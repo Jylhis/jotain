@@ -1,0 +1,92 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-log--parse-entry-at-point – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-log--parse-entry-at-point is a natively compiled function
+defined in majutsu-log.el.
+Parse one sequentially-encoded log entry at point using COMPILED.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-log--parse-entry-at-point</code></h1><p><span class="m"><code>majutsu-log--parse-entry-at-point</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-log.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-log--parse-entry-at-point <a href="#:~:text=using-,COMPILED"><span class="arg">COMPILED</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse one sequentially-encoded log entry at point using <span class="arg">COMPILED</span>.
+<p>Point must be at a line potentially containing <a href="../var/majutsu-log--entry-start-token.html"><code>majutsu-log--entry-start-token</code></a>.
+Returns entry plist and moves point past the consumed entry, or nil.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-log.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-log--parse-entry-at-point</span> (compiled)
+  <span class="doc">"Parse one sequentially-encoded log entry at point using COMPILED.
+
+Point must be at a line potentially containing `</span><span class="m doc">majutsu-log--entry-start-token</span><span class="doc">'.
+Returns entry plist and moves point past the consumed entry, or nil."</span>
+  (<span class="k">let*</span> ((entry-beg (line-beginning-position))
+         (bol entry-beg)
+         (eol (line-end-position))
+         (start-pos (majutsu-log--line-token-position majutsu-log--entry-start-token bol eol)))
+    (<span class="k">when</span> start-pos
+      (<span class="k">let*</span> ((indent (- start-pos bol))
+             (heading-prefixes nil)
+             (heading-segments nil)
+             (trailing-payload nil)
+             (done nil)
+             (first-line t))
+        (<span class="k">while</span> (<span class="k">and</span> (not done) (not (eobp)))
+          (<span class="k">setq</span> bol (line-beginning-position)
+                eol (line-end-position))
+          (<span class="k">let*</span> ((prefix-end (min (+ bol indent) eol))
+                 (prefix (buffer-substring bol prefix-end))
+                 (content-start (<span class="k">if</span> first-line
+                                    (+ start-pos (length majutsu-log--entry-start-token))
+                                  prefix-end))
+                 (segment-pos (majutsu-log--line-token-position
+                               majutsu-log--entry-tail-token bol eol content-start)))
+            (<span class="k">if</span> segment-pos
+                (<span class="k">progn</span>
+                  (<span class="k">push</span> prefix heading-prefixes)
+                  (<span class="k">push</span> (buffer-substring content-start segment-pos) heading-segments)
+                  (<span class="k">setq</span> trailing-payload (buffer-substring segment-pos eol))
+                  (<span class="k">setq</span> done t)
+                  (forward-line 1))
+              (<span class="k">push</span> prefix heading-prefixes)
+              (<span class="k">push</span> (buffer-substring content-start eol) heading-segments)
+              (forward-line 1)
+              (<span class="k">when</span> (eobp)
+                (<span class="k">setq</span> done <span class="bi">:incomplete</span>))))
+          (<span class="k">setq</span> first-line nil))
+        (<span class="k">when</span> (eq done t)
+          (<span class="k">when-let*</span> ((payloads (majutsu-log--parse-trailing-payloads trailing-payload)))
+            (<span class="k">let*</span> ((entry (list <span class="bi">:beg</span> entry-beg
+                                <span class="bi">:indent</span> indent
+                                <span class="bi">:columns</span> nil
+                                <span class="bi">:column-values</span> nil
+                                <span class="bi">:modules</span> nil
+                                <span class="bi">:heading-prefixes</span> (nreverse heading-prefixes)))
+                   (heading-payload (majutsu-log--join-lines (nreverse heading-segments))))
+              (<span class="k">setq</span> entry (majutsu-log--record-module-fields entry 'heading heading-payload compiled))
+              (<span class="k">setq</span> entry (majutsu-log--record-module-fields
+                           entry 'tail (plist-get payloads <span class="bi">:tail</span>) compiled))
+              (<span class="k">setq</span> entry (majutsu-log--record-module-fields
+                           entry 'body (plist-get payloads <span class="bi">:body</span>) compiled))
+              (<span class="k">setq</span> entry (majutsu-log--record-module-fields
+                           entry 'metadata (plist-get payloads <span class="bi">:metadata</span>) compiled))
+              (<span class="k">let</span> ((suffix-lines nil))
+                <span class="cd">;; </span><span class="c">Preserve graph continuation lines between the current entry's
+</span>                <span class="cd">;; </span><span class="c">end marker and the next entry start marker. These lines stay
+</span>                <span class="cd">;; </span><span class="c">visible as part of the current section heading area.
+</span>                (<span class="k">while</span> (<span class="k">and</span> (not (eobp))
+                            (<span class="k">let</span> ((next-bol (line-beginning-position))
+                                  (next-eol (line-end-position)))
+                              (not (majutsu-log--line-token-position
+                                    majutsu-log--entry-start-token next-bol next-eol))))
+                  (<span class="k">push</span> (buffer-substring (line-beginning-position) (line-end-position))
+                        suffix-lines)
+                  (forward-line 1))
+                (<span class="k">setq</span> entry (plist-put entry <span class="bi">:suffix-lines</span> (nreverse suffix-lines)))
+                (<span class="k">setq</span> entry (plist-put entry <span class="bi">:end</span> (point))))
+              entry)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

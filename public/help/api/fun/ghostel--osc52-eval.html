@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--osc52-eval – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--osc52-eval is a natively compiled function defined in
+ghostel.el.
+Handle an OSC 52 elisp-eval payload from the terminal.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--osc52-eval</code></h1><p><span class="m"><code>ghostel--osc52-eval</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--osc52-eval <a href="#:~:text=terminal.-,STR"><span class="arg">STR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle an OSC 52 elisp-eval payload from the terminal.
+<p><span class="arg">STR</span> is the raw payload from OSC 52 with kind 'e'.
+Parses the command and arguments, looks up the command in
+<a href="../var/ghostel-eval-cmds.html"><code>ghostel-eval-cmds</code></a>, and calls it if whitelisted.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+<span class="cd">;;; </span><span class="c">Callbacks from native module
+</span>
+(<span class="k">defun</span> <span class="f">ghostel--osc52-eval</span> (str)
+  <span class="doc">"Handle an OSC 52 elisp-eval payload from the terminal.
+STR is the raw payload from OSC 52 with kind </span><span class="bi doc">\\=</span><span class="doc">'</span><span class="m doc">e</span><span class="bi m doc">\\=</span><span class="doc">'.
+Parses the command and arguments, looks up the command in
+`</span><span class="m doc">ghostel-eval-cmds</span><span class="doc">', and calls it if whitelisted."</span>
+  (<span class="k">let*</span> ((parts (split-string-and-unquote str))
+         (command (car parts))
+         (args (cdr parts))
+         (entry (assoc command ghostel-eval-cmds)))
+    (<span class="k">if</span> entry
+        <span class="cd">;; </span><span class="c">Catch errors from the dispatched function: this callback runs
+</span>        <span class="cd">;; </span><span class="c">synchronously inside the native VT parser, so any unhandled
+</span>        <span class="cd">;; </span><span class="c">error propagates back up through `</span><span class="m c">ghostel--write-vt</span><span class="c">' and
+</span>        <span class="cd">;; </span><span class="c">crashes the process filter / redraw timer.
+</span>        (<span class="k">condition-case</span> err
+            (apply (cadr entry) args)
+          (<span class="w">error</span>
+           (message <span class="s">"ghostel: error calling %s: %s"</span>
+                    command (error-message-string err))))
+      (message <span class="s">"ghostel: unknown eval command %S (add to `</span><span class="m s">ghostel-eval-cmds</span><span class="s">' to allow)"</span>
+               command))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

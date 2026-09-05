@@ -1,0 +1,101 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-query-builder-completion-at-point-function – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-query-builder-completion-at-point-function is a natively
+compiled function defined in combobulate-query.el.
+Completion function for combobulate-query-mode.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-query-builder-completion-at-point-function</code></h1><p><span class="m"><code>combobulate-query-builder-completion-at-point-function</code></span> is a <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <span class="bt">combobulate-query.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-query-builder-completion-at-point-function)
+</code></pre>
+<h2>Documentation</h2>
+<p>Completion function for <a href="../fun/combobulate-query-mode.html"><code>combobulate-query-mode</code></a>.
+<p>This function is used by <a href="../var/completion-at-point-functions.html"><code>completion-at-point-functions</code></a> to provide
+completion candidates for the current point.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-query.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-query-builder-completion-at-point-function</span> ()
+  <span class="doc">"Completion function for `</span><span class="m doc">combobulate-query-mode</span><span class="doc">'.
+
+This function is used by `</span><span class="m doc">completion-at-point-functions</span><span class="doc">' to provide
+completion candidates for the current point."</span>
+  (<span class="k">cl-flet*</span> ((get-symbol () (thing-at-point 'symbol t))
+             (go-up () (<span class="k">ignore-errors</span> (backward-up-list 1)))
+             (go-down () (<span class="k">ignore-errors</span> (down-list)))
+             (at-char-p (s) (looking-back s 1))
+             (skip-syntax (direction <span class="ty">&amp;optional</span> syntax)
+               (<span class="k">if</span> (eq direction 'forward)
+                   (skip-syntax-forward (<span class="k">or</span> syntax <span class="s">"w_"</span>))
+                 (skip-syntax-backward (<span class="k">or</span> syntax <span class="s">"w_"</span>)))))
+    (<span class="k">save-excursion</span>
+      (<span class="k">let*</span> ((start) (end (point))
+             <span class="cd">;; </span><span class="c">Note this moves point as a side-effect of each check. The
+</span>             <span class="cd">;; </span><span class="c">order is therefore important.
+</span>             (has-prefix-text (<span class="k">prog1</span>
+                                  (&gt; (skip-syntax-backward <span class="s">"w_"</span>) 0)
+                                (<span class="k">setq</span> start (point))))
+             <span class="cd">;; </span><span class="c">Are we at the start of a form?
+</span>             (at-form-start (at-char-p <span class="s">"("</span>))
+             <span class="cd">;; </span><span class="c">Are we at the start of a match group?
+</span>             (at-match-group-start (at-char-p <span class="s">"@"</span>))
+             <span class="cd">;; </span><span class="c">Move to the end of the current text.
+</span>             (has-postfix-text (<span class="k">prog1</span>
+                                   (&gt; (skip-syntax-forward <span class="s">"w_"</span>) 0)
+                                 (<span class="k">setq</span> end (point))))
+             <span class="cd">;; </span><span class="c">Are we now at the end of a form?
+</span>             (at-form-end (at-char-p <span class="s">")"</span>))
+             <span class="cd">;; </span><span class="c">Use `</span><span class="m c">syntax-ppss</span><span class="c">' to tell us if we're inside a
+</span>             <span class="cd">;; </span><span class="c">string or not.
+</span>             (inside-string (nth 3 (syntax-ppss)))
+             (parent-rule-name (<span class="k">save-excursion</span>
+                                 <span class="cd">;; </span><span class="c">Move up out of the current form.
+</span>                                 <span class="cd">;; </span><span class="c">(parent (chi|ld)) -&gt; (parent |(child))
+</span>                                 (go-up)
+                                 <span class="cd">;; </span><span class="c">Move up out of of the parent form
+</span>                                 <span class="cd">;; </span><span class="c">(parent (child)) -&gt; |(parent (child))
+</span>                                 (go-up)
+                                 <span class="cd">;; </span><span class="c">go back down again to get at the parent
+</span>                                 <span class="cd">;; </span><span class="c">(parent (child)) -&gt; (|parent (child))
+</span>                                 (go-down)
+                                 (get-symbol)))
+             (parent-field-name (<span class="k">save-excursion</span>
+                                  (go-up)
+                                  (skip-syntax 'backward <span class="s">" "</span>)
+                                  (<span class="k">when</span> (string-suffix-p <span class="s">":"</span> (get-symbol))
+                                    (string-trim (<span class="k">or</span> (get-symbol) <span class="s">""</span>) nil <span class="s">":"</span>))))
+             <span class="cd">;; </span><span class="c">(at-field-name (save-excursion
+</span>             <span class="cd">;;                  </span><span class="c">(and (get-symbol) (string-suffix-p (or (get-symbol) "") ":"))))
+</span>             (current-rule-name (<span class="k">save-excursion</span>
+                                  (go-up)
+                                  (go-down)
+                                  (get-symbol))))
+        (list start end
+              (<span class="k">cond</span>
+               <span class="cd">;; </span><span class="c">it's a string - do nothing.
+</span>               (inside-string nil)
+               <span class="cd">;; </span><span class="c">it's a match group
+</span>               (at-match-group-start (map-keys combobulate-query-match-face-alist))
+               <span class="cd">;; </span><span class="c">it's a rule name
+</span>               ((<span class="k">or</span> has-prefix-text at-form-start has-postfix-text at-form-end)
+                (append (<span class="k">if-let</span> (rule (assoc parent-rule-name combobulate-query-builder-rules))
+                            (flatten-list
+                             (cons (<span class="k">if</span> parent-field-name
+                                       (<span class="k">or</span> (plist-get (cadr rule) (intern (concat <span class="s">":"</span> parent-field-name)))
+                                           combobulate-query-builder-rule-names)
+                                     (map-values (cadr rule)))
+                                   nil))
+                          combobulate-query-builder-rule-names)
+                        (copy-tree combobulate-query-builder-predicate-names)))
+               <span class="cd">;; </span><span class="c">it's a field name
+</span>               ((<span class="k">and</span> (not at-form-start) (not at-form-end))
+                (<span class="k">when-let</span> (rule (assoc current-rule-name combobulate-query-builder-rules))
+                  (mapcar #'combobulate-query-builder-prop-name-to-field-name
+                          (seq-remove (<span class="k">lambda</span> (prop) (equal prop <span class="bi">:*unnamed*</span>))
+                                      (map-keys (cadr rule))))))
+               (t nil)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

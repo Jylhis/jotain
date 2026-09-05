@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--drop-stranded-links – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--drop-stranded-links is a natively compiled function defined
+in ghostel-links.el.
+Remove this scan's links in BEGIN..END that no match covers.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--drop-stranded-links</code></h1><p><span class="m"><code>ghostel--drop-stranded-links</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">ghostel-links.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--drop-stranded-links <a href="#:~:text=in-,BEGIN"><span class="arg">BEGIN</span></a> <a href="#:~:text=BEGIN..-,END"><span class="arg">END</span></a> <a href="#:~:text=covers.-,MATCHED"><span class="arg">MATCHED</span></a> <a href="#:~:text=gone.-,URLS"><span class="arg">URLS</span></a> <a href="#:~:text=and-,FILES"><span class="arg">FILES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Remove this scan's links in <span class="arg">BEGIN</span>..<span class="arg">END</span> that no match covers.
+<p><span class="arg">MATCHED</span> is the list of (START . STOP) ranges the scan matched, whatever
+it then did with them.  A row repainted on its own can leave the other
+rows of a wrapped link behind, pointing at text that is gone.
+<span class="arg">URLS</span> and <span class="arg">FILES</span> say which patterns ran: a link of a kind that was not
+scanned for is unexamined, not stranded.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-links.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--drop-stranded-links</span> (begin end matched urls files)
+  <span class="doc">"Remove this scan's links in BEGIN..END that no match covers.
+MATCHED is the list of (START . STOP) ranges the scan matched, whatever
+it then did with them.  A row repainted on its own can leave the other
+rows of a wrapped link behind, pointing at text that is gone.
+URLS and FILES say which patterns ran: a link of a kind that was not
+scanned for is unexamined, not stranded."</span>
+  (<span class="k">let</span> ((pos begin))
+    (<span class="k">while</span> (<span class="k">setq</span> pos (text-property-not-all pos end 'ghostel-link-id nil))
+      (<span class="k">let*</span> ((stop (next-single-property-change pos 'ghostel-link-id nil end))
+             (echo (get-text-property pos 'help-echo))
+             (scanned (<span class="k">if</span> (<span class="k">and</span> (stringp echo)
+                               (string-prefix-p <span class="s">"fileref:"</span> echo))
+                          files
+                        urls)))
+        (<span class="k">when</span> (<span class="k">and</span> scanned
+                   (ghostel--detected-link-p pos)
+                   (not (ghostel--range-overlaps-p pos stop matched)))
+          (remove-text-properties pos stop
+                                  '(help-echo nil mouse-face nil keymap nil
+                                              ghostel-link-id nil
+                                              ghostel-link-text nil)))
+        (<span class="k">setq</span> pos stop)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

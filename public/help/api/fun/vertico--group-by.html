@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vertico--group-by – Emacs Documentation Online</title>
+<meta name="description" content="vertico--group-by is a natively compiled function defined in
+vertico.el.
+Group ELEMS by FUN.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vertico--group-by</code></h1><p><span class="m"><code>vertico--group-by</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">vertico.el</span>.
+<h2>Signature</h2>
+<pre><code>(vertico--group-by <a href="#:~:text=by-,FUN"><span class="arg">FUN</span></a> <a href="#:~:text=Group-,ELEMS"><span class="arg">ELEMS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Group <span class="arg">ELEMS</span> by <span class="arg">FUN</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kd234agnx8fzj5nnpaamc1pjsnz14kxs-emacs-packages-deps/share/emacs/site-lisp/elpa/vertico-20260830.123/vertico.el</span>
+(<span class="k">defun</span> <span class="f">vertico--group-by</span> (fun elems)
+  <span class="doc">"Group ELEMS by FUN."</span>
+  (<span class="k">let</span> ((ht (make-hash-table <span class="bi">:test</span> #'equal)) titles groups)
+    <span class="cd">;; </span><span class="c">Build hash table of groups
+</span>    (<span class="k">cl-loop</span> for elem on elems
+             for title = (funcall fun (car elem) nil) do
+             (<span class="k">if-let*</span> ((group (gethash title ht)))
+                 (setcdr group (setcdr (cdr group) elem)) <span class="cd">;; </span><span class="c">Append to tail of group
+</span>               (puthash title (cons elem elem) ht) <span class="cd">;; </span><span class="c">New group element (head . tail)
+</span>               (<span class="k">push</span> title titles)))
+    (<span class="k">setq</span> titles (nreverse titles))
+    <span class="cd">;; </span><span class="c">Cycle groups if `</span><span class="m c">vertico--lock-groups</span><span class="c">' is set
+</span>    (<span class="k">when-let*</span> ((group (seq-find (<span class="k">lambda</span> (group) (gethash group ht))
+                                 vertico--lock-groups)))
+      (<span class="k">setq</span> titles (vertico--cycle titles (seq-position titles group))))
+    <span class="cd">;; </span><span class="c">Build group list
+</span>    (<span class="k">dolist</span> (title titles)
+      (<span class="k">push</span> (gethash title ht) groups))
+    <span class="cd">;; </span><span class="c">Unlink last tail
+</span>    (setcdr (cdar groups) nil)
+    (<span class="k">setq</span> groups (nreverse groups))
+    <span class="cd">;; </span><span class="c">Link groups
+</span>    (<span class="k">let</span> ((link groups))
+      (<span class="k">while</span> (cdr link)
+        (setcdr (cdar link) (caadr link))
+        (<span class="k">pop</span> link)))
+    (cons (caar groups) titles)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

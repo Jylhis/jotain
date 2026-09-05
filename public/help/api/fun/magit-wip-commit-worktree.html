@@ -1,0 +1,42 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-wip-commit-worktree – Emacs Documentation Online</title>
+<meta name="description" content="magit-wip-commit-worktree is a natively compiled function defined in
+magit-wip.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-wip-commit-worktree</code></h1><p><span class="m"><code>magit-wip-commit-worktree</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-wip.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-wip-commit-worktree <span class="arg">REF</span> <span class="arg">FILES</span> <span class="arg">MSG</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-wip.el</span>
+(<span class="k">defun</span> <span class="f">magit-wip-commit-worktree</span> (ref files msg)
+  (<span class="k">when</span> (<span class="k">or</span> (not files)
+            <span class="cd">;; </span><span class="c">"git update-index" either ignores (before Git v2.32.0) or
+</span>            <span class="cd">;; </span><span class="c">fails, when passed directories.  This is relevant for the
+</span>            <span class="cd">;; </span><span class="c">untracked files code paths.
+</span>            (<span class="k">setq</span> files (seq-remove #'file-directory-p files)))
+    (<span class="k">let*</span> ((wipref (magit--wip-wtree-ref ref))
+           (parent (magit-wip-get-parent ref wipref))
+           (tree (<span class="k">condition-case</span> nil
+                     (<span class="k">magit-with-temp-index</span> parent (list <span class="s">"--reset"</span> <span class="s">"-i"</span>)
+                       (<span class="k">if</span> files
+                           <span class="cd">;; </span><span class="c">Use "git update-index" instead of "git add"
+</span>                           <span class="cd">;; </span><span class="c">because the latter fails if a file is already
+</span>                           <span class="cd">;; </span><span class="c">deleted in the temporary index.
+</span>                           (magit-wip--git <span class="s">"update-index"</span> <span class="s">"--add"</span> <span class="s">"--remove"</span>
+                                           <span class="s">"--ignore-skip-worktree-entries"</span>
+                                           <span class="s">"--"</span> files)
+                         (<span class="k">magit-with-toplevel</span>
+                           (magit-wip--git <span class="s">"add"</span> <span class="s">"-u"</span> <span class="s">"."</span>)))
+                       (magit-git-string <span class="s">"write-tree"</span>))
+                   (<span class="w">error</span>
+                    (message <span class="s">"Index locked; no worktree wip commit created"</span>)))))
+      (<span class="k">when</span> tree
+        (magit-wip-update-wipref ref wipref tree parent
+                                 files msg <span class="s">"worktree"</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

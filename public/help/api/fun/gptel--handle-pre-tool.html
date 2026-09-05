@@ -1,0 +1,80 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--handle-pre-tool – Emacs Documentation Online</title>
+<meta name="description" content="gptel--handle-pre-tool is a natively compiled function defined in
+gptel.el.
+Run gptel-pre-tool-call-functions for FSM.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--handle-pre-tool</code></h1><p><span class="m"><code>gptel--handle-pre-tool</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--handle-pre-tool <a href="#:~:text=for-,FSM"><span class="arg">FSM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run <a href="../var/gptel-pre-tool-call-functions.html"><code>gptel-pre-tool-call-functions</code></a> for <span class="arg">FSM</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--handle-pre-tool</span> (fsm)
+  <span class="doc">"Run `</span><span class="m doc">gptel-pre-tool-call-functions</span><span class="doc">' for FSM."</span>
+  (<span class="k">let*</span> ((info (gptel-fsm-info fsm))
+         (buffer (plist-get info <span class="bi">:buffer</span>)))
+    (<span class="k">when</span> (buffer-local-value 'gptel-pre-tool-call-functions buffer)
+      <span class="cd">;; </span><span class="c">This function might run many times, so only act on the remaining tool calls.
+</span>      (<span class="k">let</span> ((tool-use (cl-remove-if (<span class="k">lambda</span> (tc) (plist-get tc <span class="bi">:result</span>))
+                                    (plist-get info <span class="bi">:tool-use</span>)))
+            (hook-func-args (list <span class="bi">:buffer</span> (buffer-name buffer)
+                                  <span class="bi">:backend</span> (plist-get info <span class="bi">:backend</span>)
+                                  <span class="bi">:model</span> (plist-get info <span class="bi">:model</span>))))
+        (<span class="k">with-current-buffer</span> buffer
+          (run-hook-wrapped             <span class="cd">; </span><span class="c">Run pre tool call functions
+</span>           'gptel-pre-tool-call-functions
+           (<span class="k">lambda</span> (hook-func)
+             (<span class="k">prog1</span> nil
+               (<span class="k">dolist</span> (tool-call tool-use)
+                 (<span class="k">let*</span> ((name (plist-get tool-call <span class="bi">:name</span>))
+                        (args (plist-get tool-call <span class="bi">:args</span>))
+                        (hook-func-result
+                         (<span class="k">with-demoted-errors</span> <span class="s">"gptel-pre-tool-call hook error: %S"</span>
+                           (funcall hook-func (nconc (list <span class="bi">:name</span> name <span class="bi">:args</span> args)
+                                                     hook-func-args)))))
+                   (<span class="k">if</span> (plist-get hook-func-result <span class="bi">:stop</span>) <span class="cd">; </span><span class="c">Stop the request immediately
+</span>                       (<span class="k">let</span> ((reason (<span class="k">or</span> (plist-get hook-func-result <span class="bi">:stop-reason</span>)
+                                         (concat <span class="s">"Request stopped by pre-tool-call hook "</span>
+                                                 (<span class="k">and</span> (symbolp hook-func)
+                                                      (symbol-name hook-func))
+                                                 <span class="s">" (tool \""</span> name <span class="s">"\")"</span>))))
+                         (plist-put info <span class="bi">:stop-reason</span> reason)
+                         (plist-put info <span class="bi">:status</span> <span class="s">"Stopped by hook"</span>)
+                         (plist-put info <span class="bi">:error</span> reason))
+                     <span class="cd">;; </span><span class="c">if hook-func returns :confirm, add the check
+</span>                     (<span class="k">when-let*</span> ((confirm-tail
+                                  (plist-member hook-func-result <span class="bi">:confirm</span>)))
+                       (plist-put tool-call <span class="bi">:confirm</span> (cadr confirm-tail)))
+                     <span class="cd">;; </span><span class="c">if hook-func returns :args or :name, replace in the call
+</span>                     (<span class="k">when</span> (<span class="k">or</span> (plist-get hook-func-result <span class="bi">:args</span>)
+                               (plist-get hook-func-result <span class="bi">:name</span>))
+                       <span class="cd">;; </span><span class="c">Merge with args in the messages array sent to the LLM
+</span>                       (gptel--inject-tool-call
+                        (plist-get info <span class="bi">:backend</span>) (plist-get info <span class="bi">:data</span>)
+                        tool-call hook-func-result)
+                       <span class="cd">;; </span><span class="c">Merge with the tool-call in tool-use that actually runs
+</span>                       (gptel--merge-plists tool-call hook-func-result))
+                     <span class="cd">;; </span><span class="c">TODO(tool-hooks): :block behavior not final!
+</span>                     (<span class="k">let</span> ((blockp (plist-get hook-func-result <span class="bi">:block</span>))
+                           (result (plist-get hook-func-result <span class="bi">:result</span>)))
+                       (<span class="k">when</span> blockp
+                         (plist-put tool-call <span class="bi">:error</span> t)
+                         (<span class="k">setq</span> result
+                               (concat <span class="s">"&lt;tool_call_error&gt;\n"</span>
+                                       (<span class="k">if</span> (stringp blockp) blockp
+                                         (format <span class="s">"Tool %s blocked by user"</span> name))
+                                       <span class="s">"\n&lt;/tool_call_error&gt;"</span>)))
+                       (<span class="k">when</span> result
+                         (gptel--process-tool-call
+                          fsm (cl-find-if (<span class="k">lambda</span> (ts) (equal (gptel-tool-name ts) name))
+                                          (plist-get info <span class="bi">:tools</span>))
+                          tool-call result))))))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

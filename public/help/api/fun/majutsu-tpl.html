@@ -1,0 +1,45 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-tpl – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-tpl is a macro defined in majutsu-template.el.
+Expand and compile FORM to a jj template string.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-tpl</code></h1><p><span class="m"><code>majutsu-tpl</code></span> is a macro defined in <span class="bt">majutsu-template.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">majutsu-tpl</span> <a href="#:~:text=compile-,FORM"><span class="arg">FORM</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=IF-,SELF-TYPE"><span class="arg">SELF-TYPE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Expand and compile <span class="arg">FORM</span> to a jj template string.
+<p>Vector literals are compiled at macro-expansion time IF <span class="arg">SELF-TYPE</span> is provided
+as a constant.
+<p>If <span class="arg">SELF-TYPE</span> is not provided, compilation is deferred to runtime to respect
+dynamic bindings of <a href="../var/majutsu-template-default-self-type.html"><code>majutsu-template-default-self-type</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-template.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defmacro</span> <span class="f">majutsu-tpl</span> (form <span class="ty">&amp;optional</span> self-type)
+  <span class="doc">"Expand and compile FORM to a jj template string.
+Vector literals are compiled at macro-expansion time IF SELF-TYPE is provided
+as a constant.
+
+If SELF-TYPE is not provided, compilation is deferred to runtime to respect
+dynamic bindings of `</span><span class="m doc">majutsu-template-default-self-type</span><span class="doc">'."</span>
+  (<span class="k">cond</span>
+   ((<span class="k">and</span> (vectorp form) (<span class="k">or</span> (keywordp self-type) (<span class="k">and</span> (consp self-type) (eq (car self-type) 'quote))))
+    (<span class="k">let</span> ((majutsu-template-default-self-type (majutsu-template--normalize-type-symbol (eval self-type)))
+          (majutsu-template--allow-eval t))
+      (<span class="k">let</span> ((node (majutsu-template--call-with-root-self-binding
+                   nil
+                   (<span class="k">lambda</span> ()
+                     (majutsu-template--rewrite form)))))
+        `(majutsu-template-compile ',node))))
+   ((vectorp form)
+    `(<span class="k">let</span> ((majutsu-template--allow-eval t))
+       (majutsu-template-compile ,form ,self-type)))
+   (t
+    `(<span class="k">let</span> ((majutsu-template--allow-eval t))
+       (majutsu-template-compile ,form ,self-type)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

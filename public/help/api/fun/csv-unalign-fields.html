@@ -1,0 +1,67 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: csv-unalign-fields – Emacs Documentation Online</title>
+<meta name="description" content="csv-unalign-fields is an interactive and natively compiled function
+defined in csv-mode.el.
+Undo soft alignment and optionally remove redundant white space.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>csv-unalign-fields</code></h1><p><span class="m"><code>csv-unalign-fields</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">csv-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(csv-unalign-fields <a href="#:~:text=if-,HARD"><span class="arg">HARD</span></a> <a href="#:~:text=nil;-,BEG"><span class="arg">BEG</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Undo soft alignment and optionally remove redundant white space.
+<p>Undo soft alignment introduced by <a href="../fun/csv-align-fields.html"><code>csv-align-fields</code></a>.  If invoked with
+an argument then also remove all spaces and tabs around separators.
+Also make all invisible separators visible again.
+Ignore blank and comment lines.  When called non-interactively, remove
+spaces and tabs if <span class="arg">HARD</span> non-nil; <span class="arg">BEG</span> and <span class="arg">END</span> specify region to unalign.
+If there is no selected region, default to the whole buffer.
+<h2>Key Bindings</h2>
+<p><span class="v">csv-mode-map</span> <span class="key">C-c C-u</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mrygxsladaca2yfyr2cy0am5zm9lzddg-emacs-packages-deps/share/emacs/site-lisp/elpa/csv-mode-1.27/csv-mode.el</span>
+(<span class="k">defun</span> <span class="f">csv-unalign-fields</span> (hard beg end)
+  <span class="doc">"Undo soft alignment and optionally remove redundant white space.
+Undo soft alignment introduced by `</span><span class="m doc">csv-align-fields</span><span class="doc">'.  If invoked with
+an argument then also remove all spaces and tabs around separators.
+Also make all invisible separators visible again.
+Ignore blank and comment lines.  When called non-interactively, remove
+spaces and tabs if HARD non-nil; BEG and END specify region to unalign.
+If there is no selected region, default to the whole buffer."</span>
+  (<span class="k">interactive</span> (cons current-prefix-arg
+                     (<span class="k">if</span> (use-region-p)
+                         (list (region-beginning) (region-end))
+                       (list (point-min) (point-max)))))
+  <span class="cd">;; </span><span class="c">Remove any soft alignment:
+</span>  (mapc #'csv--delete-overlay (overlays-in beg end))
+  (<span class="k">with-silent-modifications</span>
+    (remove-list-of-text-properties beg end '(display invisible)))
+  (<span class="k">when</span> hard
+    (barf-if-buffer-read-only)
+    <span class="cd">;; </span><span class="c">Remove any white-space padding around separators:
+</span>    (<span class="k">save-excursion</span>
+      (<span class="k">save-restriction</span>
+	(narrow-to-region beg end)
+	(goto-char (point-min))
+	(<span class="k">while</span> (not (eobp))
+	  (<span class="k">or</span> (csv-not-looking-at-record)
+	      (<span class="k">while</span> (not (eolp))
+		<span class="cd">;; </span><span class="c">Delete horizontal white space forward:
+</span>		<span class="cd">;; </span><span class="c">(delete-horizontal-space)
+</span>		<span class="cd">;; </span><span class="c">This relies on left-to-right argument evaluation;
+</span>		<span class="cd">;; </span><span class="c">see info node (elisp) Function Forms.
+</span>		(delete-region (point)
+			       (+ (point) (skip-chars-forward <span class="s">" \t"</span>)))
+		(csv-end-of-field)
+		<span class="cd">;; </span><span class="c">Delete horizontal white space backward:
+</span>		<span class="cd">;; </span><span class="c">(delete-horizontal-space t)
+</span>		(delete-region (point)
+			       (+ (point) (skip-chars-backward <span class="s">" \t"</span>)))
+		(<span class="k">or</span> (eolp) (forward-char))))
+	  (forward-line))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

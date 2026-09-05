@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-live-preview-export – Emacs Documentation Online</title>
+<meta name="description" content="markdown-live-preview-export is an interactive and natively compiled
+function defined in markdown-mode.el.
+Export to XHTML using markdown-export.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-live-preview-export</code></h1><p><span class="m"><code>markdown-live-preview-export</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-live-preview-export)
+</code></pre>
+<h2>Documentation</h2>
+<p>Export to XHTML using <a href="../fun/markdown-export.html"><code>markdown-export</code></a>.
+<p>Browse the resulting file within Emacs using
+<a href="../var/markdown-live-preview-window-function.html"><code>markdown-live-preview-window-function</code></a> Return the buffer
+displaying the rendered output.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-live-preview-export</span> ()
+  <span class="doc">"Export to XHTML using `</span><span class="m doc">markdown-export</span><span class="doc">'.
+Browse the resulting file within Emacs using
+`</span><span class="m doc">markdown-live-preview-window-function</span><span class="doc">' Return the buffer
+displaying the rendered output."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((filename (markdown-live-preview-get-filename)))
+    (<span class="k">when</span> filename
+      (<span class="k">let*</span> ((markdown-live-preview-currently-exporting t)
+             (cur-buf (current-buffer))
+             (export-file (markdown-export filename))
+             <span class="cd">;; </span><span class="c">get positions in all windows currently displaying output buffer
+</span>             (window-data
+              (markdown-live-preview-window-serialize
+               markdown-live-preview-buffer)))
+        (<span class="k">save-window-excursion</span>
+          (<span class="k">let</span> ((output-buffer
+                 (funcall markdown-live-preview-window-function export-file)))
+            (<span class="k">with-current-buffer</span> output-buffer
+              (<span class="k">setq</span> markdown-live-preview-source-buffer cur-buf)
+              (add-hook 'kill-buffer-hook
+                        #'markdown-live-preview-remove-on-kill t t))
+            (<span class="k">with-current-buffer</span> cur-buf
+              (<span class="k">setq</span> markdown-live-preview-buffer output-buffer))))
+        (<span class="k">with-current-buffer</span> cur-buf
+          <span class="cd">;; </span><span class="c">reset all windows displaying output buffer to where they were,
+</span>          <span class="cd">;; </span><span class="c">now with the new output
+</span>          (mapc #'markdown-live-preview-window-deserialize window-data)
+          <span class="cd">;; </span><span class="c">delete html editing buffer
+</span>          (<span class="k">let</span> ((buf (get-file-buffer export-file))) (<span class="k">when</span> buf (kill-buffer buf)))
+          (<span class="k">when</span> (<span class="k">and</span> export-file (file-exists-p export-file)
+                     (eq markdown-live-preview-delete-export
+                         'delete-on-export))
+            (delete-file export-file))
+          markdown-live-preview-buffer)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

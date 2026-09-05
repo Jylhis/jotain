@@ -1,0 +1,153 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--target-completion-table-1 – Emacs Documentation Online</title>
+<meta name="description" content="bazel--target-completion-table-1 is a natively compiled function
+defined in bazel.el.
+Return a completion table completing STRING to a Bazel target or pattern.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--target-completion-table-1</code></h1><p><span class="m"><code>bazel--target-completion-table-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--target-completion-table-1 <a href="#:~:text=pattern.-,ROOT"><span class="arg">ROOT</span></a> <a href="#:~:text=and-,PACKAGE"><span class="arg">PACKAGE</span></a> <a href="#:~:text=If-,PATTERN"><span class="arg">PATTERN</span></a> <a href="#:~:text=If-,ONLY-TESTS"><span class="arg">ONLY-TESTS</span></a> <a href="#:~:text=completing-,STRING"><span class="arg">STRING</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a completion table completing <span class="arg">STRING</span> to a Bazel target or pattern.
+<p><span class="arg">ROOT</span> is the repository root directory, and <span class="arg">PACKAGE</span> is the current
+package name.  If <span class="arg">PATTERN</span> is non-nil, complete target patterns
+and skip files.  If <span class="arg">ONLY-TESTS</span> is non-nil, restrict rule target
+completion to test targets.  This is a helper function for
+<br>‘bazel--target-completion-table’.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--target-completion-table-1</span>
+    (root package pattern only-tests string)
+  <span class="doc">"Return a completion table completing STRING to a Bazel target or pattern.
+ROOT is the repository root directory, and PACKAGE is the current
+package name.  If PATTERN is non-nil, complete target patterns
+and skip files.  If ONLY-TESTS is non-nil, restrict rule target
+completion to test targets.  This is a helper function for
+‘</span><span class="m doc">bazel--target-completion-table</span><span class="doc">’."</span>
+  (<span class="w">cl-check-type</span> root string)
+  (<span class="w">cl-check-type</span> package string)
+  (<span class="w">cl-check-type</span> string string)
+  <span class="cd">;; </span><span class="c">The cases below shouldn’t rebind the PACKAGE or ROOT parameters due to
+</span>  <span class="cd">;; </span><span class="c">https://bugs.gnu.org/53071.
+</span>  (<span class="k">pcase</span> string
+    <span class="cd">;; </span><span class="c">The following patterns should cover all potential target patterns from
+</span>    <span class="cd">;; </span><span class="c">https://bazel.build/run/build#specifying-build-targets as well as their
+</span>    <span class="cd">;; </span><span class="c">prefixes.  We are a bit more lenient than necessary to avoid convoluted
+</span>    <span class="cd">;; </span><span class="c">regular expressions.
+</span>    (<span class="s">""</span>
+     <span class="cd">;; </span><span class="c">By default, offer targets and subpackages of the current package, as
+</span>     <span class="cd">;; </span><span class="c">well as “//” to anchor the pattern at the root of the current
+</span>     <span class="cd">;; </span><span class="c">repository, since these are the most common patterns.  Also offer “@” to
+</span>     <span class="cd">;; </span><span class="c">select external repositories.
+</span>     (completion-table-merge
+      (bazel--target-completion-table-2 root <span class="s">""</span> package pattern only-tests
+                                        <span class="bi">:colon</span>)
+      <span class="cd">;; </span><span class="c">Relative subpackages are only allowed in target patterns.
+</span>      (<span class="k">when</span> pattern
+        (bazel--target-package-completion-table root <span class="s">""</span> package pattern))
+      '(<span class="s">"//"</span> <span class="s">"@"</span>)))
+    ((<span class="k">rx</span> bos (<span class="k">let</span> prefix ?@) (* (not (any ?: ?/))) eos)
+     <span class="cd">;; </span><span class="c">Completion for external repository names.  Also include the main (empty)
+</span>     <span class="cd">;; </span><span class="c">repository here.
+</span>     (bazel--completion-table-with-prefix prefix
+       (completion-table-merge
+        (<span class="k">when-let*</span> ((dir (bazel--external-repository-dir root)))
+          (bazel--target-repository-completion-table dir))
+        '(<span class="s">"//"</span>))))
+    ((<span class="k">rx</span> bos (<span class="k">let</span> prefix (* (not (any ?:))) <span class="s">"/...:"</span>))
+     <span class="cd">;; </span><span class="c">Combination of package wildcard and target wildcard.
+</span>     (<span class="k">when</span> pattern
+       (bazel--completion-table-with-prefix prefix
+         '(<span class="s">"all"</span> <span class="s">"all-targets"</span> <span class="s">"*"</span>))))
+    ((<span class="k">rx</span> bos (<span class="k">let</span> prefix (? ?@ (* (not (any ?: ?/))))) ?/ eos)
+     <span class="cd">;; </span><span class="c">A single slash, optionally preceded by a repository reference, can only
+</span>     <span class="cd">;; </span><span class="c">be completed to “//”.
+</span>     (bazel--completion-table-with-prefix prefix '(<span class="s">"//"</span>)))
+    ((<span class="k">rx</span> bos (? ?@ (<span class="k">let</span> repository (* (not (any ?: ?/))))) <span class="s">"//"</span> eos)
+     <span class="cd">;; </span><span class="c">In the repository root, offer “:” to start completing rule targets, as
+</span>     <span class="cd">;; </span><span class="c">well as subpackages.
+</span>     (bazel--completion-table-with-prefix string
+       (completion-table-merge
+        '(<span class="s">":"</span>)
+        (bazel--target-package-completion-table root (<span class="k">or</span> repository <span class="s">""</span>) <span class="s">""</span>
+                                                pattern))))
+    ((<span class="k">rx</span> bos (<span class="k">let</span> prefix (* (not (any ?:))) ?/) <span class="s">"..."</span> eos)
+     <span class="cd">;; </span><span class="c">A package wildcard may optionally be followed by a target wildcard.
+</span>     (<span class="k">when</span> pattern
+       (bazel--completion-table-with-prefix prefix '(<span class="s">"..."</span> <span class="s">"...:"</span>))))
+    ((<span class="k">rx</span> bos (<span class="k">let</span> prefix (* (not (any ?:))) ?/) (** 1 2 ?.) eos)
+     <span class="cd">;; </span><span class="c">“/.” in a package name can only be completed to a package wildcard.
+</span>     (<span class="k">when</span> pattern
+       (bazel--completion-table-with-prefix prefix '(<span class="s">"..."</span>))))
+    ((<span class="k">rx</span> bos
+         (? ?@ (<span class="k">let</span> repository (+ (not (any ?: ?/))))) <span class="s">"//"</span>
+         (<span class="k">let</span> pkg (+ (not (any ?:)))) ?/
+         eos)
+     <span class="cd">;; </span><span class="c">A full package name followed by a slash must be followed by a package
+</span>     <span class="cd">;; </span><span class="c">name or wildcard.
+</span>     (bazel--completion-table-with-prefix string
+       (bazel--target-package-completion-table root (<span class="k">or</span> repository <span class="s">""</span>) pkg
+                                               pattern)))
+    ((<span class="k">rx</span> bos
+         (<span class="k">let</span> prefix
+           (? ?@ (<span class="k">let</span> repository (* (not (any ?: ?/))))) <span class="s">"//"</span>
+           (<span class="k">let</span> pkg (* (not (any ?:))))
+           ?:)
+         (* (not (any ?:)))
+         eos)
+     <span class="cd">;; </span><span class="c">Absolute target label prefix, including the colon.  Must complete to a
+</span>     <span class="cd">;; </span><span class="c">target label.
+</span>     (bazel--completion-table-with-prefix prefix
+       (bazel--target-completion-table-2 root (<span class="k">or</span> repository <span class="s">""</span>) pkg pattern
+                                         only-tests nil)))
+    ((<span class="k">rx</span> bos
+         (<span class="k">let</span> prefix (? ?@ (<span class="k">let</span> repository (* (not (any ?: ?/))))) <span class="s">"//"</span>)
+         (+ (not (any ?:)))
+         eos)
+     <span class="cd">;; </span><span class="c">Absolute package prefix, without colon.  Must complete to a package
+</span>     <span class="cd">;; </span><span class="c">name.
+</span>     (bazel--completion-table-with-prefix prefix
+       (bazel--target-package-completion-table root (<span class="k">or</span> repository <span class="s">""</span>) <span class="s">""</span>
+                                               pattern)))
+    ((<span class="k">rx</span> bos (<span class="k">let</span> prefix ?:) (* (not (any ?:))) eos)
+     <span class="cd">;; </span><span class="c">Target pattern relative to the current package.
+</span>     (bazel--completion-table-with-prefix prefix
+       (bazel--target-completion-table-2 root <span class="s">""</span> package pattern
+                                         only-tests nil)))
+    ((<span class="k">rx</span> bos (+ (not (any ?:))) ?/ eos)
+     <span class="cd">;; </span><span class="c">Subpackage or subdirectory of the current package followed by a slash.
+</span>     <span class="cd">;; </span><span class="c">Normally followed by another package name or wildcard, but can also be a
+</span>     <span class="cd">;; </span><span class="c">target name containing a slash.  The interpretation of this clause
+</span>     <span class="cd">;; </span><span class="c">differs between target patterns and labels in BUILD files.
+</span>     (<span class="k">if</span> pattern
+         (bazel--target-package-completion-table root <span class="s">""</span> package pattern)
+       (bazel--target-completion-table-2 root <span class="s">""</span> package pattern
+                                         only-tests nil)))
+    ((<span class="k">rx</span> bos
+         (<span class="k">let</span> prefix (<span class="k">let</span> subpackage (+ (not (any ?:)))) ?:)
+         (* (not (any ?:)))
+         eos)
+     <span class="cd">;; </span><span class="c">Target pattern in a subpackage of the current package.  Must be
+</span>     <span class="cd">;; </span><span class="c">followed by a target name or wildcard.
+</span>     (<span class="k">when</span> pattern
+       (<span class="k">let</span> ((pkg (<span class="k">if</span> (string-empty-p package)
+                      subpackage
+                    (concat package <span class="s">"/"</span> subpackage))))
+         (bazel--completion-table-with-prefix prefix
+           (bazel--target-completion-table-2 root <span class="s">""</span> pkg pattern
+                                             only-tests nil)))))
+    ((<span class="k">rx</span> bos (+ (not (any ?:))) eos)
+     <span class="cd">;; </span><span class="c">Something else, could be either a target or a subpackage of the current
+</span>     <span class="cd">;; </span><span class="c">package.  Prefer targets.
+</span>     (completion-table-merge
+      (bazel--target-completion-table-2 root <span class="s">""</span> package pattern only-tests
+                                        <span class="bi">:colon</span>)
+      (<span class="k">when</span> pattern
+        (bazel--target-package-completion-table root <span class="s">""</span> package pattern))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

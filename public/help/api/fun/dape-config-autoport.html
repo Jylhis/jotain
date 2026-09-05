@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape-config-autoport – Emacs Documentation Online</title>
+<meta name="description" content="dape-config-autoport is a natively compiled function defined in
+dape.el.
+Handle :autoport in CONFIG keys port, command-args, and command-env.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape-config-autoport</code></h1><p><span class="m"><code>dape-config-autoport</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape-config-autoport <a href="#:~:text=in-,CONFIG"><span class="arg">CONFIG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle :autoport in <span class="arg">CONFIG</span> keys <span class="m"><code>port</code></span>, <span class="m"><code>command-args</code></span>, and <span class="m"><code>command-env</code></span>.
+<p>If <span class="m"><code>port</code></span> is the symbol <span class="bi">:autoport</span>, replace it with a random free port
+number.  In addition, replace all occurences of <span class="bi">:autoport</span> (symbol or
+string) in <span class="m"><code>command-args</code></span> and all property values of <span class="m"><code>command-env</code></span> with
+the value of config key <span class="m"><code>port</code></span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape-config-autoport</span> (config)
+  <span class="doc">"Handle :autoport in CONFIG keys `</span><span class="m doc">port</span><span class="doc">', `</span><span class="m doc">command-args</span><span class="doc">', and `</span><span class="m doc">command-env</span><span class="doc">'.
+If `</span><span class="m doc">port</span><span class="doc">' is the symbol `</span><span class="m doc">:autoport</span><span class="doc">', replace it with a random free port
+number.  In addition, replace all occurences of `</span><span class="m doc">:autoport</span><span class="doc">' (symbol or
+string) in `</span><span class="m doc">command-args</span><span class="doc">' and all property values of `</span><span class="m doc">command-env</span><span class="doc">' with
+the value of config key `</span><span class="m doc">port</span><span class="doc">'."</span>
+  (<span class="k">when</span> (eq (plist-get config 'port) <span class="bi">:autoport</span>)
+    <span class="cd">;; </span><span class="c">Stolen from `</span><span class="m c">Eglot</span><span class="c">'
+</span>    (<span class="k">let</span> ((port-probe
+           (make-network-process <span class="bi">:name</span> <span class="s">"dape-port-probe-dummy"</span>
+                                 <span class="bi">:server</span> t
+                                 <span class="bi">:host</span> <span class="s">"localhost"</span>
+                                 <span class="bi">:service</span> 0)))
+      (plist-put config
+                 'port
+                 (<span class="k">unwind-protect</span>
+                     (process-contact port-probe <span class="bi">:service</span>)
+                   (delete-process port-probe)))))
+  (<span class="k">when-let*</span> ((port (plist-get config 'port))
+              (port-string (number-to-string port))
+              (replace-fn (<span class="k">lambda</span> (arg)
+                            (<span class="k">cond</span>
+                             ((eq arg <span class="bi">:autoport</span>) port-string)
+                             ((stringp arg) (string-replace <span class="s">":autoport"</span> port-string arg))
+                             (t arg)))))
+    (<span class="k">when-let*</span> ((command-args (plist-get config 'command-args)))
+      (plist-put config 'command-args (seq-map replace-fn command-args)))
+    (<span class="k">when-let*</span> ((command-env (plist-get config 'command-env)))
+      (plist-put config 'command-env
+                 (<span class="k">cl-loop</span> for (key value) on command-env by #'cddr
+                          collect key
+                          collect (apply replace-fn (list value))))))
+  config)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

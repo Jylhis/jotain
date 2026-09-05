@@ -1,0 +1,36 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit--cherry-move-read-args – Emacs Documentation Online</title>
+<meta name="description" content="magit--cherry-move-read-args is a natively compiled function defined
+in magit-sequence.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit--cherry-move-read-args</code></h1><p><span class="m"><code>magit--cherry-move-read-args</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">magit-sequence.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit--cherry-move-read-args <span class="arg">VERB</span> <span class="arg">AWAY</span> <span class="arg">FN</span> <span class="ty">&amp;optional</span> <span class="arg">ALLOW-DETACHED</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-sequence.el</span>
+(<span class="k">defun</span> <span class="f">magit--cherry-move-read-args</span> (verb away fn <span class="ty">&amp;optional</span> allow-detached)
+  (<span class="k">declare</span> (indent defun))
+  (<span class="k">let</span> ((commits (<span class="k">or</span> (nreverse (magit-region-values 'commit))
+                     (list (funcall (<span class="k">if</span> away
+                                        #'magit-read-branch-or-commit
+                                      #'magit-read-other-branch-or-commit)
+                                    (format <span class="s">"%s cherry"</span> (capitalize verb))))))
+        (current (<span class="k">or</span> (magit-get-current-branch)
+                     (<span class="k">and</span> allow-detached (magit-rev-parse <span class="s">"HEAD"</span>)))))
+    (<span class="k">unless</span> current
+      (<span class="w">user-error</span> <span class="s">"Cannot %s cherries while HEAD is detached"</span> verb))
+    (<span class="k">let</span> ((reachable (magit-rev-ancestor-p (car commits) current))
+          (msg <span class="s">"Cannot %s cherries that %s reachable from HEAD"</span>))
+      (<span class="k">pcase</span> (list away reachable)
+        ('(nil t) (<span class="w">user-error</span> msg verb <span class="s">"are"</span>))
+        ('(t nil) (<span class="w">user-error</span> msg verb <span class="s">"are not"</span>))))
+    `(,commits
+      ,@(funcall fn commits)
+      ,(transient-args 'magit-cherry-pick))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

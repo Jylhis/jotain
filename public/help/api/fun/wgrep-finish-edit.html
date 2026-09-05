@@ -1,0 +1,76 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: wgrep-finish-edit – Emacs Documentation Online</title>
+<meta name="description" content="wgrep-finish-edit is an interactive and natively compiled function
+defined in wgrep.el.
+Apply changes to file buffers.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>wgrep-finish-edit</code></h1><p><span class="m"><code>wgrep-finish-edit</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">wgrep.el</span>.
+<h2>Signature</h2>
+<pre><code>(wgrep-finish-edit)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply changes to file buffers.
+<p>These changes are not immediately saved to disk unless
+<a href="../var/wgrep-auto-save-buffer.html"><code>wgrep-auto-save-buffer</code></a> is non-nil.
+<h2>Key Bindings</h2>
+<p><span class="v">wgrep-mode-map</span> <span class="key">C-c C-c</span>
+<span class="v">wgrep-mode-map</span> <span class="key">C-c C-e</span>
+<span class="v">wgrep-mode-map</span> <span class="key">C-x C-s</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/jh0vggyzz4qppa1npcrzxy9a9bgj60hg-emacs-packages-deps/share/emacs/site-lisp/elpa/wgrep-20230203.1214/wgrep.el</span>
+<span class="cd">;;;</span><span class="c">
+</span><span class="cd">;;; </span><span class="c">Commands
+</span><span class="cd">;;;</span><span class="c">
+</span>
+(<span class="k">defun</span> <span class="f">wgrep-finish-edit</span> ()
+  <span class="doc">"Apply changes to file buffers.
+These changes are not immediately saved to disk unless
+`</span><span class="m doc">wgrep-auto-save-buffer</span><span class="doc">' is non-nil."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let*</span> ((tran (wgrep-compute-transaction))
+         (all-length (length tran))
+         (wgrep-auto-apply-disk nil)
+         (done 0))
+    (<span class="k">cond</span>
+     (wgrep-auto-save-buffer
+      (<span class="k">setq</span> wgrep-auto-apply-disk t))
+     ((&gt; all-length wgrep-too-many-file-length)
+      (<span class="k">when</span> (y-or-n-p (<span class="k">eval-when-compile</span>
+                        (concat
+                         <span class="s">"Edited files are too many."</span>
+                         <span class="s">" Apply the changes to disk with non-confirmation?"</span>)))
+        (<span class="k">setq</span> wgrep-auto-apply-disk t))))
+    (<span class="k">while</span> tran
+      (<span class="k">let*</span> ((editor (car tran))
+             (committed (wgrep-commit-file editor))
+             (count (nth 0 committed))
+             (result (nth 1 committed)))
+        (<span class="k">when</span> result
+          (goto-char (overlay-start result))
+          (forward-line 0))
+        (<span class="k">setq</span> done (+ done count))
+        (<span class="k">setq</span> tran (cdr tran))
+        (<span class="k">let</span> (message-log-max)
+          (message <span class="s">"Writing %d files, %d files are left..."</span>
+                   all-length (length tran)))
+        (redisplay t)))
+    (wgrep-cleanup-temp-buffer)
+    (wgrep-to-original-mode)
+    (<span class="k">let</span> ((msg (format <span class="s">"(%d changed)"</span> done))
+          (ovs (wgrep-edit-field-overlays)))
+      (<span class="k">cond</span>
+       ((null ovs)
+        (<span class="k">if</span> (= done 0)
+            (message <span class="s">"(No changes to be performed)"</span>)
+          (message <span class="s">"Successfully finished. %s"</span> msg)))
+       ((= (length ovs) 1)
+        (message <span class="s">"There is an unapplied change. %s"</span> msg))
+       (t
+        (message <span class="s">"There are %d unapplied changes. %s"</span>
+                 (length ovs) msg))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

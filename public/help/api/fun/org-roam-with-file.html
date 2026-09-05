@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-with-file – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-with-file is a macro defined in org-roam-utils.el.
+Execute BODY within FILE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-with-file</code></h1><p><span class="m"><code>org-roam-with-file</code></span> is a macro defined in <span class="bt">org-roam-utils.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">org-roam-with-file</span> <a href="#:~:text=within-,FILE"><span class="arg">FILE</span></a> <a href="#:~:text=if-,KEEP-BUF-P"><span class="arg">KEEP-BUF-P</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=Execute-,BODY"><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Execute <span class="arg">BODY</span> within <span class="arg">FILE</span>.
+<p>If <span class="arg">FILE</span> is nil, execute <span class="arg">BODY</span> in the current buffer.
+Kills the buffer if <span class="arg">KEEP-BUF-P</span> is nil, and <span class="arg">FILE</span> is not yet visited.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-utils.el</span>
+(<span class="k">defmacro</span> <span class="f">org-roam-with-file</span> (file keep-buf-p <span class="ty">&amp;rest</span> body)
+  <span class="doc">"Execute BODY within FILE.
+If FILE is nil, execute BODY in the current buffer.
+Kills the buffer if KEEP-BUF-P is nil, and FILE is not yet visited."</span>
+  (<span class="k">declare</span> (indent 2) (debug t))
+  `(<span class="k">let*</span> (new-buf
+          (auto-mode-alist nil)
+          (find-file-hook nil)
+          (buf (<span class="k">or</span> (<span class="k">and</span> (not ,file)
+                        (current-buffer)) <span class="cd">;</span><span class="c">If FILE is nil, use current buffer
+</span>                   (find-buffer-visiting ,file) <span class="cd">; </span><span class="c">If FILE is already visited, find buffer
+</span>                   (<span class="k">progn</span>
+                     (<span class="k">setq</span> new-buf t)
+                     (find-file-noselect ,file)))) <span class="cd">; </span><span class="c">Else, visit FILE and return buffer
+</span>          res)
+     (<span class="k">with-current-buffer</span> buf
+       (<span class="k">unless</span> (derived-mode-p 'org-mode)
+         (<span class="k">delay-mode-hooks</span>
+           (<span class="k">let</span> ((org-inhibit-startup t)
+                 (org-agenda-files nil))
+             (org-mode)
+             (hack-local-variables))))
+       (<span class="k">setq</span> res (<span class="k">progn</span> ,@body))
+       (<span class="k">unless</span> (<span class="k">and</span> new-buf (not ,keep-buf-p))
+         (save-buffer)))
+     (<span class="k">if</span> (<span class="k">and</span> new-buf (not ,keep-buf-p))
+         (<span class="k">when</span> (find-buffer-visiting ,file)
+           (kill-buffer (find-buffer-visiting ,file))))
+     res))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

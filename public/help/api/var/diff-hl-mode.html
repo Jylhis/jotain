@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: diff-hl-mode – Emacs Documentation Online</title>
+<meta name="description" content="diff-hl-mode is a buffer-local variable defined in diff-hl.el.
+Non-nil if Diff-Hl mode is enabled.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>diff-hl-mode</code></h1><p><span class="m"><code>diff-hl-mode</code></span> is a <a href="/info/elisp/buffer-local-variables.html">buffer-local</a> variable defined in <span class="bt">diff-hl.el</span>.
+<h2>Documentation</h2>
+<p>Non-nil if Diff-Hl mode is enabled.
+<p>Use the command <a class="v" href="../var/diff-hl-mode.html"><code>diff-hl-mode</code>(var)</a>/<a class="f" href="../fun/diff-hl-mode.html"><code>diff-hl-mode</code>(fun)</a> to change this variable.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/742jfhd6j9y7y1gqxy624dchx31gwmax-emacs-packages-deps/share/emacs/site-lisp/elpa/diff-hl-20260830.1400/diff-hl.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">define-minor-mode</span> <span class="f">diff-hl-mode</span>
+  <span class="doc">"Toggle VC diff highlighting."</span>
+  <span class="bi">:lighter</span> diff-hl-lighter
+  <span class="bi">:keymap</span> `(([remap vc-diff] . diff-hl-diff-goto-hunk)
+            (,diff-hl-command-prefix . diff-hl-command-map))
+  (<span class="k">if</span> diff-hl-mode
+      (<span class="k">progn</span>
+        (diff-hl-maybe-define-bitmaps)
+        (add-hook 'after-save-hook 'diff-hl-update nil t)
+        (add-hook 'after-change-functions 'diff-hl-edit nil t)
+        (add-hook (<span class="k">if</span> vc-mode
+                      <span class="cd">;; </span><span class="c">Defer until the end of this hook, so that its
+</span>                      <span class="cd">;; </span><span class="c">elements can modify the update behavior.
+</span>                      'diff-hl-mode-on-hook
+                    <span class="cd">;; </span><span class="c">If we're only opening the file now,
+</span>                    <span class="cd">;; </span><span class="c">`</span><span class="m c">vc-find-file-hook</span><span class="c">' likely hasn't run yet, so
+</span>                    <span class="cd">;; </span><span class="c">let's wait until the state information is
+</span>                    <span class="cd">;; </span><span class="c">saved, in order not to fetch it twice.
+</span>                    'find-file-hook)
+                  'diff-hl-update-once t t)
+        <span class="cd">;; </span><span class="c">Never removed because it acts globally.
+</span>        (add-hook 'vc-checkin-hook 'diff-hl-after-checkin)
+        (add-hook 'after-revert-hook 'diff-hl-update-once nil t)
+        <span class="cd">;; </span><span class="c">Magit does call `</span><span class="m c">auto-revert-handler</span><span class="c">', but it usually
+</span>        <span class="cd">;; </span><span class="c">doesn't do much, because `</span><span class="m c">buffer-stale--default-function</span><span class="c">'
+</span>        <span class="cd">;; </span><span class="c">doesn't care about changed VC state.
+</span>        <span class="cd">;; </span><span class="c">https://github.com/magit/magit/issues/603
+</span>        (add-hook 'magit-revert-buffer-hook 'diff-hl-update nil t)
+        <span class="cd">;; </span><span class="c">Magit versions 2.0-2.3 don't do the above and call this
+</span>        <span class="cd">;; </span><span class="c">instead, but only when they don't call `</span><span class="m c">revert-buffer</span><span class="c">':
+</span>        (add-hook 'magit-not-reverted-hook 'diff-hl-update nil t)
+        (add-hook 'text-scale-mode-hook 'diff-hl-maybe-redefine-bitmaps nil t)
+        (<span class="k">when-let*</span> ((rev (cdr
+                          (cl-find-if
+                           (<span class="k">lambda</span> (pair) (string-prefix-p (car pair) default-directory))
+                           diff-hl-reference-revision-projects-cache))))
+          (<span class="k">setq-local</span> diff-hl-reference-revision rev)))
+    (remove-hook 'after-save-hook 'diff-hl-update t)
+    (remove-hook 'after-change-functions 'diff-hl-edit t)
+    (remove-hook 'find-file-hook 'diff-hl-update-once t)
+    (remove-hook 'after-revert-hook 'diff-hl-update-once t)
+    (remove-hook 'magit-revert-buffer-hook 'diff-hl-update t)
+    (remove-hook 'magit-not-reverted-hook 'diff-hl-update t)
+    (remove-hook 'text-scale-mode-hook 'diff-hl-maybe-redefine-bitmaps t)
+    (diff-hl-remove-overlays)
+    (diff-hl--autohide-margin)
+    (kill-local-variable 'diff-hl-reference-revision)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

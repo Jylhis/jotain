@@ -1,0 +1,84 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: async-read-from-client – Emacs Documentation Online</title>
+<meta name="description" content="async-read-from-client is a natively compiled function defined in
+async.el.
+Process text from client process.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>async-read-from-client</code></h1><p><span class="m"><code>async-read-from-client</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">async.el</span>.
+<h2>Signature</h2>
+<pre><code>(async-read-from-client <a href="#:~:text="><span class="arg">PROC</span></a> <a href="#:~:text="><span class="arg">STRING</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=Argument-,PROMPT-FOR-PWD"><span class="arg">PROMPT-FOR-PWD</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Process text from client process.
+<p>The string chunks usually arrive in maximum of 4096 bytes, so a
+long client message might be split into multiple calls of this
+function.
+<p>We use a marker <a href="../var/async-read-marker.html"><code>async-read-marker</code></a> to track the position of the
+lasts complete line.  Every time we get new input, we try to look
+for newline, and if found, process the entire line and bump the
+marker position to the end of this next line.
+<p>Argument <span class="arg">PROMPT-FOR-PWD</span> allow binding lexically the value of
+<a href="../var/async-prompt-for-password.html"><code>async-prompt-for-password</code></a>, if unspecified its global value
+is used.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vpxd64bbf27n3ziyqnh29vmak5xnpk2l-emacs-packages-deps/share/emacs/site-lisp/elpa/async-20260729.1431/async.el</span>
+(<span class="k">defun</span> <span class="f">async-read-from-client</span> (proc string <span class="ty">&amp;optional</span> prompt-for-pwd)
+  <span class="doc">"Process text from client process.
+
+The string chunks usually arrive in maximum of 4096 bytes, so a
+long client message might be split into multiple calls of this
+function.
+
+We use a marker `</span><span class="m doc">async-read-marker</span><span class="doc">' to track the position of the
+lasts complete line.  Every time we get new input, we try to look
+for newline, and if found, process the entire line and bump the
+marker position to the end of this next line.
+
+Argument PROMPT-FOR-PWD allow binding lexically the value of
+`</span><span class="m doc">async-prompt-for-password</span><span class="doc">', if unspecified its global value
+is used."</span>
+  (<span class="k">with-current-buffer</span> (process-buffer proc)
+    (<span class="k">when</span> (<span class="k">and</span> prompt-for-pwd
+               (boundp 'tramp-password-prompt-regexp)
+               tramp-password-prompt-regexp
+               (string-match tramp-password-prompt-regexp string))
+      (process-send-string
+       proc (concat (read-passwd (match-string 0 string)) <span class="s">"\n"</span>)))
+    (goto-char (point-max))
+    (<span class="k">save-excursion</span>
+      (insert string))
+
+    (<span class="k">while</span> (search-forward <span class="s">"\n"</span> nil t)
+      (<span class="k">save-excursion</span>
+        (<span class="k">save-restriction</span>
+          (widen)
+          (narrow-to-region async-read-marker (point))
+          (goto-char (point-min))
+          (<span class="k">let</span> (msg)
+            (<span class="k">condition-case</span> nil
+                <span class="cd">;; </span><span class="c">It is safe to throw errors in the read because we
+</span>                <span class="cd">;; </span><span class="c">send messages always on their own line, and they
+</span>                <span class="cd">;; </span><span class="c">are always a base64 encoded string, so a message
+</span>                <span class="cd">;; </span><span class="c">will always read.  We will also ignore the rest
+</span>                <span class="cd">;; </span><span class="c">of this line since there won't be anything
+</span>                <span class="cd">;; </span><span class="c">interesting.
+</span>                (<span class="k">while</span> (<span class="k">setq</span> msg (read (current-buffer)))
+                  (<span class="k">let</span> ((msg-decoded (<span class="k">ignore-errors</span> (base64-decode-string msg))))
+                    (<span class="k">when</span> msg-decoded
+                      (<span class="k">setq</span> msg-decoded (car (read-from-string msg-decoded)))
+                      (<span class="k">when</span> (<span class="k">and</span> (listp msg-decoded)
+                                 (async-message-p msg-decoded)
+                                 async-callback)
+                        (funcall async-callback msg-decoded)))))
+              <span class="cd">;; </span><span class="c">This is OK, we reached the end of the chunk subprocess sent
+</span>              <span class="cd">;; </span><span class="c">at this time.
+</span>              (invalid-read-syntax t)
+              (end-of-file t)))
+          (goto-char (point-max))
+          (move-marker async-read-marker (point)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

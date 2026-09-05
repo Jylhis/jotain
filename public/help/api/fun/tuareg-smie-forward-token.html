@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg-smie-forward-token – Emacs Documentation Online</title>
+<meta name="description" content="tuareg-smie-forward-token is a natively compiled function defined in
+tuareg.el.
+Move point to the end of the next token and return its SMIE name.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg-smie-forward-token</code></h1><p><span class="m"><code>tuareg-smie-forward-token</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg-smie-forward-token)
+</code></pre>
+<h2>Documentation</h2>
+<p>Move point to the end of the next token and return its SMIE name.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg-smie-forward-token</span> ()
+  <span class="doc">"Move point to the end of the next token and return its SMIE name."</span>
+  (<span class="k">let</span> ((tok (tuareg-smie--forward-token)))
+    (<span class="k">cond</span>
+     ((zerop (length tok))
+      (<span class="k">if</span> (not (looking-at <span class="s">"{&lt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\\[|"</span>))
+          tok
+        (goto-char (match-end 0))
+        (match-string 0)))
+     ((<span class="k">and</span> (equal tok <span class="s">"|"</span>) (looking-at-p <span class="s">"\\]"</span>)) (forward-char 1) <span class="s">"|]"</span>)
+     ((<span class="k">and</span> (equal tok <span class="s">"&gt;"</span>) (looking-at-p <span class="s">"}"</span>)) (forward-char 1) <span class="s">"&gt;}"</span>)
+     ((<span class="k">and</span> (equal tok <span class="s">"."</span>) (memq (char-after) '(?&lt; ?~)))
+      (forward-char 1) (string ?. (char-before)))
+     ((<span class="k">or</span> (member tok '(<span class="s">"let"</span> <span class="s">"="</span> <span class="s">"-&gt;"</span>
+                        <span class="s">"module"</span> <span class="s">"class"</span> <span class="s">"open"</span> <span class="s">"type"</span> <span class="s">"with"</span> <span class="s">"and"</span>
+                        <span class="s">"exception"</span>))
+          <span class="cd">;; </span><span class="c">https://v2.ocaml.org/manual/expr.html lists
+</span>          <span class="cd">;; </span><span class="c">the tokens whose precedence is based on their prefix.
+</span>          (memq (aref tok 0) '(?* ?/ ?% ?+ ?- ?@ ?^ ?= ?&lt; ?&gt; ?| ?&amp; ?$)))
+      <span class="cd">;; </span><span class="c">When indenting, the movement is mainly backward, so it's OK to make
+</span>      <span class="cd">;; </span><span class="c">the forward tokenizer a bit slower.
+</span>      (<span class="k">save-excursion</span> (tuareg-smie-backward-token)))
+     ((<span class="k">and</span> (member tok '(<span class="s">"~"</span> <span class="s">"?"</span>))
+           (looking-at <span class="s">"[[:alpha:]_][[:alnum:]'_]*:"</span>))
+      (goto-char (match-end 0))
+      <span class="s">"label:"</span>)
+     ((<span class="k">and</span> (looking-at-p <span class="s">":</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[</span><span class="neg s">^</span><span class="s">:]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\\'</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+           (string-match-p <span class="s">"\\`[[:alpha:]_]"</span> tok)
+           (<span class="k">save-excursion</span>
+             (tuareg-smie--backward-token) <span class="cd">;</span><span class="c">Go back.
+</span>             (member (tuareg-smie--backward-token)
+                     tuareg-smie--type-label-leader)))
+      (forward-char 1)
+      <span class="s">"label:"</span>)
+     ((string-match-p <span class="s">"\\`[[:alpha:]_].*\\.\\'"</span>  tok)
+      (forward-char -1) (substring tok 0 -1))
+     (t tok))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

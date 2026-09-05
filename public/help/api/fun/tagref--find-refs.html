@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tagref--find-refs – Emacs Documentation Online</title>
+<meta name="description" content="tagref--find-refs is a natively compiled function defined in
+tagref.el.
+Find all references to TAG-NAME in the project.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tagref--find-refs</code></h1><p><span class="m"><code>tagref--find-refs</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">tagref.el</span>.
+<h2>Signature</h2>
+<pre><code>(tagref--find-refs <a href="#:~:text=to-,TAG-NAME"><span class="arg">TAG-NAME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find all references to <span class="arg">TAG-NAME</span> in the project.
+<p>Returns a list of (FILE . LINE-NUMBER) pairs.
+Uses ripgrep if available, then git grep in git repos, then grep.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/569pb56gyz7bfhc7d47q808dqp08qfsi-emacs-packages-deps/share/emacs/site-lisp/tagref.el</span>
+(<span class="k">defun</span> <span class="f">tagref--find-refs</span> (tag-name)
+  <span class="doc">"Find all references to TAG-NAME in the project.
+Returns a list of (FILE . LINE-NUMBER) pairs.
+Uses ripgrep if available, then git grep in git repos, then grep."</span>
+  (<span class="k">when-let</span> ((root (tagref--project-root)))
+    (<span class="k">let</span> ((default-directory root)
+          (literal-pattern (format <span class="s">"[ref:%s]"</span> tag-name))
+          (use-rg (tagref--ripgrep-available-p))
+          (use-git (tagref--in-git-repo-p))
+          results)
+      (<span class="k">with-temp-buffer</span>
+        (<span class="k">let</span> ((exit-code
+               (<span class="k">cond</span>
+                <span class="cd">;; </span><span class="c">Prefer ripgrep (fastest, respects .gitignore by default)
+</span>                (use-rg
+                 (call-process <span class="s">"rg"</span> nil t nil
+                               <span class="s">"--line-number"</span> <span class="s">"--fixed-strings"</span>
+                               <span class="s">"--no-heading"</span> <span class="s">"--with-filename"</span>
+                               literal-pattern))
+                <span class="cd">;; </span><span class="c">Git grep in git repos (fast, respects .gitignore)
+</span>                (use-git
+                 (call-process <span class="s">"git"</span> nil t nil
+                               <span class="s">"grep"</span> <span class="s">"-n"</span> <span class="s">"--fixed-strings"</span>
+                               literal-pattern))
+                <span class="cd">;; </span><span class="c">Fall back to grep
+</span>                (t
+                 (call-process <span class="s">"grep"</span> nil t nil
+                               <span class="s">"-rn"</span> <span class="s">"--include=*"</span>
+                               (format <span class="s">"\\[ref:%s\\]"</span> tag-name) <span class="s">"."</span>)))))
+          (<span class="k">when</span> (zerop exit-code)
+            (goto-char (point-min))
+            <span class="cd">;; </span><span class="c">rg and git grep output: FILE:LINE:...
+</span>            <span class="cd">;; </span><span class="c">grep output: ./FILE:LINE:...
+</span>            (<span class="k">let</span> ((output-regexp (<span class="k">if</span> (<span class="k">or</span> use-rg use-git)
+                                     <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s">:]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">:</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">:"</span>
+                                   <span class="s">"^\\./</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s">:]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">:</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">:"</span>)))
+              (<span class="k">while</span> (re-search-forward output-regexp nil t)
+                (<span class="k">push</span> (cons (match-string 1)
+                            (string-to-number (match-string 2)))
+                      results))))))
+      (nreverse results))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

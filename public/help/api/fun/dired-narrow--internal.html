@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dired-narrow--internal – Emacs Documentation Online</title>
+<meta name="description" content="dired-narrow--internal is a natively compiled function defined in
+dired-narrow.el.
+Narrow a dired buffer to the files matching a filter.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dired-narrow--internal</code></h1><p><span class="m"><code>dired-narrow--internal</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dired-narrow.el</span>.
+<h2>Signature</h2>
+<pre><code>(dired-narrow--internal <a href="#:~:text=function-,FILTER-FUNCTION"><span class="arg">FILTER-FUNCTION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Narrow a dired buffer to the files matching a filter.
+<p>The function <span class="arg">FILTER-FUNCTION</span> is called on each line: if it
+returns non-nil, the line is kept, otherwise it is removed.  The
+function takes one argument, which is the current filter string
+read from minibuffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/0ym55041yr8z6xpcw3l8rbck76jkmyrg-emacs-packages-deps/share/emacs/site-lisp/elpa/dired-narrow-20250511.2303/dired-narrow.el</span>
+(<span class="k">defun</span> <span class="f">dired-narrow--internal</span> (filter-function)
+  <span class="doc">"Narrow a dired buffer to the files matching a filter.
+
+The function FILTER-FUNCTION is called on each line: if it
+returns non-nil, the line is kept, otherwise it is removed.  The
+function takes one argument, which is the current filter string
+read from minibuffer."</span>
+  (<span class="k">let</span> ((dired-narrow-buffer (current-buffer))
+        (dired-narrow-filter-function filter-function)
+        (disable-narrow nil))
+    (<span class="k">unwind-protect</span>
+        (<span class="k">progn</span>
+          (dired-narrow-mode 1)
+          (add-to-invisibility-spec <span class="bi">:dired-narrow</span>)
+          (<span class="k">setq</span> disable-narrow (read-from-minibuffer
+                                (<span class="k">pcase</span> dired-narrow-filter-function
+                                  ('dired-narrow--regexp-filter
+                                   <span class="s">"Regex Filter:\s"</span>)
+                                  ('dired-narrow--fuzzy-filter
+                                   <span class="s">"Fuzzy Filter:\s"</span>)
+                                  (_ <span class="s">"Filter:\s"</span>))
+                                nil dired-narrow-map))
+          (<span class="k">let</span> ((inhibit-read-only t))
+            (dired-narrow--remove-text-with-property <span class="bi">:dired-narrow</span>))
+          <span class="cd">;; </span><span class="c">If the file no longer exists, we can't do anything, so
+</span>          <span class="cd">;; </span><span class="c">set to nil
+</span>          (<span class="k">unless</span> (dired-utils-goto-line dired-narrow--current-file)
+            (<span class="k">setq</span> dired-narrow--current-file nil)))
+      (<span class="k">with-current-buffer</span> dired-narrow-buffer
+        (<span class="k">unless</span> disable-narrow (dired-narrow-mode -1))
+        (remove-from-invisibility-spec <span class="bi">:dired-narrow</span>)
+        (dired-narrow--restore))
+      (<span class="k">cond</span>
+       ((equal disable-narrow <span class="s">"dired-narrow-enter-directory"</span>)
+        (dired-narrow-find-file)
+        (dired-narrow--internal filter-function))
+       (t
+        (<span class="k">when</span> (<span class="k">and</span> disable-narrow
+                   dired-narrow--current-file
+                   dired-narrow-exit-action)
+          (funcall dired-narrow-exit-action)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

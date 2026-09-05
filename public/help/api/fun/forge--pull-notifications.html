@@ -1,0 +1,94 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--pull-notifications – Emacs Documentation Online</title>
+<meta name="description" content="forge--pull-notifications is a byte-compiled function defined in
+forge-github.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--pull-notifications</code></h1><p><span class="m"><code>forge--pull-notifications</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in
+<span class="bt">forge-github.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--pull-notifications <span class="ty">&amp;rest</span> <span class="arg">ARGS</span>)
+</code></pre>
+<h2>Implementations</h2>
+<p>(forge--pull-notifications (CLASS (subclass forge-github-repository)) GITHOST &amp;optional CALLBACK) in `<span class="bt">forge-github.el</span>'.
+<p>Undocumented
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-github.el</span>
+<span class="cd">;;;; </span><span class="c">Notifications
+</span>
+(<span class="k">cl-defmethod</span> <span class="f">forge--pull-notifications</span>
+  ((_class (subclass forge-github-repository)) githost <span class="ty">&amp;optional</span> callback)
+  <span class="cd">;; </span><span class="c">The GraphQL API doesn't support notifications and support in the
+</span>  <span class="cd">;; </span><span class="c">REST API is abysmal -- forcing us to perform a major rain dance.
+</span>  (<span class="k">let</span> ((buffer (current-buffer))
+        (spec (forge--get-forge-host githost t)))
+    (forge--msg nil t nil <span class="s">"Pulling notifications"</span>)
+    (<span class="k">pcase-let*</span>
+        ((`(,_ ,apihost ,forge ,_) spec)
+         (since (forge--ghub-notifications-since forge))
+         (notifs
+          (seq-keep (<span class="k">lambda</span> (data)
+                      <span class="cd">;; </span><span class="c">Github returns notifications for repositories the
+</span>                      <span class="cd">;; </span><span class="c">user no longer has access to.  Trying to retrieve
+</span>                      <span class="cd">;; </span><span class="c">information for such repositories leads to errors,
+</span>                      <span class="cd">;; </span><span class="c">which we suppress.  See #164.
+</span>                      (<span class="k">with-demoted-errors</span> <span class="s">"forge--pull-notifications: %S"</span>
+                        (forge--ghub-massage-notification data githost)))
+                    (<span class="k">forge-rest</span> apihost <span class="s">"GET"</span> <span class="s">"/notifications"</span>
+                      ((all t)
+                       (<span class="k">and</span> since (since since)))
+                      <span class="bi">:unpaginate</span> t)))
+         <span class="cd">;; </span><span class="c">Split into multiple requests to reduce risk of timeouts.
+</span>         (groups (seq-partition notifs 50))
+         (pages  (length groups))
+         (page   0)
+         (topics nil))
+      (<span class="k">cl-labels</span>
+          ((cb (<span class="ty">&amp;optional</span> data _headers _status _req)
+             (<span class="k">when</span> data
+               (<span class="k">setq</span> topics (nconc topics (cdr data))))
+             (<span class="k">if</span> groups
+                 (<span class="k">let*</span> ((query (cons 'query (seq-keep #'caddr (<span class="k">pop</span> groups))))
+                        (tries 3)
+                        (errorback nil)
+                        (vacuum (<span class="k">lambda</span> ()
+                                  (forge--query apihost query nil
+                                    <span class="bi">:callback</span> #'cb
+                                    <span class="bi">:errorback</span> errorback))))
+                   <span class="cd">;; </span><span class="c">Github also returns notifications for issues
+</span>                   <span class="cd">;; </span><span class="c">belonging to repositories for which issues
+</span>                   <span class="cd">;; </span><span class="c">have been disabled.  Drop them and try again.
+</span>                   (<span class="k">setq</span> errorback
+                         (<span class="k">lambda</span> (errors _headers _status _req)
+                           (<span class="k">if</span> (zerop tries)
+                               (ghub--signal-error errors)
+                             (<span class="k">decf</span> tries)
+                             (<span class="k">cond-let</span>
+                               ([notfound
+                                 (seq-keep
+                                  (<span class="k">lambda</span> (err)
+                                    (<span class="k">and</span> (equal (cdr (assq 'type err))
+                                                <span class="s">"NOT_FOUND"</span>)
+                                         (cadr (assq 'path err))
+                                         (intern (cadr (assq 'path err)))))
+                                  (cdr errors))]
+                                (<span class="k">setq</span> query (cl-delete-if (##memq % notfound)
+                                                          query <span class="bi">:key</span> #'caar))
+                                (funcall vacuum))
+                               ((ghub--signal-error errors))))))
+                   (<span class="k">incf</span> page)
+                   (forge--msg nil t nil
+                               <span class="s">"Pulling notifications (page %s/%s)"</span> page pages)
+                   (funcall vacuum))
+               (forge--msg nil t t   <span class="s">"Pulling notifications"</span>)
+               (forge--msg nil t nil <span class="s">"Storing notifications"</span>)
+               (forge--ghub-update-notifications notifs topics (not since))
+               (forge--msg nil t t <span class="s">"Storing notifications"</span>)
+               (forge-refresh-buffer buffer)
+               (<span class="k">when</span> callback
+                 (funcall callback)))))
+        (cb)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

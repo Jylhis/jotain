@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-blame--parse-chunk – Emacs Documentation Online</title>
+<meta name="description" content="magit-blame--parse-chunk is a natively compiled function defined in
+magit-blame.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-blame--parse-chunk</code></h1><p><span class="m"><code>magit-blame--parse-chunk</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-blame.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-blame--parse-chunk <span class="arg">TYPE</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-blame.el</span>
+(<span class="k">defun</span> <span class="f">magit-blame--parse-chunk</span> (type)
+  (<span class="k">let</span> (chunk revinfo)
+    (<span class="k">unless</span> (looking-at <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.\\{40,\\}</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+      (<span class="w">error</span> <span class="s">"Blaming failed due to unexpected output: %s"</span>
+             (buffer-substring-no-properties (point) (line-end-position))))
+    (<span class="k">with-slots</span> (orig-rev orig-file prev-rev prev-file)
+        (<span class="k">setq</span> chunk (magit-blame-chunk
+                     <span class="bi">:orig-rev</span>                     (match-str 1)
+                     <span class="bi">:orig-line</span>  (string-to-number (match-str 2))
+                     <span class="bi">:final-line</span> (string-to-number (match-str 3))
+                     <span class="bi">:num-lines</span>  (string-to-number (match-str 4))))
+      (forward-line)
+      (<span class="k">let</span> (done)
+        (<span class="k">while</span> (not done)
+          (<span class="k">cond</span> ((looking-at <span class="s">"^filename </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+                 (<span class="k">setq</span> done t)
+                 (<span class="k">setf</span> orig-file (magit-decode-git-path (match-str 1))))
+                ((looking-at <span class="s">"^previous </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.\\{40,\\}</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+                 (<span class="k">setf</span> prev-rev  (match-str 1))
+                 (<span class="k">setf</span> prev-file (magit-decode-git-path (match-str 2))))
+                ((looking-at <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s"> ]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+                 (<span class="k">push</span> (cons (match-str 1)
+                             (match-str 2))
+                       revinfo)))
+          (forward-line)))
+      (<span class="k">when</span> (<span class="k">and</span> (eq type 'removal) prev-rev)
+        (<span class="k">cl-rotatef</span> orig-rev  prev-rev)
+        (<span class="k">cl-rotatef</span> orig-file prev-file)
+        (<span class="k">setq</span> revinfo nil)))
+    (list chunk revinfo)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

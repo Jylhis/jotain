@@ -1,0 +1,91 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--mode-line-module – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--mode-line-module is a natively compiled function defined in
+eca-chat.el.
+Return mode-line string segment for module KEYWORD in SESSION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--mode-line-module</code></h1><p><span class="m"><code>eca-chat--mode-line-module</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--mode-line-module <a href="#:~:text=in-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=module-,KEYWORD"><span class="arg">KEYWORD</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return mode-line string segment for module <span class="arg">KEYWORD</span> in <span class="arg">SESSION</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--mode-line-module</span> (session keyword)
+  <span class="doc">"Return mode-line string segment for module KEYWORD in SESSION."</span>
+  (<span class="k">pcase</span> keyword
+    (<span class="bi">:workspace-folders</span>
+     (<span class="k">let</span> ((home (expand-file-name <span class="s">"~"</span>)))
+       (string-join
+        (mapcar (<span class="k">lambda</span> (f)
+                  (<span class="k">if</span> (string-prefix-p home f)
+                      (concat <span class="s">"~"</span> (substring f (length home)))
+                    f))
+                (eca--session-workspace-folders session))
+        <span class="s">", "</span>)))
+    (<span class="bi">:add-workspace-button</span>
+     (propertize <span class="s">" [+]"</span>
+                 'face 'shadow
+                 'mouse-face 'highlight
+                 'help-echo <span class="s">"Add workspace folder"</span>
+                 'local-map eca-chat--add-workspace-map))
+    (<span class="bi">:remove-workspace-button</span>
+     (<span class="k">when</span> (&gt; (length (eca--session-workspace-folders session)) 1)
+       (propertize <span class="s">" [-]"</span>
+                   'face 'shadow
+                   'mouse-face 'highlight
+                   'help-echo <span class="s">"Remove workspace folder"</span>
+                   'local-map eca-chat--remove-workspace-map)))
+    (<span class="bi">:bg-jobs</span>
+     (<span class="k">when-let*</span> ((jobs (eca--session-jobs session))
+                 (running (seq-count (<span class="k">lambda</span> (j) (string= <span class="s">"running"</span> (plist-get j <span class="bi">:status</span>))) jobs)))
+       (<span class="k">when</span> (&gt; running 0)
+         (propertize (format <span class="s">" [%d %s]"</span> running (<span class="k">if</span> (= running 1) <span class="s">"job"</span> <span class="s">"jobs"</span>))
+                     'face 'shadow))))
+    (<span class="bi">:title</span>
+     (eca-chat-title))
+    (<span class="bi">:elapsed-time</span>
+     (<span class="k">when-let*</span> ((str (eca-chat--turn-duration-str)))
+       (<span class="k">let</span> ((icon (<span class="k">if</span> (eca-chat--has-pending-approvals-p) <span class="s">"🚧"</span> <span class="s">"⏱"</span>)))
+         (propertize (concat icon <span class="s">" "</span> str)
+                     'font-lock-face 'eca-chat-elapsed-time-face))))
+    (<span class="bi">:context-bar</span>
+     (<span class="k">when-let*</span> ((bar (eca-chat--context-bar)))
+       (concat bar <span class="s">" "</span>)))
+    (<span class="bi">:usage</span>
+     (eca-chat--usage-str))
+    (<span class="bi">:server-version</span>
+     (<span class="k">when</span> eca-chat--server-version
+       (concat <span class="s">"ECA "</span> eca-chat--server-version)))
+    (<span class="bi">:init-progress</span>
+     (eca-chat--init-progress-str session))
+    (<span class="bi">:trust</span>
+     (<span class="k">let*</span> ((trust? (eca-chat--trust))
+            (graphic? (display-graphic-p))
+            (face (<span class="k">if</span> trust?
+                      'eca-chat-trust-on-face
+                    'eca-chat-trust-off-face))
+            (help (<span class="k">if</span> trust?
+                      <span class="s">"Trust ON - auto-accepting tool calls"</span>
+                    <span class="s">"Trust OFF - not auto-accepting tool calls"</span>))
+            (symbol (<span class="k">if</span> trust?
+                        (<span class="k">if</span> graphic?
+                            eca-chat-trust-on-symbol
+                          eca-chat-trust-on-symbol-tty)
+                      (<span class="k">if</span> graphic?
+                          eca-chat-trust-off-symbol
+                        eca-chat-trust-off-symbol-tty))))
+       (propertize symbol
+                   'face face
+                   'mouse-face 'highlight
+                   'help-echo help
+                   'local-map eca-chat--trust-toggle-map)))
+    ((pred stringp) keyword)
+    (_ <span class="s">""</span>)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

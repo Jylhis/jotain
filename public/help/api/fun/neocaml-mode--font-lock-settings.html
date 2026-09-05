@@ -1,0 +1,202 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: neocaml-mode--font-lock-settings – Emacs Documentation Online</title>
+<meta name="description" content="neocaml-mode--font-lock-settings is a natively compiled function
+defined in neocaml.el.
+Return tree-sitter font-lock settings for LANGUAGE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>neocaml-mode--font-lock-settings</code></h1><p><span class="m"><code>neocaml-mode--font-lock-settings</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">neocaml.el</span>.
+<h2>Signature</h2>
+<pre><code>(neocaml-mode--font-lock-settings <a href="#:~:text=for-,LANGUAGE"><span class="arg">LANGUAGE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return tree-sitter font-lock settings for <span class="arg">LANGUAGE</span>.
+<p>The return value is suitable for <a href="../var/treesit-font-lock-settings.html"><code>treesit-font-lock-settings</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/6yvzbjq5ljnchx97n8s5w91crk1nh47b-emacs-packages-deps/share/emacs/site-lisp/elpa/neocaml-20260710.532/neocaml.el</span>
+<span class="cd">;; </span><span class="c">The `</span><span class="m c">ocaml-interface</span><span class="c">' grammar inherits all node types from the base
+</span><span class="cd">;; </span><span class="c">`</span><span class="m c">ocaml</span><span class="c">' grammar (overriding only `</span><span class="m c">compilation_unit</span><span class="c">'), so queries
+</span><span class="cd">;; </span><span class="c">referencing .ml-only constructs (e.g. `</span><span class="m c">application_expression</span><span class="c">',
+</span><span class="cd">;; </span><span class="c">`</span><span class="m c">let_binding</span><span class="c">') silently produce no matches in .mli files.  This
+</span><span class="cd">;; </span><span class="c">lets us use a single set of font-lock rules for both languages.
+</span>(<span class="k">defun</span> <span class="f">neocaml-mode--font-lock-settings</span> (language)
+  <span class="doc">"Return tree-sitter font-lock settings for LANGUAGE.
+The return value is suitable for `</span><span class="m doc">treesit-font-lock-settings</span><span class="doc">'."</span>
+  (append
+   (treesit-font-lock-rules
+    <span class="bi">:language</span> language
+    <span class="bi">:feature</span> 'comment
+    '((((comment) @font-lock-doc-face)
+       (<span class="bi">:match</span> <span class="s">"^(\\*\\*[</span><span class="neg s">^</span><span class="s">*]"</span> @font-lock-doc-face))
+      (comment) @font-lock-comment-face
+      <span class="cd">;; </span><span class="c">Preprocessor directives
+</span>      (line_number_directive) @font-lock-comment-face
+      (directive) @font-lock-comment-face)
+
+   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'definition
+   '(<span class="cd">;; </span><span class="c">let-bound functions: with parameters, or with fun/function body
+</span>     (let_binding pattern: (value_name) @font-lock-function-name-face (parameter)+)
+     (let_binding pattern: (value_name) @font-lock-function-name-face body: (fun_expression))
+     (let_binding pattern: (value_name) @font-lock-function-name-face body: (function_expression))
+     <span class="cd">;; </span><span class="c">let-bound variables (must come after function patterns above)
+</span>     (let_binding pattern: (value_name) @font-lock-variable-name-face (<span class="s">":"</span> (_)) <span class="bi">:?</span> (<span class="s">":&gt;"</span> (_)) <span class="bi">:?</span> <span class="bi">:anchor</span> body: (_))
+     (method_definition (method_name) @font-lock-function-name-face)
+     (method_specification (method_name) @font-lock-function-name-face)
+     <span class="cd">;; </span><span class="c">patterns containing bound variables
+</span>     (value_pattern) @font-lock-variable-name-face
+     (constructor_pattern pattern: (value_name) @font-lock-variable-name-face)
+     (tuple_pattern (value_name) @font-lock-variable-name-face)
+     <span class="cd">;; </span><span class="c">punned record fields in patterns
+</span>     (field_pattern (field_path (field_name) @font-lock-variable-name-face) <span class="bi">:anchor</span>)
+     (field_pattern (field_path (field_name) @font-lock-variable-name-face) (type_constructor_path) <span class="bi">:anchor</span>)
+     <span class="cd">;; </span><span class="c">signatures and misc
+</span>     (instance_variable_name) @font-lock-variable-name-face
+     (value_specification (value_name) @font-lock-variable-name-face)
+     (value_specification <span class="s">":"</span> @font-lock-keyword-face)
+     (external (value_name) @font-lock-variable-name-face)
+     <span class="cd">;; </span><span class="c">assignment of bindings in various circumstances
+</span>     (type_binding [<span class="s">"="</span>] @font-lock-keyword-face)
+     (let_binding [<span class="s">"="</span>] @font-lock-keyword-face)
+     (field_expression [<span class="s">"="</span>] @font-lock-keyword-face)
+     (for_expression [<span class="s">"="</span>] @font-lock-keyword-face))
+
+   <span class="cd">;; </span><span class="c">Upgrade function-typed `</span><span class="m c">val</span><span class="c">' specifications (in .mli files) to the
+</span>   <span class="cd">;; </span><span class="c">function face, mirroring how function `</span><span class="m c">let</span><span class="c">' bindings are highlighted
+</span>   <span class="cd">;; </span><span class="c">in implementations.  This overrides the generic `</span><span class="m c">value_specification</span><span class="c">'
+</span>   <span class="cd">;; </span><span class="c">rule above, so it lives in its own `</span><span class="m c">:override</span><span class="c">' block under the same
+</span>   <span class="cd">;; </span><span class="c">`</span><span class="m c">definition</span><span class="c">' feature.
+</span>   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'definition
+   <span class="bi">:override</span> t
+   '((value_specification (value_name) @font-lock-function-name-face (function_type)))
+
+   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'keyword
+   `([,@neocaml-mode--keywords] @font-lock-keyword-face
+     (fun_expression <span class="s">"-&gt;"</span> @font-lock-keyword-face)
+     (match_case <span class="s">"-&gt;"</span> @font-lock-keyword-face)
+     (value_definition [(let_operator) (let_and_operator)] @font-lock-keyword-face)
+     (match_expression (match_operator) @font-lock-keyword-face))
+
+   <span class="cd">;; </span><span class="c">See https://ocaml.org/manual/5.3/attributes.html
+</span>   <span class="cd">;; </span><span class="c">and https://ocaml.org/manual/5.3/extensionnodes.html
+</span>   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'attribute
+   '((attribute) @font-lock-preprocessor-face
+     (item_attribute) @font-lock-preprocessor-face
+     (floating_attribute) @font-lock-preprocessor-face
+     <span class="cd">;; </span><span class="c">PPX extension nodes: [%foo ...], [%%foo ...], {%foo| ... |},
+</span>     <span class="cd">;; </span><span class="c">{%%foo| ... |}
+</span>     (extension) @font-lock-preprocessor-face
+     (item_extension) @font-lock-preprocessor-face
+     (quoted_extension) @font-lock-preprocessor-face
+     (quoted_item_extension) @font-lock-preprocessor-face)
+
+   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'string
+   <span class="bi">:override</span> t
+   '([(string) (quoted_string) (character)] @font-lock-string-face)
+
+   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'escape-sequence
+   <span class="bi">:override</span> t
+   '((escape_sequence) @font-lock-escape-face
+     (conversion_specification) @font-lock-regexp-face)
+
+   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'number
+   <span class="bi">:override</span> t
+   '([(number) (signed_number)] @font-lock-number-face)
+
+   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'builtin
+   `(((value_path <span class="bi">:anchor</span> (value_name) @font-lock-builtin-face)
+      (<span class="bi">:match</span> ,(regexp-opt neocaml-mode--builtin-ids 'symbols) @font-lock-builtin-face))
+     ((constructor_path <span class="bi">:anchor</span> (constructor_name) @font-lock-builtin-face)
+      (<span class="bi">:match</span> ,(regexp-opt neocaml-mode--builtin-ids 'symbols) @font-lock-builtin-face))
+     <span class="cd">;; </span><span class="c">Builtin types (int, string, bool, etc.)
+</span>     ((type_constructor) @font-lock-builtin-face
+      (<span class="bi">:match</span> ,(regexp-opt neocaml-mode--builtin-types 'symbols) @font-lock-builtin-face)))
+
+   <span class="cd">;; </span><span class="c">See https://ocaml.org/manual/5.3/const.html
+</span>   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'constant
+   `(<span class="cd">;; </span><span class="c">some literals TODO: any more?
+</span>     [,@neocaml-mode--constants] @font-lock-constant-face)
+
+   <span class="cd">;; </span><span class="c">Variant constructors and polymorphic variant tags
+</span>   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'type
+   '((constructor_name) @font-lock-constant-face
+     (tag) @font-lock-constant-face
+     [(type_constructor) (type_variable) (hash_type)
+      (class_name) (class_type_name)] <span class="w">@font-lock-type-face</span>
+      (function_type <span class="s">"-&gt;"</span> @font-lock-type-face)
+      (tuple_type <span class="s">"*"</span> @font-lock-type-face)
+      (polymorphic_variant_type [<span class="s">"[&gt;"</span> <span class="s">"[&lt;"</span> <span class="s">"&gt;"</span> <span class="s">"|"</span> <span class="s">"["</span> <span class="s">"]"</span>] @font-lock-type-face)
+      (object_type [<span class="s">"&lt;"</span> <span class="s">"&gt;"</span> <span class="s">";"</span> <span class="s">".."</span>] @font-lock-type-face)
+      (constructor_declaration [<span class="s">"-&gt;"</span> <span class="s">"*"</span>] @font-lock-type-face)
+      (record_declaration [<span class="s">"{"</span> <span class="s">"}"</span> <span class="s">";"</span>] @font-lock-type-face)
+      (parenthesized_type [<span class="s">"("</span> <span class="s">")"</span>] @font-lock-type-face)
+      (polymorphic_type <span class="s">"."</span> @font-lock-type-face)
+      (module_name) @font-lock-type-face
+      (module_type_name) @font-lock-type-face)
+
+   <span class="cd">;; </span><span class="c">Level 4 font-locking features
+</span>
+   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'operator
+   '((method_invocation <span class="s">"#"</span> @font-lock-operator-face)
+     (infix_expression operator: _  @font-lock-operator-face)
+     (prefix_expression operator: _ @font-lock-operator-face)
+     <span class="cd">;; </span><span class="c">Standalone operator tokens not inside infix/prefix expressions
+</span>     [<span class="s">"::"</span> <span class="s">"&lt;-"</span>] @font-lock-operator-face)
+
+   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'bracket
+   '(([<span class="s">"("</span> <span class="s">")"</span> <span class="s">"["</span> <span class="s">"]"</span> <span class="s">"{"</span> <span class="s">"}"</span> <span class="s">"[|"</span> <span class="s">"|]"</span> <span class="s">"[&lt;"</span> <span class="s">"[&gt;"</span>]) @font-lock-bracket-face)
+
+   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'delimiter
+   '(([<span class="s">","</span> <span class="s">"."</span> <span class="s">";"</span> <span class="s">":"</span> <span class="s">";;"</span>]) @font-lock-delimiter-face)
+
+   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'variable
+   '((value_name) @font-lock-variable-use-face)
+
+   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'property
+   '((field_name) @font-lock-property-use-face)
+
+   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'label
+   '(<span class="cd">;; </span><span class="c">Labeled arguments: ~label, ?label
+</span>     (label_name) @font-lock-property-use-face)
+
+   <span class="bi">:language</span> language
+   <span class="bi">:feature</span> 'function
+   <span class="bi">:override</span> t
+   '((application_expression function: (value_path (value_name) @font-lock-function-call-face))
+     (application_expression function: (value_path (module_path (_) @font-lock-type-face) (value_name) @font-lock-function-call-face))
+     <span class="cd">;; </span><span class="c">x |&gt; f — highlight f as function call
+</span>     ((infix_expression
+       operator: (rel_operator) @_op
+       right: (value_path (value_name) @font-lock-function-call-face))
+      (<span class="bi">:match</span> <span class="s">"^|&gt;$"</span> @_op))
+     <span class="cd">;; </span><span class="c">f @@ x — highlight f as function call
+</span>     ((infix_expression
+       left: (value_path (value_name) @font-lock-function-call-face)
+       operator: (concat_operator) @_op)
+      (<span class="bi">:match</span> <span class="s">"^@@$"</span> @_op))))
+   <span class="cd">;; </span><span class="c">shebang is only valid in the ocaml grammar, not ocaml-interface
+</span>   (<span class="k">when</span> (eq language 'ocaml)
+     (treesit-font-lock-rules
+      <span class="bi">:language</span> 'ocaml
+      <span class="bi">:feature</span> 'comment
+      '((shebang) @font-lock-comment-face)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

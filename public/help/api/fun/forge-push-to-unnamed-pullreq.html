@@ -1,0 +1,68 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge-push-to-unnamed-pullreq – Emacs Documentation Online</title>
+<meta name="description" content="forge-push-to-unnamed-pullreq is an interactive and natively compiled
+function defined in forge-commands.el.
+Push the current branch to the branch on the contributor's fork.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge-push-to-unnamed-pullreq</code></h1><p><span class="m"><code>forge-push-to-unnamed-pullreq</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">forge-commands.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge-push-to-unnamed-pullreq <a href="#:~:text="><span class="arg">ARG1</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Push the current branch to the branch on the contributor's fork.
+<p>Usually a maintainer would use <a href="../fun/magit-push-current-to-pushremote.html"><code>magit-push-current-to-pushremote</code></a> to
+push to the branch, the contributor asks to be merged.  That does not
+work if they did not create a dedicated branch and instead committed
+directly to "main", or some other branch, that also exists in the
+upstream repository.
+<p>If this is the case then the branch, which is used to check out the
+pull-request locally, is named "pr-N" (where N is the pull-request
+number) and this command is made available as a substitute in the
+<a href="../fun/magit-push.html"><code>magit-push</code></a> menu.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-commands.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">(autoload 'forge-push-to-unnamed-pullreq "forge-commands" nil t)
+</span>(<span class="k">transient-define-suffix</span> <span class="f">forge-push-to-unnamed-pullreq</span> (args)
+  <span class="doc">"Push the current branch to the branch on the contributor's fork.
+
+Usually a maintainer would use `</span><span class="m doc">magit-push-current-to-pushremote</span><span class="doc">' to
+push to the branch, the contributor asks to be merged.  That does not
+work if they did not create a dedicated branch and instead committed
+directly to \"main\", or some other branch, that also exists in the
+upstream repository.
+
+If this is the case then the branch, which is used to check out the
+pull-request locally, is named \"pr-N\" (where N is the pull-request
+number) and this command is made available as a substitute in the
+`</span><span class="m doc">magit-push</span><span class="doc">' menu."</span>
+  <span class="bi">:if</span> (<span class="k">lambda</span> ()
+        (and-let ((branch (magit-get-current-branch)))
+          (<span class="k">and</span> (forge-get-pullreq <span class="bi">:branch</span> branch)
+               (string-match-p <span class="s">"\\`pr-[0-9]+\\'"</span> branch))))
+  <span class="bi">:description</span> (<span class="k">lambda</span> ()
+                 (<span class="k">and-let*</span> ((branch (magit-get-current-branch))
+                            (pullreq (forge-get-pullreq <span class="bi">:branch</span> branch)))
+                   (format <span class="s">"contributor's %s branch"</span>
+                           (magit--propertize-face
+                            (format <span class="s">"%s/%s"</span>
+                                    (<span class="k">oref</span> pullreq head-user)
+                                    (<span class="k">oref</span> pullreq head-ref))
+                            'magit-branch-remote))))
+  (<span class="k">interactive</span> (list (magit-push-arguments)))
+  (<span class="k">cond-let*</span>
+    ([branch (magit-get-current-branch)]
+     [pullreq (forge-get-pullreq <span class="bi">:branch</span> branch)]
+     (run-hooks 'magit-credential-hook)
+     (magit-run-git-async <span class="s">"push"</span> <span class="s">"-v"</span>
+                          (delete <span class="s">"--tags"</span> (delete <span class="s">"--follow-tags"</span> args))
+                          (<span class="k">oref</span> pullreq head-user)
+                          (format <span class="s">"%s:%s"</span> branch (<span class="k">oref</span> pullreq head-ref))))
+    ((<span class="w">error</span> <span class="s">"Checked out branch is not an unnamed pull-request branch"</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

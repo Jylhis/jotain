@@ -1,0 +1,229 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: format-spec – Emacs Documentation Online</title>
+<meta name="description" content="format-spec is an autoloaded and natively compiled function defined in
+format-spec.el.gz.
+Return a string based on FORMAT and SPECIFICATION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>format-spec</code></h1><p><span class="m"><code>format-spec</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<a href="../src/format-spec.el.html">format-spec.el.gz</a>.
+<h2>Signature</h2>
+<pre><code>(format-spec <a href="#:~:text=on-,FORMAT"><span class="arg">FORMAT</span></a> <a href="#:~:text=and-,SPECIFICATION"><span class="arg">SPECIFICATION</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=result.-,IGNORE-MISSING"><span class="arg">IGNORE-MISSING</span></a> <a href="#:~:text=If-,SPLIT"><span class="arg">SPLIT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a string based on <span class="arg">FORMAT</span> and <span class="arg">SPECIFICATION</span>.
+<p><span class="arg">FORMAT</span> is a string containing <a href="../fun/format.html"><code>format</code></a>-like specs like "su - %u %k".
+<span class="arg">SPECIFICATION</span> is an alist mapping format specification characters
+to their substitutions.
+<p>For instance:
+<p>&nbsp;&nbsp;(format-spec <span class="s">"su - %u %l"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`((?u . ,(user-login-name))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(?l . <span class="s">"ls"</span>)))
+<p>Each %-spec may contain optional flag, width, and precision
+specifiers, as follows:
+<p>&nbsp;&nbsp;%&lt;flags&gt;&lt;width&gt;&lt;precision&gt;character
+<p>The following flags are allowed:
+<p>* 0: Pad to the width, if given, with zeros instead of spaces.
+<br>* -: Pad to the width, if given, on the right instead of the left.
+<br>* &lt;: Truncate to the width and precision, if given, on the left.
+<br>* &gt;: Truncate to the width and precision, if given, on the right.
+<br>* ^: Convert to upper case.
+<br>* _: Convert to lower case.
+<p>The width and precision specifiers behave like the corresponding
+ones in <a href="../fun/format.html"><code>format</code></a> when applied to %s.
+<p>For example, "%&lt;010b" means "substitute into the output the
+value associated with ?b in <span class="arg">SPECIFICATION</span>, either padding it with
+leading zeros or truncating leading characters until it's ten
+characters wide".
+<p>The substitution for a specification character can also be a
+function, taking no arguments and returning a string to be used
+for the replacement.  It will only be called if <span class="arg">FORMAT</span> uses that
+character.  For example:
+<p>&nbsp;&nbsp;(format-spec <span class="s">"%n"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`((?n . ,(<span class="k">lambda</span> ()
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(read-number <span class="s">"Number: "</span>)))))
+<p>Note that it is best to make sure the function is not quoted,
+like above, so that it is compiled by the byte-compiler.
+<p>Any text properties of <span class="arg">FORMAT</span> are copied to the result, with any
+text properties of a %-spec itself copied to its substitution.
+However, note that face properties from the two sources are not
+merged; the face properties of %-spec override the face properties
+of substitutions, if any, in the result.
+<p><span class="arg">IGNORE-MISSING</span> indicates how to handle %-spec characters not
+present in <span class="arg">SPECIFICATION</span>.  If it is nil or omitted, emit an
+error; if it is the symbol <a href="../fun/ignore.html"><code>ignore</code></a>, leave those %-specs verbatim
+in the result, including their text properties, if any; if it is
+the symbol <a href="../fun/delete.html"><code>delete</code></a>, remove those %-specs from the result;
+otherwise do the same as for the symbol <a href="../fun/ignore.html"><code>ignore</code></a>, but also leave
+any occurrences of "%%" in <span class="arg">FORMAT</span> verbatim in the result.
+<p>If <span class="arg">SPLIT</span>, instead of returning a single string, a list of strings
+is returned, where each format spec is its own element.
+<p><a href="/info/elisp/custom-format-strings.html#index-format_002dspec">View in manual</a>
+<p>Probably introduced at or before Emacs version <a href="../etc/NEWS.23.html">23.1</a>.
+<h2>Demos</h2>
+<pre><code><span class="c">:PROPERTIES:</span>
+<span class="c">:changes:</span>  <span class="s">29.1 'format-spec' now accepts functions in the replacement.</span>
+<span class="c">:END:</span>
+
+<span class="c">#+BEGIN_SRC elisp
+</span><span class="">(format-spec </span><span class="s ">"%a + %b = %b + %a"</span><span class=""> '((?a . 1) (?b . 2)))
+</span><span class="c">#+END_SRC
+</span>
+<span class="c">#+RESULTS:</span>
+<span class="">: "1 + 2 = 2 + 1"</span>
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><a href="../src/format-spec.el.html">/usr/src/emacs/lisp/format-spec.el.gz</a>
+<span class="cd">;;; </span><span class="c">format-spec.el --- format arbitrary formatting strings -*- lexical-binding: t -*-
+</span>
+<span class="cd">;; </span><span class="c">Copyright (C) 1999-2026 Free Software Foundation, Inc.
+</span>
+<span class="cd">;; </span><span class="c">Author: Lars Magne Ingebrigtsen &lt;larsi@gnus.org&gt;
+</span><span class="cd">;; </span><span class="c">Keywords: tools
+</span>
+<span class="cd">;; </span><span class="c">This file is part of GNU Emacs.
+</span>
+<span class="cd">;; </span><span class="c">GNU Emacs is free software: you can redistribute it and/or modify
+</span><span class="cd">;; </span><span class="c">it under the terms of the GNU General Public License as published by
+</span><span class="cd">;; </span><span class="c">the Free Software Foundation, either version 3 of the License, or
+</span><span class="cd">;; </span><span class="c">(at your option) any later version.
+</span>
+<span class="cd">;; </span><span class="c">GNU Emacs is distributed in the hope that it will be useful,
+</span><span class="cd">;; </span><span class="c">but WITHOUT ANY WARRANTY; without even the implied warranty of
+</span><span class="cd">;; </span><span class="c">MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+</span><span class="cd">;; </span><span class="c">GNU General Public License for more details.
+</span>
+<span class="cd">;; </span><span class="c">You should have received a copy of the GNU General Public License
+</span><span class="cd">;; </span><span class="c">along with GNU Emacs.  If not, see &lt;https://www.gnu.org/licenses/&gt;.
+</span>
+<span class="cd">;;; </span><span class="c">Commentary:
+</span>
+<span class="cd">;;; </span><span class="c">Code:
+</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">format-spec</span> (format specification <span class="ty">&amp;optional</span> ignore-missing split)
+  <span class="doc">"Return a string based on FORMAT and SPECIFICATION.
+FORMAT is a string containing `</span><span class="m doc">format</span><span class="doc">'-like specs like \"su - %u %k\".
+SPECIFICATION is an alist mapping format specification characters
+to their substitutions.
+
+For instance:
+
+  (format-spec \"su - %u %l\"
+               </span><span class="bi doc">\\=</span><span class="doc">`((?u . ,(user-login-name))
+                 (?l . \"ls\")))
+
+Each %-spec may contain optional flag, width, and precision
+specifiers, as follows:
+
+  %&lt;flags&gt;&lt;width&gt;&lt;precision&gt;character
+
+The following flags are allowed:
+
+* 0: Pad to the width, if given, with zeros instead of spaces.
+* -: Pad to the width, if given, on the right instead of the left.
+* &lt;: Truncate to the width and precision, if given, on the left.
+* &gt;: Truncate to the width and precision, if given, on the right.
+* ^: Convert to upper case.
+* _: Convert to lower case.
+
+The width and precision specifiers behave like the corresponding
+ones in `</span><span class="m doc">format</span><span class="doc">' when applied to %s.
+
+For example, \"%&lt;010b\" means \"substitute into the output the
+value associated with ?b in SPECIFICATION, either padding it with
+leading zeros or truncating leading characters until it's ten
+characters wide\".
+
+The substitution for a specification character can also be a
+function, taking no arguments and returning a string to be used
+for the replacement.  It will only be called if FORMAT uses that
+character.  For example:
+
+  (format-spec \"%n\"
+               </span><span class="bi doc">\\=</span><span class="doc">`((?n . ,(lambda ()
+                          (read-number \"Number: \")))))
+
+Note that it is best to make sure the function is not quoted,
+like above, so that it is compiled by the byte-compiler.
+
+Any text properties of FORMAT are copied to the result, with any
+text properties of a %-spec itself copied to its substitution.
+However, note that face properties from the two sources are not
+merged; the face properties of %-spec override the face properties
+of substitutions, if any, in the result.
+
+IGNORE-MISSING indicates how to handle %-spec characters not
+present in SPECIFICATION.  If it is nil or omitted, emit an
+error; if it is the symbol `</span><span class="m doc">ignore</span><span class="doc">', leave those %-specs verbatim
+in the result, including their text properties, if any; if it is
+the symbol `</span><span class="m doc">delete</span><span class="doc">', remove those %-specs from the result;
+otherwise do the same as for the symbol `</span><span class="m doc">ignore</span><span class="doc">', but also leave
+any occurrences of \"%%\" in FORMAT verbatim in the result.
+
+If SPLIT, instead of returning a single string, a list of strings
+is returned, where each format spec is its own element."</span>
+  (<span class="k">let</span> ((orig-buffer (current-buffer)))
+    (<span class="k">with-temp-buffer</span>
+      (<span class="k">let</span> ((split-start (point-min))
+            (split-result nil))
+        (insert format)
+        (goto-char (point-min))
+        (<span class="k">while</span> (search-forward <span class="s">"%"</span> nil t)
+          (<span class="k">cond</span>
+           <span class="cd">;; </span><span class="c">Quoted percent sign.
+</span>           ((= (following-char) ?%)
+            (<span class="k">when</span> (memq ignore-missing '(nil ignore delete))
+              (delete-char 1)))
+           <span class="cd">;; </span><span class="c">Valid format spec.
+</span>           ((looking-at (<span class="k">rx</span> (? (group (+ (in <span class="s">" 0&lt;&gt;^_-"</span>))))
+                            (? (group (+ digit)))
+                            (? (group ?. (+ digit)))
+                            (group alpha)))
+            (<span class="k">let*</span> ((beg (point))
+                   (end (match-end 0))
+                   (flags (match-string 1))
+                   (width (match-string 2))
+                   (trunc (match-string 3))
+                   (char (string-to-char (match-string 4)))
+                   (text (<span class="k">let</span> ((res (cdr (assq char specification))))
+                           (<span class="k">if</span> (functionp res)
+                               (<span class="k">with-current-buffer</span> orig-buffer
+                                 (funcall res))
+                             res))))
+              (<span class="k">when</span> (<span class="k">and</span> split
+                         (not (= (1- beg) split-start)))
+                (<span class="k">push</span> (buffer-substring split-start (1- beg)) split-result))
+              (<span class="k">cond</span> (text
+                     <span class="cd">;; </span><span class="c">Handle flags.
+</span>                     (<span class="k">setq</span> text (format-spec--do-flags
+                                 (format <span class="s">"%s"</span> text)
+                                 (format-spec--parse-flags flags)
+                                 (<span class="k">and</span> width (string-to-number width))
+                                 (<span class="k">and</span> trunc (car (read-from-string trunc 1)))))
+                     <span class="cd">;; </span><span class="c">Insert first, to preserve text properties.
+</span>                     (insert-and-inherit text)
+                     <span class="cd">;; </span><span class="c">Delete the specifier body.
+</span>                     (delete-region (point) (+ end (length text)))
+                     <span class="cd">;; </span><span class="c">Delete the percent sign.
+</span>                     (delete-region (1- beg) beg))
+                    ((eq ignore-missing 'delete)
+                     <span class="cd">;; </span><span class="c">Delete the whole format spec.
+</span>                     (delete-region (1- beg) end))
+                    ((not ignore-missing)
+                     (<span class="w">error</span> <span class="s">"Invalid format character: `</span><span class="m s">%%%c</span><span class="s">'"</span> char)))
+              (<span class="k">when</span> split
+                (<span class="k">push</span> (buffer-substring (1- beg) (point)) split-result)
+                (<span class="k">setq</span> split-start (point)))))
+           <span class="cd">;; </span><span class="c">Signal an error on bogus format strings.
+</span>           ((not ignore-missing)
+            (<span class="w">error</span> <span class="s">"Invalid format string"</span>))))
+        (<span class="k">if</span> (not split)
+            (buffer-string)
+          (<span class="k">unless</span> (= split-start (point-max))
+            (<span class="k">push</span> (buffer-substring split-start (point-max)) split-result))
+          (nreverse split-result))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

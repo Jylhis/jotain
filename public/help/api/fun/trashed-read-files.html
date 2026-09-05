@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: trashed-read-files – Emacs Documentation Online</title>
+<meta name="description" content="trashed-read-files is a natively compiled function defined in
+trashed.el.
+Read trash information from trash files and info directories.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>trashed-read-files</code></h1><p><span class="m"><code>trashed-read-files</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">trashed.el</span>.
+<h2>Signature</h2>
+<pre><code>(trashed-read-files)
+</code></pre>
+<h2>Documentation</h2>
+<p>Read trash information from trash files and info directories.
+<p>The information is stored in <a href="../var/tabulated-list-entries.html"><code>tabulated-list-entries</code></a>, where ID is trash file
+name in files directory, and DESC is a vector of file type(-/D), size,
+deletion date and original filename.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/67wpnzky78h8kvn6agwgwdwx4z4cwf68-emacs-packages-deps/share/emacs/site-lisp/elpa/trashed-20230811.157/trashed.el</span>
+(<span class="k">defun</span> <span class="f">trashed-read-files</span> ()
+  <span class="doc">"Read trash information from trash files and info directories.
+The information is stored in `</span><span class="m doc">tabulated-list-entries</span><span class="doc">', where ID is trash file
+name in files directory, and DESC is a vector of file type(-/D), size,
+deletion date and original filename."</span>
+  <span class="cd">;; </span><span class="c">Initialization
+</span>  (<span class="k">setq</span> trashed-trash-can-size 0)
+  (trashed-update-col-width 1 nil)
+  (trashed-update-col-width 2 nil)
+  (trashed-update-col-width 3 nil)
+  <span class="cd">;; </span><span class="c">Read files
+</span>  (<span class="k">let</span> (files)
+    (<span class="k">if</span> (eq system-type 'windows-nt)
+        <span class="cd">;; </span><span class="c">Read trash cans in all drives
+</span>        (<span class="k">let</span> ((drive-letter ?a))
+          (<span class="k">while</span> (&lt;= drive-letter ?z)
+            (aset trashed-trash-dir 0 drive-letter)
+            (<span class="k">setq</span> files
+                  (append files
+                          (<span class="k">or</span> (<span class="k">ignore-errors</span> (directory-files-and-attributes
+                                              trashed-trash-dir t nil t))
+                              <span class="cd">;; </span><span class="c">Retry it w/o sid
+</span>                              (<span class="k">let</span> ((trashed-trash-dir (file-name-directory
+                                                        trashed-trash-dir)))
+                                (<span class="k">ignore-errors</span> (directory-files-and-attributes
+                                                trashed-trash-dir t nil t)))))
+                  drive-letter (1+ drive-letter))))
+      (<span class="k">setq</span> files (<span class="k">ignore-errors</span> (directory-files-and-attributes
+                                  trashed-files-dir nil nil t))))
+    (<span class="k">setq</span> tabulated-list-entries
+          (<span class="k">cl-loop</span> for (file . attrs) in files
+                   for entry = (trashed-file-info file attrs)
+                   when entry collect entry))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

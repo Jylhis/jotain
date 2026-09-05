@@ -1,0 +1,170 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apheleia--apply-rcs-patch – Emacs Documentation Online</title>
+<meta name="description" content="apheleia--apply-rcs-patch is a natively compiled function defined in
+apheleia-rcs.el.
+Apply RCS patch.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apheleia--apply-rcs-patch</code></h1><p><span class="m"><code>apheleia--apply-rcs-patch</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">apheleia-rcs.el</span>.
+<h2>Signature</h2>
+<pre><code>(apheleia--apply-rcs-patch <a href="#:~:text=patch.-,CONTENT-BUFFER"><span class="arg">CONTENT-BUFFER</span></a> <a href="#:~:text=and-,PATCH-BUFFER"><span class="arg">PATCH-BUFFER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply RCS patch.
+<p><span class="arg">CONTENT-BUFFER</span> contains the text to be patched, and <span class="arg">PATCH-BUFFER</span>
+contains the patch.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbykkl13khzh84lv9vw1bf1vijzg30fr-emacs-packages-deps/share/emacs/site-lisp/elpa/apheleia-20260817.2331/apheleia-rcs.el</span>
+(<span class="k">defun</span> <span class="f">apheleia--apply-rcs-patch</span> (content-buffer patch-buffer)
+  <span class="doc">"Apply RCS patch.
+CONTENT-BUFFER contains the text to be patched, and PATCH-BUFFER
+contains the patch."</span>
+  (apheleia--log
+   'rcs <span class="s">"Applying RCS patch from %S to %S"</span> patch-buffer content-buffer)
+  (<span class="k">let</span> ((commands nil)
+        (pos-list nil)
+        (window-line-list nil))
+    (<span class="k">with-current-buffer</span> content-buffer
+      (<span class="k">push</span> `(<span class="bi">:type</span> point <span class="bi">:pos</span> ,(point)) pos-list)
+      (<span class="k">when</span> (marker-position (mark-marker))
+        (<span class="k">push</span> `(<span class="bi">:type</span> marker <span class="bi">:pos</span> ,(mark-marker)) pos-list))
+      (<span class="k">dolist</span> (m mark-ring)
+        (<span class="k">when</span> (marker-position m)
+          (<span class="k">push</span> `(<span class="bi">:type</span> marker <span class="bi">:pos</span> ,m) pos-list)))
+      (<span class="k">dolist</span> (w (get-buffer-window-list nil nil t))
+        (<span class="k">push</span>
+         `(<span class="bi">:type</span> window-point <span class="bi">:pos</span> ,(window-point w) <span class="bi">:window</span> ,w) pos-list)
+        (<span class="k">push</span> (list w (count-lines (window-start w) (point))
+                    (- (line-number-at-pos (point))
+                       (line-number-at-pos (window-start w)))
+                    (copy-marker (window-start w)))
+              window-line-list)))
+    (<span class="k">with-current-buffer</span> patch-buffer
+      (apheleia--map-rcs-patch
+       (<span class="k">lambda</span> (command)
+         (<span class="k">with-current-buffer</span> content-buffer
+           <span class="cd">;; </span><span class="c">Could be optimized significantly by moving only as many
+</span>           <span class="cd">;; </span><span class="c">lines as needed, rather than returning to the beginning
+</span>           <span class="cd">;; </span><span class="c">of the buffer first.
+</span>           (<span class="k">save-excursion</span>
+             (goto-char (point-min))
+             (forward-line (1- (alist-get 'start command)))
+             <span class="cd">;; </span><span class="c">Account for the off-by-one error in the RCS patch spec
+</span>             <span class="cd">;; </span><span class="c">(namely, text is added *after* the line mentioned in
+</span>             <span class="cd">;; </span><span class="c">the patch).
+</span>             (<span class="k">when</span> (<span class="k">and</span> (eq (alist-get 'command command) 'addition)
+                        (&gt; (alist-get 'start command) 0))
+               (forward-line))
+             (<span class="k">push</span> `(marker . ,(point-marker)) command)
+             (<span class="k">push</span> command commands)
+             <span class="cd">;; </span><span class="c">If we delete a region just before inserting new text
+</span>             <span class="cd">;; </span><span class="c">at the same place, then it is a replacement. In this
+</span>             <span class="cd">;; </span><span class="c">case, check if the replaced region includes the window
+</span>             <span class="cd">;; </span><span class="c">point for any window currently displaying the content
+</span>             <span class="cd">;; </span><span class="c">buffer. If so, figure out where that window point
+</span>             <span class="cd">;; </span><span class="c">should be moved to, and record the information in an
+</span>             <span class="cd">;; </span><span class="c">additional command.
+</span>             <span class="cd">;;</span><span class="c">
+</span>             <span class="cd">;; </span><span class="c">See &lt;https://www.gnu.org/software/emacs/manual/html_node/elisp/Window-Point.html&gt;.
+</span>             <span class="cd">;;</span><span class="c">
+</span>             <span class="cd">;; </span><span class="c">Note that the commands get pushed in reverse order
+</span>             <span class="cd">;; </span><span class="c">because of how linked lists work.
+</span>             (<span class="k">let</span> ((deletion (nth 1 commands))
+                   (addition (nth 0 commands)))
+               (<span class="k">when</span> (<span class="k">and</span> (eq (alist-get 'command deletion) 'deletion)
+                          (eq (alist-get 'command addition) 'addition)
+                          <span class="cd">;; </span><span class="c">Again with the weird off-by-one
+</span>                          <span class="cd">;; </span><span class="c">computations. For example, if you replace
+</span>                          <span class="cd">;; </span><span class="c">lines 68 through 71 inclusive, then the
+</span>                          <span class="cd">;; </span><span class="c">deletion is for line 68 and the addition
+</span>                          <span class="cd">;; </span><span class="c">is for line 70. Blame RCS.
+</span>                          (= (+ (alist-get 'start deletion)
+                                (alist-get 'lines deletion)
+                                -1)
+                             (alist-get 'start addition)))
+                 (<span class="k">let</span> ((text-start (alist-get 'marker deletion)))
+                   (goto-char text-start)
+                   (forward-line (alist-get 'lines deletion))
+                   (<span class="k">let</span> ((text-end (point)))
+                     (<span class="k">dolist</span> (pos-spec pos-list)
+                       (<span class="k">let</span> ((p (plist-get pos-spec <span class="bi">:pos</span>)))
+                         <span class="cd">;; </span><span class="c">Check if the point, or marker, or window
+</span>                         <span class="cd">;; </span><span class="c">point, is within the replaced region.
+</span>                         <span class="cd">;; </span><span class="c">Markers pretend to be numbers, so we can
+</span>                         <span class="cd">;; </span><span class="c">run this in any of the three cases.
+</span>                         (<span class="k">when</span> (<span class="k">and</span> (&lt; text-start p)
+                                    (&lt; p text-end))
+                           (<span class="k">let*</span> ((old-text (buffer-substring-no-properties
+                                             text-start text-end))
+                                  (new-text (alist-get 'text addition))
+                                  (old-relative-point (- p text-start))
+                                  (new-relative-point
+                                   (<span class="k">if</span> (&gt; (max (length old-text)
+                                               (length new-text))
+                                          apheleia-max-alignment-size)
+                                       old-relative-point
+                                     (apheleia--align-point
+                                      old-text new-text old-relative-point))))
+                             (goto-char text-start)
+                             (<span class="k">push</span>
+                              `((command . move-cursor)
+                                (cursor . ,pos-spec)
+                                (offset . ,(- new-relative-point
+                                              old-relative-point)))
+                              commands))))))))))))))
+    (<span class="k">with-current-buffer</span> content-buffer
+      <span class="cd">;; </span><span class="c">We run both `</span><span class="m c">goto-char</span><span class="c">' and `</span><span class="m c">set-window-point</span><span class="c">' to offset
+</span>      <span class="cd">;; </span><span class="c">point and window point, don't want to chance that both
+</span>      <span class="cd">;; </span><span class="c">changes will stack on top of each other.
+</span>      (<span class="k">let</span> ((orig-point (point)))
+        (<span class="k">dolist</span> (command (nreverse commands))
+          (<span class="k">pcase</span> (alist-get 'command command)
+            (`addition
+             (<span class="k">save-excursion</span>
+               (goto-char (alist-get 'marker command))
+               (insert (alist-get 'text command))))
+            (`deletion
+             (<span class="k">save-excursion</span>
+               (goto-char (alist-get 'marker command))
+               (forward-line (alist-get 'lines command))
+               (delete-region (alist-get 'marker command) (point))))
+            (`move-cursor
+             (<span class="k">let</span> ((cursor (alist-get 'cursor command))
+                   (offset (alist-get 'offset command)))
+               (<span class="k">pcase</span> (plist-get cursor <span class="bi">:type</span>)
+                 (`point
+                  (goto-char
+                   (+ orig-point offset)))
+                 (`marker
+                  (set-marker
+                   (plist-get cursor <span class="bi">:pos</span>)
+                   (+ (plist-get cursor <span class="bi">:pos</span>) offset)))
+                 (`window-point
+                  (set-window-point
+                   (plist-get cursor <span class="bi">:window</span>)
+                   (+ orig-point offset))))))))))
+    <span class="cd">;; </span><span class="c">Restore the scroll position of each window displaying the
+</span>    <span class="cd">;; </span><span class="c">buffer.
+</span>    (<span class="k">dolist</span> (entry window-line-list)
+      (<span class="k">cl-destructuring-bind</span>
+          (w old-window-line old-window-line-distance old-window-start) entry
+        (<span class="k">let</span> ((new-window-line
+               (count-lines (window-start w) (point)))
+              (new-window-line-distance
+               (- (line-number-at-pos (point))
+                  (line-number-at-pos old-window-start))))
+          (<span class="k">with-selected-window</span> w
+            <span class="cd">;; </span><span class="c">Sometimes if the text is less than a buffer long, and
+</span>            <span class="cd">;; </span><span class="c">we do a deletion, it might not be possible to keep the
+</span>            <span class="cd">;; </span><span class="c">vertical position of point the same by scrolling.
+</span>            <span class="cd">;; </span><span class="c">That's okay. We just go as far as we can.
+</span>            (<span class="k">ignore-errors</span>
+              (<span class="k">if</span> (= old-window-line-distance new-window-line-distance)
+                  (set-window-start w old-window-start)
+                (scroll-down (- old-window-line new-window-line)))))
+          (set-marker old-window-start nil))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

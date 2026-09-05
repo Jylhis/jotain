@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: auto-dark--enable-themes – Emacs Documentation Online</title>
+<meta name="description" content="auto-dark--enable-themes is an interactive and natively compiled
+function defined in auto-dark.el.
+Re-enable THEMES, which defaults to &#8216;custom-enabled-themes&#8217;.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>auto-dark--enable-themes</code></h1><p><span class="m"><code>auto-dark--enable-themes</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">auto-dark.el</span>.
+<h2>Signature</h2>
+<pre><code>(auto-dark--enable-themes <span class="ty">&amp;optional</span> <a href="#:~:text=enable-,THEMES"><span class="arg">THEMES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Re-enable <span class="arg">THEMES</span>, which defaults to ‘custom-enabled-themes’.
+<p>This will load themes if necessary.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bsy6s0b3kb4pmxsgxn385p8xfkhwnj6b-emacs-packages-deps/share/emacs/site-lisp/elpa/auto-dark-20260313.2356/auto-dark.el</span>
+(<span class="k">defun</span> <span class="f">auto-dark--enable-themes</span> (<span class="ty">&amp;optional</span> themes)
+  <span class="doc">"Re-enable THEMES, which defaults to ‘</span><span class="m doc">custom-enabled-themes</span><span class="doc">’.
+This will load themes if necessary."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((full-themes (remq 'user
+                           (delete-dups (<span class="k">or</span> themes custom-enabled-themes)))))
+    <span class="cd">;; </span><span class="c">Disable only the themes we’re not going to re-enable.
+</span>    (mapc (<span class="k">lambda</span> (theme)
+            (<span class="k">unless</span> (memq theme full-themes)
+              (disable-theme theme)))
+          custom-enabled-themes)
+    (<span class="k">let</span> ((failures (mapcan (<span class="k">lambda</span> (theme)
+                              (<span class="k">condition-case</span> nil
+                                  <span class="cd">;; </span><span class="c">We use `</span><span class="m c">enable-theme</span><span class="c">' instead of
+</span>                                  <span class="cd">;; </span><span class="c">`</span><span class="m c">load-theme</span><span class="c">' when possible because:
+</span>                                  <span class="cd">;; </span><span class="c">1. `</span><span class="m c">load-theme</span><span class="c">' prompts about
+</span>                                  <span class="cd">;;    </span><span class="c">`</span><span class="m c">custom-safe-themes</span><span class="c">' which would
+</span>                                  <span class="cd">;;    </span><span class="c">break init or fire on every
+</span>                                  <span class="cd">;;    </span><span class="c">switch (#64, #82).
+</span>                                  <span class="cd">;; </span><span class="c">2. `</span><span class="m c">enable-theme</span><span class="c">' is faster since it
+</span>                                  <span class="cd">;;    </span><span class="c">skips re-evaluating the theme file.
+</span>                                  <span class="cd">;; </span><span class="c">The pre-load in `</span><span class="m c">:set</span><span class="c">' below handles
+</span>                                  <span class="cd">;; </span><span class="c">the safety prompt once up front.
+</span>                                  <span class="cd">;;</span><span class="c">
+</span>                                  <span class="cd">;; </span><span class="c">However, we check `</span><span class="m c">theme-settings</span><span class="c">'
+</span>                                  <span class="cd">;; </span><span class="c">rather than `</span><span class="m c">custom-theme-p</span><span class="c">' because
+</span>                                  <span class="cd">;; </span><span class="c">some theme libraries (e.g.
+</span>                                  <span class="cd">;; </span><span class="c">modus-themes v5) eagerly call
+</span>                                  <span class="cd">;; </span><span class="c">`</span><span class="m c">custom-declare-theme</span><span class="c">' at
+</span>                                  <span class="cd">;; </span><span class="c">`</span><span class="m c">require</span><span class="c">'-time for all their themes.
+</span>                                  <span class="cd">;; </span><span class="c">This makes `</span><span class="m c">custom-theme-p</span><span class="c">' return t
+</span>                                  <span class="cd">;; </span><span class="c">even though no face specs have been
+</span>                                  <span class="cd">;; </span><span class="c">computed yet.  `</span><span class="m c">enable-theme</span><span class="c">' on such
+</span>                                  <span class="cd">;; </span><span class="c">a theme is a no-op (#96).
+</span>                                  (ignore
+                                   (<span class="k">if</span> (get theme 'theme-settings)
+                                       (enable-theme theme)
+                                     (load-theme theme t)))
+                                (<span class="w">error</span> (list theme))))
+                            (reverse full-themes))))
+      (<span class="k">when</span> failures
+        (<span class="w">warn</span> <span class="s">"Failed to enable theme(s): %s"</span>
+              (mapconcat #'symbol-name failures <span class="s">", "</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

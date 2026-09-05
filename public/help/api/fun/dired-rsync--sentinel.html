@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dired-rsync--sentinel – Emacs Documentation Online</title>
+<meta name="description" content="dired-rsync--sentinel is a natively compiled function defined in
+dired-rsync.el.
+Process sentinel for rsync processes.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dired-rsync--sentinel</code></h1><p><span class="m"><code>dired-rsync--sentinel</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dired-rsync.el</span>.
+<h2>Signature</h2>
+<pre><code>(dired-rsync--sentinel <a href="#:~:text=inferior-,PROC"><span class="arg">PROC</span></a> <a href="#:~:text=by-,DESC"><span class="arg">DESC</span></a> <a href="#:~:text=DESC.-,DETAILS"><span class="arg">DETAILS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Process sentinel for rsync processes.
+<p>This gets called whenever the inferior <span class="arg">PROC</span> changes state as
+<br>&nbsp;&nbsp;described by <span class="arg">DESC</span>.  <span class="arg">DETAILS</span> provides access to additional
+<br>&nbsp;&nbsp;information such as the locate of the dired-buffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kxyb1l0wdk5rkn342k748mzcbfgargan-emacs-packages-deps/share/emacs/site-lisp/elpa/dired-rsync-20260716.1319/dired-rsync.el</span>
+<span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Running rsync: We need to take care of a couple of things here. We
+</span><span class="cd">;; </span><span class="c">need to ensure we run from the local host as you shouldn't expect
+</span><span class="cd">;; </span><span class="c">the remote target to be as aware of the ssh shortcuts home as from
+</span><span class="cd">;; </span><span class="c">the local system out (.ssh/config). We also want to track when it
+</span><span class="cd">;; </span><span class="c">is finished so we can inform the user the copy is complete.
+</span><span class="cd">;;</span><span class="c">
+</span>
+(<span class="k">defun</span> <span class="f">dired-rsync--sentinel</span>(proc desc details)
+  <span class="doc">"Process sentinel for rsync processes.
+This gets called whenever the inferior `</span><span class="m doc">PROC</span><span class="doc">' changes state as
+  described by `</span><span class="m doc">DESC</span><span class="doc">'.  `</span><span class="m doc">DETAILS</span><span class="doc">' provides access to additional
+  information such as the locate of the dired-buffer."</span>
+  (<span class="k">let</span> ((proc-buf (process-buffer proc)))
+    (<span class="k">when</span> (s-starts-with-p <span class="s">"finished"</span> desc)
+      <span class="cd">;; </span><span class="c">clean-up finished tasks
+</span>      (<span class="k">let</span> ((dired-buf (plist-get details '<span class="bi">:dired-buffer</span>)))
+        (<span class="k">when</span> (<span class="k">and</span> dired-rsync-unmark-on-completion
+                   (buffer-live-p dired-buf))
+          (<span class="k">with-current-buffer</span> dired-buf
+            (dired-unmark-all-marks)))
+        (kill-buffer proc-buf))
+      (run-hooks 'dired-rsync-success-hook))
+    (dired-rsync--update-modeline)
+    <span class="cd">;; </span><span class="c">If we still have a process buffer things didn't end well
+</span>    (<span class="k">when</span> (<span class="k">and</span> (not (process-live-p proc))
+               (buffer-name proc-buf))
+      (<span class="k">with-current-buffer</span> proc-buf
+        (run-hooks 'dired-rsync-failed-hook)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

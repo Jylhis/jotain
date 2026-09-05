@@ -1,0 +1,97 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb-send-request-on-point – Emacs Documentation Online</title>
+<meta name="description" content="verb-send-request-on-point is an interactive and natively compiled
+function defined in verb.el.
+Send the request specified by the selected heading's text contents.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb-send-request-on-point</code></h1><p><span class="m"><code>verb-send-request-on-point</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">verb.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb-send-request-on-point <a href="#:~:text=of-,WHERE"><span class="arg">WHERE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=argument-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Send the request specified by the selected heading's text contents.
+<p>After the request has been sent, return the response buffer (the
+buffer where the response will be loaded into).
+<p>Note that the contents of all parent headings are considered as well;
+see <a href="../fun/verb--request-spec-from-hierarchy.html"><code>verb--request-spec-from-hierarchy</code></a> to see how this is done.
+<p>The buffer containing the response is shown (or not shown) in
+different ways, depending on the value of <span class="arg">WHERE</span>:
+<p>- <a href="../fun/other-window.html"><code>other-window</code></a>: Show the response buffer on another window and
+<br>&nbsp;&nbsp;select it.
+<br>- <span class="m"><code>stay-window</code></span>: Show the response buffer on another window, but
+<br>&nbsp;&nbsp;keep the current one selected.
+<br>- <span class="m"><code>this-window</code></span>: Show the response buffer in the current window.
+<br>- <span class="m"><code>minibuffer</code></span>: Show the response status on the minibuffer, but don't
+<br>&nbsp;&nbsp;show the response buffer anywhere.
+<br>- nil: Send the request but do not show the response buffer nor the
+<br>&nbsp;&nbsp;response status anywhere.
+<p>The response buffer won't have any contents until the HTTP response
+has been received.  For all valid values of <span class="arg">WHERE</span> except nil, the
+response status will be shown on the minibuffer when the response is
+received.
+<p>If prefix argument <span class="arg">ARG</span> is non-nil, allow the user to quickly edit the
+request before it is sent.  The changes made will not affect the
+contents of the current buffer and will be discarded after the request
+is sent.
+<p>The <a href="../var/verb-post-response-hook.html"><code>verb-post-response-hook</code></a> hook is called after a response has been
+received.
+<h2>Key Bindings</h2>
+<p><span class="v">verb-command-map</span> <span class="key">C-f</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">verb-send-request-on-point</span> (where <span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Send the request specified by the selected heading's text contents.
+After the request has been sent, return the response buffer (the
+buffer where the response will be loaded into).
+
+Note that the contents of all parent headings are considered as well;
+see `</span><span class="m doc">verb--request-spec-from-hierarchy</span><span class="doc">' to see how this is done.
+
+The buffer containing the response is shown (or not shown) in
+different ways, depending on the value of WHERE:
+
+- `</span><span class="m doc">other-window</span><span class="doc">': Show the response buffer on another window and
+  select it.
+- `</span><span class="m doc">stay-window</span><span class="doc">': Show the response buffer on another window, but
+  keep the current one selected.
+- `</span><span class="m doc">this-window</span><span class="doc">': Show the response buffer in the current window.
+- `</span><span class="m doc">minibuffer</span><span class="doc">': Show the response status on the minibuffer, but don't
+  show the response buffer anywhere.
+- nil: Send the request but do not show the response buffer nor the
+  response status anywhere.
+
+The response buffer won't have any contents until the HTTP response
+has been received.  For all valid values of WHERE except nil, the
+response status will be shown on the minibuffer when the response is
+received.
+
+If prefix argument ARG is non-nil, allow the user to quickly edit the
+request before it is sent.  The changes made will not affect the
+contents of the current buffer and will be discarded after the request
+is sent.
+
+The `</span><span class="m doc">verb-post-response-hook</span><span class="doc">' hook is called after a response has been
+received."</span>
+  (<span class="k">interactive</span> (list 'this-window current-prefix-arg))
+  (verb--ensure-verb-mode)
+  (<span class="k">when</span> (<span class="k">and</span> where
+             (not (member where
+                          '(other-window stay-window this-window minibuffer))))
+    (<span class="w">user-error</span> <span class="s">"Invalid value for WHERE: %s"</span> where))
+  (<span class="k">let*</span> ((verb--inhibit-code-tags-evaluation arg)
+         (rs (verb--request-spec-from-hierarchy)))
+    (<span class="k">if</span> arg
+        <span class="cd">;; </span><span class="c">If ARG is non-nil, setup a buffer to edit the request.
+</span>        (verb--setup-temp-request-buffer rs
+                                         (selected-window)
+                                         verb--vars
+                                         where)
+      <span class="cd">;; </span><span class="c">If ARG is nil, just send the request.
+</span>      (verb--request-spec-send rs where))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

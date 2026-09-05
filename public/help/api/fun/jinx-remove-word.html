@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: jinx-remove-word – Emacs Documentation Online</title>
+<meta name="description" content="jinx-remove-word is an interactive and natively compiled function
+defined in jinx.el.
+Remove word from personal dictionary, session, etc.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>jinx-remove-word</code></h1><p><span class="m"><code>jinx-remove-word</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">jinx.el</span>.
+<h2>Signature</h2>
+<pre><code>(jinx-remove-word)
+</code></pre>
+<h2>Documentation</h2>
+<p>Remove word from personal dictionary, session, etc.
+<p>The word and dictionary are read via the minibuffer.  The word defaults
+to the word at point.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a84p94snryc55wrv02kbf63qv5yqsxl8-emacs-packages-deps/share/emacs/site-lisp/elpa/jinx-20260813.954/jinx.el</span>
+(<span class="k">defun</span> <span class="f">jinx-remove-word</span> ()
+  <span class="doc">"Remove word from personal dictionary, session, etc.
+The word and dictionary are read via the minibuffer.  The word defaults
+to the word at point."</span>
+  (<span class="k">interactive</span> nil jinx-mode)
+  (<span class="k">let*</span> ((word (read-string
+                <span class="s">"Remove word: "</span>
+                (<span class="k">pcase</span> (jinx--bounds-of-word)
+                  (`(,start . ,end)
+                   (buffer-substring-no-properties start end)))))
+         (_ (<span class="k">when</span> (equal word <span class="s">""</span>) (<span class="w">user-error</span> <span class="s">"No input"</span>)))
+         (actions
+          (<span class="k">cl-loop</span> for (key . fun) in jinx--save-keys nconc
+                   (<span class="k">cl-loop</span> for (k w a) in (funcall fun 'format key word)
+                            for kw = (concat (substring k 1) w)
+                            if (funcall fun 'has key kw)
+                            collect (list a fun 'remove key kw))))
+         (choice
+          (<span class="k">or</span> (assoc
+               (completing-read
+                (format <span class="s">"Remove ‘</span><span class="m s">%s</span><span class="s">’ from: "</span> word)
+                (completion-table-with-metadata
+                 (<span class="k">or</span> actions
+                     (<span class="w">user-error</span> <span class="s">"Word ‘</span><span class="m s">%s</span><span class="s">’ is not saved anywhere"</span> word))
+                 `((eager-display . t)
+                   (display-sort-function . ,#'identity)
+                   (cycle-sort-function . ,#'identity)))
+                nil nil nil t)
+               actions)
+              (<span class="w">user-error</span> <span class="s">"No selection"</span>))))
+    (apply (cdr choice))
+    (jinx--cleanup)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

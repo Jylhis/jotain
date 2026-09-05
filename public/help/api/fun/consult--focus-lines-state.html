@@ -1,0 +1,97 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--focus-lines-state – Emacs Documentation Online</title>
+<meta name="description" content="consult--focus-lines-state is a natively compiled function defined in
+consult.el.
+State function for consult-focus-lines with FILTER function.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--focus-lines-state</code></h1><p><span class="m"><code>consult--focus-lines-state</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--focus-lines-state <a href="#:~:text=with-,FILTER"><span class="arg">FILTER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>State function for <a href="../fun/consult-focus-lines.html"><code>consult-focus-lines</code></a> with <span class="arg">FILTER</span> function.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+<span class="cd">;;;;; </span><span class="c">Command: consult-focus-lines
+</span>
+(<span class="k">defun</span> <span class="f">consult--focus-lines-state</span> (filter)
+  <span class="doc">"State function for `</span><span class="m doc">consult-focus-lines</span><span class="doc">' with FILTER function."</span>
+  (<span class="k">let</span> (lines overlays last-input pt-orig pt-min pt-max)
+    (<span class="k">save-excursion</span>
+      (<span class="k">save-restriction</span>
+        (<span class="k">when</span> (use-region-p)
+          (narrow-to-region
+           (region-beginning)
+           <span class="cd">;; </span><span class="c">Behave the same as `</span><span class="m c">keep-lines</span><span class="c">'.
+</span>           <span class="cd">;; </span><span class="c">Move to the next line.
+</span>           (<span class="k">save-excursion</span>
+             (goto-char (region-end))
+             (<span class="k">unless</span> (<span class="k">or</span> (bolp) (eobp))
+               (forward-line 0))
+             (point))))
+        (<span class="k">setq</span> pt-orig (point) pt-min (point-min) pt-max (point-max))
+        (<span class="k">let</span> ((i 0))
+          (<span class="k">consult--each-line</span> beg end
+            <span class="cd">;; </span><span class="c">Use "\n" for empty lines, since we need a non-empty string to
+</span>            <span class="cd">;; </span><span class="c">attach the text property to.
+</span>            (<span class="k">let</span> ((line (<span class="k">if</span> (eq beg end) (char-to-string ?\n)
+                          (buffer-substring-no-properties beg end))))
+              (put-text-property 0 1 'consult--focus-line (cons (<span class="k">incf</span> i) beg) line)
+              (<span class="k">push</span> line lines)))
+          (<span class="k">setq</span> lines (nreverse lines)))))
+    (<span class="k">lambda</span> (action input)
+      <span class="cd">;; </span><span class="c">New input provided -&gt; Update
+</span>      (<span class="k">when</span> (<span class="k">and</span> input (not (equal input last-input)))
+        (<span class="k">let</span> (new-overlays)
+          (<span class="k">pcase</span> (<span class="k">while-no-input</span>
+                   (<span class="k">unless</span> (string-match-p <span class="s">"\\`</span><span class="m s">!? ?\\</span><span class="s">'"</span> input) <span class="cd">;; </span><span class="c">Empty input.
+</span>                     (<span class="k">let*</span> ((inhibit-quit (eq action 'return)) <span class="cd">;; </span><span class="c">Non interruptible, when quitting!
+</span>                            (not (string-prefix-p <span class="s">"! "</span> input))
+                            (stripped (string-remove-prefix <span class="s">"! "</span> input))
+                            (matches (funcall filter stripped lines))
+                            (old-ind 0)
+                            (block-beg pt-min)
+                            (block-end pt-min))
+                       (<span class="k">while</span> old-ind
+                         (<span class="k">let</span> ((match (<span class="k">pop</span> matches)) (ind nil) (beg pt-max) (end pt-max) prop)
+                           (<span class="k">when</span> match
+                             (<span class="k">setq</span> prop (get-text-property 0 'consult--focus-line match)
+                                   ind (car prop)
+                                   beg (cdr prop)
+                                   <span class="cd">;; </span><span class="c">Check for empty lines, see above.
+</span>                                   end (+ 1 beg (<span class="k">if</span> (equal match <span class="s">"\n"</span>) 0 (length match)))))
+                           (<span class="k">unless</span> (eq ind (1+ old-ind))
+                             (<span class="k">let</span> ((a (<span class="k">if</span> not block-beg block-end))
+                                   (b (<span class="k">if</span> not block-end beg)))
+                               (<span class="k">when</span> (/= a b)
+                                 (<span class="k">push</span> (consult--make-overlay a b 'invisible t) new-overlays)))
+                             (<span class="k">setq</span> block-beg beg))
+                           (<span class="k">setq</span> block-end end old-ind ind)))))
+                   'commit)
+            ('commit
+             (mapc #'delete-overlay overlays)
+             (<span class="k">setq</span> last-input input overlays new-overlays))
+            (_ (mapc #'delete-overlay new-overlays)))))
+      (<span class="k">when</span> (eq action 'return)
+        (<span class="k">cond</span>
+         ((not input)
+          (mapc #'delete-overlay overlays)
+          (goto-char pt-orig))
+         ((equal input <span class="s">""</span>)
+          (consult-focus-lines nil 'show)
+          (goto-char pt-orig))
+         (t
+          <span class="cd">;; </span><span class="c">Successfully terminated -&gt; Remember invisible overlays
+</span>          (<span class="k">cl-callf</span> nconc consult--focus-lines-overlays overlays)
+          <span class="cd">;; </span><span class="c">move point past invisible
+</span>          (goto-char (<span class="k">if-let*</span> ((ov (<span class="k">and</span> (invisible-p pt-orig)
+                                        (seq-find (<span class="k">lambda</span> (ov) (overlay-get ov 'invisible))
+                                                  (overlays-at pt-orig)))))
+                         (overlay-end ov)
+                       pt-orig))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

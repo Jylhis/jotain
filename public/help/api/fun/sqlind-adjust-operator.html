@@ -1,0 +1,73 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sqlind-adjust-operator – Emacs Documentation Online</title>
+<meta name="description" content="sqlind-adjust-operator is a natively compiled function defined in
+sql-indent.el.
+Adjust the indentation for operators in select clauses.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sqlind-adjust-operator</code></h1><p><span class="m"><code>sqlind-adjust-operator</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">sql-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(sqlind-adjust-operator <a href="#:~:text="><span class="arg">SYNTAX</span></a> <a href="#:~:text=Otherwise,-,BASE-INDENTATION"><span class="arg">BASE-INDENTATION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Adjust the indentation for operators in select clauses.
+<p>If the line to be indented starts with an operator, the
+right-hand operand is lined up with the left hand operand on the
+previous line.  Otherwise, <span class="arg">BASE-INDENTATION</span> is returned.  For
+example:
+<p>&nbsp;&nbsp;&nbsp;&nbsp;select col1, col2
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|| col3 as composed_column,
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;col4
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|| col5 as composed_column2
+<br>&nbsp;&nbsp;&nbsp;&nbsp;from   my_table
+<br>&nbsp;&nbsp;&nbsp;&nbsp;where  cond1 = 1
+<br>&nbsp;&nbsp;&nbsp;&nbsp;and    cond2 = 2;
+<p>This is an indentation adjuster and needs to be added to the
+<br>`sqlind-indentation-offsets-alist`
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vgm6xb2iy00bs19rdw9z3nfi5nf8g873-emacs-packages-deps/share/emacs/site-lisp/elpa/sql-indent-1.7/sql-indent.el</span>
+(<span class="k">defun</span> <span class="f">sqlind-adjust-operator</span> (syntax base-indentation)
+  <span class="doc">"Adjust the indentation for operators in select clauses.
+
+If the line to be indented starts with an operator, the
+right-hand operand is lined up with the left hand operand on the
+previous line.  Otherwise, BASE-INDENTATION is returned.  For
+example:
+
+    select col1, col2
+              || col3 as composed_column,
+           col4
+        || col5 as composed_column2
+    from   my_table
+    where  cond1 = 1
+    and    cond2 = 2;
+
+This is an indentation adjuster and needs to be added to the
+`sqlind-indentation-offsets-alist`"</span>
+  (<span class="k">save-excursion</span>
+    (<span class="k">with-syntax-table</span> sqlind-syntax-table
+      (back-to-indentation)
+      <span class="cd">;; </span><span class="c">If there are non-word constituents at the beginning if the line,
+</span>      <span class="cd">;; </span><span class="c">consider them an operator and line up the line to the first word of the
+</span>      <span class="cd">;; </span><span class="c">line, not the operator
+</span>      (<span class="k">cond</span> ((looking-at sqlind-operator-regexp)
+	     (<span class="k">let</span> ((ofs (length (match-string 0))))
+	       (<span class="k">if</span> (eq (sqlind-syntax-symbol syntax)
+		       'select-column-continuation)
+		   (goto-char (sqlind-column-definition-start
+			       (point) (sqlind-anchor-point syntax)))
+		 (forward-line -1)
+		 (end-of-line)
+		 (sqlind-backward-syntactic-ws)
+		 <span class="cd">;; </span><span class="c">Previous function leaves us on the first non-white-space
+</span>		 <span class="cd">;; </span><span class="c">character.  This might be a string terminator (') char, move
+</span>		 <span class="cd">;; </span><span class="c">the cursor one to the left, so '</span><span class="m c">forward-sexp</span><span class="c">' works correctly.
+</span>		 (<span class="k">ignore-errors</span> (forward-char 1))
+		 (forward-sexp -1))
+	       (max 0 (- (current-column) ofs))))
+	    ('t base-indentation)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

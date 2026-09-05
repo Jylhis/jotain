@@ -1,0 +1,341 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-point-context – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-point-context is a natively compiled function defined in
+web-mode.el.
+POS should be at the beginning of the indentation.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-point-context</code></h1><p><span class="m"><code>web-mode-point-context</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-point-context <a href="#:~:text=Documentation-,POS"><span class="arg">POS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p><span class="arg">POS</span> should be at the beginning of the indentation.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-point-context</span> (pos)
+  <span class="doc">"POS should be at the beginning of the indentation."</span>
+  (<span class="k">save-excursion</span>
+    (<span class="k">let</span> (curr-char curr-indentation curr-line
+                    language
+                    options
+                    reg-beg reg-col
+                    prev-char prev-indentation prev-line prev-pos
+                    token
+                    part-language
+                    depth)
+
+      (<span class="k">setq</span> reg-beg (point-min)
+            reg-col 0
+            token <span class="s">"live"</span>
+            options <span class="s">""</span>
+            language <span class="s">""</span>
+            prev-line <span class="s">""</span>
+            prev-char 0
+            prev-pos nil
+            prev-line-end nil)
+
+      (<span class="k">when</span> (get-text-property pos 'part-side)
+        (<span class="k">setq</span> part-language (symbol-name (get-text-property pos 'part-side))))
+
+      <span class="cd">;;</span><span class="c">(message "part-language=%S" part-language)
+</span>
+      (<span class="k">cond</span>
+
+        ((<span class="k">and</span> (bobp) (member web-mode-content-type '(<span class="s">"html"</span> <span class="s">"xml"</span>)))
+         (<span class="k">setq</span> language web-mode-content-type)
+         )
+
+        ((string= web-mode-content-type <span class="s">"css"</span>)
+         (<span class="k">setq</span> language <span class="s">"css"</span>
+               curr-indentation web-mode-css-indent-offset))
+
+        ((member web-mode-content-type '(<span class="s">"javascript"</span> <span class="s">"json"</span> <span class="s">"typescript"</span>))
+         (<span class="k">setq</span> language web-mode-content-type
+               curr-indentation web-mode-code-indent-offset))
+
+        ((<span class="k">or</span> (string= web-mode-content-type <span class="s">"jsx"</span>)
+             (<span class="k">and</span> part-language (string= part-language <span class="s">"jsx"</span>)))
+         (<span class="k">setq</span> language <span class="s">"jsx"</span>
+               curr-indentation web-mode-code-indent-offset)
+         (<span class="k">cond</span>
+           ((web-mode-jsx-is-html pos)
+            (<span class="k">setq</span> curr-indentation web-mode-markup-indent-offset
+                  options <span class="s">"is-html"</span>))
+           ((<span class="k">and</span> (<span class="k">setq</span> depth (get-text-property pos 'jsx-depth)) (&gt; depth 1))
+            (<span class="k">when</span> (get-text-property pos 'jsx-beg)
+              (<span class="k">setq</span> depth (1- depth)))
+            (<span class="k">setq</span> reg-beg (web-mode-jsx-depth-beginning-position pos depth))
+            (<span class="k">setq</span> reg-beg (1+ reg-beg))
+            <span class="cd">;;</span><span class="c">(message "%S" (point))
+</span>            (<span class="k">save-excursion</span>
+              (goto-char reg-beg)
+              <span class="cd">;;</span><span class="c">(message "pt=%S" reg-beg)
+</span>              (<span class="k">cond</span>
+                ((<span class="k">and</span> (not (looking-at-p <span class="s">"[ ]*$"</span>))
+                      (looking-back <span class="s">"^[[:space:]]*{"</span> (point-min)))
+                 (<span class="k">setq</span> reg-col (+ (current-indentation) <span class="cd">;; </span><span class="c">#1027
+</span>                                  (<span class="k">cond</span>
+                                    ((looking-at <span class="s">"[ ]+"</span>) (1+ (length (match-string-no-properties 0))))
+                                    (t 0))
+                                  ))
+                 )
+                ((looking-at-p <span class="s">"[ ]*\\[[ ]*$"</span>) <span class="cd">;; </span><span class="c">#0659
+</span>                 (<span class="k">setq</span> reg-col (current-indentation))
+                 )
+                ((<span class="k">and</span> (looking-back <span class="s">"=[ ]*{"</span> (point-min)) <span class="cd">;; </span><span class="c">#0739 #1022
+</span>                      (not (looking-at-p <span class="s">"[[:space:]]*&lt;"</span>)))
+                 (<span class="k">setq</span> reg-col (current-indentation))
+                 )
+                <span class="cd">;;</span><span class="c">((and (looking-back "=[ ]*{" (point-min)) ;; #0739
+</span>                <span class="cd">;;      </span><span class="c">(looking-at-p "{[ ]*"))
+</span>                <span class="cd">;; </span><span class="c">(setq reg-col (current-indentation))
+</span>                <span class="cd">;; </span><span class="c">)
+</span>                ((get-text-property (1- (point)) 'tag-beg)
+                 <span class="cd">;;</span><span class="c">(message "point=%S" (point))
+</span>                 (<span class="k">setq</span> reg-col (current-indentation))
+                 )
+                (t
+                 (message <span class="s">"%S : %S %S"</span> (point) (current-indentation) web-mode-code-indent-offset)
+                 <span class="cd">;;</span><span class="c">(setq reg-col (+ (current-indentation) web-mode-code-indent-offset web-mode-jsx-expression-padding)))
+</span>                 (<span class="k">setq</span> reg-col (+ (current-indentation) web-mode-code-indent-offset)))
+                )
+
+              <span class="cd">;;</span><span class="c">(message "%S %S %S" (point) (current-indentation) reg-col)
+</span>              ) <span class="cd">;</span><span class="c">save-excursion
+</span>            )
+           ((string= web-mode-content-type <span class="s">"jsx"</span>)
+            (<span class="k">setq</span> reg-beg (point-min)))
+           (t
+            (<span class="k">setq</span> reg-beg (<span class="k">or</span> (web-mode-part-beginning-position pos) (point-min)))
+            (<span class="k">save-excursion</span>
+              (goto-char reg-beg)
+              (search-backward <span class="s">"&lt;"</span> nil t)
+              (<span class="k">setq</span> reg-col (current-column))
+              ) <span class="cd">;</span><span class="c">save-excursion
+</span>            )
+           ) <span class="cd">;</span><span class="c">cond
+</span>         <span class="cd">;;</span><span class="c">(message "jsx reg-beg=%S" reg-beg)
+</span>         ) <span class="cd">;</span><span class="c">jsx
+</span>
+        ((string= web-mode-content-type <span class="s">"php"</span>)
+         (<span class="k">setq</span> language <span class="s">"php"</span>
+               curr-indentation web-mode-code-indent-offset))
+
+        ((<span class="k">or</span> (string= web-mode-content-type <span class="s">"xml"</span>))
+         (<span class="k">setq</span> language <span class="s">"xml"</span>
+               curr-indentation web-mode-markup-indent-offset))
+
+        <span class="cd">;; </span><span class="c">TODO: est ce util ?
+</span>        ((<span class="k">and</span> (get-text-property pos 'tag-beg)
+              (get-text-property pos 'tag-name)
+              <span class="cd">;;</span><span class="c">(not (get-text-property pos 'part-side))
+</span>              )
+         (<span class="k">setq</span> language <span class="s">"html"</span>
+               curr-indentation web-mode-markup-indent-offset))
+
+        ((<span class="k">and</span> (get-text-property pos 'block-side)
+              (not (get-text-property pos 'block-beg)))
+
+         (<span class="k">setq</span> reg-beg (<span class="k">or</span> (web-mode-block-beginning-position pos) (point-min)))
+         (goto-char reg-beg)
+         (<span class="k">setq</span> reg-col (current-column))
+         <span class="cd">;;</span><span class="c">(message "%S %S" reg-beg reg-col)
+</span>         (<span class="k">setq</span> language web-mode-engine)
+         (<span class="k">setq</span> curr-indentation web-mode-code-indent-offset)
+
+         (<span class="k">cond</span>
+           ((string= web-mode-engine <span class="s">"blade"</span>)
+            (<span class="k">save-excursion</span>
+              (<span class="k">when</span> (web-mode-rsf <span class="s">"{[{!]+[ ]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">@props[ ]*[(]"</span>) <span class="cd">;; </span><span class="c">#1318
+</span>                (<span class="k">setq</span> reg-col (current-column))))
+            (<span class="k">setq</span> reg-beg (+ reg-beg 2))
+            )
+           ((string= web-mode-engine <span class="s">"razor"</span>)
+            <span class="cd">;;</span><span class="c">(setq reg-beg (+ reg-beg 2))
+</span>            <span class="cd">;;</span><span class="c">(setq reg-col (current-column))
+</span>            )
+           <span class="cd">;; </span><span class="c">tests/demo.chtml
+</span>           ((string= web-mode-engine <span class="s">"ctemplate"</span>)
+            (<span class="k">save-excursion</span>
+              (<span class="k">when</span> (web-mode-rsf <span class="s">"{{#?"</span>)
+                (<span class="k">setq</span> reg-col (current-column))))
+            )
+           ((string= web-mode-engine <span class="s">"dust"</span>)
+            (<span class="k">save-excursion</span>
+              (<span class="k">when</span> (web-mode-rsf <span class="s">"{@"</span>)
+                (<span class="k">setq</span> reg-col (current-column))))
+            )
+           ((string= web-mode-engine <span class="s">"svelte"</span>)
+            (<span class="k">save-excursion</span>
+              (<span class="k">when</span> (web-mode-rsf <span class="s">"{@"</span>)
+                (<span class="k">setq</span> reg-col (current-column))))
+            )
+           ((string= web-mode-engine <span class="s">"template-toolkit"</span>)
+            (<span class="k">setq</span> reg-beg (+ reg-beg 3)
+                  reg-col (+ reg-col 3))
+            )
+           ((<span class="k">and</span> (string= web-mode-engine <span class="s">"jsp"</span>)
+                 (web-mode-looking-at <span class="s">"&lt;%@"</span> reg-beg))
+            (<span class="k">save-excursion</span>
+              (goto-char reg-beg)
+              (looking-at <span class="s">"&lt;%@[ ]*[[:alpha:]]+[ ]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">&lt;/?[[:alpha:]]+[:.][[:alpha:]]+[ ]+"</span>)
+              (goto-char (match-end 0))
+              (<span class="k">setq</span> reg-col (current-column))
+              )
+            )
+           ((<span class="k">and</span> (string= web-mode-engine <span class="s">"freemarker"</span>)
+                 (web-mode-looking-at <span class="s">"&lt;@</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">&lt;%@</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">&lt;[[:alpha:]]"</span> reg-beg))
+            (<span class="k">save-excursion</span>
+              (goto-char reg-beg)
+              (looking-at <span class="s">"&lt;@[[:alpha:].]+[ ]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">&lt;%@[ ]*[[:alpha:]]+[ ]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">&lt;[[:alpha:]]+:[[:alpha:]]+[ ]+"</span>)
+              (goto-char (match-end 0))
+              (<span class="k">setq</span> reg-col (current-column))
+              )
+            )
+           ) <span class="cd">;</span><span class="c">cond
+</span>         ) <span class="cd">;</span><span class="c">block-side
+</span>
+        ((<span class="k">and</span> part-language (member part-language
+                                    '(<span class="s">"css"</span> <span class="s">"javascript"</span> <span class="s">"json"</span> <span class="s">"sql"</span> <span class="s">"markdown"</span>
+                                      <span class="s">"pug"</span> <span class="s">"ruby"</span> <span class="s">"sass"</span> <span class="s">"stylus"</span> <span class="s">"typescript"</span>)))
+         (<span class="k">setq</span> reg-beg (<span class="k">or</span> (web-mode-part-beginning-position pos) (point-min)))
+         (goto-char reg-beg)
+         (<span class="k">if</span> (<span class="k">and</span> (string= web-mode-engine <span class="s">"mojolicious"</span>)
+                  (looking-back <span class="s">"javascript begin"</span> (point-min)))
+             (search-backward <span class="s">"%"</span> nil t)
+             (search-backward <span class="s">"&lt;"</span> nil t))
+         (<span class="k">setq</span> reg-col (current-column))
+         (<span class="k">setq</span> language part-language)
+         (<span class="k">cond</span>
+           ((string= language <span class="s">"css"</span>)
+            (<span class="k">setq</span> curr-indentation web-mode-css-indent-offset))
+           ((string= language <span class="s">"sql"</span>)
+            (<span class="k">setq</span> curr-indentation web-mode-sql-indent-offset))
+           ((string= language <span class="s">"markdown"</span>)
+            (<span class="k">setq</span> curr-indentation web-mode-code-indent-offset))
+           ((string= language <span class="s">"pug"</span>)
+            (<span class="k">setq</span> curr-indentation web-mode-code-indent-offset))
+           ((string= language <span class="s">"sass"</span>)
+            (<span class="k">setq</span> curr-indentation web-mode-code-indent-offset))
+           ((string= language <span class="s">"stylus"</span>)
+            (<span class="k">setq</span> curr-indentation web-mode-code-indent-offset))
+           ((string= language <span class="s">"ruby"</span>)
+            (<span class="k">setq</span> curr-indentation web-mode-code-indent-offset))
+           ((string= language <span class="s">"typescript"</span>)
+            (<span class="k">setq</span> curr-indentation web-mode-code-indent-offset))
+           (t
+            (<span class="k">setq</span> language <span class="s">"javascript"</span>
+                  curr-indentation web-mode-code-indent-offset))
+           )
+         ) <span class="cd">;</span><span class="c">part-side
+</span>
+        (t
+         (<span class="k">setq</span> language <span class="s">"html"</span>
+               curr-indentation web-mode-markup-indent-offset)
+         )
+
+        ) <span class="cd">;</span><span class="c">cond
+</span>
+      (<span class="k">cond</span>
+        ((<span class="k">or</span> (<span class="k">and</span> (&gt; pos (point-min))
+                  (eq (get-text-property pos 'part-token) 'comment)
+                  (eq (get-text-property (1- pos) 'part-token) 'comment)
+                  (<span class="k">progn</span>
+                    (<span class="k">setq</span> reg-beg (previous-single-property-change pos 'part-token))
+                    t))
+             (<span class="k">and</span> (&gt; pos (point-min))
+                  (eq (get-text-property pos 'block-token) 'comment)
+                  (eq (get-text-property (1- pos) 'block-token) 'comment)
+                  (<span class="k">progn</span>
+                    (<span class="k">setq</span> reg-beg (previous-single-property-change pos 'block-token))
+                    t))
+             (<span class="k">and</span> (&gt; pos (point-min))
+                  (eq (get-text-property pos 'tag-type) 'comment)
+                  (not (get-text-property pos 'tag-beg))
+                  (<span class="k">progn</span>
+                    (<span class="k">setq</span> reg-beg (web-mode-tag-beginning-position pos))
+                    t))
+             )
+         (<span class="k">setq</span> token <span class="s">"comment"</span>))
+        ((<span class="k">or</span> (<span class="k">and</span> (&gt; pos (point-min))
+                  (member (get-text-property pos 'part-token)
+                          '(string context key))
+                  (member (get-text-property (1- pos) 'part-token)
+                          '(string context key)))
+             (<span class="k">and</span> (eq (get-text-property pos 'block-token) 'string)
+                  (eq (get-text-property (1- pos) 'block-token) 'string)))
+         (<span class="k">setq</span> token <span class="s">"string"</span>))
+        )
+
+      (goto-char pos)
+      (<span class="k">setq</span> curr-line (web-mode-trim
+                       (buffer-substring-no-properties
+                        (line-beginning-position)
+                        (line-end-position))))
+      (<span class="k">setq</span> curr-char (<span class="k">if</span> (string= curr-line <span class="s">""</span>) 0 (aref curr-line 0)))
+
+      (<span class="k">when</span> (<span class="k">or</span> (member language '(<span class="s">"php"</span> <span class="s">"blade"</span> <span class="s">"javascript"</span> <span class="s">"typescript"</span> <span class="s">"jsx"</span> <span class="s">"razor"</span> <span class="s">"css"</span>))
+                (<span class="k">and</span> (member language '(<span class="s">"html"</span> <span class="s">"xml"</span>))
+                     (not (eq ?\&lt; curr-char))))
+        (<span class="k">let</span> (prev)
+          (<span class="k">cond</span>
+            ((member language '(<span class="s">"html"</span> <span class="s">"xml"</span> <span class="s">"javascript"</span> <span class="s">"typescript"</span> <span class="s">"jsx"</span> <span class="s">"css"</span>))
+             (<span class="k">when</span> (<span class="k">setq</span> prev (web-mode-part-previous-live-line reg-beg))
+               (<span class="k">setq</span> prev-line (nth 0 prev)
+                     prev-indentation (nth 1 prev)
+                     prev-pos (nth 2 prev)
+                     prev-line-end (nth 3 prev))
+               )
+             )
+            ((<span class="k">setq</span> prev (web-mode-block-previous-live-line))
+             (<span class="k">setq</span> prev-line (nth 0 prev)
+                   prev-indentation (nth 1 prev)
+                   prev-pos (nth 2 prev)
+                   prev-line-end (nth 3 prev))
+             (<span class="k">setq</span> prev-line (web-mode-clean-block-line prev-line)))
+            ) <span class="cd">;</span><span class="c">cond
+</span>          ) <span class="cd">;</span><span class="c">let
+</span>        (<span class="k">when</span> (&gt;= (length prev-line) 1)
+          (<span class="k">setq</span> prev-char (aref prev-line (1- (length prev-line))))
+          (<span class="k">setq</span> prev-line (substring-no-properties prev-line))
+          )
+        )
+
+      (<span class="k">cond</span>
+        ((not (member web-mode-content-type '(<span class="s">"html"</span> <span class="s">"xml"</span>)))
+         )
+        ((member language '(<span class="s">"javascript"</span> <span class="s">"typescript"</span> <span class="s">"jsx"</span> <span class="s">"ruby"</span>))
+         (<span class="k">setq</span> reg-col (<span class="k">if</span> web-mode-script-padding (+ reg-col web-mode-script-padding) 0)))
+        ((member language '(<span class="s">"css"</span> <span class="s">"sql"</span> <span class="s">"markdown"</span> <span class="s">"pug"</span> <span class="s">"sass"</span> <span class="s">"stylus"</span>))
+         (<span class="k">setq</span> reg-col (<span class="k">if</span> web-mode-style-padding (+ reg-col web-mode-style-padding) 0)))
+        ((not (member language '(<span class="s">"html"</span> <span class="s">"xml"</span>)))
+         (<span class="k">setq</span> reg-col
+               (<span class="k">cond</span>
+                 ((not web-mode-block-padding) reg-col)
+                 ((eq web-mode-block-padding -1) 0)
+                 (t (+ reg-col web-mode-block-padding))
+                 ) <span class="cd">;</span><span class="c">cond
+</span>               ) <span class="cd">;</span><span class="c">setq
+</span>         )
+        )
+
+      (list <span class="bi">:curr-char</span> curr-char
+            <span class="bi">:curr-indentation</span> curr-indentation
+            <span class="bi">:curr-line</span> curr-line
+            <span class="bi">:language</span> language
+            <span class="bi">:options</span> options
+            <span class="bi">:prev-char</span> prev-char
+            <span class="bi">:prev-indentation</span> prev-indentation
+            <span class="bi">:prev-line</span> prev-line
+            <span class="bi">:prev-line-end</span> prev-line-end
+            <span class="bi">:prev-pos</span> prev-pos
+            <span class="bi">:reg-beg</span> reg-beg
+            <span class="bi">:reg-col</span> reg-col
+            <span class="bi">:token</span> token)
+      )))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

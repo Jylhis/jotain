@@ -1,0 +1,127 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dtrt-indent-try-set-offset – Emacs Documentation Online</title>
+<meta name="description" content="dtrt-indent-try-set-offset is an interactive and natively compiled
+function defined in dtrt-indent.el.
+Try adjusting the current buffer's indentation offset.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dtrt-indent-try-set-offset</code></h1><p><span class="m"><code>dtrt-indent-try-set-offset</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">dtrt-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(dtrt-indent-try-set-offset)
+</code></pre>
+<h2>Documentation</h2>
+<p>Try adjusting the current buffer's indentation offset.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/07pi18l0q79xmgqf3amadq86iinldk0s-emacs-packages-deps/share/emacs/site-lisp/elpa/dtrt-indent-20260709.2011/dtrt-indent.el</span>
+(<span class="k">defun</span> <span class="f">dtrt-indent-try-set-offset</span> ()
+  <span class="doc">"Try adjusting the current buffer's indentation offset."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((language-and-variable (cdr (dtrt-indent--search-hook-mapping major-mode))))
+    (<span class="k">when</span> language-and-variable
+      (<span class="k">let*</span> ((result
+              (dtrt-indent--analyze
+               (dtrt-indent--calc-histogram
+                (car language-and-variable))))
+             (best-guess
+              (cdr (assoc <span class="bi">:best-guess</span> result)))
+             (rejected
+              (cdr (assoc <span class="bi">:rejected</span> result)))
+             (confidence
+              (cdr (assoc <span class="bi">:confidence</span> result)))
+             (change-indent-tabs-mode
+              (cdr (assoc <span class="bi">:change-indent-tabs-mode</span> result)))
+             (indent-tabs-mode-setting
+              (cdr (assoc <span class="bi">:indent-tabs-mode-setting</span> result)))
+             (best-indent-offset
+              (nth 0 best-guess))
+             (indent-offset-mode-variables
+              (<span class="k">let</span> ((v (nth 1 language-and-variable)))
+                (<span class="k">if</span> (listp v) v (list v))))
+             (indent-offset-variables
+              (append
+               indent-offset-mode-variables
+               (remove nil
+                       (mapcar
+                        (<span class="k">lambda</span> (x)
+                          (<span class="k">let</span> ((mode (car x))
+                                (variable (cadr x)))
+                            (<span class="k">when</span> (<span class="k">and</span> (boundp mode)
+                                       (symbol-value mode))
+                              variable)))
+                        dtrt-indent-hook-generic-mapping-list))))
+             (indent-offset-names
+              (mapconcat (<span class="k">lambda</span> (x) (format <span class="s">"%s"</span> x))
+                         indent-offset-variables <span class="s">", "</span>)))
+
+        <span class="cd">;; </span><span class="c">update indent-offset-variable?
+</span>        (<span class="k">cond</span>
+         ((<span class="k">and</span> best-guess
+               (not rejected))
+
+          (<span class="k">if</span> dtrt-indent-explicit-offset
+              (message <span class="s">"\
+Indentation offset set with file variable; not adjusted"</span>)
+            (<span class="k">when</span> (<span class="k">or</span> (not dtrt-indent-require-confirmation-flag)
+                      (yes-or-no-p
+                       (format <span class="s">"Do you want to adjust %s to %s for buffer %s? "</span>
+                               indent-offset-names
+                               best-indent-offset
+                               (buffer-name))))
+              (<span class="k">setq</span> dtrt-indent-original-indent
+                    (mapcar
+                     (<span class="k">lambda</span> (x)
+                       (list x (symbol-value x) (local-variable-p x)))
+                     indent-offset-variables))
+              (<span class="k">when</span> (&gt;= dtrt-indent-verbosity 1)
+                (<span class="k">let</span> ((offset-info
+                       (format <span class="s">"%s adjusted to %s%s"</span>
+                               indent-offset-names
+                               best-indent-offset
+                               (<span class="k">if</span> (&gt;= dtrt-indent-verbosity 2)
+                                   (format <span class="s">" (%.0f%%%% confidence)"</span>
+                                           (* 100 confidence))
+                                 <span class="s">""</span>))))
+                  (message (concat <span class="s">"Note: "</span> offset-info))))
+              (<span class="k">dolist</span> (x indent-offset-variables)
+                (set (make-local-variable x)
+                     best-indent-offset))
+              best-indent-offset)))
+         (t
+          (<span class="k">when</span> (&gt;= dtrt-indent-verbosity 2)
+            (message <span class="s">"Note: %s not adjusted%s"</span> indent-offset-variables
+                     (<span class="k">if</span> (<span class="k">and</span> rejected (&gt;= dtrt-indent-verbosity 3))
+                         (format <span class="s">": %s"</span> rejected) <span class="s">""</span>)))
+          nil))
+
+        <span class="cd">;; </span><span class="c">update indent-tabs-mode?
+</span>        (<span class="k">cond</span>
+         ((<span class="k">and</span> change-indent-tabs-mode
+               (not (eq indent-tabs-mode indent-tabs-mode-setting)))
+          (<span class="k">when</span> (&gt;= dtrt-indent-verbosity 1)
+            (<span class="k">let</span> ((tabs-mode-info
+                   (<span class="k">when</span> (<span class="k">and</span> change-indent-tabs-mode
+                              (not (eql indent-tabs-mode-setting
+                                        indent-tabs-mode)))
+                     (format <span class="s">"indent-tabs-mode adjusted to %s"</span>
+                             indent-tabs-mode-setting))))
+              (message (concat <span class="s">"Note: "</span> tabs-mode-info))))
+          <span class="cd">;; </span><span class="c">backup indent-tabs-mode setting
+</span>          (<span class="k">setq</span> dtrt-indent-original-indent
+                (cons
+                 (<span class="k">let</span> ((x 'indent-tabs-mode))
+                   (list x (symbol-value x) (local-variable-p x)))
+                 dtrt-indent-original-indent))
+          <span class="cd">;; </span><span class="c">actually adapt indent-tabs-mode
+</span>          (set (make-local-variable 'indent-tabs-mode)
+               indent-tabs-mode-setting))
+         (t
+          (<span class="k">when</span> (&gt;= dtrt-indent-verbosity 2)
+            (message <span class="s">"Note: indent-tabs-mode not adjusted"</span>))
+          nil))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

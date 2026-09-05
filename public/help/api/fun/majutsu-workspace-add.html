@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-workspace-add – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-workspace-add is an interactive and natively compiled function
+defined in majutsu-workspace.el.
+Add a workspace.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-workspace-add</code></h1><p><span class="m"><code>majutsu-workspace-add</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-workspace.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-workspace-add <a href="#:~:text=workspace.-,DESTINATION"><span class="arg">DESTINATION</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=Optional-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=NAME,-,REVISION"><span class="arg">REVISION</span></a> <a href="#:~:text=and-,SPARSE-PATTERNS"><span class="arg">SPARSE-PATTERNS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Add a workspace.
+<p><span class="arg">DESTINATION</span> is where to create the new workspace.
+Optional <span class="arg">NAME</span>, <span class="arg">REVISION</span> (revset), and <span class="arg">SPARSE-PATTERNS</span> correspond to
+<br>&nbsp;&nbsp;`jj workspace add` options.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-workspace.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">majutsu-workspace-add</span> (destination <span class="ty">&amp;optional</span> name revision sparse-patterns)
+  <span class="doc">"Add a workspace.
+
+DESTINATION is where to create the new workspace.
+Optional NAME, REVISION (revset), and SPARSE-PATTERNS correspond to
+  `jj workspace add` options."</span>
+  (<span class="k">interactive</span>
+   (<span class="k">let*</span> ((root (majutsu--toplevel-safe))
+          (parent (file-name-directory (directory-file-name root)))
+          (destination (read-directory-name <span class="s">"Create workspace at: "</span> parent nil nil))
+          (name (string-trim
+                 (<span class="k">or</span> (majutsu-completing-read
+                      <span class="s">"Workspace name (empty = default)"</span>
+                      (majutsu-workspace--names root)
+                      nil nil nil 'majutsu-workspace-name-history
+                      nil 'majutsu-workspace)
+                     <span class="s">""</span>)))
+          (revision (<span class="k">or</span> (majutsu-read-optional-revset
+                         <span class="s">"Parent revset (-r, empty = default)"</span>
+                         nil nil 'majutsu-read-revset-history)
+                        <span class="s">""</span>))
+          (sparse (majutsu-completing-read <span class="s">"Sparse patterns"</span>
+                                           '(<span class="s">"copy"</span> <span class="s">"full"</span> <span class="s">"empty"</span>) nil t nil nil <span class="s">"copy"</span>)))
+     (list destination
+           (<span class="k">unless</span> (string-empty-p name) name)
+           (<span class="k">unless</span> (string-empty-p revision) revision)
+           (<span class="k">unless</span> (equal sparse <span class="s">"copy"</span>) sparse))))
+  (<span class="k">let*</span> ((dest (expand-file-name destination))
+         (args (append (list <span class="s">"workspace"</span> <span class="s">"add"</span> (majutsu-convert-filename-for-jj dest))
+                       (<span class="k">and</span> name (list <span class="s">"--name"</span> name))
+                       (<span class="k">and</span> revision (list <span class="s">"--revision"</span> revision))
+                       (<span class="k">and</span> sparse-patterns (list <span class="s">"--sparse-patterns"</span> sparse-patterns))))
+         (exit (apply #'majutsu-run-jj args)))
+    (<span class="k">if</span> (zerop exit)
+        (<span class="k">progn</span>
+          (message <span class="s">"Workspace created in %s"</span> dest)
+          <span class="cd">;; </span><span class="c">Like Magit, visit the new workspace.
+</span>          (majutsu-workspace-visit dest))
+      (message <span class="s">"Workspace creation failed"</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

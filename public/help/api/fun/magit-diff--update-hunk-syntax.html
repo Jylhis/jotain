@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-diff--update-hunk-syntax – Emacs Documentation Online</title>
+<meta name="description" content="magit-diff--update-hunk-syntax is a natively compiled function defined
+in magit-diff.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-diff--update-hunk-syntax</code></h1><p><span class="m"><code>magit-diff--update-hunk-syntax</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">magit-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-diff--update-hunk-syntax <span class="ty">&amp;optional</span> <span class="arg">HUNK</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-diff.el</span>
+<span class="cd">;;;; </span><span class="c">Syntax
+</span>
+(<span class="k">defun</span> <span class="f">magit-diff--update-hunk-syntax</span> (<span class="ty">&amp;optional</span> hunk)
+  (<span class="k">if</span> hunk
+      (<span class="k">pcase-let</span> (((eieio fontified content end) hunk))
+        (<span class="k">unless</span> fontified
+          (<span class="k">oset</span> hunk fontified t)
+          (<span class="k">save-excursion</span>
+            (goto-char content)
+            (<span class="k">pcase-let*</span>
+                ((`(,old ,new) (magit-diff-visit--sides))
+                 (old (apply #'magit-diff--get-hunk-syntax hunk 'old old))
+                 (new (apply #'magit-diff--get-hunk-syntax hunk 'new new)))
+              (<span class="k">while</span> (&lt; (point) end)
+                (<span class="k">pcase-dolist</span> (`(,b ,e ,face)
+                               (<span class="k">pcase</span> (char-after (point))
+                                 (?-  (<span class="k">pop</span> old))
+                                 (?+  (<span class="k">pop</span> new))
+                                 (?\s (<span class="k">pop</span> old)
+                                      (<span class="k">pop</span> new))))
+                  (<span class="k">let</span> ((o (make-overlay (+ (point) 1 b) (+ (point) 1 e) nil t)))
+                    (overlay-put o 'evaporate t)
+                    (overlay-put o 'face face)))
+                (forward-line 1))))))
+    (<span class="k">named-let</span> update ((section magit-root-section))
+      (<span class="k">if</span> (magit-section-match 'hunk section)
+          (<span class="k">unless</span> (magit--meta-hunk-p section)
+            (magit-diff--update-hunk-syntax section))
+        (<span class="k">dolist</span> (child (<span class="k">oref</span> section children))
+          (update child))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

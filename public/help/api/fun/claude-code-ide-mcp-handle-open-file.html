@@ -1,0 +1,92 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp-handle-open-file – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp-handle-open-file is a natively compiled function
+defined in claude-code-ide-mcp-handlers.el.
+Open a file with optional text selection.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp-handle-open-file</code></h1><p><span class="m"><code>claude-code-ide-mcp-handle-open-file</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide-mcp-handlers.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp-handle-open-file <a href="#:~:text=selection.-,ARGUMENTS"><span class="arg">ARGUMENTS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Open a file with optional text selection.
+<p><span class="arg">ARGUMENTS</span> should contain:
+<br>- <span class="m"><code>path</code></span>: File path to open
+<br>- <span class="m"><code>startLine</code></span> (optional): Start line for selection
+<br>- <span class="m"><code>endLine</code></span> (optional): End line for selection
+<br>- <span class="m"><code>startText</code></span> (optional): Start text pattern for selection
+<br>- <span class="m"><code>endText</code></span> (optional): End text pattern for selection
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp-handlers.el</span>
+<span class="cd">;;; </span><span class="c">Tool Handler Functions
+</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp-handle-open-file</span> (arguments)
+  <span class="doc">"Open a file with optional text selection.
+ARGUMENTS should contain:
+- `</span><span class="m doc">path</span><span class="doc">': File path to open
+- `</span><span class="m doc">startLine</span><span class="doc">' (optional): Start line for selection
+- `</span><span class="m doc">endLine</span><span class="doc">' (optional): End line for selection
+- `</span><span class="m doc">startText</span><span class="doc">' (optional): Start text pattern for selection
+- `</span><span class="m doc">endText</span><span class="doc">' (optional): End text pattern for selection"</span>
+  (<span class="k">let</span> ((path (alist-get 'path arguments))
+        (start-line (alist-get 'startLine arguments))
+        (end-line (alist-get 'endLine arguments))
+        (start-text (alist-get 'startText arguments))
+        (end-text (alist-get 'endText arguments)))
+    (<span class="k">unless</span> path
+      (<span class="w">signal</span> 'mcp-error '(<span class="s">"Missing required parameter: path"</span>)))
+    (<span class="k">condition-case</span> err
+        (<span class="k">progn</span>
+          (find-file path)
+          <span class="cd">;; </span><span class="c">Set up buffer cache hooks for the newly opened file
+</span>          (<span class="k">with-current-buffer</span> (current-buffer)
+            (claude-code-ide-mcp--setup-buffer-cache-hooks))
+          <span class="cd">;; </span><span class="c">Text pattern selection takes precedence over line numbers
+</span>          (<span class="k">cond</span>
+           <span class="cd">;; </span><span class="c">Both start and end text patterns provided
+</span>           ((<span class="k">and</span> start-text end-text)
+            (goto-char (point-min))
+            (<span class="k">if</span> (search-forward start-text nil t)
+                (<span class="k">let</span> ((start-pos (match-beginning 0)))
+                  (<span class="k">if</span> (search-forward end-text nil t)
+                      (<span class="k">let</span> ((end-pos (match-end 0)))
+                        (goto-char start-pos)
+                        (push-mark end-pos t t)
+                        (activate-mark))
+                    <span class="cd">;; </span><span class="c">End text not found, just go to start
+</span>                    (goto-char start-pos)))
+              <span class="cd">;; </span><span class="c">Start text not found, fall back to line numbers if provided
+</span>              (<span class="k">when</span> start-line
+                (goto-char (point-min))
+                (forward-line (1- start-line))
+                (<span class="k">when</span> end-line
+                  (push-mark (point) t t)
+                  (forward-line (- end-line start-line))
+                  (end-of-line)
+                  (activate-mark)))))
+           <span class="cd">;; </span><span class="c">Only start text provided
+</span>           (start-text
+            (goto-char (point-min))
+            (<span class="k">when</span> (search-forward start-text nil t)
+              (goto-char (match-beginning 0))))
+           <span class="cd">;; </span><span class="c">Line number selection
+</span>           (start-line
+            (goto-char (point-min))
+            (forward-line (1- start-line))
+            (<span class="k">when</span> end-line
+              (push-mark (point) t t)
+              (forward-line (- end-line start-line))
+              (end-of-line)
+              (activate-mark))))
+          <span class="cd">;; </span><span class="c">Return in VS Code format
+</span>          (list `((type . <span class="s">"text"</span>)
+                  (text . <span class="s">"FILE_OPENED"</span>))))
+      (<span class="w">error</span>
+       (<span class="w">signal</span> 'mcp-error (list (format <span class="s">"Failed to open file: %s"</span>
+                                        (error-message-string err))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

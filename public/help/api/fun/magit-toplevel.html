@@ -1,0 +1,106 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-toplevel – Emacs Documentation Online</title>
+<meta name="description" content="magit-toplevel is a natively compiled function defined in
+magit-git.el.
+Return the absolute path to the toplevel of the current repository.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-toplevel</code></h1><p><span class="m"><code>magit-toplevel</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-git.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-toplevel <span class="ty">&amp;optional</span> <a href="#:~:text=optional-,DIRECTORY"><span class="arg">DIRECTORY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the absolute path to the toplevel of the current repository.
+<p>From within the working tree or control directory of a repository
+return the absolute path to the toplevel directory of the working
+tree.  As a special case, from within a bare repository return the
+control directory instead.  When called outside a repository, return
+nil.
+<p>When optional <span class="arg">DIRECTORY</span> is non-nil, return the toplevel for that
+directory, instead of the one for <a href="../var/default-directory.html"><code>default-directory</code></a>.
+<p>Try to respect the option <a href="../var/find-file-visit-truename.html"><code>find-file-visit-truename</code></a>, i.e., when the
+value of that option is nil, avoid needlessly returning the truename.
+When a symlink to a sub-directory of the working tree is involved,
+or when called from within a sub-directory of the gitdir or from the
+toplevel of a gitdir, which itself is not located within the working
+tree, then it is not possible to avoid returning the truename.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-git.el</span>
+(<span class="k">defun</span> <span class="f">magit-toplevel</span> (<span class="ty">&amp;optional</span> directory)
+  <span class="doc">"Return the absolute path to the toplevel of the current repository.
+
+From within the working tree or control directory of a repository
+return the absolute path to the toplevel directory of the working
+tree.  As a special case, from within a bare repository return the
+control directory instead.  When called outside a repository, return
+nil.
+
+When optional DIRECTORY is non-nil, return the toplevel for that
+directory, instead of the one for `</span><span class="m doc">default-directory</span><span class="doc">'.
+
+Try to respect the option `</span><span class="m doc">find-file-visit-truename</span><span class="doc">', i.e., when the
+value of that option is nil, avoid needlessly returning the truename.
+When a symlink to a sub-directory of the working tree is involved,
+or when called from within a sub-directory of the gitdir or from the
+toplevel of a gitdir, which itself is not located within the working
+tree, then it is not possible to avoid returning the truename."</span>
+  (<span class="k">magit--with-refresh-cache</span>
+      (cons (<span class="k">or</span> directory default-directory) 'magit-toplevel)
+    (<span class="k">magit--with-safe-default-directory</span> directory
+      (<span class="k">cond-let*</span>
+        ([topdir (magit-rev-parse-safe <span class="s">"--show-toplevel"</span>)]
+         [topdir (magit-expand-git-file-name topdir)]
+         (<span class="k">cond-let*</span>
+           (<span class="cd">;; </span><span class="c">Always honor these settings.
+</span>            [_(not find-file-visit-truename)]
+            [_(not (getenv <span class="s">"GIT_WORK_TREE"</span>))]
+            <span class="cd">;; </span><span class="c">"--show-cdup" is the relative path to the toplevel from
+</span>            <span class="cd">;; </span><span class="c">(file-truename default-directory).  Here we pretend it is
+</span>            <span class="cd">;; </span><span class="c">relative to `</span><span class="m c">default-directory</span><span class="c">', and go to that directory.
+</span>            <span class="cd">;; </span><span class="c">Then we check whether "--show-toplevel" still returns the
+</span>            <span class="cd">;; </span><span class="c">same value and whether "--show-cdup" now is the empty
+</span>            <span class="cd">;; </span><span class="c">string.  If both is the case, then we are at the toplevel
+</span>            <span class="cd">;; </span><span class="c">of the same working tree, but also avoided needlessly
+</span>            <span class="cd">;; </span><span class="c">following any symlinks.
+</span>            [updir (file-name-as-directory
+                    (magit-rev-parse-safe <span class="s">"--show-cdup"</span>))]
+            [updir (<span class="k">if</span> (file-name-absolute-p updir)
+                       (concat (file-remote-p default-directory) updir)
+                     (expand-file-name updir))]
+            [updir-&gt;topdir
+             (<span class="k">let</span> ((default-directory updir))
+               (<span class="k">and</span> (string-equal (magit-rev-parse-safe <span class="s">"--show-cdup"</span>) <span class="s">""</span>)
+                    (magit-rev-parse-safe <span class="s">"--show-toplevel"</span>)))]
+            [_(string-equal (magit-expand-git-file-name updir-&gt;topdir) topdir)]
+            updir)
+           ((concat (file-remote-p default-directory)
+                    (file-name-as-directory topdir)))))
+        ([gitdir (magit-rev-parse-safe <span class="s">"--git-dir"</span>)]
+         [gitdir (file-name-as-directory
+                  (<span class="k">if</span> (file-name-absolute-p gitdir)
+                      <span class="cd">;; </span><span class="c">We might have followed a symlink.
+</span>                      (concat (file-remote-p default-directory)
+                              (magit-expand-git-file-name gitdir))
+                    (expand-file-name gitdir)))]
+         (<span class="k">cond-let*</span>
+           ((magit-bare-repo-p) gitdir)
+           <span class="cd">;; </span><span class="c">Return the linked working tree, if any.
+</span>           ([link (expand-file-name <span class="s">"gitdir"</span> gitdir)]
+            [wtree (<span class="k">and</span> (file-exists-p link)
+                        (magit-file-line link))]
+            <span class="cd">;; </span><span class="c">Ignore ".git/gitdir" files that result from a Git bug.
+</span>            <span class="cd">;; </span><span class="c">This has long been fixed, but old repository may still
+</span>            <span class="cd">;; </span><span class="c">exist that contain such a file.  See #2364.
+</span>            [_(not (equal wtree <span class="s">".git"</span>))]
+            (file-name-directory (expand-file-name wtree default-directory)))
+           <span class="cd">;; </span><span class="c">The working directory may not be the parent
+</span>           <span class="cd">;; </span><span class="c">directory of .git if it was set up with
+</span>           <span class="cd">;; </span><span class="c">"git init --separate-git-dir".  See #2955.
+</span>           ((car (rassoc gitdir magit--separated-gitdirs)))
+           <span class="cd">;; </span><span class="c">Step outside the control directory to enter the working tree.
+</span>           ((file-name-directory (directory-file-name gitdir)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

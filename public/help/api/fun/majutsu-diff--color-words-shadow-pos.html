@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-diff--color-words-shadow-pos – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-diff--color-words-shadow-pos is a natively compiled function
+defined in majutsu-diff.el.
+Compute shadow cursor position for color-words geometry at CURSOR.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-diff--color-words-shadow-pos</code></h1><p><span class="m"><code>majutsu-diff--color-words-shadow-pos</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-diff--color-words-shadow-pos <a href="#:~:text=at-,CURSOR"><span class="arg">CURSOR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Compute shadow cursor position for color-words geometry at <span class="arg">CURSOR</span>.
+<p>Return buffer position, or nil if no mapping is possible.
+<p>Map using non-token offsets to align shared context.  When <span class="arg">CURSOR</span> sits
+inside a token span, prefer a token span anchored at the same offset on
+the other side; otherwise fall back to the non-token stream.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-diff.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-diff--color-words-shadow-pos</span> (cursor)
+  <span class="doc">"Compute shadow cursor position for color-words geometry at CURSOR.
+Return buffer position, or nil if no mapping is possible.
+
+Map using non-token offsets to align shared context.  When CURSOR sits
+inside a token span, prefer a token span anchored at the same offset on
+the other side; otherwise fall back to the non-token stream."</span>
+  (<span class="k">let</span> ((region-ov (majutsu-diff--color-words--region-overlay-at cursor)))
+    (<span class="k">when</span> region-ov
+      (<span class="k">let*</span> ((region-other (overlay-get region-ov 'majutsu-color-words-region-other))
+             (from-spans (overlay-get region-ov 'majutsu-color-words-non-token))
+             (to-spans (<span class="k">and</span> region-other
+                            (overlay-get region-other 'majutsu-color-words-non-token)))
+             (from-tokens (overlay-get region-ov 'majutsu-color-words-token-anchors))
+             (to-tokens (<span class="k">and</span> region-other
+                             (overlay-get region-other 'majutsu-color-words-token-anchors)))
+             (offset (<span class="k">or</span> (majutsu-diff--color-words--span-stream-offset
+                          cursor from-spans)
+                         (<span class="k">and</span> from-tokens 0)))
+             (scaled (<span class="k">cond</span>
+                      ((<span class="k">and</span> to-spans offset)
+                       (min offset (1- (majutsu-diff--color-words--span-stream-length
+                                        to-spans))))
+                      (offset offset))))
+        (<span class="k">when</span> (<span class="k">and</span> offset scaled)
+          (<span class="k">let*</span> ((from-bucket (cdr (assoc offset from-tokens)))
+                 (to-bucket (cdr (assoc scaled to-tokens)))
+                 (token-hit (<span class="k">and</span> from-bucket
+                                 (seq-find (<span class="k">lambda</span> (span)
+                                             (<span class="k">and</span> (&lt;= (car span) cursor)
+                                                  (&lt; cursor (cdr span))))
+                                           from-bucket))))
+            (<span class="k">cond</span>
+             ((<span class="k">and</span> token-hit to-bucket)
+              (car (car to-bucket)))
+             (to-spans
+              (majutsu-diff--color-words--span-stream-pos scaled to-spans)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

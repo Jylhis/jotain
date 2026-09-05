@@ -1,0 +1,42 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark-export-dired – Emacs Documentation Online</title>
+<meta name="description" content="embark-export-dired is a natively compiled function defined in
+embark.el.
+Create a Dired buffer listing FILES.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark-export-dired</code></h1><p><span class="m"><code>embark-export-dired</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark-export-dired <a href="#:~:text=listing-,FILES"><span class="arg">FILES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create a Dired buffer listing <span class="arg">FILES</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+(<span class="k">defun</span> <span class="f">embark-export-dired</span> (files)
+  <span class="doc">"Create a Dired buffer listing FILES."</span>
+  (<span class="k">setq</span> files (mapcar #'directory-file-name
+                      (cl-remove-if-not #'file-exists-p files)))
+  (<span class="k">when</span> (dired-check-switches dired-listing-switches <span class="s">"A"</span> <span class="s">"almost-all"</span>)
+    (<span class="k">setq</span> files (cl-remove-if
+                 (<span class="k">lambda</span> (path)
+                   (<span class="k">let</span> ((file (file-name-nondirectory path)))
+                     (<span class="k">or</span> (string= file <span class="s">"."</span>) (string= file <span class="s">".."</span>))))
+                 files)))
+  (<span class="k">cl-letf*</span> ((dir (<span class="k">or</span> (file-name-directory (try-completion <span class="s">""</span> files)) <span class="s">""</span>))
+             <span class="cd">;; </span><span class="c">Prevent reusing existing Dired buffer.
+</span>             ((symbol-function 'dired-find-buffer-nocreate) #'ignore)
+             (buf (dired-noselect
+                   (cons (expand-file-name dir)
+                         (mapcar (<span class="k">lambda</span> (file) (string-remove-prefix dir file))
+                                 files)))))
+    (<span class="k">with-current-buffer</span> buf
+      <span class="cd">;; </span><span class="c">Unadvertise to prevent the new buffer from being reused.
+</span>      (dired-unadvertise default-directory)
+      (rename-buffer (format <span class="s">"*Embark Export Dired %s*"</span> default-directory)))
+    (pop-to-buffer buf)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

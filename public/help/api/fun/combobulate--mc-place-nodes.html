@@ -1,0 +1,72 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate--mc-place-nodes – Emacs Documentation Online</title>
+<meta name="description" content="combobulate--mc-place-nodes is a natively compiled function defined in
+combobulate-cursor.el.
+Edit PLACEMENT-NODES according to each node's desired placement action.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate--mc-place-nodes</code></h1><p><span class="m"><code>combobulate--mc-place-nodes</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">combobulate-cursor.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate--mc-place-nodes <a href="#:~:text=Edit-,PLACEMENT-NODES"><span class="arg">PLACEMENT-NODES</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,DEFAULT-ACTION"><span class="arg">DEFAULT-ACTION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Edit <span class="arg">PLACEMENT-NODES</span> according to each node's desired placement action.
+<p>Must be a list of cons cells where the car is the placement
+action and the cdr is the node.
+<p>The car should be one of the following symbols:
+<p><span class="m"><code>before</code></span>, which puts the point at the node start; <span class="m"><code>after</code></span>, which puts the
+point at the node end; and <a href="../fun/mark.html"><code>mark</code></a>, which marks the node.
+<p>If <span class="arg">DEFAULT-ACTION</span> is non-nil, it is used for labelled nodes that do not have
+match a placement action.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-cursor.el</span>
+(<span class="k">defun</span> <span class="f">combobulate--mc-place-nodes</span> (placement-nodes <span class="ty">&amp;optional</span> default-action)
+  <span class="doc">"Edit PLACEMENT-NODES according to each node's desired placement action.
+
+Must be a list of cons cells where the car is the placement
+action and the cdr is the node.
+
+The car should be one of the following symbols:
+
+`</span><span class="m doc">before</span><span class="doc">', which puts the point at the node start; `</span><span class="m doc">after</span><span class="doc">', which puts the
+point at the node end; and `</span><span class="m doc">mark</span><span class="doc">', which marks the node.
+
+If DEFAULT-ACTION is non-nil, it is used for labelled nodes that do not have
+match a placement action."</span>
+  (combobulate--mc-assert-is-supported)
+  (<span class="k">if</span> (combobulate--mc-active)
+      <span class="cd">;; </span><span class="c">bail out if mc's running as we don't want to run mc
+</span>      <span class="cd">;; </span><span class="c">inside mc, which will happen if you trigger a command
+</span>      <span class="cd">;; </span><span class="c">from execute-extended-command for... some... reason..
+</span>      nil
+    (<span class="k">let</span> ((counter 0) (node-point) (do-mark) (matched)
+          (default-action (<span class="k">or</span> default-action 'before)))
+      (<span class="k">cl-flet</span> ((apply-action (action node)
+                  (<span class="k">pcase</span> action
+                    ((<span class="k">or</span> 'before '@before) (<span class="k">setq</span> node-point (combobulate-node-start node)))
+                    ((<span class="k">or</span> 'after '@after) (<span class="k">setq</span> node-point (combobulate-node-end node)))
+                    ((<span class="k">or</span> 'mark '@mark) (<span class="k">setq</span> node-point (combobulate-node-start node)
+                                             do-mark t))
+                    (_ nil))))
+        (combobulate--mc-clear-cursors)
+        (<span class="k">pcase-dolist</span> (`(,action . ,node) (reverse placement-nodes))
+          (<span class="k">setq</span> do-mark nil)
+          (<span class="k">unless</span> (apply-action action node)
+            <span class="cd">;; </span><span class="c">fall back to `</span><span class="m c">default-action</span><span class="c">' if we get nil back from
+</span>            <span class="cd">;; </span><span class="c">`</span><span class="m c">apply-action</span><span class="c">'.
+</span>            (apply-action default-action node))
+          (<span class="k">push</span> (cons action node) matched)
+          (<span class="k">if</span> (= counter (- (length placement-nodes) 1))
+              (<span class="k">progn</span> (goto-char node-point)
+                     (<span class="k">when</span> do-mark (set-mark (combobulate-node-end node))))
+            (goto-char node-point)
+            (<span class="k">when</span> do-mark (set-mark (combobulate-node-end node)))
+            (combobulate--mc-place-cursor))
+          (<span class="k">cl-incf</span> counter))
+        (combobulate--mc-enable)
+        matched))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

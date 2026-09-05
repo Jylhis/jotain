@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-appear--show-invisible – Emacs Documentation Online</title>
+<meta name="description" content="org-appear--show-invisible is a natively compiled function defined in
+org-appear.el.
+Silently remove invisible property from invisible parts of element ELEM.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-appear--show-invisible</code></h1><p><span class="m"><code>org-appear--show-invisible</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">org-appear.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-appear--show-invisible <a href="#:~:text=element-,ELEM"><span class="arg">ELEM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Silently remove invisible property from invisible parts of element <span class="arg">ELEM</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/h68d0k7qg0i0kn245ckyaf2x4scf8f79-emacs-packages-deps/share/emacs/site-lisp/elpa/org-appear-20260716.2120/org-appear.el</span>
+(<span class="k">defun</span> <span class="f">org-appear--show-invisible</span> (elem)
+  <span class="doc">"Silently remove invisible property from invisible parts of element ELEM."</span>
+  (<span class="k">let*</span> ((elem-at-point (org-appear--parse-elem elem))
+	 (elem-type (car elem))
+	 (start (plist-get elem-at-point <span class="bi">:start</span>))
+	 (end (plist-get elem-at-point <span class="bi">:end</span>))
+	 (visible-start (plist-get elem-at-point <span class="bi">:visible-start</span>))
+	 (visible-end (plist-get elem-at-point <span class="bi">:visible-end</span>)))
+    (<span class="k">when</span> (<span class="k">and</span> (eq org-appear-autolinks 'just-brackets)
+	       (eq elem-type 'link))
+      (<span class="k">setq</span> start (1- visible-start))
+      (<span class="k">setq</span> end (1+ visible-end)))
+    (<span class="k">with-silent-modifications</span>
+      (<span class="k">cond</span> ((eq elem-type 'entity)
+	     (decompose-region start end))
+	    ((memq elem-type '(latex-fragment latex-environment))
+	     (<span class="k">when</span> org-appear-autosubmarkers
+	       (remove-text-properties start end '(invisible)))
+	     (<span class="k">when</span> org-appear-autoentities
+	       (decompose-region start end)))
+	    ((eq elem-type 'keyword)
+	     (remove-text-properties start end '(invisible org-link)))
+	    ((<span class="k">and</span> (<span class="k">featurep</span> '<span class="m">org-fold</span>)
+		  (eq elem-type 'link)
+		  (eq org-fold-core-style 'text-properties))
+	     (remove-text-properties start
+				     visible-start
+				     (list (org-fold-core--property-symbol-get-create 'org-link) nil))
+	     (remove-text-properties visible-end
+				     end
+				     (list (org-fold-core--property-symbol-get-create 'org-link) nil)))
+	    (t
+	     (remove-text-properties start visible-start '(invisible org-link))
+	     (remove-text-properties visible-end end '(invisible org-link)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

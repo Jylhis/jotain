@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dirvish--try-reuse – Emacs Documentation Online</title>
+<meta name="description" content="dirvish--try-reuse is a natively compiled function defined in
+dirvish.el.
+Find PATH in existed or new session, DWIM is passed from dirvish-dwim.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dirvish--try-reuse</code></h1><p><span class="m"><code>dirvish--try-reuse</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dirvish.el</span>.
+<h2>Signature</h2>
+<pre><code>(dirvish--try-reuse <a href="#:~:text=Find-,PATH"><span class="arg">PATH</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=session,-,DWIM"><span class="arg">DWIM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find <span class="arg">PATH</span> in existed or new session, <span class="arg">DWIM</span> is passed from <a href="../fun/dirvish-dwim.html"><code>dirvish-dwim</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a7h73ip6x5m1pxn38j7f0al6n93w904q-emacs-packages-deps/share/emacs/site-lisp/elpa/dirvish-20260725.1520/dirvish.el</span>
+(<span class="k">defun</span> <span class="f">dirvish--try-reuse</span> (path <span class="ty">&amp;optional</span> dwim)
+  <span class="doc">"Find PATH in existed or new session, DWIM is passed from `</span><span class="m doc">dirvish-dwim</span><span class="doc">'."</span>
+  (<span class="k">let*</span> ((dir (<span class="k">or</span> path default-directory))
+         (fn (<span class="k">if</span> dired-kill-when-opening-new-dired-buffer 'find-alternate-file
+               'find-file))
+         (cur? (dirvish-curr)) <span class="cd">; </span><span class="c">can be a non-default session, reuse it directly
+</span>         (vis? (<span class="k">cl-loop</span> for w in (window-list)
+                        for b = (window-buffer w)
+                        for dv = (<span class="k">with-current-buffer</span> b (dirvish-curr))
+                        thereis (<span class="k">and</span> dv (eq 'default (dv-type dv)) dv)))
+         (reuse? (<span class="k">unless</span> vis? (dirvish--get-session 'type 'default))))
+    (<span class="k">cond</span> (cur? (dirvish--find-entry fn dir)
+                (<span class="k">when</span> (<span class="k">and</span> dirvish-default-layout (not (dv-curr-layout cur?)))
+                  (<span class="k">unless</span> dwim (dirvish-layout-toggle))))
+          (vis?
+           (<span class="k">dirvish-save-dedication</span> (switch-to-buffer (cdr (dv-index vis?))))
+           (dirvish--find-entry fn dir)
+           (<span class="k">when</span> (<span class="k">and</span> dirvish-default-layout (not (dv-curr-layout vis?)))
+             (<span class="k">unless</span> dwim (dirvish-layout-toggle))))
+          (reuse?
+           (<span class="k">with-selected-window</span> (dirvish--create-root-window reuse?)
+             (<span class="k">setf</span> (dv-curr-layout reuse?)
+                   (<span class="k">or</span> (dv-curr-layout reuse?) dirvish-default-layout))
+             (<span class="k">and</span> dwim (not (one-window-p)) (<span class="k">setf</span> (dv-curr-layout reuse?) nil))
+             (<span class="k">dirvish-save-dedication</span> (switch-to-buffer (cdr (dv-index reuse?))))
+             (<span class="k">unless</span> (eq dirvish-reuse-session 'resume)
+               (dirvish--find-entry fn dir))))
+          (t (dirvish--new
+              <span class="bi">:curr-layout</span> (<span class="k">if</span> dwim (<span class="k">and</span> (one-window-p) dirvish-default-layout)
+                             dirvish-default-layout))
+             (dirvish--find-entry 'find-file dir)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

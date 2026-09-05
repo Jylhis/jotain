@@ -1,0 +1,40 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: logview--prompt-for-new-filter – Emacs Documentation Online</title>
+<meta name="description" content="logview--prompt-for-new-filter is a natively compiled function defined
+in logview.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>logview--prompt-for-new-filter</code></h1><p><span class="m"><code>logview--prompt-for-new-filter</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">logview.el</span>.
+<h2>Signature</h2>
+<pre><code>(logview--prompt-for-new-filter <span class="arg">PROMPT</span> <span class="arg">TYPE</span> <span class="arg">FILTER-LINE-PREFIX</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qid656ql5mh048bd0k84vvsbc2517lh9-emacs-packages-deps/share/emacs/site-lisp/elpa/logview-20260218.2013/logview.el</span>
+(<span class="k">defun</span> <span class="f">logview--prompt-for-new-filter</span> (prompt type filter-line-prefix)
+  (logview--assert type)
+  (<span class="k">let*</span> ((default-value (<span class="k">unless</span> (eq type 'message)
+                          (<span class="k">logview--std-temporarily-widening</span>
+                            (<span class="k">logview--locate-current-entry</span> entry start
+                              (<span class="k">let</span> ((base (regexp-quote (logview--entry-group entry start (<span class="k">pcase</span> type
+                                                                                            (`name   logview--name-group)
+                                                                                            (`thread logview--thread-group)
+                                                                                            (_       (<span class="w">error</span> <span class="s">"Unhandled type `</span><span class="m s">%s</span><span class="s">'"</span> type)))))))
+                                (list base (format <span class="s">"^%s$"</span> base)))))))
+         (regexp        (read-regexp prompt default-value (cdr (assq type '((name    . logview--name-regexp-history)
+                                                                            (thread  . logview--thread-regexp-history)
+                                                                            (message . logview--message-regexp-history)))))))
+    (<span class="k">unless</span> (logview--valid-regexp-p regexp)
+      (<span class="w">user-error</span> <span class="s">"Invalid regular expression"</span>))
+    (<span class="k">when</span> (<span class="k">and</span> (memq type '(name thread)) (string-match-p <span class="s">"\n"</span> regexp))
+      (<span class="w">user-error</span> <span class="s">"Regular expression must not span several lines"</span>))
+    (<span class="k">setf</span> logview--main-filter-text (concat logview--main-filter-text
+                                            (<span class="k">when</span> (<span class="k">and</span> logview--main-filter-text
+                                                       (not (string-suffix-p <span class="s">"\n"</span> logview--main-filter-text)))
+                                              <span class="s">"\n"</span>)
+                                            filter-line-prefix <span class="s">" "</span> (replace-regexp-in-string <span class="s">"\n"</span> <span class="s">"\n.. "</span> regexp) <span class="s">"\n"</span>))
+    (logview--parse-filters)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

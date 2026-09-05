@@ -1,0 +1,39 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: diff-hl--when-done – Emacs Documentation Online</title>
+<meta name="description" content="diff-hl--when-done is a natively compiled function defined in
+diff-hl.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>diff-hl--when-done</code></h1><p><span class="m"><code>diff-hl--when-done</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">diff-hl.el</span>.
+<h2>Signature</h2>
+<pre><code>(diff-hl--when-done <span class="arg">BUFFER</span> <span class="arg">GET-VALUE</span> <span class="arg">CALLBACK</span> <span class="ty">&amp;optional</span> <span class="arg">PROC</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/742jfhd6j9y7y1gqxy624dchx31gwmax-emacs-packages-deps/share/emacs/site-lisp/elpa/diff-hl-20260830.1400/diff-hl.el</span>
+(<span class="k">defun</span> <span class="f">diff-hl--when-done</span> (buffer get-value callback <span class="ty">&amp;optional</span> proc)
+  (<span class="k">let</span> ((proc (<span class="k">or</span> proc (get-buffer-process buffer))))
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">If there's no background process, just execute the code.
+</span>     ((<span class="k">or</span> (null proc) (eq (process-status proc) 'exit))
+      <span class="cd">;; </span><span class="c">Make sure we've read the process's output before going further.
+</span>      (<span class="k">when</span> proc (accept-process-output proc))
+      (<span class="k">when</span> (get-buffer buffer)
+        (<span class="k">with-current-buffer</span> buffer
+          (funcall callback (funcall get-value buffer)))))
+     <span class="cd">;; </span><span class="c">If process was deleted, we ignore it.
+</span>     ((eq (process-status proc) 'signal))
+     <span class="cd">;; </span><span class="c">If a process is running, set the sentinel.
+</span>     ((eq (process-status proc) 'run)
+      (<span class="k">add-function</span>
+       <span class="bi">:after</span>
+       (process-sentinel proc)
+       (<span class="k">lambda</span> (proc _status)
+         <span class="cd">;; </span><span class="c">Delegate to the parent cond for decision logic.
+</span>         (diff-hl--when-done buffer get-value callback proc))))
+     <span class="cd">;; </span><span class="c">Maybe we should ignore all other states as well.
+</span>     (t (<span class="w">error</span> <span class="s">"Unexpected process state"</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

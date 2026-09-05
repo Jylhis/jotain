@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-ediff--control-packet-spec – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-ediff--control-packet-spec is a natively compiled function
+defined in majutsu-ediff.el.
+Parse Majutsu Ediff control packet LINE into a plist spec.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-ediff--control-packet-spec</code></h1><p><span class="m"><code>majutsu-ediff--control-packet-spec</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-ediff.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-ediff--control-packet-spec <a href="#:~:text=packet-,LINE"><span class="arg">LINE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse Majutsu Ediff control packet <span class="arg">LINE</span> into a plist spec.
+<p>Return nil when <span class="arg">LINE</span> is not a valid control packet.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-ediff.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-ediff--control-packet-spec</span> (line)
+  <span class="doc">"Parse Majutsu Ediff control packet LINE into a plist spec.
+Return nil when LINE is not a valid control packet."</span>
+  (<span class="k">when</span> (string-match
+         (format <span class="s">"^%s: </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">DIFF</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">MERGE</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">\\r</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?$"</span>
+                 majutsu-ediff--control-packet-prefix)
+         line)
+    (<span class="k">let*</span> ((pid (match-string 1 line))
+           (kind (downcase (match-string 2 line)))
+           (fields (split-string (match-string 3 line) <span class="s">"\x1f"</span> nil)))
+      (<span class="k">pcase</span> kind
+        (<span class="s">"diff"</span>
+         (<span class="k">pcase</span> fields
+           (`(,left ,right ,file)
+            (<span class="k">let</span> ((spec (list <span class="bi">:pid</span> pid
+                              <span class="bi">:type</span> 'diff
+                              <span class="bi">:left</span> left
+                              <span class="bi">:right</span> right)))
+              (<span class="k">if</span> (string-empty-p file)
+                  spec
+                (append spec (list <span class="bi">:file</span> file)))))
+           (`(,left ,right)
+            (list <span class="bi">:pid</span> pid <span class="bi">:type</span> 'diff <span class="bi">:left</span> left <span class="bi">:right</span> right))
+           (_ nil)))
+        (<span class="s">"merge"</span>
+         (<span class="k">pcase</span> fields
+           (`(,left ,base ,right ,output ,marker)
+            (list <span class="bi">:pid</span> pid
+                  <span class="bi">:type</span> 'merge
+                  <span class="bi">:left</span> left
+                  <span class="bi">:base</span> base
+                  <span class="bi">:right</span> right
+                  <span class="bi">:output</span> output
+                  <span class="bi">:marker</span> marker))
+           (_ nil)))
+        (_ nil)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

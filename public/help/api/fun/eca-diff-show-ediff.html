@@ -1,0 +1,198 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-diff-show-ediff – Emacs Documentation Online</title>
+<meta name="description" content="eca-diff-show-ediff is a natively compiled function defined in
+eca-diff.el.
+Show DIFF for file at PATH using Ediff side-by-side in windows.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-diff-show-ediff</code></h1><p><span class="m"><code>eca-diff-show-ediff</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-diff-show-ediff <a href="#:~:text=at-,PATH"><span class="arg">PATH</span></a> <a href="#:~:text=Show-,DIFF"><span class="arg">DIFF</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,CHAT-BUF"><span class="arg">CHAT-BUF</span></a> <a href="#:~:text=If-,REDISPLAY-FN"><span class="arg">REDISPLAY-FN</span></a> _)
+</code></pre>
+<h2>Documentation</h2>
+<p>Show <span class="arg">DIFF</span> for file at <span class="arg">PATH</span> using Ediff side-by-side in windows.
+<p>If <span class="arg">CHAT-BUF</span> is provided it will be used to attempt to re-display the
+chat buffer after Ediff quits.  If <span class="arg">REDISPLAY-FN</span> is provided it will be
+called with <span class="arg">CHAT-BUF</span> to perform that re-display (default: <a href="../fun/display-buffer.html"><code>display-buffer</code></a>).
+ROOTS may be passed for path relativization if desired.
+<p>This function tries to be Doom-compatible when Emacs runs Doom popup
+system (it ignores those popup rules for the generated ediff buffers).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-diff.el</span>
+(<span class="k">defun</span> <span class="f">eca-diff-show-ediff</span> (path diff <span class="ty">&amp;optional</span> chat-buf redisplay-fn _)
+  <span class="doc">"Show DIFF for file at PATH using Ediff side-by-side in windows.
+If CHAT-BUF is provided it will be used to attempt to re-display the
+chat buffer after Ediff quits.  If REDISPLAY-FN is provided it will be
+called with CHAT-BUF to perform that re-display (default: `</span><span class="m doc">display-buffer</span><span class="doc">').
+ROOTS may be passed for path relativization if desired.
+
+This function tries to be Doom-compatible when Emacs runs Doom popup
+system (it ignores those popup rules for the generated ediff buffers)."</span>
+  (<span class="k">let*</span> (<span class="cd">;; </span><span class="c">ediff expects `\n` line endings.
+</span>         (diff (replace-regexp-in-string <span class="s">"\r\n"</span> <span class="s">"\n"</span> diff))
+         (parsed        (eca-diff-parse-unified-diff diff))
+         (orig          (plist-get parsed <span class="bi">:original</span>))
+         (new           (plist-get parsed <span class="bi">:new</span>))
+         (buf-orig      (generate-new-buffer (format <span class="s">"*eca-diff-orig:%s*"</span> path)))
+         (buf-new       (generate-new-buffer (format <span class="s">"*eca-diff-new:%s*"</span> path)))
+         (chat-buf      chat-buf)
+         (redisplay-fn  (<span class="k">or</span> redisplay-fn #'eca-diff--default-redisplay-fn))
+         <span class="cd">;; </span><span class="c">Doom-specific: Check if we're in a popup context
+</span>         (doom-popup-p   (<span class="k">and</span> (boundp '+popup-buffer-mode) +popup-buffer-mode))
+         (in-doom-p      (<span class="k">featurep</span> '<span class="m">doom</span>))
+         <span class="cd">;; </span><span class="c">Don't save window config if in Doom popup - causes conflicts
+</span>         (cwc            (<span class="k">unless</span> doom-popup-p (current-window-configuration)))
+         (orig-selected  (selected-window))
+         (orig-buffer    chat-buf)
+         (ediff-buffers-before
+          (seq-filter (<span class="k">lambda</span> (b)
+                        (string-match-p <span class="s">"\\*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">ediff-</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">Ediff Control</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>
+                                        (buffer-name b)))
+                      (buffer-list)))
+         session-ediff-buffers
+         cleanup-fn
+         after-setup-fn)
+
+    <span class="cd">;; </span><span class="c">Doom-specific: Set popup rules to prevent interference
+</span>    (<span class="k">when</span> in-doom-p
+      (<span class="k">when</span> (fboundp 'set-popup-rule!)
+        <span class="cd">;; </span><span class="c">Prevent ECA diff buffers from being managed by Doom's popup system
+</span>        (set-popup-rule! <span class="s">"^\\*eca-diff-"</span> <span class="bi">:ignore</span> t)
+        (set-popup-rule! <span class="s">"^\\*Ediff Control Panel"</span> <span class="bi">:ignore</span> t)))
+
+    <span class="cd">;; </span><span class="c">Fill temporary buffers
+</span>    (<span class="k">with-current-buffer</span> buf-orig
+      (<span class="k">let</span> ((inhibit-read-only t))
+        (erase-buffer)
+        (insert orig)
+        (set-buffer-modified-p nil)))
+    (<span class="k">with-current-buffer</span> buf-new
+      (<span class="k">let</span> ((inhibit-read-only t))
+        (erase-buffer)
+        (insert new)
+        (set-buffer-modified-p nil)))
+
+    <span class="cd">;; </span><span class="c">Only manipulate windows if not in Doom popup context
+</span>    (<span class="k">unless</span> doom-popup-p
+      <span class="cd">;; </span><span class="c">Temporarily relax side-window protections so Ediff can split
+</span>      (<span class="k">let</span> ((frame (selected-frame)))
+        (<span class="k">dolist</span> (w (seq-filter (<span class="k">lambda</span> (w)
+                                 (<span class="k">and</span> (eq (window-frame w) frame)
+                                      (<span class="k">or</span> (window-parameter w 'no-delete-other-windows)
+                                          (window-parameter w 'window-side))))
+                               (window-list)))
+          (<span class="k">when</span> (window-live-p w)
+            (set-window-parameter w 'no-delete-other-windows nil)
+            (set-window-parameter w 'window-side nil))))
+      <span class="cd">;; </span><span class="c">Ensure Ediff has a single full window to manage
+</span>      (<span class="k">unless</span> (one-window-p t)
+        (delete-other-windows)))
+
+    <span class="cd">;; </span><span class="c">Enhanced cleanup with Doom compatibility
+</span>    (<span class="k">setq</span> cleanup-fn
+          (<span class="k">lambda</span> ()
+            <span class="cd">;; </span><span class="c">Kill temp buffers first to avoid conflicts
+</span>            (<span class="k">when</span> (buffer-live-p buf-orig) (kill-buffer buf-orig))
+            (<span class="k">when</span> (buffer-live-p buf-new)  (kill-buffer buf-new))
+            <span class="cd">;; </span><span class="c">Kill any additional Ediff-generated buffers
+</span>            (<span class="k">dolist</span> (b session-ediff-buffers)
+              (<span class="k">when</span> (<span class="k">and</span> b (buffer-live-p b))
+                (kill-buffer b)))
+
+            <span class="cd">;; </span><span class="c">Doom-aware window restoration
+</span>            (<span class="k">cond</span>
+             <span class="cd">;; </span><span class="c">If we were in a Doom popup, use Doom's restoration
+</span>             (doom-popup-p
+              (<span class="k">cond</span>
+               ((<span class="k">and</span> (fboundp '+popup/restore) (buffer-live-p orig-buffer))
+                (+popup/restore))
+               ((buffer-live-p orig-buffer)
+                (switch-to-buffer orig-buffer))))
+
+             <span class="cd">;; </span><span class="c">Standard window config restoration with Doom-compatible delay
+</span>             (cwc
+              <span class="cd">;; </span><span class="c">Use longer delay for Doom compatibility
+</span>              (run-with-timer (<span class="k">if</span> in-doom-p 0.3 0.1) nil
+                              (<span class="k">lambda</span> ()
+                                (<span class="k">condition-case</span> err
+                                    (<span class="k">progn</span>
+                                      (set-window-configuration cwc)
+                                      (<span class="k">when</span> (window-live-p orig-selected)
+                                        (select-window orig-selected))
+                                      <span class="cd">;; </span><span class="c">Re-display chat buffer in side window if needed
+</span>                                      (<span class="k">when</span> (<span class="k">and</span> (buffer-live-p chat-buf)
+                                                 (<span class="k">or</span> (not (get-buffer-window chat-buf t))
+                                                     (not (window-parameter (get-buffer-window chat-buf t) 'window-side))))
+                                        (<span class="k">ignore-errors</span> (funcall redisplay-fn chat-buf))))
+                                  (<span class="w">error</span>
+                                   (message <span class="s">"ECA: Could not restore window config: %s"</span> err)
+                                   <span class="cd">;; </span><span class="c">Fallback: ensure chat buffer is visible
+</span>                                   (<span class="k">when</span> (buffer-live-p chat-buf)
+                                     (<span class="k">ignore-errors</span> (funcall redisplay-fn chat-buf))))))))
+
+             <span class="cd">;; </span><span class="c">Fallback for cases without saved config
+</span>             (t
+              (<span class="k">when</span> (<span class="k">and</span> (buffer-live-p chat-buf)
+                         (<span class="k">or</span> (not (get-buffer-window chat-buf t))
+                             (not (window-parameter (get-buffer-window chat-buf t) 'window-side))))
+                (<span class="k">ignore-errors</span> (funcall redisplay-fn chat-buf)))))
+
+            (remove-hook 'ediff-quit-hook cleanup-fn)))
+
+    <span class="cd">;; </span><span class="c">After-setup hook: capture ediff buffers and move to first diff
+</span>    (<span class="k">setq</span> after-setup-fn
+          (<span class="k">lambda</span> ()
+            (<span class="k">let</span> ((ediff-buffers-after
+                   (seq-filter (<span class="k">lambda</span> (b)
+                                 (string-match-p <span class="s">"\\*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">ediff-</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">Ediff\n Control</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> (buffer-name b)))
+                               (buffer-list))))
+              (<span class="k">setq</span> session-ediff-buffers
+                    (seq-filter (<span class="k">lambda</span> (b)
+                                  (<span class="k">and</span> (not (member b ediff-buffers-before))
+                                       (not (string-match-p <span class="s">"*Ediff\n Registry*"</span> (buffer-name b)))))
+                                ediff-buffers-after)))
+            (<span class="k">condition-case</span> _err
+                (<span class="k">progn</span>
+                  (<span class="k">setq</span> ediff-current-difference -1)
+                  (ediff-next-difference))
+              (<span class="w">error</span> nil))
+            (remove-hook 'ediff-after-setup-windows-hook after-setup-fn)))
+
+    <span class="cd">;; </span><span class="c">Install hooks
+</span>    (add-hook 'ediff-quit-hook cleanup-fn)
+    (add-hook 'ediff-after-setup-windows-hook after-setup-fn)
+
+    <span class="cd">;; </span><span class="c">Start Ediff with error handling
+</span>    (<span class="k">condition-case</span> err
+	(<span class="k">let</span> ((ediff-window-setup-function
+	       (<span class="k">if</span> (daemonp)
+		   'ediff-setup-windows-plain
+		 ediff-window-setup-function)))
+        (ediff-buffers buf-orig buf-new))
+      (<span class="w">error</span>
+       <span class="cd">;; </span><span class="c">On error, remove hooks and restore windows
+</span>       (remove-hook 'ediff-quit-hook cleanup-fn)
+       (remove-hook 'ediff-after-setup-windows-hook after-setup-fn)
+
+       <span class="cd">;; </span><span class="c">Doom-aware error recovery
+</span>       (<span class="k">cond</span>
+        (cwc (set-window-configuration cwc))
+        (doom-popup-p
+         (<span class="k">when</span> (buffer-live-p orig-buffer)
+           (switch-to-buffer orig-buffer))))
+
+       <span class="cd">;; </span><span class="c">Re-display chat buffer on error
+</span>       (<span class="k">when</span> (<span class="k">and</span> (buffer-live-p chat-buf)
+                  (<span class="k">or</span> (not (get-buffer-window chat-buf t))
+                      (not (window-parameter (get-buffer-window chat-buf t) 'window-side))))
+         (<span class="k">ignore-errors</span> (funcall redisplay-fn chat-buf)))
+
+       <span class="cd">;; </span><span class="c">Kill temp buffers
+</span>       (<span class="k">when</span> (buffer-live-p buf-orig) (kill-buffer buf-orig))
+       (<span class="k">when</span> (buffer-live-p buf-new)  (kill-buffer buf-new))
+       (message <span class="s">"eca-diff: error starting ediff: %s"</span> err)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,78 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-tag-attributes-sort – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-tag-attributes-sort is an interactive and natively compiled
+function defined in web-mode.el.
+Sort the attributes inside the current html tag.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-tag-attributes-sort</code></h1><p><span class="m"><code>web-mode-tag-attributes-sort</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-tag-attributes-sort <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">POS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Sort the attributes inside the current html tag.
+<h2>Key Bindings</h2>
+<p><span class="v">web-mode-map</span> <span class="key">C-c C-t a</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-tag-attributes-sort</span> (<span class="ty">&amp;optional</span> pos)
+  <span class="doc">"Sort the attributes inside the current html tag."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">unless</span> pos (<span class="k">setq</span> pos (point)))
+  (<span class="k">save-excursion</span>
+    (<span class="k">let</span> (attrs (continue t) min max tag-beg tag-end attr attr-name attr-beg attr-end indent sorter ins)
+      (<span class="k">if</span> (not (member (get-text-property pos 'tag-type) '(start void)))
+          nil
+          (<span class="k">setq</span> tag-beg (web-mode-tag-beginning-position pos)
+                tag-end (web-mode-tag-end-position))
+          <span class="cd">;;        </span><span class="c">(message "%S %S" tag-beg tag-end)
+</span>          (goto-char tag-beg)
+          (<span class="k">while</span> continue
+            (<span class="k">if</span> (<span class="k">or</span> (not (web-mode-attribute-next))
+                    (&gt;= (point) tag-end))
+                (<span class="k">setq</span> continue nil)
+                <span class="cd">;;</span><span class="c">(message "attr=%S" (point))
+</span>                (<span class="k">setq</span> attr-beg (web-mode-attribute-beginning-position)
+                      attr-end (1+ (web-mode-attribute-end-position)))
+                (<span class="k">when</span> (null min)
+                  (<span class="k">setq</span> min attr-beg))
+                (<span class="k">setq</span> max attr-end)
+                (goto-char attr-beg)
+                (<span class="k">setq</span> attr (buffer-substring-no-properties attr-beg attr-end))
+                (<span class="k">if</span> (string-match <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alnum:]-]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">="</span> attr)
+                    (<span class="k">setq</span> attr-name (match-string-no-properties 1 attr))
+                    (<span class="k">setq</span> attr-name attr))
+                (<span class="k">setq</span> indent (looking-back <span class="s">"^[ \t]*"</span> (point-min)))
+                (<span class="k">setq</span> attrs (append attrs (list (list attr-beg attr-end attr-name attr indent))))
+                ) <span class="cd">;</span><span class="c">if
+</span>            ) <span class="cd">;</span><span class="c">while
+</span>          ) <span class="cd">;</span><span class="c">if in tag
+</span>      (<span class="k">when</span> attrs
+        (<span class="k">setq</span> sorter (<span class="k">function</span>
+                      (<span class="k">lambda</span> (elt1 elt2)
+                       (string&lt; (nth 2 elt1) (nth 2 elt2))
+                       )))
+        (<span class="k">setq</span> attrs (sort attrs sorter))
+        (delete-region (1- min) max)
+        (<span class="k">setq</span> ins <span class="s">""</span>)
+        (<span class="k">dolist</span> (elt attrs)
+          (<span class="k">if</span> (<span class="k">and</span> (nth 4 elt) (&gt; (length ins) 1))
+              (<span class="k">setq</span> ins (concat ins <span class="s">"\n"</span>))
+              (<span class="k">setq</span> ins (concat ins <span class="s">" "</span>)))
+          (<span class="k">setq</span> ins (concat ins (nth 3 elt)))
+          )
+        (goto-char (1- min))
+        (insert ins)
+        (web-mode-tag-beginning)
+        (<span class="k">setq</span> min (line-beginning-position))
+        (web-mode-tag-end)
+        (<span class="k">setq</span> max (line-end-position))
+        (indent-region min max)
+        )
+      <span class="cd">;;</span><span class="c">(message "attrs=%S" attrs)
+</span>      )))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,79 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-table-align – Emacs Documentation Online</title>
+<meta name="description" content="markdown-table-align is an interactive and natively compiled function
+defined in markdown-mode.el.
+Align table at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-table-align</code></h1><p><span class="m"><code>markdown-table-align</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-table-align)
+</code></pre>
+<h2>Documentation</h2>
+<p>Align table at point.
+<p>This function assumes point is on a table.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-table-align</span> ()
+  <span class="doc">"Align table at point.
+This function assumes point is on a table."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((begin (markdown-table-begin))
+        (end (copy-marker (markdown-table-end))))
+    (<span class="k">markdown-table-save-cell</span>
+     (goto-char begin)
+     (<span class="k">let*</span> (fmtspec
+            <span class="cd">;; </span><span class="c">Store table indent
+</span>            (indent (<span class="k">progn</span> (looking-at <span class="s">"[ \t]*"</span>) (match-string 0)))
+            <span class="cd">;; </span><span class="c">Split table in lines and save column format specifier
+</span>            (lines (mapcar (<span class="k">lambda</span> (line)
+                             (<span class="k">if</span> (markdown--is-delimiter-row line)
+                                 (<span class="k">progn</span> (<span class="k">setq</span> fmtspec (<span class="k">or</span> fmtspec line)) nil)
+                               line))
+                           (markdown--split-string (buffer-substring begin end) <span class="s">"\n"</span>)))
+            <span class="cd">;; </span><span class="c">Split lines in cells
+</span>            (cells (mapcar (<span class="k">lambda</span> (l) (markdown--table-line-to-columns l))
+                           (remq nil lines)))
+            <span class="cd">;; </span><span class="c">Calculate maximum number of cells in a line
+</span>            (maxcells (<span class="k">if</span> cells
+                          (apply #'max (mapcar #'length cells))
+                        (<span class="w">user-error</span> <span class="s">"Empty table"</span>)))
+            maxwidths)
+       <span class="cd">;; </span><span class="c">Calculate maximum width for each column
+</span>       (<span class="k">dotimes</span> (i maxcells)
+         (<span class="k">let</span> ((column (mapcar (<span class="k">lambda</span> (x) (<span class="k">or</span> (nth i x) <span class="s">""</span>)) cells)))
+           (<span class="k">push</span> (apply #'max 1 (mapcar #'markdown--string-width column))
+                 maxwidths)))
+       (<span class="k">setq</span> maxwidths (nreverse maxwidths))
+       <span class="cd">;; </span><span class="c">Process column format specifier
+</span>       (<span class="k">setq</span> fmtspec (markdown-table-colfmt fmtspec))
+       <span class="cd">;; </span><span class="c">Compute formats needed for output of table lines
+</span>       (<span class="k">let</span> ((hfmt (concat indent <span class="s">"|"</span>))
+             hfmt1 fmt (fmts fmtspec))
+         (<span class="k">dolist</span> (width maxwidths)
+           (<span class="k">setq</span> fmt (car fmts) fmts (cdr fmts))
+           (<span class="k">cond</span> ((equal fmt 'l) (<span class="k">setq</span> hfmt1 <span class="s">":%s-|"</span>))
+                 ((equal fmt 'r) (<span class="k">setq</span> hfmt1 <span class="s">"-%s:|"</span>))
+                 ((equal fmt 'c) (<span class="k">setq</span> hfmt1 <span class="s">":%s:|"</span>))
+                 (t              (<span class="k">setq</span> hfmt1 <span class="s">"-%s-|"</span>)))
+           (<span class="k">setq</span> hfmt (concat hfmt (format hfmt1 (make-string width ?-)))))
+         <span class="cd">;; </span><span class="c">Replace modified lines only
+</span>         (<span class="k">dolist</span> (line lines)
+           (<span class="k">let</span> ((line (<span class="k">if</span> line
+                           (concat indent <span class="s">"|"</span>
+                                   (markdown-table-align-raw (<span class="k">pop</span> cells) fmtspec maxwidths)
+                                   <span class="s">"|"</span>)
+                         hfmt))
+                 (previous (buffer-substring (point) (line-end-position))))
+             (<span class="k">if</span> (equal previous line)
+                 (forward-line)
+               (insert line <span class="s">"\n"</span>)
+               (delete-region (point) (line-beginning-position 2))))))
+       (set-marker end nil)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

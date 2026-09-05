@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: helpful--set – Emacs Documentation Online</title>
+<meta name="description" content="helpful--set is a natively compiled function defined in helpful.el.
+Set the value of this symbol.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>helpful--set</code></h1><p><span class="m"><code>helpful--set</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">helpful.el</span>.
+<h2>Signature</h2>
+<pre><code>(helpful--set <a href="#:~:text="><span class="arg">BUTTON</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Set the value of this symbol.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/al1y9rq93c50r6aqa0749m04ilfnar06-emacs-packages-deps/share/emacs/site-lisp/elpa/helpful-20250408.334/helpful.el</span>
+(<span class="k">defun</span> <span class="f">helpful--set</span> (button)
+  <span class="doc">"Set the value of this symbol."</span>
+  (<span class="k">let*</span> ((sym (button-get button 'symbol))
+         (buf (button-get button 'buffer))
+         (sym-value (helpful--sym-value sym buf))
+         (set-func (<span class="k">if</span> (local-variable-p sym buf)
+                       <span class="s">"setq"</span>
+                     (symbol-name helpful-set-variable-function)))
+         <span class="cd">;; </span><span class="c">Inspired by `</span><span class="m c">counsel-read-setq-expression</span><span class="c">'.
+</span>         (expr
+          (<span class="k">minibuffer-with-setup-hook</span>
+              (<span class="k">lambda</span> ()
+                (<span class="k">add-function</span> <span class="bi">:before-until</span> (local 'eldoc-documentation-function)
+                              #'elisp-eldoc-documentation-function)
+                (run-hooks 'eval-expression-minibuffer-setup-hook)
+                (goto-char (minibuffer-prompt-end))
+                (forward-char (length (format <span class="s">"(%s %S "</span> set-func sym))))
+            (read-from-minibuffer
+             <span class="s">"Eval: "</span>
+             (format
+              (<span class="k">if</span> (<span class="k">or</span> (consp sym-value)
+                      (<span class="k">and</span> (symbolp sym-value)
+                           (not (null sym-value))
+                           (not (keywordp sym-value))))
+                  <span class="s">"(%s %s '%S)"</span>
+                <span class="s">"(%s %s %S)"</span>)
+              set-func sym sym-value)
+             read-expression-map t
+             'read-expression-history))))
+    (<span class="k">save-current-buffer</span>
+      <span class="cd">;; </span><span class="c">If this is a buffer-local variable, ensure we're in the right
+</span>      <span class="cd">;; </span><span class="c">buffer.
+</span>      (<span class="k">when</span> buf
+        (set-buffer buf))
+      (eval-expression expr))
+    (helpful-update)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

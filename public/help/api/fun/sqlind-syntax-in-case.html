@@ -1,0 +1,44 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sqlind-syntax-in-case – Emacs Documentation Online</title>
+<meta name="description" content="sqlind-syntax-in-case is a natively compiled function defined in
+sql-indent.el.
+Return the syntax at POS which is part a &quot;case&quot; expression at START.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sqlind-syntax-in-case</code></h1><p><span class="m"><code>sqlind-syntax-in-case</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">sql-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(sqlind-syntax-in-case <a href="#:~:text=at-,POS"><span class="arg">POS</span></a> <a href="#:~:text=at-,START"><span class="arg">START</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the syntax at <span class="arg">POS</span> which is part a "case" expression at <span class="arg">START</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vgm6xb2iy00bs19rdw9z3nfi5nf8g873-emacs-packages-deps/share/emacs/site-lisp/elpa/sql-indent-1.7/sql-indent.el</span>
+(<span class="k">defun</span> <span class="f">sqlind-syntax-in-case</span> (pos start)
+  <span class="doc">"Return the syntax at POS which is part a \"case\" expression at START."</span>
+  (<span class="k">save-excursion</span>
+    (goto-char pos)
+    (<span class="k">cond</span> ((looking-at <span class="s">"when</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">else"</span>)
+           <span class="cd">;; </span><span class="c">A WHEN, or ELSE clause is indented relative to the start of the
+</span>           <span class="cd">;; </span><span class="c">case expression
+</span>           (cons 'case-clause start))
+          ((looking-at <span class="s">"end"</span>)
+           (cons (list 'block-end 'case <span class="s">""</span>) start))
+          ((looking-at <span class="s">"then"</span>)
+           <span class="cd">;; </span><span class="c">THEN and ELSE clauses are indented relative to the start of the
+</span>           <span class="cd">;; </span><span class="c">when clause, which we must find
+</span>           (<span class="k">while</span> (not (<span class="k">and</span> (re-search-backward <span class="s">"\\_&lt;when\\_&gt;"</span>)
+                            (sqlind-same-level-statement (point) start)))
+             nil)
+           (cons 'case-clause-item (point)))
+          (t
+           <span class="cd">;; </span><span class="c">It is a statement continuation from the closest CASE element
+</span>           (<span class="k">while</span> (<span class="k">and</span> (not (= (point) start))
+                       (not (<span class="k">and</span> (re-search-backward sqlind-case-clauses-regexp start 'noerror)
+                                 (sqlind-same-level-statement (point) start))))
+             nil)
+           (cons 'case-clause-item-cont (point))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

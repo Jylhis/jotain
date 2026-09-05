@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-rewrite – Emacs Documentation Online</title>
+<meta name="description" content="eca-rewrite is an interactive and natively compiled function defined
+in eca-rewrite.el.
+Rewrite a text with a new LLM generated one.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-rewrite</code></h1><p><span class="m"><code>eca-rewrite</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-rewrite.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-rewrite <span class="ty">&amp;optional</span> <a href="#:~:text=br&gt;-,PROMPT"><span class="arg">PROMPT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Rewrite a text with a new LLM generated one.
+<p>- If on an existing rewrite overlay, re-iterate
+<br>- Else if region active, rewrite that region
+<br>- Else try to detect defun/paragraph boundaries
+<p><span class="arg">PROMPT</span> is the instructions prompt for the LLM.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-rewrite.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">eca-rewrite</span> (<span class="ty">&amp;optional</span> prompt)
+  <span class="doc">"Rewrite a text with a new LLM generated one.
+- If on an existing rewrite overlay, re-iterate
+- Else if region active, rewrite that region
+- Else try to detect defun/paragraph boundaries
+
+PROMPT is the instructions prompt for the LLM."</span>
+  (<span class="k">interactive</span>)
+  (eca-assert-session-running (eca-session))
+  (<span class="k">let*</span> ((prompt (<span class="k">or</span> prompt
+                     (read-string <span class="s">"Rewrite prompt: "</span> (<span class="k">or</span> eca-rewrite--last-prompt
+                                                         eca-rewrite-prompt-prefix))))
+         (existing-ov (eca-rewrite--overlay-at-point))
+         (start (<span class="k">cond</span> (existing-ov (overlay-start existing-ov))
+                      ((use-region-p) (eca-rewrite--normalize-start-region (region-beginning)))
+                      (t (<span class="k">or</span> (car (bounds-of-thing-at-point 'defun))
+                             (car (bounds-of-thing-at-point 'paragraph))
+                             (<span class="w">user-error</span> <span class="s">"No region selected or existing-ov rewrite overlay"</span>)))))
+         (end (<span class="k">cond</span> (existing-ov (overlay-end existing-ov))
+                    ((use-region-p) (region-end))
+                    (t (<span class="k">or</span> (cdr (bounds-of-thing-at-point 'defun))
+                           (cdr (bounds-of-thing-at-point 'paragraph))
+                           start))))
+         (text (<span class="k">if</span> existing-ov
+                   (overlay-get existing-ov 'eca-text)
+                 (buffer-substring-no-properties start end))))
+    (eca-rewrite--rewrite existing-ov (eca-session) text (buffer-file-name) start end prompt)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

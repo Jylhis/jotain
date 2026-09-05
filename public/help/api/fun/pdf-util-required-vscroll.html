@@ -1,0 +1,85 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-util-required-vscroll – Emacs Documentation Online</title>
+<meta name="description" content="pdf-util-required-vscroll is a natively compiled function defined in
+pdf-util.el.
+Return the amount of scrolling necessary, to make image EDGES visible.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-util-required-vscroll</code></h1><p><span class="m"><code>pdf-util-required-vscroll</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">pdf-util.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-util-required-vscroll <a href="#:~:text=image-,EDGES"><span class="arg">EDGES</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=Unless-,EAGER-P"><span class="arg">EAGER-P</span></a> <a href="#:~:text=Keep-,CONTEXT-PIXEL"><span class="arg">CONTEXT-PIXEL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the amount of scrolling necessary, to make image <span class="arg">EDGES</span> visible.
+<p>Scroll as little as necessary.  Unless <span class="arg">EAGER-P</span> is non-nil, in
+which case scroll as much as possible.
+<p>Keep <span class="arg">CONTEXT-PIXEL</span> pixel of the image visible at the bottom and
+top of the window.  <span class="arg">CONTEXT-PIXEL</span> defaults to an equivalent pixel
+value of <a href="../var/next-screen-context-lines.html"><code>next-screen-context-lines</code></a>.
+<p>Return the required vscroll in pixels or nil, if scrolling is not
+needed.
+<p>Note: For versions of emacs before 27 this will return lines instead of
+pixels. This is because of a change that occurred to <a href="../fun/image-mode.html"><code>image-mode</code></a> in 27.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-util.el</span>
+(<span class="k">defun</span> <span class="f">pdf-util-required-vscroll</span> (edges <span class="ty">&amp;optional</span> eager-p context-pixel)
+  <span class="doc">"Return the amount of scrolling necessary, to make image EDGES visible.
+
+Scroll as little as necessary.  Unless EAGER-P is non-nil, in
+which case scroll as much as possible.
+
+Keep CONTEXT-PIXEL pixel of the image visible at the bottom and
+top of the window.  CONTEXT-PIXEL defaults to an equivalent pixel
+value of `</span><span class="m doc">next-screen-context-lines</span><span class="doc">'.
+
+Return the required vscroll in pixels or nil, if scrolling is not
+needed.
+
+Note: For versions of emacs before 27 this will return lines instead of
+pixels. This is because of a change that occurred to `</span><span class="m doc">image-mode</span><span class="doc">' in 27."</span>
+  (pdf-util-assert-pdf-window)
+  (<span class="k">if</span> pdf-view-roll-minor-mode
+      (max 0 (- (nth 1 edges)
+                (<span class="k">or</span> context-pixel
+                    (* next-screen-context-lines (frame-char-height)))))
+    (<span class="k">let*</span> ((win (window-inside-pixel-edges))
+           (image-height (cdr (pdf-view-image-size
+                               (<span class="k">unless</span> pdf-view-roll-minor-mode
+                                 t))))
+           (image-top (window-vscroll nil t))
+           (edges (pdf-util-translate
+                   edges
+                   (pdf-view-image-offset) t)))
+      (<span class="k">pdf-util-with-edges</span> (win edges)
+        (<span class="k">let*</span> ((context-pixel (<span class="k">or</span> context-pixel
+                                  (* next-screen-context-lines
+                                     (frame-char-height))))
+               <span class="cd">;;</span><span class="c">Be careful not to modify edges.
+</span>               (edges-top (- edges-top context-pixel))
+               (edges-bot (+ edges-bot context-pixel))
+               (vscroll
+                (<span class="k">cond</span> ((&lt; edges-top image-top)
+                       (max 0 (<span class="k">if</span> eager-p
+                                  (- edges-bot win-height)
+                                edges-top)))
+                      ((&gt; (min image-height
+                               edges-bot)
+                          (+ image-top win-height))
+                       (min (- image-height win-height)
+                            (<span class="k">if</span> eager-p
+                                edges-top
+                              (- edges-bot win-height)))))))
+
+
+          (<span class="k">when</span> vscroll
+            (round
+             <span class="cd">;; </span><span class="c">`</span><span class="m c">image-set-window-vscroll</span><span class="c">' changed in version 27 to using
+</span>             <span class="cd">;; </span><span class="c">pixels, not lines.
+</span>             (<span class="k">if</span> (version&lt; emacs-version <span class="s">"27"</span>)
+                 (/ vscroll (float (frame-char-height)))
+               vscroll))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

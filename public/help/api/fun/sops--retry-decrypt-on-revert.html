@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sops--retry-decrypt-on-revert – Emacs Documentation Online</title>
+<meta name="description" content="sops--retry-decrypt-on-revert is a natively compiled function defined
+in sops.el.
+Retry sops decrypt as a revert-buffer-function after initial failure.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sops--retry-decrypt-on-revert</code></h1><p><span class="m"><code>sops--retry-decrypt-on-revert</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">sops.el</span>.
+<h2>Signature</h2>
+<pre><code>(sops--retry-decrypt-on-revert <span class="ty">&amp;rest</span> <a href="#:~:text=the-,first"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Retry sops decrypt as a <a href="../var/revert-buffer-function.html"><code>revert-buffer-function</code></a> after initial failure.
+<p>Installed in <a href="../fun/sops--find-file-hook.html"><code>sops--find-file-hook</code></a> when the first <a href="../fun/sops--decrypt-buffer.html"><code>sops--decrypt-buffer</code></a>
+call exits non-zero -- without this hook, <a href="../fun/revert-buffer.html"><code>revert-buffer</code></a> would fall
+through to the default implementation which just re-reads the encrypted
+bytes and never re-invokes sops, so the recovery hint printed into
+<br><span class="bi">*sops-error:*</span> ("fix auth, then \\[revert-buffer]") would be a lie.
+<p>Re-reads the encrypted file from disk (in case the user also fixed
+things externally) and re-runs <a href="../fun/sops--decrypt-buffer.html"><code>sops--decrypt-buffer</code></a>.  On success,
+disables <a href="../fun/read-only-mode.html"><code>read-only-mode</code></a> and enables <a class="v" href="../var/sops-mode.html"><code>sops-mode</code>(var)</a>/<a class="f" href="../fun/sops-mode.html"><code>sops-mode</code>(fun)</a> -- enabling sops-mode
+installs the real <a href="../fun/sops--revert-buffer.html"><code>sops--revert-buffer</code></a> for subsequent reverts, so this
+retry function only runs as long as decrypt keeps failing.  On
+continued failure, <a href="../fun/sops--decrypt-buffer.html"><code>sops--decrypt-buffer</code></a> pops the error buffer again
+and the buffer stays read-only with ciphertext.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qkr1smn94fw9pj8qis6r47djxqbd30ki-emacs-packages-deps/share/emacs/site-lisp/elpa/sops-20260518.350/sops.el</span>
+(<span class="k">defun</span> <span class="f">sops--retry-decrypt-on-revert</span> (<span class="ty">&amp;rest</span> _args)
+  <span class="doc">"Retry sops decrypt as a `</span><span class="m doc">revert-buffer-function</span><span class="doc">' after initial failure.
+Installed in `</span><span class="m doc">sops--find-file-hook</span><span class="doc">' when the first `</span><span class="m doc">sops--decrypt-buffer</span><span class="doc">'
+call exits non-zero -- without this hook, `</span><span class="m doc">revert-buffer</span><span class="doc">' would fall
+through to the default implementation which just re-reads the encrypted
+bytes and never re-invokes sops, so the recovery hint printed into
+`</span><span class="m doc">*sops-error:*</span><span class="doc">' (\"fix auth, then \\[</span><span class="m doc">revert-buffer</span><span class="doc">]\") would be a lie.
+
+Re-reads the encrypted file from disk (in case the user also fixed
+things externally) and re-runs `</span><span class="m doc">sops--decrypt-buffer</span><span class="doc">'.  On success,
+disables `</span><span class="m doc">read-only-mode</span><span class="doc">' and enables `</span><span class="m doc">sops-mode</span><span class="doc">' -- enabling sops-mode
+installs the real `</span><span class="m doc">sops--revert-buffer</span><span class="doc">' for subsequent reverts, so this
+retry function only runs as long as decrypt keeps failing.  On
+continued failure, `</span><span class="m doc">sops--decrypt-buffer</span><span class="doc">' pops the error buffer again
+and the buffer stays read-only with ciphertext."</span>
+  (<span class="k">save-restriction</span>
+    (widen)
+    (set-visited-file-modtime)
+    (<span class="k">let</span> ((inhibit-read-only t))
+      (erase-buffer)
+      (insert-file-contents buffer-file-name)))
+  (set-buffer-modified-p nil)
+  (<span class="k">when</span> (sops--decrypt-buffer)
+    <span class="cd">;; </span><span class="c">Mirror the find-file-hook failure path: set `</span><span class="m c">buffer-read-only</span><span class="c">'
+</span>    <span class="cd">;; </span><span class="c">directly so `</span><span class="m c">revert-buffer</span><span class="c">'s read-only state restoration (inline
+</span>    <span class="cd">;; </span><span class="c">on Emacs 29.1, hook-driven on 30+) leaves us writable.
+</span>    (<span class="k">setq</span> buffer-read-only nil)
+    <span class="cd">;; </span><span class="c">Pre-set state so the `</span><span class="m c">sops-mode</span><span class="c">' enable guard skips its own
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">sops--filestatus</span><span class="c">' re-check -- we just decrypted, the file is
+</span>    <span class="cd">;; </span><span class="c">sops-encrypted by definition.
+</span>    (<span class="k">setq</span> sops--state (sops-state-create <span class="bi">:status</span> 'decrypted))
+    (sops-mode 1)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

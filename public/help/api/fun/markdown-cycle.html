@@ -1,0 +1,107 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-cycle – Emacs Documentation Online</title>
+<meta name="description" content="markdown-cycle is an interactive and natively compiled function
+defined in markdown-mode.el.
+Visibility cycling for Markdown mode.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-cycle</code></h1><p><span class="m"><code>markdown-cycle</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-cycle <span class="ty">&amp;optional</span> <a href="#:~:text=if-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Visibility cycling for Markdown mode.
+<p>This function is called with a <kbd>C-u</kbd> (<a href="../fun/universal-argument.html"><code>universal-argument</code></a>) or if <span class="arg">ARG</span> is t, perform
+global visibility cycling.  If the point is at an atx-style header, cycle
+visibility of the corresponding subtree.  Otherwise, indent the current line
+<br>&nbsp;or insert a tab, as appropriate, by calling <a href="../fun/indent-for-tab-command.html"><code>indent-for-tab-command</code></a>.
+<h2>Key Bindings</h2>
+<p><span class="v">markdown-mode-map</span> <span class="key">TAB</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+<span class="cd">;; </span><span class="c">This function was originally derived from `</span><span class="m c">org-cycle</span><span class="c">' from org.el.
+</span>(<span class="k">defun</span> <span class="f">markdown-cycle</span> (<span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Visibility cycling for Markdown mode.
+This function is called with a `\\[</span><span class="m doc">universal-argument</span><span class="doc">]' or if ARG is t, perform
+global visibility cycling.  If the point is at an atx-style header, cycle
+visibility of the corresponding subtree.  Otherwise, indent the current line
+ or insert a tab, as appropriate, by calling `</span><span class="m doc">indent-for-tab-command</span><span class="doc">'."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">cond</span>
+
+   <span class="cd">;; </span><span class="c">Global cycling
+</span>   (arg
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">Move from overview to contents
+</span>     ((<span class="k">and</span> (eq last-command this-command)
+           (eq markdown-cycle-global-status 2))
+      (outline-hide-sublevels 1)
+      (message <span class="s">"CONTENTS"</span>)
+      (<span class="k">setq</span> markdown-cycle-global-status 3)
+      (markdown-outline-fix-visibility))
+     <span class="cd">;; </span><span class="c">Move from contents to all
+</span>     ((<span class="k">and</span> (eq last-command this-command)
+           (eq markdown-cycle-global-status 3))
+      (outline-show-all)
+      (message <span class="s">"SHOW ALL"</span>)
+      (<span class="k">setq</span> markdown-cycle-global-status 1))
+     <span class="cd">;; </span><span class="c">Defaults to overview
+</span>     (t
+      (outline-hide-body)
+      (message <span class="s">"OVERVIEW"</span>)
+      (<span class="k">setq</span> markdown-cycle-global-status 2)
+      (markdown-outline-fix-visibility))))
+
+   <span class="cd">;; </span><span class="c">At a heading: rotate between three different views
+</span>   ((<span class="k">save-excursion</span> (beginning-of-line 1) (markdown-on-heading-p))
+    (markdown-back-to-heading)
+    (<span class="k">let</span> ((goal-column 0) eoh eol eos)
+      <span class="cd">;; </span><span class="c">Determine boundaries
+</span>      (<span class="k">save-excursion</span>
+        (markdown-back-to-heading)
+        (<span class="k">save-excursion</span>
+          (beginning-of-line 2)
+          (<span class="k">while</span> (<span class="k">and</span> (not (eobp)) <span class="cd">;; </span><span class="c">this is like `</span><span class="m c">next-line</span><span class="c">'
+</span>                      (get-char-property (1- (point)) 'invisible))
+            (beginning-of-line 2)) <span class="w">(</span><span class="w k">setq</span><span class="w"> eol (point)))</span>
+        (markdown-end-of-heading)   (<span class="k">setq</span> eoh (point))
+        (markdown-end-of-subtree t)
+        (skip-chars-forward <span class="s">" \t\n"</span>)
+        (beginning-of-line 1) <span class="cd">; </span><span class="c">in case this is an item
+</span>        (<span class="k">setq</span> eos (1- (point))))
+      <span class="cd">;; </span><span class="c">Find out what to do next and set `</span><span class="m c">this-command</span><span class="c">'
+</span>      (<span class="k">cond</span>
+       <span class="cd">;; </span><span class="c">Nothing is hidden behind this heading
+</span>       ((= eos eoh)
+        (message <span class="s">"EMPTY ENTRY"</span>)
+        (<span class="k">setq</span> markdown-cycle-subtree-status nil))
+       <span class="cd">;; </span><span class="c">Entire subtree is hidden in one line: open it
+</span>       ((&gt;= eol eos)
+        (markdown-show-entry)
+        (outline-show-children)
+        (message <span class="s">"CHILDREN"</span>)
+        (<span class="k">setq</span> markdown-cycle-subtree-status 'children))
+       <span class="cd">;; </span><span class="c">We just showed the children, now show everything.
+</span>       ((<span class="k">and</span> (eq last-command this-command)
+             (eq markdown-cycle-subtree-status 'children))
+        (outline-show-subtree)
+        (message <span class="s">"SUBTREE"</span>)
+        (<span class="k">setq</span> markdown-cycle-subtree-status 'subtree))
+       <span class="cd">;; </span><span class="c">Default action: hide the subtree.
+</span>       (t
+        (outline-hide-subtree)
+        (message <span class="s">"FOLDED"</span>)
+        (<span class="k">setq</span> markdown-cycle-subtree-status 'folded)))))
+
+   <span class="cd">;; </span><span class="c">In a table, move forward by one cell
+</span>   ((markdown-table-at-point-p)
+    (call-interactively #'markdown-table-forward-cell))
+
+   <span class="cd">;; </span><span class="c">Otherwise, indent as appropriate
+</span>   (t
+    (indent-for-tab-command))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

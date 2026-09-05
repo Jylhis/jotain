@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-blob-visit-magit – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-blob-visit-magit is an interactive and natively compiled
+function defined in majutsu-file.el.
+Visit the current blob in magit-blob-mode.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-blob-visit-magit</code></h1><p><span class="m"><code>majutsu-blob-visit-magit</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">majutsu-file.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-blob-visit-magit)
+</code></pre>
+<h2>Documentation</h2>
+<p>Visit the current blob in <span class="m"><code>magit-blob-mode</code></span>.
+<h2>Key Bindings</h2>
+<p><span class="v">majutsu-blob-mode-map</span> <span class="key">C-c m</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-file.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-blob-visit-magit</span> ()
+  <span class="doc">"Visit the current blob in `</span><span class="m doc">magit-blob-mode</span><span class="doc">'."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">unless</span> (<span class="k">and</span> (<span class="k">bound-and-true-p</span> majutsu-blob-mode)
+               majutsu-buffer-blob-root
+               majutsu-buffer-blob-path
+               majutsu-buffer-blob-revset)
+    (<span class="w">user-error</span> <span class="s">"Not in a blob buffer"</span>))
+  (<span class="k">let*</span> ((line (line-number-at-pos))
+         (col (current-column))
+         (default-directory majutsu-buffer-blob-root))
+    (<span class="k">when</span> (<span class="k">and</span> (not majutsu-buffer-blob-commit-id)
+               majutsu-buffer-blob-revset)
+      (<span class="k">when-let*</span> ((rev-info (majutsu-file--resolve-single-rev-info majutsu-buffer-blob-revset))
+                  (new-change (plist-get rev-info <span class="bi">:change-id</span>)))
+        (<span class="k">setq</span> majutsu-buffer-blob-revision new-change)
+        (<span class="k">setq</span> majutsu-buffer-blob-change-id new-change)
+        (<span class="k">setq</span> majutsu-buffer-blob-commit-id (plist-get rev-info <span class="bi">:commit-id</span>))
+        (majutsu-file--refresh-buffer-name)))
+    (<span class="k">let</span> ((commit majutsu-buffer-blob-commit-id))
+      (<span class="k">unless</span> (<span class="k">and</span> commit (not (string-empty-p commit)))
+        (<span class="w">user-error</span> <span class="s">"Revset does not resolve to a single commit"</span>))
+      (<span class="k">unless</span> (fboundp 'magit-find-file)
+        (<span class="k">require</span> '<span class="m">magit-files</span>))
+      (<span class="k">let</span> ((buf (magit-find-file commit majutsu-buffer-blob-path)))
+        (<span class="k">when</span> (buffer-live-p buf)
+          (<span class="k">with-current-buffer</span> buf
+            (majutsu-file--goto-line-col line col)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

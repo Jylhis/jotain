@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult-line – Emacs Documentation Online</title>
+<meta name="description" content="consult-line is an interactive and natively compiled function defined
+in consult.el.
+Search for a matching line.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult-line</code></h1><p><span class="m"><code>consult-line</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult-line <span class="ty">&amp;optional</span> <a href="#:~:text=Optional-,INITIAL"><span class="arg">INITIAL</span></a> <a href="#:~:text=the-,START"><span class="arg">START</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Search for a matching line.
+<p>Depending on the setting <a href="../var/consult-point-placement.html"><code>consult-point-placement</code></a> the command
+jumps to the beginning or the end of the first match on the line
+or the line beginning.  The default candidate is the non-empty
+line next to point.  This command obeys narrowing.  Optional
+<span class="arg">INITIAL</span> input can be provided.  The search starting point is
+changed if the <span class="arg">START</span> prefix argument is set.  The symbol at point
+and the last <a href="../var/isearch-string.html"><code>isearch-string</code></a> is added to the future history.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">consult-line</span> (<span class="ty">&amp;optional</span> initial start)
+  <span class="doc">"Search for a matching line.
+
+Depending on the setting `</span><span class="m doc">consult-point-placement</span><span class="doc">' the command
+jumps to the beginning or the end of the first match on the line
+or the line beginning.  The default candidate is the non-empty
+line next to point.  This command obeys narrowing.  Optional
+INITIAL input can be provided.  The search starting point is
+changed if the START prefix argument is set.  The symbol at point
+and the last `</span><span class="m doc">isearch-string</span><span class="doc">' is added to the future history."</span>
+  (<span class="k">interactive</span> (list nil (not (not current-prefix-arg))))
+  (<span class="k">let*</span> ((curr-line (line-number-at-pos (point) consult-line-numbers-widen))
+         (top (not (eq start consult-line-start-from-top)))
+         (candidates (<span class="k">consult--slow-operation</span> <span class="s">"Collecting lines..."</span>
+                       (consult--line-candidates top curr-line))))
+    (consult--read
+     candidates
+     <span class="bi">:prompt</span> (<span class="k">if</span> top <span class="s">"Go to line from top: "</span> <span class="s">"Go to line: "</span>)
+     <span class="bi">:annotate</span> (consult--line-fontify curr-line)
+     <span class="bi">:category</span> 'consult-location
+     <span class="bi">:sort</span> nil
+     <span class="bi">:require-match</span> t
+     <span class="cd">;; </span><span class="c">Always add last `</span><span class="m c">isearch-string</span><span class="c">' to future history
+</span>     <span class="bi">:add-history</span> (list (thing-at-point 'symbol) isearch-string)
+     <span class="bi">:history</span> '(<span class="bi">:input</span> consult--line-history)
+     <span class="bi">:lookup</span> #'consult--line-match
+     <span class="bi">:default</span> (car candidates)
+     <span class="cd">;; </span><span class="c">Add `</span><span class="m c">isearch-string</span><span class="c">' as initial input if starting from Isearch
+</span>     <span class="bi">:initial</span> (<span class="k">or</span> initial
+                  (<span class="k">and</span> isearch-mode
+                       (<span class="k">prog1</span> isearch-string (isearch-done))))
+     <span class="bi">:state</span> (consult--location-state candidates))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

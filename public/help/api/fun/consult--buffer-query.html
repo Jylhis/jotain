@@ -1,0 +1,86 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--buffer-query – Emacs Documentation Online</title>
+<meta name="description" content="consult--buffer-query is a natively compiled function defined in
+consult.el.
+Query for a list of matching buffers.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--buffer-query</code></h1><p><span class="m"><code>consult--buffer-query</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--buffer-query <span class="ty">&amp;key</span> <a href="#:~:text=name.-,SORT"><span class="arg">SORT</span></a> <a href="#:~:text=sources.-,DIRECTORY"><span class="arg">DIRECTORY</span></a> <a href="#:~:text=regexps.-,MODE"><span class="arg">MODE</span></a> <a href="#:~:text=buffers.-,AS"><span class="arg">AS</span></a> <a href="#:~:text=buffers.-,PREDICATE"><span class="arg">PREDICATE</span></a> (<a href="#:~:text=nil.-,FILTER"><span class="arg">FILTER</span></a> t) <a href="#:~:text=regexps.-,INCLUDE"><span class="arg">INCLUDE</span></a> (<a href="#:~:text=invert.-,EXCLUDE"><span class="arg">EXCLUDE</span></a> consult-buffer-filter) (<a href="#:~:text=function.-,BUFFER-LIST"><span class="arg">BUFFER-LIST</span></a> consult-buffer-list-function))
+</code></pre>
+<h2>Documentation</h2>
+<p>Query for a list of matching buffers.
+<p>The function supports filtering by various criteria which are
+used throughout Consult.  In particular it is the backbone of
+most <a href="../var/consult-buffer-sources.html"><code>consult-buffer-sources</code></a>.
+<span class="arg">DIRECTORY</span> can either be the symbol project or a file name.
+<span class="arg">SORT</span> can be visibility, alpha or nil.
+<span class="arg">FILTER</span> can be either t, nil or invert.
+<span class="arg">EXCLUDE</span> is a list of regexps.
+<span class="arg">INCLUDE</span> is a list of regexps.
+<span class="arg">MODE</span> can be a mode or a list of modes to restrict the returned buffers.
+<span class="arg">PREDICATE</span> is a predicate function.
+<span class="arg">BUFFER-LIST</span> is a function or a list of buffers.
+<span class="arg">AS</span> is a conversion function.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">cl-defun</span> <span class="f">consult--buffer-query</span> ( <span class="ty">&amp;key</span> sort directory mode as predicate (filter t)
+                                  include (exclude consult-buffer-filter)
+                                  (buffer-list consult-buffer-list-function))
+  <span class="doc">"Query for a list of matching buffers.
+The function supports filtering by various criteria which are
+used throughout Consult.  In particular it is the backbone of
+most `</span><span class="m doc">consult-buffer-sources</span><span class="doc">'.
+DIRECTORY can either be the symbol project or a file name.
+SORT can be visibility, alpha or nil.
+FILTER can be either t, nil or invert.
+EXCLUDE is a list of regexps.
+INCLUDE is a list of regexps.
+MODE can be a mode or a list of modes to restrict the returned buffers.
+PREDICATE is a predicate function.
+BUFFER-LIST is a function or a list of buffers.
+AS is a conversion function."</span>
+  (<span class="k">let</span> ((root (consult--normalize-directory directory)))
+    (<span class="k">setq</span> buffer-list (<span class="k">cond</span>
+                       ((functionp buffer-list) (funcall buffer-list))
+                       ((listp buffer-list) (copy-sequence buffer-list))
+                       (t (buffer-list))))
+    (<span class="k">when</span> (<span class="k">or</span> filter mode root)
+      (<span class="k">let</span> ((exclude-re (consult--regexp-filter exclude))
+            (include-re (consult--regexp-filter include))
+            (case-fold-search))
+        (<span class="k">consult--keep!</span> buffer-list
+          (<span class="k">and</span>
+           (<span class="k">or</span> (not mode)
+               (<span class="k">let</span> ((mm (buffer-local-value 'major-mode it)))
+                 (<span class="k">if</span> (consp mode)
+                     (any (<span class="k">lambda</span> (m) (provided-mode-derived-p mm m)) mode)
+                   (provided-mode-derived-p mm mode))))
+           (<span class="k">pcase-exhaustive</span> filter
+             ('nil t)
+             ((<span class="k">or</span> 't 'invert)
+              (eq (eq filter t)
+                  (<span class="k">and</span>
+                   (<span class="k">or</span> (not exclude)
+                       (not (string-match-p exclude-re (buffer-name it))))
+                   (<span class="k">or</span> (not include)
+                       (not (not (string-match-p include-re (buffer-name it)))))))))
+           (<span class="k">or</span> (not root)
+               (<span class="k">when-let*</span> ((dir (buffer-local-value 'default-directory it)))
+                 (string-prefix-p root
+                                  (<span class="k">if</span> (<span class="k">and</span> (/= 0 (length dir)) (eq (aref dir 0) ?/))
+                                      dir
+                                    (expand-file-name dir)))))
+           (<span class="k">or</span> (not predicate) (funcall predicate it))
+           it))))
+    (<span class="k">when</span> sort
+      (<span class="k">setq</span> buffer-list (funcall (intern (format <span class="s">"consult--buffer-sort-%s"</span> sort)) buffer-list)))
+    (<span class="k">when</span> as
+      (<span class="k">cl-loop</span> for it in-ref buffer-list do (<span class="k">setf</span> it (funcall as it))))
+    buffer-list))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

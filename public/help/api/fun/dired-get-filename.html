@@ -1,0 +1,116 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dired-get-filename – Emacs Documentation Online</title>
+<meta name="description" content="dired-get-filename is an autoloaded and natively compiled function
+defined in dired.el.gz.
+In Dired, return name of file mentioned on this line.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dired-get-filename</code></h1><p><span class="m"><code>dired-get-filename</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <a href="../src/dired.el.html">dired.el.gz</a>.
+<h2>Signature</h2>
+<pre><code>(dired-get-filename <span class="ty">&amp;optional</span> <a href="#:~:text=arg-,LOCALP"><span class="arg">LOCALP</span></a> <a href="#:~:text=arg-,NO-ERROR-IF-NOT-FILEP"><span class="arg">NO-ERROR-IF-NOT-FILEP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>In Dired, return name of file mentioned on this line.
+<p>Value returned normally includes the directory name.
+Optional arg <span class="arg">LOCALP</span> with value <span class="m"><code>no-dir</code></span> means don't include directory
+name in result.  A value of <span class="m"><code>verbatim</code></span> means to return the name exactly as
+it occurs in the buffer, and a value of t means construct name relative to
+<a href="../var/default-directory.html"><code>default-directory</code></a>, which still may contain slashes if in a subdirectory.
+Optional arg <span class="arg">NO-ERROR-IF-NOT-FILEP</span> means treat <span class="m"><code>.</code></span> and <span class="m"><code>..</code></span> as
+regular filenames and return nil if no filename on this line.
+Otherwise, an error occurs in these cases.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><a href="../src/dired.el.html">/usr/src/emacs/lisp/dired.el.gz</a>
+(<span class="k">defun</span> <span class="f">dired-get-filename</span> (<span class="ty">&amp;optional</span> localp no-error-if-not-filep)
+  <span class="doc">"In Dired, return name of file mentioned on this line.
+Value returned normally includes the directory name.
+Optional arg LOCALP with value `</span><span class="m doc">no-dir</span><span class="doc">' means don't include directory
+name in result.  A value of `</span><span class="m doc">verbatim</span><span class="doc">' means to return the name exactly as
+it occurs in the buffer, and a value of t means construct name relative to
+`</span><span class="m doc">default-directory</span><span class="doc">', which still may contain slashes if in a subdirectory.
+Optional arg NO-ERROR-IF-NOT-FILEP means treat `</span><span class="m doc">.</span><span class="doc">' and `</span><span class="m doc">..</span><span class="doc">' as
+regular filenames and return nil if no filename on this line.
+Otherwise, an error occurs in these cases."</span>
+  (<span class="k">let</span> ((hidden (<span class="k">and</span> dired-subdir-alist
+                     (dired-subdir-hidden-p
+                      (dired-current-directory))))
+	case-fold-search file p1 p2 already-absolute)
+    (<span class="k">when</span> hidden
+      (dired-unhide-subdir))
+    (<span class="k">save-excursion</span>
+      (<span class="k">if</span> (<span class="k">setq</span> p1 (dired-move-to-filename (not no-error-if-not-filep)))
+	  (<span class="k">setq</span> p2 (dired-move-to-end-of-filename no-error-if-not-filep))))
+    (<span class="k">when</span> hidden
+      (dired-hide-subdir 1))
+    <span class="cd">;; </span><span class="c">nil if no file on this line, but no-error-if-not-filep is t:
+</span>    (<span class="k">if</span> (<span class="k">setq</span> file (<span class="k">and</span> p1 p2 (buffer-substring p1 p2)))
+	(<span class="k">progn</span>
+	  <span class="cd">;; </span><span class="c">Get rid of the mouse-face property that file names have.
+</span>	  (set-text-properties 0 (length file) nil file)
+	  <span class="cd">;; </span><span class="c">Unquote names quoted by ls or by dired-insert-directory.
+</span>	  <span class="cd">;; </span><span class="c">This code was written using `</span><span class="m c">read</span><span class="c">' to unquote, because
+</span>          <span class="cd">;; </span><span class="c">it's faster than substituting \007 (4 chars) -&gt; ^G (1
+</span>          <span class="cd">;; </span><span class="c">char) etc. in a lisp loop.  Unfortunately, this decision
+</span>          <span class="cd">;; </span><span class="c">has necessitated hacks such as dealing with filenames
+</span>          <span class="cd">;; </span><span class="c">with quotation marks in their names.
+</span>	  (<span class="k">while</span> (string-match <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[</span><span class="neg s">^</span><span class="s">\\]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\\`</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> file)
+	    (<span class="k">setq</span> file (replace-match <span class="s">"\\\""</span> nil t file 1)))
+          <span class="cd">;; </span><span class="c">Unescape any spaces escaped by ls -b (bug#10469).
+</span>          <span class="cd">;; </span><span class="c">Other -b quotes, eg \t, \n, work transparently.
+</span>          (<span class="k">if</span> (dired-switches-escape-p dired-actual-switches)
+              (<span class="k">let</span> ((start 0)
+                    (rep <span class="s">""</span>)
+                    (shift -1))
+                (<span class="k">if</span> (eq localp 'verbatim)
+                    (<span class="k">setq</span> rep <span class="s">"\\\\"</span>
+                          shift +1))
+                (<span class="k">while</span> (string-match <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\\\</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> "</span> file start)
+                  (<span class="k">setq</span> file (replace-match rep nil t file 1)
+                        start (+ shift (match-end 0))))))
+	  (<span class="k">when</span> (eq system-type 'windows-nt)
+	    (<span class="k">save-match-data</span>
+	      (<span class="k">let</span> ((start 0))
+		(<span class="k">while</span> (string-match <span class="s">"\\\\"</span> file start)
+		  (aset file (match-beginning 0) ?/)
+		  (<span class="k">setq</span> start (match-end 0))))))
+
+          <span class="cd">;; </span><span class="c">Hence we don't need to worry about converting `</span><span class="m c">\\</span><span class="c">' back to `\'.
+</span>          (<span class="k">setq</span> file (read (concat <span class="s">"\""</span> file <span class="s">"\""</span>)))))
+    (<span class="k">and</span> file (files--name-absolute-system-p file)
+	 (<span class="k">setq</span> already-absolute t))
+    (<span class="k">cond</span>
+     ((null file)
+      nil)
+     ((eq localp 'verbatim)
+      file)
+     ((<span class="k">and</span> (not no-error-if-not-filep)
+	   (member file '(<span class="s">"."</span> <span class="s">".."</span>)))
+      (<span class="w">error</span> <span class="s">"Cannot operate on `</span><span class="m s">.</span><span class="s">' or `</span><span class="m s">..</span><span class="s">'"</span>))
+     ((<span class="k">and</span> (eq localp 'no-dir) already-absolute)
+      (file-name-nondirectory file))
+     (already-absolute
+      (<span class="k">let</span> ((handler (find-file-name-handler file nil)))
+	<span class="cd">;; </span><span class="c">check for safe-magic property so that we won't
+</span>	<span class="cd">;; </span><span class="c">put /: for names that don't really need them.
+</span>	<span class="cd">;; </span><span class="c">For instance, .gz files when auto-compression-mode is on.
+</span>	(<span class="k">if</span> (<span class="k">and</span> handler (not (get handler 'safe-magic)))
+	    (concat <span class="s">"/:"</span> file)
+	  file)))
+     ((eq localp 'no-dir)
+      file)
+     ((equal (dired-current-directory) <span class="s">"/"</span>)
+      (<span class="k">setq</span> file (concat (dired-current-directory localp) file))
+      (<span class="k">let</span> ((handler (find-file-name-handler file nil)))
+	<span class="cd">;; </span><span class="c">check for safe-magic property so that we won't
+</span>	<span class="cd">;; </span><span class="c">put /: for names that don't really need them.
+</span>	<span class="cd">;; </span><span class="c">For instance, .gz files when auto-compression-mode is on.
+</span>	(<span class="k">if</span> (<span class="k">and</span> handler (not (get handler 'safe-magic)))
+	    (concat <span class="s">"/:"</span> file)
+	  file)))
+     (t
+      (concat (dired-current-directory localp) file)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

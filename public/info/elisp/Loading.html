@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.1.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Loading (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Loading (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Loading (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Byte-Compilation.html#Byte-Compilation" rel="next" title="Byte Compilation">
+<link href="Customization.html#Customization" rel="prev" title="Customization">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+dt.def-line {font-size: 1rem}
+kbd.kbd {font-style: oblique}
+span.r {font-family: initial; font-weight: normal; font-style: normal}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold}
+ul.mark-bullet {list-style-type: disc}
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Loading">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Byte-Compilation.html#Byte-Compilation" rel="next">Byte Compilation</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Customization.html#Customization" rel="prev">Customization Settings</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Emacs Lisp</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h2 class="chapter" id="Loading-1"><span>16 Loading<a class="copiable-link" href="#Loading-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-loading"></a>
+<a class="index-entry-id" id="index-library"></a>
+<a class="index-entry-id" id="index-Lisp-library"></a>
+
+<p>Loading a file of Lisp code means bringing its contents into the
+Lisp environment in the form of Lisp objects.  Emacs finds and opens
+the file, reads the text, evaluates each form, and then closes the
+file.  Such a file is also called a <em class="dfn">Lisp library</em>.
+</p>
+<p>The load functions evaluate all the expressions in a file just
+as the <code class="code">eval-buffer</code> function evaluates all the
+expressions in a buffer.  The difference is that the load functions
+read and evaluate the text in the file as found on disk, not the text
+in an Emacs buffer.
+</p>
+<a class="index-entry-id" id="index-top_002dlevel-form"></a>
+<p>The loaded file must contain Lisp expressions, either as source code
+or as byte-compiled code.  Each form in the file is called a
+<em class="dfn">top-level form</em>.  There is no special format for the forms in a
+loadable file; any form in a file may equally well be typed directly
+into a buffer and evaluated there.  (Indeed, most code is tested this
+way.)  Most often, the forms are function definitions and variable
+definitions.
+</p>
+<p>Emacs can also load compiled dynamic modules: shared libraries that
+provide additional functionality for use in Emacs Lisp programs, just
+like a package written in Emacs Lisp would.  When a dynamic module is
+loaded, Emacs calls a specially-named initialization function which
+the module needs to implement, and which exposes the additional
+functions and variables to Emacs Lisp programs.
+</p>
+<p>For on-demand loading of external libraries which are known in advance
+to be required by certain Emacs primitives, see <a class="pxref" href="System-Interface.html#Dynamic-Libraries">Dynamically Loaded Libraries</a>.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#How-Programs-Do-Loading">How Programs Do Loading</a></li>
+<li><a href="#Load-Suffixes">Load Suffixes</a></li>
+<li><a href="#Library-Search">Library Search</a></li>
+<li><a href="#Loading-Non_002dASCII">Loading Non-<abbr class="acronym">ASCII</abbr> Characters</a></li>
+<li><a href="#Autoload">Autoload</a></li>
+<li><a href="#Repeated-Loading">Repeated Loading</a></li>
+<li><a href="#Named-Features">Features</a></li>
+<li><a href="#Where-Defined">Which File Defined a Certain Symbol</a></li>
+<li><a href="#Unloading">Unloading</a></li>
+<li><a href="#Hooks-for-Loading">Hooks for Loading</a></li>
+<li><a href="#Dynamic-Modules">Emacs Dynamic Modules</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="How-Programs-Do-Loading">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Load-Suffixes" rel="next">Load Suffixes</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Loading" rel="up">Loading</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="How-Programs-Do-Loading-1"><span>16.1 How Programs Do Loading<a class="copiable-link" href="#How-Programs-Do-Loading-1"> &para;</a></span></h3>
+
+<p>Emacs Lisp has several interfaces for loading.  For example,
+<code class="code">autoload</code> creates a placeholder object for a function defined in a
+file; trying to call the autoloading function loads the file to get the
+function&rsquo;s real definition (see <a class="pxref" href="#Autoload">Autoload</a>).  <code class="code">require</code> loads a
+file if it isn&rsquo;t already loaded (see <a class="pxref" href="#Named-Features">Features</a>).  Ultimately,
+all these facilities call the <code class="code">load</code> function to do the work.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-load"><span class="category-def">Function: </span><span><strong class="def-name">load</strong> <var class="def-var-arguments">filename &amp;optional missing-ok nomessage nosuffix must-suffix</var><a class="copiable-link" href="#index-load"> &para;</a></span></dt>
+<dd><p>This function finds and opens a file of Lisp code, evaluates all the
+forms in it, and closes the file.
+</p>
+<p>To find the file, <code class="code">load</code> first looks for a file named
+<samp class="file"><var class="var">filename</var>.elc</samp>, that is, for a file whose name is
+<var class="var">filename</var> with the extension &lsquo;<samp class="samp">.elc</samp>&rsquo; appended.  If such a
+file exists, and Emacs was compiled with native-compilation support
+(see <a class="pxref" href="Native-Compilation.html#Native-Compilation">Compilation of Lisp to Native Code</a>), <code class="code">load</code> attempts to find a
+corresponding &lsquo;<samp class="samp">.eln</samp>&rsquo; file, and if found, loads it instead of
+<samp class="file"><var class="var">filename</var>.elc</samp>.  Otherwise, it loads
+<samp class="file"><var class="var">filename</var>.elc</samp> (and starts a background native compilation
+to produce the missing &lsquo;<samp class="samp">.eln</samp>&rsquo; file, followed by loading that
+file).  If there is no <samp class="file"><var class="var">filename</var>.elc</samp>, then <code class="code">load</code>
+looks for a file named <samp class="file"><var class="var">filename</var>.el</samp>.  If that file exists,
+it is loaded.  If Emacs was compiled with support for dynamic modules
+(see <a class="pxref" href="#Dynamic-Modules">Emacs Dynamic Modules</a>), <code class="code">load</code> next looks for a file named
+<samp class="file"><var class="var">filename</var>.<var class="var">ext</var></samp>, where <var class="var">ext</var> is a system-dependent
+file-name extension of shared libraries (&lsquo;<samp class="samp">.so</samp>&rsquo; on GNU and Unix
+systems).  Finally, if neither of those names is found, <code class="code">load</code>
+looks for a file named <var class="var">filename</var> with nothing appended, and loads
+it if it exists.  (The <code class="code">load</code> function is not clever about
+looking at <var class="var">filename</var>.  In the perverse case of a file named
+<samp class="file">foo.el.el</samp>, evaluation of <code class="code">(load &quot;foo.el&quot;)</code> will indeed
+find it.)
+</p>
+<p>If Auto Compression mode is enabled, as it is by default, then if
+<code class="code">load</code> can not find a file, it searches for a compressed version
+of the file before trying other file names.  It decompresses and loads
+it if it exists.  It looks for compressed versions by appending each
+of the suffixes in <code class="code">jka-compr-load-suffixes</code> to the file name.
+The value of this variable must be a list of strings.  Its standard
+value is <code class="code">(&quot;.gz&quot;)</code>.
+</p>
+<p>If the optional argument <var class="var">nosuffix</var> is non-<code class="code">nil</code>, then
+<code class="code">load</code> does not try the suffixes &lsquo;<samp class="samp">.elc</samp>&rsquo; and &lsquo;<samp class="samp">.el</samp>&rsquo;.  In
+this case, you must specify the precise file name you want, except
+that, if Auto Compression mode is enabled, <code class="code">load</code> will still use
+<code class="code">jka-compr-load-suffixes</code> to find compressed versions.  By
+specifying the precise file name and using <code class="code">t</code> for
+<var class="var">nosuffix</var>, you can prevent file names like <samp class="file">foo.el.el</samp> from
+being tried.
+</p>
+<p>If the optional argument <var class="var">must-suffix</var> is non-<code class="code">nil</code>, then
+<code class="code">load</code> insists that the file name used must end in either
+&lsquo;<samp class="samp">.el</samp>&rsquo; or &lsquo;<samp class="samp">.elc</samp>&rsquo; (possibly extended with a compression
+suffix) or the shared-library extension, unless it contains an
+explicit directory name.
+</p>
+<p>If the option <code class="code">load-prefer-newer</code> is non-<code class="code">nil</code>, then when
+searching suffixes, <code class="code">load</code> selects whichever version of a file
+(&lsquo;<samp class="samp">.elc</samp>&rsquo;, &lsquo;<samp class="samp">.el</samp>&rsquo;, etc.) has been modified most recently.
+In this case, <code class="code">load</code> doesn&rsquo;t load the &lsquo;<samp class="samp">.eln</samp>&rsquo;
+native-compiled file even if it exists.
+</p>
+<p>If <var class="var">filename</var> is a relative file name, such as <samp class="file">foo</samp> or
+<samp class="file">baz/foo.bar</samp>, <code class="code">load</code> searches for the file using the variable
+<code class="code">load-path</code>.  It appends <var class="var">filename</var> to each of the directories
+listed in <code class="code">load-path</code>, and loads the first file it finds whose name
+matches.  The current default directory is tried only if it is specified
+in <code class="code">load-path</code>, where <code class="code">nil</code> stands for the default directory.
+<code class="code">load</code> tries all three possible suffixes in the first directory in
+<code class="code">load-path</code>, then all three suffixes in the second directory, and
+so on.  See <a class="xref" href="#Library-Search">Library Search</a>.
+</p>
+<p>Whatever the name under which the file is eventually found, and the
+directory where Emacs found it, Emacs sets the value of the variable
+<code class="code">load-file-name</code> to that file&rsquo;s name.
+</p>
+<p>If you get a warning that <samp class="file">foo.elc</samp> is older than <samp class="file">foo.el</samp>, it
+means you should consider recompiling <samp class="file">foo.el</samp>.  See <a class="xref" href="Byte-Compilation.html#Byte-Compilation">Byte Compilation</a>.
+</p>
+<p>When loading a source file (not compiled), <code class="code">load</code> performs
+character set translation just as Emacs would do when visiting the file.
+See <a class="xref" href="Non_002dASCII-Characters.html#Coding-Systems">Coding Systems</a>.
+</p>
+<a class="index-entry-id" id="index-eager-macro-expansion"></a>
+<p>When loading an uncompiled file, Emacs tries to expand any macros
+that the file contains (see <a class="pxref" href="Macros.html#Macros">Macros</a>).  We refer to this as
+<em class="dfn">eager macro expansion</em>.  Doing this (rather than deferring
+the expansion until the relevant code runs) can significantly speed
+up the execution of uncompiled code.  Sometimes, this macro expansion
+cannot be done, owing to a cyclic dependency.  In the simplest
+example of this, the file you are loading refers to a macro defined
+in another file, and that file in turn requires the file you are
+loading.  Emacs will issue an error about
+(&lsquo;<samp class="samp">Eager macro-expansion skipped due to cycle&hellip;</samp>&rsquo;)
+giving details of the problem.  You have to restructure
+your code so that this does not happen.  Loading a compiled file does
+not cause macroexpansion, because this should already have happened
+during compilation.  See <a class="xref" href="Macros.html#Compiling-Macros">Macros and Byte Compilation</a>.
+</p>
+<p>Messages like &lsquo;<samp class="samp">Loading foo...</samp>&rsquo; and &lsquo;<samp class="samp">Loading foo...done</samp>&rsquo; appear
+in the echo area during loading unless <var class="var">nomessage</var> is
+non-<code class="code">nil</code>.  If a native-compiled &lsquo;<samp class="samp">.eln</samp>&rsquo; file is loaded,
+the message says so.
+</p>
+<a class="index-entry-id" id="index-load-errors"></a>
+<p>Any unhandled errors while loading a file terminate loading.  If the
+load was done for the sake of <code class="code">autoload</code>, any function definitions
+made during the loading are undone.
+</p>
+<a class="index-entry-id" id="index-file_002derror"></a>
+<p>If <code class="code">load</code> can&rsquo;t find the file to load, then normally it signals a
+<code class="code">file-error</code> (with &lsquo;<samp class="samp">Cannot open load file
+<var class="var">filename</var></samp>&rsquo;).  But if <var class="var">missing-ok</var> is non-<code class="code">nil</code>, then
+<code class="code">load</code> just returns <code class="code">nil</code>.
+</p>
+<p>You can use the variable <code class="code">load-read-function</code> to specify a function
+for <code class="code">load</code> to use instead of <code class="code">read</code> for reading expressions.
+See below.
+</p>
+<p><code class="code">load</code> returns <code class="code">t</code> if the file loads successfully.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-load_002dfile"><span class="category-def">Command: </span><span><strong class="def-name">load-file</strong> <var class="def-var-arguments">filename</var><a class="copiable-link" href="#index-load_002dfile"> &para;</a></span></dt>
+<dd><p>This command loads the file <var class="var">filename</var>.  If <var class="var">filename</var> is a
+relative file name, then the current default directory is assumed.
+This command does not use <code class="code">load-path</code>, and does not append
+suffixes.  However, it does look for compressed versions (if Auto
+Compression Mode is enabled).  Use this command if you wish to specify
+precisely the file name to load.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-load_002dlibrary"><span class="category-def">Command: </span><span><strong class="def-name">load-library</strong> <var class="def-var-arguments">library</var><a class="copiable-link" href="#index-load_002dlibrary"> &para;</a></span></dt>
+<dd><p>This command loads the library named <var class="var">library</var>.  It is equivalent to
+<code class="code">load</code>, except for the way it reads its argument interactively.
+See <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Lisp-Libraries.html#Lisp-Libraries">Lisp Libraries</a> in <cite class="cite">The GNU Emacs Manual</cite>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-load_002din_002dprogress"><span class="category-def">Variable: </span><span><strong class="def-name">load-in-progress</strong><a class="copiable-link" href="#index-load_002din_002dprogress"> &para;</a></span></dt>
+<dd><p>This variable is non-<code class="code">nil</code> if Emacs is in the process of loading a
+file, and it is <code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-load_002dfile_002dname"><span class="category-def">Variable: </span><span><strong class="def-name">load-file-name</strong><a class="copiable-link" href="#index-load_002dfile_002dname"> &para;</a></span></dt>
+<dd><p>When Emacs is in the process of loading a file, this variable&rsquo;s value
+is the name of that file, as Emacs found it during the search
+described earlier in this section.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-load_002dread_002dfunction"><span class="category-def">Variable: </span><span><strong class="def-name">load-read-function</strong><a class="copiable-link" href="#index-load_002dread_002dfunction"> &para;</a></span></dt>
+<dd><a class="anchor" id="Definition-of-load_002dread_002dfunction"></a><p>This variable specifies an alternate expression-reading function for
+<code class="code">load</code> and <code class="code">eval-region</code> to use instead of <code class="code">read</code>.
+The function should accept one argument, just as <code class="code">read</code> does.
+</p>
+<p>By default, this variable&rsquo;s value is <code class="code">read</code>.  See <a class="xref" href="Read-and-Print.html#Input-Functions">Input Functions</a>.
+</p>
+<p>Instead of using this variable, it is cleaner to use another, newer
+feature: to pass the function as the <var class="var">read-function</var> argument to
+<code class="code">eval-region</code>.  See <a class="xref" href="Evaluation.html#Definition-of-eval_002dregion">Eval</a>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-load_002dpath_002dfilter_002dcache_002ddirectory_002dfiles"><span class="category-def">Function: </span><span><strong class="def-name">load-path-filter-cache-directory-files</strong> <var class="def-var-arguments">path filename suffixes</var><a class="copiable-link" href="#index-load_002dpath_002dfilter_002dcache_002ddirectory_002dfiles"> &para;</a></span></dt>
+<dd><p>This function filters <var class="var">path</var> to remove any directories that could
+not hold <var class="var">filename</var> with any of <var class="var">suffixes</var>, and returns the
+filtered list of directories.  The function caches the directories it
+scans and the files inside them, and uses the cache in subsequent calls,
+which speeds up repeated lookups of files in <var class="var">path</var>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-load_002dpath_002dfilter_002dfunction"><span class="category-def">Variable: </span><span><strong class="def-name">load-path-filter-function</strong><a class="copiable-link" href="#index-load_002dpath_002dfilter_002dfunction"> &para;</a></span></dt>
+<dd><p>If this variable names a function, <code class="code">load</code> will call that function
+when it scans <code class="code">load-path</code> to find files.  The function will be
+called with 3 arguments: the value of <code class="code">load-path</code>, <var class="var">filename</var>,
+the name of a file being looked up as passed to <code class="code">load</code>, and a list
+of suffixes to append to <var class="var">filename</var>.  It should return a shorter
+list of directories where <var class="var">filename</var> can reside, thus making the
+lookup faster.  The function
+<code class="code">load-path-filter-cache-directory-files</code> is a good candidate to be
+such a function.
+</p></dd></dl>
+
+<p>For information about how <code class="code">load</code> is used in building Emacs, see
+<a class="ref" href="GNU-Emacs-Internals.html#Building-Emacs">Building Emacs</a>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Load-Suffixes">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Library-Search" rel="next">Library Search</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#How-Programs-Do-Loading" rel="prev">How Programs Do Loading</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Loading" rel="up">Loading</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Load-Suffixes-1"><span>16.2 Load Suffixes<a class="copiable-link" href="#Load-Suffixes-1"> &para;</a></span></h3>
+<p>We now describe some technical details about the exact suffixes that
+<code class="code">load</code> tries.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-load_002dsuffixes"><span class="category-def">Variable: </span><span><strong class="def-name">load-suffixes</strong><a class="copiable-link" href="#index-load_002dsuffixes"> &para;</a></span></dt>
+<dd><p>This is a list of suffixes indicating (compiled or source) Emacs Lisp
+files.  It should not include the empty string.  <code class="code">load</code> uses
+these suffixes in order when it appends Lisp suffixes to the specified
+file name.  The standard value is <code class="code">(&quot;.elc&quot; &quot;.el&quot;)</code> which produces
+the behavior described in the previous section.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-load_002dfile_002drep_002dsuffixes"><span class="category-def">Variable: </span><span><strong class="def-name">load-file-rep-suffixes</strong><a class="copiable-link" href="#index-load_002dfile_002drep_002dsuffixes"> &para;</a></span></dt>
+<dd><p>This is a list of suffixes that indicate representations of the same
+file.  This list should normally start with the empty string.
+When <code class="code">load</code> searches for a file it appends the suffixes in this
+list, in order, to the file name, before searching for another file.
+</p>
+<p>Enabling Auto Compression mode appends the suffixes in
+<code class="code">jka-compr-load-suffixes</code> to this list and disabling Auto
+Compression mode removes them again.  The standard value of
+<code class="code">load-file-rep-suffixes</code> if Auto Compression mode is disabled is
+<code class="code">(&quot;&quot;)</code>.  Given that the standard value of
+<code class="code">jka-compr-load-suffixes</code> is <code class="code">(&quot;.gz&quot;)</code>, the standard value
+of <code class="code">load-file-rep-suffixes</code> if Auto Compression mode is enabled
+is <code class="code">(&quot;&quot; &quot;.gz&quot;)</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-get_002dload_002dsuffixes"><span class="category-def">Function: </span><span><strong class="def-name">get-load-suffixes</strong><a class="copiable-link" href="#index-get_002dload_002dsuffixes"> &para;</a></span></dt>
+<dd><p>This function returns the list of all suffixes that <code class="code">load</code> should
+try, in order, when its <var class="var">must-suffix</var> argument is non-<code class="code">nil</code>.
+This takes both <code class="code">load-suffixes</code> and <code class="code">load-file-rep-suffixes</code>
+into account.  If <code class="code">load-suffixes</code>, <code class="code">jka-compr-load-suffixes</code>
+and <code class="code">load-file-rep-suffixes</code> all have their standard values, this
+function returns <code class="code">(&quot;.elc&quot; &quot;.elc.gz&quot; &quot;.el&quot; &quot;.el.gz&quot;)</code> if Auto
+Compression mode is enabled and <code class="code">(&quot;.elc&quot; &quot;.el&quot;)</code> if Auto
+Compression mode is disabled.
+</p></dd></dl>
+
+<p>To summarize, <code class="code">load</code> normally first tries the suffixes in the
+value of <code class="code">(get-load-suffixes)</code> and then those in
+<code class="code">load-file-rep-suffixes</code>.  If <var class="var">nosuffix</var> is non-<code class="code">nil</code>,
+it skips the former group, and if <var class="var">must-suffix</var> is non-<code class="code">nil</code>,
+it skips the latter group.
+</p>
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-load_002dprefer_002dnewer"><span class="category-def">User Option: </span><span><strong class="def-name">load-prefer-newer</strong><a class="copiable-link" href="#index-load_002dprefer_002dnewer"> &para;</a></span></dt>
+<dd><p>If this option is non-<code class="code">nil</code>, then rather than stopping at the
+first suffix that exists, <code class="code">load</code> tests them all, and uses
+whichever file is the newest.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Library-Search">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Loading-Non_002dASCII" rel="next">Loading Non-<abbr class="acronym">ASCII</abbr> Characters</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Load-Suffixes" rel="prev">Load Suffixes</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Loading" rel="up">Loading</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Library-Search-1"><span>16.3 Library Search<a class="copiable-link" href="#Library-Search-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-library-search"></a>
+<a class="index-entry-id" id="index-find-library"></a>
+
+<p>When Emacs loads a Lisp library, it searches for the library
+in a list of directories specified by the variable <code class="code">load-path</code>.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-load_002dpath"><span class="category-def">Variable: </span><span><strong class="def-name">load-path</strong><a class="copiable-link" href="#index-load_002dpath"> &para;</a></span></dt>
+<dd><p>The value of this variable is a list of directories to search when
+loading files with <code class="code">load</code>.  Each element is a string (which must be
+a directory) or <code class="code">nil</code> (which stands for the current working
+directory).
+</p></dd></dl>
+
+<p>When Emacs starts up, it sets up the value of <code class="code">load-path</code> in
+several steps.  First, it looks for the directory containing its own
+Lisp files, using default locations set when Emacs was compiled.  It
+saves this directory in <code class="code">lisp-directory</code>.  Normally, this is a
+directory where the <samp class="file">*.elc</samp> files are installed, something like
+</p>
+<div class="example">
+<pre class="example-preformatted">&quot;/usr/local/share/emacs/<var class="var">version</var>/lisp&quot;
+</pre></div>
+
+<p>where <var class="var">version</var> is the Emacs version.  (In this and the following
+examples, replace <samp class="file">/usr/local</samp> with the prefix appropriate for
+your Emacs installation.)  This directory and its subdirectories
+contain the standard Lisp files that come with Emacs.  If Emacs cannot
+find its own Lisp files, it will not start correctly.
+</p>
+<p>If you run Emacs from the directory where it was built&mdash;that is, an
+executable that has not been installed yet&mdash;Emacs instead initializes
+<code class="code">lisp-directory</code> using the <samp class="file">lisp</samp> subdirectory of the
+directory containing the sources from which it was built.
+</p>
+<p>Emacs then initializes <code class="code">load-path</code> with this <code class="code">lisp-directory</code>.
+If you built Emacs in a separate directory from the
+sources, it also adds the <samp class="file">lisp</samp> subdirectory of the build directory.
+</p>
+<p>All of these directories are stored in the above two variables as
+absolute file names.
+</p>
+<a class="index-entry-id" id="index-site_002dlisp-directories"></a>
+<p>Unless you start Emacs with the <samp class="option">--no-site-lisp</samp> option,
+it then adds two more <samp class="file">site-lisp</samp> directories to the front of
+<code class="code">load-path</code>.  These are intended for locally installed Lisp files,
+and are normally of the form:
+</p>
+<div class="example">
+<pre class="example-preformatted">&quot;/usr/local/share/emacs/<var class="var">version</var>/site-lisp&quot;
+</pre></div>
+
+<p>and
+</p>
+<div class="example">
+<pre class="example-preformatted">&quot;/usr/local/share/emacs/site-lisp&quot;
+</pre></div>
+
+<p>The first one is for locally installed files for the current Emacs
+<var class="var">version</var>; the second is for locally installed files meant for use
+with any installed Emacs version.  (If Emacs is running uninstalled,
+it also adds <samp class="file">site-lisp</samp> subdirectories from the source and build
+directories, if they exist.  However, normally the source and build
+directories do not contain <samp class="file">site-lisp</samp> subdirectories.)
+</p>
+<a class="index-entry-id" id="index-EMACSLOADPATH-environment-variable"></a>
+<p>If the environment variable <code class="env">EMACSLOADPATH</code> is set, it modifies
+the above initialization procedure.  Emacs initializes
+<code class="code">load-path</code> based on the value of the environment variable.
+</p>
+<p>The syntax of <code class="env">EMACSLOADPATH</code> is the same as used for <code class="env">PATH</code>;
+directories are separated by &lsquo;<samp class="samp">:</samp>&rsquo; (or &lsquo;<samp class="samp">;</samp>&rsquo;, on some
+operating systems).
+Here is an example of how to set <code class="env">EMACSLOADPATH</code> variable (from a
+<code class="command">sh</code>-style shell):
+</p>
+<div class="example">
+<pre class="example-preformatted">export EMACSLOADPATH=/home/foo/.emacs.d/lisp:
+</pre></div>
+
+<p>An empty element in the value of the environment variable, whether
+trailing (as in the above example, note the trailing &lsquo;<samp class="samp">:</samp>&rsquo;),
+leading, or embedded, is replaced by the default value of
+<code class="code">load-path</code> as determined by the standard initialization
+procedure.  If there are no such empty elements, then
+<code class="env">EMACSLOADPATH</code> specifies the entire <code class="code">load-path</code>.  You must
+include either an empty element, or the explicit path to the directory
+containing the standard Lisp files, else Emacs will not function.
+(Another way to modify <code class="code">load-path</code> is to use the <samp class="option">-L</samp>
+command-line option when starting Emacs; see below.)
+</p>
+<p>For each directory in <code class="code">load-path</code>, Emacs then checks to see if
+it contains a file <samp class="file">subdirs.el</samp>, and if so, loads it.  The
+<samp class="file">subdirs.el</samp> file is created when Emacs is built/installed,
+and contains code that causes Emacs to add any subdirectories of those
+directories to <code class="code">load-path</code>.  Both immediate subdirectories and
+subdirectories multiple levels down are added.  But it excludes
+subdirectories whose names do not start with a letter or digit, and
+subdirectories named <samp class="file">RCS</samp> or <samp class="file">CVS</samp>, and subdirectories
+containing a file named <samp class="file">.nosearch</samp>.
+</p>
+<p>Next, Emacs adds any extra load directories that you specify using the
+<samp class="option">-L</samp> command-line option (see <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Action-Arguments.html#Action-Arguments">Action Arguments</a> in <cite class="cite">The
+GNU Emacs Manual</cite>).  It also adds the directories where optional
+packages are installed, if any (see <a class="pxref" href="Packaging.html#Packaging-Basics">Packaging Basics</a>).
+</p>
+<p>It is common to add code to one&rsquo;s init file (see <a class="pxref" href="System-Interface.html#Init-File">The Init File</a>) to
+add one or more directories to <code class="code">load-path</code>.  For example:
+</p>
+<div class="example">
+<pre class="example-preformatted">(push &quot;~/.emacs.d/lisp&quot; load-path)
+</pre></div>
+
+<p>See <a class="xref" href="Lists.html#List-Variables">push</a>, for the description of <code class="code">push</code>.
+</p>
+<p>Dumping Emacs uses a special value of <code class="code">load-path</code>.  If you use
+a <samp class="file">site-load.el</samp> or <samp class="file">site-init.el</samp> file to customize the
+dumped Emacs (see <a class="pxref" href="GNU-Emacs-Internals.html#Building-Emacs">Building Emacs</a>), any changes to <code class="code">load-path</code>
+that these files make will be lost after dumping.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-lisp_002ddirectory"><span class="category-def">Variable: </span><span><strong class="def-name">lisp-directory</strong><a class="copiable-link" href="#index-lisp_002ddirectory"> &para;</a></span></dt>
+<dd><p>This variable holds a string naming the directory which holds
+Emacs&rsquo;s own <samp class="file">*.el</samp> and <samp class="file">*.elc</samp> files.  This is usually the
+place where those files are located in the Emacs installation tree,
+unless Emacs is run from its build directory in which case it points
+to the <samp class="file">lisp</samp> subdirectory in the source directory from which
+Emacs was built.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-locate_002dlibrary"><span class="category-def">Command: </span><span><strong class="def-name">locate-library</strong> <var class="def-var-arguments">library &amp;optional nosuffix path interactive-call</var><a class="copiable-link" href="#index-locate_002dlibrary"> &para;</a></span></dt>
+<dd><p>This command finds the precise file name for library <var class="var">library</var>.  It
+searches for the library in the same way <code class="code">load</code> does, and the
+argument <var class="var">nosuffix</var> has the same meaning as in <code class="code">load</code>: don&rsquo;t
+add suffixes &lsquo;<samp class="samp">.elc</samp>&rsquo; or &lsquo;<samp class="samp">.el</samp>&rsquo; to the specified name
+<var class="var">library</var>.
+</p>
+<p>If the <var class="var">path</var> is non-<code class="code">nil</code>, that list of directories is used
+instead of <code class="code">load-path</code>.
+</p>
+<p>When <code class="code">locate-library</code> is called from a program, it returns the file
+name as a string.  When the user runs <code class="code">locate-library</code>
+interactively, the argument <var class="var">interactive-call</var> is <code class="code">t</code>, and this
+tells <code class="code">locate-library</code> to display the file name in the echo area.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-shadowed-Lisp-files"></a>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-list_002dload_002dpath_002dshadows"><span class="category-def">Command: </span><span><strong class="def-name">list-load-path-shadows</strong> <var class="def-var-arguments">&amp;optional stringp</var><a class="copiable-link" href="#index-list_002dload_002dpath_002dshadows"> &para;</a></span></dt>
+<dd><p>This command shows a list of <em class="dfn">shadowed</em> Emacs Lisp files.  A
+shadowed file is one that will not normally be loaded, despite being
+in a directory on <code class="code">load-path</code>, due to the existence of another
+similarly-named file in a directory earlier on <code class="code">load-path</code>.
+</p>
+<p>For instance, suppose <code class="code">load-path</code> is set to
+</p>
+<div class="example">
+<pre class="example-preformatted">  (&quot;/opt/emacs/site-lisp&quot; &quot;/usr/share/emacs/29.1/lisp&quot;)
+</pre></div>
+
+<p>and that both these directories contain a file named <samp class="file">foo.el</samp>.
+Then <code class="code">(require 'foo)</code> never loads the file in the second
+directory.  Such a situation might indicate a problem in the way Emacs
+was installed.
+</p>
+<p>When called from Lisp, this function prints a message listing the
+shadowed files, instead of displaying them in a buffer.  If the
+optional argument <code class="code">stringp</code> is non-<code class="code">nil</code>, it instead returns
+the shadowed files as a string.
+</p></dd></dl>
+
+<p>If Emacs was compiled with support for native compilation
+(see <a class="pxref" href="Native-Compilation.html#Native-Compilation">Compilation of Lisp to Native Code</a>), then when a &lsquo;<samp class="samp">.elc</samp>&rsquo; byte-compiled
+file is found by searching <code class="code">load-path</code>, Emacs will try to look
+for a corresponding &lsquo;<samp class="samp">.eln</samp>&rsquo; file holding the corresponding
+native-compiled code.  The native-compiled files are looked up in
+the directories listed by the <code class="code">native-comp-eln-load-path</code>.
+</p>
+<a class="index-entry-id" id="index-comp_002dnative_002dversion_002ddir"></a>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-native_002dcomp_002deln_002dload_002dpath"><span class="category-def">Variable: </span><span><strong class="def-name">native-comp-eln-load-path</strong><a class="copiable-link" href="#index-native_002dcomp_002deln_002dload_002dpath"> &para;</a></span></dt>
+<dd><p>This variable holds a list of directories where Emacs looks for
+native-compiled &lsquo;<samp class="samp">.eln</samp>&rsquo; files.  File names in the list that are
+not absolute are interpreted as relative to <code class="code">invocation-directory</code>
+(see <a class="pxref" href="System-Interface.html#System-Environment">Operating System Environment</a>).  The last directory in the list is the
+system directory, i.e. the directory with &lsquo;<samp class="samp">.eln</samp>&rsquo; files
+installed by the Emacs build and installation procedure.  In each of
+the directories in the list, Emacs looks for &lsquo;<samp class="samp">.eln</samp>&rsquo; files in a
+subdirectory whose name is constructed from the Emacs version and an
+8-character hash that depends on the current native-compilation
+<abbr class="acronym">ABI</abbr>; the name of this subdirectory is stored in the variable
+<code class="code">comp-native-version-dir</code>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Loading-Non_002dASCII">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Autoload" rel="next">Autoload</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Library-Search" rel="prev">Library Search</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Loading" rel="up">Loading</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Loading-Non_002dASCII-Characters"><span>16.4 Loading Non-<abbr class="acronym">ASCII</abbr> Characters<a class="copiable-link" href="#Loading-Non_002dASCII-Characters"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-loading_002c-and-non_002dASCII-characters"></a>
+<a class="index-entry-id" id="index-non_002dASCII-characters-in-loaded-files"></a>
+
+<p>When Emacs Lisp programs contain string constants with non-<abbr class="acronym">ASCII</abbr>
+characters, these can be represented within Emacs either as unibyte
+strings or as multibyte strings (see <a class="pxref" href="Non_002dASCII-Characters.html#Text-Representations">Text Representations</a>).  Which
+representation is used depends on how the file is read into Emacs.  If
+it is read with decoding into multibyte representation, the text of the
+Lisp program will be multibyte text, and its string constants will be
+multibyte strings.  If a file containing Latin-1 characters (for
+example) is read without decoding, the text of the program will be
+unibyte text, and its string constants will be unibyte strings.
+See <a class="xref" href="Non_002dASCII-Characters.html#Coding-Systems">Coding Systems</a>.
+</p>
+<p>In most Emacs Lisp programs, the fact that non-<abbr class="acronym">ASCII</abbr>
+strings are multibyte strings should not be noticeable, since
+inserting them in unibyte buffers converts them to unibyte
+automatically.  However, if this does make a difference, you can force
+a particular Lisp file to be interpreted as unibyte by writing
+&lsquo;<samp class="samp">coding: raw-text</samp>&rsquo; in a local variables section.  With
+that designator, the file will unconditionally be interpreted as
+unibyte.  This can matter when making key bindings to
+non-<abbr class="acronym">ASCII</abbr> characters written as <code class="code">?v<var class="var">literal</var></code>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Autoload">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Repeated-Loading" rel="next">Repeated Loading</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Loading-Non_002dASCII" rel="prev">Loading Non-<abbr class="acronym">ASCII</abbr> Characters</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Loading" rel="up">Loading</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Autoload-1"><span>16.5 Autoload<a class="copiable-link" href="#Autoload-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-autoload"></a>
+
+<p>The <em class="dfn">autoload</em> facility lets you register the existence of a
+function or macro, but put off loading the file that defines it.  The
+first call to the function automatically loads the proper library, in
+order to install the real definition and other associated code, then
+runs the real definition as if it had been loaded all along.
+Autoloading can also be triggered by looking up the documentation of
+the function or macro (see <a class="pxref" href="Documentation.html#Documentation-Basics">Documentation Basics</a>), and completion
+of variable and function names (see <a class="pxref" href="#Autoload-by-Prefix">Autoload by Prefix</a> below).
+</p>
+
+<p>There are two ways to set up an autoloaded function: by calling
+<code class="code">autoload</code>, and by writing a &ldquo;magic&rdquo; comment in the
+source before the real definition.  <code class="code">autoload</code> is the low-level
+primitive for autoloading; any Lisp program can call <code class="code">autoload</code> at
+any time.  Magic comments are the most convenient way to make a function
+autoload, for packages installed along with Emacs.  These comments do
+nothing on their own, but they serve as a guide for the command
+<code class="code">loaddefs-generate</code>, which constructs calls to <code class="code">autoload</code>
+and arranges to execute them when Emacs is built.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-autoload-1"><span class="category-def">Function: </span><span><strong class="def-name">autoload</strong> <var class="def-var-arguments">function filename &amp;optional docstring interactive type</var><a class="copiable-link" href="#index-autoload-1"> &para;</a></span></dt>
+<dd><p>This function defines the function (or macro) named <var class="var">function</var> so as
+to load automatically from <var class="var">filename</var>.  The string <var class="var">filename</var>
+specifies the file to load to get the real definition of <var class="var">function</var>.
+</p>
+<p>If <var class="var">filename</var> does not contain either a directory name, or the
+suffix <code class="code">.el</code> or <code class="code">.elc</code>, this function insists on adding one
+of these suffixes, and it will not load from a file whose name is just
+<var class="var">filename</var> with no added suffix.  (The variable
+<code class="code">load-suffixes</code> specifies the exact required suffixes.)
+</p>
+<p>The argument <var class="var">docstring</var> is the documentation string for the
+function.  Specifying the documentation string in the call to
+<code class="code">autoload</code> makes it possible to look at the documentation without
+loading the function&rsquo;s real definition.  Normally, this should be
+identical to the documentation string in the function definition
+itself.  If it isn&rsquo;t, the function definition&rsquo;s documentation string
+takes effect when it is loaded.
+</p>
+<p>If <var class="var">interactive</var> is non-<code class="code">nil</code>, that says <var class="var">function</var> can be
+called interactively.  This lets completion in <kbd class="kbd">M-x</kbd> work without
+loading <var class="var">function</var>&rsquo;s real definition.  The complete interactive
+specification is not given here; it&rsquo;s not needed unless the user
+actually calls <var class="var">function</var>, and when that happens, it&rsquo;s time to load
+the real definition.
+</p>
+<p>If <var class="var">interactive</var> is a list, it is interpreted as a list of modes
+this command is applicable for.
+</p>
+<p>You can autoload macros and keymaps as well as ordinary functions.
+Specify <var class="var">type</var> as <code class="code">macro</code> if <var class="var">function</var> is really a macro.
+Specify <var class="var">type</var> as <code class="code">keymap</code> if <var class="var">function</var> is really a
+keymap.  Various parts of Emacs need to know this information without
+loading the real definition.
+</p>
+<p>An autoloaded keymap loads automatically during key lookup when a prefix
+key&rsquo;s binding is the symbol <var class="var">function</var>.  Autoloading does not occur
+for other kinds of access to the keymap.  In particular, it does not
+happen when a Lisp program gets the keymap from the value of a variable
+and calls <code class="code">keymap-set</code>; not even if the variable name is the same
+symbol <var class="var">function</var>.
+</p>
+<a class="index-entry-id" id="index-function-cell-in-autoload"></a>
+<p>If <var class="var">function</var> already has a non-void function definition that is not
+an autoload object, this function does nothing and returns <code class="code">nil</code>.
+Otherwise, it constructs an autoload object (see <a class="pxref" href="Lisp-Data-Types.html#Autoload-Type">Autoload Type</a>),
+and stores it as the function definition for <var class="var">function</var>.  The
+autoload object has this form:
+</p>
+<div class="example">
+<pre class="example-preformatted">(autoload <var class="var">filename</var> <var class="var">docstring</var> <var class="var">interactive</var> <var class="var">type</var>)
+</pre></div>
+
+<p>For example,
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(symbol-function 'run-prolog)
+     &rArr; (autoload &quot;prolog&quot; 169681 t nil)
+</pre></div></div>
+
+<p>In this case, <code class="code">&quot;prolog&quot;</code> is the name of the file to load, 169681
+refers to the documentation string in the
+<samp class="file">emacs/etc/DOC</samp> file (see <a class="pxref" href="Documentation.html#Documentation-Basics">Documentation Basics</a>),
+<code class="code">t</code> means the function is interactive, and <code class="code">nil</code> that it is
+not a macro or a keymap.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-autoloadp"><span class="category-def">Function: </span><span><strong class="def-name">autoloadp</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-autoloadp"> &para;</a></span></dt>
+<dd><p>This function returns non-<code class="code">nil</code> if <var class="var">object</var> is an autoload
+object.  For example, to check if <code class="code">run-prolog</code> is defined as an
+autoloaded function, evaluate
+</p>
+<div class="example smallexample">
+<pre class="example-preformatted">(autoloadp (symbol-function 'run-prolog))
+</pre></div>
+</dd></dl>
+
+<a class="index-entry-id" id="index-autoload-errors"></a>
+<p>The autoloaded file usually contains other definitions and may require
+or provide one or more features.  If the file is not completely loaded
+(due to an error in the evaluation of its contents), any function
+definitions or <code class="code">provide</code> calls that occurred during the load are
+undone.  This is to ensure that the next attempt to call any function
+autoloading from this file will try again to load the file.  If not for
+this, then some of the functions in the file might be defined by the
+aborted load, but fail to work properly for the lack of certain
+subroutines not loaded successfully because they come later in the file.
+</p>
+<p>If the autoloaded file fails to define the desired Lisp function or
+macro, then an error is signaled with data <code class="code">&quot;Autoloading failed to
+define function <var class="var">function-name</var>&quot;</code>.
+</p>
+<a class="index-entry-id" id="index-loaddefs_002dgenerate"></a>
+<a class="index-entry-id" id="index-magic-autoload-comment"></a>
+<a class="index-entry-id" id="index-autoload-cookie"></a>
+<a class="anchor" id="autoload-cookie"></a><p>A magic autoload comment (often called an <em class="dfn">autoload cookie</em>)
+consists of &lsquo;<samp class="samp">;;;###autoload</samp>&rsquo;, on a line by itself,
+just before the real definition of the function in its
+autoloadable source file.  The function <code class="code">loaddefs-generate</code>
+writes a corresponding <code class="code">autoload</code> call into <samp class="file">loaddefs.el</samp>.
+(The string that serves as the autoload cookie and the name of the
+file generated by <code class="code">loaddefs-generate</code> can be changed from the
+above defaults, see below.)
+Building Emacs loads <samp class="file">loaddefs.el</samp> and thus calls <code class="code">autoload</code>.
+</p>
+<p>The same magic comment can copy any kind of form into
+<samp class="file">loaddefs.el</samp>.  The form following the magic comment is copied
+verbatim, unless it is a form which the autoload facility handles
+specially, by conversion directly into an <code class="code">autoload</code> call, or by
+recursively expanding the macro.  Any macro can request expansion of
+autoloads which call it during generation; See <a class="xref" href="#autoload_002dmacro-expand">autoload-macro expand</a>.
+</p>
+<p>The following forms are handled specially:
+</p>
+<dl class="table">
+<dt>Definitions for function or function-like objects:</dt>
+<dd><p><code class="code">defun</code> and <code class="code">defmacro</code>; also <code class="code">cl-defun</code> and
+<code class="code">cl-defmacro</code> (see <a data-manual="cl" href="https://www.gnu.org/software/emacs/manual/html_node/cl/Argument-Lists.html#Argument-Lists">Argument Lists</a> in <cite class="cite">Common Lisp Extensions</cite>),
+and <code class="code">define-overloadable-function</code> (see the commentary in
+<samp class="file">mode-local.el</samp>).
+</p>
+</dd>
+<dt>Definitions for major or minor modes:</dt>
+<dd><p><code class="code">define-minor-mode</code>, <code class="code">define-globalized-minor-mode</code>,
+<code class="code">define-generic-mode</code>, <code class="code">define-derived-mode</code>, and
+<code class="code">define-compilation-mode</code>.
+</p>
+</dd>
+<dt>Other definition types:</dt>
+<dd><p><code class="code">defcustom</code>, <code class="code">defgroup</code>, <code class="code">deftheme</code>, <code class="code">defclass</code>
+(see <a data-manual="eieio" href="https://www.gnu.org/software/emacs/manual/html_node/eieio/index.html#Top">EIEIO</a> in <cite class="cite">EIEIO</cite>), <code class="code">define-skeleton</code>
+(see <a data-manual="autotype" href="https://www.gnu.org/software/emacs/manual/html_node/autotype/index.html#Top">Autotyping</a> in <cite class="cite">Autotyping</cite>),
+<code class="code">transient-define-prefix</code>, <code class="code">transient-define-suffix</code>,
+<code class="code">transient-define-infix</code>, <code class="code">transient-define-argument</code>, and
+<code class="code">transient-define-group</code> (see <a data-manual="transient" href="../transient_html/index.html#Top">Transient</a> in <cite class="cite">Transient
+User and Developer Manual</cite>).
+</p></dd>
+</dl>
+
+<p>You can also use a magic comment to execute a form at build time
+<em class="emph">without</em> executing it when the file itself is loaded.  To do this,
+write the form <em class="emph">on the same line</em> as the magic comment.  Since it
+is in a comment, it does nothing when you load the source file; but
+<code class="code">loaddefs-generate</code> copies it to <samp class="file">loaddefs.el</samp>, where
+it is executed while building Emacs.
+</p>
+<p>The following example shows how <code class="code">doctor</code> is prepared for
+autoloading with a magic comment:
+</p>
+<div class="example">
+<pre class="example-preformatted">;;;###autoload
+(defun doctor ()
+  &quot;Switch to *doctor* buffer and start giving psychotherapy.&quot;
+  (interactive)
+  (switch-to-buffer &quot;*doctor*&quot;)
+  (doctor-mode))
+</pre></div>
+
+<p>Here&rsquo;s what that produces in <samp class="file">loaddefs.el</samp>:
+</p>
+<div class="example">
+<pre class="example-preformatted">(autoload 'doctor &quot;doctor&quot; &quot;\
+Switch to *doctor* buffer and start giving psychotherapy.
+
+\(fn)&quot; t nil)
+</pre></div>
+
+<a class="index-entry-id" id="index-fn-in-function_0027s-documentation-string"></a>
+<p>While the <samp class="file">loaddefs.el</samp> isn&rsquo;t for editing, we try to keep it
+somewhat readable for people.  For instance, control characters in
+<code class="code">defvar</code> values are escaped, and we insert a backslash and
+newline immediately following the double-quote of the doc string to
+keep the line length down.  &lsquo;<samp class="samp">(fn)</samp>&rsquo; in the usage part of the
+documentation string is replaced with the function&rsquo;s name when the
+various help functions (see <a class="pxref" href="Documentation.html#Help-Functions">Help Functions</a>) display it.
+</p>
+<a class="anchor" id="autoload_002dmacro-expand"></a><p>If you write a function definition with an unusual macro that is not
+one of the known and recognized function definition methods, using an
+ordinary magic autoload comment with a call to the macro would require
+autoloading the macro definition itself to work.  Doing so copies the
+whole macro definition into the autoload file.  If that is not desired,
+you can use the special declare form <code class="code">(autoload-macro expand)</code> in
+your macro definition (see <a class="pxref" href="Functions.html#Declare-Form">The <code class="code">declare</code> Form</a>), instead of autoloading it.
+This indicates to the autoload system that calls to your macro following
+&lsquo;<samp class="samp">;;;###autoload</samp>&rsquo; should be expanded, similar to how the special
+functions listed above are handled.  For example, a macro which wraps
+<code class="code">define-minor-mode</code> can request expansion, so that proper
+<code class="code">autoload</code> calls for the function it defines are generated.
+</p>
+<a class="index-entry-id" id="index-_003aautoload_002dend"></a>
+<p>The keyword symbol <code class="code">:autoload-end</code> can be used in the expansion of
+a macro to prevent including unwanted forms in the autoload output.  Its
+presence causes any further elements within the form where it appears to
+be silently skipped.  For example, if during autoload generation, a
+macro&rsquo;s expansion includes:
+</p>
+<div class="example">
+<pre class="example-preformatted">(progn
+  (put my-mode 'visible-prop t)
+  :autoload-end
+  (put my-mode 'hidden-prop nil))
+</pre></div>
+
+<p>the final form (<code class="code">(put&nbsp;my-mode&nbsp;'hidden-prop&nbsp;nil)</code><!-- /@w -->) will not be
+copied into the autoload file.
+</p>
+<p>Note that, if a symbol in the <code class="code">car</code> of an autoloaded form is found
+to be undefined during autoload generation, the file in which the
+associated &lsquo;<samp class="samp">;;;###autoload</samp>&rsquo; appears will itself be loaded, to give
+the macro a chance to be defined.  Packages which use special loading
+mechanisms, including loading their own <samp class="file"><var class="var">package</var>-loaddefs.el</samp>
+file, should therefore gracefully handle load errors, since these files
+may not yet exist during autoload generation.  This can be done, e.g.,
+by setting the <var class="var">no-error</var> argument of <code class="code">require</code> non-<code class="code">nil</code>
+(see <a class="pxref" href="#Named-Features">Features</a>)).
+</p>
+<p>Alternatively, instead of expansion, you can put the desired
+<code class="code">autoload</code> call into <samp class="file">loaddefs.el</samp> by writing this:
+</p>
+<div class="example">
+<pre class="example-preformatted">;;;###autoload (autoload 'foo &quot;myfile&quot;)
+(mydefunmacro foo
+  ...)
+</pre></div>
+
+<p>You can use a non-default string as the autoload cookie and have the
+corresponding autoload calls written into a file whose name is
+different from the default <samp class="file">loaddefs.el</samp>.  Emacs provides two
+variables to control this:
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-lisp_002dmode_002dautoload_002dregexp"><span class="category-def">Variable: </span><span><strong class="def-name">lisp-mode-autoload-regexp</strong><a class="copiable-link" href="#index-lisp_002dmode_002dautoload_002dregexp"> &para;</a></span></dt>
+<dd><p>The value of this constant is a regexp that matches autoload cookies.
+<code class="code">loaddefs-generate</code> copies the Lisp form that follows the
+cookie into the autoload file it generates.  This will match comments
+like &lsquo;<samp class="samp">;;;###autoload</samp>&rsquo; and &lsquo;<samp class="samp">;;;###calc-autoload</samp>&rsquo;.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-generated_002dautoload_002dfile"><span class="category-def">Variable: </span><span><strong class="def-name">generated-autoload-file</strong><a class="copiable-link" href="#index-generated_002dautoload_002dfile"> &para;</a></span></dt>
+<dd><p>The value of this variable names an Emacs Lisp file where the autoload
+calls should go.  The default value is <samp class="file">loaddefs.el</samp>, but you can
+override that, e.g., in the local variables section of a
+<samp class="file">.el</samp> file (see <a class="pxref" href="Variables.html#File-Local-Variables">File Local Variables</a>).  The autoload file is
+assumed to contain a trailer starting with a formfeed character.
+</p></dd></dl>
+
+<p>The following function may be used to explicitly load the library
+specified by an autoload object:
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-autoload_002ddo_002dload"><span class="category-def">Function: </span><span><strong class="def-name">autoload-do-load</strong> <var class="def-var-arguments">autoload &amp;optional name macro-only</var><a class="copiable-link" href="#index-autoload_002ddo_002dload"> &para;</a></span></dt>
+<dd><p>This function performs the loading specified by <var class="var">autoload</var>, which
+should be an autoload object.  The optional argument <var class="var">name</var>, if
+non-<code class="code">nil</code>, should be a symbol whose function value is
+<var class="var">autoload</var>; in that case, the return value of this function is the
+symbol&rsquo;s new function value.  If the value of the optional argument
+<var class="var">macro-only</var> is <code class="code">macro</code>, this function avoids loading a
+function, only a macro.
+</p></dd></dl>
+
+<ul class="mini-toc">
+<li><a href="#Autoload-by-Prefix">Autoload by Prefix</a></li>
+<li><a href="#When-to-Autoload">When to Use Autoload</a></li>
+</ul>
+<hr>
+<div class="subsection-level-extent" id="Autoload-by-Prefix">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#When-to-Autoload" rel="next">When to Use Autoload</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Autoload" rel="up">Autoload</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Autoload-by-Prefix-1"><span>16.5.1 Autoload by Prefix<a class="copiable-link" href="#Autoload-by-Prefix-1"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-autoload-by-prefix"></a>
+
+<a class="index-entry-id" id="index-definition_002dprefixes"></a>
+<a class="index-entry-id" id="index-register_002ddefinition_002dprefixes"></a>
+<a class="index-entry-id" id="index-autoload_002dcompute_002dprefixes"></a>
+<p>During completion for the commands <code class="code">describe-variable</code> and
+<code class="code">describe-function</code>, Emacs will try to load files which may
+contain definitions matching the prefix being completed.  The variable
+<code class="code">definition-prefixes</code> holds a hashtable which maps a prefix to
+the corresponding list of files to load for it.  Entries to this
+mapping are added by calls to <code class="code">register-definition-prefixes</code>
+which are generated by <code class="code">loaddefs-generate</code>
+(see <a class="pxref" href="#Autoload">Autoload</a>).  Files which don&rsquo;t contain any definitions worth
+loading (test files, for example), should set
+<code class="code">autoload-compute-prefixes</code> to <code class="code">nil</code> as a file-local
+variable.
+</p>
+<hr>
+</div>
+<div class="subsection-level-extent" id="When-to-Autoload">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Autoload-by-Prefix" rel="prev">Autoload by Prefix</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Autoload" rel="up">Autoload</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="When-to-Use-Autoload"><span>16.5.2 When to Use Autoload<a class="copiable-link" href="#When-to-Use-Autoload"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-autoload_002c-when-to-use"></a>
+
+<p>Do not add an autoload comment unless it is really necessary.
+Autoloading code means it is always globally visible.  Once an item is
+autoloaded, there is no compatible way to transition back to it not
+being autoloaded (after people become accustomed to being able to use it
+without an explicit load).
+</p>
+<ul class="itemize mark-bullet">
+<li>The most common items to autoload are the interactive entry points to a
+library.  For example, if <samp class="file">python.el</samp> is a library defining a
+major-mode for editing Python code, autoload the definition of the
+<code class="code">python-mode</code> function, so that people can simply use <kbd class="kbd">M-x
+python-mode</kbd> to load the library.
+
+</li><li>Variables usually don&rsquo;t need to be autoloaded.  An exception is if the
+variable on its own is generally useful without the whole defining
+library being loaded.  (An example of this might be something like
+<code class="code">find-exec-terminator</code>.)
+
+</li><li>Don&rsquo;t autoload a user option just so that a user can set it.
+
+</li><li>Never add an autoload <em class="emph">comment</em> to silence a compiler warning in
+another file.  In the file that produces the warning, use
+<code class="code">(defvar foo)</code> to silence an undefined variable warning, and
+<code class="code">declare-function</code> (see <a class="pxref" href="Functions.html#Declaring-Functions">Telling the Compiler that a Function is Defined</a>) to silence an
+undefined function warning; or require the relevant library; or use an
+explicit autoload <em class="emph">statement</em>.
+</li></ul>
+
+<hr>
+</div>
+</div>
+<div class="section-level-extent" id="Repeated-Loading">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Named-Features" rel="next">Features</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Autoload" rel="prev">Autoload</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Loading" rel="up">Loading</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Repeated-Loading-1"><span>16.6 Repeated Loading<a class="copiable-link" href="#Repeated-Loading-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-repeated-loading"></a>
+
+<p>You can load a given file more than once in an Emacs session.  For
+example, after you have rewritten and reinstalled a function definition
+by editing it in a buffer, you may wish to return to the original
+version; you can do this by reloading the file it came from.
+</p>
+<p>When you load or reload files, bear in mind that the <code class="code">load</code> and
+<code class="code">load-library</code> functions automatically load a byte-compiled file
+rather than a non-compiled file of similar name.  If you rewrite a file
+that you intend to save and reinstall, you need to byte-compile the new
+version; otherwise Emacs will load the older, byte-compiled file instead
+of your newer, non-compiled file!  If that happens, the message
+displayed when loading the file includes, &lsquo;<samp class="samp">(compiled; note, source is
+newer)</samp>&rsquo;, to remind you to recompile it.
+</p>
+<p>When writing the forms in a Lisp library file, keep in mind that the
+file might be loaded more than once.  For example, think about whether
+each variable should be reinitialized when you reload the library;
+<code class="code">defvar</code> does not change the value if the variable is already
+initialized.  (See <a class="xref" href="Variables.html#Defining-Variables">Defining Global Variables</a>.)
+</p>
+<p>The simplest way to add an element to an alist is like this:
+</p>
+<div class="example">
+<pre class="example-preformatted">(push '(leif-mode &quot; Leif&quot;) minor-mode-alist)
+</pre></div>
+
+<p>But this would add multiple elements if the library is reloaded.  To
+avoid the problem, use <code class="code">add-to-list</code> (see <a class="pxref" href="Lists.html#List-Variables">Modifying List Variables</a>):
+</p>
+<div class="example">
+<pre class="example-preformatted">(add-to-list 'minor-mode-alist '(leif-mode &quot; Leif&quot;))
+</pre></div>
+
+<p>Occasionally you will want to test explicitly whether a library has
+already been loaded.  If the library uses <code class="code">provide</code> to provide a
+named feature, you can use <code class="code">featurep</code> earlier in the file to test
+whether the <code class="code">provide</code> call has been executed before (see <a class="pxref" href="#Named-Features">Features</a>).  Alternatively, you could use something like this:
+</p>
+<div class="example">
+<pre class="example-preformatted">(defvar foo-was-loaded nil)
+
+(unless foo-was-loaded
+  <var class="var">execute-first-time-only</var>
+  (setq foo-was-loaded t))
+</pre></div>
+
+
+<hr>
+</div>
+<div class="section-level-extent" id="Named-Features">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Where-Defined" rel="next">Which File Defined a Certain Symbol</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Repeated-Loading" rel="prev">Repeated Loading</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Loading" rel="up">Loading</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Features"><span>16.7 Features<a class="copiable-link" href="#Features"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-features"></a>
+<a class="index-entry-id" id="index-requiring-features"></a>
+<a class="index-entry-id" id="index-providing-features"></a>
+
+<p><code class="code">provide</code> and <code class="code">require</code> are an alternative to
+<code class="code">autoload</code> for loading files automatically.  They work in terms of
+named <em class="dfn">features</em>.  Autoloading is triggered by calling a specific
+function, but a feature is loaded the first time another program asks
+for it by name.
+</p>
+<p>A feature name is a symbol that stands for a collection of functions,
+variables, etc.  The file that defines them should <em class="dfn">provide</em> the
+feature.  Another program that uses them may ensure they are defined by
+<em class="dfn">requiring</em> the feature.  This loads the file of definitions if it
+hasn&rsquo;t been loaded already.
+</p>
+<a class="index-entry-id" id="index-load-error-with-require"></a>
+<p>To require the presence of a feature, call <code class="code">require</code> with the
+feature name as argument.  <code class="code">require</code> looks in the global variable
+<code class="code">features</code> to see whether the desired feature has been provided
+already.  If not, it loads the feature from the appropriate file.  This
+file should call <code class="code">provide</code> at the top level to add the feature to
+<code class="code">features</code>; if it fails to do so, <code class="code">require</code> signals an error.
+</p>
+<p>For example, in <samp class="file">idlwave.el</samp>, the definition for
+<code class="code">idlwave-complete-filename</code> includes the following code:
+</p>
+<div class="example">
+<pre class="example-preformatted">(defun idlwave-complete-filename ()
+  &quot;Use the comint stuff to complete a file name.&quot;
+   (require 'comint)
+   (let* ((comint-file-name-chars &quot;~/A-Za-z0-9+@:_.$#%={}\\-&quot;)
+          (comint-completion-addsuffix nil)
+          ...)
+       (comint-dynamic-complete-filename)))
+</pre></div>
+
+<p>The expression <code class="code">(require 'comint)</code> loads the file <samp class="file">comint.el</samp>
+if it has not yet been loaded, ensuring that
+<code class="code">comint-dynamic-complete-filename</code> is defined.  Features are
+normally named after the files that provide them, so that
+<code class="code">require</code> need not be given the file name.  (Note that it is
+important that the <code class="code">require</code> statement be outside the body of the
+<code class="code">let</code>.  Loading a library while its variables are let-bound can
+have unintended consequences, namely the variables becoming unbound
+after the let exits.)
+</p>
+<p>The <samp class="file">comint.el</samp> file contains the following top-level expression:
+</p>
+<div class="example">
+<pre class="example-preformatted">(provide 'comint)
+</pre></div>
+
+<p>This adds <code class="code">comint</code> to the global <code class="code">features</code> list, so that
+<code class="code">(require 'comint)</code> will henceforth know that nothing needs to be
+done.
+</p>
+<a class="index-entry-id" id="index-byte_002dcompiling-require"></a>
+<p>When <code class="code">require</code> is used at top level in a file, it takes effect
+when you byte-compile that file (see <a class="pxref" href="Byte-Compilation.html#Byte-Compilation">Byte Compilation</a>) as well as
+when you load it.  This is in case the required package contains macros
+that the byte compiler must know about.  It also avoids byte compiler
+warnings for functions and variables defined in the file loaded with
+<code class="code">require</code>.
+</p>
+<p>Although top-level calls to <code class="code">require</code> are evaluated during
+byte compilation, <code class="code">provide</code> calls are not.  Therefore, you can
+ensure that a file of definitions is loaded before it is byte-compiled
+by including a <code class="code">provide</code> followed by a <code class="code">require</code> for the same
+feature, as in the following example.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(provide 'my-feature)  ; <span class="r">Ignored by byte compiler,</span>
+                       ;   <span class="r">evaluated by <code class="code">load</code>.</span>
+(require 'my-feature)  ; <span class="r">Evaluated by byte compiler.</span>
+</pre></div></div>
+
+<p>The compiler ignores the <code class="code">provide</code>, then processes the
+<code class="code">require</code> by loading the file in question.  Loading the file does
+execute the <code class="code">provide</code> call, so the subsequent <code class="code">require</code> call
+does nothing when the file is loaded.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-provide"><span class="category-def">Function: </span><span><strong class="def-name">provide</strong> <var class="def-var-arguments">feature &amp;optional subfeatures</var><a class="copiable-link" href="#index-provide"> &para;</a></span></dt>
+<dd><p>This function announces that <var class="var">feature</var> is now loaded, or being
+loaded, into the current Emacs session.  This means that the facilities
+associated with <var class="var">feature</var> are or will be available for other Lisp
+programs.
+</p>
+<p>The direct effect of calling <code class="code">provide</code> is to add <var class="var">feature</var> to
+the front of <code class="code">features</code> if it is not already in that list and
+call any <code class="code">eval-after-load</code> code waiting for it (see <a class="pxref" href="#Hooks-for-Loading">Hooks for Loading</a>).  The argument <var class="var">feature</var> must be a symbol.
+<code class="code">provide</code> returns <var class="var">feature</var>.
+</p>
+<p>If provided, <var class="var">subfeatures</var> should be a list of symbols indicating
+a set of specific subfeatures provided by this version of
+<var class="var">feature</var>.  You can test the presence of a subfeature using
+<code class="code">featurep</code>.  The idea of subfeatures is that you use them when a
+package (which is one <var class="var">feature</var>) is complex enough to make it
+useful to give names to various parts or functionalities of the
+package, which might or might not be loaded, or might or might not be
+present in a given version.  See <a class="xref" href="Processes.html#Network-Feature-Testing">Testing Availability of Network Features</a>, for
+an example.
+</p>
+<div class="example">
+<pre class="example-preformatted">features
+     &rArr; (bar bish)
+
+(provide 'foo)
+     &rArr; foo
+features
+     &rArr; (foo bar bish)
+</pre></div>
+
+<p>When a file is loaded to satisfy an autoload, and it stops due to an
+error in the evaluation of its contents, any function definitions or
+<code class="code">provide</code> calls that occurred during the load are undone.
+See <a class="xref" href="#Autoload">Autoload</a>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-require"><span class="category-def">Function: </span><span><strong class="def-name">require</strong> <var class="def-var-arguments">feature &amp;optional filename noerror</var><a class="copiable-link" href="#index-require"> &para;</a></span></dt>
+<dd><p>This function checks whether <var class="var">feature</var> is present in the current
+Emacs session (using <code class="code">(featurep <var class="var">feature</var>)</code>; see below).  The
+argument <var class="var">feature</var> must be a symbol.
+</p>
+<p>If the feature is not present, then <code class="code">require</code> loads <var class="var">filename</var>
+with <code class="code">load</code>.  If <var class="var">filename</var> is not supplied, then the name of
+the symbol <var class="var">feature</var> is used as the base file name to load.
+However, in this case, <code class="code">require</code> insists on finding <var class="var">feature</var>
+with an added &lsquo;<samp class="samp">.el</samp>&rsquo; or &lsquo;<samp class="samp">.elc</samp>&rsquo; suffix (possibly extended with
+a compression suffix); a file whose name is just <var class="var">feature</var> won&rsquo;t
+be used.  (The variable <code class="code">load-suffixes</code> specifies the exact
+required Lisp suffixes.)
+</p>
+<p>If <var class="var">noerror</var> is non-<code class="code">nil</code>, that suppresses errors from actual
+loading of the file.  In that case, <code class="code">require</code> returns <code class="code">nil</code>
+if loading the file fails.  Normally, <code class="code">require</code> returns
+<var class="var">feature</var>.
+</p>
+<p>If loading the file succeeds but does not provide <var class="var">feature</var>,
+<code class="code">require</code> signals an error about the missing feature.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-require_002dwith_002dcheck"><span class="category-def">Function: </span><span><strong class="def-name">require-with-check</strong> <var class="def-var-arguments">feature &amp;optional filename noerror</var><a class="copiable-link" href="#index-require_002dwith_002dcheck"> &para;</a></span></dt>
+<dd><p>This function works like <code class="code">require</code>, except if <var class="var">feature</var> is
+already loaded (i.e. is already a member of the list in
+<code class="code">features</code>, see below).  If <var class="var">feature</var> is already loaded, this
+function checks if <var class="var">feature</var> was provided by a file different from
+<var class="var">filename</var>, and if so, it by default signals an error.  If the
+value of the optional argument <var class="var">noerror</var> is <code class="code">reload</code>, the
+function doesn&rsquo;t signal an error, but instead forcibly reloads
+<var class="var">filename</var>; if <var class="var">noerror</var> is some other non-<code class="code">nil</code> value,
+the function emits a warning about <var class="var">feature</var> being already
+provided by another file.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-featurep"><span class="category-def">Function: </span><span><strong class="def-name">featurep</strong> <var class="def-var-arguments">feature &amp;optional subfeature</var><a class="copiable-link" href="#index-featurep"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">feature</var> has been provided in
+the current Emacs session (i.e., if <var class="var">feature</var> is a member of
+<code class="code">features</code>.)  If <var class="var">subfeature</var> is non-<code class="code">nil</code>, then the
+function returns <code class="code">t</code> only if that subfeature is provided as well
+(i.e., if <var class="var">subfeature</var> is a member of the <code class="code">subfeature</code>
+property of the <var class="var">feature</var> symbol.)
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-features-1"><span class="category-def">Variable: </span><span><strong class="def-name">features</strong><a class="copiable-link" href="#index-features-1"> &para;</a></span></dt>
+<dd><p>The value of this variable is a list of symbols that are the features
+loaded in the current Emacs session.  Each symbol was put in this list
+with a call to <code class="code">provide</code>.  The order of the elements in the
+<code class="code">features</code> list is not significant.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-loading-and-configuring-features"></a>
+<p>The <code class="code">use-package</code> macro provides a convenient way of loading a
+feature and configuring it for use.  It provides a means to combine
+requiring a feature, like <code class="code">require</code> does, with code to be run
+when the feature is actually loaded, similar to load-time hooks
+(see <a class="pxref" href="#Hooks-for-Loading">Hooks for Loading</a>).  The declarative syntax of
+<code class="code">use-package</code> makes it exceptionally easy to use in user init
+files.
+</p>
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-use_002dpackage"><span class="category-def">Macro: </span><span><strong class="def-name">use-package</strong> <var class="def-var-arguments">feature &amp;rest args</var><a class="copiable-link" href="#index-use_002dpackage"> &para;</a></span></dt>
+<dd><p>This macro specifies how to load the named <var class="var">feature</var> and how to
+configure and customize it for use.  The arguments <var class="var">args</var> are
+keyword-value pairs.  Some of the important keywords and their values
+are:
+</p>
+<dl class="table">
+<dt><code class="code">:init <var class="var">forms</var></code></dt>
+<dd><p>Specifies <var class="var">forms</var> to execute before <var class="var">feature</var> is loaded.
+</p>
+</dd>
+<dt><code class="code">:config <var class="var">forms</var></code></dt>
+<dd><p>Specifies <var class="var">forms</var> to execute after loading <var class="var">feature</var>.
+</p>
+</dd>
+<dt><code class="code">:defer <var class="var">condition</var></code></dt>
+<dd><p>If <var class="var">condition</var> is non-<code class="code">nil</code>, it specifies to defer loading
+<var class="var">feature</var> until any of the autoloaded commands or variables of
+<var class="var">feature</var> are first used.  If <var class="var">condition</var> is a number <var class="var">n</var>,
+it specifies that <var class="var">feature</var> should be loaded after <var class="var">n</var>
+seconds of idle time.
+</p>
+</dd>
+<dt><code class="code">:commands <var class="var">commands</var>&hellip;</code></dt>
+<dd><p>Specifies commands of <var class="var">feature</var> to be autoloaded.
+</p>
+</dd>
+<dt><code class="code">:bind <var class="var">keybindings</var>&hellip;</code></dt>
+<dd><p>Specifies the <var class="var">keybindings</var> for <var class="var">feature</var>s commands.  Each
+binding has the form
+</p>
+<div class="example lisp">
+<pre class="lisp-preformatted">(<var class="var">key-sequence</var> . <var class="var">command</var>)
+</pre></div>
+<p>or
+</p><div class="example lisp">
+<pre class="lisp-preformatted">(:map <var class="var">keymap</var> (<var class="var">key-sequence</var> . <var class="var">command</var>))
+</pre></div>
+
+<p>where <var class="var">key-sequence</var> is in the form accepted by the <code class="code">kbd</code>
+macro (see <a class="pxref" href="Keymaps.html#Key-Sequences">Key Sequences</a>).
+</p></dd>
+</dl>
+
+<p>For more details about <code class="code">use-package</code>, see <cite class="cite"><a data-manual="use-package" href="https://www.gnu.org/software/emacs/manual/html_node/use-package/index.html#Top">use-package User Manual</a></cite>.
+</p></dd></dl>
+
+
+<hr>
+</div>
+<div class="section-level-extent" id="Where-Defined">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Unloading" rel="next">Unloading</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Named-Features" rel="prev">Features</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Loading" rel="up">Loading</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Which-File-Defined-a-Certain-Symbol"><span>16.8 Which File Defined a Certain Symbol<a class="copiable-link" href="#Which-File-Defined-a-Certain-Symbol"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-symbol_002c-where-defined"></a>
+<a class="index-entry-id" id="index-where-was-a-symbol-defined"></a>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-symbol_002dfile"><span class="category-def">Function: </span><span><strong class="def-name">symbol-file</strong> <var class="def-var-arguments">symbol &amp;optional type native-p</var><a class="copiable-link" href="#index-symbol_002dfile"> &para;</a></span></dt>
+<dd><p>This function returns the name of the file that defined <var class="var">symbol</var>.
+If <var class="var">type</var> is <code class="code">nil</code>, then any kind of definition is acceptable.
+If <var class="var">type</var> is <code class="code">defun</code>, <code class="code">defvar</code>, or <code class="code">defface</code>, that
+specifies function definition, variable definition, or face definition
+only.
+</p>
+<p>The value is normally an absolute file name.  It can also be <code class="code">nil</code>,
+if the definition is not associated with any file.  If <var class="var">symbol</var>
+specifies an autoloaded function, the value can be a relative file name
+without extension.
+</p>
+<p>If the optional third argument <var class="var">native-p</var> is non-<code class="code">nil</code>, and
+Emacs was built with native compilation support (see <a class="pxref" href="Native-Compilation.html#Native-Compilation">Compilation of Lisp to Native Code</a>), this function will try to find the <samp class="file">.eln</samp> file
+that defined <var class="var">symbol</var>, instead of the <samp class="file">.elc</samp> or <samp class="file">.el</samp>
+file.  If such a <samp class="file">.eln</samp> file is found and is not outdated, the
+function will return its absolute file name; otherwise it will report
+the name of either the source or the byte-compiled file.
+</p></dd></dl>
+
+<p>The basis for <code class="code">symbol-file</code> is the data in the variable
+<code class="code">load-history</code>.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-load_002dhistory"><span class="category-def">Variable: </span><span><strong class="def-name">load-history</strong><a class="copiable-link" href="#index-load_002dhistory"> &para;</a></span></dt>
+<dd><p>The value of this variable is an alist that associates the names of
+loaded library files with the names of the functions and variables
+they defined, as well as the features they provided or required.
+</p>
+<p>Each element in this alist describes one loaded library (including
+libraries that are preloaded at startup).  It is a list whose <small class="sc">CAR</small>
+is the absolute file name of the library (a string).  The rest of the
+list elements have these forms:
+</p>
+<dl class="table">
+<dt><code class="code"><var class="var">var</var></code></dt>
+<dd><p>The symbol <var class="var">var</var> was defined as a variable.
+</p></dd>
+<dt><code class="code">(defun . <var class="var">fun</var>)</code></dt>
+<dd><p>The function <var class="var">fun</var> was defined.
+<code class="code">(defun . <var class="var">fun</var>)</code>, which represents defining <var class="var">fun</var> as a
+function.
+</p></dd>
+<dt><code class="code">(defface . <var class="var">face</var>)</code></dt>
+<dd><p>The face <var class="var">face</var> was defined.
+</p></dd>
+<dt><code class="code">(require . <var class="var">feature</var>)</code></dt>
+<dd><p>The feature <var class="var">feature</var> was required.
+</p></dd>
+<dt><code class="code">(provide . <var class="var">feature</var>)</code></dt>
+<dd><p>The feature <var class="var">feature</var> was provided.
+</p></dd>
+<dt><code class="code">(cl-defmethod <var class="var">method</var> <var class="var">specializers</var>)</code></dt>
+<dd><p>The named <var class="var">method</var> was defined by using <code class="code">cl-defmethod</code>, with
+<var class="var">specializers</var> as its specializers.
+</p></dd>
+<dt><code class="code">(define-type . <var class="var">type</var>)</code></dt>
+<dd><p>The type <var class="var">type</var> was defined.
+</p></dd>
+</dl>
+
+<p>The value of <code class="code">load-history</code> may have one element whose <small class="sc">CAR</small> is
+<code class="code">nil</code>.  This element describes definitions made with
+<code class="code">eval-buffer</code> on a buffer that is not visiting a file.
+</p></dd></dl>
+
+<p>The command <code class="code">eval-region</code> updates <code class="code">load-history</code>, but does so
+by adding the symbols defined to the element for the file being visited,
+rather than replacing that element.  See <a class="xref" href="Evaluation.html#Eval">Eval</a>.
+</p>
+<a class="index-entry-id" id="index-function_002dhistory-_0028function-symbol-property_0029"></a>
+<p>In addition to <code class="code">load-history</code>, every function keeps track of its
+own history in the symbol property <code class="code">function-history</code>.
+The reason why functions are treated specially in this respect is that
+it is common for functions to be defined in two steps in two different
+files (typically, one of them is an autoload), so in order to be
+able to properly <em class="emph">unload</em> a file, we need to know more precisely
+what that file did to the function definition.
+</p>
+<p>The symbol property <code class="code">function-history</code> holds a list of the form
+<code class="code">(<var class="var">file1</var>&nbsp;<var class="var">def2</var>&nbsp;<var class="var">file2</var>&nbsp;<var class="var">def3</var>&nbsp;...)</code><!-- /@w -->, where
+<var class="var">file1</var> is the last file that changed the definition and
+<var class="var">def2</var> was the definition before <var class="var">file1</var>, set by <var class="var">file2</var>,
+etc.  Logically this list should end with the name of the first file
+that defined this function, but to save space this last element
+is usually omitted.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Unloading">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Hooks-for-Loading" rel="next">Hooks for Loading</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Where-Defined" rel="prev">Which File Defined a Certain Symbol</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Loading" rel="up">Loading</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Unloading-1"><span>16.9 Unloading<a class="copiable-link" href="#Unloading-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-unloading-packages"></a>
+
+<p>You can discard the functions and variables loaded by a library to
+reclaim memory for other Lisp objects.  To do this, use the function
+<code class="code">unload-feature</code>:
+</p>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-unload_002dfeature"><span class="category-def">Command: </span><span><strong class="def-name">unload-feature</strong> <var class="def-var-arguments">feature &amp;optional force</var><a class="copiable-link" href="#index-unload_002dfeature"> &para;</a></span></dt>
+<dd><p>This command unloads the library that provided feature <var class="var">feature</var>.
+It undefines all functions, macros, and variables defined in that
+library with <code class="code">defun</code>, <code class="code">defalias</code>, <code class="code">defsubst</code>,
+<code class="code">defmacro</code>, <code class="code">defconst</code>, <code class="code">defvar</code>, and <code class="code">defcustom</code>.
+It then restores any autoloads formerly associated with those symbols.
+(Loading saves these in the <code class="code">function-history</code> property of the symbol.)
+</p>
+<p>Before restoring the previous definitions, <code class="code">unload-feature</code> runs
+<code class="code">remove-hook</code> to remove functions defined by the library from certain
+hooks.  These hooks include variables whose names end in &lsquo;<samp class="samp">-hook</samp>&rsquo;
+(or the deprecated suffix &lsquo;<samp class="samp">-hooks</samp>&rsquo;), plus those listed in
+<code class="code">unload-feature-special-hooks</code>, as well as
+<code class="code">auto-mode-alist</code>.  This is to prevent Emacs from ceasing to
+function because important hooks refer to functions that are no longer
+defined.
+</p>
+<p>Standard unloading activities also undo ELP profiling of functions
+in that library, unprovides any features provided by the library, and
+cancels timers held in variables defined by the library.
+</p>
+<a class="index-entry-id" id="index-feature_002dunload_002dfunction"></a>
+<p>If these measures are not sufficient to prevent malfunction, a library
+can define an explicit unloader named <code class="code"><var class="var">feature</var>-unload-function</code>.
+If that symbol is defined as a function, <code class="code">unload-feature</code> calls
+it with no arguments before doing anything else.  It can do whatever
+is appropriate to unload the library.  If it returns <code class="code">nil</code>,
+<code class="code">unload-feature</code> proceeds to take the normal unload actions.
+Otherwise it considers the job to be done.
+</p>
+<p>Ordinarily, <code class="code">unload-feature</code> refuses to unload a library on which
+other loaded libraries depend.  (A library <var class="var">a</var> depends on library
+<var class="var">b</var> if <var class="var">a</var> contains a <code class="code">require</code> for <var class="var">b</var>.)  If the
+optional argument <var class="var">force</var> is non-<code class="code">nil</code>, dependencies are
+ignored and you can unload any library.
+</p></dd></dl>
+
+<p>The <code class="code">unload-feature</code> function is written in Lisp; its actions are
+based on the variable <code class="code">load-history</code>.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-unload_002dfeature_002dspecial_002dhooks"><span class="category-def">Variable: </span><span><strong class="def-name">unload-feature-special-hooks</strong><a class="copiable-link" href="#index-unload_002dfeature_002dspecial_002dhooks"> &para;</a></span></dt>
+<dd><p>This variable holds a list of hooks to be scanned before unloading a
+library, to remove functions defined in the library.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Hooks-for-Loading">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Dynamic-Modules" rel="next">Emacs Dynamic Modules</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Unloading" rel="prev">Unloading</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Loading" rel="up">Loading</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Hooks-for-Loading-1"><span>16.10 Hooks for Loading<a class="copiable-link" href="#Hooks-for-Loading-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-loading-hooks"></a>
+<a class="index-entry-id" id="index-hooks-for-loading"></a>
+
+<p>You can ask for code to be executed each time Emacs loads a library,
+by using the variable <code class="code">after-load-functions</code>:
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-after_002dload_002dfunctions"><span class="category-def">Variable: </span><span><strong class="def-name">after-load-functions</strong><a class="copiable-link" href="#index-after_002dload_002dfunctions"> &para;</a></span></dt>
+<dd><p>This abnormal hook is run after loading a file.  Each function in the
+hook is called with a single argument, the absolute filename of the
+file that was just loaded.
+</p></dd></dl>
+
+<p>If you want code to be executed when a <em class="emph">particular</em> library is
+loaded, use the macro <code class="code">with-eval-after-load</code>:
+</p>
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-with_002deval_002dafter_002dload"><span class="category-def">Macro: </span><span><strong class="def-name">with-eval-after-load</strong> <var class="def-var-arguments">library body&hellip;</var><a class="copiable-link" href="#index-with_002deval_002dafter_002dload"> &para;</a></span></dt>
+<dd><p>This macro arranges to evaluate <var class="var">body</var> at the end of loading
+the file <var class="var">library</var>, each time <var class="var">library</var> is loaded.  If
+<var class="var">library</var> is already loaded, it evaluates <var class="var">body</var> right away.
+</p>
+<p>Usually <var class="var">library</var> is a feature (i.e., a symbol), in which case
+<var class="var">body</var> is evaluated at the end of any file where
+<code class="code">(provide <var class="var">library</var>)</code> is called.
+</p>
+<p><var class="var">library</var> can be also a file name (i.e., a string).
+You don&rsquo;t need to give a directory or extension in the file name
+<var class="var">library</var>.  Normally, you just give a bare file name, like this:
+</p>
+<div class="example">
+<pre class="example-preformatted">(with-eval-after-load &quot;js&quot; (keymap-set js-mode-map &quot;C-c C-c&quot; 'js-eval))
+</pre></div>
+
+<p>To restrict which files can trigger the evaluation, include a
+directory or an extension or both in <var class="var">library</var>.  Only a file whose
+absolute name matches all the given name components will match.
+In the following
+example, <samp class="file">my_inst.elc</samp> or <samp class="file">my_inst.elc.gz</samp> in some directory
+<code class="code">..../foo/bar</code> will trigger the evaluation, but not
+<samp class="file">my_inst.el</samp>:
+</p>
+<div class="example">
+<pre class="example-preformatted">(with-eval-after-load &quot;foo/bar/my_inst.elc&quot; ...)
+</pre></div>
+
+<p>An error in <var class="var">body</var> does not undo the load, but does prevent
+execution of the rest of <var class="var">body</var>.
+</p></dd></dl>
+
+<p>Normally, well-designed Lisp programs should not use
+<code class="code">with-eval-after-load</code>.  If you need to examine and set the
+variables defined in another library (those meant for outside use),
+you can do it immediately&mdash;there is no need to wait until the library
+is loaded.  If you need to call functions defined by that library, you
+should load the library, preferably with <code class="code">require</code> (see <a class="pxref" href="#Named-Features">Features</a>).
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Dynamic-Modules">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Hooks-for-Loading" rel="prev">Hooks for Loading</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Loading" rel="up">Loading</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Emacs-Dynamic-Modules"><span>16.11 Emacs Dynamic Modules<a class="copiable-link" href="#Emacs-Dynamic-Modules"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-dynamic-modules"></a>
+
+<p>A <em class="dfn">dynamic Emacs module</em> is a shared library that provides
+additional functionality for use in Emacs Lisp programs, just like a
+package written in Emacs Lisp would.
+</p>
+<p>Functions that load Emacs Lisp packages can also load dynamic
+modules.  They recognize dynamic modules by looking at their file-name
+extension, a.k.a. &ldquo;suffix&rdquo;.  This suffix is platform-dependent.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-module_002dfile_002dsuffix"><span class="category-def">Variable: </span><span><strong class="def-name">module-file-suffix</strong><a class="copiable-link" href="#index-module_002dfile_002dsuffix"> &para;</a></span></dt>
+<dd><p>This variable holds the system-dependent value of the file-name
+extension of the module files.  Its value is <samp class="file">.so</samp> on POSIX
+hosts, <samp class="file">.dylib</samp> on macOS, and <samp class="file">.dll</samp> on MS-Windows.
+</p></dd></dl>
+
+<p>On macOS, dynamic modules can also have the suffix <samp class="file">.so</samp> in
+addition to <samp class="file">.dylib</samp>.
+</p>
+<a class="index-entry-id" id="index-emacs_005fmodule_005finit"></a>
+<a class="index-entry-id" id="index-plugin_005fis_005fGPL_005fcompatible"></a>
+<p>Every dynamic module should export a C-callable function named
+<code class="code">emacs_module_init</code>, which Emacs will call as part of the call to
+<code class="code">load</code> or <code class="code">require</code> which loads the module.  It should also
+export a symbol named <code class="code">plugin_is_GPL_compatible</code> to indicate that
+its code is released under the GPL or compatible license; Emacs will
+signal an error if your program tries to load modules that don&rsquo;t
+export such a symbol.
+</p>
+<p>If a module needs to call Emacs functions, it should do so through the
+<abbr class="acronym">API</abbr> (Application Programming Interface) defined and
+documented in the header file <samp class="file">emacs-module.h</samp> that is part of
+the Emacs distribution.  See <a class="xref" href="GNU-Emacs-Internals.html#Writing-Dynamic-Modules">Writing Dynamically-Loaded Modules</a>, for details
+of using that API when writing your own modules.
+</p>
+<a class="index-entry-id" id="index-user_002dptr-object"></a>
+<a class="index-entry-id" id="index-user-pointer-object"></a>
+<p>Modules can create <code class="code">user-ptr</code> Lisp objects that embed pointers to
+C struct&rsquo;s defined by the module.  This is useful for keeping around
+complex data structures created by a module, to be passed back to the
+module&rsquo;s functions.  User-ptr objects can also have associated
+<em class="dfn">finalizers</em> &ndash; functions to be run when the object is GC&rsquo;ed; this
+is useful for freeing any resources allocated for the underlying data
+structure, such as memory, open file descriptors, etc.  See <a class="xref" href="GNU-Emacs-Internals.html#Module-Values">Conversion Between Lisp and Module Values</a>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-user_002dptrp"><span class="category-def">Function: </span><span><strong class="def-name">user-ptrp</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-user_002dptrp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if its argument is a <code class="code">user-ptr</code>
+object.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-module_002dload"><span class="category-def">Function: </span><span><strong class="def-name">module-load</strong> <var class="def-var-arguments">file</var><a class="copiable-link" href="#index-module_002dload"> &para;</a></span></dt>
+<dd><p>Emacs calls this low-level primitive to load a module from the
+specified <var class="var">file</var> and perform the necessary initialization of the
+module.  This is the primitive which makes sure the module exports the
+<code class="code">plugin_is_GPL_compatible</code> symbol, calls the module&rsquo;s
+<code class="code">emacs_module_init</code> function, and signals an error if that
+function returns an error indication, or if the user typed <kbd class="kbd">C-g</kbd>
+during the initialization.  If the initialization succeeds,
+<code class="code">module-load</code> returns <code class="code">t</code>.  Note that <var class="var">file</var> must
+already have the proper file-name extension, as this function doesn&rsquo;t
+try looking for files with known extensions, unlike <code class="code">load</code>.
+</p>
+<p>Unlike <code class="code">load</code>, <code class="code">module-load</code> doesn&rsquo;t record the module in
+<code class="code">load-history</code>, doesn&rsquo;t print any messages, and doesn&rsquo;t protect
+against recursive loads.  Most users should therefore use <code class="code">load</code>,
+<code class="code">load-file</code>, <code class="code">load-library</code>, or <code class="code">require</code> instead of
+<code class="code">module-load</code>.
+</p></dd></dl>
+
+<p>Loadable modules in Emacs are enabled by using the
+<kbd class="kbd">--with-modules</kbd> option at configure time.
+</p></div>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Byte-Compilation.html#Byte-Compilation" rel="next">Byte Compilation</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Customization.html#Customization" rel="prev">Customization Settings</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Emacs Lisp</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+
+
+
+</body>
+</html>

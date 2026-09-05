@@ -1,0 +1,70 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: jinx--check-region – Emacs Documentation Online</title>
+<meta name="description" content="jinx--check-region is a natively compiled function defined in jinx.el.
+Check region between START and END.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>jinx--check-region</code></h1><p><span class="m"><code>jinx--check-region</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">jinx.el</span>.
+<h2>Signature</h2>
+<pre><code>(jinx--check-region <a href="#:~:text=between-,START"><span class="arg">START</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=Optionally-,RETRY"><span class="arg">RETRY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Check region between <span class="arg">START</span> and <span class="arg">END</span>.
+<p>Optionally <span class="arg">RETRY</span> word at given position.  Return updated <span class="arg">END</span>
+position.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a84p94snryc55wrv02kbf63qv5yqsxl8-emacs-packages-deps/share/emacs/site-lisp/elpa/jinx-20260813.954/jinx.el</span>
+(<span class="k">defun</span> <span class="f">jinx--check-region</span> (start end <span class="ty">&amp;optional</span> retry)
+  <span class="doc">"Check region between START and END.
+Optionally RETRY word at given position.  Return updated END
+position."</span>
+  (<span class="k">let</span> (parse-sexp-lookup-properties case-fold-search retry-start retry-end)
+    (<span class="k">with-silent-modifications</span>
+      (<span class="k">save-excursion</span>
+        (<span class="k">save-match-data</span>
+          (<span class="k">with-syntax-table</span> jinx--syntax-table
+            <span class="cd">;; </span><span class="c">Ensure that region starts and ends at word boundaries
+</span>            (goto-char start)
+            (<span class="k">unless</span> (looking-at-p <span class="s">"\\&lt;"</span>)
+              (re-search-backward <span class="s">"\\&lt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">^"</span>)
+              (<span class="k">setq</span> start (match-beginning 0)))
+            (goto-char end)
+            (<span class="k">unless</span> (looking-at-p <span class="s">"\\&gt;"</span>)
+              (re-search-forward <span class="s">"\\&gt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">$"</span>)
+              (<span class="k">setq</span> end (match-beginning 0)))
+            (remove-overlays start end 'category 'jinx-overlay)
+            (goto-char start)
+            (<span class="k">while</span> (re-search-forward <span class="s">"\\&lt;\\w+\\&gt;"</span> end t)
+              (<span class="k">let</span> ((word-start (match-beginning 0))
+                    (word-end (match-end 0)))
+                <span class="cd">;; </span><span class="c">No quote or apostrophe at start or end
+</span>                (<span class="k">while</span> (<span class="k">and</span> (&lt; word-start word-end)
+                            (<span class="k">let</span> ((c (char-after word-start)))
+                              (<span class="k">or</span> (= c ?') (= c ?<span class="w">’</span>))))
+                  (<span class="k">incf</span> word-start))
+                (<span class="k">while</span> (<span class="k">and</span> (&lt; word-start word-end)
+                            (<span class="k">let</span> ((c (char-before word-end)))
+                              (<span class="k">or</span> (= c ?') (= c ?<span class="w">’</span>))))
+                  (<span class="k">decf</span> word-end))
+                (<span class="k">while</span> (&lt; word-start word-end)
+                  (<span class="k">let</span> ((subword-end word-end))
+                    (<span class="k">when</span> jinx--camel
+                      (goto-char word-start)
+                      (<span class="k">when</span> (looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:upper:]]?[[:lower:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[[:upper:]][[:lower:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">+\\&gt;"</span>)
+                        (<span class="k">setq</span> subword-end (match-end 1))))
+                    (goto-char subword-end)
+                    (<span class="k">pcase</span> (run-hook-with-args-until-success 'jinx--predicates word-start)
+                      ((<span class="k">and</span> (pred integerp) skip)
+                       (goto-char (max subword-end (min end skip))))
+                      ('nil
+                       (<span class="k">if</span> (<span class="k">and</span> retry (&lt;= word-start retry subword-end))
+                           (<span class="k">setq</span> retry-start word-start retry-end subword-end retry nil)
+                         (overlay-put (make-overlay word-start subword-end) 'category 'jinx-overlay))))
+                    (<span class="k">setq</span> word-start subword-end)))))
+            (remove-list-of-text-properties start end '(jinx--pending))
+            (<span class="k">when</span> retry-start
+              (put-text-property retry-start retry-end 'jinx--pending t))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

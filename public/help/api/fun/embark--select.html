@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark--select – Emacs Documentation Online</title>
+<meta name="description" content="embark--select is a natively compiled function defined in embark.el.
+Add or remove ORIG-TARGET of given ORIG-TYPE to the selection.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark--select</code></h1><p><span class="m"><code>embark--select</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark--select <span class="ty">&amp;key</span> <a href="#:~:text=remove-,ORIG-TARGET"><span class="arg">ORIG-TARGET</span></a> <a href="#:~:text=given-,ORIG-TYPE"><span class="arg">ORIG-TYPE</span></a> <a href="#:~:text=If-,BOUNDS"><span class="arg">BOUNDS</span></a> <span class="ty">&amp;allow-other-keys</span>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Add or remove <span class="arg">ORIG-TARGET</span> of given <span class="arg">ORIG-TYPE</span> to the selection.
+<p>If <span class="arg">BOUNDS</span> are given, also highlight the target when selecting it.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+(<span class="k">cl-defun</span> <span class="f">embark--select</span>
+    (<span class="ty">&amp;key</span> orig-target orig-type bounds <span class="ty">&amp;allow-other-keys</span>)
+  <span class="doc">"Add or remove ORIG-TARGET of given ORIG-TYPE to the selection.
+If BOUNDS are given, also highlight the target when selecting it."</span>
+  (<span class="k">cl-flet</span> ((multi-type (x) (car (get-text-property 0 'multi-category x))))
+    (<span class="k">if-let*</span> ((existing (seq-find
+                         (<span class="k">pcase-lambda</span> (`(,cand . ,ov))
+                           (<span class="k">and</span>
+                            (equal cand orig-target)
+                            (<span class="k">if</span> (<span class="k">and</span> bounds ov)
+                                (<span class="k">and</span> (= (car bounds) (overlay-start ov))
+                                     (= (cdr bounds) (overlay-end ov)))
+                              (<span class="k">let</span> ((cand-type (multi-type cand)))
+                                (<span class="k">or</span> (eq cand-type orig-type)
+                                    (eq cand-type (multi-type orig-target)))))))
+                         embark--selection)))
+        (<span class="k">progn</span>
+          (<span class="k">when</span> (cdr existing) (delete-overlay (cdr existing)))
+          (<span class="k">setq</span> embark--selection (delq existing embark--selection)))
+      (<span class="k">let</span> ((target (copy-sequence orig-target)) overlay)
+        (<span class="k">when</span> bounds
+          (<span class="k">setq</span> overlay (make-overlay (car bounds) (cdr bounds)))
+          (overlay-put overlay 'category 'embark-selected-overlay))
+        (add-text-properties 0 (length orig-target)
+                             `(multi-category ,(cons orig-type orig-target))
+                             target)
+        (<span class="k">push</span> (cons target overlay) embark--selection))))
+  (<span class="k">when</span> embark-selection-indicator
+    (add-to-list 'mode-line-misc-info '(<span class="bi">:eval</span> (embark--selection-indicator)))
+    (force-mode-line-update t)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

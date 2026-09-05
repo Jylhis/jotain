@@ -1,0 +1,193 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-make-preset – Emacs Documentation Online</title>
+<meta name="description" content="gptel-make-preset is a natively compiled function defined in gptel.el.
+Define a gptel preset with NAME.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-make-preset</code></h1><p><span class="m"><code>gptel-make-preset</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-make-preset <a href="#:~:text=with-,NAME"><span class="arg">NAME</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=symbol.-,KEYS"><span class="arg">KEYS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Define a gptel preset with <span class="arg">NAME</span>.
+<p>A preset is a combination of gptel options intended to be applied and
+used together.  Presets can make it less tedious to change gptel
+settings on the fly.
+<p>Typically this will include a model, backend, system message and perhaps
+some tools, but any set of gptel options can be set this way.
+<p><span class="arg">NAME</span> must be a symbol.  <span class="arg">KEYS</span> is a plist corresponding to the options
+being set.  All <span class="arg">KEYS</span> are optional.
+<p>Recognized keys:
+<p>DESCRIPTION is a description of the preset, used when selecting a
+preset.
+<p>PARENTS is a preset name (or list of preset names) to apply before this
+one.
+<p>PRE and POST are functions to run before and after the preset is
+applied.  They take no arguments.
+<p>BACKEND is the <a href="../var/gptel-backend.html"><code>gptel-backend</code></a> to set, or its name (like "ChatGPT").
+<p>MODEL is the <a href="../var/gptel-model.html"><code>gptel-model</code></a>, a symbol.
+<p>SYSTEM is the directive.  It can be
+<br>- the system message (a string),
+<br>- a list of strings (a conversation template)
+<br>- or a function (dynamic system message).
+<br>- It can also be a symbol naming a directive in <a href="../var/gptel-directives.html"><code>gptel-directives</code></a>.
+<p>TOOLS is a list of gptel tools or tool names, like
+<br>'("read_url" "read_buffer" ...)
+<p>Recognized keys are not limited to the above.  Any other key (like
+<br><span class="bi">:foo</span>) corresponds to the value of either <span class="m"><code>gptel-foo</code></span> (preferred) or
+<br><span class="m"><code>gptel--foo</code></span>.
+<br>- So TOOLS corresponds to option <a href="../var/gptel-tools.html"><code>gptel-tools</code></a>,
+<br>- CONFIRM-TOOL-CALLS to <a href="../var/gptel-confirm-tool-calls.html"><code>gptel-confirm-tool-calls</code></a>,
+<br>- TEMPERATURE to <a href="../var/gptel-temperature.html"><code>gptel-temperature</code></a> and so on.
+<br>See gptel's customization options for all available settings.
+<p>Specifying the value of a key will set the corresponding gptel option to
+it.  For example,
+<p>&nbsp;&nbsp;(gptel-make-preset 'websearch
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:tools</span> '(<span class="s">"search_web"</span> <span class="s">"read_url"</span>)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:system</span> <span class="s">"Use the provided tools to search the web
+</span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="s">for up-to-date information"</span>)
+<p>will replace the currently active option <a href="../var/gptel-tools.html"><code>gptel-tools</code></a> and the system
+message.
+<p>Alternatively,
+<p>- You can require that the value be appended or prepended to the
+<br>&nbsp;&nbsp;existing value instead of replacing it.  This can be done by
+<br>&nbsp;&nbsp;specifying the value as a plist instead with the keys <span class="bi">:prepend</span> or
+<br>&nbsp;&nbsp;<span class="bi">:append</span>.
+<p>&nbsp;&nbsp;(gptel-make-preset 'websearch
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:tools</span>  '(<span class="bi">:append</span> (<span class="s">"search_web"</span> <span class="s">"read_url"</span>))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:system</span> '(<span class="bi">:prepend</span> <span class="s">"Use the provided tools to search the web
+</span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="s">for up-to-date information."</span>))
+<p>- You can dynamically compute the value for a key at the time the preset
+<br>&nbsp;&nbsp;is applied with <span class="bi">:eval</span> or <span class="bi">:function</span>.  This is mostly useful when
+<br>&nbsp;&nbsp;using presets in the prompt, as @preset-name.
+<p>&nbsp;&nbsp;An <span class="bi">:eval</span> form is evaluated when the preset is applied:
+<p>&nbsp;&nbsp;(gptel-make-preset 'visible-buffers
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:description</span> <span class="s">"Include the full text of all buffers visible in the
+</span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="s">frame."</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:context</span> '(<span class="bi">:eval</span> (mapcar #'window-buffer (window-list))))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;▲                ▲
+<br>&nbsp;&nbsp;&nbsp;&nbsp;│                ╰╴evaluated when preset is applied
+<br>&nbsp;&nbsp;&nbsp;&nbsp;╰╴sets gptel-context
+<p>&nbsp;&nbsp;<span class="bi">:function</span> should take the current value of the key as an input and
+<br>&nbsp;&nbsp;return the new value.  Here we combine it with <span class="bi">:append</span> in the plist.
+<p>&nbsp;&nbsp;(gptel-make-preset 'github-read-only
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:description</span> <span class="s">"Provide read-only GitHub tools"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:pre</span> (<span class="k">lambda</span> () (gptel-mcp-connect '(<span class="s">"github"</span>) 'sync))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:tools</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;'( <span class="bi">:append</span> (<span class="s">"mcp-github"</span>)       <span class="cd">;</span><span class="c">Adds all github MCP tools
+</span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:function</span> (<span class="k">lambda</span> (tools)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(cl-delete-if    <span class="cd">;</span><span class="c">Remove "write" access to GitHub
+</span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">lambda</span> (tool)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(string-match-p <span class="s">"create_"</span> (gptel-tool-name tool)))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tools))))
+<p>&nbsp;&nbsp;NOTE: <span class="bi">:eval</span> and <span class="bi">:function</span> are evaluated in a temporary buffer, and
+<br>&nbsp;&nbsp;not the buffer from which the request is sent.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel-make-preset</span> (name <span class="ty">&amp;rest</span> keys)
+  <span class="doc">"Define a gptel preset with NAME.
+
+A preset is a combination of gptel options intended to be applied and
+used together.  Presets can make it less tedious to change gptel
+settings on the fly.
+
+Typically this will include a model, backend, system message and perhaps
+some tools, but any set of gptel options can be set this way.
+
+NAME must be a symbol.  KEYS is a plist corresponding to the options
+being set.  All KEYS are optional.
+
+Recognized keys:
+
+DESCRIPTION is a description of the preset, used when selecting a
+preset.
+
+PARENTS is a preset name (or list of preset names) to apply before this
+one.
+
+PRE and POST are functions to run before and after the preset is
+applied.  They take no arguments.
+
+BACKEND is the `</span><span class="m doc">gptel-backend</span><span class="doc">' to set, or its name (like \"ChatGPT\").
+
+MODEL is the `</span><span class="m doc">gptel-model</span><span class="doc">', a symbol.
+
+SYSTEM is the directive.  It can be
+- the system message (a string),
+- a list of strings (a conversation template)
+- or a function (dynamic system message).
+- It can also be a symbol naming a directive in `</span><span class="m doc">gptel-directives</span><span class="doc">'.
+
+TOOLS is a list of gptel tools or tool names, like
+</span><span class="bi doc">\\=</span><span class="doc">'(\"read_url\" \"read_buffer\" ...)
+
+Recognized keys are not limited to the above.  Any other key (like
+`</span><span class="m doc">:foo</span><span class="doc">') corresponds to the value of either `</span><span class="m doc">gptel-foo</span><span class="doc">' (preferred) or
+`</span><span class="m doc">gptel--foo</span><span class="doc">'.
+- So TOOLS corresponds to option `</span><span class="m doc">gptel-tools</span><span class="doc">',
+- CONFIRM-TOOL-CALLS to `</span><span class="m doc">gptel-confirm-tool-calls</span><span class="doc">',
+- TEMPERATURE to `</span><span class="m doc">gptel-temperature</span><span class="doc">' and so on.
+See gptel's customization options for all available settings.
+
+Specifying the value of a key will set the corresponding gptel option to
+it.  For example,
+
+  (gptel-make-preset </span><span class="bi doc">\\=</span><span class="doc">'websearch
+    :tools </span><span class="bi doc">\\=</span><span class="doc">'(\"search_web\" \"read_url\")
+    :system \"Use the provided tools to search the web
+              for up-to-date information\")
+
+will replace the currently active option `</span><span class="m doc">gptel-tools</span><span class="doc">' and the system
+message.
+
+Alternatively,
+
+- You can require that the value be appended or prepended to the
+  existing value instead of replacing it.  This can be done by
+  specifying the value as a plist instead with the keys `</span><span class="m doc">:prepend</span><span class="doc">' or
+  `</span><span class="m doc">:append</span><span class="doc">'.
+
+  (gptel-make-preset </span><span class="bi doc">\\=</span><span class="doc">'websearch
+    :tools  </span><span class="bi doc">\\=</span><span class="doc">'(:append (\"search_web\" \"read_url\"))
+    :system </span><span class="bi doc">\\=</span><span class="doc">'(:prepend \"Use the provided tools to search the web
+                        for up-to-date information.\"))
+
+- You can dynamically compute the value for a key at the time the preset
+  is applied with `</span><span class="m doc">:eval</span><span class="doc">' or `</span><span class="m doc">:function</span><span class="doc">'.  This is mostly useful when
+  using presets in the prompt, as @preset-name.
+
+  An `</span><span class="m doc">:eval</span><span class="doc">' form is evaluated when the preset is applied:
+
+  (gptel-make-preset </span><span class="bi doc">\\=</span><span class="doc">'visible-buffers
+    :description \"Include the full text of all buffers visible in the
+                 frame.\"
+    :context </span><span class="bi doc">\\=</span><span class="doc">'(:eval (mapcar #</span><span class="bi doc">\\=</span><span class="doc">'window-buffer (window-list))))
+    ▲                ▲
+    │                ╰╴evaluated when preset is applied
+    ╰╴sets `</span><span class="m doc">gptel-context</span><span class="doc">'
+
+  `</span><span class="m doc">:function</span><span class="doc">' should take the current value of the key as an input and
+  return the new value.  Here we combine it with `</span><span class="m doc">:append</span><span class="doc">' in the plist.
+
+  (gptel-make-preset </span><span class="bi doc">\\=</span><span class="doc">'github-read-only
+    :description \"Provide read-only GitHub tools\"
+    :pre (lambda () (gptel-mcp-connect </span><span class="bi doc">\\=</span><span class="doc">'(\"github\") </span><span class="bi doc">\\=</span><span class="doc">'sync))
+    :tools
+    </span><span class="bi doc">\\=</span><span class="doc">'( :append (\"mcp-github\")       ;Adds all github MCP tools
+       :function (lambda (tools)
+                   (cl-delete-if    ;Remove \"write\" access to GitHub
+                    (lambda (tool)
+                      (string-match-p \"create_\" (gptel-tool-name tool)))
+                    tools))))
+
+  NOTE: `</span><span class="m doc">:eval</span><span class="doc">' and `</span><span class="m doc">:function</span><span class="doc">' are evaluated in a temporary buffer, and
+  not the buffer from which the request is sent."</span>
+  (<span class="k">declare</span> (indent 1))
+  (<span class="k">if-let*</span> ((p (assoc name gptel--known-presets)))
+      (setcdr p keys)
+    (<span class="k">setq</span> gptel--known-presets          <span class="cd">;</span><span class="c">Add at end of presets for menu ordering
+</span>          (nconc gptel--known-presets (list (cons name keys))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

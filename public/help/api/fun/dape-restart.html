@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape-restart – Emacs Documentation Online</title>
+<meta name="description" content="dape-restart is an interactive and natively compiled function defined
+in dape.el.
+Restart debugging session.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape-restart</code></h1><p><span class="m"><code>dape-restart</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape-restart <span class="ty">&amp;optional</span> <a href="#:~:text=session.-,CONN"><span class="arg">CONN</span></a> <a href="#:~:text=invocations.-,SKIP-COMPILE"><span class="arg">SKIP-COMPILE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Restart debugging session.
+<p><span class="arg">CONN</span> is inferred for interactive invocations.
+<span class="arg">SKIP-COMPILE</span> is used internally for recursive calls.
+<h2>Key Bindings</h2>
+<p><span class="v">ctl-x-map</span> <span class="key">C-a r</span>
+<span class="v">dape-global-map</span> <span class="key">r</span>
+<span class="v">global-map</span> <span class="key">C-x C-a r</span>
+<span class="v">help-quick-use-map</span> <span class="key">C-x C-a r</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape-restart</span> (<span class="ty">&amp;optional</span> conn skip-compile)
+  <span class="doc">"Restart debugging session.
+CONN is inferred for interactive invocations.
+SKIP-COMPILE is used internally for recursive calls."</span>
+  (<span class="k">interactive</span> (list (dape--live-connection 'last t)))
+  (dape--stack-frame-cleanup)
+  (<span class="k">cond</span>
+   (<span class="cd">;; </span><span class="c">Restart if adapter supports it
+</span>    (<span class="k">and</span> conn (dape--capable-p conn <span class="bi">:supportsRestartRequest</span>))
+    (<span class="k">if</span> (<span class="k">and</span> (not skip-compile) (plist-get (dape--config conn) 'compile))
+        (dape--compile (dape--config conn)
+                       (<span class="k">lambda</span> () (dape-restart conn 'skip-compile)))
+      (dape--breakpoints-reset 'from-restart)
+      (<span class="k">setq</span> dape--connection-selected nil)
+      (<span class="k">setf</span> (dape--threads conn) nil
+            (dape--thread-id conn) nil
+            (dape--modules conn) nil
+            (dape--sources conn) nil
+            (dape--restart-in-progress-p conn) t)
+      (<span class="k">when</span> (length= (dape--live-connections-root) 1)
+        (dape-active-mode -1))
+      (<span class="k">dape--with-request</span>
+          (dape-request conn <span class="bi">:restart</span>
+                        `(<span class="bi">:arguments</span> ,(dape--launch-or-attach-arguments conn)))
+        (<span class="k">unless</span> dape-active-mode
+          (dape-active-mode +1))
+        (<span class="k">setf</span> (dape--restart-in-progress-p conn) nil))))
+   (<span class="cd">;; </span><span class="c">Use previous connections configuration
+</span>    dape--connections
+    (<span class="k">let</span> ((conn (<span class="k">or</span> (<span class="k">and</span> conn (dape--root-of conn))
+                    (car dape--connections))))
+      (<span class="k">dape--with-request</span> (dape-kill conn)
+        (dape (dape--config conn)))))
+   (<span class="cd">;; </span><span class="c">Use history
+</span>    dape-history
+    (dape (apply #'dape--config-eval (dape--config-from-string (car dape-history)))))
+   ((<span class="w">user-error</span> <span class="s">"Unable to derive session to restart, run `</span><span class="m s">dape</span><span class="s">'"</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

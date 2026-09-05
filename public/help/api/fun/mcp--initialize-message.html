@@ -1,0 +1,83 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: mcp--initialize-message – Emacs Documentation Online</title>
+<meta name="description" content="mcp--initialize-message is a natively compiled function defined in
+mcp.el.
+Helper function to send an initialize request to the CONNECTION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>mcp--initialize-message</code></h1><p><span class="m"><code>mcp--initialize-message</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(mcp--initialize-message <a href="#:~:text=the-,CONNECTION"><span class="arg">CONNECTION</span></a> <a href="#:~:text=object.-,CHECK-SSE"><span class="arg">CHECK-SSE</span></a> <a href="#:~:text=sending.-,CALLBACK"><span class="arg">CALLBACK</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=initialization.-,ERROR-CALLBACK"><span class="arg">ERROR-CALLBACK</span></a> <a href="#:~:text=occurs.-,SYNCP"><span class="arg">SYNCP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Helper function to send an <span class="m"><code>initialize</code></span> request to the <span class="arg">CONNECTION</span>.
+<p><span class="arg">CONNECTION</span> is the MCP connection object.
+<span class="arg">CHECK-SSE</span> is an optional boolean flag indicating whether to verify is SSE
+mcp server before sending.
+<span class="arg">CALLBACK</span> is a function to call upon successful initialization.
+<span class="arg">ERROR-CALLBACK</span> is an optional function to call if an error occurs.
+<span class="arg">SYNCP</span> specifies if the operation should be synchronous or asynchronous.
+<p>See <a href="../fun/mcp-async-initialize-message.html"><code>mcp-async-initialize-message</code></a> and <a href="../fun/mcp-sync-initialize-message.html"><code>mcp-sync-initialize-message</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a854ba0xan3il3xqm2sx95la5018xp8i-emacs-packages-deps/share/emacs/site-lisp/elpa/mcp-20260615.940/mcp.el</span>
+(<span class="k">defun</span> <span class="f">mcp--initialize-message</span> (connection check-sse callback <span class="ty">&amp;optional</span> error-callback syncp)
+  <span class="doc">"Helper function to send an `</span><span class="m doc">initialize</span><span class="doc">' request to the CONNECTION.
+
+CONNECTION is the MCP connection object.
+CHECK-SSE is an optional boolean flag indicating whether to verify is SSE
+mcp server before sending.
+CALLBACK is a function to call upon successful initialization.
+ERROR-CALLBACK is an optional function to call if an error occurs.
+SYNCP specifies if the operation should be synchronous or asynchronous.
+
+See `</span><span class="m doc">mcp-async-initialize-message</span><span class="doc">' and `</span><span class="m doc">mcp-sync-initialize-message</span><span class="doc">'."</span>
+  (<span class="k">let*</span> ((success-fn (<span class="k">lambda</span> (res)
+                       (<span class="k">cl-destructuring-bind</span> (<span class="ty">&amp;key</span> protocolVersion serverInfo capabilities <span class="ty">&amp;allow-other-keys</span>) res
+                         (funcall callback protocolVersion serverInfo capabilities))))
+         (error-fn (<span class="k">jsonrpc-lambda</span> (<span class="ty">&amp;key</span> code message _data)
+                     (<span class="k">if</span> error-callback
+                         (funcall error-callback code message)
+                       (message <span class="s">"Sadly, %s mpc server reports %s: %s"</span>
+                                (jsonrpc-name connection) code message))))
+         (timeout-fn (<span class="k">lambda</span> ()
+                       (<span class="k">unless</span> (<span class="k">and</span> check-sse
+                                    (mcp-http-process-connection-p connection)
+                                    (mcp--sse connection))
+                         (<span class="k">if</span> error-callback
+                             (funcall error-callback 124 <span class="s">"timeout"</span>)
+                           (message <span class="s">"Sadly, mcp server (%s) timed out"</span>
+                                    (jsonrpc-name connection))))))
+         (args `(,connection
+                 <span class="bi">:initialize</span>
+                 (<span class="bi">:protocolVersion</span> ,(car mcp--support-versions)
+                  <span class="bi">:capabilities</span> (<span class="bi">:roots</span> (<span class="bi">:listChanged</span> t))
+                  <span class="bi">:clientInfo</span> (<span class="bi">:name</span> <span class="s">"mcp-emacs"</span> <span class="bi">:version</span> <span class="s">"0.1.0"</span>))
+                 ,@(<span class="k">unless</span> syncp `(<span class="bi">:success-fn</span>
+                                   ,success-fn))
+                 ,@(<span class="k">unless</span> syncp `(<span class="bi">:error-fn</span>
+                                   ,error-fn))
+                 <span class="bi">:timeout</span> ,mcp-server-start-time
+                 ,@(<span class="k">unless</span> syncp `(<span class="bi">:timeout-fn</span>
+                                   ,timeout-fn)))))
+    (<span class="k">if</span> syncp
+        (<span class="k">condition-case-unless-debug</span> res
+            (apply #'jsonrpc-request
+                   args)
+          (jsonrpc-error
+           (<span class="k">pcase</span> res
+             (`(jsonrpc-error ,_ (jsonrpc-error-code . ,code) (jsonrpc-error-message . ,message) ,_)
+              (funcall error-fn (list <span class="bi">:code</span> code <span class="bi">:message</span> message))
+              nil)
+             (`(jsonrpc-error ,_ (jsonrpc-error-message . <span class="s">"Timed out"</span>))
+              (funcall timeout-fn)
+              nil)))
+          (<span class="bi">:success</span>
+           (<span class="k">cl-destructuring-bind</span> (<span class="ty">&amp;key</span> protocolVersion serverInfo capabilities <span class="ty">&amp;allow-other-keys</span>) res
+             (funcall callback protocolVersion serverInfo capabilities))))
+      (apply #'jsonrpc-async-request
+             args))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

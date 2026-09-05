@@ -1,0 +1,91 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-define-envelope – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-define-envelope is a natively compiled function defined in
+combobulate-envelope.el.
+Define an envelope using ARGS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-define-envelope</code></h1><p><span class="m"><code>combobulate-define-envelope</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">combobulate-envelope.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-define-envelope <span class="ty">&amp;rest</span> <a href="#:~:text=using-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Define an envelope using <span class="arg">ARGS</span>.
+<p><span class="arg">ARGS</span> is a list of keyword arguments. The following keywords are
+supported:
+<p><span class="bi">:name</span> (required) - The name of the envelope.
+<p><span class="bi">:description</span> (required) - A description of the envelope.
+<p><span class="bi">:template</span> (required) - The template to apply to the nodes.
+<p><span class="bi">:nodes</span> - A list of node types that the envelope can be applied
+<br>to.
+<p><span class="bi">:procedures</span> - A list of procedures that the envelope can be
+<br>applied to. If <span class="bi">:nodes</span> is defined, then this is ignored.
+<p><span class="bi">:shorthand</span> - A shorthand for the nodes that the envelope can be
+<br>applied to. This shorthand is a string that is used to look up a
+procedure in the language-specific <span class="m"><code>procedure-shorthand-alist</code></span>.
+<p><span class="bi">:point-placement</span> - Where to place point after the envelope is
+<br>applied. This can be either <span class="m"><code>start</code></span>, <span class="m"><code>stay</code></span> or <span class="m"><code>end</code></span>. The default
+is <span class="m"><code>start</code></span>.
+<p><span class="bi">:key</span> (required) - A key to bind the envelope to. It will be
+<br>bound to the language-specific key map
+<span class="m"><code>combobulate-LANGUAGE-envelope-map</code></span>, which itself is bound to
+<a href="../var/combobulate-key-map.html"><code>combobulate-key-map</code></a> under the sub prefix <span class="m"><code>e</code></span>.
+<p><span class="bi">:extra-key</span> - An extra key to bind the envelope to. It will be
+<br>bound to the language-specific map directly and so any key is
+valid.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-envelope.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-define-envelope</span> (<span class="ty">&amp;rest</span> args)
+  <span class="doc">"Define an envelope using ARGS.
+
+ARGS is a list of keyword arguments. The following keywords are
+supported:
+
+`</span><span class="m doc">:name</span><span class="doc">' (required) - The name of the envelope.
+
+`</span><span class="m doc">:description</span><span class="doc">' (required) - A description of the envelope.
+
+`</span><span class="m doc">:template</span><span class="doc">' (required) - The template to apply to the nodes.
+
+`</span><span class="m doc">:nodes</span><span class="doc">' - A list of node types that the envelope can be applied
+to.
+
+`</span><span class="m doc">:procedures</span><span class="doc">' - A list of procedures that the envelope can be
+applied to. If `</span><span class="m doc">:nodes</span><span class="doc">' is defined, then this is ignored.
+
+`</span><span class="m doc">:shorthand</span><span class="doc">' - A shorthand for the nodes that the envelope can be
+applied to. This shorthand is a string that is used to look up a
+procedure in the language-specific `</span><span class="m doc">procedure-shorthand-alist</span><span class="doc">'.
+
+`</span><span class="m doc">:point-placement</span><span class="doc">' - Where to place point after the envelope is
+applied. This can be either `</span><span class="m doc">start</span><span class="doc">', `</span><span class="m doc">stay</span><span class="doc">' or `</span><span class="m doc">end</span><span class="doc">'. The default
+is `</span><span class="m doc">start</span><span class="doc">'.
+
+`</span><span class="m doc">:key</span><span class="doc">' (required) - A key to bind the envelope to. It will be
+bound to the language-specific key map
+`</span><span class="m doc">combobulate-LANGUAGE-envelope-map</span><span class="doc">', which itself is bound to
+`</span><span class="m doc">combobulate-key-map</span><span class="doc">' under the sub prefix `</span><span class="m doc">e</span><span class="doc">'.
+
+`</span><span class="m doc">:extra-key</span><span class="doc">' - An extra key to bind the envelope to. It will be
+bound to the language-specific map directly and so any key is
+valid."</span>
+  (<span class="k">map-let</span> (<span class="bi">:description</span> <span class="bi">:key</span> <span class="bi">:extra-key</span> <span class="bi">:name</span>) args
+    (<span class="k">let</span> ((fn-name (combobulate--envelope-get-function-name args)))
+      <span class="cd">;; </span><span class="c">Do not redefine the function if it already exists. This can
+</span>      <span class="cd">;; </span><span class="c">actually cause a serious performance cascade as each invocation.
+</span>      (<span class="k">unless</span> (fboundp fn-name)
+        <span class="cd">;; </span><span class="c">Store the function symbol for later recall in things like
+</span>        <span class="cd">;; </span><span class="c">transient.
+</span>        (<span class="k">defalias</span> <span class="f">fn-name</span>
+          `(<span class="k">lambda</span> () ,(format <span class="s">"%s\n%s"</span> description
+                          <span class="s">"This command triggers Combobulate's envelope system."</span>)
+             (<span class="k">interactive</span>)
+             (combobulate-execute-envelope ,name))))
+      (define-key (<span class="k">combobulate-read</span> envelope-map) (kbd key) fn-name)
+      (<span class="k">when</span> extra-key
+        (define-key (<span class="k">combobulate-read</span> map) (kbd extra-key) fn-name)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

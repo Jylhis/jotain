@@ -1,0 +1,78 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--handle-tool-use – Emacs Documentation Online</title>
+<meta name="description" content="gptel--handle-tool-use is a natively compiled function defined in
+gptel-request.el.
+Run tool calls captured in FSM, and advance the state machine with the results.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--handle-tool-use</code></h1><p><span class="m"><code>gptel--handle-tool-use</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--handle-tool-use <a href="#:~:text=in-,FSM"><span class="arg">FSM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run tool calls captured in <span class="arg">FSM</span>, and advance the state machine with the results.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+(<span class="k">defun</span> <span class="f">gptel--handle-tool-use</span> (fsm)
+  <span class="doc">"Run tool calls captured in FSM, and advance the state machine with the results."</span>
+  (<span class="k">when-let*</span> ((info (gptel-fsm-info fsm))
+              (backend (plist-get info <span class="bi">:backend</span>))
+              <span class="cd">;; </span><span class="c">This function might run many times, so only act on the remaining tool calls.
+</span>              (tool-use (cl-remove-if (<span class="k">lambda</span> (tc) (plist-get tc <span class="bi">:result</span>))
+                                      (plist-get info <span class="bi">:tool-use</span>))))
+    (<span class="k">with-current-buffer</span> (plist-get info <span class="bi">:buffer</span>)
+      (<span class="k">let</span> ((pending-calls))
+        (mapc                           <span class="cd">; </span><span class="c">Construct function calls
+</span>         (<span class="k">lambda</span> (tool-call)
+           (<span class="k">letrec</span> ((args (plist-get tool-call <span class="bi">:args</span>))
+                    (name (plist-get tool-call <span class="bi">:name</span>))
+                    (tool-spec (cl-find-if (<span class="k">lambda</span> (ts) (equal (gptel-tool-name ts) name))
+                                           (plist-get info <span class="bi">:tools</span>)))
+                    (process-tool-result (apply-partially #'gptel--process-tool-call
+                                                          fsm tool-spec tool-call)))
+             (<span class="k">if</span> (null tool-spec)
+                 (<span class="k">if</span> (equal name gptel--ersatz-json-tool) <span class="cd">;</span><span class="c">Could be a JSON response
+</span>                     (<span class="k">progn</span> <span class="cd">;</span><span class="c">Handle structured JSON output supplied as tool call
+</span>                       (funcall (plist-get info <span class="bi">:callback</span>)
+                                (<span class="k">gptel--json-encode</span> (plist-get tool-call <span class="bi">:args</span>)) info)
+                       (plist-put info <span class="bi">:tool-use</span> <span class="cd">;</span><span class="c">Remove this tool call from the list
+</span>                                  (cl-remove-if (<span class="k">lambda</span> (tc) (equal (plist-get tc <span class="bi">:name</span>)
+                                                               gptel--ersatz-json-tool))
+                                                (plist-get info <span class="bi">:tool-use</span>)))
+                       (<span class="k">when</span> (plist-get info <span class="bi">:stream</span>)
+                         (funcall (plist-get info <span class="bi">:callback</span>) t info)))
+		   (message <span class="s">"Unknown tool called by model: %s"</span> name)
+                   (funcall process-tool-result
+                            (format <span class="s">"Error: Tool '</span><span class="m s">%s</span><span class="s">' is not available. Available tools: %s"</span>
+                                    name (mapconcat #'gptel-tool-name
+                                                    (plist-get info <span class="bi">:tools</span>) <span class="s">", "</span>))))
+               (<span class="k">let</span> ((confirm))         <span class="cd">;</span><span class="c">Check if tool requires confirmation
+</span>                 (<span class="k">cond</span>      <span class="cd">;</span><span class="c">:confirm in tool-call (from hooks) takes precedence
+</span>                  ((<span class="k">and-let*</span> ((call-confirm (plist-member tool-call <span class="bi">:confirm</span>)))
+                     (<span class="k">prog1</span> t (<span class="k">setq</span> confirm (cadr call-confirm)))))
+                  ((<span class="k">and</span> gptel-confirm-tool-calls <span class="cd">;</span><span class="c">global and tool-specific setting
+</span>                        (<span class="k">or</span> (eq gptel-confirm-tool-calls t) <span class="cd">;</span><span class="c">always confirm, or
+</span>                            (<span class="k">and-let*</span> ((confirm (gptel-tool-confirm tool-spec)))
+                              (<span class="k">or</span> (not (functionp confirm))
+                                  (apply confirm (gptel--map-tool-args tool-spec args))))))
+                   (<span class="k">setq</span> confirm t)))
+                 (<span class="k">if</span> confirm  <span class="cd">;</span><span class="c">To send to callback for confirmation
+</span>                     (<span class="k">push</span> (list tool-spec args process-tool-result) pending-calls)
+                   (<span class="k">let</span> ((arg-values (gptel--map-tool-args tool-spec args)))
+                     (<span class="k">if</span> (gptel-tool-async tool-spec) <span class="cd">;</span><span class="c">If not, run the tool
+</span>                         (apply (gptel-tool-function tool-spec)
+                                process-tool-result arg-values)
+                       (<span class="k">let</span> ((result (<span class="k">condition-case</span> errdata
+                                         (apply (gptel-tool-function tool-spec) arg-values)
+                                       (<span class="w">error</span> (mapconcat #'gptel--to-string errdata <span class="s">" "</span>)))))
+                         (funcall process-tool-result result)))))))))
+         tool-use)
+        (<span class="k">when</span> pending-calls
+          (plist-put info <span class="bi">:tool-pending</span> t)
+          (funcall (plist-get info <span class="bi">:callback</span>)
+                   (cons 'tool-call pending-calls) info))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

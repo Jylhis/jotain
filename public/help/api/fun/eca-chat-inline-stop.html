@@ -1,0 +1,44 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat-inline-stop – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat-inline-stop is an interactive and natively compiled function
+defined in eca-chat-inline.el.
+Stop the prompt running behind the inline overlay at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat-inline-stop</code></h1><p><span class="m"><code>eca-chat-inline-stop</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-chat-inline.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat-inline-stop)
+</code></pre>
+<h2>Documentation</h2>
+<p>Stop the prompt running behind the inline overlay at point.
+<h2>Key Bindings</h2>
+<p><span class="v">eca-chat-inline-actions-map</span> <span class="key">s</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-inline.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">eca-chat-inline-stop</span> ()
+  <span class="doc">"Stop the prompt running behind the inline overlay at point."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let*</span> ((session (eca-chat-inline--session))
+         (ov (eca-chat-inline--ov-or-error))
+         (chat-id (overlay-get ov 'eca-chat-inline--chat-id))
+         (chat-buffer (<span class="k">and</span> chat-id
+                           (eca-chat-inline--chat-buffer session chat-id))))
+    (<span class="k">if</span> (<span class="k">and</span> chat-buffer
+             (<span class="k">or</span> (buffer-local-value 'eca-chat--chat-loading chat-buffer)
+                 (buffer-local-value 'eca-chat--pending-question chat-buffer)))
+        <span class="cd">;; </span><span class="c">The buffer path also cancels a pending question client-side.
+</span>        (<span class="k">eca-chat--with-current-buffer</span> chat-buffer
+          (eca-chat--stop-prompt session))
+      <span class="cd">;; </span><span class="c">No mirror buffer, or it does not know the prompt started yet
+</span>      <span class="cd">;; </span><span class="c">(statusChanged still in flight): stop straight on the server,
+</span>      <span class="cd">;; </span><span class="c">which ignores chats that are not running.
+</span>      (eca-api-notify session
+                      <span class="bi">:method</span> <span class="s">"chat/promptStop"</span>
+                      <span class="bi">:params</span> (list <span class="bi">:chatId</span> chat-id)))
+    (eca-chat-inline--set-status ov <span class="s">"Stopping..."</span>)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

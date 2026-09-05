@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--refresh-subagent-usage-label – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--refresh-subagent-usage-label is a natively compiled function
+defined in eca-chat.el.
+Refresh the label of subagent TOOL-CALL-ID to reflect latest usage data.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--refresh-subagent-usage-label</code></h1><p><span class="m"><code>eca-chat--refresh-subagent-usage-label</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--refresh-subagent-usage-label <a href="#:~:text=subagent-,TOOL-CALL-ID"><span class="arg">TOOL-CALL-ID</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Refresh the label of subagent <span class="arg">TOOL-CALL-ID</span> to reflect latest usage data.
+<p>Rebuilds the steps-info string with current usage and updates the overlay.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--refresh-subagent-usage-label</span> (tool-call-id)
+  <span class="doc">"Refresh the label of subagent TOOL-CALL-ID to reflect latest usage data.
+Rebuilds the steps-info string with current usage and updates the overlay."</span>
+  (<span class="k">when-let*</span> ((ov-label (eca-chat--get-expandable-content tool-call-id))
+              (label (overlay-get ov-label 'eca-chat--tool-call-label))
+              (status (<span class="k">or</span> (overlay-get ov-label 'eca-chat--tool-call-status) <span class="s">""</span>))
+              (time (<span class="k">or</span> (overlay-get ov-label 'eca-chat--tool-call-time) <span class="s">""</span>))
+              (ov-content (overlay-get ov-label 'eca-chat--expandable-content-ov-content)))
+    (<span class="k">let*</span> ((step (overlay-get ov-label 'eca-chat--tool-call-step))
+           (max-steps (overlay-get ov-label 'eca-chat--tool-call-max-steps))
+           (usage-str (eca-chat--subagent-usage-str tool-call-id))
+           (steps-info (eca-chat--subagent-steps-info step max-steps usage-str))
+           (new-label (concat (propertize label 'font-lock-face 'eca-chat-subagent-tool-call-label-face)
+                              steps-info <span class="s">" "</span> status time))
+           (open? (overlay-get ov-label 'eca-chat--expandable-content-toggle))
+           (content (overlay-get ov-content 'eca-chat--expandable-content-content))
+           (has-content? (<span class="k">and</span> content (not (string-empty-p content)))))
+      (overlay-put ov-label 'eca-chat--tool-call-steps-info steps-info)
+      (<span class="k">save-excursion</span>
+        (goto-char (overlay-start ov-label))
+        (delete-region (point) (1- (overlay-start ov-content)))
+        (eca-chat--insert
+         (propertize (eca-chat--propertize-only-first-word
+                      new-label
+                      'line-prefix (<span class="k">when</span> has-content?
+                                     (<span class="k">if</span> open?
+                                         (overlay-get ov-label 'eca-chat--expandable-content-close-icon)
+                                       (overlay-get ov-label 'eca-chat--expandable-content-open-icon))))
+                     'help-echo <span class="s">"mouse-1 / RET / tab: expand/collapse"</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

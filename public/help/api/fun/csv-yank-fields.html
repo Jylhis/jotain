@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: csv-yank-fields – Emacs Documentation Online</title>
+<meta name="description" content="csv-yank-fields is an interactive and natively compiled function
+defined in csv-mode.el.
+Yank fields as the ARGth field of each line in the region.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>csv-yank-fields</code></h1><p><span class="m"><code>csv-yank-fields</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">csv-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(csv-yank-fields <a href="#:~:text=interactively,-,FIELD"><span class="arg">FIELD</span></a> <a href="#:~:text=index;-,BEG"><span class="arg">BEG</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Yank fields as the ARGth field of each line in the region.
+<p>ARG may be arbitrarily large and records are extended as necessary.
+If not set, the region defaults to the CSV records around point;
+if point is not in a CSV record then offer to yank as a new table.
+The fields yanked are those last killed by <a href="../fun/csv-kill-fields.html"><code>csv-kill-fields</code></a>.
+Fields are separated by <a href="../var/csv-separators.html"><code>csv-separators</code></a> and null fields are allowed anywhere.
+Field indices increase from 1 on the left or decrease from -1 on the right.
+A prefix argument specifies a single field, otherwise prompt for field index.
+Ignore blank and comment lines.  When called non-interactively, <span class="arg">FIELD</span>
+is a single field index; <span class="arg">BEG</span> and <span class="arg">END</span> specify the region to process.
+<h2>Key Bindings</h2>
+<p><span class="v">csv-mode-map</span> <span class="key">C-c C-y</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mrygxsladaca2yfyr2cy0am5zm9lzddg-emacs-packages-deps/share/emacs/site-lisp/elpa/csv-mode-1.27/csv-mode.el</span>
+(<span class="k">defun</span> <span class="f">csv-yank-fields</span> (field beg end)
+  <span class="doc">"Yank fields as the ARGth field of each line in the region.
+ARG may be arbitrarily large and records are extended as necessary.
+If not set, the region defaults to the CSV records around point;
+if point is not in a CSV record then offer to yank as a new table.
+The fields yanked are those last killed by `</span><span class="m doc">csv-kill-fields</span><span class="doc">'.
+Fields are separated by `</span><span class="m doc">csv-separators</span><span class="doc">' and null fields are allowed anywhere.
+Field indices increase from 1 on the left or decrease from -1 on the right.
+A prefix argument specifies a single field, otherwise prompt for field index.
+Ignore blank and comment lines.  When called non-interactively, FIELD
+is a single field index; BEG and END specify the region to process."</span>
+  <span class="cd">;; </span><span class="c">(interactive "*P\nr")
+</span>  (<span class="k">interactive</span> (<span class="k">condition-case</span> err
+		   (csv-interactive-args 'single)
+		 (<span class="w">error</span> (list nil nil err))))
+  (barf-if-buffer-read-only)
+  (<span class="k">if</span> (null beg)
+      (<span class="k">if</span> (y-or-n-p (concat (error-message-string end)
+			    <span class="s">".  Yank as a new table? "</span>))
+	  (csv-yank-as-new-table)
+	(<span class="w">error</span> (error-message-string end)))
+    (<span class="k">if</span> (&lt;= field 0) (<span class="k">setq</span> field (1+ field)))
+    (<span class="k">save-excursion</span>
+      (<span class="k">save-restriction</span>
+	(narrow-to-region beg end)
+	(goto-char (point-min))
+	(<span class="k">let</span> ((fields csv-killed-fields))
+	  (<span class="k">while</span> (not (eobp))
+	    (<span class="k">unless</span> (csv-not-looking-at-record)
+	      <span class="cd">;; </span><span class="c">Yank at start of specified field if possible,
+</span>	      <span class="cd">;; </span><span class="c">otherwise yank at end of record:
+</span>	      (<span class="k">if</span> (zerop field)
+		  (end-of-line)
+		(csv-sort-skip-fields field 'yank))
+	      (<span class="k">and</span> (eolp) (insert (car csv-separators)))
+	      (<span class="k">when</span> fields
+		(insert (car fields))
+		(<span class="k">setq</span> fields (cdr fields)))
+	      (<span class="k">or</span> (eolp) (insert (car csv-separators))))
+	    (forward-line)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

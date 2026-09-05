@@ -1,0 +1,76 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp--handle-tools-call – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp--handle-tools-call is a natively compiled function
+defined in claude-code-ide-mcp.el.
+Handle the tools/call request with ID and PARAMS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp--handle-tools-call</code></h1><p><span class="m"><code>claude-code-ide-mcp--handle-tools-call</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide-mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp--handle-tools-call <a href="#:~:text=with-,ID"><span class="arg">ID</span></a> <a href="#:~:text=and-,PARAMS"><span class="arg">PARAMS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=Optional-,SESSION"><span class="arg">SESSION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle the tools/call request with <span class="arg">ID</span> and <span class="arg">PARAMS</span>.
+<p>Optional <span class="arg">SESSION</span> contains the MCP session context.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp--handle-tools-call</span> (id params <span class="ty">&amp;optional</span> session)
+  <span class="doc">"Handle the tools/call request with ID and PARAMS.
+Optional SESSION contains the MCP session context."</span>
+  (<span class="k">claude-code-ide-debug</span> <span class="s">"Handling tools/call request with id: %s"</span> id)
+  <span class="cd">;; </span><span class="c">Ensure handlers are loaded
+</span>  (<span class="k">let*</span> ((tool-name (alist-get 'name params))
+         (arguments (alist-get 'arguments params))
+         (handler (alist-get tool-name claude-code-ide-mcp-tools nil nil #'string=)))
+    (<span class="k">claude-code-ide-debug</span> <span class="s">"Tool call: %s with arguments: %S"</span> tool-name arguments)
+    (<span class="k">if</span> handler
+        (<span class="k">condition-case</span> err
+            (<span class="k">progn</span>
+              (<span class="k">claude-code-ide-debug</span> <span class="s">"Found handler for tool: %s"</span> tool-name)
+              (<span class="k">let</span> ((result (<span class="k">if</span> (member tool-name '(<span class="s">"getDiagnostics"</span>))
+                                <span class="cd">;; </span><span class="c">Pass session to handlers that need it
+</span>                                (funcall handler arguments session)
+                              (funcall handler arguments))))
+                <span class="cd">;; </span><span class="c">Check if this is a deferred response
+</span>                (<span class="k">if</span> (alist-get 'deferred result)
+                    (<span class="k">progn</span>
+                      (<span class="k">claude-code-ide-debug</span> <span class="s">"Tool %s returned deferred, storing id %s"</span> tool-name id)
+                      <span class="cd">;; </span><span class="c">Store the request ID for later in the current session
+</span>                      (<span class="k">let*</span> ((unique-key (alist-get 'unique-key result))
+                             (storage-key (<span class="k">if</span> unique-key
+                                              (format <span class="s">"%s-%s"</span> tool-name unique-key)
+                                            tool-name))
+                             <span class="cd">;; </span><span class="c">Get session from result or try to find current session
+</span>                             (result-session (alist-get 'session result))
+                             (session (<span class="k">or</span> result-session
+                                          (claude-code-ide-mcp--get-current-session))))
+                        (<span class="k">if</span> session
+                            (<span class="k">let</span> ((session-deferred (claude-code-ide-mcp-session-deferred session)))
+                              (puthash storage-key id session-deferred)
+                              (<span class="k">claude-code-ide-debug</span> <span class="s">"Stored deferred response in session for %s"</span>
+                                                     (claude-code-ide-mcp-session-project-dir session)))
+                          (<span class="k">claude-code-ide-debug</span> <span class="s">"Warning: No session found, cannot store deferred response"</span>)))
+                      <span class="cd">;; </span><span class="c">Don't send a response yet
+</span>                      nil)
+                  <span class="cd">;; </span><span class="c">Normal response
+</span>                  (<span class="k">claude-code-ide-debug</span> <span class="s">"Tool %s returned result: %S"</span> tool-name result)
+                  (claude-code-ide-mcp--make-response id `((content . ,result))))))
+          (mcp-error
+           (<span class="k">claude-code-ide-debug</span> <span class="s">"Tool %s threw MCP error: %S"</span> tool-name err)
+           (claude-code-ide-mcp--make-error-response
+            id -32603 (<span class="k">if</span> (listp (cdr err))
+                          (car (cdr err))
+                        (cdr err))))
+          (<span class="w">error</span>
+           (<span class="k">claude-code-ide-debug</span> <span class="s">"Tool %s threw error: %S"</span> tool-name err)
+           (claude-code-ide-mcp--make-error-response
+            id -32603 (format <span class="s">"Tool execution failed: %s"</span> (error-message-string err)))))
+      (<span class="k">progn</span>
+        (<span class="k">claude-code-ide-debug</span> <span class="s">"Unknown tool requested: %s"</span> tool-name)
+        (claude-code-ide-mcp--make-error-response
+         id -32601 (format <span class="s">"Unknown tool: %s"</span> tool-name))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

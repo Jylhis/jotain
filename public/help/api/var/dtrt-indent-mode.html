@@ -1,0 +1,231 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: dtrt-indent-mode – Emacs Documentation Online</title>
+<meta name="description" content="dtrt-indent-mode is a customizable and buffer-local variable defined
+in dtrt-indent.el.
+Toggle adaptive indentation mode.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>dtrt-indent-mode</code></h1><p><span class="m"><code>dtrt-indent-mode</code></span> is a <a href="/info/elisp/variable-definitions.html">customizable</a> and <a href="/info/elisp/buffer-local-variables.html">buffer-local</a> variable defined
+in <span class="bt">dtrt-indent.el</span>.
+<h2>Documentation</h2>
+<p>Toggle adaptive indentation mode.
+<p>Setting this variable directly does not take effect;
+use either <kbd>M-x customize</kbd> (<a href="../fun/customize.html"><code>customize</code></a>) or the function <a class="v" href="../var/dtrt-indent-mode.html"><code>dtrt-indent-mode</code>(var)</a>/<a class="f" href="../fun/dtrt-indent-mode.html"><code>dtrt-indent-mode</code>(fun)</a>.
+<p>This variable was added, or its default value changed, in Emacs 22.0.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/07pi18l0q79xmgqf3amadq86iinldk0s-emacs-packages-deps/share/emacs/site-lisp/elpa/dtrt-indent-20260709.2011/dtrt-indent.el</span>
+<span class="cd">;;; </span><span class="c">dtrt-indent.el --- Adapt to foreign indentation offsets -*- lexical-binding: t; -*-
+</span>
+<span class="cd">;; </span><span class="c">Copyright (C) 2003, 2007, 2008 Julian Scheid
+</span><span class="cd">;; </span><span class="c">Copyright (C) 2014-2025 Reuben Thomas
+</span>
+<span class="cd">;; </span><span class="c">Author: Julian Scheid &lt;julians37@googlemail.com&gt;
+</span><span class="cd">;; </span><span class="c">Maintainer: Reuben Thomas &lt;rrt@sc3d.org&gt;
+</span><span class="cd">;; </span><span class="c">URL: https://github.com/jscheid/dtrt-indent
+</span><span class="cd">;; </span><span class="c">Package-Version: 20260709.2011
+</span><span class="cd">;; </span><span class="c">Package-Revision: nil
+</span><span class="cd">;; </span><span class="c">Keywords: convenience files languages c
+</span><span class="cd">;; </span><span class="c">Package-Requires: ((emacs "28.1"))
+</span>
+<span class="cd">;; </span><span class="c">This file is free software; you can redistribute it and/or modify
+</span><span class="cd">;; </span><span class="c">it under the terms of the GNU General Public License as published by
+</span><span class="cd">;; </span><span class="c">the Free Software Foundation; either version 2, or (at your option)
+</span><span class="cd">;; </span><span class="c">any later version.
+</span>
+<span class="cd">;; </span><span class="c">This file is distributed in the hope that it will be useful,
+</span><span class="cd">;; </span><span class="c">but WITHOUT ANY WARRANTY; without even the implied warranty of
+</span><span class="cd">;; </span><span class="c">MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+</span><span class="cd">;; </span><span class="c">GNU General Public License for more details.
+</span>
+<span class="cd">;; </span><span class="c">You should have received a copy of the GNU General Public License
+</span><span class="cd">;; </span><span class="c">along with this software; see the file COPYING.  If not, write to
+</span><span class="cd">;; </span><span class="c">the Free Software Foundation, Inc., 51 Franklin Street, Fifth
+</span><span class="cd">;; </span><span class="c">Floor, Boston, MA 02110-1301 USA
+</span>
+<span class="cd">;;; </span><span class="c">Commentary:
+</span>
+<span class="cd">;; </span><span class="c">A minor mode that guesses the indentation offset and
+</span><span class="cd">;; </span><span class="c">`</span><span class="m c">indent-tabs-mode</span><span class="c">' originally used for creating source code files and
+</span><span class="cd">;; </span><span class="c">transparently adjusts the corresponding settings in Emacs, making it
+</span><span class="cd">;; </span><span class="c">more convenient to edit others' files.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">This hooks into many major modes - c-mode, java-mode and ruby-mode, to
+</span><span class="cd">;; </span><span class="c">name but a few - and makes an educated guess on which offset is
+</span><span class="cd">;; </span><span class="c">appropriate by analyzing indentation levels in the file.  Modes that have
+</span><span class="cd">;; </span><span class="c">their own indentation offset guessing, such as python-mode, are not dealt
+</span><span class="cd">;; </span><span class="c">with.  In modes based on SMIE, dtrt-indent delegates to smie-config-guess.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Heuristics are used to estimate the proper indentation offset and
+</span><span class="cd">;; </span><span class="c">therefore this system is not infallible, however adjustments will
+</span><span class="cd">;; </span><span class="c">only be made if the guess is considered reliable.  This way it
+</span><span class="cd">;; </span><span class="c">should leave you off no worse than before.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">To install, M-x customize-variable dtrt-indent-global-mode, and turn on
+</span><span class="cd">;; </span><span class="c">"Dtrt Indent Global Mode".
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">The default settings have been carefully chosen and tested to work
+</span><span class="cd">;; </span><span class="c">reliably on a wide range of source files.  However, if it doesn't work
+</span><span class="cd">;; </span><span class="c">for you they can be fine tuned using M-x customize-group dtrt-indent.
+</span><span class="cd">;; </span><span class="c">You can use `</span><span class="m c">dtrt-indent-diagnosis</span><span class="c">' to see dtrt-indent's
+</span><span class="cd">;; </span><span class="c">measurements, `</span><span class="m c">dtrt-indent-highlight</span><span class="c">' to show indentation that was
+</span><span class="cd">;; </span><span class="c">considered,and `</span><span class="m c">dtrt-indent-undo</span><span class="c">' to undo any changes it makes.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Heuristics
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">We now describe the inner workings of dtrt-indent and how it arrives
+</span><span class="cd">;; </span><span class="c">at a conclusion on whether or not to change the indentation settings,
+</span><span class="cd">;; </span><span class="c">and to which value.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Lines Analyzed
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">In order to limit performance degradation due to the analysis, only a
+</span><span class="cd">;; </span><span class="c">fixed number of lines will be analyzed.  If the size of the file is
+</span><span class="cd">;; </span><span class="c">less than this number of lines, the whole file will be analyzed;
+</span><span class="cd">;; </span><span class="c">otherwise, the given number of lines at the beginning of the file are
+</span><span class="cd">;; </span><span class="c">analyzed.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Certain lines are ignored during analysis:
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">* Empty lines.
+</span><span class="cd">;; </span><span class="c">* Lines that are not indented (indentation offset 0).
+</span><span class="cd">;; </span><span class="c">* Lines that are the continuation of a multi-line comment or a
+</span><span class="cd">;;   </span><span class="c">multi-line statement or expression.
+</span><span class="cd">;; </span><span class="c">* Lines that only contain a single character can be ignored; by
+</span><span class="cd">;;   </span><span class="c">default, however, they are included.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">If, after ignoring any lines that are not eligible, the number of
+</span><span class="cd">;; </span><span class="c">relevant lines is smaller than a given threshold then the file is
+</span><span class="cd">;; </span><span class="c">treated as not fit for analysis and no guess will be made.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Configuration settings used at this stage:
+</span><span class="cd">;; </span><span class="c">`</span><span class="m c">dtrt-indent-min-relevant-lines</span><span class="c">', `</span><span class="m c">dtrt-indent-max-lines</span><span class="c">',
+</span><span class="cd">;; </span><span class="c">`</span><span class="m c">dtrt-indent-ignore-single-chars-flag</span><span class="c">'
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Histogram Generation
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">For the remaining lines - those eligible within the fixed range - a
+</span><span class="cd">;; </span><span class="c">histogram is generated.  The histogram informs dtrt-indent about how
+</span><span class="cd">;; </span><span class="c">many lines are indented with one space, how many with two spaces, how
+</span><span class="cd">;; </span><span class="c">many with three spaces, etc.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Offset Assessment
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Using the histogram, dtrt-indent determines for each of the potential
+</span><span class="cd">;; </span><span class="c">indentation offsets (by default, 2 through 8) how many lines are
+</span><span class="cd">;; </span><span class="c">indented with a multiple of that offset.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Offsets for which the histogram doesn't contain enough distinct
+</span><span class="cd">;; </span><span class="c">indentations might be ignored; by default, however, a single
+</span><span class="cd">;; </span><span class="c">indentation per offset is accepted.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">After this step, dtrt-indent has a map of probabilities for each of
+</span><span class="cd">;; </span><span class="c">the potential offsets.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Configuration settings used at this stage: `</span><span class="m c">dtrt-indent-min-offset</span><span class="c">',
+</span><span class="cd">;; </span><span class="c">`</span><span class="m c">dtrt-indent-max-offset</span><span class="c">', `</span><span class="m c">dtrt-indent-min-matching-indentations</span><span class="c">'
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Offset Merging
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">As a next step, offsets that are a factor of another offset with
+</span><span class="cd">;; </span><span class="c">similar probability are discarded; this is necessary because in a file
+</span><span class="cd">;; </span><span class="c">that has been indented with, say, 4 spaces per level, 2 spaces per
+</span><span class="cd">;; </span><span class="c">level could otherwise be wrongly guessed.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Configuration settings used at this stage:
+</span><span class="cd">;; </span><span class="c">`</span><span class="m c">dtrt-indent-max-merge-deviation</span><span class="c">'
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Final Evaluation
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Finally, dtrt-indent looks at the highest probability of all
+</span><span class="cd">;; </span><span class="c">potential offsets; if that probablity is below a given threshold, the
+</span><span class="cd">;; </span><span class="c">guess is deemed unreliable and no settings are changed.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">If the analysis yielded a best guess that exceeds the absolute
+</span><span class="cd">;; </span><span class="c">threshold, that guess is deemed reliable and the indentation setting
+</span><span class="cd">;; </span><span class="c">will be modified.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Configuration settings used at this stage: `</span><span class="m c">dtrt-indent-min-quality</span><span class="c">'.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">`</span><span class="m c">indent-tabs-mode</span><span class="c">' Setting
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">For determining hard vs. soft tabs, dtrt-indent counts the number of
+</span><span class="cd">;; </span><span class="c">lines out of the eligible lines in the fixed segment that are
+</span><span class="cd">;; </span><span class="c">indented using hard tabs, and the number of lines indented using
+</span><span class="cd">;; </span><span class="c">spaces.  If either count is significantly higher than the other count,
+</span><span class="cd">;; </span><span class="c">`</span><span class="m c">indent-tabs-mode</span><span class="c">' will be modified.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Configuration settings used at this stage:
+</span><span class="cd">;; </span><span class="c">`</span><span class="m c">dtrt-indent-min-soft-tab-superiority</span><span class="c">',
+</span><span class="cd">;; </span><span class="c">`</span><span class="m c">dtrt-indent-min-hard-tab-superiority</span><span class="c">'
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Files not touched by dtrt-indent:
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">- Files that specify the corresponding variable
+</span><span class="cd">;;   </span><span class="c">(e.g. c-basic-offset) as a File Variable.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">- Files that specify dtrt-indent-mode: 0 as a File Variable.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">- Files with a major mode that dtrt-indent doesn't hook into.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">- Files for which the indentation offset cannot be guessed
+</span><span class="cd">;;   </span><span class="c">reliably.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">- Files for which `</span><span class="m c">dtrt-indent-explicit-offset</span><span class="c">' is true; this can be
+</span><span class="cd">;; </span><span class="c">- used in `</span><span class="m c">.dir-locals.el</span><span class="c">' files, for example.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Limitations:
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">- dtrt-indent can't deal well with files that use variable
+</span><span class="cd">;;   </span><span class="c">indentation offsets, e.g. files that use varying indentation
+</span><span class="cd">;;   </span><span class="c">based on the outer construct.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">- dtrt-indent currently only supports a limited number of languages
+</span><span class="cd">;;   </span><span class="c">(major-modes).
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">- dtrt-indent only guesses the indendation offset, not the
+</span><span class="cd">;;   </span><span class="c">indentation style.  For instance, it does not detect whether a
+</span><span class="cd">;;   </span><span class="c">C-like file uses hanging braces or not.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">- dtrt-indent can't deal well with files that mix hard tabs with
+</span><span class="cd">;; </span><span class="c">- spaces for indentation.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">TODO:
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">- verbose and diagnostics messages
+</span><span class="cd">;; </span><span class="c">- make sure variable documentation match their function
+</span><span class="cd">;; </span><span class="c">- make sure defaults are sensible
+</span><span class="cd">;; </span><span class="c">- bulk (real world) tests
+</span><span class="cd">;; </span><span class="c">- functional tests
+</span><span class="cd">;; </span><span class="c">- unit tests
+</span>
+<span class="cd">;;; </span><span class="c">Code:
+</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">define-minor-mode</span> <span class="f">dtrt-indent-mode</span>
+  <span class="doc">"Toggle dtrt-indent mode.
+With no argument, this command toggles the mode.  Non-null prefix
+argument turns on the mode.  Null prefix argument turns off the
+mode.
+
+When dtrt-indent mode is enabled, the proper indentation offset
+and `</span><span class="m doc">indent-tabs-mode</span><span class="doc">' will be guessed for newly opened files and
+adjusted transparently."</span>
+  <span class="bi">:lighter</span> dtrt-indent-lighter
+  <span class="bi">:group</span> 'dtrt-indent
+  (<span class="k">if</span> dtrt-indent-mode
+      (<span class="k">if</span> (<span class="k">and</span> (boundp 'smie-grammar) (not (null smie-grammar)) (not (eq smie-grammar 'unset)))
+          (<span class="k">progn</span>
+            (<span class="k">when</span> (<span class="k">and</span> (not (<span class="k">bound-and-true-p</span> smie-config--buffer-local))
+                       (fboundp 'smie-config-guess))
+              (smie-config-guess))
+            (<span class="k">when</span> (<span class="k">bound-and-true-p</span> dtrt-indent-run-after-smie)
+              (dtrt-indent-try-set-offset)))
+        (dtrt-indent-try-set-offset))
+    (dtrt-indent-undo)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: orderless-define-completion-style – Emacs Documentation Online</title>
+<meta name="description" content="orderless-define-completion-style is a macro defined in orderless.el.
+Define an orderless completion style with given CONFIGURATION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>orderless-define-completion-style</code></h1><p><span class="m"><code>orderless-define-completion-style</code></span> is a macro defined in <span class="bt">orderless.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">orderless-define-completion-style</span> <a href="#:~:text=you,-,NAME"><span class="arg">NAME</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=optional-,DOCSTRING"><span class="arg">DOCSTRING</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=given-,CONFIGURATION"><span class="arg">CONFIGURATION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Define an orderless completion style with given <span class="arg">CONFIGURATION</span>.
+<p>The <span class="arg">CONFIGURATION</span> should be a list of bindings that you could use
+with <a href="../fun/let.html"><code>let</code></a> to configure orderless.  You can include bindings for
+<a href="../var/orderless-matching-styles.html"><code>orderless-matching-styles</code></a> and <a href="../var/orderless-style-dispatchers.html"><code>orderless-style-dispatchers</code></a>,
+for example.
+<p>The completion style consists of two functions that this macro
+defines for you, <span class="arg">NAME</span>-try-completion and <span class="arg">NAME</span>-all-completions.
+This macro registers those in <a href="../var/completion-styles-alist.html"><code>completion-styles-alist</code></a> as
+forming the completion style <span class="arg">NAME</span>.
+<p>The optional <span class="arg">DOCSTRING</span> argument is used as the documentation
+string for the completion style.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w4nd3vqafwr5yv9m3q76kmi7a9pr8jas-emacs-packages-deps/share/emacs/site-lisp/elpa/orderless-20260830.1156/orderless.el</span>
+(<span class="k">defmacro</span> <span class="f">orderless-define-completion-style</span>
+    (name <span class="ty">&amp;optional</span> docstring <span class="ty">&amp;rest</span> configuration)
+  <span class="doc">"Define an orderless completion style with given CONFIGURATION.
+The CONFIGURATION should be a list of bindings that you could use
+with `</span><span class="m doc">let</span><span class="doc">' to configure orderless.  You can include bindings for
+`</span><span class="m doc">orderless-matching-styles</span><span class="doc">' and `</span><span class="m doc">orderless-style-dispatchers</span><span class="doc">',
+for example.
+
+The completion style consists of two functions that this macro
+defines for you, NAME-try-completion and NAME-all-completions.
+This macro registers those in `</span><span class="m doc">completion-styles-alist</span><span class="doc">' as
+forming the completion style NAME.
+
+The optional DOCSTRING argument is used as the documentation
+string for the completion style."</span>
+  (<span class="k">declare</span> (doc-string 2) (indent 1))
+  (<span class="k">unless</span> (stringp docstring)
+    (<span class="k">push</span> docstring configuration)
+    (<span class="k">setq</span> docstring nil))
+  (<span class="k">let*</span> ((fn-name (<span class="k">lambda</span> (string) (intern (concat (symbol-name name) string))))
+         (try-completion  (funcall fn-name <span class="s">"-try-completion"</span>))
+         (all-completions (funcall fn-name <span class="s">"-all-completions"</span>))
+         (doc-fmt <span class="s">"`</span><span class="m s">%s</span><span class="s">' function for the %s style.
+This function delegates to `</span><span class="m s">orderless-%s</span><span class="s">'.
+The orderless configuration is locally modified
+specifically for the %s style."</span>)
+         (fn-doc (<span class="k">lambda</span> (fn) (format doc-fmt fn name fn name name))))
+    `(<span class="k">progn</span>
+       (<span class="k">defun</span> ,try-completion (string table pred point)
+         ,(funcall fn-doc <span class="s">"try-completion"</span>)
+         (<span class="k">let</span> ,configuration
+           (orderless-try-completion string table pred point)))
+       (<span class="k">defun</span> ,all-completions (string table pred point)
+         ,(funcall fn-doc <span class="s">"all-completions"</span>)
+         (<span class="k">let</span> ,configuration
+           (orderless-all-completions string table pred point)))
+       (add-to-list 'completion-styles-alist
+                    '(,name ,try-completion ,all-completions ,docstring)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,79 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit--insert-log – Emacs Documentation Online</title>
+<meta name="description" content="magit--insert-log is a natively compiled function defined in
+magit-log.el.
+Insert a log section.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit--insert-log</code></h1><p><span class="m"><code>magit--insert-log</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-log.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit--insert-log <a href="#:~:text="><span class="arg">KEEP-ERROR</span></a> <a href="#:~:text="><span class="arg">REVS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">ARGS</span></a> <a href="#:~:text="><span class="arg">FILES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert a log section.
+<p>Do not add this to a hook variable.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-log.el</span>
+          <span class="s">"%s"</span>))       <span class="cd">; </span><span class="c">\n ..  headers  magit-log-revision-headers-format
+</span>
+(<span class="k">defun</span> <span class="f">magit--insert-log</span> (keep-error revs <span class="ty">&amp;optional</span> args files)
+  <span class="doc">"Insert a log section.
+Do not add this to a hook variable."</span>
+  (<span class="k">declare</span> (indent defun))
+  (<span class="k">setq</span> magit-section-preserve-visibility t) <span class="cd">; </span><span class="c">TODO do it here?
+</span>  (<span class="k">let</span> ((magit-git-global-arguments
+         (remove <span class="s">"--literal-pathspecs"</span> magit-git-global-arguments)))
+    (magit--git-wash (apply-partially #'magit-log-wash-log 'log) keep-error
+      <span class="s">"log"</span>
+      (format magit-log-heading-format
+              (<span class="k">if</span> (<span class="k">and</span> (member <span class="s">"--left-right"</span> args)
+                       (not (member <span class="s">"--graph"</span> args)))
+                  <span class="s">"%m "</span>
+                <span class="s">""</span>)
+              (<span class="k">if</span> (member <span class="s">"--decorate"</span> args) <span class="s">"%D"</span> <span class="s">""</span>)
+              (<span class="k">if</span> (not (member <span class="s">"--show-signature"</span> args))
+                  <span class="s">""</span>
+                (<span class="k">setq</span> args (remove <span class="s">"--show-signature"</span> args))
+                (<span class="k">let</span> ((limit (magit-log-get-commit-limit args)))
+                  (<span class="k">cond</span>
+                    ((not limit)
+                     (message
+                      <span class="s">"Dropping --show-signature because -n isn't set (see %s)"</span>
+                      'magit-log-show-signatures-limit)
+                     <span class="s">""</span>)
+                    ((&gt; limit magit-log-show-signatures-limit)
+                     (message
+                      <span class="s">"Dropping --show-signature because -n is larger than %s"</span>
+                      'magit-log-show-signatures-limit)
+                     <span class="s">""</span>)
+                    (<span class="s">"%G?"</span>))))
+              (<span class="k">if</span> magit-log-margin-show-committer-date <span class="s">"%ct"</span> <span class="s">"%at"</span>)
+              (<span class="k">if</span> magit-log-trailer-labels
+                  (format <span class="s">"%%(trailers:%s%s)"</span>
+                          (<span class="k">if</span> (not (equal (cdr magit-log-trailer-labels) <span class="s">""</span>))
+                              (concat (cdr magit-log-trailer-labels) <span class="s">","</span>)
+                            <span class="s">""</span>)
+                          <span class="s">"unfold=true,separator=&#30;,key_value_separator=&#31;"</span>)
+                <span class="s">""</span>)
+              (<span class="k">if</span> (member <span class="s">"++header"</span> args)
+                  (<span class="k">if</span> (member <span class="s">"--graph"</span> (<span class="k">setq</span> args (remove <span class="s">"++header"</span> args)))
+                      (concat <span class="s">"\n"</span> magit-log-revision-headers-format <span class="s">"\n"</span>)
+                    (concat <span class="s">"\n&#30;"</span> magit-log-revision-headers-format <span class="s">"&#30;\n"</span>))
+                <span class="s">""</span>))
+      (<span class="k">progn</span>
+        (<span class="k">when-let</span> ((order (seq-find (##string-match <span class="s">"^\\+\\+order=</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">$"</span> %)
+                                    args)))
+          (<span class="k">setq</span> args (cons (format <span class="s">"--%s-order"</span> (match-str 1 order))
+                           (remove order args))))
+        (<span class="k">when</span> (member <span class="s">"--decorate"</span> args)
+          (<span class="k">setq</span> args (cons <span class="s">"--decorate=full"</span> (remove <span class="s">"--decorate"</span> args))))
+        (<span class="k">when</span> (member <span class="s">"--reverse"</span> args)
+          (<span class="k">setq</span> args (remove <span class="s">"--graph"</span> args)))
+        (<span class="k">setq</span> args (magit-diff--maybe-add-stat-arguments args))
+        args)
+      <span class="s">"--use-mailmap"</span> <span class="s">"--no-prefix"</span> revs <span class="s">"--"</span> files)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

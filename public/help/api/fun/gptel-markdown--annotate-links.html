@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-markdown--annotate-links – Emacs Documentation Online</title>
+<meta name="description" content="gptel-markdown--annotate-links is a natively compiled function defined
+in gptel.el.
+Annotate Markdown links whose sources will be sent with gptel-send.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-markdown--annotate-links</code></h1><p><span class="m"><code>gptel-markdown--annotate-links</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-markdown--annotate-links <a href="#:~:text=between-,BEG"><span class="arg">BEG</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Annotate Markdown links whose sources will be sent with <a href="../fun/gptel-send.html"><code>gptel-send</code></a>.
+<p>Search between <span class="arg">BEG</span> and <span class="arg">END</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel-markdown--annotate-links</span> (beg end)
+  <span class="doc">"Annotate Markdown links whose sources will be sent with `</span><span class="m doc">gptel-send</span><span class="doc">'.
+
+Search between BEG and END."</span>
+  (<span class="k">when</span> gptel-track-media
+    (<span class="k">save-excursion</span>
+      (goto-char beg) (forward-line -1)
+      (<span class="k">let</span> ((link-ovs (<span class="k">cl-loop</span> for o in (overlays-in (point) end)
+                               if (overlay-get o 'gptel-track-media)
+                               collect o into os finally return os)))
+        (<span class="k">while</span> (re-search-forward gptel-markdown--link-regex end t)
+          (<span class="k">unless</span> (gptel--in-response-p (1- (point)))
+            (<span class="k">let*</span> ((link (markdown-link-at-pos (point)))
+                   (from (car link)) (to (cadr link))
+                   (link-status (gptel-markdown--validate-link link))
+                   (ov (<span class="k">cl-loop</span> for o in (overlays-in from to)
+                                if (overlay-get o 'gptel-track-media)
+                                return o)))
+              (<span class="k">if</span> ov                    <span class="cd">; </span><span class="c">Ensure overlay over each link
+</span>                  (<span class="k">progn</span> (move-overlay ov from to)
+                         (<span class="k">setq</span> link-ovs (delq ov link-ovs)))
+                (<span class="k">setq</span> ov (make-overlay from to nil t))
+                (overlay-put ov 'gptel-track-media t)
+                (overlay-put ov 'evaporate t)
+                (overlay-put ov 'priority -80))
+              <span class="cd">;; </span><span class="c">Check if link will be sent, and annotate accordingly
+</span>              (gptel--annotate-link ov link-status))))
+        (<span class="k">and</span> link-ovs (mapc #'delete-overlay link-ovs))))
+    `(jit-lock-bounds ,beg . ,end)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

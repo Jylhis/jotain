@@ -1,0 +1,103 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--kitty-display-virtual – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--kitty-display-virtual is a natively compiled function defined
+in ghostel-kitty.el.
+Display a virtual kitty graphics placement (unicode placeholders).">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--kitty-display-virtual</code></h1><p><span class="m"><code>ghostel--kitty-display-virtual</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">ghostel-kitty.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--kitty-display-virtual <a href="#:~:text=line.-,DATA"><span class="arg">DATA</span></a> <a href="#:~:text=PPM).-,IS-PNG"><span class="arg">IS-PNG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Display a virtual kitty graphics placement (unicode placeholders).
+<p>Searches the buffer for U+10EEEE placeholder characters and overlays
+per-row image slices on the placeholder regions of each line.
+<span class="arg">DATA</span> is a unibyte string (PNG or PPM).  <span class="arg">IS-PNG</span> is non-nil for PNG.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-kitty.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--kitty-display-virtual</span> (data is-png)
+  <span class="doc">"Display a virtual kitty graphics placement (unicode placeholders).
+Searches the buffer for U+10EEEE placeholder characters and overlays
+per-row image slices on the placeholder regions of each line.
+DATA is a unibyte string (PNG or PPM).  IS-PNG is non-nil for PNG."</span>
+  (<span class="k">when</span> (display-graphic-p)
+    (<span class="k">condition-case</span> err
+        (<span class="k">let</span> ((placeholder (string #x10EEEE))
+              (cw (default-font-width))
+              (ch (default-font-height))
+              grid-cols grid-rows img)
+          (<span class="k">save-excursion</span>
+            <span class="cd">;; </span><span class="c">First pass: measure the grid by walking the buffer line by
+</span>            <span class="cd">;; </span><span class="c">line and counting placeholders.  Tracks the *maximum* count
+</span>            <span class="cd">;; </span><span class="c">across rows so a short first row doesn't undersize the
+</span>            <span class="cd">;; </span><span class="c">image.  Avoids `</span><span class="m c">line-number-at-pos</span><span class="c">' in the search loop —
+</span>            <span class="cd">;; </span><span class="c">that's O(buffer size) per call and was the dominant cost
+</span>            <span class="cd">;; </span><span class="c">for large yazi previews.
+</span>            (goto-char (point-min))
+            (<span class="k">let</span> ((max-line-cols 0)
+                  (total-rows 0))
+              (<span class="k">while</span> (not (eobp))
+                (<span class="k">let</span> ((eol (line-end-position))
+                      (this-row 0))
+                  (<span class="k">save-excursion</span>
+                    (<span class="k">while</span> (search-forward placeholder eol t)
+                      (<span class="k">setq</span> this-row (1+ this-row))))
+                  (<span class="k">when</span> (&gt; this-row 0)
+                    (<span class="k">setq</span> total-rows (1+ total-rows))
+                    (<span class="k">when</span> (&gt; this-row max-line-cols)
+                      (<span class="k">setq</span> max-line-cols this-row))))
+                (forward-line 1))
+              (<span class="k">setq</span> grid-cols (max 1 max-line-cols))
+              (<span class="k">setq</span> grid-rows (max 1 total-rows)))
+            <span class="cd">;; </span><span class="c">Create the image sized to the full grid.  `:ascent center'
+</span>            <span class="cd">;; </span><span class="c">aligns each slice around the line's vertical center so it
+</span>            <span class="cd">;; </span><span class="c">tiles flush with adjacent slices regardless of the line's
+</span>            <span class="cd">;; </span><span class="c">baseline (the default `:ascent 50' splits the slice across
+</span>            <span class="cd">;; </span><span class="c">the baseline, leaving visible offsets between rows).
+</span>            (<span class="k">setq</span> img (create-image data (<span class="k">if</span> is-png 'png 'pbm) t
+                                    <span class="bi">:width</span> (* grid-cols cw)
+                                    <span class="bi">:height</span> (* grid-rows ch)
+                                    <span class="bi">:scale</span> 1
+                                    <span class="bi">:ascent</span> 'center))
+            <span class="cd">;; </span><span class="c">Second pass: apply per-row slices on placeholder regions.
+</span>            <span class="cd">;; </span><span class="c">Walks line by line — `</span><span class="m c">line-end-position</span><span class="c">' is O(1) with no
+</span>            <span class="cd">;; </span><span class="c">full-buffer scan per placeholder.
+</span>            (goto-char (point-min))
+            (<span class="k">let</span> ((row 0))
+              (<span class="k">while</span> (not (eobp))
+                (<span class="k">let*</span> ((eol (line-end-position))
+                       (line-start (<span class="k">save-excursion</span>
+                                     (search-forward placeholder eol t))))
+                  (<span class="k">when</span> line-start
+                    (<span class="k">let</span> ((line-end eol))
+                      (<span class="k">setq</span> line-start (1- line-start))
+                      (<span class="k">when</span> (&gt; line-end line-start)
+                        (add-text-properties
+                         line-start line-end
+                         (list 'display (list (list 'slice 0 (* row ch)
+                                                    (* grid-cols cw) ch)
+                                              img)
+                               'ghostel-kitty t))
+                        <span class="cd">;; </span><span class="c">Clamp the placeholder line to `</span><span class="m c">ch</span><span class="c">' so the slice
+</span>                        <span class="cd">;; </span><span class="c">tiles flush and the file-list column on the same
+</span>                        <span class="cd">;; </span><span class="c">line doesn't grow taller than non-image lines.
+</span>                        <span class="cd">;; </span><span class="c">The U+10EEEE fallback font and any Nerd Font
+</span>                        <span class="cd">;; </span><span class="c">icons would otherwise pull line height above the
+</span>                        <span class="cd">;; </span><span class="c">buffer's default font height, leaving gaps below
+</span>                        <span class="cd">;; </span><span class="c">the slice and above the next line's content.
+</span>                        (<span class="k">when</span> (&lt; line-end (point-max))
+                          (add-text-properties line-end (1+ line-end)
+                                               (list 'line-height ch
+                                                     'ghostel-kitty t)))
+                        (<span class="k">setq</span> ghostel--kitty-active t)))
+                    (<span class="k">setq</span> row (1+ row))))
+                (forward-line 1)))))
+      (<span class="w">error</span>
+       (<span class="k">setq</span> ghostel--kitty-last-error err)
+       (message <span class="s">"ghostel: kitty virtual image error: %S"</span> err)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

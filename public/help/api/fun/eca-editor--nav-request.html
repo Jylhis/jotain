@@ -1,0 +1,105 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-editor--nav-request – Emacs Documentation Online</title>
+<meta name="description" content="eca-editor--nav-request is a natively compiled function defined in
+eca-editor.el.
+Ask the editor for the METHOD locations of the symbol in PARAMS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-editor--nav-request</code></h1><p><span class="m"><code>eca-editor--nav-request</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-editor.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-editor--nav-request <a href="#:~:text=of-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=server-,REQUEST"><span class="arg">REQUEST</span></a> <a href="#:~:text=in-,PARAMS"><span class="arg">PARAMS</span></a> <a href="#:~:text=the-,METHOD"><span class="arg">METHOD</span></a> <a href="#:~:text=error.-,EXTRA-PARAMS"><span class="arg">EXTRA-PARAMS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Ask the editor for the <span class="arg">METHOD</span> locations of the symbol in <span class="arg">PARAMS</span>.
+<p>Respond to the server <span class="arg">REQUEST</span> of <span class="arg">SESSION</span> following the status
+contract of the <span class="m"><code>editor/getDefinition</code></span> and <span class="m"><code>editor/getReferences</code></span>
+requests: success, starting, no-server or error.  <span class="arg">EXTRA-PARAMS</span>
+are appended to the lsp request params.  Prefer lsp-mode, falling
+back to the buffer's xref backend (eglot, etags, ...) when
+lsp-mode cannot serve the file.  Return the response plist for
+sync answers or <span class="bi">:async</span> when the response will be sent later.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-editor.el</span>
+(<span class="k">defun</span> <span class="f">eca-editor--nav-request</span> (session request params method extra-params)
+  <span class="doc">"Ask the editor for the METHOD locations of the symbol in PARAMS.
+Respond to the server REQUEST of SESSION following the status
+contract of the `</span><span class="m doc">editor/getDefinition</span><span class="doc">' and `</span><span class="m doc">editor/getReferences</span><span class="doc">'
+requests: success, starting, no-server or error.  EXTRA-PARAMS
+are appended to the lsp request params.  Prefer lsp-mode, falling
+back to the buffer's xref backend (eglot, etags, ...) when
+lsp-mode cannot serve the file.  Return the response plist for
+sync answers or `</span><span class="m doc">:async</span><span class="doc">' when the response will be sent later."</span>
+  (<span class="k">let*</span> ((uri (plist-get params <span class="bi">:uri</span>))
+         (position (plist-get params <span class="bi">:position</span>))
+         (path (<span class="k">and</span> uri (eca--uri-to-path uri))))
+    (<span class="k">cond</span>
+     ((<span class="k">or</span> (null path) (not (file-exists-p path)))
+      (list <span class="bi">:status</span> <span class="s">"error"</span>
+            <span class="bi">:message</span> (format <span class="s">"File not found: %s"</span> (<span class="k">or</span> path uri))))
+
+     ((not (eca-editor--lsp-nav-available-p))
+      (<span class="k">with-current-buffer</span> (eca-editor--file-buffer path)
+        (eca-editor--xref-fallback
+         session request params method
+         (list <span class="bi">:status</span> <span class="s">"no-server"</span>
+               <span class="bi">:message</span> <span class="s">"No lsp-mode and no xref backend available for this file"</span>))))
+
+     (t
+      (<span class="k">with-current-buffer</span> (eca-editor--file-buffer path)
+        (<span class="k">let</span> ((workspaces (eca-editor--lsp-buffer-workspaces)))
+          (<span class="k">cond</span>
+           <span class="cd">;; </span><span class="c">Workspace attached but the server has not finished the
+</span>           <span class="cd">;; </span><span class="c">initialize handshake yet: requests would fail with a
+</span>           <span class="cd">;; </span><span class="c">misleading capability error, so ask the server to retry.
+</span>           ((<span class="k">and</span> workspaces
+                 (not (eca-editor--lsp-workspaces-ready-p workspaces)))
+            (list <span class="bi">:status</span> <span class="s">"starting"</span>))
+
+           (workspaces
+            (<span class="k">condition-case</span> err
+                (<span class="k">progn</span>
+                  (eca-editor--lsp-request-async
+                   method
+                   (append (list <span class="bi">:textDocument</span> (list <span class="bi">:uri</span> (eca--path-to-uri path))
+                                 <span class="bi">:position</span> (list <span class="bi">:line</span> (max 0 (1- (<span class="k">or</span> (plist-get position <span class="bi">:line</span>) 1)))
+                                                 <span class="bi">:character</span> (max 0 (1- (<span class="k">or</span> (plist-get position <span class="bi">:character</span>) 1)))))
+                           extra-params)
+                   (<span class="k">lambda</span> (result)
+                     (eca-api-send-request-response
+                      session request
+                      (list <span class="bi">:status</span> <span class="s">"success"</span>
+                            <span class="bi">:locations</span> (eca-editor--lsp-locations-&gt;eca result))))
+                   (<span class="k">lambda</span> (err)
+                     (eca-api-send-request-response
+                      session request
+                      (list <span class="bi">:status</span> <span class="s">"error"</span>
+                            <span class="bi">:message</span> (eca-editor--lsp-error-message err)))))
+                  <span class="bi">:async</span>)
+              <span class="cd">;; </span><span class="c">lsp-mode can signal synchronously, e.g. the capability
+</span>              <span class="cd">;; </span><span class="c">check; answer error instead of dying in the filter.
+</span>              (<span class="w">error</span> (list <span class="bi">:status</span> <span class="s">"error"</span>
+                           <span class="bi">:message</span> (error-message-string err)))))
+
+           ((eca-editor--lsp-known-root-p path)
+            (<span class="k">condition-case</span> err
+                (<span class="k">if</span> (eca-editor--lsp-start)
+                    (list <span class="bi">:status</span> <span class="s">"starting"</span>)
+                  (eca-editor--xref-fallback
+                   session request params method
+                   (list <span class="bi">:status</span> <span class="s">"no-server"</span>
+                         <span class="bi">:message</span> <span class="s">"No installed lsp-mode client for this file's major mode and no xref backend"</span>)))
+              (<span class="w">error</span> (eca-editor--xref-fallback
+                      session request params method
+                      (list <span class="bi">:status</span> <span class="s">"no-server"</span>
+                            <span class="bi">:message</span> (error-message-string err))))))
+
+           (t
+            (eca-editor--xref-fallback
+             session request params method
+             (list <span class="bi">:status</span> <span class="s">"no-server"</span>
+                   <span class="bi">:message</span> <span class="s">"No lsp-mode workspace and no xref backend for this file; start lsp or eglot in its project once"</span>))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--fd-make-builder – Emacs Documentation Online</title>
+<meta name="description" content="consult--fd-make-builder is a natively compiled function defined in
+consult.el.
+Build find command line, finding across PATHS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--fd-make-builder</code></h1><p><span class="m"><code>consult--fd-make-builder</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--fd-make-builder <a href="#:~:text=across-,PATHS"><span class="arg">PATHS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Build find command line, finding across <span class="arg">PATHS</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+<span class="cd">;;;;; </span><span class="c">Command: consult-fd
+</span>
+(<span class="k">defun</span> <span class="f">consult--fd-make-builder</span> (paths)
+  <span class="doc">"Build find command line, finding across PATHS."</span>
+  (<span class="k">let</span> ((cmd (consult--build-args consult-fd-args)))
+    (<span class="k">lambda</span> (input)
+      (<span class="k">pcase-let*</span> ((`(,arg . ,opts) (consult--command-split input))
+                   (flags (append cmd opts))
+                   (ignore-case
+                    (<span class="k">and</span> (not (<span class="k">or</span> (member <span class="s">"-s"</span> flags) (member <span class="s">"--case-sensitive"</span> flags)))
+                         (<span class="k">or</span> (member <span class="s">"-i"</span> flags) (member <span class="s">"--ignore-case"</span> flags)
+                             (<span class="k">let</span> (case-fold-search)
+                               <span class="cd">;; </span><span class="c">Case insensitive if there are no uppercase letters
+</span>                               (not (string-match-p <span class="s">"[[:upper:]]"</span> arg)))))))
+        (<span class="k">if</span> (<span class="k">or</span> (member <span class="s">"-F"</span> flags) (member <span class="s">"--fixed-strings"</span> flags)
+                (member <span class="s">"-g"</span> flags) (member <span class="s">"--glob"</span> flags))
+            (<span class="k">when-let*</span> ((args (consult--split-escaped arg)))
+              (cons (append cmd opts
+                            (mapcan (<span class="k">lambda</span> (x) `(<span class="s">"--and"</span> ,x))
+                                    (<span class="k">if</span> (<span class="k">or</span> (member <span class="s">"-g"</span> flags) (member <span class="s">"--glob"</span> flags))
+                                        (mapcar (<span class="k">lambda</span> (x) (concat <span class="s">"**/"</span> x)) args)
+                                      args))
+                            (mapcan (<span class="k">lambda</span> (x) `(<span class="s">"--search-path"</span> ,x)) paths))
+                    (apply-partially #'consult--highlight-literals args ignore-case)))
+          (<span class="k">pcase-let</span> ((`(,re . ,hl) (consult--compile-regexp arg 'pcre ignore-case)))
+             (<span class="k">when</span> (<span class="k">or</span> re opts) <span class="cd">;; </span><span class="c">Either option or regexp must be provided
+</span>              (cons (append cmd opts
+                            (mapcan (<span class="k">lambda</span> (x) `(<span class="s">"--and"</span> ,x)) re)
+                            (mapcan (<span class="k">lambda</span> (x) `(<span class="s">"--search-path"</span> ,x)) paths))
+                    hl))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

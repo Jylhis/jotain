@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--context-bar-allocate – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--context-bar-allocate is a natively compiled function defined
+in eca-chat.el.
+Allocate CELLS whole cells across TOKENS by proportion.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--context-bar-allocate</code></h1><p><span class="m"><code>eca-chat--context-bar-allocate</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--context-bar-allocate <a href="#:~:text=across-,TOKENS"><span class="arg">TOKENS</span></a> <a href="#:~:text=Allocate-,CELLS"><span class="arg">CELLS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Allocate <span class="arg">CELLS</span> whole cells across <span class="arg">TOKENS</span> by proportion.
+<p>Every positive entry gets at least one cell when <span class="arg">CELLS</span> allows it; the
+result is a list of non-negative integers summing to <span class="arg">CELLS</span> (or to the
+number of cells available when there are more categories than cells).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--context-bar-allocate</span> (tokens cells)
+  <span class="doc">"Allocate CELLS whole cells across TOKENS by proportion.
+Every positive entry gets at least one cell when CELLS allows it; the
+result is a list of non-negative integers summing to CELLS (or to the
+number of cells available when there are more categories than cells)."</span>
+  (<span class="k">let*</span> ((n (length tokens))
+         (positives (cl-count-if (<span class="k">lambda</span> (tk) (&gt; tk 0)) tokens)))
+    (<span class="k">cond</span>
+     ((<span class="k">or</span> (&lt;= cells 0) (zerop positives)) (make-list n 0))
+     ((&lt;= cells positives)
+      <span class="cd">;; </span><span class="c">Too tight for all: one cell each to the CELLS largest categories.
+</span>      (<span class="k">let</span> ((out (make-list n 0)))
+        (<span class="k">dolist</span> (i (seq-take (eca-chat--context-bar-indices-by-tokens tokens) cells))
+          (<span class="k">when</span> (&gt; (nth i tokens) 0) (<span class="k">setf</span> (nth i out) 1)))
+        out))
+     (t
+      <span class="cd">;; </span><span class="c">One cell per positive category, then the rest by proportion.
+</span>      (<span class="k">let*</span> ((total (apply #'+ tokens))
+             (remaining (- cells positives))
+             (running 0) (prev 0)
+             (extra (mapcar (<span class="k">lambda</span> (tk)
+                              (<span class="k">setq</span> running (+ running tk))
+                              (<span class="k">let</span> ((cum (round (* remaining (/ (float running) total)))))
+                                (<span class="k">prog1</span> (- cum prev) (<span class="k">setq</span> prev cum))))
+                            tokens)))
+        (cl-mapcar (<span class="k">lambda</span> (tk e) (+ (<span class="k">if</span> (&gt; tk 0) 1 0) e)) tokens extra))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

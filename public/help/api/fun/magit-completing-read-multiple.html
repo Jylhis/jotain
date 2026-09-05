@@ -1,0 +1,82 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-completing-read-multiple – Emacs Documentation Online</title>
+<meta name="description" content="magit-completing-read-multiple is a natively compiled function defined
+in magit-base.el.
+Read multiple strings in the minibuffer, with completion.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-completing-read-multiple</code></h1><p><span class="m"><code>magit-completing-read-multiple</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">magit-base.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-completing-read-multiple <a href="#:~:text="><span class="arg">PROMPT</span></a> <a href="#:~:text=of-,TABLE"><span class="arg">TABLE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=various-,third"><span class="arg">PREDICATE</span></a> <a href="#:~:text="><span class="arg">REQUIRE-MATCH</span></a> <a href="#:~:text="><span class="arg">INITIAL-INPUT</span></a> <a href="#:~:text="><span class="arg">HIST</span></a> <a href="#:~:text="><span class="arg">DEF</span></a> <a href="#:~:text="><span class="arg">INHERIT-INPUT-METHOD</span></a> <a href="#:~:text=argument-,NO-SPLIT"><span class="arg">NO-SPLIT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Read multiple strings in the minibuffer, with completion.
+<p>Like <a href="../fun/completing-read-multiple.html"><code>completing-read-multiple</code></a> but don't mess with order of
+<span class="arg">TABLE</span> and take an additional argument <span class="arg">NO-SPLIT</span>, which causes
+the user input to be returned as a single unmodified string.
+Also work around various incompatible features of various
+third-party completion frameworks.
+<h2>Aliases</h2>
+<p><a href="../fun/magit-completing-read-multiple%2A.html"><code>magit-completing-read-multiple*</code></a> (obsolete since Magit-Section 4.0.0)
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-base.el</span>
+(<span class="k">defun</span> <span class="f">magit-completing-read-multiple</span>
+    ( prompt table <span class="ty">&amp;optional</span> predicate require-match initial-input
+      hist def inherit-input-method
+      no-split)
+  <span class="doc">"Read multiple strings in the minibuffer, with completion.
+Like `</span><span class="m doc">completing-read-multiple</span><span class="doc">' but don't mess with order of
+TABLE and take an additional argument NO-SPLIT, which causes
+the user input to be returned as a single unmodified string.
+Also work around various incompatible features of various
+third-party completion frameworks."</span>
+  (<span class="k">cl-letf*</span>
+      (<span class="cd">;; </span><span class="c">To implement NO-SPLIT we have to manipulate the respective
+</span>       <span class="cd">;; </span><span class="c">`</span><span class="m c">split-string</span><span class="c">' invocation.  We cannot simply advice it to
+</span>       <span class="cd">;; </span><span class="c">return the input string because `</span><span class="m c">SELECTRUM</span><span class="c">' would choke on
+</span>       <span class="cd">;; </span><span class="c">that string.  Use a variable to pass along the raw user
+</span>       <span class="cd">;; </span><span class="c">input string. aa5f098ab
+</span>       (input nil)
+       (split-string (symbol-function #'split-string))
+       ((symbol-function #'split-string)
+        (<span class="k">lambda</span> (string <span class="ty">&amp;optional</span> separators omit-nulls trim)
+          (<span class="k">when</span> (<span class="k">and</span> no-split
+                     (equal separators crm-separator)
+                     (equal omit-nulls t))
+            (<span class="k">setq</span> input string))
+          (funcall split-string string separators omit-nulls trim)))
+       <span class="cd">;; </span><span class="c">Add the default to the table if absent, which is necessary
+</span>       <span class="cd">;; </span><span class="c">because we don't add it to the prompt for some frameworks.
+</span>       (table (<span class="k">if</span> (<span class="k">and</span> def
+                       (listp table)
+                       (not (listp (car table)))
+                       (not (member def table)))
+                  (cons def table)
+                table))
+       <span class="cd">;; </span><span class="c">Prevent `</span><span class="m c">BUILT-IN</span><span class="c">' completion from messing up our existing
+</span>       <span class="cd">;; </span><span class="c">order of the completion candidates. aa5f098ab
+</span>       (table (magit--completion-table table))
+       <span class="cd">;; </span><span class="c">Prevent `</span><span class="m c">IVY</span><span class="c">' from messing up our existing order. c7af78726
+</span>       (ivy-sort-matches-functions-alist nil)
+       <span class="cd">;; </span><span class="c">Prevent `</span><span class="m c">HELM</span><span class="c">' from messing up our existing order.  6fcf994bd
+</span>       (helm-completion-in-region-default-sort-fn nil)
+       <span class="cd">;; </span><span class="c">Prevent `</span><span class="m c">HELM</span><span class="c">' from automatically appending the separator,
+</span>       <span class="cd">;; </span><span class="c">which is counterproductive when NO-SPLIT is non-nil and/or
+</span>       <span class="cd">;; </span><span class="c">when reading commit ranges. 798aff564
+</span>       (helm-crm-default-separator
+        (<span class="k">if</span> no-split nil (<span class="k">bound-and-true-p</span> helm-crm-default-separator)))
+       <span class="cd">;; </span><span class="c">And now, the moment we have all been waiting for...
+</span>       (values (completing-read-multiple
+                (magit--format-prompt prompt def)
+                table predicate
+                (<span class="k">if</span> (eq require-match 'any) nil require-match)
+                initial-input hist def inherit-input-method)))
+    (<span class="k">when</span> (<span class="k">and</span> (eq require-match 'any)
+               (not values))
+      (<span class="w">user-error</span> <span class="s">"Nothing selected"</span>))
+    (<span class="k">if</span> no-split input values)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

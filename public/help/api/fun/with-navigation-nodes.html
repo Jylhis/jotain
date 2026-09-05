@@ -1,0 +1,73 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: with-navigation-nodes – Emacs Documentation Online</title>
+<meta name="description" content="with-navigation-nodes is a macro defined in combobulate-navigation.el.
+Invoke BODY with a list of specific navigational nodes, and maybe advance point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>with-navigation-nodes</code></h1><p><span class="m"><code>with-navigation-nodes</code></span> is a macro defined in <span class="bt">combobulate-navigation.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">with-navigation-nodes</span> (<span class="ty">&amp;key</span> (<a href="#:~:text="><span class="arg">NODES</span></a> nil) <a href="#:~:text="><span class="arg">SKIP-PREFIX</span></a> <a href="#:~:text="><span class="arg">BACKWARD</span></a> (<a href="#:~:text="><span class="arg">SKIP-NEWLINE</span></a> <a href="#:~:text="><span class="arg">t</span></a>) (<a href="#:~:text="><span class="arg">PROCEDURES</span></a> <a href="#:~:text=non--,nil"><span class="arg">nil</span></a>)) <span class="ty">&amp;rest</span> <a href="#:~:text=Invoke-,BODY"><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Invoke <span class="arg">BODY</span> with a list of specific navigational nodes, and maybe advance point.
+<p>If <span class="bi">:nodes</span> is non-<span class="arg">nil</span>, it must be a list of legitimate tree
+sitter node types to <a href="../fun/let.html"><code>let</code></a>-bind to
+<a href="../var/combobulate-navigable-nodes.html"><code>combobulate-navigable-nodes</code></a>. If <span class="arg">nil</span>, or not specified,
+use the default nodes.
+<p>If <span class="bi">:skip-prefix</span> is non-<span class="arg">nil</span>, then skip forward (unless
+<br><span class="bi">:backward</span> is set) in the direction, skipping past
+<br><a href="../var/combobulate-skip-prefix-regexp.html"><code>combobulate-skip-prefix-regexp</code></a> characters.
+<p>If an error is raised during <span class="arg">BODY</span>, then reset the point to its
+original position.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-navigation.el</span>
+(<span class="k">cl-defmacro</span> <span class="f">with-navigation-nodes</span> ((<span class="ty">&amp;key</span> (nodes nil) skip-prefix backward (skip-newline t) (procedures nil)) <span class="ty">&amp;rest</span> body)
+  <span class="doc">"Invoke BODY with a list of specific navigational nodes, and maybe advance point.
+
+If `</span><span class="m doc">:nodes</span><span class="doc">' is non-nil, it must be a list of legitimate tree
+sitter node types to `</span><span class="m doc">let</span><span class="doc">'-bind to
+`</span><span class="m doc">combobulate-navigable-nodes</span><span class="doc">'. If nil, or not specified,
+use the default nodes.
+
+If `</span><span class="m doc">:skip-prefix</span><span class="doc">' is non-nil, then skip forward (unless
+`</span><span class="m doc">:backward</span><span class="doc">' is set) in the direction, skipping past
+`</span><span class="m doc">combobulate-skip-prefix-regexp</span><span class="doc">' characters.
+
+If an error is raised during BODY, then reset the point to its
+original position."</span>
+  (<span class="k">declare</span> (indent 1) (debug (sexp body)))
+  (<span class="k">let</span> ((--old-pos (gensym))
+        (--err (gensym)))
+    `(<span class="k">let*</span> ((procedure-value
+             (<span class="k">and</span>
+              (not (equal ',procedures nil))
+              ,procedures))
+            (combobulate-navigable-nodes
+             (<span class="k">or</span> ,nodes
+                 (<span class="k">when</span> (<span class="k">and</span> procedure-value (not ,nodes))
+                   (combobulate-procedure-collect-activation-nodes
+                    procedure-value))
+                 (<span class="k">combobulate-read</span> default-nodes)
+                 (combobulate-procedure-collect-activation-nodes
+                  (<span class="k">combobulate-read</span> procedures-default))))
+            (combobulate-default-procedures procedure-value))
+       <span class="cd">;; </span><span class="c">keep the old position around: if we skip chars around but
+</span>       <span class="cd">;; </span><span class="c">`</span><span class="m c">body</span><span class="c">' fails with an error we want to snap back.
+</span>       (<span class="k">let</span> ((,--old-pos (point))
+             (,--err t))
+         (<span class="k">when</span> ,skip-prefix
+           (<span class="k">if</span> ,backward
+               (skip-chars-backward
+                (<span class="k">if</span> ,skip-newline combobulate-skip-prefix-regexp
+                  combobulate-skip-prefix-regexp-no-newline))
+             (combobulate-skip-whitespace-forward ,skip-newline)))
+         <span class="cd">;; </span><span class="c">preserves call stack in case of an error
+</span>         (<span class="k">unwind-protect</span>
+             (<span class="k">prog1</span> (<span class="k">progn</span> ,@body)
+               (<span class="k">setq</span> ,--err nil))
+           (<span class="k">when</span> ,--err (goto-char ,--old-pos))
+           nil)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

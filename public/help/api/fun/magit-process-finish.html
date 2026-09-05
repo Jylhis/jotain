@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-process-finish – Emacs Documentation Online</title>
+<meta name="description" content="magit-process-finish is a natively compiled function defined in
+magit-process.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-process-finish</code></h1><p><span class="m"><code>magit-process-finish</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-process.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-process-finish <span class="arg">ARG</span> <span class="ty">&amp;optional</span> <span class="arg">PROCESS-BUF</span> <span class="arg">COMMAND-BUF</span> <span class="arg">DEFAULT-DIR</span> <span class="arg">SECTION</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-process.el</span>
+(<span class="k">defun</span> <span class="f">magit-process-finish</span> (arg <span class="ty">&amp;optional</span> process-buf _command-buf
+                                 default-dir section)
+  (<span class="k">unless</span> (integerp arg)
+    (<span class="k">setq</span> process-buf (process-buffer arg))
+    (<span class="k">setq</span> default-dir (process-get arg 'default-dir))
+    (<span class="k">setq</span> section     (process-get arg 'section))
+    (<span class="k">setq</span> arg         (process-exit-status arg)))
+  (<span class="k">when</span> (fboundp 'dired-uncache)
+    (dired-uncache default-dir))
+  (<span class="k">when</span> (buffer-live-p process-buf)
+    (<span class="k">with-current-buffer</span> process-buf
+      (magit-process-finish-section section arg)))
+  (<span class="k">if</span> (= arg 0)
+      (magit-process-unset-mode-line default-dir)
+    (<span class="k">let</span> ((msg (magit-process-error-summary process-buf section)))
+      (<span class="k">if</span> magit-process-display-mode-line-error
+          (magit-process-set-mode-line-error-status
+           (<span class="k">or</span> (magit-process-error-tooltip process-buf section) msg))
+        (magit-process-unset-mode-line default-dir))
+      (<span class="k">when</span> (buffer-live-p process-buf)
+        (<span class="k">with-current-buffer</span> process-buf
+          (<span class="k">when-let</span> ((status-buf (magit-get-mode-buffer 'magit-status-mode)))
+            (<span class="k">with-current-buffer</span> status-buf
+              (<span class="k">setq</span> magit-this-error msg)))))
+      (<span class="k">let</span> ((usage
+             (<span class="k">and</span> magit-show-process-buffer-hint
+                  (<span class="k">if-let</span> ((keys (where-is-internal 'magit-process-buffer)))
+                      (format <span class="s">"Type %s to see %S for details"</span>
+                              (key-description (car keys)) process-buf)
+                    (format <span class="s">"See %S for details"</span> process-buf)))))
+        (<span class="k">if</span> magit-process-raise-error
+            (<span class="w">signal</span> 'magit-git-error
+                    (list msg (<span class="k">or</span> usage (list 'in default-dir))))
+          (message <span class="s">"Git error: %s"</span>
+                   (concat msg (<span class="k">and</span> usage (format <span class="s">" [%s]"</span> usage))))))))
+  arg)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

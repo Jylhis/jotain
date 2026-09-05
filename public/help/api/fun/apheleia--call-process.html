@@ -1,0 +1,136 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apheleia--call-process – Emacs Documentation Online</title>
+<meta name="description" content="apheleia--call-process is a natively compiled function defined in
+apheleia-formatters.el.
+Helper to synchronously run a formatter process.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apheleia--call-process</code></h1><p><span class="m"><code>apheleia--call-process</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">apheleia-formatters.el</span>.
+<h2>Signature</h2>
+<pre><code>(apheleia--call-process <span class="ty">&amp;key</span> <a href="#:~:text=includes:-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=passing-,STDIN"><span class="arg">STDIN</span></a> <a href="#:~:text=the-,STDOUT"><span class="arg">STDOUT</span></a> <a href="#:~:text=and-,STDERR"><span class="arg">STDERR</span></a> <a href="#:~:text=runs-,COMMAND"><span class="arg">COMMAND</span></a> <a href="#:~:text="><span class="arg">REMOTE</span></a> <a href="#:~:text="><span class="arg">NOQUERY</span></a> <a href="#:~:text=and-,CONNECTION-TYPE"><span class="arg">CONNECTION-TYPE</span></a> <a href="#:~:text=finished-,CALLBACK"><span class="arg">CALLBACK</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Helper to synchronously run a formatter process.
+<p>This function essentially runs <span class="arg">COMMAND</span> synchronously passing <span class="arg">STDIN</span>
+as standard input and saving output to the <span class="arg">STDOUT</span> and <span class="arg">STDERR</span> buffers.
+Once the process is finished <span class="arg">CALLBACK</span> will be invoked with the exit
+code (see <a href="../fun/process-exit-status.html"><code>process-exit-status</code></a>) of the process.
+<p>This function accepts all the same arguments as <a href="../fun/apheleia--make-process.html"><code>apheleia--make-process</code></a>
+for simplicity, however some may not be used. This includes: <span class="arg">NAME</span>,
+NO-QUERY, and <span class="arg">CONNECTION-TYPE</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbykkl13khzh84lv9vw1bf1vijzg30fr-emacs-packages-deps/share/emacs/site-lisp/elpa/apheleia-20260817.2331/apheleia-formatters.el</span>
+(<span class="k">cl-defun</span> <span class="f">apheleia--call-process</span>
+    (<span class="ty">&amp;key</span> name stdin stdout stderr command
+          remote noquery connection-type callback)
+  <span class="doc">"Helper to synchronously run a formatter process.
+This function essentially runs COMMAND synchronously passing STDIN
+as standard input and saving output to the STDOUT and STDERR buffers.
+Once the process is finished CALLBACK will be invoked with the exit
+code (see `</span><span class="m doc">process-exit-status</span><span class="doc">') of the process.
+
+This function accepts all the same arguments as `</span><span class="m doc">apheleia--make-process</span><span class="doc">'
+for simplicity, however some may not be used. This includes: NAME,
+NO-QUERY, and CONNECTION-TYPE."</span>
+  (ignore name noquery connection-type)
+  (<span class="k">let*</span> ((run-on-remote (<span class="k">and</span> (eq apheleia-remote-algorithm 'remote)
+                             remote))
+	 <span class="cd">;; </span><span class="c">Resolve the formatter executable's path to ensure it's
+</span>	 <span class="cd">;; </span><span class="c">found
+</span>	 (command (cons (executable-find (car command) run-on-remote) (cdr command)))
+         (stderr-file (apheleia--make-temp-file run-on-remote <span class="s">"apheleia"</span>))
+         (args
+          (append
+           (list
+            <span class="cd">;; </span><span class="c">argv[0]
+</span>            (car command)
+            <span class="cd">;; </span><span class="c">If stdin we don't delete the STDIN buffer text with
+</span>            <span class="cd">;; </span><span class="c">`</span><span class="m c">call-process-region</span><span class="c">'. Otherwise we send no INFILE
+</span>            <span class="cd">;; </span><span class="c">argument to `</span><span class="m c">call-process</span><span class="c">'.
+</span>            (not stdin)
+            <span class="cd">;; </span><span class="c">stdout buffer and stderr file. `</span><span class="m c">call-process</span><span class="c">' cannot
+</span>            <span class="cd">;; </span><span class="c">capture stderr into a separate buffer, the best we can
+</span>            <span class="cd">;; </span><span class="c">do is save and read from a file.
+</span>            `(,stdout ,stderr-file)
+            <span class="cd">;; </span><span class="c">Do not re/display stdout as output is received.
+</span>            nil)
+           <span class="cd">;; </span><span class="c">argv[1:]
+</span>           (cdr command))))
+    (apheleia--log
+     'process <span class="s">"Sending stderr for process %s to tempfile %s"</span>
+     name stderr-file)
+    (<span class="k">unwind-protect</span>
+        (<span class="k">let</span> ((exit-status
+               (<span class="k">cl-letf*</span> ((message (symbol-function #'message))
+                          ((symbol-function #'message)
+                           (<span class="k">lambda</span> (format-string <span class="ty">&amp;rest</span> args)
+                             (<span class="k">unless</span> (string-prefix-p <span class="s">"Renaming"</span> (car args))
+                               (apply message format-string args)))))
+                 (<span class="k">cond</span>
+                  ((<span class="k">and</span> run-on-remote stdin)
+                   <span class="cd">;; </span><span class="c">There's no call-process variant for this, we'll have to
+</span>                   <span class="cd">;; </span><span class="c">copy STDIN to a remote temporary file, create a subshell
+</span>                   <span class="cd">;; </span><span class="c">on the remote that runs the formatter and passes the temp
+</span>                   <span class="cd">;; </span><span class="c">file as stdin and then deletes it.
+</span>                   (<span class="k">let*</span> ((remote-stdin
+                           (apheleia--make-temp-file
+                            run-on-remote <span class="s">"apheleia-stdin"</span>))
+                          <span class="cd">;; </span><span class="c">WARN: This assumes a POSIX compatible shell.
+</span>                          (shell
+                           (<span class="k">or</span> (<span class="k">bound-and-true-p</span> tramp-default-remote-shell)
+                               <span class="s">"sh"</span>))
+                          (shell-command
+                           (concat
+                            (mapconcat #'shell-quote-argument command <span class="s">" "</span>)
+                            <span class="s">" &lt; "</span>
+                            (shell-quote-argument
+                             (apheleia-formatters-local-buffer-file-name
+                              remote-stdin)))))
+                     (<span class="k">unwind-protect</span>
+                         (<span class="k">progn</span>
+                           (<span class="k">with-current-buffer</span> stdin
+                             (apheleia--write-region-silently
+                              nil nil remote-stdin))
+                           (apheleia--log
+                            'process
+                            <span class="s">"Using process-file to create process %s with %S"</span>
+                            name (list shell <span class="s">"-c"</span> shell-command))
+                           (process-file
+                            shell nil (nth 2 args) nil <span class="s">"-c"</span> shell-command))
+                       (delete-file remote-stdin))))
+                  (stdin
+                   (apheleia--log
+                    'process
+                    <span class="s">"Using call-process-region to create process %s with %S"</span>
+                    name command)
+                   (<span class="k">with-current-buffer</span> stdin
+                     (apply #'call-process-region
+                            (point-min) (point-max) args)))
+                  (run-on-remote
+                   (apheleia--log
+                    'process
+                    <span class="s">"Using process-file to create process %s with %S"</span>
+                    name command)
+                   (apply #'process-file args))
+                  (t
+                   (apheleia--log
+                    'process
+                    <span class="s">"Using process-file to create process %s with %S"</span>
+                    name command)
+                   (apply #'call-process args))))))
+          <span class="cd">;; </span><span class="c">Save stderr from STDERR-FILE back into the STDERR buffer.
+</span>          (<span class="k">with-current-buffer</span> stderr
+            (insert-file-contents stderr-file))
+          <span class="cd">;; </span><span class="c">I don't think it's possible to get here if the process
+</span>          <span class="cd">;; </span><span class="c">was interrupted, since we were running it synchronously,
+</span>          <span class="cd">;; </span><span class="c">so it should be ok to assume we pass nil to the callback.
+</span>          (funcall callback exit-status nil)
+          <span class="cd">;; </span><span class="c">We return nil because there's no live process that can be
+</span>          <span class="cd">;; </span><span class="c">returned.
+</span>          nil)
+      (delete-file stderr-file))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

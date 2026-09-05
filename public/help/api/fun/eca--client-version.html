@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca--client-version – Emacs Documentation Online</title>
+<meta name="description" content="eca--client-version is a natively compiled function defined in eca.el.
+Return the eca-emacs client version string.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca--client-version</code></h1><p><span class="m"><code>eca--client-version</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">eca.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca--client-version)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the eca-emacs client version string.
+<p>Tries git info first, then package.el version, then file modification date.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca.el</span>
+(<span class="k">defun</span> <span class="f">eca--client-version</span> ()
+  <span class="doc">"Return the eca-emacs client version string.
+Tries git info first, then package.el version, then file modification date."</span>
+  (<span class="k">let</span> ((lib-file (<span class="k">or</span> load-file-name (locate-library <span class="s">"eca"</span>))))
+    (<span class="k">when</span> lib-file
+      (<span class="k">let</span> ((lib-dir (file-name-directory lib-file)))
+        (<span class="k">or</span>
+         <span class="cd">;; </span><span class="c">Try git: SHA + date
+</span>         (<span class="k">when-let*</span> ((git-dir (locate-dominating-file lib-dir <span class="s">".git"</span>))
+                     (default-directory git-dir)
+                     (sha (<span class="k">ignore-errors</span>
+                            (string-trim
+                             (shell-command-to-string <span class="s">"git rev-parse --short HEAD 2&gt;/dev/null"</span>))))
+                     (date (<span class="k">ignore-errors</span>
+                             (string-trim
+                              (shell-command-to-string <span class="s">"git log -1 --format=%cd --date=short 2&gt;/dev/null"</span>)))))
+           (<span class="k">when</span> (<span class="k">and</span> (not (string-empty-p sha))
+                      (not (string-empty-p date))
+                      (not (string-match-p <span class="s">"fatal"</span> sha)))
+             (format <span class="s">"%s (%s)"</span> sha date)))
+         <span class="cd">;; </span><span class="c">Try package.el version
+</span>         (<span class="k">when</span> (<span class="k">bound-and-true-p</span> package-alist)
+           (<span class="k">when-let*</span> ((pkg-desc (cadr (assq 'eca package-alist))))
+             (package-version-join (package-desc-version pkg-desc))))
+         <span class="cd">;; </span><span class="c">Fallback: file modification date
+</span>         (<span class="k">when-let*</span> ((attrs (file-attributes lib-file))
+                     (mtime (file-attribute-modification-time attrs)))
+           (format <span class="s">"unknown (modified %s)"</span> (format-time-string <span class="s">"%Y-%m-%d"</span> mtime))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

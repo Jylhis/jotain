@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>early-init.el — jotain</title>
+<link rel="canonical" href="https://jotain.j10s.io/">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f8fb">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d0f14">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script src="/js/theme-init.js"></script>
+<link rel="stylesheet" href="/css/site.css">
+<link rel="stylesheet" href="/css/docs.css">
+</head>
+<body>
+<div class="frame">
+  <header class="tab-bar">
+    <div class="tab-brand"><a class="tab-brand-link" href="/"><span class="tab-prompt">jy ❯</span></a></div>
+    <nav class="tabs" aria-label="buffers">
+      <a class="tab" href="/#readme">README.org</a>
+      <a class="tab" href="/#man">*Man JOTAIN(7)*</a>
+      <a class="tab" href="/#keys">keybindings</a>
+      <span class="tab tab-current" aria-current="page">docs/configuration/early-init.mdx</span>
+    </nav>
+    <div class="tab-actions">
+      <a class="gh-link" href="https://github.com/Jylhis/jotain">github ⑂</a>
+      <button type="button" class="theme-btn" id="theme-btn" aria-label="toggle theme">☾</button>
+    </div>
+  </header>
+  <main class="buffer">
+    <article class="page docs-prose">
+<h1 id="early-initel">early-init.el</h1>
+<p><code>early-init.el</code> is loaded before <code>package.el</code> runs, before the first frame is drawn, and before <code>init.el</code> is evaluated. Anything that <em>must</em> happen that early lives here; everything else lives in <code>init.el</code> or one of the <code>lisp/init-*.el</code> modules.</p>
+<h2 id="garbage-collection">Garbage collection</h2>
+<p>The GC threshold is bumped to "effectively never" during startup; <code>init-core</code> restores a 16 MiB runtime value.</p>
+<pre class="elisp"><code>(setq gc-cons-threshold most-positive-fixnum
+      gc-cons-percentage 0.6)</code></pre>
+<h2 id="bidirectional-text">Bidirectional text</h2>
+<p>Jotain targets LTR-only usage, so disable the bidirectional reordering and parenthesis algorithms — they otherwise run on every redisplay and are measurable on large files.</p>
+<pre class="elisp"><code>(setq-default bidi-display-reordering nil
+              bidi-paragraph-direction &#39;left-to-right)
+(setopt bidi-inhibit-bpa t)</code></pre>
+<h2 id="load-preference">Load preference</h2>
+<p>Prefer newer source files to stale <code>.elc</code> in batch mode only. Interactive sessions keep <code>.elc</code> preference for speed.</p>
+<pre class="elisp"><code>(setq load-prefer-newer noninteractive)</code></pre>
+<h2 id="packageel-and-use-package">package.el and use-package</h2>
+<p><code>package.el</code> stays on and <code>package-quickstart</code> is enabled — Nix (and, in dev, devenv) already provides most packages via <code>load-path</code>, so startup is fast without any trickery. <code>use-package</code> is built in on Emacs 29+, so the only thing we configure before <code>init.el</code> loads is imenu support and <code>use-package-always-ensure</code>.</p>
+<pre class="elisp"><code>(setq package-quickstart-file
+      (expand-file-name &quot;var/package-quickstart.el&quot; user-emacs-directory)
+      package-quickstart t)
+(setq use-package-enable-imenu-support t
+      use-package-always-ensure t)</code></pre>
+<p><code>package-quickstart-file</code> <strong>must</strong> be pinned here, not in <code>init.el</code>: <code>startup.el</code> runs its automatic <code>package-activate-all</code> between <code>early-init.el</code> and <code>init.el</code>, and looks up the quickstart file at whatever path <code>package-quickstart-file</code> holds at that moment. Leaving it at its default puts the file outside <code>var/</code>, and Emacs never finds it on later startups — quickstart ends up paying its refresh + byte-compile cost on every <code>package-install</code> without providing any actual speedup.</p>
+<p>With <code>use-package-always-ensure</code> set to <code>t</code>, every <code>use-package</code> block defaults to "install if missing". Built-ins must opt out with <code>:ensure nil</code>.</p>
+<h3 id="silencing-a-quickstart-false-positive">Silencing a quickstart false-positive</h3>
+<p><code>package-quickstart-refresh</code> (called after every <code>package-install</code> via <code>package--quickstart-maybe-refresh</code>) internally re-calls <code>package-initialize</code>, which trips the "Unnecessary call to <code>package-initialize</code> in init file" warning even though the call is legitimate. Emacs's own code can't distinguish that internal self-call from a user one, so we suppress the warning type directly:</p>
+<pre class="elisp"><code>(with-eval-after-load &#39;warnings
+  (add-to-list &#39;warning-suppress-log-types &#39;(package reinitialization)))</code></pre>
+<h2 id="frame-chrome">Frame chrome</h2>
+<p>GUI chrome is disabled in <code>default-frame-alist</code> <em>before</em> the first frame is drawn — this is much faster than toggling the modes off afterwards.</p>
+<pre class="elisp"><code>(push &#39;(menu-bar-lines . 0) default-frame-alist)
+(push &#39;(tool-bar-lines . 0) default-frame-alist)
+(push &#39;(vertical-scroll-bars) default-frame-alist)
+(when (featurep &#39;ns)
+  (push &#39;(ns-transparent-titlebar . t) default-frame-alist)
+  (push &#39;(ns-appearance . dark) default-frame-alist))
+
+(setq inhibit-startup-screen t
+      inhibit-startup-message t
+      inhibit-startup-echo-area-message user-login-name
+      initial-scratch-message nil)</code></pre>
+<h2 id="byte-compiler-noise">Byte-compiler noise</h2>
+<p>Silence obsolete-symbol warnings from third-party packages we do not control. Real warnings still surface.</p>
+<pre class="elisp"><code>(setq byte-compile-warnings &#39;(not obsolete))</code></pre>
+<h2 id="font-caches">Font caches</h2>
+<p>Trade a bit of RAM for smoother redisplay.</p>
+<pre class="elisp"><code>(setq inhibit-compacting-font-caches t)
+(when (eq system-type &#39;darwin)
+  (setq ns-use-thin-smoothing t))</code></pre>
+<h2 id="native-compilation">Native compilation</h2>
+<p>On Emacs 30 with native compilation available, keep the eln-cache out of the config directory, silence the firehose of async warnings during init, and crank native-comp speed.</p>
+<pre class="elisp"><code>(when (and (fboundp &#39;native-comp-available-p)
+           (native-comp-available-p))
+  (setq native-comp-async-report-warnings-errors nil
+        native-comp-speed 2)
+  (when (fboundp &#39;startup-redirect-eln-cache)
+    (startup-redirect-eln-cache
+     (convert-standard-filename
+      (expand-file-name &quot;var/eln-cache/&quot; user-emacs-directory)))))</code></pre>
+<h2 id="tree-sitter-grammars">Tree-sitter grammars</h2>
+<p>Nix sets <code>TREE_SITTER_DIR</code> to point at the grammar bundle produced by <code>default.nix</code>; <code>early-init.el</code> picks it up and wires it into <code>treesit-extra-load-path</code>.</p>
+<pre class="elisp"><code>(when-let* ((ts-dir (getenv &quot;TREE_SITTER_DIR&quot;)))
+  (setq treesit-extra-load-path (list ts-dir)))</code></pre>
+<h2 id="terminal-aliases">Terminal aliases</h2>
+<p>Ghostty advertises <code>TERM=xterm-ghostty</code>, but Emacs does not ship <code>term/xterm-ghostty.el</code>. Aliasing to <code>xterm-256color</code> makes <code>term/xterm.el</code> load instead, restoring <code>modifyOtherKeys</code> and 24-bit colour. This must be set in <code>early-init.el</code> because <code>tty-run-terminal-initialization</code> fires before <code>init.el</code>.</p>
+<pre class="elisp"><code>(add-to-list &#39;term-file-aliases &#39;(&quot;xterm-ghostty&quot; . &quot;xterm-256color&quot;))</code></pre>
+    <nav class="keys-nav docs-nav"><a href="/docs/configuration/init/">← init.el</a><a href="/docs/configuration/packages/">Packages →</a></nav>
+    </article>
+  </main>
+  <footer class="modeline">
+    <span>-UUU:**--</span>
+    <span class="modeline-buffer">docs/configuration/early-init.mdx</span>
+    <span class="modeline-pos">Top L1</span>
+    <span>(Markdown)</span>
+    <span class="modeline-version">U:jotain 2026.07</span>
+  </footer>
+  <div class="minibuffer">
+    <span class="echo">C-x C-f <a href="/docs/">/docs/</a> · <a href="/manual/">manual</a> · <a href="/man/">man</a> · <a href="/info/">info</a> · ☾ theme</span>
+  </div>
+</div>
+<script src="/js/docs.js"></script>
+</body>
+</html>

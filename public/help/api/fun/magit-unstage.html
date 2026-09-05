@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-unstage – Emacs Documentation Online</title>
+<meta name="description" content="magit-unstage is an interactive and natively compiled function defined
+in magit-apply.el.
+Remove the change at point from the staging area.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-unstage</code></h1><p><span class="m"><code>magit-unstage</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">magit-apply.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-unstage)
+</code></pre>
+<h2>Documentation</h2>
+<p>Remove the change at point from the staging area.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-apply.el</span>
+<span class="cd">;;;; </span><span class="c">Unstage
+</span>
+(<span class="k">defun</span> <span class="f">magit-unstage</span> ()
+  <span class="doc">"Remove the change at point from the staging area."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">when-let</span> ((s (magit-apply--get-selection))
+             (type (magit-diff-type))
+             (scope (magit-diff-scope)))
+    (<span class="k">pcase</span> (list type scope
+                 (magit-apply--ignore-whitespace-p s type scope))
+      (`(untracked     ,_  ,_) (<span class="w">user-error</span> <span class="s">"Cannot unstage untracked changes"</span>))
+      (`(unstaged    file  ,_) (magit-unstage-intent (list (<span class="k">oref</span> s value))))
+      (`(unstaged   files  ,_) (magit-unstage-intent (magit-region-values nil t)))
+      (`(unstaged      ,_  ,_) (<span class="w">user-error</span> <span class="s">"Already unstaged"</span>))
+      (`(staged    region  ,_) (magit-apply-region s <span class="s">"--reverse"</span> <span class="s">"--cached"</span>))
+      (`(staged      hunk  ,_) (magit-apply-hunk   s <span class="s">"--reverse"</span> <span class="s">"--cached"</span>))
+      (`(staged     hunks  ,_) (magit-apply-hunks  s <span class="s">"--reverse"</span> <span class="s">"--cached"</span>))
+      ('(staged      file   t) (magit-apply-diff   s <span class="s">"--reverse"</span> <span class="s">"--cached"</span>))
+      ('(staged     files   t) (magit-apply-diffs  s <span class="s">"--reverse"</span> <span class="s">"--cached"</span>))
+      ('(staged      list   t) (magit-apply-diffs  s <span class="s">"--reverse"</span> <span class="s">"--cached"</span>))
+      ('(staged      file nil) (magit-unstage-1 (list (<span class="k">oref</span> s value))))
+      ('(staged     files nil) (magit-unstage-1 (magit-region-values nil t)))
+      ('(staged      list nil) (magit-unstage-all))
+      (`(committed     ,_  ,_) (<span class="k">if</span> magit-unstage-committed
+                                   (magit-reverse-in-index)
+                                 (<span class="w">user-error</span> <span class="s">"Cannot unstage committed changes"</span>)))
+      (`(undefined     ,_  ,_) (<span class="w">user-error</span> <span class="s">"Cannot unstage this change"</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

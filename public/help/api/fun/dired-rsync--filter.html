@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dired-rsync--filter – Emacs Documentation Online</title>
+<meta name="description" content="dired-rsync--filter is a natively compiled function defined in
+dired-rsync.el.
+PROC rsync process filter, insert STRING into buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dired-rsync--filter</code></h1><p><span class="m"><code>dired-rsync--filter</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dired-rsync.el</span>.
+<h2>Signature</h2>
+<pre><code>(dired-rsync--filter <a href="#:~:text=Documentation-,PROC"><span class="arg">PROC</span></a> <a href="#:~:text=insert-,STRING"><span class="arg">STRING</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p><span class="arg">PROC</span> rsync process filter, insert <span class="arg">STRING</span> into buffer.
+<p>This gets called with string whenever there is new data to
+display in the process buffer.  We scan the string to extract useful
+information and update the dired-rsync-modeline-status.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kxyb1l0wdk5rkn342k748mzcbfgargan-emacs-packages-deps/share/emacs/site-lisp/elpa/dired-rsync-20260716.1319/dired-rsync.el</span>
+(<span class="k">defun</span> <span class="f">dired-rsync--filter</span> (proc string)
+  <span class="doc">"`</span><span class="m doc">PROC</span><span class="doc">' rsync process filter, insert `</span><span class="m doc">STRING</span><span class="doc">' into buffer.
+
+This gets called with string whenever there is new data to
+display in the process buffer.  We scan the string to extract useful
+information and update the dired-rsync-modeline-status."</span>
+
+  <span class="cd">;; </span><span class="c">scan the new string
+</span>  (<span class="k">let</span> ((err nil) (indicator nil))
+    <span class="cd">;; </span><span class="c">Grab % complete string
+</span>    (<span class="k">when</span> (string-match dired-rsync-percent-complete-regex string)
+      (<span class="k">setq</span> indicator (match-string 0 string)))
+    <span class="cd">;; </span><span class="c">check for prompt
+</span>    (<span class="k">when</span> (string-match dired-rsync-passphrase-stall-regex string)
+      (process-send-string proc (concat (read-passwd string) <span class="s">"\n"</span>)))
+    <span class="cd">;; </span><span class="c">update if anything to report
+</span>    (<span class="k">when</span> (<span class="k">or</span> err indicator)
+      (dired-rsync--update-modeline err indicator)))
+
+  <span class="cd">;; </span><span class="c">update the process buffer (we could just drop?)
+</span>  (<span class="k">let</span> ((old-process-mark (process-mark proc)))
+    <span class="cd">;; </span><span class="c">do the normal buffer text insertion
+</span>    (<span class="k">when</span> (buffer-live-p (process-buffer proc))
+      (<span class="k">with-current-buffer</span> (process-buffer proc)
+        (<span class="k">let</span> ((moving (= (point) old-process-mark)))
+          (<span class="k">save-excursion</span>
+            <span class="cd">;; </span><span class="c">Insert the text, advancing the process marker.
+</span>            (goto-char old-process-mark)
+            (insert string)
+            (set-marker (process-mark proc) (point))
+            <span class="cd">;; </span><span class="c">Delete old text upto the newline
+</span>            (goto-char (point-max))
+            (<span class="k">when</span> (search-backward <span class="s">"\r"</span> nil t)
+              (delete-region (point-min) (+ 1 (match-beginning 0)))))
+          (<span class="k">if</span> moving
+              (goto-char (process-mark proc))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

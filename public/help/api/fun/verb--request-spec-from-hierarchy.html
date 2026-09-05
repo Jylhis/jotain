@@ -1,0 +1,68 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb--request-spec-from-hierarchy – Emacs Documentation Online</title>
+<meta name="description" content="verb--request-spec-from-hierarchy is a natively compiled function
+defined in verb.el.
+Return a request spec generated from the headings hierarchy.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb--request-spec-from-hierarchy</code></h1><p><span class="m"><code>verb--request-spec-from-hierarchy</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">verb.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb--request-spec-from-hierarchy <span class="ty">&amp;rest</span> <a href="#:~:text=in-,SPECS"><span class="arg">SPECS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a request spec generated from the headings hierarchy.
+<p>To do this, use <a href="../fun/verb--request-spec-from-heading.html"><code>verb--request-spec-from-heading</code></a> for the current
+heading, for that heading's parent, and so on until the root of the
+hierarchy is reached.
+Once all the request specs have been collected, override them in
+inverse order according to the rules described in
+<a href="../fun/verb-request-spec-override.html"><code>verb-request-spec-override</code></a>.  After that, override that result with
+all the request specs in <span class="arg">SPECS</span>, in the order they were passed in.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb.el</span>
+(<span class="k">defun</span> <span class="f">verb--request-spec-from-hierarchy</span> (<span class="ty">&amp;rest</span> specs)
+  <span class="doc">"Return a request spec generated from the headings hierarchy.
+To do this, use `</span><span class="m doc">verb--request-spec-from-heading</span><span class="doc">' for the current
+heading, for that heading's parent, and so on until the root of the
+hierarchy is reached.
+Once all the request specs have been collected, override them in
+inverse order according to the rules described in
+`</span><span class="m doc">verb-request-spec-override</span><span class="doc">'.  After that, override that result with
+all the request specs in SPECS, in the order they were passed in."</span>
+  <span class="cd">;; </span><span class="c">Load all prelude verb-var's before rest of the spec to be complete, unless
+</span>  <span class="cd">;; </span><span class="c">specs already exists which means called from ob-verb block and loaded.
+</span>  (<span class="k">unless</span> specs
+    (verb--load-preludes-from-hierarchy))
+  (<span class="k">let</span> ((p (point))
+        done final-spec)
+    (<span class="k">save-restriction</span>
+      (widen)
+      (<span class="k">save-excursion</span>
+        <span class="cd">;; </span><span class="c">First, go back to the current heading, if possible. If no
+</span>        <span class="cd">;; </span><span class="c">heading is found, then don't attempt to read anything.
+</span>        (<span class="k">setq</span> done (not (verb--back-to-heading)))
+        <span class="cd">;; </span><span class="c">If there's at least one heading above us, go up through the
+</span>        <span class="cd">;; </span><span class="c">headings tree taking a request specification from each level.
+</span>        (<span class="k">while</span> (not done)
+          (<span class="k">let</span> ((spec (verb--request-spec-from-heading p)))
+            (<span class="k">when</span> spec (<span class="k">push</span> spec specs)))
+          (<span class="k">setq</span> done (not (verb--up-heading))))))
+    (<span class="k">if</span> specs
+        (<span class="k">progn</span>
+          (<span class="k">setq</span> final-spec (car specs))
+          (<span class="k">when</span> (&lt; 1 (length specs))
+            (<span class="k">dolist</span> (spec (cdr specs))
+              <span class="cd">;; </span><span class="c">Override spec 1 with spec 2, and the result with spec
+</span>              <span class="cd">;; </span><span class="c">3, then with 4, etc.
+</span>              (<span class="k">setq</span> final-spec (verb-request-spec-override final-spec
+                                                           spec))))
+          <span class="cd">;; </span><span class="c">Process and return.
+</span>          (verb--request-spec-post-process final-spec))
+      (<span class="w">user-error</span> (concat <span class="s">"No request specifications found\n"</span>
+                          <span class="s">"Remember to tag your headlines with :%s:"</span>)
+                  verb-tag))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

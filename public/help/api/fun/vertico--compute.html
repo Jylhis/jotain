@@ -1,0 +1,87 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vertico--compute – Emacs Documentation Online</title>
+<meta name="description" content="vertico--compute is a natively compiled function defined in
+vertico.el.
+Compute state given INPUT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vertico--compute</code></h1><p><span class="m"><code>vertico--compute</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">vertico.el</span>.
+<h2>Signature</h2>
+<pre><code>(vertico--compute <a href="#:~:text=given-,INPUT"><span class="arg">INPUT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Compute state given <span class="arg">INPUT</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kd234agnx8fzj5nnpaamc1pjsnz14kxs-emacs-packages-deps/share/emacs/site-lisp/elpa/vertico-20260830.123/vertico.el</span>
+(<span class="k">defun</span> <span class="f">vertico--compute</span> (input)
+  <span class="doc">"Compute state given INPUT."</span>
+  (<span class="k">pcase-let*</span> ((`(,str . ,pt) input)
+               (table minibuffer-completion-table)
+               (pred minibuffer-completion-predicate)
+               (before (substring str 0 pt))
+               (after (substring str pt))
+               <span class="cd">;; </span><span class="c">bug#47678: `</span><span class="m c">completion-boundaries</span><span class="c">' fails for `</span><span class="m c">partial-completion</span><span class="c">'
+</span>               <span class="cd">;; </span><span class="c">if the cursor is moved before the slashes of "~//".
+</span>               <span class="cd">;; </span><span class="c">See also corfu.el which has the same issue.
+</span>               (bounds (<span class="k">condition-case</span> nil
+                           (completion-boundaries before table pred after)
+                         (t (cons 0 (length after)))))
+               (field (substring str (car bounds) (+ pt (cdr bounds))))
+               <span class="cd">;; </span><span class="c">bug#75910: category instead of `</span><span class="m c">minibuffer-completing-file-name</span><span class="c">'
+</span>               (completing-file (eq 'file (vertico--metadata-get 'category)))
+               (`(,all . ,hl)
+                (<span class="k">dlet</span> ((completion-lazy-hilit t) (completion-lazy-hilit-fn nil))
+                  (cons (completion-all-completions str table pred pt vertico--metadata)
+                        completion-lazy-hilit-fn)))
+               (base (<span class="k">or</span> (<span class="k">when-let*</span> ((z (last all))) (<span class="k">prog1</span> (cdr z) (setcdr z nil))) 0))
+               (vertico--base (substring str 0 base))
+               (def (<span class="k">or</span> (car-safe minibuffer-default) minibuffer-default))
+               (rm minibuffer--require-match)
+               (valid (<span class="k">if</span> (functionp rm) (funcall rm str)
+                        (test-completion str table pred)))
+               (groups) (def-missing) (allow-prompt) (lock))
+    <span class="cd">;; </span><span class="c">Filter the ignored file extensions. We cannot use modified predicate for
+</span>    <span class="cd">;; </span><span class="c">this filtering, since this breaks the special casing in the
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">completion-file-name-table</span><span class="c">' for `</span><span class="m c">file-exists-p</span><span class="c">' and `</span><span class="m c">file-directory-p</span><span class="c">'.
+</span>    (<span class="k">when</span> completing-file
+      (<span class="k">let</span> ((exact (<span class="k">and</span> (not (equal field <span class="s">""</span>)) (member field all))))
+        (<span class="k">setq</span> all (completion-pcm--filename-try-filter all))
+        (<span class="k">and</span> exact (not (member field all)) (<span class="k">push</span> field all))))
+    <span class="cd">;; </span><span class="c">Sort using the `</span><span class="m c">display-sort-function</span><span class="c">' or the Vertico sort functions
+</span>    (<span class="k">setq</span> all (funcall (<span class="k">or</span> (vertico--sort-function) #'identity) all))
+    <span class="cd">;; </span><span class="c">Move special candidates: "field" appears at the top, before "field/", before default value
+</span>    (<span class="k">when</span> (<span class="k">and</span> (stringp def) (not (equal def <span class="s">""</span>)))
+      (<span class="k">setq</span> all (vertico--move-to-front def all)))
+    (<span class="k">unless</span> (equal field <span class="s">""</span>)
+      (<span class="k">when</span> (<span class="k">and</span> completing-file (not (string-suffix-p <span class="s">"/"</span> field)))
+        (<span class="k">setq</span> all (vertico--move-to-front (concat field <span class="s">"/"</span>) all)))
+      (<span class="k">setq</span> all (vertico--move-to-front field all)))
+    (<span class="k">setq</span> all (delete-consecutive-dups all))
+    (<span class="k">when-let*</span> ((fun (<span class="k">and</span> all (vertico--metadata-get 'group-function))))
+      (<span class="k">setq</span> groups (vertico--group-by fun all) all (car groups)))
+    (<span class="k">setq</span> def-missing (<span class="k">and</span> def (equal str <span class="s">""</span>) (not (member def all)))
+          allow-prompt (<span class="k">and</span> (not (eq vertico-preselect 'no-prompt))
+                            (<span class="k">or</span> valid def-missing (eq vertico-preselect 'prompt)
+                                (memq rm '(nil confirm confirm-after-completion))))
+          lock (<span class="k">and</span> vertico--lock-candidate <span class="cd">;; </span><span class="c">Locked position of old candidate.
+</span>                    (<span class="k">if</span> (&lt; vertico--index 0) (<span class="k">and</span> allow-prompt -1)
+                      (seq-position all (nth vertico--index vertico--candidates)))))
+    `((vertico--input . ,input)
+      (vertico--base . ,vertico--base)
+      (vertico--metadata . ,vertico--metadata)
+      (vertico--candidates . ,all)
+      (vertico--total . ,(length all))
+      (vertico--hilit . ,(<span class="k">or</span> hl #'identity))
+      (vertico--allow-prompt . ,allow-prompt)
+      (vertico--lock-candidate . ,lock)
+      (vertico--groups . ,(cdr groups))
+      (vertico--index . ,(<span class="k">or</span> lock
+                             (<span class="k">if</span> (<span class="k">or</span> def-missing (eq vertico-preselect 'prompt) (not all)
+                                     (<span class="k">and</span> completing-file (eq vertico-preselect 'directory)
+                                          valid (= (length vertico--base) (length str))))
+                                 -1 0))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

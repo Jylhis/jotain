@@ -1,0 +1,252 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sqlind-refine-syntax – Emacs Documentation Online</title>
+<meta name="description" content="sqlind-refine-syntax is a natively compiled function defined in
+sql-indent.el.
+Refine a basic syntax CONTEXT at POS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sqlind-refine-syntax</code></h1><p><span class="m"><code>sqlind-refine-syntax</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">sql-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(sqlind-refine-syntax <a href="#:~:text=syntax-,CONTEXT"><span class="arg">CONTEXT</span></a> <a href="#:~:text=at-,POS"><span class="arg">POS</span></a> <a href="#:~:text=anchor.-,HAVE-BLOCK-CONTEXT"><span class="arg">HAVE-BLOCK-CONTEXT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Refine a basic syntax <span class="arg">CONTEXT</span> at <span class="arg">POS</span>.
+<p><span class="arg">CONTEXT</span> is a syntactic context obtained by looking at the
+statement start and block start, see <a href="../fun/sqlind-syntax-of-line.html"><code>sqlind-syntax-of-line</code></a>.  We
+refine it by looking at the contents of the current line and the
+contents of the anchor.
+<p><span class="arg">HAVE-BLOCK-CONTEXT</span> indicates that we are indenting a statement,
+not a statement-continuation <span class="arg">POS</span> is the same as the
+<a href="../fun/sqlind-beginning-of-statement.html"><code>sqlind-beginning-of-statement</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vgm6xb2iy00bs19rdw9z3nfi5nf8g873-emacs-packages-deps/share/emacs/site-lisp/elpa/sql-indent-1.7/sql-indent.el</span>
+<span class="cd">;;;;; </span><span class="c">sqlind-syntax-of-line
+</span>
+(<span class="k">defun</span> <span class="f">sqlind-refine-syntax</span> (context pos have-block-context)
+  <span class="doc">"Refine a basic syntax CONTEXT at POS.
+CONTEXT is a syntactic context obtained by looking at the
+statement start and block start, see `</span><span class="m doc">sqlind-syntax-of-line</span><span class="doc">'.  We
+refine it by looking at the contents of the current line and the
+contents of the anchor.
+
+HAVE-BLOCK-CONTEXT indicates that we are indenting a statement,
+not a statement-continuation POS is the same as the
+`</span><span class="m doc">sqlind-beginning-of-statement</span><span class="doc">'."</span>
+  (<span class="k">let</span> ((syntax (sqlind-syntax context))
+        (anchor (sqlind-anchor-point context))
+        (syntax-symbol (sqlind-syntax-symbol context)))
+
+    (goto-char pos)
+
+    (<span class="k">cond</span>
+      <span class="cd">;; </span><span class="c">do we start a comment?
+</span>      ((<span class="k">and</span> (not (eq syntax-symbol 'comment-continuation))
+            (looking-at sqlind-comment-start-skip))
+       (<span class="k">push</span> (cons 'comment-start anchor) context))
+
+      <span class="cd">;; </span><span class="c">Refine a statement continuation
+</span>      ((memq syntax-symbol '(statement-continuation nested-statement-continuation))
+
+       <span class="cd">;; </span><span class="c">a (nested) statement continuation which starts with loop
+</span>       <span class="cd">;; </span><span class="c">or then is a block start
+</span>       (<span class="k">if</span> (<span class="k">and</span> have-block-context (looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">loop</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">then</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">when</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;"</span>))
+           (<span class="k">push</span> (cons (list 'block-start (intern (sqlind-match-string 0))) anchor)
+                 context)
+         <span class="cd">;; </span><span class="c">else
+</span>         (goto-char anchor)
+         (<span class="k">when</span> (eq syntax 'nested-statement-continuation)
+           (forward-char 1)
+           (sqlind-forward-syntactic-ws)
+           (<span class="k">setq</span> anchor (point)))
+
+         <span class="cd">;; </span><span class="c">when all we have before `</span><span class="m c">pos</span><span class="c">' is a label, we have a
+</span>         <span class="cd">;; </span><span class="c">labeled-statement-start
+</span>         (<span class="k">when</span> (looking-at <span class="s">"&lt;&lt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[a-z0-9_]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">&gt;&gt;"</span>)
+           (goto-char (match-end 0))
+           (forward-char 1)
+           (sqlind-forward-syntactic-ws)
+           (<span class="k">when</span> (eq (point) pos)
+             (<span class="k">push</span> (cons 'labeled-statement-start anchor) context)))
+
+         (<span class="k">when</span> (looking-at <span class="s">"when\\_&gt;"</span>)
+           (<span class="k">let*</span> ((acontext (sqlind-syntax-of-line))
+                  (asyntax (sqlind-syntax acontext)))
+             (<span class="k">cond</span> ((equal asyntax '(in-block exception <span class="s">""</span>))
+                    (<span class="k">push</span> (cons '(in-block exception-handler <span class="s">""</span>) (point)) context))
+                   ((equal asyntax '(block-start when))
+                    <span class="cd">;; </span><span class="c">Refine again in the context of the when line
+</span>                    (<span class="k">setq</span> context (sqlind-refine-syntax (cdr acontext) pos have-block-context))))))
+
+         <span class="cd">;; </span><span class="c">maybe we have a DML statement (select, insert, update and
+</span>         <span class="cd">;; </span><span class="c">delete)
+</span>
+         <span class="cd">;; </span><span class="c">skip a cursor definition if it is before our point, in the
+</span>         <span class="cd">;; </span><span class="c">following format:
+</span>         <span class="cd">;;</span><span class="c">
+</span>         <span class="cd">;; </span><span class="c">CURSOR name IS
+</span>         <span class="cd">;; </span><span class="c">CURSOR name type IS
+</span>         (<span class="k">when</span> (looking-at <span class="s">"cursor\\b"</span>)
+           (<span class="k">let</span> ((origin (point)))
+             (forward-sexp 1)           <span class="cd">; </span><span class="c">skip "cursor"
+</span>             (sqlind-forward-syntactic-ws)
+             (forward-sexp 1)
+             (sqlind-forward-syntactic-ws)
+             (<span class="k">if</span> (looking-at <span class="s">"is\\b"</span>)
+                 (<span class="k">progn</span>
+                   (goto-char (match-end 0))
+                   (sqlind-forward-syntactic-ws))
+               (forward-sexp 1)
+               (sqlind-forward-syntactic-ws)
+               (<span class="k">when</span> (looking-at <span class="s">"is\\b"</span>)
+                 (goto-char (match-end 0))
+                 (sqlind-forward-syntactic-ws)))
+             (<span class="k">unless</span> (&lt;= (point) pos)
+               (goto-char origin))))
+
+         <span class="cd">;; </span><span class="c">Skip a PostgreSQL cursor declaration
+</span>         (<span class="k">when</span> (<span class="k">and</span> (eq sql-product 'postgres)
+                    (looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">declare</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">cursor</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">for</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\b"</span>))
+           (<span class="k">when</span> (re-search-forward <span class="s">"\\b</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">select</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">update</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">delete</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">insert</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\b"</span> pos 'noerror)
+             (goto-char (match-beginning 0))))
+
+         <span class="cd">;; </span><span class="c">skip a forall statement if it is before our point
+</span>         (<span class="k">when</span> (looking-at <span class="s">"forall\\b"</span>)
+           (<span class="k">when</span> (re-search-forward <span class="s">"\\b</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">select</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">update</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">delete</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">insert</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\b"</span> pos 'noerror)
+             (goto-char (match-beginning 0))))
+
+         <span class="cd">;; </span><span class="c">only check for syntax inside DML clauses if we are not
+</span>         <span class="cd">;; </span><span class="c">at the start of one.
+</span>         (<span class="k">when</span> (&lt; (point) pos)
+           (<span class="k">cond</span>
+             <span class="cd">;; </span><span class="c">NOTE: We only catch here "CASE" expressions, not CASE
+</span>             <span class="cd">;; </span><span class="c">statements.  We also catch assignments with case (var
+</span>             <span class="cd">;; </span><span class="c">:= CASE ...)
+</span>             ((looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\w+[ \t\r\n\f]+:=[ \t\r\n\f]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">case</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+              (<span class="k">when</span> (&lt; (match-beginning 2) pos)
+                (<span class="k">push</span> (sqlind-syntax-in-case pos (match-beginning 2)) context)))
+             ((looking-at <span class="s">"with"</span>)
+              (<span class="k">push</span> (sqlind-syntax-in-with pos (point)) context))
+             ((looking-at <span class="s">"select"</span>)
+              (<span class="k">push</span> (sqlind-syntax-in-select pos (point)) context))
+             ((<span class="k">and</span> (eq sql-product 'postgres)
+                   (looking-at <span class="s">"perform"</span>))
+              (<span class="k">push</span> (sqlind-syntax-in-select pos (point)) context))
+             ((looking-at <span class="s">"insert"</span>)
+              (<span class="k">push</span> (sqlind-syntax-in-insert pos (point)) context))
+             ((looking-at <span class="s">"delete"</span>)
+              (<span class="k">push</span> (sqlind-syntax-in-delete pos (point)) context))
+             ((looking-at <span class="s">"update"</span>)
+              (<span class="k">push</span> (sqlind-syntax-in-update pos (point)) context))))
+
+         (<span class="k">when</span> (eq (sqlind-syntax-symbol context) 'select-column-continuation)
+           (<span class="k">let</span> ((cdef (sqlind-column-definition-start pos (sqlind-anchor-point context))))
+             (<span class="k">when</span> cdef
+               (<span class="k">save-excursion</span>
+                 (goto-char cdef)
+                 (<span class="k">when</span> (looking-at <span class="s">"case"</span>)
+                   (<span class="k">push</span> (sqlind-syntax-in-case pos (point)) context))))))
+
+         (<span class="k">when</span> (eq (sqlind-syntax-symbol context) 'nested-statement-continuation)
+           (<span class="k">save-excursion</span>
+             <span class="cd">;; </span><span class="c">Look for a join expression inside a nested statement, see #70
+</span>	     (goto-char pos)
+	     (<span class="k">when</span> (<span class="k">or</span> (looking-at sqlind-join-condition-regexp)
+		       (<span class="k">progn</span> (forward-word -1) (looking-at sqlind-join-condition-regexp)))
+	       <span class="cd">;; </span><span class="c">look for the join start, that will be the anchor
+</span>               (<span class="k">let</span> ((jstart (sqlind-find-join-start (point) anchor)))
+                 (<span class="k">when</span> jstart
+                   (<span class="k">push</span> (cons 'select-join-condition jstart) context))))))
+
+         ))
+
+    <span class="cd">;; </span><span class="c">create block start syntax if needed
+</span>
+    ((<span class="k">and</span> (eq syntax-symbol 'in-block)
+          (memq (nth 1 syntax) '(if elsif elseif then case))
+          (looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">then</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">els</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">e</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">e?if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;"</span>))
+     (<span class="k">let</span> ((what (intern (sqlind-match-string 0))))
+       <span class="cd">;; </span><span class="c">the only invalid combination is a then statement in
+</span>       <span class="cd">;; </span><span class="c">an (in-block "then") context
+</span>       (<span class="k">unless</span> (<span class="k">and</span> (eq what 'then) (equal (nth 1 syntax) 'then))
+         (<span class="k">push</span> (cons (list 'block-start what) anchor) context))))
+
+    ((<span class="k">and</span> (eq syntax-symbol 'in-block)
+          (eq (nth 1 syntax) 'exception)
+          (not (looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">when</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">end</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;"</span>)))
+     (<span class="k">save-excursion</span>
+       (<span class="k">when</span> (sqlind-search-backward pos <span class="s">"when\\_&gt;"</span> anchor)
+         (<span class="k">push</span> (cons (list 'in-block 'exception-handler) (point)) context))))
+
+    <span class="cd">;; </span><span class="c">note that begin is not a block-start in a 'in-begin-block
+</span>    <span class="cd">;; </span><span class="c">context
+</span>    ((<span class="k">and</span> (memq syntax-symbol '(defun-start declare-statement toplevel
+                                package package-body))
+          (<span class="k">or</span> (looking-at <span class="s">"begin\\_&gt;"</span>)
+              (<span class="k">and</span> (eq sql-product 'postgres) (looking-at <span class="s">"\\$\\$"</span>))))
+     (<span class="k">push</span> (cons (list 'block-start 'begin) anchor) context))
+
+    ((<span class="k">and</span> (memq syntax-symbol '(defun-start package package-body))
+          (looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">is</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">as</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;"</span>))
+     (<span class="k">push</span> (cons (list 'block-start 'is-or-as) anchor) context))
+
+    ((<span class="k">and</span> (memq syntax-symbol '(in-begin-block in-block))
+          (looking-at <span class="s">"exception\\_&gt;"</span>))
+     (<span class="k">push</span> (cons (list 'block-start 'exception) anchor) context))
+
+    ((<span class="k">and</span> (eq syntax-symbol 'in-block)
+          (memq (nth 1 syntax) '(then case))
+          (not (looking-at <span class="s">"end\\s-*\\_&lt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">case</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;"</span>)))
+     (<span class="k">if</span> (looking-at <span class="s">"when\\_&gt;"</span>)
+         (<span class="k">push</span> (cons (list 'block-start 'when) anchor) context)
+       <span class="cd">;; </span><span class="c">NOTE: the "when" case is handed above
+</span>       (<span class="k">when</span> (sqlind-search-backward pos <span class="s">"when\\_&gt;"</span> anchor)
+         (<span class="k">push</span> (cons '(in-block when) (point)) context))))
+
+    <span class="cd">;; </span><span class="c">indenting the select clause inside a view or a "create table as"
+</span>    <span class="cd">;; </span><span class="c">statement.
+</span>    ((<span class="k">and</span> (eq syntax-symbol 'create-statement)
+          (memq (nth 1 syntax) '(view table)))
+     (goto-char anchor)
+     (<span class="k">catch</span> '<span class="m">done</span>
+       (<span class="k">while</span> (re-search-forward <span class="s">"\\bselect\\b"</span> pos 'noerror)
+         (goto-char (match-beginning 0))
+         (<span class="k">when</span> (sqlind-same-level-statement (point) anchor)
+           (<span class="k">push</span> (sqlind-syntax-in-select pos (point)) context)
+           (<span class="k">throw</span> '<span class="m">done</span> nil))
+         (goto-char (match-end 0)))))
+
+    <span class="cd">;; </span><span class="c">create a block-end syntax if needed
+</span>
+    ((<span class="k">and</span> (not (eq syntax-symbol 'comment-continuation))
+          (looking-at <span class="s">"end[ \t\r\n\f]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\_&lt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">loop</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">case</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?[ \t\r\n\f]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\_&lt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[a-z0-9_]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?"</span>))
+     <span class="cd">;; </span><span class="c">so we see the syntax which closes the current block.  We still
+</span>     <span class="cd">;; </span><span class="c">need to check if the current end is a valid closing block
+</span>     (<span class="k">let</span> ((kind (<span class="k">or</span> (sqlind-match-string 1) <span class="s">""</span>))
+           (label (<span class="k">or</span> (sqlind-match-string 2) <span class="s">""</span>)))
+       (<span class="k">push</span> (sqlind-refine-end-syntax
+              (<span class="k">if</span> (equal kind <span class="s">""</span>) nil (intern kind))
+              label (point) context)
+             context)))
+
+    ((<span class="k">and</span> (eq sql-product 'postgres)
+          (not (eq syntax-symbol 'comment-continuation))
+          (looking-at <span class="s">"\\$\\$"</span>))
+     (<span class="k">push</span> (sqlind-refine-end-syntax
+            nil <span class="s">""</span> (point) context)
+           context))
+
+    <span class="cd">;; </span><span class="c">See #92 and pr92b.sql, no such thing as a nested declare statement, use
+</span>    <span class="cd">;; </span><span class="c">the context of the previous declare-statement!
+</span>    ((<span class="k">and</span> (eq sql-product 'postgres)
+          (eq syntax-symbol 'declare-statement)
+          (looking-at <span class="s">"declare\\_&gt;"</span>))
+     (goto-char anchor)
+     (<span class="k">setq</span> context (sqlind-syntax-of-line)))
+
+    )
+  context))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

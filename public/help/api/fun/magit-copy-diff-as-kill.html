@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-copy-diff-as-kill – Emacs Documentation Online</title>
+<meta name="description" content="magit-copy-diff-as-kill is an interactive and natively compiled
+function defined in magit-apply.el.
+Save the diff at point to the kill ring.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-copy-diff-as-kill</code></h1><p><span class="m"><code>magit-copy-diff-as-kill</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">magit-apply.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-copy-diff-as-kill)
+</code></pre>
+<h2>Documentation</h2>
+<p>Save the diff at point to the kill ring.
+<p>This command can be used on staged and unstaged changes, and anywhere
+<a href="../fun/magit-apply.html"><code>magit-apply</code></a> can be used.  Additionally, if there is no diff at point
+but <a class="v" href="../var/magit-buffer-revision.html"><code>magit-buffer-revision</code>(var)</a>/<a class="f" href="../fun/magit-buffer-revision.html"><code>magit-buffer-revision</code>(fun)</a> is non-nil, or there is a commit at point,
+the diff for that commit is saved.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-apply.el</span>
+<span class="cd">;;;; </span><span class="c">Copy
+</span>
+(<span class="k">defun</span> <span class="f">magit-copy-diff-as-kill</span> ()
+  <span class="doc">"Save the diff at point to the kill ring.
+This command can be used on staged and unstaged changes, and anywhere
+`</span><span class="m doc">magit-apply</span><span class="doc">' can be used.  Additionally, if there is no diff at point
+but `</span><span class="m doc">magit-buffer-revision</span><span class="doc">' is non-nil, or there is a commit at point,
+the diff for that commit is saved."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">cond-let</span>
+    ([$ (magit-apply--get-selection t)]
+     (<span class="k">pcase</span> (list (magit-diff-type) (magit-diff-scope))
+       (`(untracked ,(<span class="k">or</span> 'file 'files))
+        (<span class="w">user-error</span> <span class="s">"Cannot copy this as a diff"</span>))
+       (`(rebase-sequence file)
+        (<span class="w">user-error</span> <span class="s">"Cannot copy this as a diff"</span>))
+       (`(,_ region) (magit-apply-region $))
+       (`(,_   hunk) (magit-apply-hunk   $))
+       (`(,_  hunks) (magit-apply-hunks  $))
+       (`(,_   file) (magit-apply-diff   $))
+       (`(,_  files) (magit-apply-diffs  $))))
+    ([rev (<span class="k">or</span> (magit-commit-at-point) magit-buffer-revision)]
+     (<span class="k">magit--with-temp-process-buffer</span>
+       (magit-git-insert <span class="s">"show"</span> <span class="s">"-p"</span> <span class="s">"--format="</span> rev)
+       (kill-new (buffer-string))))
+    ((<span class="w">user-error</span> <span class="s">"Cannot copy this as a diff"</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

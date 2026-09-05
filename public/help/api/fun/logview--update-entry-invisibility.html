@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: logview--update-entry-invisibility – Emacs Documentation Online</title>
+<meta name="description" content="logview--update-entry-invisibility is a natively compiled function
+defined in logview.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>logview--update-entry-invisibility</code></h1><p><span class="m"><code>logview--update-entry-invisibility</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">logview.el</span>.
+<h2>Signature</h2>
+<pre><code>(logview--update-entry-invisibility <span class="arg">START</span> <span class="arg">DETAILS-START</span> <span class="arg">END</span> <span class="arg">FILTERED</span> <span class="arg">ENTRY-MANUALLY-HIDDEN</span> <span class="arg">DETAILS-MANUALLY-HIDDEN</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qid656ql5mh048bd0k84vvsbc2517lh9-emacs-packages-deps/share/emacs/site-lisp/elpa/logview-20260218.2013/logview.el</span>
+<span class="cd">;; </span><span class="c">Returns non-nil if any part of the entry is visible as a result.
+</span>(<span class="k">defun</span> <span class="f">logview--update-entry-invisibility</span> (start details-start end filtered entry-manually-hidden details-manually-hidden)
+  (<span class="k">let</span> ((first-line-end-lf-back (logview--character-back (<span class="k">or</span> details-start end)))
+        (invisible              (get-text-property (<span class="k">or</span> details-start start) 'invisible))
+        new-invisible
+        fully-invisible)
+    (<span class="k">dolist</span> (element (<span class="k">if</span> (listp invisible) invisible (list invisible)))
+      (<span class="k">cond</span> ((<span class="k">and</span> (eq filtered                'propagate) (eq element logview--filtered-symbol))
+             (<span class="k">setq</span> filtered t))
+            ((<span class="k">and</span> (eq entry-manually-hidden   'propagate) (eq element logview--hidden-entry-symbol))
+             (<span class="k">setq</span> entry-manually-hidden t))
+            ((<span class="k">and</span> (eq details-manually-hidden 'propagate) (eq element logview--hidden-details-symbol))
+             (<span class="k">setq</span> details-manually-hidden t))
+            ((not (<span class="k">and</span> (symbolp element) (string-match-p <span class="s">"^logview-"</span> (symbol-name element))))
+             (<span class="k">push</span> element new-invisible))))
+    (<span class="k">when</span> (eq entry-manually-hidden t)
+      (<span class="k">push</span> logview--hidden-entry-symbol new-invisible)
+      (<span class="k">setq</span> fully-invisible t))
+    (<span class="k">when</span> (eq filtered t)
+      (<span class="k">push</span> logview--filtered-symbol new-invisible)
+      (<span class="k">setq</span> fully-invisible t))
+    (<span class="k">if</span> new-invisible
+        (put-text-property (logview--character-back-checked start) first-line-end-lf-back 'invisible (<span class="k">setq</span> new-invisible (nreverse new-invisible)))
+      (remove-list-of-text-properties (logview--character-back-checked start) first-line-end-lf-back '(invisible)))
+    (<span class="k">when</span> details-start
+      (<span class="k">when</span> (eq details-manually-hidden t)
+        (<span class="k">push</span> logview--hidden-details-symbol new-invisible))
+      (<span class="k">push</span> 'logview-details new-invisible)
+      (put-text-property first-line-end-lf-back (logview--character-back end) 'invisible new-invisible))
+    (not fully-invisible)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

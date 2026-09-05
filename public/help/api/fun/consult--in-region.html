@@ -1,0 +1,90 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--in-region – Emacs Documentation Online</title>
+<meta name="description" content="consult--in-region is a natively compiled function defined in
+consult.el.
+Internal completion-in-region-function.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--in-region</code></h1><p><span class="m"><code>consult--in-region</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--in-region <a href="#:~:text=arguments-,START"><span class="arg">START</span></a> <a href="#:~:text=START,-,END"><span class="arg">END</span></a> <a href="#:~:text=END,-,TABLE"><span class="arg">TABLE</span></a> <a href="#:~:text=and-,PREDICATE"><span class="arg">PREDICATE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Internal <a href="../var/completion-in-region-function.html"><code>completion-in-region-function</code></a>.
+<p>The arguments <span class="arg">START</span>, <span class="arg">END</span>, <span class="arg">TABLE</span> and <span class="arg">PREDICATE</span> and
+expected return value are as specified for <a href="../fun/completion-in-region.html"><code>completion-in-region</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--in-region</span> (start end table predicate)
+  <span class="doc">"Internal `</span><span class="m doc">completion-in-region-function</span><span class="doc">'.
+The arguments START, END, TABLE and PREDICATE and
+expected return value are as specified for `</span><span class="m doc">completion-in-region</span><span class="doc">'."</span>
+  (barf-if-buffer-read-only)
+  (<span class="k">let*</span> ((initial (buffer-substring-no-properties start end))
+         (metadata (completion-metadata initial table predicate))
+         <span class="cd">;; </span><span class="c">bug#75910: category instead of `</span><span class="m c">minibuffer-completing-file-name</span><span class="c">'
+</span>         (minibuffer-completing-file-name
+          (eq 'file (completion-metadata-get metadata 'category)))
+         (threshold (completion--cycle-threshold metadata))
+         (all (completion-all-completions initial table predicate
+                                          (<span class="k">if</span> (&lt;= start (point) end)
+                                              (- (point) start)
+                                            (length initial))
+                                          metadata)))
+    <span class="cd">;; </span><span class="c">Normalize improper list
+</span>    (<span class="k">when-let*</span> ((last (last all)))
+      (setcdr last nil))
+    (<span class="k">if</span> (<span class="k">or</span> (eq threshold t) (length&lt; all (1+ (<span class="k">or</span> threshold 1)))
+            (<span class="k">and</span> completion-cycling completion-all-sorted-completions))
+        (<span class="k">let</span> (completion-auto-help)
+          (completion--in-region start end table predicate))
+      <span class="cd">;; </span><span class="c">Wrap all annotation functions to ensure that they are executed
+</span>      <span class="cd">;; </span><span class="c">in the original buffer.
+</span>      (<span class="k">let*</span> ((exit-fun (plist-get completion-extra-properties <span class="bi">:exit-function</span>))
+             (ann-fun (plist-get completion-extra-properties <span class="bi">:annotation-function</span>))
+             (aff-fun (plist-get completion-extra-properties <span class="bi">:affixation-function</span>))
+             (docsig-fun (plist-get completion-extra-properties <span class="bi">:company-docsig</span>))
+             (completion-extra-properties
+              `(,@(<span class="k">and</span> ann-fun (list <span class="bi">:annotation-function</span> (consult--in-buffer ann-fun)))
+                ,@(<span class="k">and</span> aff-fun (list <span class="bi">:affixation-function</span> (consult--in-buffer aff-fun)))
+                <span class="cd">;; </span><span class="c">Provide `</span><span class="m c">:annotation-function</span><span class="c">' if `</span><span class="m c">:company-docsig</span><span class="c">' is specified.
+</span>                ,@(<span class="k">and</span> docsig-fun (not ann-fun) (not aff-fun)
+                       (list <span class="bi">:annotation-function</span>
+                             (consult--in-buffer
+                              (<span class="k">lambda</span> (cand)
+                                (concat (propertize <span class="s">" "</span> 'display '(space <span class="bi">:align-to</span> center))
+                                        (funcall docsig-fun cand))))))))
+             (completion
+              (<span class="k">consult--local-let</span> ((enable-recursive-minibuffers t))
+                <span class="cd">;; </span><span class="c">Evaluate completion table in the original buffer.
+</span>                <span class="cd">;; </span><span class="c">This is a reasonable thing to do and required by
+</span>                <span class="cd">;; </span><span class="c">some completion tables in particular by lsp-mode.
+</span>                <span class="cd">;; </span><span class="c">See gh:minad/vertico#61.
+</span>                (consult--read
+                 (consult--completion-table-in-buffer table)
+                 <span class="bi">:command</span> #'consult-completion-in-region
+                 <span class="bi">:prompt</span> (<span class="k">if</span> (minibufferp)
+                             <span class="cd">;; </span><span class="c">Use existing minibuffer prompt and input
+</span>                             (<span class="k">let</span> ((prompt (buffer-substring (point-min) start)))
+                               (put-text-property
+                                (max 0 (1- (minibuffer-prompt-end))) (length prompt)
+                                'face 'shadow prompt)
+                               prompt)
+                           <span class="s">"Complete: "</span>)
+                 <span class="bi">:state</span> (consult--insertion-preview start end)
+                 <span class="bi">:predicate</span> predicate
+                 <span class="bi">:initial</span> initial))))
+        (completion--replace start end completion)
+        (<span class="k">when</span> exit-fun
+          (funcall exit-fun completion
+                   <span class="cd">;; </span><span class="c">If completion is finished and cannot be further
+</span>                   <span class="cd">;; </span><span class="c">completed, return `</span><span class="m c">finished</span><span class="c">'.  Otherwise return
+</span>                   <span class="cd">;; </span><span class="c">`</span><span class="m c">exact</span><span class="c">'.
+</span>                   (<span class="k">if</span> (eq (try-completion completion table predicate) t)
+                       'finished 'exact)))
+        t))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

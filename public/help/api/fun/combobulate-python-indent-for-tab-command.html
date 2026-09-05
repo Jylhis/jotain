@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-python-indent-for-tab-command – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-python-indent-for-tab-command is an interactive and
+natively compiled function defined in combobulate-python.el.
+Wrapper for indent-for-tab-command that adds advanced indentation.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-python-indent-for-tab-command</code></h1><p><span class="m"><code>combobulate-python-indent-for-tab-command</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and
+<a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">combobulate-python.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-python-indent-for-tab-command <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Wrapper for <a href="../fun/indent-for-tab-command.html"><code>indent-for-tab-command</code></a> that adds advanced indentation.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-python.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-python-indent-for-tab-command</span> (<span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Wrapper for `</span><span class="m doc">indent-for-tab-command</span><span class="doc">' that adds advanced indentation."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">with-navigation-nodes</span>
+      (<span class="bi">:nodes</span> (append
+               <span class="cd">;; </span><span class="c">rules that trigger indentation
+</span>               (combobulate-production-rules-get <span class="s">"_simple_statement"</span>)
+               (combobulate-production-rules-get <span class="s">"_compound_statement"</span>))
+              <span class="cd">;; </span><span class="c">do not skip prefix if we have a region active. the
+</span>              <span class="cd">;; </span><span class="c">reason for that is that skipping forward with a
+</span>              <span class="cd">;; </span><span class="c">marked region can bork the indentation mechanism as
+</span>              <span class="cd">;; </span><span class="c">we can only effectively indent with whole lines.
+</span>              <span class="bi">:skip-prefix</span> (not (use-region-p))
+              <span class="bi">:skip-newline</span> nil)
+    (<span class="k">let</span> ((node (combobulate--get-nearest-navigable-node)))
+      (<span class="k">cond</span>
+       ((use-region-p)
+        <span class="cd">;; </span><span class="c">ensure point is at the beginning of the region
+</span>        (<span class="k">when</span> (&gt; (point) (mark))
+          (exchange-point-and-mark))
+        (combobulate-proffer-indentation node)
+        <span class="cd">;; </span><span class="c">toggle the region on and off so it doesn't get deactivated
+</span>        (<span class="k">setq</span> deactivate-mark nil)
+        (activate-mark))
+       <span class="cd">;; </span><span class="c">we need to handle blank lines as tabbing on a blank line should
+</span>       <span class="cd">;; </span><span class="c">default to the regular python indentation mechanism.
+</span>       ((<span class="k">save-excursion</span>
+          (beginning-of-line)
+          (looking-at-p <span class="s">"[[:space:]]*$"</span>))
+        (indent-for-tab-command arg))
+       <span class="cd">;; </span><span class="c">if we're at the beginning of a node, we want to indent it.
+</span>       ((<span class="k">and</span> combobulate-python-indent-blocks-dwim (combobulate-point-at-beginning-of-node-p node))
+        (combobulate-proffer-indentation node))
+       <span class="cd">;; </span><span class="c">for everything else, use the regular indentation mechanism.
+</span>       (t (indent-for-tab-command arg))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,93 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-attach – Emacs Documentation Online</title>
+<meta name="description" content="org-attach is an autoloaded, interactive and natively compiled
+function defined in org-attach.el.
+The dispatcher for attachment commands.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-attach</code></h1><p><span class="m"><code>org-attach</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a>, <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">org-attach.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-attach)
+</code></pre>
+<h2>Documentation</h2>
+<p>The dispatcher for attachment commands.
+<p>Shows a list of commands and prompts for another key to execute a command.
+<h2>Key Bindings</h2>
+<p><span class="v">org-mode-map</span> <span class="key">C-c C-a</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-9.8.10/org-attach.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">org-attach</span> ()
+  <span class="doc">"The dispatcher for attachment commands.
+Shows a list of commands and prompts for another key to execute a command."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> (c marker)
+    (<span class="k">when</span> (eq major-mode 'org-agenda-mode)
+      (<span class="k">setq</span> marker (<span class="k">or</span> (get-text-property (point) 'org-hd-marker)
+		       (get-text-property (point) 'org-marker)))
+      (<span class="k">unless</span> marker
+	(<span class="w">error</span> <span class="s">"No item in current line"</span>)))
+    (<span class="k">org-with-point-at</span> marker
+      (<span class="k">let</span> ((dir (org-attach-dir nil 'no-fs-check)))
+        (<span class="k">if</span> (<span class="k">and</span> (<span class="k">featurep</span> '<span class="m">org-inlinetask</span>)
+                 (not (org-inlinetask-in-task-p)))
+	    (<span class="k">org-with-limited-levels</span>
+	     (org-back-to-heading-or-point-min t))
+          (<span class="k">if</span> (<span class="k">and</span> (<span class="k">featurep</span> '<span class="m">org-inlinetask</span>)
+		   (org-inlinetask-in-task-p))
+              (org-inlinetask-goto-beginning)
+            (org-back-to-heading-or-point-min t)))
+        (<span class="k">save-excursion</span>
+	  (<span class="k">save-window-excursion</span>
+	    (<span class="k">unless</span> org-attach-expert
+	      (switch-to-buffer-other-window <span class="s">"*Org Attach*"</span>)
+	      (erase-buffer)
+	      (<span class="k">setq</span> cursor-type nil
+                    header-line-format <span class="s">"Use C-v, M-v, C-n or C-p to navigate."</span>)
+	      (insert
+               (concat <span class="s">"Attachment folder:\n"</span>
+		       (<span class="k">or</span> dir
+			   <span class="s">"Can't find an existing attachment-folder"</span>)
+		       (<span class="k">unless</span> (<span class="k">and</span> dir (file-directory-p dir))
+                         <span class="s">"\n(Not yet created)"</span>)
+		       <span class="s">"\n\n"</span>
+                       (format <span class="s">"Select an Attachment Command:\n\n%s"</span>
+                               (mapconcat
+                                (<span class="k">lambda</span> (entry)
+                                  (<span class="k">pcase</span> entry
+                                    (`((,key . ,_) ,_ ,docstring)
+                                     (format <span class="s">"%c       %s"</span>
+                                             key
+                                             (replace-regexp-in-string <span class="s">"\n</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[\t ]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>
+                                                                       <span class="s">"        "</span>
+                                                                       docstring
+                                                                       nil nil 1)))
+                                    (_
+                                     (<span class="w">user-error</span>
+                                      <span class="s">"Invalid `</span><span class="m s">org-attach-commands</span><span class="s">' item: %S"</span>
+                                      entry))))
+                                org-attach-commands
+                                <span class="s">"\n"</span>))))
+              (goto-char (point-min)))
+	    (org-fit-window-to-buffer (get-buffer-window <span class="s">"*Org Attach*"</span>))
+            (<span class="k">unwind-protect</span>
+                (<span class="k">let</span> ((msg (format <span class="s">"Select command: [%s]"</span>
+                                   (concat (mapcar #'caar org-attach-commands)))))
+                  (message msg)
+                  (<span class="k">while</span> (<span class="k">and</span> (<span class="k">setq</span> c (read-char-exclusive))
+                              (memq c '(?\C-n ?\C-p ?\C-v ?\M-v)))
+                    (org-scroll c t)))
+              (<span class="k">when-let*</span> ((window (get-buffer-window <span class="s">"*Org Attach*"</span> t)))
+                (quit-window 'kill window))
+	      (<span class="k">and</span> (get-buffer <span class="s">"*Org Attach*"</span>) (kill-buffer <span class="s">"*Org Attach*"</span>)))))
+        (<span class="k">let</span> ((command (cl-some (<span class="k">lambda</span> (entry)
+				  (<span class="k">and</span> (memq c (nth 0 entry)) (nth 1 entry)))
+                                org-attach-commands)))
+	  (<span class="k">if</span> (commandp command)
+	      (command-execute command)
+	    (<span class="w">error</span> <span class="s">"No such attachment command: %c"</span> c)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

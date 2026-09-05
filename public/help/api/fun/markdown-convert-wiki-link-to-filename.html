@@ -1,0 +1,67 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-convert-wiki-link-to-filename – Emacs Documentation Online</title>
+<meta name="description" content="markdown-convert-wiki-link-to-filename is a natively compiled function
+defined in markdown-mode.el.
+Generate a filename from the wiki link NAME.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-convert-wiki-link-to-filename</code></h1><p><span class="m"><code>markdown-convert-wiki-link-to-filename</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-convert-wiki-link-to-filename <a href="#:~:text=link-,NAME"><span class="arg">NAME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Generate a filename from the wiki link <span class="arg">NAME</span>.
+<p>Spaces in <span class="arg">NAME</span> are replaced with <a href="../var/markdown-link-space-sub-char.html"><code>markdown-link-space-sub-char</code></a>.
+Search depth is determined by <a href="../var/markdown-wiki-link-search-type.html"><code>markdown-wiki-link-search-type</code></a>.
+When in <a href="../fun/gfm-mode.html"><code>gfm-mode</code></a>, follow GitHub's conventions where [[Test Test]]
+and [[test test]] both map to Test-test.ext.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-convert-wiki-link-to-filename</span> (name)
+  <span class="doc">"Generate a filename from the wiki link NAME.
+Spaces in NAME are replaced with `</span><span class="m doc">markdown-link-space-sub-char</span><span class="doc">'.
+Search depth is determined by `</span><span class="m doc">markdown-wiki-link-search-type</span><span class="doc">'.
+When in `</span><span class="m doc">gfm-mode</span><span class="doc">', follow GitHub's conventions where [[Test Test]]
+and [[test test]] both map to Test-test.ext."</span>
+  (<span class="k">save-match-data</span>
+    <span class="cd">;; </span><span class="c">This function must not overwrite match data(PR #590)
+</span>    (<span class="k">let*</span> ((basename (replace-regexp-in-string
+                      <span class="s">"[[:space:]\n]"</span> markdown-link-space-sub-char name))
+           (basename (<span class="k">if</span> (<span class="k">and</span> (derived-mode-p 'gfm-mode) (not markdown-wiki-link-retain-case))
+                         (concat (upcase (substring basename 0 1))
+                                 (downcase (substring basename 1 nil)))
+                       basename))
+           (search-types (markdown--wiki-link-search-types))
+           directory extension default candidates dir)
+      (<span class="k">when</span> buffer-file-name
+        (<span class="k">setq</span> directory (file-name-directory buffer-file-name)
+              extension (file-name-extension buffer-file-name)))
+      (<span class="k">setq</span> default (concat basename
+                            (<span class="k">when</span> extension (concat <span class="s">"."</span> extension))))
+      (<span class="k">cond</span>
+       <span class="cd">;; </span><span class="c">Look in current directory first.
+</span>       ((<span class="k">or</span> (null buffer-file-name)
+            (file-exists-p default))
+        default)
+       <span class="cd">;; </span><span class="c">Possibly search in subdirectories, next.
+</span>       ((<span class="k">and</span> (memq 'sub-directories search-types)
+             (<span class="k">setq</span> candidates
+                   (directory-files-recursively
+                    directory (concat <span class="s">"^"</span> default <span class="s">"$"</span>))))
+        (car candidates))
+       <span class="cd">;; </span><span class="c">Possibly search in parent directories as a last resort.
+</span>       ((<span class="k">and</span> (memq 'parent-directories search-types)
+             (<span class="k">setq</span> dir (locate-dominating-file directory default)))
+        (concat dir default))
+       ((<span class="k">and</span> (memq 'project search-types)
+             (<span class="k">setq</span> candidates
+                   (directory-files-recursively
+                    (markdown--project-root) (concat <span class="s">"^"</span> default <span class="s">"$"</span>))))
+        (car candidates))
+       <span class="cd">;; </span><span class="c">If nothing is found, return default in current directory.
+</span>       (t default)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

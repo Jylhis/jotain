@@ -1,0 +1,174 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apheleia--formatter-context – Emacs Documentation Online</title>
+<meta name="description" content="apheleia--formatter-context is a natively compiled function defined in
+apheleia-formatters.el.
+Construct a formatter context for the formatter with NAME and COMMAND.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apheleia--formatter-context</code></h1><p><span class="m"><code>apheleia--formatter-context</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">apheleia-formatters.el</span>.
+<h2>Signature</h2>
+<pre><code>(apheleia--formatter-context <a href="#:~:text=with-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=and-,COMMAND"><span class="arg">COMMAND</span></a> <a href="#:~:text=input.-,REMOTE"><span class="arg">REMOTE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=cleanup.-,STDIN-BUFFER"><span class="arg">STDIN-BUFFER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Construct a formatter context for the formatter with <span class="arg">NAME</span> and <span class="arg">COMMAND</span>.
+<p>Returns an <a class="v" href="../var/apheleia-formatter--context.html"><code>apheleia-formatter--context</code>(var)</a>/<a class="f" href="../fun/apheleia-formatter--context.html"><code>apheleia-formatter--context</code>(fun)</a> object on success and nil if
+the formatter is not executable. The returned formatter context may
+have some state such as temporary files that the caller is expected
+to cleanup.
+<p><span class="arg">STDIN-BUFFER</span> is the optional buffer to use when creating a temporary
+file for the formatters standard input. <span class="arg">REMOTE</span> asserts whether the
+buffer being formatted is on a remote machine or the local machine.
+See <a href="../fun/apheleia--run-formatters.html"><code>apheleia--run-formatters</code></a> for more details on the usage of <span class="arg">REMOTE</span>.
+<p>If <span class="arg">COMMAND</span> uses the symbol <span class="m"><code>file</code></span> and the current buffer is modified
+from what is written to disk, then return nil meaning meaning no
+cmd is to be run.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbykkl13khzh84lv9vw1bf1vijzg30fr-emacs-packages-deps/share/emacs/site-lisp/elpa/apheleia-20260817.2331/apheleia-formatters.el</span>
+(<span class="k">defun</span> <span class="f">apheleia--formatter-context</span> (name command remote <span class="ty">&amp;optional</span> stdin-buffer)
+  <span class="doc">"Construct a formatter context for the formatter with NAME and COMMAND.
+Returns an `</span><span class="m doc">apheleia-formatter--context</span><span class="doc">' object on success and nil if
+the formatter is not executable. The returned formatter context may
+have some state such as temporary files that the caller is expected
+to cleanup.
+
+STDIN-BUFFER is the optional buffer to use when creating a temporary
+file for the formatters standard input. REMOTE asserts whether the
+buffer being formatted is on a remote machine or the local machine.
+See `</span><span class="m doc">apheleia--run-formatters</span><span class="doc">' for more details on the usage of REMOTE.
+
+If COMMAND uses the symbol `</span><span class="m doc">file</span><span class="doc">' and the current buffer is modified
+from what is written to disk, then return nil meaning meaning no
+cmd is to be run."</span>
+  (<span class="k">cl-block</span> nil
+    (<span class="k">let*</span> ((context (apheleia-formatter--context))
+           (run-on-remote
+            (<span class="k">when</span> (eq apheleia-remote-algorithm 'remote)
+              remote))
+           <span class="cd">;; </span><span class="c">Whether the machine the process will run on matches
+</span>           <span class="cd">;; </span><span class="c">the machine the buffer/file is currently on. Either
+</span>           <span class="cd">;; </span><span class="c">we're running remotely and the buffer is remote or
+</span>           <span class="cd">;; </span><span class="c">we're not running remotely and the buffer is not
+</span>           <span class="cd">;; </span><span class="c">remote.
+</span>           (remote-match (equal run-on-remote remote))
+           (stdin (<span class="k">or</span> stdin-buffer (current-buffer)))
+           (command (apply #'list command)))
+      (<span class="k">setf</span> (apheleia-formatter--name context) name)
+      (<span class="k">setf</span> (apheleia-formatter--stdin context) stdin)
+      (<span class="k">setf</span> (apheleia-formatter--remote context) remote)
+      <span class="cd">;; </span><span class="c">TODO: Support arbitrary package managers, not just NPM.
+</span>      (<span class="k">when</span> (memq 'npx command)
+        (<span class="k">setq</span> command (remq 'npx command))
+        (<span class="k">when</span> remote-match
+          (<span class="k">when-let</span> ((project-dir
+                      (locate-dominating-file default-directory
+                                              <span class="s">"node_modules"</span>)))
+            (<span class="k">let</span> ((binary
+                   (expand-file-name
+                    (car command)
+                    (expand-file-name
+                     <span class="s">".bin"</span>
+                     (expand-file-name <span class="s">"node_modules"</span> project-dir)))))
+              (<span class="k">when</span> (file-executable-p binary)
+                (setcar command binary))))))
+
+      (<span class="k">when</span> (<span class="k">or</span> (memq 'file command) (memq 'filepath command))
+        <span class="cd">;; </span><span class="c">Fail when using file but not as the first formatter in this
+</span>        <span class="cd">;; </span><span class="c">sequence. (But filepath is okay, since it indicates content
+</span>        <span class="cd">;; </span><span class="c">is not actually being read from the named file.)
+</span>        (<span class="k">when</span> (memq 'file command)
+          (<span class="k">when</span> stdin-buffer
+            (<span class="w">error</span> <span class="s">"Cannot run formatter using `</span><span class="m s">file</span><span class="s">' in a sequence unless \
+it's first in the sequence"</span>))
+          (<span class="k">unless</span> remote-match
+            (<span class="w">error</span> <span class="s">"Formatter uses `</span><span class="m s">file</span><span class="s">' but process will run on different \
+machine from the machine file is available on"</span>))
+          (<span class="k">setq</span> stdin nil)
+          <span class="cd">;; </span><span class="c">If `</span><span class="m c">buffer-file-name</span><span class="c">' is nil then there is no backing
+</span>          <span class="cd">;; </span><span class="c">file, so `</span><span class="m c">buffer-modified-p</span><span class="c">' should be ignored (it always
+</span>          <span class="cd">;; </span><span class="c">returns non-nil).
+</span>          (<span class="k">when</span> (<span class="k">and</span> (buffer-modified-p) buffer-file-name)
+            (<span class="k">cl-return</span>)))
+        <span class="cd">;; </span><span class="c">We always strip out the remote-path prefix for file/filepath.
+</span>        (<span class="k">let</span> ((file-name (apheleia-formatters-local-buffer-file-name
+                          (<span class="k">or</span> buffer-file-name
+                              (concat default-directory
+                                      (apheleia--safe-buffer-name))))))
+          (<span class="k">setq</span> command (apheleia--replq command '(file filepath) file-name))))
+
+      (<span class="k">when</span> (<span class="k">or</span> (memq 'input command) (memq 'inplace command))
+        (<span class="k">let</span> ((input-fname (apheleia--make-temp-file
+                            run-on-remote <span class="s">"apheleia"</span> nil
+                            (<span class="k">when-let</span> ((file-name
+                                        (<span class="k">or</span> buffer-file-name
+                                            (apheleia--safe-buffer-name))))
+                              (file-name-extension file-name 'period)))))
+          (<span class="k">with-current-buffer</span> stdin
+            (apheleia--write-region-silently nil nil input-fname))
+          (<span class="k">setf</span> (apheleia-formatter--input-fname context) input-fname
+                (apheleia-formatter--stdin context) nil)
+          <span class="cd">;; </span><span class="c">Inplace is the same as input but the output file is the
+</span>          <span class="cd">;; </span><span class="c">input file.
+</span>          (<span class="k">when</span> (memq 'inplace command)
+            (<span class="k">setf</span> (apheleia-formatter--output-fname context) input-fname))
+          (<span class="k">setq</span> command (apheleia--replq
+                         command '(input inplace)
+                         (apheleia-formatters-local-buffer-file-name
+                          input-fname)))))
+
+      (<span class="k">when</span> (memq 'output command)
+        (<span class="k">let</span> ((output-fname (apheleia--make-temp-file
+                             run-on-remote <span class="s">"apheleia"</span>)))
+          (<span class="k">setf</span> (apheleia-formatter--output-fname context) output-fname)
+          (<span class="k">setq</span> command (apheleia--replq
+                         command 'output
+                         (apheleia-formatters-local-buffer-file-name
+                          output-fname)))))
+
+      <span class="cd">;; </span><span class="c">Evaluate each element of arg that isn't a string and replace
+</span>      <span class="cd">;; </span><span class="c">it with the evaluated value. The result of an evaluation should
+</span>      <span class="cd">;; </span><span class="c">be a string or a list of strings. If the former its replaced as
+</span>      <span class="cd">;; </span><span class="c">is. If the latter the contents of the list is substituted in
+</span>      <span class="cd">;; </span><span class="c">place.
+</span>      (<span class="k">setq</span> command
+            (<span class="k">cl-loop</span>
+             for arg in command
+             with val = nil
+             do (<span class="k">setq</span> val (<span class="k">if</span> (stringp arg)
+                              arg
+                            (eval arg)))
+             if val
+             if (<span class="k">and</span> (consp val)
+                     (cl-every #'stringp val))
+             append val
+             else if (stringp val)
+             collect val
+             else do (<span class="w">error</span> <span class="s">"Result of command evaluation must be a string \
+or list of strings: %S"</span> arg)))
+
+      <span class="cd">;; </span><span class="c">Windows fails to run formatter scripts. Check whether the
+</span>      <span class="cd">;; </span><span class="c">command executable is a script that contains a shebang. Parse
+</span>      <span class="cd">;; </span><span class="c">the shebang and insert the binary into the command.
+</span>      (<span class="k">when</span> (member system-type '(ms-dos windows-nt))
+        (<span class="k">when-let</span> ((arg1-file (locate-file (car command) exec-path)))
+          (<span class="k">with-temp-buffer</span>
+            (insert-file-contents arg1-file nil 0 2)
+            (<span class="k">when</span> (string= (buffer-string) <span class="s">"#!"</span>)
+              <span class="cd">;; </span><span class="c">Assumes that the full shebang is max 200 characters
+</span>              (insert-file-contents arg1-file nil 2 200 t)
+              (<span class="k">let*</span> ((shebang-components (split-string (thing-at-point 'line)))
+                     (shebang-binary
+                      (<span class="k">if</span> (string= (car shebang-components) <span class="s">"/usr/bin/env"</span>)
+                          (cdr shebang-components)
+                        (last (split-string (car shebang-components) <span class="s">"/"</span>)))))
+                (<span class="k">setq</span> command (append shebang-binary
+                                      (list arg1-file)
+                                      (cdr command))))))))
+
+      (<span class="k">setf</span> (apheleia-formatter--arg1 context) (car command)
+            (apheleia-formatter--argv context) (cdr command))
+      context)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,89 @@
+/*
+ * motion.css — the "survey renders in" motion signature.
+ *
+ * The principle: nothing fades or floats. A surface is SURVEYED — contours
+ * draw, triangulation lines extend, and readouts count on, the way a plate is
+ * plotted and a terminal reports. Each idiom maps to an existing motion token
+ * — no new durations or easings.
+ *
+ *   contour-draw — a stroke draws along its own length  (survey, 480ms)
+ *   line-extend  — a rule extends from the datum        (slow, 300ms)
+ *   readout      — a mono value types on with steps()   (survey, 480ms, stepped)
+ *   caret        — a bronze block caret blinks          (1.1s, loop)
+ *
+ * Guardrails (docs/STYLE-GUIDE.md §5):
+ *   · max ONE full plate render per viewport
+ *   · the caret never appears twice on one surface
+ *   · caret is for prompts and loading states only
+ *   · nothing bounces — every continuous easing is ease-out
+ *
+ * The universal prefers-reduced-motion guard in colors_and_type.css covers
+ * every animation below: durations collapse to 0.001ms and loops run once, so
+ * drawn/extended/typed elements land in their final visible state and the
+ * caret rests solid.
+ */
+
+@keyframes ds-contour-in {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ds-line-in {
+  to { transform: scaleX(1); }
+}
+@keyframes ds-readout-in {
+  to { width: var(--ds-readout-ch, 10ch); }
+}
+@keyframes ds-caret-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* A stroked path — contour ring, triangulation arc, diagram stroke — that
+   draws itself along its own length. Set --ds-contour-len to the path length
+   in user units (JS: path.getTotalLength()). Add .is-drawn to run. */
+.ds-contour-draw {
+  stroke-dasharray: var(--ds-contour-len, 1000);
+  stroke-dashoffset: var(--ds-contour-len, 1000);
+}
+.ds-contour-draw.is-drawn {
+  animation: ds-contour-in var(--transition-survey) forwards;
+}
+
+/* A rule that extends outward from the datum. Add .is-drawn to run. */
+.ds-line-extend {
+  height: 1px;
+  background: var(--color-border);
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+.ds-line-extend.is-drawn {
+  animation: ds-line-in var(--transition-slow) forwards;
+}
+
+/* A mono readout that types on, terminal-style. Set --ds-readout-ch to the
+   value's width in ch (e.g. style="--ds-readout-ch: 10ch" for 10 characters).
+   Add .is-read to run. */
+.ds-readout {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 0;
+  vertical-align: bottom;
+}
+.ds-readout.is-read {
+  /* motion.survey — steps(12) replaces the survey easing, so the duration is
+     the literal token value (var(--transition-survey) bundles its bezier). */
+  animation: ds-readout-in 480ms steps(12) forwards;
+}
+
+/* The block caret — prompts and loading states. Always aria-hidden="true";
+   pair it with visible text (e.g. "fetching") so meaning never rides on
+   the animation alone. */
+.ds-caret {
+  display: inline-block;
+  width: 0.5em;
+  height: 1.1em;
+  background: var(--color-accent);
+  vertical-align: text-bottom;
+  margin-left: 0.15em;
+  animation: ds-caret-blink 1.1s steps(1) infinite;
+}

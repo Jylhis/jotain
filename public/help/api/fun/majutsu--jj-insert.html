@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu--jj-insert – Emacs Documentation Online</title>
+<meta name="description" content="majutsu--jj-insert is a natively compiled function defined in
+majutsu-jj.el.
+Run jj with ARGS and insert output at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu--jj-insert</code></h1><p><span class="m"><code>majutsu--jj-insert</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-jj.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu--jj-insert <a href="#:~:text=If-,RETURN-ERROR"><span class="arg">RETURN-ERROR</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=with-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run jj with <span class="arg">ARGS</span> and insert output at point.
+<p>If <span class="arg">RETURN-ERROR</span> is nil, return the exit code.  If <span class="arg">RETURN-ERROR</span> is
+non-nil, return the error message if the command fails, or the
+exit code if there is no error output.  When <span class="arg">RETURN-ERROR</span> is
+<span class="m"><code>full</code></span>, return the full stderr output on error.
+<p>This is the low-level worker for <a href="../fun/majutsu-jj-insert.html"><code>majutsu-jj-insert</code></a> and similar
+functions.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-jj.el</span>
+(<span class="k">defun</span> <span class="f">majutsu--jj-insert</span> (return-error <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Run jj with ARGS and insert output at point.
+
+If RETURN-ERROR is nil, return the exit code.  If RETURN-ERROR is
+non-nil, return the error message if the command fails, or the
+exit code if there is no error output.  When RETURN-ERROR is
+`</span><span class="m doc">full</span><span class="doc">', return the full stderr output on error.
+
+This is the low-level worker for `</span><span class="m doc">majutsu-jj-insert</span><span class="doc">' and similar
+functions."</span>
+  (<span class="k">setq</span> args (majutsu-process-jj-arguments args))
+  (<span class="k">let*</span> ((start-time (current-time))
+         (err-file (<span class="k">and</span> return-error
+                        (make-nearby-temp-file <span class="s">"majutsu-jj-err"</span>)))
+         exit-code)
+    (majutsu--debug <span class="s">"Running command: %s %s"</span> (majutsu-jj--executable) (string-join args <span class="s">" "</span>))
+    (<span class="k">setq</span> exit-code (apply #'majutsu-process-file (majutsu-jj--executable) nil
+                           (list t err-file) nil args))
+    (majutsu--debug <span class="s">"Command completed in %.3f seconds, exit code: %d"</span>
+                    (float-time (time-subtract (current-time) start-time))
+                    exit-code)
+    (<span class="k">when</span> (<span class="k">and</span> majutsu-show-command-output (&gt; (point-max) (point-min)))
+      (majutsu--debug <span class="s">"Command output: %s"</span>
+                      (string-trim (buffer-substring (point-min) (point-max)))))
+    (<span class="k">prog1</span> (<span class="k">if</span> (<span class="k">and</span> err-file (not (zerop exit-code)))
+               (<span class="k">with-temp-buffer</span>
+                 (insert-file-contents err-file)
+                 (<span class="k">if</span> (eq return-error 'full)
+                     (buffer-string)
+                   (<span class="k">let</span> ((line (car (split-string (buffer-string) <span class="s">"\n"</span> t))))
+                     (<span class="k">or</span> line exit-code))))
+             exit-code)
+      (<span class="k">when</span> err-file (<span class="k">ignore-errors</span> (delete-file err-file))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

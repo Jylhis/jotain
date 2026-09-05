@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge-bug-reference-setup – Emacs Documentation Online</title>
+<meta name="description" content="forge-bug-reference-setup is a natively compiled function defined in
+forge-topic.el.
+Setup bug-reference in the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge-bug-reference-setup</code></h1><p><span class="m"><code>forge-bug-reference-setup</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">forge-topic.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge-bug-reference-setup)
+</code></pre>
+<h2>Documentation</h2>
+<p>Setup <span class="m"><code>bug-reference</code></span> in the current buffer.
+<p>If forge data has been fetched for the current repository, then
+enable <a class="v" href="../var/bug-reference-mode.html"><code>bug-reference-mode</code>(var)</a>/<a class="f" href="../fun/bug-reference-mode.html"><code>bug-reference-mode</code>(fun)</a> or <a class="v" href="../var/bug-reference-prog-mode.html"><code>bug-reference-prog-mode</code>(var)</a>/<a class="f" href="../fun/bug-reference-prog-mode.html"><code>bug-reference-prog-mode</code>(fun)</a> and
+modify <a href="../var/bug-reference-bug-regexp.html"><code>bug-reference-bug-regexp</code></a> if appropriate.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-topic.el</span>
+(<span class="k">defun</span> <span class="f">forge-bug-reference-setup</span> ()
+  <span class="doc">"Setup `</span><span class="m doc">bug-reference</span><span class="doc">' in the current buffer.
+If forge data has been fetched for the current repository, then
+enable `</span><span class="m doc">bug-reference-mode</span><span class="doc">' or `</span><span class="m doc">bug-reference-prog-mode</span><span class="doc">' and
+modify `</span><span class="m doc">bug-reference-bug-regexp</span><span class="doc">' if appropriate."</span>
+  (<span class="k">unless</span> (<span class="k">or</span> bug-reference-url-format
+              (not (forge-db t))
+              (<span class="k">and</span> buffer-file-name
+                   (not forge-bug-reference-remote-files)
+                   (file-remote-p buffer-file-name))
+              <span class="cd">;; </span><span class="c">TODO Allow use in these modes again.
+</span>              (derived-mode-p 'forge-topics-mode 'forge-notifications-mode))
+    (<span class="k">magit--with-safe-default-directory</span> nil
+      (<span class="k">when-let</span> ((repo (forge-get-repository <span class="bi">:tracked?</span>)))
+        (<span class="k">when</span> (derived-mode-p 'magit-status-mode
+                              'forge-notifications-mode)
+          (<span class="k">setq-local</span>
+           bug-reference-auto-setup-functions
+           (<span class="k">let</span> ((hook bug-reference-auto-setup-functions))
+             (list (<span class="k">lambda</span> ()
+                     <span class="cd">;; </span><span class="c">HOOK is not allowed to be a lexical var:
+</span>                     <span class="cd">;; </span><span class="c">(run-hook-with-args-until-success 'hook)
+</span>                     (<span class="k">catch</span> '<span class="m">success</span>
+                       (<span class="k">dolist</span> (f hook)
+                         (<span class="k">when</span> (funcall f)
+                           (<span class="k">setq</span> bug-reference-bug-regexp
+                                 (concat <span class="s">"."</span> bug-reference-bug-regexp))
+                           (<span class="k">throw</span> '<span class="m">success</span> t)))))))))
+        (<span class="k">if</span> (derived-mode-p 'prog-mode)
+            (bug-reference-prog-mode 1)
+          (bug-reference-mode 1))
+        (add-hook 'completion-at-point-functions
+                  #'forge-topic-completion-at-point nil t)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

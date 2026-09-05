@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--setup-post-buffer – Emacs Documentation Online</title>
+<meta name="description" content="forge--setup-post-buffer is a natively compiled function defined in
+forge-post.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--setup-post-buffer</code></h1><p><span class="m"><code>forge--setup-post-buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">forge-post.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--setup-post-buffer <span class="arg">OBJ-OR-ACTION</span> <span class="arg">SUBMIT</span> <span class="arg">FILE</span> <span class="arg">HEADER</span> <span class="ty">&amp;optional</span> <span class="arg">BINDINGS</span> <span class="arg">FN</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-post.el</span>
+(<span class="k">defun</span> <span class="f">forge--setup-post-buffer</span> ( obj-or-action submit file header
+                                  <span class="ty">&amp;optional</span> bindings fn)
+  (<span class="k">declare</span> (indent defun))
+  (<span class="k">let*</span> ((prevbuf (current-buffer))
+         (winconf (current-window-configuration))
+         (action  (<span class="k">cond</span> ((symbolp obj-or-action)             obj-or-action)
+                        ((<span class="k">forge--childp</span> obj-or-action 'forge-topic) 'reply)
+                        ((<span class="k">forge--childp</span> obj-or-action 'forge-post)   'edit)))
+         (obj     (<span class="k">if</span> (symbolp obj-or-action)
+                      (forge-get-repository <span class="bi">:tracked</span>)
+                    obj-or-action))
+         (repo    (forge-get-repository obj))
+         (header  (forge--format obj header))
+         (file    (forge--post-expand-file-name (forge--format obj file) repo))
+         (_       (make-directory (file-name-directory file) t))
+         (buffer  (find-file-noselect file))
+         (resume  (forge--post-resume-p file buffer)))
+    (<span class="k">with-current-buffer</span> buffer
+      (forge-post-mode)
+      (magit-set-header-line-format header)
+      (<span class="k">setq</span> forge--pre-post-buffer prevbuf)
+      (<span class="k">setq</span> forge--pre-post-winconf winconf)
+      (forge-set-buffer-repository)
+      (<span class="k">setq</span> forge-edit-post-action action)
+      (<span class="k">setq</span> forge--buffer-post-object obj)
+      (<span class="k">setq</span> forge--submit-post-function submit)
+      (<span class="k">pcase-dolist</span> (`(,var ,val) bindings)
+        (set-local var val)
+        (<span class="k">when</span> (eq var 'forge--buffer-template)
+          (<span class="k">let-alist</span> forge--buffer-template
+            (<span class="k">setq</span> forge--buffer-assignees .assignees)
+            (<span class="k">setq</span> forge--buffer-labels .labels)
+            (<span class="k">setq</span> forge--buffer-draft-p .draft))))
+      (<span class="k">cond-let</span>
+        (resume)
+        ((not (memq action '(new-discussion new-issue new-pullreq))))
+        ([template (alist-get 'text forge--buffer-template)]
+         (<span class="k">unless</span> (string-prefix-p <span class="s">"# "</span> template)
+           (insert <span class="s">"# \n\n"</span>))
+         (insert template)
+         (goto-char 3))
+        ((insert <span class="s">"# "</span>)))
+      (<span class="k">when</span> fn
+        (funcall fn)))
+    (run-hook-wrapped 'forge-edit-post-hook
+                      (<span class="k">lambda</span> (fn) (<span class="k">with-current-buffer</span> buffer (funcall fn)) nil))
+    (message (substitute-command-keys
+              <span class="s">"Use \\[</span><span class="m s">forge-post-menu</span><span class="s">] to set fields and submit or abort"</span>))
+    (forge--display-post-buffer buffer)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

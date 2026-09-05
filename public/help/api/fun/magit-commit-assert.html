@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-commit-assert – Emacs Documentation Online</title>
+<meta name="description" content="magit-commit-assert is a natively compiled function defined in
+magit-commit.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-commit-assert</code></h1><p><span class="m"><code>magit-commit-assert</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-commit.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-commit-assert <span class="arg">ARGS</span> <span class="ty">&amp;optional</span> <span class="arg">NOPATCH</span> <span class="arg">STRICT</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-commit.el</span>
+(<span class="k">defun</span> <span class="f">magit-commit-assert</span> (args <span class="ty">&amp;optional</span> nopatch strict)
+  (<span class="k">cond</span>
+    (nopatch (<span class="k">or</span> args (list <span class="s">"--"</span>)))
+    ((<span class="k">or</span> (magit-anything-staged-p)
+         (<span class="k">and</span> (magit-anything-unstaged-p)
+              <span class="cd">;; </span><span class="c">^ Everything of nothing is still nothing.
+</span>              (member <span class="s">"--all"</span> args))
+         (<span class="k">and</span> (not strict)
+              <span class="cd">;; </span><span class="c">^ For amend variants that don't make sense otherwise.
+</span>              (<span class="k">or</span> (member <span class="s">"--amend"</span> args)
+                  (member <span class="s">"--allow-empty"</span> args)
+                  (member <span class="s">"--reset-author"</span> args)
+                  (member <span class="s">"--signoff"</span> args)
+                  (transient-arg-value <span class="s">"--author="</span> args)
+                  (transient-arg-value <span class="s">"--date="</span> args))))
+     (<span class="k">or</span> args (list <span class="s">"--"</span>)))
+    ((<span class="k">and</span> (magit-rebase-in-progress-p)
+          (not (magit-anything-unstaged-p))
+          (y-or-n-p <span class="s">"Nothing staged.  Continue in-progress rebase? "</span>))
+     (<span class="k">setq</span> this-command #'magit-rebase-continue)
+     (magit-run-git-sequencer <span class="s">"rebase"</span> <span class="s">"--continue"</span>)
+     nil)
+    ((file-exists-p (expand-file-name <span class="s">"MERGE_MSG"</span> (magit-gitdir)))
+     (<span class="k">cond</span> ((magit-anything-unmerged-p)
+            (<span class="w">user-error</span> <span class="s">"Unresolved conflicts"</span>))
+           ((<span class="k">and</span> (magit-anything-unstaged-p)
+                 (not (y-or-n-p
+                       <span class="s">"Proceed with merge despite unstaged changes? "</span>)))
+            (<span class="w">user-error</span> <span class="s">"Abort"</span>))
+           ((<span class="k">or</span> args (list <span class="s">"--"</span>)))))
+    ((not (magit-anything-unstaged-p))
+     (<span class="w">user-error</span> <span class="s">"Nothing staged (or unstaged)"</span>))
+    (magit-commit-ask-to-stage
+     (<span class="k">when</span> (eq magit-commit-ask-to-stage 'verbose)
+       (apply #'magit-diff-unstaged (magit-diff-arguments)))
+     (<span class="k">prog1</span> (<span class="k">when</span> (<span class="k">or</span> (eq magit-commit-ask-to-stage 'stage)
+                      (y-or-n-p
+                       <span class="s">"Nothing staged.  Commit all uncommitted changes? "</span>))
+              (<span class="k">setq</span> this-command 'magit-commit--all)
+              (cons <span class="s">"--all"</span> (<span class="k">or</span> args (list <span class="s">"--"</span>))))
+       (<span class="k">when</span> (<span class="k">and</span> (eq magit-commit-ask-to-stage 'verbose)
+                  (derived-mode-p 'magit-diff-mode))
+         (magit-mode-bury-buffer))))
+    (t
+     (<span class="w">user-error</span> <span class="s">"Nothing staged"</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

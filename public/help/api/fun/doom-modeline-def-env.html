@@ -1,0 +1,86 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: doom-modeline-def-env – Emacs Documentation Online</title>
+<meta name="description" content="doom-modeline-def-env is a macro defined in doom-modeline-env.el.
+Define a handler for updating &amp; displaying a version string for a language.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>doom-modeline-def-env</code></h1><p><span class="m"><code>doom-modeline-def-env</code></span> is a macro defined in <span class="bt">doom-modeline-env.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">doom-modeline-def-env </span><a href="#:~:text=language.-,NAME"><span class="arg">NAME</span></a><span class="k"> &amp;key </span><a href="#:~:text=ID.-,HOOKS"><span class="arg">HOOKS</span></a><span class="k"> </span><a href="#:~:text=triggered.-,COMMAND"><span class="arg">COMMAND</span></a> <a href="#:~:text=br&gt;-,PARSER"><span class="arg">PARSER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Define a handler for updating &amp; displaying a version string for a language.
+<p><span class="arg">NAME</span> is an unquoted symbol representing the handler's unique ID.
+<span class="arg">HOOKS</span> is a list of hook symbols where this handler should be triggered.
+<span class="arg">COMMAND</span> should be a function that returns a shell command and its arguments (as
+<br>&nbsp;&nbsp;a list). It is run on <span class="arg">HOOKS</span>. It takes no arguments.
+<br><span class="arg">PARSER</span> should be a function for parsing <span class="arg">COMMAND</span>'s output line-by-line, to
+<br>&nbsp;&nbsp;extract the version string.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mxkjlhf33q1xxjiii3w5v8nn7avms0p9-emacs-packages-deps/share/emacs/site-lisp/elpa/doom-modeline-20260828.1146/doom-modeline-env.el</span>
+(<span class="k">cl-defmacro</span> <span class="f">doom-modeline-def-env</span> (name <span class="ty">&amp;key</span> hooks command parser)
+  <span class="doc">"Define a handler for updating &amp; displaying a version string for a language.
+
+NAME is an unquoted symbol representing the handler's unique ID.
+HOOKS is a list of hook symbols where this handler should be triggered.
+COMMAND should be a function that returns a shell command and its arguments (as
+  a list). It is run on HOOKS. It takes no arguments.
+PARSER should be a function for parsing COMMAND's output line-by-line, to
+  extract the version string."</span>
+  (<span class="k">declare</span> (indent defun))
+  (<span class="k">unless</span> (<span class="k">and</span> hooks command parser)
+    (<span class="w">error</span> <span class="s">"'</span><span class="m s">%s</span><span class="s">' env is missing either :hooks, :command or :parser"</span> name))
+  (<span class="k">let</span> ((parse-fn  (intern (format <span class="s">"doom-modeline-env--%s-parse"</span> name)))
+        (action-fn (intern (format <span class="s">"doom-modeline-env--%s-args"</span>  name)))
+        (setup-fn  (intern (format <span class="s">"doom-modeline-env-setup-%s"</span>  name)))
+        (update-fn (intern (format <span class="s">"doom-modeline-env-update-%s"</span> name)))
+        (enable-var  (intern (format <span class="s">"doom-modeline-env-enable-%s"</span> name)))
+        (command-var (intern (format <span class="s">"doom-modeline-env-%s-command"</span> name)))
+        (parser-var  (intern (format <span class="s">"doom-modeline-env-%s-parser-fn"</span> name)))
+        (exe-var     (intern (format <span class="s">"doom-modeline-env-%s-executable"</span> name))))
+    (macroexp-progn
+     `((<span class="k">defcustom</span> ,enable-var t
+         ,(format <span class="s">"Whether to display the version string for %s buffers."</span> name)
+         <span class="bi">:type</span> 'boolean
+         <span class="bi">:group</span> 'doom-modeline-env)
+       (<span class="k">defvar</span> ,command-var ',action-fn
+         ,(concat <span class="s">"A function that returns the shell command and arguments (as a list) to\n"</span>
+                  <span class="s">"produce a version string."</span>))
+       (<span class="k">defvar</span> ,parser-var ',parse-fn
+         ,(format <span class="s">"The function to parse each line of `</span><span class="m s">%s</span><span class="s">'</span><span class="w s">\</span><span class="s">'s output."</span> command-var))
+       (<span class="k">defcustom</span> ,exe-var nil
+         ,(format (concat <span class="s">"What executable to use for the version indicator in %s buffers.\n\n"</span>
+                          <span class="s">"If nil, the default binary for this language is used."</span>)
+                  name)
+         <span class="bi">:type</span> 'string
+         <span class="bi">:group</span> 'doom-modeline-env)
+       (<span class="k">defalias</span> ',parse-fn ,parser
+         (format <span class="s">"The line parser for %s buffers.\n\nUsed by `</span><span class="m s">%s</span><span class="s">'."</span>
+                 ',name ',update-fn))
+       (<span class="k">defalias</span> ',action-fn ,command
+         (format <span class="s">"The command resolver for %s buffers.\n\nUsed by `</span><span class="m s">%s</span><span class="s">'."</span>
+                 ',name ',update-fn))
+       (<span class="k">defalias</span> ',setup-fn
+         (<span class="k">lambda</span> ()
+           (<span class="k">if</span> enable-local-variables
+               (add-hook 'hack-local-variables-hook #',update-fn nil t)
+             (,update-fn)))
+         (format <span class="s">"Prepares the modeline to later display the %s version string."</span>
+                 ',name))
+       (<span class="k">defalias</span> ',update-fn
+         (<span class="k">lambda</span> ()
+           (<span class="k">when</span> ,enable-var
+             (<span class="k">when-let*</span> ((command-list (funcall ,command-var))
+                         (exe (executable-find (car command-list))))
+               (<span class="k">setq</span> doom-modeline-env--command exe
+                     doom-modeline-env--command-args (cdr command-list)
+                     doom-modeline-env--parser ,parser-var)
+               (doom-modeline-update-env))))
+         (format <span class="s">"Updates the %s version string in the modeline."</span> ',name))
+       (<span class="k">let</span> ((hooks ',(eval hooks)))
+         (<span class="k">dolist</span> (hook (<span class="k">if</span> (listp hooks) hooks (list hooks)))
+           (add-hook hook #',setup-fn)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

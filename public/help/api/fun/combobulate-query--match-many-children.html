@@ -1,0 +1,152 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-query--match-many-children – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-query--match-many-children is a natively compiled function
+defined in combobulate-navigation.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-query--match-many-children</code></h1><p><span class="m"><code>combobulate-query--match-many-children</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">combobulate-navigation.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-query--match-many-children <span class="arg">CHILDREN</span> <span class="arg">FULL-QUERY</span> <span class="ty">&amp;optional</span> <span class="arg">QUANTIFIER</span> <span class="arg">NEXT-QUERY</span> <span class="arg">SIBLING</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-navigation.el</span>
+(<span class="k">cl-defun</span> <span class="f">combobulate-query--match-many-children</span> (children full-query <span class="ty">&amp;optional</span> quantifier next-query sibling)
+  (<span class="k">setq</span> quantifier (<span class="k">or</span> quantifier '1))
+  (<span class="k">let*</span> ((query-term-types (mapcar #'combobulate-query--term-type full-query))
+         (match-anonymous (<span class="k">or</span> (member 'anonymous query-term-types)
+                              (member 'wildcard query-term-types)))
+         (query (combobulate-query--iter-query full-query))
+         (terms-left -1)
+         (machine nil)
+         (term-quantifier '1)
+         (next-term)
+         (match-state 'unknown)
+         (machine-state nil)
+         (accrued-matches)
+         (child)
+         (matches)
+         (match-result)
+         (term)
+         (starting-children children))
+    (<span class="k">when</span> (<span class="k">and</span> sibling (<span class="k">or</span> (member '* full-query)
+                           (member '+ full-query)))
+      (<span class="w">error</span> <span class="s">"Only `</span><span class="m s">?</span><span class="s">' quantifiers are supported in sibling sub-queries."</span>))
+    (<span class="k">cl-flet*</span> ((advance-machine (status)
+                 (<span class="k">setq</span> machine-state (<span class="k">iter-next</span> machine status))
+                 machine-state)
+               (store-match (v)
+                 (<span class="k">setq</span> accrued-matches (nconc accrued-matches (mapcar #'append v))))
+               (commit-matches ()
+                 (<span class="k">setq</span> matches (nconc matches accrued-matches))
+                 (<span class="k">setq</span> accrued-matches nil))
+               (discard-matches ()
+                 (<span class="k">setq</span> accrued-matches nil))
+               (next-term (<span class="ty">&amp;optional</span> reset)
+                 (<span class="k">when</span> reset
+                   (<span class="k">iter-next</span> query t))
+                 (<span class="k">pcase-let</span> ((`(,new-term ,peek-term ,ct) (<span class="k">iter-next</span> query)))
+                   (<span class="k">setq</span> term new-term)
+                   (<span class="k">when</span> (&gt;= ct terms-left)
+                     (commit-matches))
+                   (<span class="k">setq</span> terms-left ct)
+                   (<span class="k">setq</span> next-term peek-term)
+                   (<span class="k">if</span> (<span class="k">and</span> peek-term (eq (combobulate-query--term-type peek-term) 'quantifier))
+                       (<span class="k">setq</span> term-quantifier peek-term)
+                     (<span class="k">setq</span> term-quantifier '1))
+                   new-term))
+               (reset-machine ()
+                 (<span class="k">if</span> machine
+                     (<span class="k">setq</span> machine-state (<span class="k">iter-next</span> machine 'reset))
+                   (<span class="k">setq</span> machine (combobulate-query--iter-state-machine quantifier t))
+                   (<span class="k">setq</span> machine-state (<span class="k">iter-next</span> machine)))
+                 (<span class="k">unless</span> (eq machine-state 'start)
+                   (<span class="w">error</span> <span class="s">"Machine start machine-state should be `</span><span class="m s">start</span><span class="s">' but it is `</span><span class="m s">%s</span><span class="s">'"</span> machine-state))))
+      (reset-machine)
+      (next-term)
+      (<span class="k">cl-block</span> stop
+        (<span class="k">while</span> term
+          <span class="cd">;; </span><span class="c">debug
+</span>          (<span class="k">when</span> (eq (combobulate-query--term-type term) 'quantifier)
+            (<span class="w">error</span> <span class="s">"Next term is a quantifier `</span><span class="m s">%s</span><span class="s">'"</span> term))
+          (<span class="k">cl-block</span> next-child
+            (<span class="k">while</span> (<span class="k">setq</span> child (<span class="k">pop</span> children))
+              (<span class="k">setq</span> match-result nil)
+              (<span class="k">when</span> (<span class="k">or</span> (<span class="k">and</span> (not (combobulate-node-named-p child)) match-anonymous)
+                        (combobulate-node-named-p child))
+                (<span class="k">setq</span> match-result (<span class="k">if</span> (not (eq term-quantifier '1))
+                                       (combobulate-query--match-many-children
+                                        (list child) (list term)
+                                        (<span class="k">prog1</span> (next-term) (next-term))
+                                        next-term)
+                                     (funcall (combobulate-query-find-test-function term) child term)))
+                (<span class="k">pcase</span> match-result
+                  (`(match . (,sub-results . ,_))
+                   (<span class="k">setq</span> match-result sub-results))
+                  (`(no-match . ,_)
+                   (<span class="k">setq</span> match-result nil))
+                  (`(ignore . (nil . ,_))
+                   (<span class="k">push</span> child children)
+                   (<span class="k">setq</span> match-result nil)
+                   (<span class="k">cl-return-from</span> next-child))
+                  (_ (<span class="w">error</span> <span class="s">"unknown sub result `</span><span class="m s">%s</span><span class="s">'"</span> match-result)))
+                (<span class="k">if</span> match-result
+                    (<span class="k">progn</span>
+                      (advance-machine 'match)
+                      (<span class="k">when</span> (<span class="k">and</span> (eq machine-state 'match-continue)
+                                 next-query children
+                                 (combobulate-query-search-1 (car children)
+                                                             (<span class="k">if</span> (consp next-query)
+                                                                 next-query
+                                                               (cons next-query nil))))
+                        (store-match match-result)
+                        (commit-matches)
+                        (<span class="k">setq</span> match-state 'match)
+                        (<span class="k">setq</span> term nil)
+                        (<span class="k">cl-return-from</span> stop))
+                      (<span class="k">pcase</span> machine-state
+                        ('match-continue
+                         (store-match match-result)
+                         (next-term))
+                        ('match-stop
+                         (store-match match-result)
+                         (reset-machine)
+                         (commit-matches)
+                         (<span class="k">if</span> (&gt; terms-left 1)
+                             (next-term)
+                           (<span class="k">setq</span> term nil))
+                         (<span class="k">setq</span> match-state 'match)
+                         (<span class="k">cl-return-from</span> next-child))
+                        (_ (<span class="w">error</span> <span class="s">"Positive match machine-state error: `</span><span class="m s">%s</span><span class="s">'"</span> machine-state))))
+                  (<span class="k">pcase</span> (<span class="k">setq</span> machine-state (advance-machine 'no-match))
+                    ('match-stop
+                     (reset-machine)
+                     (<span class="k">setq</span> match-state 'match)
+                     (<span class="k">push</span> child children)
+                     (discard-matches)
+                     (<span class="k">cl-return-from</span> stop))
+                    <span class="cd">;; </span><span class="c">do nothing: we've been told to proceed
+</span>                    ('continue)
+                    (_ (<span class="w">error</span> <span class="s">"Negative match machine-state error: `</span><span class="m s">%s</span><span class="s">'"</span> machine-state))))))
+            (<span class="k">pcase</span> (<span class="k">setq</span> machine-state (advance-machine 'no-children))
+              ('failed-match
+               (reset-machine)
+               (<span class="k">setq</span> match-state 'no-match)
+               (<span class="k">cl-return-from</span> stop))
+              ('match-stop
+               (reset-machine)
+               (<span class="k">setq</span> match-state 'match)
+               (<span class="k">cl-return-from</span> stop))
+              ('skip
+               (reset-machine)
+               (<span class="k">setq</span> children starting-children)
+               (<span class="k">setq</span> match-state 'ignore)
+               (<span class="k">cl-return-from</span> stop))
+              (_ (<span class="w">error</span> <span class="s">"Out of children machine-state error: `</span><span class="m s">%s</span><span class="s">'"</span> machine-state))))))
+      (<span class="k">when</span> accrued-matches
+        (<span class="w">error</span> <span class="s">"accrued matches error: `</span><span class="m s">%s</span><span class="s">'"</span> accrued-matches))
+      (cons match-state (cons matches children)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

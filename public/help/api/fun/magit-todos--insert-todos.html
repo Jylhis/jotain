@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-todos--insert-todos – Emacs Documentation Online</title>
+<meta name="description" content="magit-todos--insert-todos is a natively compiled function defined in
+magit-todos.el.
+Insert to-do items into current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-todos--insert-todos</code></h1><p><span class="m"><code>magit-todos--insert-todos</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-todos.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-todos--insert-todos)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert to-do items into current buffer.
+<p>This function should be called from inside a ‘magit-status’ buffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/na5pd87dpfy16i19v2xzgb9ry6gjpyvw-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-todos-20250928.1611/magit-todos.el</span>
+(<span class="k">defun</span> <span class="f">magit-todos--insert-todos</span> ()
+  <span class="doc">"Insert to-do items into current buffer.
+This function should be called from inside a ‘</span><span class="m doc">magit-status</span><span class="doc">’ buffer."</span>
+  (<span class="k">declare</span> (indent defun))
+  (<span class="k">when</span> (<span class="k">or</span> magit-todos-update-remote
+            magit-todos-updating
+            (not (file-remote-p default-directory)))
+    (<span class="k">when</span> magit-todos-active-scan
+      <span class="cd">;; </span><span class="c">Avoid running multiple scans for a single magit-status buffer.
+</span>      (<span class="k">let</span> ((buffer (process-buffer magit-todos-active-scan)))
+        (<span class="k">when</span> (process-live-p magit-todos-active-scan)
+          (delete-process magit-todos-active-scan))
+        (<span class="k">when</span> (buffer-live-p buffer)
+          (kill-buffer buffer)))
+      (<span class="k">setq</span> magit-todos-active-scan nil))
+    (<span class="k">pcase</span> magit-todos-update
+      ((<span class="k">or</span> 't                           <span class="cd">; </span><span class="c">Automatic
+</span>           <span class="cd">;; </span><span class="c">Manual and updating now
+</span>           (<span class="k">and</span> 'nil (guard magit-todos-updating))
+           <span class="cd">;; </span><span class="c">Caching and cache expired
+</span>           (<span class="k">and</span> (pred integerp) (guard (<span class="k">or</span> magit-todos-updating <span class="cd">; </span><span class="c">Forced update
+</span>                                           (&gt;= (float-time
+                                                (time-subtract (current-time)
+                                                               magit-todos-last-update-time))
+                                               magit-todos-update)
+                                           (null magit-todos-last-update-time)))))
+       <span class="cd">;; </span><span class="c">Scan and insert.
+</span>       <span class="cd">;; </span><span class="c">HACK: I don't like setting a special var here, because it seems like lexically binding a
+</span>       <span class="cd">;; </span><span class="c">special var should follow down the chain, but it isn't working, so we'll do this.
+</span>       (<span class="k">setq</span> magit-todos-updating t)
+       (<span class="k">setq</span> magit-todos-active-scan (funcall magit-todos-scanner
+                                              <span class="bi">:callback</span> #'magit-todos--insert-items
+                                              <span class="bi">:magit-status-buffer</span> (current-buffer)
+                                              <span class="bi">:directory</span> default-directory
+                                              <span class="bi">:depth</span> magit-todos-depth))
+       (magit-todos--maybe-insert-branch-todos 'rescan))
+      (_ <span class="cd">; </span><span class="c">Caching and cache not expired, or not automatic and not manually updating now
+</span>       (magit-todos--insert-items (current-buffer) magit-todos-item-cache)
+       (magit-todos--maybe-insert-branch-todos 'cached)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

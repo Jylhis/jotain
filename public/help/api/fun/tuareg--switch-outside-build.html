@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg--switch-outside-build – Emacs Documentation Online</title>
+<meta name="description" content="tuareg--switch-outside-build is a natively compiled function defined
+in tuareg.el.
+If the current buffer refers to a file under a _build
+directory and a corresponding file exists outside the _build
+directory, propose the user to switch to it.  Return t if the
+switch was made.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg--switch-outside-build</code></h1><p><span class="m"><code>tuareg--switch-outside-build</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg--switch-outside-build)
+</code></pre>
+<h2>Documentation</h2>
+<p>If the current buffer refers to a file under a _build
+directory and a corresponding file exists outside the _build
+directory, propose the user to switch to it.  Return t if the
+switch was made.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg--switch-outside-build</span> ()
+  <span class="doc">"If the current buffer refers to a file under a _build
+directory and a corresponding file exists outside the _build
+directory, propose the user to switch to it.  Return t if the
+switch was made."</span>
+  (<span class="k">unless</span> noninteractive
+    (<span class="k">let</span> ((fpath (buffer-file-name))
+	  (p nil)
+          (in-build nil)
+          base b)
+      (<span class="k">when</span> fpath
+        <span class="cd">;; </span><span class="c">Inspired by `</span><span class="m c">locate-dominating-file</span><span class="c">'.
+</span>        (<span class="k">setq</span> fpath (abbreviate-file-name fpath))
+        (<span class="k">setq</span> base (file-name-nondirectory fpath))
+        (<span class="k">setq</span> fpath (file-name-directory fpath))
+        (<span class="k">while</span> (not (<span class="k">or</span> in-build
+                        (null fpath)
+                        (string-match-p locate-dominating-stop-dir-regexp fpath)))
+          (<span class="k">setq</span> b (file-name-nondirectory (directory-file-name fpath)))
+          (<span class="k">if</span> (string= b <span class="s">"_build"</span>)
+              (<span class="k">setq</span> in-build t)
+            (<span class="k">push</span> (file-name-as-directory b) p)
+            (<span class="k">if</span> (equal fpath (<span class="k">setq</span> fpath (file-name-directory
+                                          (directory-file-name fpath))))
+                (<span class="k">setq</span> fpath nil))))
+        (<span class="k">when</span> in-build
+	  <span class="cd">;; </span><span class="c">Make `</span><span class="m c">fpath</span><span class="c">' the path without _build.
+</span>	  (<span class="k">setq</span> fpath (file-name-directory (directory-file-name fpath)))
+          <span class="cd">;; </span><span class="c">jbuilder prefixes the path with a &lt;context&gt; dir, not ocamlbuild
+</span>          (<span class="k">let*</span> ((context (<span class="k">pop</span> p))
+                 (rel-fpath (concat (apply #'concat p) base))
+                 (alt0 (concat fpath rel-fpath))         <span class="cd">; </span><span class="c">jbuilder
+</span>                 (alt1 (concat fpath context rel-fpath)) <span class="cd">; </span><span class="c">ocamlbuild
+</span>                 (alt (<span class="k">if</span> (file-readable-p alt0) alt0))
+                 (alt (<span class="k">or</span> alt (<span class="k">if</span> (file-readable-p alt1) alt1))))
+            (<span class="k">if</span> (<span class="k">and</span> alt
+                     (y-or-n-p <span class="s">"File in _build.  Switch to corresponding \
+file outside _build? "</span>))
+                (<span class="k">progn</span>
+                  (kill-buffer)
+                  (find-file alt)
+                  t)
+              (read-only-mode)
+              (message <span class="s">"File in _build.  C-x C-q to edit."</span>)
+              nil)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

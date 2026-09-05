@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-mcp-toggle-server – Emacs Documentation Online</title>
+<meta name="description" content="eca-mcp-toggle-server is an interactive and natively compiled function
+defined in eca-mcp.el.
+Select an MCP server and toggle its runtime state.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-mcp-toggle-server</code></h1><p><span class="m"><code>eca-mcp-toggle-server</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-mcp-toggle-server)
+</code></pre>
+<h2>Documentation</h2>
+<p>Select an MCP server and toggle its runtime state.
+<p>Running servers are stopped, stopped servers are started, and servers
+requiring authentication are connected.  Persistent enablement is unchanged.
+<h2>Key Bindings</h2>
+<p><span class="v">eca-chat-mode-map</span> <span class="key">C-c S-RET</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-mcp.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">eca-mcp-toggle-server</span> ()
+  <span class="doc">"Select an MCP server and toggle its runtime state.
+Running servers are stopped, stopped servers are started, and servers
+requiring authentication are connected.  Persistent enablement is unchanged."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((session (eca-session)))
+    (eca-assert-session-running session)
+    (<span class="k">let</span> ((servers (sort (copy-sequence (eca-mcp-servers session))
+                         (<span class="k">lambda</span> (a b)
+                           (string-lessp (plist-get a <span class="bi">:name</span>)
+                                         (plist-get b <span class="bi">:name</span>))))))
+      (<span class="k">unless</span> servers
+        (<span class="w">user-error</span> <span class="s">"No MCP servers are configured"</span>))
+      (<span class="k">let*</span> ((candidates (eca-mcp--server-candidates servers))
+             (choice (completing-read <span class="s">"Toggle MCP server: "</span>
+                                      candidates nil t))
+             (name (cdr (assoc choice candidates)))
+             (server (eca-get (eca--session-tool-servers session) name)))
+        (<span class="k">unless</span> server
+          (<span class="w">user-error</span> <span class="s">"MCP server %s is no longer available"</span> name))
+        (<span class="k">let</span> ((action (eca-mcp--server-runtime-action server)))
+          (<span class="k">cond</span>
+           (action
+            (eca-mcp--notify-server-action session server action))
+           ((string= (plist-get server <span class="bi">:status</span>) <span class="s">"stopping"</span>)
+            (<span class="w">user-error</span> <span class="s">"MCP server %s is stopping; try again shortly"</span>
+                        name))
+           (t
+            (<span class="w">user-error</span> <span class="s">"MCP server %s has unsupported status: %s"</span>
+                        name
+                        (<span class="k">or</span> (plist-get server <span class="bi">:status</span>) <span class="s">"unknown"</span>)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

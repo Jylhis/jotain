@@ -1,0 +1,171 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: csv--jit-align – Emacs Documentation Online</title>
+<meta name="description" content="csv--jit-align is a natively compiled function defined in csv-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>csv--jit-align</code></h1><p><span class="m"><code>csv--jit-align</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">csv-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(csv--jit-align <span class="arg">BEG</span> <span class="arg">END</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mrygxsladaca2yfyr2cy0am5zm9lzddg-emacs-packages-deps/share/emacs/site-lisp/elpa/csv-mode-1.27/csv-mode.el</span>
+(<span class="k">defun</span> <span class="f">csv--jit-align</span> (beg end)
+  (<span class="k">save-excursion</span>
+    <span class="cd">;; </span><span class="c">This is run with inhibit-modification-hooks set, so the overlays'
+</span>    <span class="cd">;; </span><span class="c">modification-hook doesn't work :-(
+</span>    (<span class="k">and</span> csv--header-line
+         (&lt;= beg (overlay-end csv--header-line))
+         (&gt;= end (overlay-start csv--header-line))
+         (csv--header-flush))
+    <span class="cd">;; </span><span class="c">First, round up to a whole number of lines.
+</span>    (goto-char end)
+    (<span class="k">unless</span> (bolp) (forward-line 1) (<span class="k">setq</span> end (point)))
+    (goto-char beg)
+    (<span class="k">unless</span> (bolp) (forward-line 1) (<span class="k">setq</span> beg (point)))
+    (csv--jit-unalign beg end)
+    (put-text-property beg end 'csv--jit t)
+
+    (<span class="k">pcase-let*</span> ((`(,column-widths ,field-widths) (csv--column-widths beg end))
+                 (changed (csv--jit-merge-columns column-widths))
+                 (ellipsis-width (csv--ellipsis-width)))
+      (<span class="k">when</span> changed
+        <span class="cd">;; </span><span class="c">Do it after the current redisplay is over.
+</span>        (run-with-timer jit-lock-context-time nil #'csv--jit-flush beg end))
+
+      <span class="cd">;; </span><span class="c">Align fields:
+</span>      (goto-char beg)
+      (<span class="k">while</span> (&lt; (point) end)
+	(<span class="k">unless</span> (csv-not-looking-at-record)
+          (<span class="k">let</span> ((w csv--jit-columns)
+                (widths-config csv--config-column-widths)
+                (column 0))      <span class="cd">;</span><span class="c">Desired position of left-side of this column.
+</span>            (<span class="k">while</span> (<span class="k">and</span> w (not (eolp)))
+              (<span class="k">let*</span> ((field-beg (point))
+                     (width-config (<span class="k">pop</span> widths-config))
+                     (align-padding (<span class="k">if</span> (bolp) 0 csv-align-padding))
+                     (left-padding 0) (right-padding 0)
+                     (field-width (<span class="k">pop</span> field-widths))
+                     (column-width
+                      (min (max csv-align-min-width
+                                (car (<span class="k">pop</span> w)))
+                           (<span class="k">or</span> width-config
+                               <span class="cd">;; </span><span class="c">Don't apply csv-align-max-width
+</span>                               <span class="cd">;; </span><span class="c">to the last field!
+</span>                               (<span class="k">if</span> w csv-align-max-width
+                                 most-positive-fixnum))))
+                     (x (- column-width field-width)) <span class="cd">; </span><span class="c">Required padding.
+</span>                     (truncate nil))
+                (csv-end-of-field)
+                <span class="cd">;; </span><span class="c">beg = beginning of current field
+</span>                <span class="cd">;; </span><span class="c">end = (point) = end of current field
+</span>                (<span class="k">when</span> (&lt; x 0)
+                  (<span class="k">setq</span> truncate (max column
+                                      (+ column column-width
+                                         align-padding (- ellipsis-width))))
+                  (<span class="k">setq</span> x 0))
+                <span class="cd">;; </span><span class="c">Compute required padding:
+</span>                (<span class="k">pcase</span> csv-align-style
+                  ('left
+                   <span class="cd">;; </span><span class="c">Left align -- pad on the right:
+</span>                   (<span class="k">setq</span> left-padding align-padding
+                         right-padding x))
+                  ('right
+                   <span class="cd">;; </span><span class="c">Right align -- pad on the left:
+</span>                   (<span class="k">setq</span> left-padding (+ align-padding x)))
+                  ('auto
+                   <span class="cd">;; </span><span class="c">Auto align -- left align text, right align numbers:
+</span>                   (<span class="k">if</span> (string-match <span class="s">"\\`[-+.[:digit:]]+\\'"</span>
+                                     (buffer-substring field-beg (point)))
+                       <span class="cd">;; </span><span class="c">Right align -- pad on the left:
+</span>                       (<span class="k">setq</span> left-padding (+ align-padding x))
+                     <span class="cd">;; </span><span class="c">Left align -- pad on the right:
+</span>                     (<span class="k">setq</span> left-padding align-padding
+                           right-padding x)))
+                  ('centre
+                   <span class="cd">;; </span><span class="c">Centre -- pad on both left and right:
+</span>                   (<span class="k">let</span> ((y (/ x 2)))   <span class="cd">; </span><span class="c">truncated integer quotient
+</span>                     (<span class="k">setq</span> left-padding (+ align-padding y)
+                           right-padding (- x y)))))
+
+                (<span class="k">cond</span>
+
+                 ((<span class="k">or</span> (memq 'csv buffer-invisibility-spec)
+                      <span class="cd">;; </span><span class="c">For TSV, hidden or not doesn't make much difference,
+</span>                      <span class="cd">;; </span><span class="c">but the behavior is slightly better when we "hide"
+</span>                      <span class="cd">;; </span><span class="c">the TABs with a `</span><span class="m c">display</span><span class="c">' property than if we add
+</span>                      <span class="cd">;; </span><span class="c">before/after-strings.
+</span>                      (tsv--mode-p))
+
+                  <span class="cd">;; </span><span class="c">Hide separators...
+</span>                  <span class="cd">;; </span><span class="c">Merge right-padding from previous field
+</span>                  <span class="cd">;; </span><span class="c">with left-padding from this field:
+</span>                  (<span class="k">if</span> (zerop column)
+                      (<span class="k">when</span> (&gt; left-padding 0)
+                        <span class="cd">;; </span><span class="c">Display spaces before first field
+</span>                        <span class="cd">;; </span><span class="c">by overlaying first character:
+</span>			(csv--make-overlay
+			 field-beg (1+ field-beg) nil nil nil
+			 `(before-string ,(make-string left-padding ?\ )
+                                         csv--jit t)))
+                    <span class="cd">;; </span><span class="c">Display separator as spaces:
+</span>                    (<span class="k">with-silent-modifications</span>
+                      (put-text-property
+                       (1- field-beg) field-beg
+                       'display `(space <span class="bi">:align-to</span>
+                                        ,(+ left-padding column))))))
+
+                 (t <span class="cd">;; </span><span class="c">Do not hide separators...
+</span>                  (<span class="k">let</span> ((overlay (csv--make-overlay field-beg (point)
+                                                    nil nil t
+                                                    '(csv--jit t))))
+                    (<span class="k">when</span> (&gt; left-padding 0) <span class="cd">; </span><span class="c">Pad on the left.
+</span>                      <span class="cd">;; </span><span class="c">Display spaces before field:
+</span>                      (overlay-put overlay 'before-string
+                                   (make-string left-padding ?\ )))
+                    (<span class="k">unless</span> (eolp)
+                      (<span class="k">if</span> (&gt; right-padding 0) <span class="cd">; </span><span class="c">Pad on the right.
+</span>                          <span class="cd">;; </span><span class="c">Display spaces after field:
+</span>                          (overlay-put
+                           overlay
+                           'after-string (make-string right-padding ?\ )))))))
+                (<span class="k">setq</span> column (+ column column-width align-padding))
+                <span class="cd">;; </span><span class="c">Do it after applying the property, so `</span><span class="m c">move-to-column</span><span class="c">' can
+</span>                <span class="cd">;; </span><span class="c">take it into account.
+</span>                (<span class="k">when</span> truncate
+                  (<span class="k">let</span> ((trunc-pos
+                         (<span class="k">save-excursion</span>
+                           <span class="cd">;; </span><span class="c">¡¡ BIG UGLY HACK !!
+</span>                           <span class="cd">;; </span><span class="c">`</span><span class="m c">current-column</span><span class="c">' and `</span><span class="m c">move-to-column</span><span class="c">' count
+</span>                           <span class="cd">;; </span><span class="c">text hidden with an ellipsis "as if" it were
+</span>                           <span class="cd">;; </span><span class="c">fully visible, which is completely wrong here,
+</span>                           <span class="cd">;; </span><span class="c">so circumvent this by temporarily pretending
+</span>                           <span class="cd">;; </span><span class="c">that `</span><span class="m c">csv-truncate</span><span class="c">' is fully invisible (which
+</span>                           <span class="cd">;; </span><span class="c">isn't quite right either, but should work
+</span>                           <span class="cd">;; </span><span class="c">just well enough for us here).
+</span>                           (<span class="k">let</span> ((buffer-invisibility-spec
+                                  buffer-invisibility-spec))
+                             (add-to-invisibility-spec 'csv-truncate)
+                             (move-to-column truncate))
+                           (point))))
+                    (put-text-property trunc-pos (point)
+                                       'invisible 'csv-truncate)
+                    (<span class="k">when</span> (&gt; (- (point) trunc-pos) 1)
+                      <span class="cd">;; </span><span class="c">Arrange to temporarily untruncate the string when
+</span>                      <span class="cd">;; </span><span class="c">cursor moves into it.
+</span>                      <span class="cd">;; </span><span class="c">FIXME: This only works if
+</span>                      <span class="cd">;; </span><span class="c">`</span><span class="m c">global-disable-point-adjustment</span><span class="c">' is non-nil!
+</span>                      <span class="cd">;; </span><span class="c">Arguably this should be fixed by making
+</span>                      <span class="cd">;; </span><span class="c">point-adjustment code pay attention to
+</span>                      <span class="cd">;; </span><span class="c">cursor-sensor-functions!
+</span>                      (put-text-property
+                       (1+ trunc-pos) (point)
+                       'cursor-sensor-functions
+                       (list #'csv-align--cursor-truncated)))))
+                (<span class="k">unless</span> (eolp) (forward-char)) <span class="cd">; </span><span class="c">Skip separator.
+</span>                ))))
+	(forward-line)))
+    `(jit-lock-bounds ,beg . ,end)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

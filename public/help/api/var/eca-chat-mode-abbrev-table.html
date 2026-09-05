@@ -1,0 +1,223 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: eca-chat-mode-abbrev-table – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat-mode-abbrev-table is a variable defined in eca-chat.el.
+Abbrev table for eca-chat-mode.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>eca-chat-mode-abbrev-table</code></h1><p><span class="m"><code>eca-chat-mode-abbrev-table</code></span> is a variable defined in <span class="bt">eca-chat.el</span>.
+<h2>Value</h2>
+<pre><code>#&lt;obarray n=1&gt;
+</code></pre>
+<h2>Documentation</h2>
+<p>Abbrev table for <a href="../fun/eca-chat-mode.html"><code>eca-chat-mode</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+<span class="cd">;; </span><span class="c">Public
+</span>
+(<span class="k">eca-chat-define-derived-mode</span> eca-chat-mode <span class="s">"eca-chat"</span>
+  <span class="s">"Major mode for ECA chat sessions.
+\\{</span><span class="v s">eca-chat-mode-map</span><span class="s">}"</span>
+  <span class="bi">:group</span> 'eca
+  <span class="cd">;; </span><span class="c">Use word-wrap instead of visual-line-mode to preserve table formatting.
+</span>  <span class="cd">;; </span><span class="c">visual-line-mode wraps all lines including tables, breaking their layout.
+</span>  (<span class="k">setq-local</span> word-wrap t)
+  (<span class="k">setq-local</span> truncate-lines nil)
+  <span class="cd">;; </span><span class="c">Scroll just enough to keep point visible instead of recentering,
+</span>  <span class="cd">;; </span><span class="c">otherwise the window jumps up and down while streamed chunks push
+</span>  <span class="cd">;; </span><span class="c">the prompt around (#268).  Users customizing `</span><span class="m c">scroll-conservatively</span><span class="c">'
+</span>  <span class="cd">;; </span><span class="c">globally never see this, but the Emacs default (0) recenters.
+</span>  (<span class="k">setq-local</span> scroll-conservatively 101)
+  (<span class="k">setq-local</span> scroll-margin 0)
+  <span class="cd">;; </span><span class="c">The spinner is padded with trailing spaces to keep a fixed width.
+</span>  (<span class="k">setq-local</span> show-trailing-whitespace nil)
+  (hl-line-mode -1)
+  (<span class="k">setq-local</span> eca-chat--history '())
+  (<span class="k">setq-local</span> eca-chat--history-index -1)
+
+  <span class="cd">;; </span><span class="c">Mutable defaults would otherwise be shared until locally assigned.
+</span>  (<span class="k">setq-local</span> eca-chat-expandable--id-&gt;ov
+              (make-hash-table <span class="bi">:test</span> 'equal))
+  (<span class="k">setq-local</span> eca-chat--tool-call-prepare-counters
+              (make-hash-table <span class="bi">:test</span> 'equal))
+  (<span class="k">setq-local</span> eca-chat--tool-call-prepare-content-cache
+              (make-hash-table <span class="bi">:test</span> 'equal))
+  (<span class="k">setq-local</span> eca-chat--tool-call-elapsed-times
+              (make-hash-table <span class="bi">:test</span> 'equal))
+  (<span class="k">setq-local</span> eca-chat--subagent-chat-id-&gt;tool-call-id
+              (make-hash-table <span class="bi">:test</span> 'equal))
+  (<span class="k">setq-local</span> eca-chat--subagent-usage
+              (make-hash-table <span class="bi">:test</span> 'equal))
+
+  <span class="cd">;; </span><span class="c">Show diff blocks in markdown-mode with colors.
+</span>  (<span class="k">setq-local</span> markdown-fontify-code-blocks-natively t)
+  <span class="cd">;; </span><span class="c">Enable gfm-view-mode-like rendering without read-only.
+</span>  (<span class="k">setq-local</span> markdown-hide-markup t)
+  (eca-chat--apply-markdown-markup-visibility)
+
+  <span class="cd">;; </span><span class="c">markdown-mode declares keymap, help-echo, and mouse-face as
+</span>  <span class="cd">;; </span><span class="c">font-lock-extra-managed-props, which causes font-lock-ensure to
+</span>  <span class="cd">;; </span><span class="c">strip these properties from the entire buffer on every
+</span>  <span class="cd">;; </span><span class="c">refontification cycle.  ECA uses these properties on interactive
+</span>  <span class="cd">;; </span><span class="c">elements (approval buttons, expandable block labels, etc.) that
+</span>  <span class="cd">;; </span><span class="c">must survive font-lock.  Remove them so font-lock leaves our
+</span>  <span class="cd">;; </span><span class="c">interactive text properties intact.
+</span>  (<span class="k">setq-local</span> font-lock-extra-managed-props
+              (seq-difference font-lock-extra-managed-props
+                              '(keymap help-echo mouse-face)))
+
+  <span class="cd">;; </span><span class="c">Skip font-lock on ranges tagged with `</span><span class="m c">eca-no-fontify</span><span class="c">', currently
+</span>  <span class="cd">;; </span><span class="c">used to stop gfm/markdown matchers from re-fontifying streaming
+</span>  <span class="cd">;; </span><span class="c">tool-call argument bodies on every chunk (see #234).
+</span>  (<span class="k">setq-local</span> font-lock-fontify-region-function #'eca-chat--fontify-region)
+
+  (make-local-variable 'completion-at-point-functions)
+  (<span class="k">setq-local</span> completion-at-point-functions (list #'eca-chat-completion-at-point))
+
+  <span class="cd">;; </span><span class="c">The server filters candidates by substring over full paths; make
+</span>  <span class="cd">;; </span><span class="c">sure client-side completion styles keep those candidates visible
+</span>  <span class="cd">;; </span><span class="c">regardless of the user's global completion configuration.
+</span>  (<span class="k">setq-local</span> completion-category-defaults
+              (cons '(eca-capf (styles basic substring))
+                    completion-category-defaults))
+  (<span class="k">setq-local</span> completion-ignore-case t)
+
+  <span class="cd">;; </span><span class="c">Turn raw @path/#path tokens into proper items after a space.
+</span>  (add-hook 'post-self-insert-hook #'eca-chat--post-self-insert nil t)
+
+  (make-local-variable 'company-box-icons-functions)
+  (<span class="k">when</span> (<span class="k">featurep</span> '<span class="m">company-box</span>)
+    (add-to-list 'company-box-icons-functions #'eca-chat--completion-item-company-box-icon))
+
+  (<span class="k">let</span> ((session (<span class="k">or</span> eca--chat-init-session (eca-session))))
+    (<span class="k">when</span> session
+      (<span class="k">setq-local</span> eca--session-id-cache (eca--session-id session)))
+    (<span class="k">unless</span> (listp header-line-format)
+      (<span class="k">setq-local</span> header-line-format (list header-line-format)))
+    (add-to-list 'header-line-format `(t (<span class="bi">:eval</span> (eca-chat--header-line-string (eca-session)))))
+
+    (<span class="k">when</span> (eq 0 (length (string-trim (buffer-string))))
+      (<span class="k">save-excursion</span>
+        (goto-char (point-min))
+        (eca-chat--insert <span class="s">"\n"</span>)
+        (<span class="k">unless</span> eca--chat-init-skip-welcome
+          (eca-chat--insert (propertize (eca--session-chat-welcome-message session)
+                                        'font-lock-face 'eca-chat-welcome-face))
+          (eca-chat--insert <span class="s">"\n"</span>)
+          (eca-chat--insert (eca-buttonize
+                             eca-chat-mode-map
+                             (propertize <span class="s">"Resume a previous session"</span>
+                                         'font-lock-face 'eca-chat-resume-link-face)
+                             #'eca-chat-resume))
+          (<span class="k">setq-local</span> eca-chat--welcome-shown t))
+        (eca-chat--insert-prompt-string)))
+
+    <span class="cd">;; </span><span class="c">TODO is there a better way to do that?
+</span>    (advice-add 'delete-char <span class="bi">:around</span> #'eca-chat--key-pressed-deletion)
+    (advice-add 'delete-backward-char <span class="bi">:around</span> #'eca-chat--key-pressed-deletion)
+    (advice-add 'backward-delete-char <span class="bi">:around</span> #'eca-chat--key-pressed-deletion)
+    (advice-add 'backward-delete-char-untabify <span class="bi">:around</span> #'eca-chat--key-pressed-deletion)
+    (advice-add 'backward-kill-word <span class="bi">:around</span> #'eca-chat--key-pressed-deletion)
+    (<span class="k">when</span> (<span class="k">featurep</span> '<span class="m">evil</span>)
+      (advice-add 'evil-delete-backward-word <span class="bi">:around</span> #'eca-chat--key-pressed-deletion)
+      (advice-add 'evil-delete-back-to-indentation <span class="bi">:around</span> #'eca-chat--key-pressed-deletion)
+      (advice-add 'evil-delete-whole-line <span class="bi">:around</span> #'eca-chat--key-pressed-deletion)
+      (advice-add 'evil-delete-char <span class="bi">:around</span> #'eca-chat--key-pressed-deletion)
+      (advice-add 'evil-delete <span class="bi">:around</span> #'eca-chat--key-pressed-deletion)
+      (advice-add 'evil-delete-backward-char <span class="bi">:around</span> #'eca-chat--key-pressed-deletion))
+
+    (add-hook 'eldoc-documentation-functions #'eca-chat-eldoc-function nil t)
+    (eldoc-mode 1)
+
+    (add-hook 'kill-buffer-hook #'eca-chat--on-buffer-killed nil t)
+
+    <span class="cd">;; </span><span class="c">Paste image from clipboard support
+</span>    (<span class="k">when</span> (fboundp 'yank-media-handler)
+      <span class="cd">;; </span><span class="c">reset current handlers inherit from markdown
+</span>      (<span class="k">setq-local</span> yank-media--registered-handlers nil)
+      (yank-media-handler <span class="s">"image/png"</span> #'eca-chat--yank-image-handler)
+      (yank-media-handler <span class="s">"image/jpeg"</span> #'eca-chat--yank-image-handler)
+      (yank-media-handler <span class="s">"image/jpg"</span> #'eca-chat--yank-image-handler)
+      (yank-media-handler <span class="s">"image/gif"</span> #'eca-chat--yank-image-handler)
+      (yank-media-handler <span class="s">"image/webp"</span> #'eca-chat--yank-image-handler)
+      (advice-add 'yank <span class="bi">:around</span> #'eca-chat--yank-considering-image)
+      (<span class="k">when</span> (<span class="k">featurep</span> '<span class="m">evil</span>)
+        (advice-add 'evil-paste-after <span class="bi">:around</span> #'eca-chat--yank-considering-image)
+        (advice-add 'evil-paste-before <span class="bi">:around</span> #'eca-chat--yank-considering-image)))
+
+    (<span class="k">let</span> ((chat-buffer (current-buffer)))
+      (run-with-timer
+       0.05
+       nil
+       (<span class="k">lambda</span> ()
+         (<span class="k">eca-chat--with-current-buffer</span> chat-buffer
+           (display-line-numbers-mode -1)
+           (<span class="k">when</span> (fboundp 'vi-tilde-fringe-mode) (vi-tilde-fringe-mode -1))
+           (<span class="k">when</span> (fboundp 'company-mode)
+             (<span class="k">setq-local</span> company-backends '(company-capf)
+                         company-minimum-prefix-length 0))
+           (<span class="k">when</span> (fboundp 'corfu-mode)
+             (<span class="k">setq-local</span> corfu-auto-prefix 0))
+           (<span class="k">setq-local</span> eca-chat--server-version
+                       (eca-process--get-current-server-version))
+           (<span class="k">when</span> eca-chat-override-mode-line
+             (<span class="k">setq-local</span> mode-line-format
+                         (<span class="k">if</span> (functionp eca-chat-mode-line-format)
+                             (funcall eca-chat-mode-line-format session)
+                           `(t (<span class="bi">:eval</span> (eca-chat--mode-line-string ,session))))))
+
+           <span class="cd">;; </span><span class="c">Tab-line: show a tab for each open chat
+</span>           (<span class="k">when</span> eca-chat-tab-line
+             (<span class="k">require</span> '<span class="m">tab-line</span>)
+             (<span class="k">setq-local</span> tab-line-tabs-function #'eca-chat--tab-line-tabs)
+             (<span class="k">setq-local</span> tab-line-new-button-show t)
+             (<span class="k">setq-local</span> tab-line-close-button-show eca-chat-tab-line-close-button-show)
+             (<span class="k">setq-local</span> tab-line-new-tab-function #'eca-chat-new)
+             (<span class="k">setq-local</span> tab-line-separator <span class="s">""</span>)
+             (<span class="k">setq-local</span> tab-line-tab-face-functions '(eca-chat--tab-line-face))
+             (face-remap-add-relative 'tab-line <span class="bi">:height</span> 0.9)
+             <span class="cd">;; </span><span class="c">Use text × instead of XPM image so it inherits the tab background
+</span>             (<span class="k">setq-local</span> tab-line-close-button
+                         (propertize <span class="s">" × "</span>
+                                     'keymap eca-chat--tab-close-map
+                                     'mouse-face 'tab-line-close-highlight
+                                     'help-echo <span class="s">"Click to close tab"</span>))
+             (tab-line-mode 1))
+
+           <span class="cd">;; </span><span class="c">Keep session last-chat-buffer in sync with the displayed chat
+</span>           (add-hook 'post-command-hook #'eca-chat--sync-last-buffer nil t)
+
+           (force-mode-line-update)
+           (run-hooks 'eca-chat-mode-hook))))))
+
+  (face-remap-add-relative 'markdown-line-break-face
+                           '(<span class="bi">:underline</span> nil))
+
+  <span class="cd">;; </span><span class="c">Ensure markdown links look clickable regardless of theme.
+</span>  (face-remap-add-relative 'markdown-link-face
+                           '(<span class="bi">:underline</span> t))
+  (face-remap-add-relative 'markdown-plain-url-face
+                           '(<span class="bi">:underline</span> t))
+
+  <span class="cd">;; </span><span class="c">Ensure tables use a monospace font for proper alignment.
+</span>  (face-remap-add-relative 'markdown-table-face
+                           '(<span class="bi">:inherit</span> fixed-pitch))
+
+  <span class="cd">;; </span><span class="c">Compute expandable-block background faces from current theme and
+</span>  <span class="cd">;; </span><span class="c">keep them in sync when the user switches themes.
+</span>  (eca-chat--update-expandable-block-faces)
+  (eca-table-update-faces)
+  (add-hook 'enable-theme-functions
+            (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> _)
+              (eca-chat--update-expandable-block-faces)
+              (eca-table-update-faces))
+            nil t)
+
+  <span class="cd">;; </span><span class="c">Re-evaluate table action bars when window is resized.
+</span>  (add-hook 'window-size-change-functions
+            #'eca-chat--on-window-size-change)
+
+  (goto-char (point-max)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

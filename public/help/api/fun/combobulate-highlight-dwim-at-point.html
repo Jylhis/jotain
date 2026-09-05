@@ -1,0 +1,67 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-highlight-dwim-at-point – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-highlight-dwim-at-point is an interactive and natively
+compiled function defined in combobulate-query.el.
+DWIM and build a query that highlight nodes with FACE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-highlight-dwim-at-point</code></h1><p><span class="m"><code>combobulate-highlight-dwim-at-point</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <span class="bt">combobulate-query.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-highlight-dwim-at-point <a href="#:~:text=with-,FACE"><span class="arg">FACE</span></a> <a href="#:~:text=If-,STRICT"><span class="arg">STRICT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>DWIM and build a query that highlight nodes with <span class="arg">FACE</span>.
+<p>If <span class="arg">STRICT</span> is non-nil, then the parent node of the node at point
+is used to constrain the search.  Otherwise, the parent node is
+marked <span class="m"><code>_</code></span> indicating a wildcard.
+<p>Uses <span class="m"><code>context-nodes</code></span> to determine the right
+node at point to highlight.
+<h2>Key Bindings</h2>
+<p><span class="v">combobulate-highlight-key-map</span> <span class="key">h</span>
+<span class="v">combobulate-key-map</span> <span class="key">C-c o h h</span>
+<span class="v">combobulate-options-key-map</span> <span class="key">h h</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-query.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-highlight-dwim-at-point</span> (face strict)
+  <span class="doc">"DWIM and build a query that highlight nodes with FACE.
+
+If STRICT is non-nil, then the parent node of the node at point
+is used to constrain the search.  Otherwise, the parent node is
+marked `</span><span class="m doc">_</span><span class="doc">' indicating a wildcard.
+
+Uses `</span><span class="m doc">context-nodes</span><span class="doc">' to determine the right
+node at point to highlight."</span>
+  (<span class="k">interactive</span> (list (combobulate-highlight-read-face-name <span class="s">"Face: "</span>)
+                     (y-or-n-p <span class="s">"Match similar types only? "</span>)))
+  <span class="cd">;; </span><span class="c">determine the right node at point to collect.
+</span>  (<span class="k">let</span> ((node (<span class="k">with-navigation-nodes</span> (<span class="bi">:procedures</span> (<span class="k">combobulate-read</span> context-nodes))
+                (car-safe
+                 (seq-sort #'combobulate-node-larger-than-node-p
+                           (seq-filter #'combobulate-navigable-node-p
+                                       (cons (combobulate-node-at-point nil t)
+                                             (combobulate-get-parents (combobulate-node-at-point nil t))))))))
+        (query))
+    (<span class="k">unless</span> node (<span class="w">error</span> <span class="s">"Cannot find a valid context node at point"</span>))
+    (<span class="k">with-navigation-nodes</span> (<span class="bi">:procedures</span> (<span class="k">combobulate-read</span> procedures-hierarchy))
+      (<span class="k">if-let</span> ((node-parent (combobulate-node-parent node)))
+          (<span class="k">progn</span>
+            (<span class="k">setq</span> query (combobulate-query-builder-matcher-query
+                         node
+                         (combobulate-query-builder-get-node-text node)
+                         strict
+                         face
+                         node-parent))
+            (combobulate-query-builder-install-into-buffer
+             (current-buffer)
+             query
+             (combobulate-parser-language (combobulate-parser-node node)))
+            (combobulate-message
+             (format <span class="s">"Installing %s query:\n %s"</span>
+                     (<span class="k">if</span> strict <span class="s">"strict"</span> <span class="s">"lax"</span>)
+                     (combobulate-query-builder-fontify-query query (combobulate-parser-node node)))))
+        (<span class="w">error</span> <span class="s">"Cannot derive a parent node from the current node"</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

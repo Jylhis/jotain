@@ -1,0 +1,87 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--redraw-now – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--redraw-now is a natively compiled function defined in
+ghostel.el.
+Attempt to redraw BUFFER and retain the request until it succeeds.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--redraw-now</code></h1><p><span class="m"><code>ghostel--redraw-now</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--redraw-now <a href="#:~:text=redraw-,BUFFER"><span class="arg">BUFFER</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=With-,FORCE"><span class="arg">FORCE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Attempt to redraw <span class="arg">BUFFER</span> and retain the request until it succeeds.
+<p>The renderer preserves buffer positions while applying terminal mutations;
+this function anchors windows that were following the live viewport.
+<p>With <span class="arg">FORCE</span> non-nil, redraw even while synchronized output (mode 2026)
+is open.  Normal redraws remain pending when the native renderer declines
+them during synchronized output or when <span class="arg">BUFFER</span> has no render window.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--redraw-now</span> (buffer <span class="ty">&amp;optional</span> force)
+  <span class="doc">"Attempt to redraw BUFFER and retain the request until it succeeds.
+The renderer preserves buffer positions while applying terminal mutations;
+this function anchors windows that were following the live viewport.
+
+With FORCE non-nil, redraw even while synchronized output (mode 2026)
+is open.  Normal redraws remain pending when the native renderer declines
+them during synchronized output or when BUFFER has no render window."</span>
+  (<span class="k">when</span> (buffer-live-p buffer)
+    (<span class="k">with-current-buffer</span> buffer
+      (<span class="k">setq</span> ghostel--pending-redraw t)
+      (<span class="k">when</span> force (<span class="k">setq</span> ghostel--force-next-redraw t))
+      (<span class="k">when</span> ghostel--redraw-timer
+        (cancel-timer ghostel--redraw-timer)
+        (<span class="k">setq</span> ghostel--redraw-timer nil))
+      (<span class="k">when</span> (<span class="k">and</span> ghostel--term
+                 (ghostel--terminal-live-p)
+                 (not (ghostel--maybe-defer-redraw buffer)))
+        (<span class="k">when-let*</span> ((render-win (ghostel--get-render-window buffer)))
+          <span class="cd">;; </span><span class="c">Pause line mode if alt-screen just turned on.  This must run
+</span>          <span class="cd">;; </span><span class="c">before the snapshot so a pause can take ownership of its input.
+</span>          (ghostel--line-mode-pre-redraw)
+          (<span class="k">let*</span> ((anchored (ghostel--anchored-windows buffer t))
+                 <span class="cd">;; </span><span class="c">Line-mode input is not part of libghostty's grid.  Remove
+</span>                 <span class="cd">;; </span><span class="c">it while native rendering runs, then restore it after
+</span>                 <span class="cd">;; </span><span class="c">rendering.
+</span>                 (line-snapshot (<span class="k">and</span> (eq ghostel--input-mode 'line)
+                                     (ghostel--line-mode-snapshot)))
+                 (inhibit-read-only t)
+                 (inhibit-redisplay t)
+                 (inhibit-modification-hooks t)
+                 (gc-cons-threshold most-positive-fixnum)
+                 (rendered
+                  (<span class="k">with-selected-window</span> render-win
+                    <span class="cd">;; </span><span class="c">FULL and FORCE-SYNC are separate native policies.
+</span>                    (ghostel--redraw ghostel--term
+                                     (eq ghostel--input-mode 'line)
+                                     ghostel--force-next-redraw))))
+            (<span class="k">when</span> rendered
+              (<span class="k">setq</span> ghostel--pending-redraw nil
+                    ghostel--force-next-redraw nil))
+            (ghostel--apply-cursor-style)
+            <span class="cd">;; </span><span class="c">FOLLOWING=t: the render advanced the cursor while preserving
+</span>            <span class="cd">;; </span><span class="c">window-point, so the pre-render snapshot carries the Emacs-mode
+</span>            <span class="cd">;; </span><span class="c">follow decision.
+</span>            (<span class="k">dolist</span> (win anchored) (ghostel--anchor-window win nil t))
+            (<span class="k">let</span> ((line-restored
+                   (<span class="k">and</span> line-snapshot
+                        (ghostel--line-mode-restore line-snapshot))))
+              <span class="cd">;; </span><span class="c">Restore failed because the prompt moved or disappeared;
+</span>              <span class="cd">;; </span><span class="c">forward the saved input rather than silently losing it.
+</span>              (<span class="k">when</span> (<span class="k">and</span> line-snapshot (not line-restored))
+                (<span class="k">let</span> ((input (plist-get line-snapshot <span class="bi">:input</span>)))
+                  (<span class="k">when</span> (<span class="k">and</span> input (&gt; (length input) 0))
+                    (ghostel--write-pty ghostel--term input)
+                    (message
+                     <span class="s">"ghostel: line-mode prompt lost; input forwarded raw"</span>))))
+              (ghostel--schedule-link-detection))
+            <span class="cd">;; </span><span class="c">Resume line mode if alt-screen just turned off, and update the
+</span>            <span class="cd">;; </span><span class="c">alt-screen-prev cache for the next cycle.
+</span>            (ghostel--line-mode-post-redraw)
+            (ghostel--detect-password-prompt)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,70 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-migrate-v1-to-v2 – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-migrate-v1-to-v2 is a natively compiled function defined in
+org-roam-migrate.el.
+Convert the current buffer to v2 format.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-migrate-v1-to-v2</code></h1><p><span class="m"><code>org-roam-migrate-v1-to-v2</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">org-roam-migrate.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-migrate-v1-to-v2)
+</code></pre>
+<h2>Documentation</h2>
+<p>Convert the current buffer to v2 format.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-migrate.el</span>
+(<span class="k">defun</span> <span class="f">org-roam-migrate-v1-to-v2</span> ()
+  <span class="doc">"Convert the current buffer to v2 format."</span>
+  <span class="cd">;; </span><span class="c">Create file level ID
+</span>  (<span class="k">org-with-point-at</span> 1
+    (org-id-get-create))
+  <span class="cd">;; </span><span class="c">Replace roam_key into properties drawer roam_ref
+</span>  (<span class="k">when-let*</span> ((refs (mapcan #'split-string-and-unquote
+                            (cdar (org-collect-keywords '(<span class="s">"roam_key"</span>))))))
+    (<span class="k">let</span> ((case-fold-search t))
+      (<span class="k">org-with-point-at</span> 1
+        (<span class="k">dolist</span> (ref refs)
+          (org-roam-ref-add ref))
+        (<span class="k">while</span> (re-search-forward <span class="s">"^#\\+roam_key:"</span> (point-max) t)
+          (beginning-of-line)
+          (kill-line 1)))))
+
+  <span class="cd">;; </span><span class="c">Replace roam_alias into properties drawer roam_aliases
+</span>  (<span class="k">when-let*</span> ((aliases (mapcan #'split-string-and-unquote
+                               (cdar (org-collect-keywords '(<span class="s">"roam_alias"</span>))))))
+    (<span class="k">dolist</span> (alias aliases)
+      (org-roam-alias-add alias)))
+  (<span class="k">let</span> ((case-fold-search t))
+    (<span class="k">org-with-point-at</span> 1
+      (<span class="k">while</span> (re-search-forward <span class="s">"^#\\+roam_alias:"</span> (point-max) t)
+        (beginning-of-line)
+        (kill-line 1))))
+
+  <span class="cd">;; </span><span class="c">Replace #+roam_tags into #+filetags
+</span>  (<span class="k">org-with-point-at</span> 1
+    (<span class="k">let*</span> ((roam-tags (org-roam-migrate-get-prop-list <span class="s">"ROAM_TAGS"</span>))
+           (file-tags (cl-mapcan (<span class="k">lambda</span> (value)
+                                   (cl-mapcan
+                                    (<span class="k">lambda</span> (k) (org-split-string k <span class="s">":"</span>))
+                                    (split-string value)))
+                                 (org-roam-migrate-get-prop-list <span class="s">"FILETAGS"</span>)))
+           (tags (append roam-tags file-tags))
+           (tags (seq-map (<span class="k">lambda</span> (tag)
+                            (replace-regexp-in-string
+                             <span class="s">"[</span><span class="neg s">^</span><span class="s">[:alnum:]_@#%]"</span>
+                             <span class="s">"_"</span>
+                             tag)) <span class="w">tags))</span>
+           (tags (seq-uniq tags)))
+      (<span class="k">when</span> tags
+        (org-roam-migrate-prop-set <span class="s">"filetags"</span> (org-make-tag-string tags))))
+    (<span class="k">let</span> ((case-fold-search t))
+      (<span class="k">org-with-point-at</span> 1
+        (<span class="k">while</span> (re-search-forward <span class="s">"^#\\+roam_tags:"</span> (point-max) t)
+          (beginning-of-line)
+          (kill-line 1)))))
+  (save-buffer))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

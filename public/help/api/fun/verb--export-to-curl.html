@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb--export-to-curl – Emacs Documentation Online</title>
+<meta name="description" content="verb--export-to-curl is a natively compiled function defined in
+verb.el.
+Export a request spec RS to curl format.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb--export-to-curl</code></h1><p><span class="m"><code>verb--export-to-curl</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">verb.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb--export-to-curl <a href="#:~:text=spec-,RS"><span class="arg">RS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,NO-MESSAGE"><span class="arg">NO-MESSAGE</span></a> <a href="#:~:text=If-,NO-KILL"><span class="arg">NO-KILL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Export a request spec <span class="arg">RS</span> to curl format.
+<p>Add the generated command to the kill ring and return it.  For more
+information about curl see URL <a href="https://curl.haxx.se/">https://curl.haxx.se/</a>.  If <span class="arg">NO-MESSAGE</span>
+is non-nil, do not display a message on the minibuffer.  If <span class="arg">NO-KILL</span> is
+non-nil, do not add the command to the kill ring.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb.el</span>
+(<span class="k">defun</span> <span class="f">verb--export-to-curl</span> (rs <span class="ty">&amp;optional</span> no-message no-kill)
+  <span class="doc">"Export a request spec RS to curl format.
+Add the generated command to the kill ring and return it.  For more
+information about curl see URL `</span><span class="m doc">https://curl.haxx.se/</span><span class="doc">'.  If NO-MESSAGE
+is non-nil, do not display a message on the minibuffer.  If NO-KILL is
+non-nil, do not add the command to the kill ring."</span>
+  (<span class="k">with-temp-buffer</span>
+    (insert <span class="s">"curl '"</span> (verb-request-spec-url-to-string rs) <span class="s">"'"</span>)
+    (<span class="k">dolist</span> (key-value (<span class="k">oref</span> rs headers))
+      (insert <span class="s">" \\\n"</span>)
+      (insert <span class="s">"-H '"</span> (car key-value) <span class="s">": "</span> (cdr key-value) <span class="s">"'"</span>))
+    (<span class="k">unless</span> (string= (<span class="k">oref</span> rs method) <span class="s">"GET"</span>)
+      (insert (<span class="k">if</span> (<span class="k">oref</span> rs headers) <span class="s">" \\\n"</span> <span class="s">" "</span>)))
+    (<span class="k">pcase</span> (<span class="k">oref</span> rs method)
+      <span class="cd">;; </span><span class="c">GET: no argument needed.
+</span>      ((<span class="k">or</span> <span class="s">"PATCH"</span> <span class="s">"PUT"</span> <span class="s">"POST"</span>)
+       (insert <span class="s">"-X "</span>
+               (<span class="k">oref</span> rs method)
+               <span class="s">" \\\n--data-raw "</span>
+               (<span class="k">if</span> (verb-util--seq-contains-p (<span class="k">oref</span> rs body) ?')
+                   <span class="cd">;; </span><span class="c">use heredoc if body contains single quote
+</span>                   (concat <span class="s">"\"$(cat &lt;&lt;'</span><span class="m s">VERB_DATA_EOF</span><span class="s">'\n"</span>
+                           (<span class="k">or</span> (<span class="k">oref</span> rs body) <span class="s">""</span>)
+                           <span class="s">"\nVERB_DATA_EOF\n)\""</span>)
+                 (concat <span class="s">"'"</span> (<span class="k">or</span> (<span class="k">oref</span> rs body) <span class="s">""</span>) <span class="s">"'"</span>))))
+      (<span class="s">"DELETE"</span>
+       (insert <span class="s">"-X DELETE"</span>))
+      (<span class="s">"OPTIONS"</span>
+       (insert <span class="s">"-X OPTIONS -i"</span>))
+      (<span class="s">"HEAD"</span>
+       (insert <span class="s">"-I"</span>))
+      (<span class="s">"TRACE"</span>
+       (insert <span class="s">"-X TRACE"</span>))
+      (<span class="s">"CONNECT"</span>
+       (<span class="w">user-error</span> <span class="s">"%s"</span> <span class="s">"CONNECT method not supported in curl format"</span>)))
+    (<span class="k">let</span> ((result (verb--buffer-string-no-properties)))
+      (<span class="k">unless</span> no-kill
+        (kill-new result))
+      (<span class="k">unless</span> no-message
+        (message <span class="s">"Curl command copied to the kill ring"</span>))
+      <span class="cd">;; </span><span class="c">Return the generated command.
+</span>      result)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

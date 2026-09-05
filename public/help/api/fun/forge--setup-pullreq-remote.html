@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--setup-pullreq-remote – Emacs Documentation Online</title>
+<meta name="description" content="forge--setup-pullreq-remote is a natively compiled function defined in
+forge-commands.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--setup-pullreq-remote</code></h1><p><span class="m"><code>forge--setup-pullreq-remote</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">forge-commands.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--setup-pullreq-remote <span class="arg">PULLREQ</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-commands.el</span>
+(<span class="k">defun</span> <span class="f">forge--setup-pullreq-remote</span> (pullreq)
+  (<span class="k">let*</span> ((pr-remote (<span class="k">oref</span> pullreq head-user))
+         (pr-branch (<span class="k">oref</span> pullreq head-ref))
+         (repo (forge-get-repository pullreq))
+         (host (<span class="k">oref</span> repo githost))
+         (user (<span class="k">oref</span> pullreq head-user))
+         (fork (<span class="k">oref</span> pullreq head-repo)))
+    (<span class="k">if</span> (magit-remote-p pr-remote)
+        (<span class="k">let</span> ((url (magit-git-string <span class="s">"remote"</span> <span class="s">"get-url"</span> pr-remote))
+              (fetch (magit-get-all <span class="s">"remote"</span> pr-remote <span class="s">"fetch"</span>)))
+          (<span class="k">unless</span> (equal (forge--split-forge-url url)
+                         (list host user (substring fork (1+ (length user)))))
+            (<span class="w">user-error</span> <span class="s">"Remote `</span><span class="m s">%s</span><span class="s">' already exists but does not point to %s"</span>
+                        pr-remote url))
+          (<span class="k">unless</span> (<span class="k">or</span> (member (format <span class="s">"+refs/heads/*:refs/remotes/%s/*"</span>
+                                      pr-remote)
+                              fetch)
+                      (member (format <span class="s">"+refs/heads/%s:refs/remotes/%s/%s"</span>
+                                      pr-branch pr-remote pr-branch)
+                              fetch))
+            (magit-git <span class="s">"remote"</span> <span class="s">"set-branches"</span> <span class="s">"--add"</span> pr-remote pr-branch)
+            (magit-git <span class="s">"fetch"</span> pr-remote)))
+      (<span class="k">let</span> ((url (magit-git-string <span class="s">"remote"</span> <span class="s">"get-url"</span> (<span class="k">oref</span> repo remote))))
+        (magit-git
+         <span class="s">"remote"</span> <span class="s">"add"</span> <span class="s">"-f"</span> <span class="s">"--no-tags"</span>
+         <span class="s">"-t"</span> pr-branch pr-remote
+         (<span class="k">cond</span> ((<span class="k">or</span> (string-prefix-p <span class="s">"git@"</span> url)
+                    (string-prefix-p <span class="s">"ssh://git@"</span> url))
+                (format <span class="s">"git@%s:%s.git"</span> host fork))
+               ((string-prefix-p <span class="s">"https://"</span> url)
+                (format <span class="s">"https://%s/%s.git"</span> host fork))
+               ((string-prefix-p <span class="s">"git://"</span> url)
+                (format <span class="s">"git://%s/%s.git"</span> host fork))
+               ((string-prefix-p <span class="s">"http://"</span> url)
+                (format <span class="s">"http://%s/%s.git"</span> host fork))
+               ((<span class="w">error</span> <span class="s">"%s has an unexpected format"</span> url))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

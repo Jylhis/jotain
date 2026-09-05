@@ -1,0 +1,133 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark-act – Emacs Documentation Online</title>
+<meta name="description" content="embark-act is an interactive and natively compiled function defined in
+embark.el.
+Prompt the user for an action and perform it.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark-act</code></h1><p><span class="m"><code>embark-act</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark-act <span class="ty">&amp;optional</span> <a href="#:~:text=nil-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Prompt the user for an action and perform it.
+<p>The targets of the action are chosen by <a href="../var/embark-target-finders.html"><code>embark-target-finders</code></a>.
+By default, if called from a minibuffer the target is the top
+completion candidate.  When called from a non-minibuffer buffer
+there can multiple targets and you can cycle among them by using
+<a href="../fun/embark-cycle.html"><code>embark-cycle</code></a> (which is bound by default to the same key
+binding <a href="../fun/embark-act.html"><code>embark-act</code></a> is, but see <a href="../var/embark-cycle-key.html"><code>embark-cycle-key</code></a>).
+<p>This command uses <a href="../var/embark-prompter.html"><code>embark-prompter</code></a> to ask the user to specify an
+action, and calls it injecting the target at the first minibuffer
+prompt.
+<p>If you call this from the minibuffer, it can optionally quit the
+minibuffer.  The variable <a href="../var/embark-quit-after-action.html"><code>embark-quit-after-action</code></a> controls
+whether calling <a href="../fun/embark-act.html"><code>embark-act</code></a> with nil <span class="arg">ARG</span> quits the minibuffer,
+and if <span class="arg">ARG</span> is non-nil it will do the opposite.  Interactively,
+<span class="arg">ARG</span> is the prefix argument.
+<p>If instead you call this from outside the minibuffer, the first
+<span class="arg">ARG</span> targets are skipped over (if <span class="arg">ARG</span> is negative the skipping is
+done by cycling backwards) and cycling starts from the following
+target.
+<h2>Key Bindings</h2>
+<p><span class="v">embark-collect-mode-map</span> <span class="key">a</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">embark-act</span> (<span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Prompt the user for an action and perform it.
+The targets of the action are chosen by `</span><span class="m doc">embark-target-finders</span><span class="doc">'.
+By default, if called from a minibuffer the target is the top
+completion candidate.  When called from a non-minibuffer buffer
+there can multiple targets and you can cycle among them by using
+`</span><span class="m doc">embark-cycle</span><span class="doc">' (which is bound by default to the same key
+binding `</span><span class="m doc">embark-act</span><span class="doc">' is, but see `</span><span class="m doc">embark-cycle-key</span><span class="doc">').
+
+This command uses `</span><span class="m doc">embark-prompter</span><span class="doc">' to ask the user to specify an
+action, and calls it injecting the target at the first minibuffer
+prompt.
+
+If you call this from the minibuffer, it can optionally quit the
+minibuffer.  The variable `</span><span class="m doc">embark-quit-after-action</span><span class="doc">' controls
+whether calling `</span><span class="m doc">embark-act</span><span class="doc">' with nil ARG quits the minibuffer,
+and if ARG is non-nil it will do the opposite.  Interactively,
+ARG is the prefix argument.
+
+If instead you call this from outside the minibuffer, the first
+ARG targets are skipped over (if ARG is negative the skipping is
+done by cycling backwards) and cycling starts from the following
+target."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">let*</span> ((targets (<span class="k">or</span> (embark--targets) (<span class="w">user-error</span> <span class="s">"No target found"</span>)))
+         (indicators (mapcar #'funcall embark-indicators))
+         (default-done nil))
+    (<span class="k">when</span> arg
+      (<span class="k">if</span> (minibufferp)
+          (embark-toggle-quit)
+        (<span class="k">setq</span> targets (embark--rotate targets (prefix-numeric-value arg)))))
+    (<span class="k">unwind-protect</span>
+        (<span class="k">while</span>
+            (<span class="k">let*</span> ((target (car targets))
+                   (action
+                    (<span class="k">or</span> (embark--prompt
+                         indicators
+                         (<span class="k">let</span> ((embark-default-action-overrides
+                                (<span class="k">if</span> default-done
+                                    `((t . ,default-done))
+                                  embark-default-action-overrides)))
+                           (embark--action-keymap (plist-get target <span class="bi">:type</span>)
+                                                  (cdr targets)))
+                         targets)
+                        (<span class="w">user-error</span> <span class="s">"Canceled"</span>)))
+                   (default-action (<span class="k">or</span> default-done
+                                       (embark--default-action
+                                        (plist-get target <span class="bi">:type</span>)))))
+              (<span class="k">cond</span>
+               <span class="cd">;; </span><span class="c">When acting twice in the minibuffer, do not restart
+</span>               <span class="cd">;; </span><span class="c">`</span><span class="m c">embark-act</span><span class="c">'.  Otherwise the next `</span><span class="m c">embark-act</span><span class="c">' will
+</span>               <span class="cd">;; </span><span class="c">find a target in the original buffer.
+</span>               ((eq action #'embark-act)
+                (message <span class="s">"Press an action key"</span>))
+               ((eq action #'embark-cycle)
+                (<span class="k">setq</span> targets (embark--rotate
+                               targets (prefix-numeric-value prefix-arg))))
+               (t
+                <span class="cd">;; </span><span class="c">if the action is non-repeatable, cleanup indicator now
+</span>                (<span class="k">let</span> ((repeat (embark--action-repeatable-p action)))
+                  (<span class="k">unless</span> repeat (mapc #'funcall indicators))
+                  (<span class="k">condition-case</span> err
+                      (embark--act
+                       action
+                       (<span class="k">if</span> (<span class="k">and</span> (eq action default-action)
+                                (eq action embark--command)
+                                (not (memq action embark-multitarget-actions)))
+                           (embark--orig-target target)
+                         target)
+                       (embark--quit-p action))
+                    (<span class="w">user-error</span>
+                     (funcall (<span class="k">if</span> repeat #'message #'user-error)
+                              <span class="s">"%s"</span> (cadr err))))
+                  (<span class="k">when-let*</span> ((new-targets (<span class="k">and</span> repeat (embark--targets))))
+                    <span class="cd">;; </span><span class="c">Terminate repeated prompter on default action,
+</span>                    <span class="cd">;; </span><span class="c">when repeating. Jump to the region type if the
+</span>                    <span class="cd">;; </span><span class="c">region is active after the action, or else to the
+</span>                    <span class="cd">;; </span><span class="c">current type again.
+</span>                    (<span class="k">setq</span> default-done #'embark-done
+                          targets
+                          (embark--rotate
+                           new-targets
+                           (<span class="k">or</span> (cl-position-if
+                                (<span class="k">let</span> ((desired-type
+                                       (<span class="k">if</span> (eq repeat t)
+                                           (plist-get (car targets) <span class="bi">:type</span>)
+                                         repeat)))
+                                  (<span class="k">lambda</span> (x)
+                                    (eq (plist-get x <span class="bi">:type</span>) desired-type)))
+                                new-targets)
+                               0)))))))))
+      (mapc #'funcall indicators))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

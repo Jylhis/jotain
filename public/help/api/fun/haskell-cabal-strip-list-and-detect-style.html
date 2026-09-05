@@ -1,0 +1,85 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-cabal-strip-list-and-detect-style – Emacs Documentation Online</title>
+<meta name="description" content="haskell-cabal-strip-list-and-detect-style is a natively compiled
+function defined in haskell-cabal.el.
+Strip commas from a comma-separated list.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-cabal-strip-list-and-detect-style</code></h1><p><span class="m"><code>haskell-cabal-strip-list-and-detect-style</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">haskell-cabal.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-cabal-strip-list-and-detect-style)
+</code></pre>
+<h2>Documentation</h2>
+<p>Strip commas from a comma-separated list.
+<p>Detect and return the comma style.  The possible options are:
+<p>before: a comma at the start of each line (except the first), e.g.
+<br>&nbsp;&nbsp;&nbsp;&nbsp;Foo
+<br>&nbsp;&nbsp;, Bar
+<p>after: a comma at the end of each line (except the last), e.g.
+<br>&nbsp;&nbsp;&nbsp;&nbsp;Foo,
+<br>&nbsp;&nbsp;&nbsp;&nbsp;Bar
+<p>single: everything on a single line, but comma-separated, e.g.
+<br>&nbsp;&nbsp;&nbsp;&nbsp;Foo, Bar
+<p>nil: no commas, e.g.
+<br>&nbsp;&nbsp;&nbsp;&nbsp;Foo Bar
+<p>If the styles are mixed, the position of the first comma
+determines the style. If there is only one element then <span class="m"><code>after</code></span>
+style is assumed.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-cabal.el</span>
+(<span class="k">defun</span> <span class="f">haskell-cabal-strip-list-and-detect-style</span> ()
+  <span class="doc">"Strip commas from a comma-separated list.
+Detect and return the comma style.  The possible options are:
+
+before: a comma at the start of each line (except the first), e.g.
+    Foo
+  , Bar
+
+after: a comma at the end of each line (except the last), e.g.
+    Foo,
+    Bar
+
+single: everything on a single line, but comma-separated, e.g.
+    Foo, Bar
+
+nil: no commas, e.g.
+    Foo Bar
+
+If the styles are mixed, the position of the first comma
+determines the style. If there is only one element then `</span><span class="m doc">after</span><span class="doc">'
+style is assumed."</span>
+  (<span class="k">let</span> (comma-style)
+    <span class="cd">;; </span><span class="c">split list items on single line
+</span>    (goto-char (point-min))
+    (<span class="k">while</span> (re-search-forward
+            <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s"> \t,\n]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">[ \t]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">,</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">[ \t]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s"> \t,\n]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> nil t)
+      (<span class="k">when</span> (haskell-cabal-comma-separatorp (match-beginning 2))
+        (<span class="k">setq</span> comma-style 'single)
+        (replace-match <span class="s">"\\1\n\\3"</span> nil nil)))
+    <span class="cd">;; </span><span class="c">remove commas before
+</span>    (goto-char (point-min))
+    (<span class="k">while</span> (re-search-forward <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[ \t]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">,</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[ \t]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> nil t)
+      (<span class="k">setq</span> comma-style 'before)
+      (replace-match <span class="s">""</span> nil nil))
+    <span class="cd">;; </span><span class="c">remove trailing commas
+</span>    (goto-char (point-min))
+    (<span class="k">while</span> (re-search-forward <span class="s">",[ \t]*$"</span> nil t)
+      (<span class="k">unless</span> (eq comma-style 'before)
+        (<span class="k">setq</span> comma-style 'after))
+      (replace-match <span class="s">""</span> nil nil))
+
+    <span class="cd">;; </span><span class="c">if there is just one line then set default as 'after
+</span>    (<span class="k">unless</span> comma-style
+      (goto-char (point-min))
+      (forward-line)
+      (<span class="k">when</span> (eobp)
+        (<span class="k">setq</span> comma-style 'after)))
+    (goto-char (point-min))
+
+    (<span class="k">haskell-cabal-each-line</span> (haskell-cabal-chomp-line))
+    comma-style))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,85 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-diff-visit-file – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-diff-visit-file is an interactive and natively compiled
+function defined in majutsu-diff.el.
+From a diff, visit the appropriate version of the file at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-diff-visit-file</code></h1><p><span class="m"><code>majutsu-diff-visit-file</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">majutsu-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-diff-visit-file <span class="ty">&amp;optional</span> <a href="#:~:text=argument-,FORCE-WORKSPACE"><span class="arg">FORCE-WORKSPACE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>From a diff, visit the appropriate version of the file at point.
+<p>If point is on an added or context line, visit the new/right side.
+If point is on a removed line, visit the old/left side.
+<p>For diffs of the working copy (@), this visits the actual file in
+the workspace.  For diffs of committed changes, this visits the
+blob from the appropriate revision.
+<p>With prefix argument <span class="arg">FORCE-WORKSPACE</span>, always visit the workspace file
+regardless of what the diff is about.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-diff.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">majutsu-diff-visit-file</span> (<span class="ty">&amp;optional</span> force-workspace)
+  <span class="doc">"From a diff, visit the appropriate version of the file at point.
+
+If point is on an added or context line, visit the new/right side.
+If point is on a removed line, visit the old/left side.
+
+For diffs of the working copy (@), this visits the actual file in
+the workspace.  For diffs of committed changes, this visits the
+blob from the appropriate revision.
+
+With prefix argument FORCE-WORKSPACE, always visit the workspace file
+regardless of what the diff is about."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">let*</span> ((section (magit-current-section))
+         (file (majutsu-file-at-point))
+         (backend (majutsu-diff--sync-backend))
+         (line-info (<span class="k">and</span> (eq backend 'color-words)
+                         (majutsu-diff--color-words-line-info))))
+    (<span class="k">unless</span> file
+      (<span class="w">user-error</span> <span class="s">"No file at point"</span>))
+    (<span class="k">let*</span> ((revs (majutsu-diff--revisions))
+           (goto-from (<span class="k">if</span> line-info
+                          (majutsu-diff--color-words-goto-from line-info)
+                        (<span class="k">and</span> section (magit-section-match 'jj-hunk section)
+                             (majutsu-diff--on-removed-line-p))))
+           (target-rev (<span class="k">if</span> goto-from (car revs) (cdr revs)))
+           (goto-workspace (<span class="k">or</span> force-workspace
+                               (<span class="k">and</span> (majutsu-diff--visit-workspace-p)
+                                    (not goto-from))))
+           (line (<span class="k">cond</span>
+                  (line-info
+                   (<span class="k">or</span> (<span class="k">and</span> goto-from (plist-get line-info <span class="bi">:from-line</span>))
+                       (plist-get line-info <span class="bi">:to-line</span>)
+                       (plist-get line-info <span class="bi">:from-line</span>)))
+                  ((<span class="k">and</span> section (magit-section-match 'jj-hunk section))
+                   (majutsu-diff--hunk-line section goto-from))))
+           (col (<span class="k">cond</span>
+                 (line-info (majutsu-diff--color-words-column line-info goto-from))
+                 ((<span class="k">and</span> section (magit-section-match 'jj-hunk section))
+                  (majutsu-diff--hunk-column section goto-from)))))
+      (<span class="k">if</span> goto-workspace
+          <span class="cd">;; </span><span class="c">Visit workspace file
+</span>          (<span class="k">let</span> ((full-path (expand-file-name file default-directory)))
+            (<span class="k">if</span> (file-exists-p full-path)
+                (<span class="k">progn</span>
+                  (find-file full-path)
+                  (<span class="k">when</span> (<span class="k">and</span> line col)
+                    (goto-char (point-min))
+                    (forward-line (1- line))
+                    (move-to-column col)))
+              (<span class="w">user-error</span> <span class="s">"File does not exist in workspace: %s"</span> file)))
+        <span class="cd">;; </span><span class="c">Visit blob from appropriate revision
+</span>        (<span class="k">let</span> ((buf (majutsu-find-file target-rev file)))
+          (<span class="k">when</span> (<span class="k">and</span> buf line col)
+            (majutsu-diff--goto-line-col buf line col)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

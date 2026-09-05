@@ -1,0 +1,130 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--init-buffer – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--init-buffer is a natively compiled function defined in
+ghostel.el.
+Initialize BUFFER as a ghostel terminal.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--init-buffer</code></h1><p><span class="m"><code>ghostel--init-buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--init-buffer <a href="#:~:text=Initialize-,BUFFER"><span class="arg">BUFFER</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=Optional-,ROWS"><span class="arg">ROWS</span></a> <a href="#:~:text=and-,COLS"><span class="arg">COLS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Initialize <span class="arg">BUFFER</span> as a ghostel terminal.
+<p>This is the invariant boundary between an Emacs buffer and its native
+terminal handle: <span class="arg">BUFFER</span> is made empty, renderer-coupled buffer-local
+state is reset, and the newly created terminal is attached immediately
+as <span class="arg">BUFFER</span>'s buffer-local <a href="../var/ghostel--term.html"><code>ghostel--term</code></a>.  It intentionally does not
+reset unrelated buffer-local state such as manual rename/identity bookkeeping.
+<p>Optional <span class="arg">ROWS</span> and <span class="arg">COLS</span> override size detection.  Otherwise terminal
+dimensions come from <span class="arg">BUFFER</span>'s displayed window when one exists,
+otherwise from the selected window.  Height uses <a href="../fun/window-screen-lines.html"><code>window-screen-lines</code></a>,
+the metric the standard <span class="m"><code>adjust-window-size-function</code></span> path also uses,
+not <a href="../fun/window-body-height.html"><code>window-body-height</code></a>.  The former divides the window's pixel height
+by the buffer's <a href="../fun/default-line-height.html"><code>default-line-height</code></a>, which respects
+<a href="../var/face-remapping-alist.html"><code>face-remapping-alist</code></a> and <span class="bi">:height</span> on the default face; the latter
+divides by frame char height.  When a theme remaps default —
+<span class="m"><code>nano-light</code></span> / <span class="m"><code>nano-dark</code></span> do this — the two metrics disagree, and
+using <a href="../fun/window-body-height.html"><code>window-body-height</code></a> would size the terminal to N rows only to
+have the standard adjust-fn immediately resize to N-K, sending a
+startup SIGWINCH that some TUI apps (Claude Code's /tui fullscreen)
+handle imperfectly (issue #192).
+<p>This function does not start a process; callers decide what program to
+spawn after initialization.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+<span class="cd">;;; </span><span class="c">Entry point
+</span>
+(<span class="k">defun</span> <span class="f">ghostel--init-buffer</span> (buffer <span class="ty">&amp;optional</span> rows cols)
+  <span class="doc">"Initialize BUFFER as a ghostel terminal.
+This is the invariant boundary between an Emacs buffer and its native
+terminal handle: BUFFER is made empty, renderer-coupled buffer-local
+state is reset, and the newly created terminal is attached immediately
+as BUFFER's buffer-local `</span><span class="m doc">ghostel--term</span><span class="doc">'.  It intentionally does not
+reset unrelated buffer-local state such as manual rename/identity bookkeeping.
+
+Optional ROWS and COLS override size detection.  Otherwise terminal
+dimensions come from BUFFER's displayed window when one exists,
+otherwise from the selected window.  Height uses `</span><span class="m doc">window-screen-lines</span><span class="doc">',
+the metric the standard `</span><span class="m doc">adjust-window-size-function</span><span class="doc">' path also uses,
+not `</span><span class="m doc">window-body-height</span><span class="doc">'.  The former divides the window's pixel height
+by the buffer's `</span><span class="m doc">default-line-height</span><span class="doc">', which respects
+`</span><span class="m doc">face-remapping-alist</span><span class="doc">' and `</span><span class="m doc">:height</span><span class="doc">' on the default face; the latter
+divides by frame char height.  When a theme remaps default —
+`</span><span class="m doc">nano-light</span><span class="doc">' / `</span><span class="m doc">nano-dark</span><span class="doc">' do this — the two metrics disagree, and
+using `</span><span class="m doc">window-body-height</span><span class="doc">' would size the terminal to N rows only to
+have the standard adjust-fn immediately resize to N-K, sending a
+startup SIGWINCH that some TUI apps (Claude Code's /tui fullscreen)
+handle imperfectly (issue #192).
+
+This function does not start a process; callers decide what program to
+spawn after initialization."</span>
+  (<span class="k">unless</span> (buffer-live-p buffer)
+    (<span class="w">user-error</span> <span class="s">"Cannot initialize dead buffer as ghostel terminal"</span>))
+  (<span class="k">unless</span> (eq (null rows) (null cols))
+    (<span class="w">user-error</span> <span class="s">"ROWS and COLS must be provided together"</span>))
+  (<span class="k">with-current-buffer</span> buffer
+    (<span class="k">when</span> (process-live-p ghostel--process)
+      (<span class="w">user-error</span> <span class="s">"Buffer %s already has a running ghostel process"</span>
+                  (buffer-name buffer)))
+    (<span class="k">unless</span> (derived-mode-p 'ghostel-mode)
+      (ghostel-mode))
+    (<span class="k">when</span> ghostel--redraw-timer
+      (cancel-timer ghostel--redraw-timer))
+    (<span class="k">when</span> ghostel--plain-link-detection-timer
+      (cancel-timer ghostel--plain-link-detection-timer))
+    (ghostel--clear-plain-link-detection-bounds)
+    <span class="cd">;; </span><span class="c">Reinitialization may reuse an existing ghostel buffer that was in
+</span>    <span class="cd">;; </span><span class="c">line mode; reset it to the renderer-owned default before erasing.
+</span>    (<span class="k">setq</span> buffer-read-only t)
+    (<span class="k">let</span> ((inhibit-read-only t))
+      (erase-buffer))
+    (<span class="k">setq</span> ghostel--input-mode 'semi-char
+          ghostel--term nil
+          ghostel--term-rows nil
+          ghostel--term-cols nil
+          ghostel--process nil
+          ghostel--pid nil
+          ghostel--last-directory nil
+          ghostel--title nil
+          ghostel--command-running nil
+          ghostel--event-buf nil
+          ghostel--redraw-timer nil
+          ghostel--pending-redraw nil
+          ghostel--plain-link-detection-timer nil
+          ghostel--force-next-redraw nil
+          ghostel--cursor-pos nil
+          ghostel--cursor-char-pos nil
+          ghostel--repainted-region nil)
+    <span class="cd">;; </span><span class="c">Reused buffers hold the previous session's title; drop it from
+</span>    <span class="cd">;; </span><span class="c">the mode line along with the buffer-local reset above.
+</span>    (ghostel--buffer-identification-update)
+    (<span class="k">let*</span> ((w (<span class="k">or</span> (get-buffer-window buffer t) (selected-window)))
+           (height (max 1 (<span class="k">or</span> rows
+                              (<span class="k">if</span> (window-live-p w)
+                                  (<span class="k">with-selected-window</span> w
+                                    (floor (window-screen-lines)))
+                                24))))
+           (width  (max 1 (<span class="k">or</span> cols
+                              (<span class="k">if</span> (window-live-p w)
+                                  (window-max-chars-per-line w)
+                                80)))))
+      (<span class="k">setq</span> ghostel--term
+            (ghostel--new height width
+                          ghostel-max-scrollback
+                          ghostel-kitty-graphics-storage-limit
+                          (ghostel--kitty-mediums-bits)))
+      <span class="cd">;; </span><span class="c">Seed libghostty's cell dimensions before the process starts —
+</span>      <span class="cd">;; </span><span class="c">otherwise kitty graphics placements arriving in the very first
+</span>      <span class="cd">;; </span><span class="c">output (e.g. timg's transmit-and-place) compute grid_rows=0
+</span>      <span class="cd">;; </span><span class="c">and the terminal advances the cursor zero rows, leaving the
+</span>      <span class="cd">;; </span><span class="c">next prompt on top of the image.
+</span>      (ghostel--set-size-with-cell-dims ghostel--term height width)
+      (ghostel--apply-palette ghostel--term)
+      (ghostel--apply-bold-config ghostel--term))
+    buffer))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

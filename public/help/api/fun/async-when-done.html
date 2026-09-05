@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: async-when-done – Emacs Documentation Online</title>
+<meta name="description" content="async-when-done is a natively compiled function defined in async.el.
+Process sentinel used to retrieve the value from the child process.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>async-when-done</code></h1><p><span class="m"><code>async-when-done</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">async.el</span>.
+<h2>Signature</h2>
+<pre><code>(async-when-done <a href="#:~:text="><span class="arg">PROC</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">CHANGE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Process sentinel used to retrieve the value from the child process.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vpxd64bbf27n3ziyqnh29vmak5xnpk2l-emacs-packages-deps/share/emacs/site-lisp/elpa/async-20260729.1431/async.el</span>
+(<span class="k">defun</span> <span class="f">async-when-done</span> (proc <span class="ty">&amp;optional</span> _change)
+  <span class="doc">"Process sentinel used to retrieve the value from the child process."</span>
+  (<span class="k">when</span> (eq 'exit (process-status proc))
+    (<span class="k">with-current-buffer</span> (process-buffer proc)
+      (<span class="k">let</span> ((async-current-process proc))
+        (<span class="k">if</span> (= 0 (process-exit-status proc))
+            (<span class="k">if</span> async-callback-for-process
+                (<span class="k">if</span> async-callback
+                    (<span class="k">prog1</span>
+                        (funcall async-callback proc)
+                      (<span class="k">unless</span> async-debug
+                        <span class="cd">;; </span><span class="c">we need to check this because theoretically
+</span>                        <span class="cd">;; </span><span class="c">`</span><span class="m c">async-callback</span><span class="c">' could've killed it already
+</span>                        (<span class="k">when</span> (buffer-live-p (process-buffer proc))
+                          (kill-buffer (process-buffer proc)))))
+                  (set (make-local-variable 'async-callback-value) proc)
+                  (set (make-local-variable 'async-callback-value-set) t))
+              <span class="cd">;; </span><span class="c">Maybe strip out unreadable "#"; They are replaced by
+</span>              <span class="cd">;; </span><span class="c">empty string unless they are prefixing a special
+</span>              <span class="cd">;; </span><span class="c">object like a marker. See issue #145.
+</span>              (widen)
+              (goto-char (point-min))
+              (<span class="k">save-excursion</span>
+                <span class="cd">;; </span><span class="c">Transform markers in list like
+</span>                <span class="cd">;; </span><span class="c">(marker (moves after insertion) at 2338 in
+</span>                <span class="cd">;; </span><span class="c">test\.org) so that remap text properties function
+</span>                <span class="cd">;; </span><span class="c">can parse it to restitute marker.
+</span>                (<span class="k">while</span> (re-search-forward <span class="s">"#&lt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s">&gt;]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">&gt;"</span> nil t)
+                  (replace-match (concat <span class="s">"("</span> (match-string 1) <span class="s">")"</span>) t t)))
+              (<span class="k">while</span> (re-search-forward <span class="s">"#("</span> nil t)
+                (replace-match <span class="s">"("</span> t t))
+              (goto-char (point-max))
+              (backward-sexp)
+              (<span class="k">let</span> ((value (read (current-buffer))))
+                (async-handle-result async-callback value (current-buffer))))
+          (set (make-local-variable 'async-callback-value)
+               (list 'error
+                     (format <span class="s">"Async process '</span><span class="m s">%s</span><span class="s">' failed with exit code %d"</span>
+                             (process-name proc) (process-exit-status proc))))
+          (set (make-local-variable 'async-callback-value-set) t))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-curl--stream-insert-response – Emacs Documentation Online</title>
+<meta name="description" content="gptel-curl--stream-insert-response is a natively compiled function
+defined in gptel.el.
+Insert streaming RESPONSE from an LLM into the gptel buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-curl--stream-insert-response</code></h1><p><span class="m"><code>gptel-curl--stream-insert-response</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-curl--stream-insert-response <a href="#:~:text=streaming-,RESPONSE"><span class="arg">RESPONSE</span></a> <a href="#:~:text=buffer.-,INFO"><span class="arg">INFO</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=Optional-,RAW"><span class="arg">RAW</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert streaming <span class="arg">RESPONSE</span> from an LLM into the gptel buffer.
+<p><span class="arg">INFO</span> is a mutable plist containing information relevant to this buffer.
+See <a href="../fun/gptel--url-get-response.html"><code>gptel--url-get-response</code></a> for details.
+<p>Optional <span class="arg">RAW</span> disables text properties and transformation.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel-curl--stream-insert-response</span> (response info <span class="ty">&amp;optional</span> raw)
+  <span class="doc">"Insert streaming RESPONSE from an LLM into the gptel buffer.
+
+INFO is a mutable plist containing information relevant to this buffer.
+See `</span><span class="m doc">gptel--url-get-response</span><span class="doc">' for details.
+
+Optional RAW disables text properties and transformation."</span>
+  (<span class="k">pcase</span> response
+    ((pred stringp)
+     (<span class="k">let</span> ((start-marker (plist-get info <span class="bi">:position</span>))
+           (tracking-marker (plist-get info <span class="bi">:tracking-marker</span>))
+           (transformer (plist-get info <span class="bi">:transformer</span>)))
+       (<span class="k">with-current-buffer</span> (marker-buffer start-marker)
+         (<span class="k">save-excursion</span>
+           (<span class="k">unless</span> tracking-marker
+             (goto-char start-marker)
+             (<span class="k">unless</span> (<span class="k">or</span> (bobp) (plist-get info <span class="bi">:in-place</span>))
+               (insert gptel-response-separator)
+               (<span class="k">when</span> gptel-mode
+                 <span class="cd">;; </span><span class="c">Put prefix before AI response.
+</span>                 (insert (gptel-response-prefix-string)))
+               (move-marker start-marker (point)))
+             (<span class="k">setq</span> tracking-marker (set-marker (make-marker) (point)))
+             (set-marker-insertion-type tracking-marker t)
+             (plist-put info <span class="bi">:tracking-marker</span> tracking-marker))
+           (goto-char tracking-marker)
+           (<span class="k">unless</span> raw
+             (<span class="k">when</span> transformer
+               (<span class="k">setq</span> response (funcall transformer response)))
+             (add-text-properties
+              0 (length response) '(gptel response front-sticky (gptel))
+              response))
+           <span class="cd">;; </span><span class="c">(run-hooks 'gptel-pre-stream-hook)
+</span>           (insert response)
+           (run-hooks 'gptel-post-stream-hook)))))
+    (`(reasoning . ,text)
+     (gptel--display-reasoning-stream text info))
+    (`(tool-call . ,tool-calls)
+     (gptel--display-tool-calls tool-calls info))
+    (`(tool-result . ,tool-results)
+     (gptel--display-tool-results tool-results info)
+     <span class="cd">;; </span><span class="c">Adjust for tool calls inside reasoning blocks
+</span>     (<span class="k">when</span> (eq (plist-get info <span class="bi">:reasoning-block</span>) 'in)
+       (<span class="k">when-let*</span> ((rm (plist-get info <span class="bi">:reasoning-marker</span>))
+                   (tm (plist-get info <span class="bi">:tracking-marker</span>)))
+         (move-marker rm tm (marker-buffer tm)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

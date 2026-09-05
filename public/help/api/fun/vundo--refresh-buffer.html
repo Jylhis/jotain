@@ -1,0 +1,122 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vundo--refresh-buffer – Emacs Documentation Online</title>
+<meta name="description" content="vundo--refresh-buffer is a natively compiled function defined in
+vundo.el.
+Refresh VUNDO-BUFFER with the undo history of ORIG-BUFFER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vundo--refresh-buffer</code></h1><p><span class="m"><code>vundo--refresh-buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">vundo.el</span>.
+<h2>Signature</h2>
+<pre><code>(vundo--refresh-buffer <a href="#:~:text=of-,ORIG-BUFFER"><span class="arg">ORIG-BUFFER</span></a> <a href="#:~:text=Refresh-,VUNDO-BUFFER"><span class="arg">VUNDO-BUFFER</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,INCREMENTAL"><span class="arg">INCREMENTAL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Refresh <span class="arg">VUNDO-BUFFER</span> with the undo history of <span class="arg">ORIG-BUFFER</span>.
+<p>If <span class="arg">INCREMENTAL</span> non-nil, reuse existing mod-list and mod-hash.
+<span class="arg">INCREMENTAL</span> is only applicable when entries are either added or
+removed from undo-list. On the other hand, if some entries are
+removed and some added, do not use <span class="arg">INCREMENTAL</span>.
+<p>This function modifies <a href="../var/vundo--prev-mod-list.html"><code>vundo--prev-mod-list</code></a>,
+<a href="../var/vundo--prev-mod-hash.html"><code>vundo--prev-mod-hash</code></a>, <a href="../var/vundo--prev-undo-list.html"><code>vundo--prev-undo-list</code></a>,
+<a href="../var/vundo--orig-buffer.html"><code>vundo--orig-buffer</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/7c2696v2qdrdv2vf2im8alazibi7qq0z-emacs-packages-deps/share/emacs/site-lisp/elpa/vundo-2.4.0/vundo.el</span>
+(<span class="k">defun</span> <span class="f">vundo--refresh-buffer</span>
+    (orig-buffer vundo-buffer <span class="ty">&amp;optional</span> incremental)
+  <span class="doc">"Refresh VUNDO-BUFFER with the undo history of ORIG-BUFFER.
+If INCREMENTAL non-nil, reuse existing mod-list and mod-hash.
+INCREMENTAL is only applicable when entries are either added or
+removed from undo-list. On the other hand, if some entries are
+removed and some added, do not use INCREMENTAL.
+
+This function modifies `</span><span class="m doc">vundo--prev-mod-list</span><span class="doc">',
+`</span><span class="m doc">vundo--prev-mod-hash</span><span class="doc">', `</span><span class="m doc">vundo--prev-undo-list</span><span class="doc">',
+`</span><span class="m doc">vundo--orig-buffer</span><span class="doc">'."</span>
+  (<span class="k">with-current-buffer</span> vundo-buffer
+    <span class="cd">;; </span><span class="c">1. Setting these to nil makes `</span><span class="m c">vundo--mod-list-from</span><span class="c">',
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">vundo--update-mapping</span><span class="c">' and `</span><span class="m c">vundo--build-tree</span><span class="c">' starts from
+</span>    <span class="cd">;; </span><span class="c">scratch.
+</span>    (<span class="k">when</span> (not incremental)
+      (<span class="k">setq</span> vundo--prev-undo-list nil
+            vundo--prev-mod-list nil
+            vundo--prev-mod-hash nil)
+      <span class="cd">;; </span><span class="c">Give the garbage collector a chance to release
+</span>      <span class="cd">;; </span><span class="c">`</span><span class="m c">buffer-undo-list</span><span class="c">': GC cannot release cons cells when all
+</span>      <span class="cd">;; </span><span class="c">these stuff are referring to it.
+</span>      (garbage-collect))
+    (<span class="k">let</span> ((undo-list (buffer-local-value
+                      'buffer-undo-list orig-buffer))
+          mod-list
+          mod-hash
+          (latest-state (<span class="k">and</span> vundo--prev-mod-list
+                             (vundo--latest-buffer-state
+                              vundo--prev-mod-list)))
+          (inhibit-read-only t))
+      <span class="cd">;; </span><span class="c">2. Here we consider two cases, adding more nodes (or starting
+</span>      <span class="cd">;; </span><span class="c">from scratch) or removing nodes. In both cases, we update and
+</span>      <span class="cd">;; </span><span class="c">set MOD-LIST and MOD-HASH. We don't need to worry about the
+</span>      <span class="cd">;; </span><span class="c">garbage collector trimming the end of `</span><span class="m c">buffer-undo-list</span><span class="c">': if
+</span>      <span class="cd">;; </span><span class="c">we are generating MOD-LIST from scratch, it will work as
+</span>      <span class="cd">;; </span><span class="c">normal, if we are generating incrementally,
+</span>      <span class="cd">;; </span><span class="c">`</span><span class="m c">vundo--prev-undo-list</span><span class="c">' holds the untrimmed undo list.
+</span>      (<span class="k">if-let</span> ((new-tail (<span class="k">and</span> vundo--prev-mod-hash
+                              (gethash (vundo--sans-nil undo-list)
+                                       vundo--prev-mod-hash))))
+          <span class="cd">;; </span><span class="c">a) Removing.
+</span>          (<span class="k">setq</span> mod-list (vundo--mod-list-trim vundo--prev-mod-list
+                                               (vundo-m-idx new-tail))
+                mod-hash vundo--prev-mod-hash)
+        <span class="cd">;; </span><span class="c">b) Adding.
+</span>        (<span class="k">let</span> ((diff (- (length undo-list)
+                       (length vundo--prev-undo-list))))
+          (<span class="w">cl-assert</span> (eq vundo--prev-undo-list (nthcdr diff undo-list)))
+          (<span class="k">setq</span> mod-list (vundo--mod-list-from
+                          undo-list diff vundo--prev-mod-list)
+                mod-hash (vundo--update-mapping
+                          mod-list vundo--prev-mod-hash
+                          (length vundo--prev-mod-list)))
+          <span class="cd">;; </span><span class="c">Build tree.
+</span>          (vundo--build-tree mod-list mod-hash
+                             (length vundo--prev-mod-list))))
+
+      <span class="cd">;; </span><span class="c">Update cache.
+</span>      (<span class="k">setq</span> vundo--prev-mod-list mod-list
+            vundo--prev-mod-hash mod-hash
+            vundo--prev-undo-list undo-list
+            vundo--orig-buffer orig-buffer)
+
+      <span class="cd">;; </span><span class="c">Record timestamps
+</span>      (<span class="k">setq</span> vundo--timestamps (vundo--record-timestamps mod-list))
+
+      <span class="cd">;; </span><span class="c">3. Render buffer. We don't need to redraw the tree if there
+</span>      <span class="cd">;; </span><span class="c">is no change to the nodes.
+</span>      (<span class="k">unless</span> (eq (vundo--latest-buffer-state mod-list) latest-state)
+        (vundo--draw-tree mod-list))
+
+      <span class="cd">;; </span><span class="c">Highlight current node.
+</span>      (vundo--highlight-node (vundo--current-node mod-list))
+      (goto-char (vundo-m-point (vundo--current-node mod-list)))
+
+      <span class="cd">;; </span><span class="c">Highlight the last saved node extra specially
+</span>      (<span class="k">when</span> vundo-highlight-saved-nodes
+        (vundo--highlight-last-saved-node mod-list vundo--timestamps))
+
+      <span class="cd">;; </span><span class="c">Call out truncated undo tree.
+</span>      (<span class="k">let</span> ((first-undo (buffer-local-value
+                         'vundo--first-undo orig-buffer))
+            (current-first-undo
+             <span class="cd">;; </span><span class="c">We actually use the second vundo-m, because the
+</span>             <span class="cd">;; </span><span class="c">‘</span><span class="m c">undo-list</span><span class="c">’ of the first vundo-m is always nil.
+</span>             (vundo-m-undo-list (aref mod-list 1))))
+        (<span class="k">when</span> (<span class="k">and</span> first-undo (not (eq first-undo current-first-undo)))
+          (message <span class="s">"⚠️ The undo-list of this buffer is truncated by garbage collection, to prevent this from happening again, consider increasing ‘</span><span class="m s">undo-limit</span><span class="s">’"</span>))
+        (<span class="k">when</span> (<span class="k">or</span> (not first-undo)
+                  (<span class="k">and</span> first-undo (not (eq first-undo
+                                           current-first-undo))))
+          (<span class="k">with-current-buffer</span> orig-buffer
+            (<span class="k">setq</span> vundo--first-undo
+                  (vundo-m-undo-list (aref mod-list 1)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

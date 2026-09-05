@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-diff--update-hunk-refinement – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-diff--update-hunk-refinement is a natively compiled function
+defined in majutsu-diff.el.
+Apply or remove word-level refinement overlays.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-diff--update-hunk-refinement</code></h1><p><span class="m"><code>majutsu-diff--update-hunk-refinement</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-diff--update-hunk-refinement <span class="ty">&amp;optional</span> <a href="#:~:text=When-,SECTION"><span class="arg">SECTION</span></a> <a href="#:~:text="><span class="arg">ALLOW-REMOVE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply or remove word-level refinement overlays.
+<p>When <span class="arg">SECTION</span> is nil, walk all hunk sections.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-diff.el</span>
+<span class="cd">;;; </span><span class="c">Refinement
+</span>
+(<span class="k">defun</span> <span class="f">majutsu-diff--update-hunk-refinement</span> (<span class="ty">&amp;optional</span> section allow-remove)
+  <span class="doc">"Apply or remove word-level refinement overlays.
+When SECTION is nil, walk all hunk sections."</span>
+  (<span class="k">if</span> section
+      (<span class="k">unless</span> (<span class="k">oref</span> section hidden)
+        (<span class="k">pcase</span> (list majutsu-diff-refine-hunk
+                     (<span class="k">oref</span> section refined)
+                     (eq section (magit-current-section)))
+          ((<span class="k">or</span> `(all nil ,_) '(t nil t))
+           (<span class="k">oset</span> section refined t)
+           (<span class="k">if</span> (eq majutsu-diff-backend 'color-words)
+               (majutsu-diff--color-words-refine-hunk section)
+             (<span class="k">save-excursion</span>
+               (goto-char (<span class="k">oref</span> section start))
+               <span class="cd">;; </span><span class="c">`</span><span class="m c">diff-refine-hunk</span><span class="c">' cannot handle combined hunks.
+</span>               (<span class="k">unless</span> (looking-at <span class="s">"@@@"</span>)
+                 (<span class="k">let</span> ((len (- (<span class="k">oref</span> section end) (<span class="k">oref</span> section start))))
+                   (<span class="k">if</span> (<span class="k">and</span> majutsu-diff-refine-max-chars
+                            (&gt; len majutsu-diff-refine-max-chars))
+                       (<span class="k">progn</span>
+                         (<span class="k">oset</span> section refined nil)
+                         (remove-overlays (<span class="k">oref</span> section start)
+                                          (<span class="k">oref</span> section end)
+                                          'diff-mode 'fine))
+                     (<span class="k">let</span> ((smerge-refine-ignore-whitespace
+                            majutsu-diff-refine-ignore-whitespace)
+                           (write-region-inhibit-fsync t))
+                       (diff-refine-hunk))))))))
+          ((<span class="k">and</span> (guard allow-remove)
+                (<span class="k">or</span> `(nil t ,_) '(t t nil)))
+           (<span class="k">oset</span> section refined nil)
+           (remove-overlays (<span class="k">oref</span> section start)
+                            (<span class="k">oref</span> section end)
+                            'diff-mode 'fine))))
+    (<span class="k">cl-labels</span> ((walk (node)
+                  (<span class="k">if</span> (magit-section-match 'jj-hunk node)
+                      (majutsu-diff--update-hunk-refinement node t)
+                    (<span class="k">dolist</span> (child (<span class="k">oref</span> node children))
+                      (walk child)))))
+      (walk magit-root-section))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

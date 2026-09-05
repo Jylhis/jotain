@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-process--fetch-releases – Emacs Documentation Online</title>
+<meta name="description" content="eca-process--fetch-releases is a natively compiled function defined in
+eca-process.el.
+Return cached releases list, fetching from GitHub if needed.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-process--fetch-releases</code></h1><p><span class="m"><code>eca-process--fetch-releases</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-process.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-process--fetch-releases)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return cached releases list, fetching from GitHub if needed.
+<p>Refetches when the cache is empty or has expired per
+<a href="../var/eca-server-releases-cache-ttl.html"><code>eca-server-releases-cache-ttl</code></a>.  On fetch failure, any previously
+cached value is preserved and returned, and further fetch attempts
+are skipped for <a href="../var/eca-process--releases-failure-cooldown.html"><code>eca-process--releases-failure-cooldown</code></a> seconds.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-process.el</span>
+(<span class="k">defun</span> <span class="f">eca-process--fetch-releases</span> ()
+  <span class="doc">"Return cached releases list, fetching from GitHub if needed.
+Refetches when the cache is empty or has expired per
+`</span><span class="m doc">eca-server-releases-cache-ttl</span><span class="doc">'.  On fetch failure, any previously
+cached value is preserved and returned, and further fetch attempts
+are skipped for `</span><span class="m doc">eca-process--releases-failure-cooldown</span><span class="doc">' seconds."</span>
+  (<span class="k">cond</span>
+   ((eca-process--releases-cache-valid-p)
+    (cdr eca-process--releases-cache))
+   ((<span class="k">and</span> eca-process--releases-fetch-failed-at
+         (&lt; (- (float-time) eca-process--releases-fetch-failed-at)
+            eca-process--releases-failure-cooldown))
+    (cdr-safe eca-process--releases-cache))
+   (t
+    (<span class="k">condition-case</span> err
+        (<span class="k">let*</span> ((coding-system-for-read 'utf-8)
+               (json-string
+                (eca--curl-download-string
+                 eca-process--releases-url))
+               (releases (<span class="k">with-temp-buffer</span>
+                           (insert json-string)
+                           (goto-char (point-min))
+                           (<span class="k">eca-api--json-read-buffer</span>))))
+          <span class="cd">;; </span><span class="c">Guard against non-release payloads (e.g. a rate-limit
+</span>          <span class="cd">;; </span><span class="c">JSON object) poisoning the cache.
+</span>          (<span class="k">unless</span> (<span class="k">and</span> (<span class="k">or</span> (vectorp releases) (proper-list-p releases))
+                       (&gt; (length releases) 0)
+                       (plist-get (elt releases 0) <span class="bi">:tag_name</span>))
+            (<span class="w">error</span> <span class="s">"Unexpected releases payload"</span>))
+          (<span class="k">setq</span> eca-process--releases-fetch-failed-at nil)
+          (<span class="k">setq</span> eca-process--releases-cache
+                (cons (float-time) releases))
+          releases)
+      (<span class="w">error</span>
+       (<span class="k">setq</span> eca-process--releases-fetch-failed-at (float-time))
+       (eca-warn <span class="s">"Failed to fetch releases: %s"</span> err)
+       (cdr-safe eca-process--releases-cache))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

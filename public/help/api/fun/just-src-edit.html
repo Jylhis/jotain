@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: just-src-edit – Emacs Documentation Online</title>
+<meta name="description" content="just-src-edit is an interactive and natively compiled function defined
+in just-ts-mode.el.
+Edit the task body at point in a dedicated buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>just-src-edit</code></h1><p><span class="m"><code>just-src-edit</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">just-ts-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(just-src-edit)
+</code></pre>
+<h2>Documentation</h2>
+<p>Edit the task body at point in a dedicated buffer.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4mrcq9a0hg0kfl5gxbbg2vjzwc644has-emacs-packages-deps/share/emacs/site-lisp/elpa/just-ts-mode-20260319.1513/just-ts-mode.el</span>
+(<span class="k">defun</span> <span class="f">just-src-edit</span> ()
+  <span class="doc">"Edit the task body at point in a dedicated buffer."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((task-info (just-src-edit--find-task-bounds)))
+    (<span class="k">unless</span> task-info
+      (<span class="w">user-error</span> <span class="s">"Not in a task body"</span>))
+
+    (<span class="k">let*</span> ((task-name (nth 0 task-info))
+           (body-start (nth 1 task-info))
+           (body-end (nth 2 task-info))
+           (original-buffer (current-buffer))
+           (indentation (just-src-edit--calculate-indentation body-start body-end))
+           (content (buffer-substring-no-properties body-start body-end))
+           (clean-content (just-src-edit--remove-indentation content indentation))
+           (edit-buffer (generate-new-buffer (format <span class="s">"*Just Task: %s*"</span> task-name))))
+
+      <span class="cd">;; </span><span class="c">Switch to edit buffer
+</span>      (pop-to-buffer edit-buffer)
+
+      <span class="cd">;; </span><span class="c">Insert content and set up buffer
+</span>      (insert clean-content)
+      (goto-char (point-min))
+
+      <span class="cd">;; </span><span class="c">Ensure buffer ends with newline
+</span>      (goto-char (point-max))
+      (<span class="k">unless</span> (<span class="k">and</span> (&gt; (point-max) (point-min))
+                   (= (char-before) ?\n))
+        (insert <span class="s">"\n"</span>))
+      (goto-char (point-min))
+
+      <span class="cd">;; </span><span class="c">Detect and set appropriate mode
+</span>      (<span class="k">if</span> (string-match <span class="s">"^#!"</span> clean-content)
+          (normal-mode)
+        (sh-mode))
+
+      <span class="cd">;; </span><span class="c">Set up buffer-local variables
+</span>      (<span class="k">setq</span> just-src-edit--original-buffer original-buffer)
+      (<span class="k">setq</span> just-src-edit--beg-marker (<span class="k">with-current-buffer</span> original-buffer
+                                        (copy-marker body-start)))
+      (<span class="k">setq</span> just-src-edit--end-marker (<span class="k">with-current-buffer</span> original-buffer
+                                        (copy-marker body-end t)))
+      (<span class="k">setq</span> just-src-edit--indentation indentation)
+      (<span class="k">setq</span> just-src-edit--task-name task-name)
+
+      <span class="cd">;; </span><span class="c">Enable the minor mode for keybindings
+</span>      (just-src-edit-mode 1)
+
+      <span class="cd">;; </span><span class="c">Show helpful message
+</span>      (message <span class="s">"Edit task '</span><span class="m s">%s</span><span class="s">'. %s"</span> task-name (just-src-edit--describe-bindings)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

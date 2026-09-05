@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: cape--super-prefix – Emacs Documentation Online</title>
+<meta name="description" content="cape--super-prefix is a natively compiled function defined in cape.el.
+Find tables from Capf RESULTS matching prefix at BEG to END.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>cape--super-prefix</code></h1><p><span class="m"><code>cape--super-prefix</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">cape.el</span>.
+<h2>Signature</h2>
+<pre><code>(cape--super-prefix <a href="#:~:text=at-,BEG"><span class="arg">BEG</span></a> <a href="#:~:text=to-,END"><span class="arg">END</span></a> <a href="#:~:text=Capf-,RESULTS"><span class="arg">RESULTS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find tables from Capf <span class="arg">RESULTS</span> matching prefix at <span class="arg">BEG</span> to <span class="arg">END</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4ylqcdhr31fki9yxzd4rhd2bm54ydhdn-emacs-packages-deps/share/emacs/site-lisp/elpa/cape-20260821.1208/cape.el</span>
+(<span class="k">defun</span> <span class="f">cape--super-prefix</span> (beg end results)
+  <span class="doc">"Find tables from Capf RESULTS matching prefix at BEG to END."</span>
+  (<span class="k">let</span> (tables exc prefix-len)
+    (<span class="k">cl-loop</span>
+     for (main beg2 end2 table . plist) in results do
+     <span class="cd">;; </span><span class="c">Note: `</span><span class="m c">cape-capf-super</span><span class="c">' currently cannot merge Capfs which trigger at
+</span>     <span class="cd">;; </span><span class="c">different beginning positions.  In order to support this, take the
+</span>     <span class="cd">;; </span><span class="c">smallest BEG value and then normalize all candidates by prefixing them
+</span>     <span class="cd">;; </span><span class="c">such that they all start at the smallest BEG position.
+</span>     (<span class="k">when</span> (= beg beg2)
+       (<span class="k">push</span> (list main (plist-get plist <span class="bi">:predicate</span>) table
+                   (<span class="k">cl-loop</span> for f in cape--super-functions
+                            for v = (plist-get plist f)
+                            if v collect f and collect v))
+             tables)
+       <span class="cd">;; </span><span class="c">The resulting merged Capf is exclusive if one of the main
+</span>       <span class="cd">;; </span><span class="c">Capfs is exclusive.
+</span>       (<span class="k">when</span> (<span class="k">and</span> main (not (eq (plist-get plist <span class="bi">:exclusive</span>) 'no)))
+         (<span class="k">setq</span> exc t))
+       (<span class="k">setq</span> end (max end end2))
+       (<span class="k">let</span> ((plen (plist-get plist <span class="bi">:company-prefix-length</span>)))
+         (<span class="k">cond</span>
+          ((eq plen t)
+           (<span class="k">setq</span> prefix-len t))
+          ((<span class="k">and</span> (not prefix-len) (integerp plen))
+           (<span class="k">setq</span> prefix-len plen))
+          ((<span class="k">and</span> (integerp prefix-len) (integerp plen))
+           (<span class="k">setq</span> prefix-len (max prefix-len plen)))))))
+    (list (nreverse tables) exc prefix-len)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

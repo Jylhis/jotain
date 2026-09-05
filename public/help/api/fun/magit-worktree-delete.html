@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-worktree-delete – Emacs Documentation Online</title>
+<meta name="description" content="magit-worktree-delete is an interactive and natively compiled function
+defined in magit-worktree.el.
+Delete a worktree, defaulting to the worktree at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-worktree-delete</code></h1><p><span class="m"><code>magit-worktree-delete</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-worktree.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-worktree-delete <a href="#:~:text="><span class="arg">WORKTREE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Delete a worktree, defaulting to the worktree at point.
+<p>The primary worktree cannot be deleted.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-worktree.el</span>
+(<span class="k">defun</span> <span class="f">magit-worktree-delete</span> (worktree)
+  <span class="doc">"Delete a worktree, defaulting to the worktree at point.
+The primary worktree cannot be deleted."</span>
+  (<span class="k">interactive</span>
+    (list (magit-completing-read <span class="s">"Delete worktree"</span>
+                                 (mapcar #'car (cdr (magit-list-worktrees)))
+                                 nil t nil nil
+                                 (magit-section-value-if 'worktree))))
+  (<span class="k">if</span> (file-directory-p (expand-file-name <span class="s">".git"</span> worktree))
+      (<span class="w">user-error</span> <span class="s">"Deleting %s would delete the shared .git directory"</span> worktree)
+    (<span class="k">let*</span> ((wtrees (magit-list-worktrees))
+           (wtree (assoc worktree wtrees))
+           (locked (nth 5 wtree))
+           (primary (file-name-as-directory (caar wtrees))))
+      (<span class="k">when</span> locked
+        (<span class="w">user-error</span> <span class="s">"Cannot delete locked %s%s"</span> worktree
+                    (<span class="k">if</span> (stringp locked) (format <span class="s">" [reason: %s]"</span> locked) <span class="s">""</span>)))
+      (<span class="k">when</span> (file-exists-p worktree)
+        (<span class="k">let</span> (uncommitted)
+          (magit-confirm
+            (<span class="k">cond</span> ((<span class="k">let</span> ((default-directory worktree))
+                     (<span class="k">or</span> (magit-anything-modified-p)
+                         (magit-untracked-files)))
+                   (<span class="k">setq</span> uncommitted 'danger))
+                  (magit-delete-by-moving-to-trash 'trash)
+                  ('delete))
+            (format <span class="s">"%s worktree \"%s\"%s"</span>
+                    (<span class="k">if</span> magit-delete-by-moving-to-trash <span class="s">"Trash"</span> <span class="s">"Delete"</span>)
+                    (file-name-nondirectory (directory-file-name worktree))
+                    (<span class="k">if</span> uncommitted <span class="s">" despite uncommitted changes"</span> <span class="s">""</span>))
+            nil nil (list worktree)))
+        (<span class="k">if</span> magit-delete-by-moving-to-trash
+            (<span class="k">let</span> ((delete-by-moving-to-trash t))
+              (delete-directory worktree t t))
+          (magit-call-git <span class="s">"worktree"</span> <span class="s">"remove"</span> <span class="s">"--force"</span> worktree)))
+      (<span class="k">if</span> (file-exists-p default-directory)
+          (magit-run-git <span class="s">"worktree"</span> <span class="s">"prune"</span>)
+        (<span class="k">let</span> ((default-directory primary))
+          (magit-run-git <span class="s">"worktree"</span> <span class="s">"prune"</span>))
+        (<span class="k">when</span> (derived-mode-p 'magit-status-mode)
+          (kill-buffer)
+          (magit-status-setup-buffer primary))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

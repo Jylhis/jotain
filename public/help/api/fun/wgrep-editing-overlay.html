@@ -1,0 +1,72 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: wgrep-editing-overlay – Emacs Documentation Online</title>
+<meta name="description" content="wgrep-editing-overlay is a natively compiled function defined in
+wgrep.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>wgrep-editing-overlay</code></h1><p><span class="m"><code>wgrep-editing-overlay</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">wgrep.el</span>.
+<h2>Signature</h2>
+<pre><code>(wgrep-editing-overlay <span class="ty">&amp;optional</span> <span class="arg">START</span> <span class="arg">END</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/jh0vggyzz4qppa1npcrzxy9a9bgj60hg-emacs-packages-deps/share/emacs/site-lisp/elpa/wgrep-20230203.1214/wgrep.el</span>
+<span class="cd">;;;</span><span class="c">
+</span><span class="cd">;;; </span><span class="c">Editing handlers
+</span><span class="cd">;;;</span><span class="c">
+</span>
+<span class="cd">;; </span><span class="c">get overlay BEG and END is passed by `</span><span class="m c">after-change-functions</span><span class="c">'
+</span>(<span class="k">defun</span> <span class="f">wgrep-editing-overlay</span> (<span class="ty">&amp;optional</span> start end)
+  (<span class="k">let</span> ((beg (<span class="k">or</span> start (line-beginning-position)))
+        (fin (<span class="k">or</span> end (line-end-position)))
+        ov bol eol
+        <span class="cd">;; </span><span class="c">beginning/end of grep
+</span>        bog eog)
+    (goto-char beg)
+    (<span class="k">setq</span> bol (line-beginning-position))
+    (goto-char fin)
+    (<span class="k">setq</span> eol (line-end-position))
+    (<span class="k">catch</span> '<span class="m">done</span>
+      (<span class="k">dolist</span> (o (overlays-in bol eol))
+        <span class="cd">;; </span><span class="c">find overlay that have changed by user.
+</span>        (<span class="k">when</span> (overlay-get o 'wgrep-changed)
+          (<span class="k">setq</span> ov o)
+          (<span class="k">throw</span> '<span class="m">done</span> o))))
+    (<span class="k">if</span> ov
+        (<span class="k">setq</span> bog (min beg (overlay-start ov))
+              eog (max (overlay-end ov) fin))
+      (<span class="k">setq</span> bog bol
+            eog eol))
+    (goto-char bog)
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">When handling whole line, BOL equal beginning of edit.
+</span>     ((<span class="k">and</span> (null ov) start (= bog start)))
+     ((get-text-property (point) 'wgrep-line-filename)
+      (<span class="k">let*</span> ((header-end
+              (next-single-property-change (point) 'wgrep-line-filename nil eol))
+             (filename (get-text-property (point) 'wgrep-line-filename))
+             (linum (get-text-property (point) 'wgrep-line-number))
+             (value (buffer-substring-no-properties header-end eog))
+             contents-begin)
+        (goto-char header-end)
+        (<span class="k">setq</span> contents-begin (point-marker))
+        <span class="cd">;; </span><span class="c">create editing overlay
+</span>        (<span class="k">cond</span>
+         ((null ov)
+          (<span class="k">let</span> ((old (wgrep-get-old-text filename linum)))
+            (<span class="k">setq</span> ov (wgrep-make-overlay bog eog))
+            (overlay-put ov 'wgrep-contents-begin contents-begin)
+            (overlay-put ov 'wgrep-filename filename)
+            (overlay-put ov 'wgrep-linum linum)
+            (overlay-put ov 'wgrep-changed t)
+            (overlay-put ov 'priority 0)
+            (overlay-put ov 'evaporate t)
+            (overlay-put ov 'wgrep-old-text old)))
+         (t
+          (move-overlay ov bog eog)))
+        (overlay-put ov 'wgrep-edit-text value))))
+    ov))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

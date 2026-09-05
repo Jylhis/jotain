@@ -1,0 +1,77 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-update-ghc-support – Emacs Documentation Online</title>
+<meta name="description" content="haskell-update-ghc-support is an interactive and natively compiled
+function defined in haskell-ghc-support.el.
+Update haskell-ghc-supported-options and haskell-ghc-supported-extensions.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-update-ghc-support</code></h1><p><span class="m"><code>haskell-update-ghc-support</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">haskell-ghc-support.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-update-ghc-support <a href="#:~:text=from-,GHC-PATH"><span class="arg">GHC-PATH</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update <a href="../var/haskell-ghc-supported-options.html"><code>haskell-ghc-supported-options</code></a> and <a href="../var/haskell-ghc-supported-extensions.html"><code>haskell-ghc-supported-extensions</code></a>.
+<p>This command should be run once a GHC is released. It will use
+<br>--show-options and --supported-extensions to source the
+<br>information from <span class="arg">GHC-PATH</span>. Then it will update source code to
+include newly found options. Old options are never removed and
+are retained to support old versions of the compiler.
+<p>Options and extension are kept in ascending order.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-ghc-support.el</span>
+(<span class="k">defun</span> <span class="f">haskell-update-ghc-support</span> (ghc-path)
+  <span class="doc">"Update `</span><span class="m doc">haskell-ghc-supported-options</span><span class="doc">' and `</span><span class="m doc">haskell-ghc-supported-extensions</span><span class="doc">'.
+
+This command should be run once a GHC is released. It will use
+--show-options and --supported-extensions to source the
+information from GHC-PATH. Then it will update source code to
+include newly found options. Old options are never removed and
+are retained to support old versions of the compiler.
+
+Options and extension are kept in ascending order."</span>
+  (<span class="k">interactive</span>
+   (list
+    (read-shell-command <span class="s">"GHC command: "</span> nil nil
+                        (<span class="k">let</span> ((filename
+                               (<span class="k">cond</span>
+                                (buffer-file-name)
+                                ((eq major-mode 'dired-mode)
+                                 (<span class="k">when</span> (fboundp 'dired-get-filename)
+                                   <span class="cd">;; </span><span class="c">silence the checker
+</span>                                   (dired-get-filename nil t))))))
+                          (<span class="k">and</span> filename (file-relative-name filename))))))
+
+
+  (<span class="k">let</span> ((extentions (split-string (shell-command-to-string (concat ghc-path <span class="s">" --supported-extensions"</span>))))
+        (options (split-string (shell-command-to-string (concat ghc-path <span class="s">" --show-options"</span>)))))
+    (<span class="k">with-current-buffer</span>
+        (find-file-noselect (replace-regexp-in-string <span class="s">"\\.elc$"</span> <span class="s">".el"</span> (symbol-file 'haskell-ghc-supported-options)))
+      (<span class="k">save-excursion</span>
+        (goto-char (point-min))
+        (re-search-forward <span class="s">"BEGIN haskell-ghc-supported-extensions"</span>)
+        (forward-line 1)
+        (<span class="k">let</span> ((point (point)))
+          (re-search-forward <span class="s">"END haskell-ghc-supported-extensions"</span>)
+          (goto-char (line-beginning-position))
+          (delete-region point (point)))
+        (<span class="k">setq</span> haskell-ghc-supported-extensions
+              (delete-dups (sort (append extentions haskell-ghc-supported-extensions) #'string&lt;)))
+        (<span class="k">dolist</span> (item haskell-ghc-supported-extensions)
+          (insert <span class="s">"    \""</span> item <span class="s">"\"\n"</span>))
+        (re-search-forward <span class="s">"BEGIN haskell-ghc-supported-options"</span>)
+        (forward-line 1)
+        (<span class="k">let</span> ((point (point)))
+          (re-search-forward <span class="s">"END haskell-ghc-supported-options"</span>)
+          (goto-char (line-beginning-position))
+          (delete-region point (point)))
+        (<span class="k">setq</span> haskell-ghc-supported-options
+              (delete-dups (sort (append options haskell-ghc-supported-options) #'string&lt;)))
+        (<span class="k">dolist</span> (item haskell-ghc-supported-options)
+          (insert <span class="s">"    \""</span> item <span class="s">"\"\n"</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

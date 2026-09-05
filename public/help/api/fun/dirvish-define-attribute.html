@@ -1,0 +1,97 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dirvish-define-attribute – Emacs Documentation Online</title>
+<meta name="description" content="dirvish-define-attribute is a macro defined in dirvish.el.
+Define a Dirvish attribute NAME with DOCSTRING.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dirvish-define-attribute</code></h1><p><span class="m"><code>dirvish-define-attribute</code></span> is a macro defined in <span class="bt">dirvish.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">dirvish-define-attribute</span> <a href="#:~:text=attribute-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=with-,DOCSTRING"><span class="arg">DOCSTRING</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=runs-,BODY"><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Define a Dirvish attribute <span class="arg">NAME</span> with <span class="arg">DOCSTRING</span>.
+<p>An Dirvish attribute contains:
+<br>- a PREDICATE form, which is the value of <span class="bi">:when</span> keyword
+<br>- a SETUP form, which is the value of <span class="bi">:setup</span> keyword
+<br>- a RENDER function runs <span class="arg">BODY</span> (excludes all the keywords)
+<p>During redisplay, the PREDICATE is evaluated with WIN-WIDTH (from
+<a href="../fun/window-width.html"><code>window-width</code></a>) bound locally, a nil result means the attribute should
+not be rendered.  Otherwise, SETUP form is evalutated once and RENDER is
+called for every file line in the viewport with the following arguments:
+<p>- <span class="m"><code>f-beg</code></span>   from <a href="../fun/dired-move-to-filename.html"><code>dired-move-to-filename</code></a>
+<br>- <span class="m"><code>f-end</code></span>   from <a href="../fun/dired-move-to-end-of-filename.html"><code>dired-move-to-end-of-filename</code></a>
+<br>- <span class="m"><code>f-str</code></span>   from (<a href="../fun/buffer-substring.html"><code>buffer-substring</code></a> F-BEG F-END)
+<br>- <span class="m"><code>f-name</code></span>  from <a href="../fun/dired-get-filename.html"><code>dired-get-filename</code></a>
+<br>- <span class="m"><code>f-attrs</code></span> from <a href="../fun/file-attributes.html"><code>file-attributes</code></a>
+<br>- <span class="m"><code>f-type</code></span>  from <a href="../fun/file-directory-p.html"><code>file-directory-p</code></a> along with <a href="../fun/file-symlink-p.html"><code>file-symlink-p</code></a>
+<br>- <span class="m"><code>l-beg</code></span>   from <a href="../fun/line-beginning-position.html"><code>line-beginning-position</code></a>
+<br>- <span class="m"><code>l-end</code></span>   from <a href="../fun/line-end-position.html"><code>line-end-position</code></a>
+<br>- <span class="m"><code>hl-face</code></span> from <span class="m"><code>dirvish-hl-line</code></span> face, only passed in for current line
+<br>- <span class="m"><code>w-width</code></span> from <a href="../fun/window-width.html"><code>window-width</code></a>
+<p>RENDER should return a cons of (TYPE . VAL) where:
+<br>- TYPE can be one of <span class="m"><code>ov</code></span>, <span class="m"><code>left</code></span> or <span class="m"><code>right</code></span>
+<br>- When TYPE is <span class="m"><code>ov</code></span>, VAL is a overlay to be put; otherwise VAL is a string
+<p>The collected <span class="m"><code>left</code></span> strings as a whole is then attached to <span class="m"><code>f-end</code></span>,
+while <span class="m"><code>right</code></span> would fill up remaining space within the file line.  These
+keywords are used to calculate the starting position of the collected
+<span class="m"><code>right</code></span> strings:
+<p>- <span class="bi">:width</span>: a form denotes the constant length of the attribute.
+<br>- <span class="bi">:right</span>: like <span class="bi">:width</span>, but only used by <span class="m"><code>right</code></span> TYPE RENDER.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a7h73ip6x5m1pxn38j7f0al6n93w904q-emacs-packages-deps/share/emacs/site-lisp/elpa/dirvish-20260725.1520/dirvish.el</span>
+<span class="cd">;;;; </span><span class="c">Attributes
+</span>
+(<span class="k">defmacro</span> <span class="f">dirvish-define-attribute</span> (name docstring <span class="ty">&amp;rest</span> body)
+  <span class="doc">"Define a Dirvish attribute NAME with DOCSTRING.
+An Dirvish attribute contains:
+- a PREDICATE form, which is the value of `</span><span class="m doc">:when</span><span class="doc">' keyword
+- a SETUP form, which is the value of `</span><span class="m doc">:setup</span><span class="doc">' keyword
+- a RENDER function runs BODY (excludes all the keywords)
+
+During redisplay, the PREDICATE is evaluated with WIN-WIDTH (from
+`</span><span class="m doc">window-width</span><span class="doc">') bound locally, a nil result means the attribute should
+not be rendered.  Otherwise, SETUP form is evalutated once and RENDER is
+called for every file line in the viewport with the following arguments:
+
+- `</span><span class="m doc">f-beg</span><span class="doc">'   from `</span><span class="m doc">dired-move-to-filename</span><span class="doc">'
+- `</span><span class="m doc">f-end</span><span class="doc">'   from `</span><span class="m doc">dired-move-to-end-of-filename</span><span class="doc">'
+- `</span><span class="m doc">f-str</span><span class="doc">'   from (`</span><span class="m doc">buffer-substring</span><span class="doc">' F-BEG F-END)
+- `</span><span class="m doc">f-name</span><span class="doc">'  from `</span><span class="m doc">dired-get-filename</span><span class="doc">'
+- `</span><span class="m doc">f-attrs</span><span class="doc">' from `</span><span class="m doc">file-attributes</span><span class="doc">'
+- `</span><span class="m doc">f-type</span><span class="doc">'  from `</span><span class="m doc">file-directory-p</span><span class="doc">' along with `</span><span class="m doc">file-symlink-p</span><span class="doc">'
+- `</span><span class="m doc">l-beg</span><span class="doc">'   from `</span><span class="m doc">line-beginning-position</span><span class="doc">'
+- `</span><span class="m doc">l-end</span><span class="doc">'   from `</span><span class="m doc">line-end-position</span><span class="doc">'
+- `</span><span class="m doc">hl-face</span><span class="doc">' from `</span><span class="m doc">dirvish-hl-line</span><span class="doc">' face, only passed in for current line
+- `</span><span class="m doc">w-width</span><span class="doc">' from `</span><span class="m doc">window-width</span><span class="doc">'
+
+RENDER should return a cons of (TYPE . VAL) where:
+- TYPE can be one of `</span><span class="m doc">ov</span><span class="doc">', `</span><span class="m doc">left</span><span class="doc">' or `</span><span class="m doc">right</span><span class="doc">'
+- When TYPE is `</span><span class="m doc">ov</span><span class="doc">', VAL is a overlay to be put; otherwise VAL is a string
+
+The collected `</span><span class="m doc">left</span><span class="doc">' strings as a whole is then attached to `</span><span class="m doc">f-end</span><span class="doc">',
+while `</span><span class="m doc">right</span><span class="doc">' would fill up remaining space within the file line.  These
+keywords are used to calculate the starting position of the collected
+`</span><span class="m doc">right</span><span class="doc">' strings:
+
+- `</span><span class="m doc">:width</span><span class="doc">': a form denotes the constant length of the attribute.
+- `</span><span class="m doc">:right</span><span class="doc">': like `</span><span class="m doc">:width</span><span class="doc">', but only used by `</span><span class="m doc">right</span><span class="doc">' TYPE RENDER."</span>
+  (<span class="k">declare</span> (indent defun) (doc-string 2))
+  (<span class="k">let</span> ((render (intern (format <span class="s">"dirvish-attribute-%s-rd"</span> name)))
+        (args '(f-beg f-end f-str f-name f-attrs
+                      f-type l-beg l-end hl-face w-width))
+        options)
+    (<span class="k">while</span> (keywordp (car body)) (<span class="k">dotimes</span> (_ 2) (<span class="k">push</span> (<span class="k">pop</span> body) options)))
+    (<span class="k">setq</span> options (reverse options))
+    `(<span class="k">progn</span>
+       (add-to-list
+        'dirvish--available-attrs
+        (cons ',name '(,(<span class="k">or</span> (plist-get options <span class="bi">:width</span>) 0)
+                       ,(<span class="k">or</span> (plist-get options <span class="bi">:right</span>) 0)
+                       ,(<span class="k">or</span> (plist-get options <span class="bi">:when</span>) t)
+                       ,(<span class="k">or</span> (plist-get options <span class="bi">:setup</span>) nil)
+                       ,render ,docstring)))
+       (<span class="k">defun</span> ,render ,args (ignore ,@args) ,@body))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

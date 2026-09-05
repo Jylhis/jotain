@@ -1,0 +1,67 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-rewrite-content-received – Emacs Documentation Online</title>
+<meta name="description" content="eca-rewrite-content-received is a natively compiled function defined
+in eca-rewrite.el.
+Handle content update for a rewrite operation from LLM.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-rewrite-content-received</code></h1><p><span class="m"><code>eca-rewrite-content-received</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-rewrite.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-rewrite-content-received <a href="#:~:text=LLM.-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=session.-,PARAMS"><span class="arg">PARAMS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle content update for a rewrite operation from LLM.
+<p><span class="arg">SESSION</span> is the ECA session.
+<span class="arg">PARAMS</span> is a plist containing:
+<br>&nbsp;&nbsp;:rewriteId -- the identifier of the rewrite overlay,
+<br>&nbsp;&nbsp;:content   -- a plist with at least a :type and optionally :text.
+<p>Update the corresponding overlay with content (partial or finished),
+accepts, shows menu, or diffs according to <a href="../var/eca-rewrite-finished-action.html"><code>eca-rewrite-finished-action</code></a>,
+<br>&nbsp;or prompts user if not set.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-rewrite.el</span>
+<span class="cd">;; </span><span class="c">Public
+</span>
+(<span class="k">defun</span> <span class="f">eca-rewrite-content-received</span> (_session params)
+  <span class="doc">"Handle content update for a rewrite operation from LLM.
+SESSION is the ECA session.
+PARAMS is a plist containing:
+  :rewriteId -- the identifier of the rewrite overlay,
+  :content   -- a plist with at least a :type and optionally :text.
+
+Update the corresponding overlay with content (partial or finished),
+accepts, shows menu, or diffs according to `</span><span class="m doc">eca-rewrite-finished-action</span><span class="doc">',
+ or prompts user if not set."</span>
+  (<span class="k">let*</span> ((id (plist-get params <span class="bi">:rewriteId</span>))
+         (content (plist-get params <span class="bi">:content</span>))
+         (buffer (eca-rewrite--get-buffer id)))
+    (<span class="k">when</span> (buffer-live-p buffer)
+      (<span class="k">with-current-buffer</span> buffer
+        (<span class="k">when-let</span> ((ov (eca-rewrite--overlay-from-id id)))
+          (<span class="k">pcase</span> (plist-get content <span class="bi">:type</span>)
+            (<span class="s">"reasoning"</span> (eca-rewrite--refresh-overlay-actions ov 'reasoning))
+            (<span class="s">"text"</span> (eca-rewrite--add-text ov (plist-get content <span class="bi">:text</span>)))
+            (<span class="s">"error"</span> (<span class="k">progn</span>
+                       (eca-rewrite--reject (list ov))
+                       (eca-error <span class="s">"Rewrite error: %s"</span> (plist-get content <span class="bi">:message</span>))))
+            (<span class="s">"replace"</span> (<span class="k">progn</span>
+                         (overlay-put ov 'eca-rewrite--new-text-acc <span class="s">""</span>)
+                         (eca-rewrite--add-text ov (plist-get content <span class="bi">:text</span>))))
+            (<span class="s">"finished"</span> (<span class="k">progn</span>
+                          (overlay-put ov 'eca-rewrite--total-time-ms (plist-get content <span class="bi">:totalTimeMs</span>))
+                          (<span class="k">pcase</span> eca-rewrite-finished-action
+                            ('accept (eca-rewrite--accept ov))
+                            ('diff (eca-rewrite--diff ov))
+                            ('merge (eca-rewrite--merge ov))
+                            ('show-overlay-actions (<span class="k">progn</span>
+                                                     (eca-rewrite--refresh-overlay-actions ov 'finished)
+                                                     (pulse-momentary-highlight-region (overlay-start ov) (overlay-end ov))
+                                                     (kill-buffer (overlay-get ov 'eca-rewrite--temp-buffer))))
+                            (_ (<span class="w">user-error</span> (format <span class="s">"Uknown rewrite action '</span><span class="m s">%s</span><span class="s">' for eca-rewrite-finished-action"</span> eca-rewrite-finished-action))))
+                          (<span class="k">with-demoted-errors</span> <span class="s">"eca-rewrite-on-finished-hook: %S"</span>
+                            (run-hook-with-args 'eca-rewrite-on-finished-hook ov))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

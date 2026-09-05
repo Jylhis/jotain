@@ -1,0 +1,89 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--inspect-tool-calls – Emacs Documentation Online</title>
+<meta name="description" content="gptel--inspect-tool-calls is an interactive and natively compiled
+function defined in gptel.el.
+Set up and switch to a buffer to inspect pending tool-calls.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--inspect-tool-calls</code></h1><p><span class="m"><code>gptel--inspect-tool-calls</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--inspect-tool-calls <a href="#:~:text=calls.-,TOOL-CALLS"><span class="arg">TOOL-CALLS</span></a> <a href="#:~:text=calls.-,INFO"><span class="arg">INFO</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=plist.-,TOOL-OVERLAY"><span class="arg">TOOL-OVERLAY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Set up and switch to a buffer to inspect pending tool-calls.
+<p><span class="arg">TOOL-CALLS</span> is the alist of tool calls.  <span class="arg">INFO</span> is the request context
+plist.  <span class="arg">TOOL-OVERLAY</span> is the tool call dispatch overlay (if any) in the
+query buffer.
+<h2>Key Bindings</h2>
+<p><span class="v">gptel-tool-call-actions-map</span> <span class="key">C-c TAB</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--inspect-tool-calls</span> (tool-calls info <span class="ty">&amp;optional</span> tool-overlay)
+  <span class="doc">"Set up and switch to a buffer to inspect pending tool-calls.
+
+TOOL-CALLS is the alist of tool calls.  INFO is the request context
+plist.  TOOL-OVERLAY is the tool call dispatch overlay (if any) in the
+query buffer."</span>
+  (<span class="k">interactive</span> (<span class="k">pcase-let</span> ((`(,resp . ,o) (get-char-property-and-overlay
+                                           (point) 'gptel-tool)))
+                 (list resp (overlay-get o 'info) o)))
+  (<span class="k">with-current-buffer</span> (get-buffer-create <span class="s">"*gptel-tool-calls*"</span>)
+    (<span class="k">let</span> ((inhibit-read-only t)
+          (tool-use (plist-get info <span class="bi">:tool-use</span>)))
+      (remove-overlays)
+      (erase-buffer)
+      (<span class="k">unless</span> (derived-mode-p 'lisp-data-mode)
+        (lisp-data-mode)
+        (add-hook 'post-command-hook #'gptel--inspect-tool-post-command nil t))
+      <span class="cd">;; </span><span class="c">NOTE: This needs to be called after setting the major mode, as
+</span>      <span class="cd">;; </span><span class="c">buffer-local variables are wiped out.
+</span>      <span class="cd">;; </span><span class="c">Required to store state for accepting/rejecting calls
+</span>      (<span class="k">setq</span> gptel--fsm-last (gptel-make-fsm <span class="bi">:info</span> info))
+      (plist-put info <span class="bi">:tool-display</span> (list tool-calls tool-overlay)) <span class="cd">;</span><span class="c">NOTE: INFO is never nil
+</span>      (insert <span class="s">";; Inspect or edit tool calls.
+;; Adding or deleting tool calls is not supported.\n\n"</span>)
+      (<span class="k">cl-loop</span> for tool-spec-args-cb in tool-calls
+               for (tool-spec arg-plist _process-tool-result) = tool-spec-args-cb
+               with o
+               for name = (gptel-tool-name tool-spec)
+               for pt = (point)
+               for index =
+               (cl-position-if
+                (<span class="k">lambda</span> (call) (<span class="k">and</span> (not (plist-get call <span class="bi">:result</span>))
+                               (string= (plist-get call <span class="bi">:name</span>) name)
+                               (null (cl-set-difference
+                                      (plist-get call <span class="bi">:args</span>) arg-plist
+                                      <span class="bi">:test</span> #'equal))))
+                tool-use)
+               do (prin1 (list <span class="bi">:name</span> name <span class="bi">:args</span> arg-plist)
+                         (current-buffer) '((length . nil) (level . nil)))
+               (insert <span class="s">"\n\n"</span>)          <span class="cd">;</span><span class="c">Avoid extending the overlay
+</span>               (<span class="k">setq</span> o (make-overlay pt (- (point) 2) nil nil t))
+               (overlay-put o 'gptel-tool tool-spec-args-cb)
+               (overlay-put o 'gptel-overlay index))
+      (goto-char (point-min)) (forward-line 3))
+    (use-local-map
+     (make-composed-keymap
+      gptel-tool-call-inspection-map (current-local-map)))
+    (<span class="k">unless</span> header-line-format
+      (<span class="k">setq</span> header-line-format
+            (substitute-command-keys
+             (concat
+              (propertize <span class="s">"Tool calls"</span> 'face 'font-lock-string-face) <span class="s">": "</span>
+              (buttonize <span class="s">"Confirm"</span> #'gptel--inspect-accept-tool-calls)
+              <span class="s">" \\[</span><span class="m s">gptel--inspect-accept-tool-calls</span><span class="s">], "</span>
+              (buttonize <span class="s">"Cancel"</span> #'gptel--inspect-reject-tool-calls)
+              <span class="s">" \\[</span><span class="m s">gptel--inspect-reject-tool-calls</span><span class="s">], "</span>
+              (buttonize <span class="s">"Return"</span> #'gptel--inspect-quit-tool-calls)
+              <span class="s">" \\[</span><span class="m s">gptel--inspect-quit-tool-calls</span><span class="s">], "</span>
+              (buttonize <span class="s">"Edit"</span> (<span class="k">lambda</span> (_) (read-only-mode 'toggle)))
+              <span class="s">" \\[</span><span class="m s">read-only-mode</span><span class="s">]"</span>))))
+    (set-buffer-modified-p nil)
+    (read-only-mode)
+    (gptel--inspect-tool-post-command)
+    (display-buffer (current-buffer) gptel-display-buffer-action)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

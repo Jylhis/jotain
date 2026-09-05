@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: mcp-request-dispatcher – Emacs Documentation Online</title>
+<meta name="description" content="mcp-request-dispatcher is a natively compiled function defined in
+mcp.el.
+Default handler for MCP server requests.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>mcp-request-dispatcher</code></h1><p><span class="m"><code>mcp-request-dispatcher</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(mcp-request-dispatcher <a href="#:~:text=requests.-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=connection.-,METHOD"><span class="arg">METHOD</span></a> <a href="#:~:text=name.-,PARAMS"><span class="arg">PARAMS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Default handler for MCP server requests.
+<p><span class="arg">NAME</span> identifies the server connection. <span class="arg">METHOD</span> is the requested
+method name. <span class="arg">PARAMS</span> contains the method parameters.
+<p>This basic implementation just logs the request. Applications
+should override this to implement actual request handling.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a854ba0xan3il3xqm2sx95la5018xp8i-emacs-packages-deps/share/emacs/site-lisp/elpa/mcp-20260615.940/mcp.el</span>
+(<span class="k">defun</span> <span class="f">mcp-request-dispatcher</span> (name method params)
+  <span class="doc">"Default handler for MCP server requests.
+NAME identifies the server connection. METHOD is the requested
+method name. PARAMS contains the method parameters.
+
+This basic implementation just logs the request. Applications
+should override this to implement actual request handling."</span>
+  (<span class="k">pcase</span> method
+    ('roots/list
+     (<span class="k">if-let*</span> ((connection (gethash name mcp-server-connections)))
+         (<span class="k">let</span> ((roots (<span class="k">condition-case</span> nil
+                          (mcp--roots connection)
+                        (<span class="w">error</span> nil))))
+           (list <span class="bi">:roots</span> (<span class="k">if</span> roots
+                            (vconcat (mapcar (<span class="k">lambda</span> (root)
+                                               (<span class="k">if</span> (stringp root)
+                                                   (list <span class="bi">:uri</span> (concat <span class="s">"file://"</span> (expand-file-name root))
+                                                         <span class="bi">:name</span> (file-name-nondirectory (directory-file-name root)))
+                                                 root))
+                                             roots))
+                          [])))
+       (list <span class="bi">:roots</span> [])))
+    (_
+     (message <span class="s">"%s Received request: method=%s, params=%s"</span> name method params))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

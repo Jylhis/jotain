@@ -1,0 +1,126 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sqlind-maybe-skip-create-options – Emacs Documentation Online</title>
+<meta name="description" content="sqlind-maybe-skip-create-options is a natively compiled function
+defined in sql-indent.el.
+Move point past any MySQL option declarations.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sqlind-maybe-skip-create-options</code></h1><p><span class="m"><code>sqlind-maybe-skip-create-options</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">sql-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(sqlind-maybe-skip-create-options)
+</code></pre>
+<h2>Documentation</h2>
+<p>Move point past any MySQL option declarations.
+<p>Statements like "CREATE VIEW" or "CREATE TABLE" can have
+various options betwen the CREATE keyword and the thing being
+created.  If such options exist at (point) the cursor is moved
+past them.
+<p>Currently we move over the following options, for different
+products:
+<p>MySQL:
+<p>&nbsp;&nbsp;TEMPORARY
+<br>&nbsp;&nbsp;ALGORITHM = {UNDEFINED | MERGE | TEMPTABLE}
+<br>&nbsp;&nbsp;DEFINER = { user | CURENT_USER }
+<br>&nbsp;&nbsp;SQL SECURITY { DEFINER | INVOKER }
+<p>PostgresSQL
+<p>&nbsp;&nbsp;TEMP
+<br>&nbsp;&nbsp;TEMPORARY
+<br>&nbsp;&nbsp;GLOBAL
+<br>&nbsp;&nbsp;LOCAL
+<br>&nbsp;&nbsp;UNLOGGED
+<br>&nbsp;&nbsp;MATERIALIZED
+<p>Oracle
+<p>&nbsp;&nbsp;PRIVATE
+<br>&nbsp;&nbsp;TEMP
+<br>&nbsp;&nbsp;TEMPORARY
+<br>&nbsp;&nbsp;MATERIALIZED
+<p>We don't consider if the options are valid or not for the thing
+being created.  We just skip any and all of them that are
+present.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vgm6xb2iy00bs19rdw9z3nfi5nf8g873-emacs-packages-deps/share/emacs/site-lisp/elpa/sql-indent-1.7/sql-indent.el</span>
+(<span class="k">defun</span> <span class="f">sqlind-maybe-skip-create-options</span> ()
+  <span class="doc">"Move point past any MySQL option declarations.
+
+Statements like \"CREATE VIEW\" or \"CREATE TABLE\" can have
+various options betwen the CREATE keyword and the thing being
+created.  If such options exist at (point) the cursor is moved
+past them.
+
+Currently we move over the following options, for different
+products:
+
+MySQL:
+
+  TEMPORARY
+  ALGORITHM = {UNDEFINED | MERGE | TEMPTABLE}
+  DEFINER = { user | CURENT_USER }
+  SQL SECURITY { DEFINER | INVOKER }
+
+PostgresSQL
+
+  TEMP
+  TEMPORARY
+  GLOBAL
+  LOCAL
+  UNLOGGED
+  MATERIALIZED
+
+Oracle
+
+  PRIVATE
+  TEMP
+  TEMPORARY
+  MATERIALIZED
+
+We don't consider if the options are valid or not for the thing
+being created.  We just skip any and all of them that are
+present."</span>
+  (<span class="k">cond</span>
+    ((eq sql-product 'mysql)
+     (<span class="k">catch</span> '<span class="m">finished</span>
+       (<span class="k">while</span> t
+         (<span class="k">cond</span>
+           ((looking-at <span class="s">"temporary\\_&gt;"</span>)
+            (goto-char (match-end 0))
+            (sqlind-forward-syntactic-ws))
+           ((looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">definer</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">algorithm</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\s-</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[\n]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">*=</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\s-</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[\n]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">*\\S-+"</span>)
+            (goto-char (match-end 0))
+            (sqlind-forward-syntactic-ws))
+           ((looking-at <span class="s">"sql</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\s-</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[\n]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">+security</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\s-</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[\n]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">+\\S-+"</span>)
+            (goto-char (match-end 0))
+            (sqlind-forward-syntactic-ws))
+           (t (<span class="k">throw</span> '<span class="m">finished</span> nil))))))
+    ((eq sql-product 'postgres)
+     (<span class="k">catch</span> '<span class="m">finished</span>
+       (<span class="k">while</span> t
+         (<span class="k">cond</span>
+           ((looking-at <span class="s">"temp</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">orary</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?\\_&gt;"</span>)
+            (goto-char (match-end 0))
+            (sqlind-forward-syntactic-ws))
+           ((looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">global</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">local</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">unlogged</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;"</span>)
+            (goto-char (match-end 0))
+            (sqlind-forward-syntactic-ws))
+           ((looking-at <span class="s">"materialized\\_&gt;"</span>)
+            (goto-char (match-end 0))
+            (sqlind-forward-syntactic-ws))
+           (t (<span class="k">throw</span> '<span class="m">finished</span> nil))))))
+    ((eq sql-product 'oracle)
+     (<span class="k">catch</span> '<span class="m">finished</span>
+       (<span class="k">while</span> t
+         (<span class="k">cond</span>
+           ((looking-at <span class="s">"temp</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">orary</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;"</span>)
+            (goto-char (match-end 0))
+            (sqlind-forward-syntactic-ws))
+           ((looking-at <span class="s">"materialized\\_&gt;"</span>)
+            (goto-char (match-end 0))
+            (sqlind-forward-syntactic-ws))
+           ((looking-at <span class="s">"private\\_&gt;"</span>)
+            (goto-char (match-end 0))
+            (sqlind-forward-syntactic-ws))
+           (t (<span class="k">throw</span> '<span class="m">finished</span> nil))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

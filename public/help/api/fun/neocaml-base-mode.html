@@ -1,0 +1,107 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: neocaml-base-mode – Emacs Documentation Online</title>
+<meta name="description" content="neocaml-base-mode is an interactive and natively compiled function
+defined in neocaml.el.
+Base major mode for OCaml files, providing shared setup.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>neocaml-base-mode</code></h1><p><span class="m"><code>neocaml-base-mode</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">neocaml.el</span>.
+<h2>Signature</h2>
+<pre><code>(neocaml-base-mode)
+</code></pre>
+<h2>Documentation</h2>
+<p>Base major mode for OCaml files, providing shared setup.
+<p>This mode is not intended to be used directly.  Use <a href="../fun/neocaml-mode.html"><code>neocaml-mode</code></a>
+for .ml files and <a href="../fun/neocaml-interface-mode.html"><code>neocaml-interface-mode</code></a> for .mli files.
+<p>In addition to any hooks its parent mode <a href="../fun/prog-mode.html"><code>prog-mode</code></a> might have run,
+this mode runs the hook <a href="../var/neocaml-base-mode-hook.html"><code>neocaml-base-mode-hook</code></a>, as the final or
+penultimate step during initialization.
+<p>C-M-u      <a href="../fun/neocaml-backward-up-list.html"><code>neocaml-backward-up-list</code></a>
+<br>C-c 4 C-a  <a href="../fun/ff-find-other-file-other-window.html"><code>ff-find-other-file-other-window</code></a>
+<br>C-c C-a    <a href="../fun/ff-find-other-file.html"><code>ff-find-other-file</code></a>
+<br>C-c C-c    <a href="../fun/compile.html"><code>compile</code></a>
+<br>C-c C-f    <a href="../fun/neocaml-format-buffer.html"><code>neocaml-format-buffer</code></a>
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/6yvzbjq5ljnchx97n8s5w91crk1nh47b-emacs-packages-deps/share/emacs/site-lisp/elpa/neocaml-20260710.532/neocaml.el</span>
+(<span class="k">define-derived-mode</span> <span class="f">neocaml-base-mode</span> prog-mode <span class="s">"OCaml"</span>
+  <span class="doc">"Base major mode for OCaml files, providing shared setup.
+This mode is not intended to be used directly.  Use `</span><span class="m doc">neocaml-mode</span><span class="doc">'
+for .ml files and `</span><span class="m doc">neocaml-interface-mode</span><span class="doc">' for .mli files."</span>
+  <span class="bi">:syntax-table</span> neocaml-base-mode-syntax-table
+
+  <span class="cd">;; </span><span class="c">Syntax propertization for char literals and quoted strings, so the
+</span>  <span class="cd">;; </span><span class="c">syntactic layer agrees with the parse tree (see commentary above).
+</span>  (<span class="k">setq-local</span> syntax-propertize-function #'neocaml--syntax-propertize)
+
+  <span class="cd">;; </span><span class="c">comment settings
+</span>  (<span class="k">setq-local</span> comment-start <span class="s">"(* "</span>)
+  (<span class="k">setq-local</span> comment-end <span class="s">" *)"</span>)
+  (<span class="k">setq-local</span> comment-start-skip <span class="s">"(\\*+[ \t]*"</span>)
+  (<span class="k">setq-local</span> comment-multi-line t)
+  (<span class="k">setq-local</span> comment-line-break-function #'neocaml--comment-indent-new-line)
+
+  <span class="cd">;; </span><span class="c">Electric indentation on delimiters
+</span>  (<span class="k">setq-local</span> electric-indent-chars
+              (append <span class="s">"{}()"</span> electric-indent-chars))
+
+  <span class="cd">;; </span><span class="c">Fill paragraph
+</span>  (<span class="k">setq-local</span> fill-paragraph-function #'neocaml--fill-paragraph)
+  (<span class="k">setq-local</span> adaptive-fill-mode t)
+
+  <span class="cd">;; </span><span class="c">Optional format-on-save via ocamlformat
+</span>  (add-hook 'before-save-hook #'neocaml--format-before-save nil t)
+
+  <span class="cd">;; </span><span class="c">Default to `dune build' for `</span><span class="m c">compile</span><span class="c">'/`</span><span class="m c">project-compile</span><span class="c">' in dune projects.
+</span>  (<span class="k">when</span> (locate-dominating-file default-directory <span class="s">"dune-project"</span>)
+    (<span class="k">setq-local</span> compile-command <span class="s">"dune build"</span>))
+
+  <span class="cd">;; </span><span class="c">Make URLs and bug references in comments clickable.  Set
+</span>  <span class="cd">;; </span><span class="c">`</span><span class="m c">bug-reference-url-format</span><span class="c">' (e.g. via .dir-locals.el) to resolve refs.
+</span>  (goto-address-prog-mode)
+  (bug-reference-prog-mode)
+
+  <span class="cd">;; </span><span class="c">TODO: Make this configurable?
+</span>  (<span class="k">setq-local</span> treesit-font-lock-feature-list
+              '((comment definition)
+                (keyword string type)
+                (attribute builtin constant escape-sequence number)
+                (operator bracket delimiter variable property label function)))
+
+  (<span class="k">setq-local</span> indent-line-function #'treesit-indent)
+
+  <span class="cd">;; </span><span class="c">Emacs 29 has no treesit-thing-settings, so treesit-major-mode-setup
+</span>  <span class="cd">;; </span><span class="c">won't configure forward-sexp.  Set the hybrid function directly.
+</span>  (<span class="k">unless</span> (boundp 'treesit-thing-settings)
+    (<span class="k">setq-local</span> forward-sexp-function #'neocaml--forward-sexp-hybrid))
+  (<span class="k">setq-local</span> treesit-defun-type-regexp
+              (cons neocaml--defun-type-regexp
+                    #'neocaml--defun-valid-p))
+  (<span class="k">setq-local</span> treesit-defun-name-function #'neocaml--defun-name)
+
+  <span class="cd">;; </span><span class="c">which-func-mode / add-log integration
+</span>  (<span class="k">setq-local</span> add-log-current-defun-function #'treesit-add-log-current-defun)
+
+  <span class="cd">;; </span><span class="c">outline-minor-mode integration (Emacs 30+)
+</span>  (<span class="k">when</span> (boundp 'treesit-outline-predicate)
+    (<span class="k">setq-local</span> treesit-outline-predicate
+                (cons neocaml--defun-type-regexp
+                      #'neocaml--defun-valid-p)))
+
+  <span class="cd">;; </span><span class="c">ff-find-other-file setup
+</span>  (<span class="k">setq-local</span> ff-other-file-alist neocaml-other-file-alist)
+
+  <span class="cd">;; </span><span class="c">Setup prettify-symbols (users enable prettify-symbols-mode via hooks)
+</span>  (<span class="k">setq-local</span> prettify-symbols-alist (neocaml--prettify-symbols-alist))
+
+  <span class="cd">;; </span><span class="c">Register neocaml modes with eglot so it knows to start ocamllsp.
+</span>  (neocaml--register-with-eglot)
+
+  <span class="cd">;; </span><span class="c">Register neocaml modes with dape's ocamlearlybird config.
+</span>  (neocaml--register-with-dape))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

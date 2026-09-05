@@ -1,0 +1,86 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ansible-vault – Emacs Documentation Online</title>
+<meta name="description" content="ansible-vault is a natively compiled function defined in ansible.el.
+Execute `ansible-vault` MODE on STR with the given PARAMS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ansible-vault</code></h1><p><span class="m"><code>ansible-vault</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">ansible.el</span>.
+<h2>Signature</h2>
+<pre><code>(ansible-vault <a href="#:~:text=vault`-,MODE"><span class="arg">MODE</span></a> <a href="#:~:text=on-,STR"><span class="arg">STR</span></a> <a href="#:~:text=given-,PARAMS"><span class="arg">PARAMS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Execute `ansible-vault` <span class="arg">MODE</span> on <span class="arg">STR</span> with the given <span class="arg">PARAMS</span>.
+<p><span class="arg">MODE</span> is <span class="m"><code>encrypt</code></span> or <span class="m"><code>decrypt</code></span>.
+<p><span class="arg">STR</span> is the string to be handled.
+<p><span class="arg">PARAMS</span> is produced by <a href="../fun/ansible-vault-get-password.html"><code>ansible-vault-get-password</code></a> and is meant to be an
+list of args that can be passed to ansible-vault.
+<p>If the first line of <span class="arg">STR</span> is indented with whitespace, only those lines
+in <span class="arg">STR</span> that match that whitespace will be handled by <span class="m"><code>ansible-vault </code></span><span class="arg">MODE</span>.
+The rest will be untouched.
+<p>The string that results will be returned.
+<p>See the man page <span class="m"><code>ansible-vault(1)</code></span> for more details.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/plpn0nz8g04i3gb19c4sz3hxm214032l-emacs-packages-deps/share/emacs/site-lisp/elpa/ansible-20260607.1852/ansible.el</span>
+(<span class="k">defun</span> <span class="f">ansible-vault</span> (mode str params)
+  <span class="doc">"Execute `ansible-vault` MODE on STR with the given PARAMS.
+
+MODE is `</span><span class="m doc">encrypt</span><span class="doc">' or `</span><span class="m doc">decrypt</span><span class="doc">'.
+
+STR is the string to be handled.
+
+PARAMS is produced by `</span><span class="m doc">ansible-vault-get-password</span><span class="doc">' and is meant to be an
+list of args that can be passed to ansible-vault.
+
+If the first line of STR is indented with whitespace, only those lines
+in STR that match that whitespace will be handled by `ansible-vault MODE'.
+The rest will be untouched.
+
+The string that results will be returned.
+
+See the man page `ansible-vault(1)' for more details."</span>
+  (<span class="k">let*</span> ((temp-file (make-temp-file <span class="s">"ansible-vault-ansible"</span>))
+         (lines (split-string str <span class="s">"\n"</span>))
+         (first-line (car lines))
+         (first-line-prefix (<span class="k">if</span> (string-match <span class="s">"^[ \t]*"</span> first-line)
+                                (match-string 0 first-line)
+                              <span class="s">""</span>))
+         (same-indent-lines (<span class="k">cl-loop</span> for line in lines
+                                     while (string-prefix-p first-line-prefix line)
+                                     collect line))
+         (rest-lines (nthcdr (length same-indent-lines) lines))
+         (cleaned-same-indent-lines
+          (mapconcat (<span class="k">lambda</span> (line)
+                       (replace-regexp-in-string
+                        (format <span class="s">"^%s"</span> (regexp-quote first-line-prefix))
+                        <span class="s">""</span> line))
+                     same-indent-lines
+                     <span class="s">"\n"</span>)))
+    (write-region cleaned-same-indent-lines nil temp-file 'append)
+
+    (<span class="k">let</span> ((output-buffer (generate-new-buffer <span class="s">" *ansible-vault-output*"</span>))
+          (status nil))
+      (<span class="k">unwind-protect</span>
+          (<span class="k">progn</span>
+            <span class="cd">;; </span><span class="c">call-process calls the binary directly without spawning /bin/sh
+</span>            (<span class="k">let</span> ((full-args (append (list mode) params (list temp-file))))
+              (<span class="k">setq</span> status (apply #'call-process <span class="s">"ansible-vault"</span> nil output-buffer nil full-args)))
+
+            (<span class="k">if</span> (/= status 0)
+                (<span class="w">error</span> <span class="s">"Error in `ansible-vault` execution! Exit code: %s"</span> status)
+              <span class="cd">;; </span><span class="c">Read the output directly from our isolated buffer
+</span>              (<span class="k">let</span> ((output (<span class="k">with-current-buffer</span> output-buffer
+                              (string-trim-right (buffer-string)))))
+                (delete-file temp-file)
+                (concat (mapconcat
+                         (<span class="k">lambda</span> (line) (concat first-line-prefix line))
+                         (split-string output <span class="s">"\n"</span>)
+                         <span class="s">"\n"</span>)
+                        (<span class="k">when</span> rest-lines
+                          (concat <span class="s">"\n"</span> (mapconcat 'identity rest-lines <span class="s">"\n"</span>)))))))
+        <span class="cd">;; </span><span class="c">Ensure buffer cleanup happens even if errors occur
+</span>        (<span class="k">when</span> (buffer-live-p output-buffer)
+          (kill-buffer output-buffer))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

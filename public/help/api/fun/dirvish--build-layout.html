@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dirvish--build-layout – Emacs Documentation Online</title>
+<meta name="description" content="dirvish--build-layout is a natively compiled function defined in
+dirvish.el.
+Build layout for Dirvish session DV.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dirvish--build-layout</code></h1><p><span class="m"><code>dirvish--build-layout</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dirvish.el</span>.
+<h2>Signature</h2>
+<pre><code>(dirvish--build-layout <a href="#:~:text=session-,DV"><span class="arg">DV</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Build layout for Dirvish session <span class="arg">DV</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a7h73ip6x5m1pxn38j7f0al6n93w904q-emacs-packages-deps/share/emacs/site-lisp/elpa/dirvish-20260725.1520/dirvish.el</span>
+(<span class="k">defun</span> <span class="f">dirvish--build-layout</span> (dv)
+  <span class="doc">"Build layout for Dirvish session DV."</span>
+  (<span class="k">let*</span> ((layout (dv-curr-layout dv)) (conf (dv-winconf dv))
+         (w-args `((preview (side . right) (window-width . ,(nth 2 layout)))
+                   (header (side . above) (window-height . -2)
+                           (window-parameters . ((no-other-window . t))))
+                   (footer (side . below) (window-height . -2)
+                           (window-parameters . ((no-other-window . t))))))
+         (w-order (<span class="k">and</span> layout (dirvish--window-split-order)))
+         (window-safe-min-height 0) (window-resize-pixelwise t)
+         (lh (line-pixel-height)) (gui? (display-graphic-p)) sf
+         (mh (dirvish--mode-line-height t)) (hh (dirvish--mode-line-height t t)))
+    (<span class="k">setf</span> (dv-index dv) (cons (<span class="k">dirvish-prop</span> <span class="bi">:root</span>) (current-buffer)))
+    <span class="cd">;; </span><span class="c">only refresh window config before creating fullframe layout
+</span>    (<span class="k">setf</span> (dv-winconf dv) (<span class="k">when</span> layout (<span class="k">or</span> conf (current-window-configuration))))
+    (<span class="k">and</span> (not layout) (<span class="k">setq</span> sf (dv-size-fixed dv)) (<span class="k">setq</span> window-size-fixed sf))
+    (<span class="k">when</span> layout (dirvish--init-special-buffers dv))
+    (dirvish--setup-mode-line dv)
+    (<span class="k">when</span> w-order (<span class="k">let</span> ((ignore-window-parameters t)) (delete-other-windows)))
+    (<span class="k">when</span> (<span class="k">or</span> (dv-curr-layout dv) (dv-dedicated dv))
+      (set-window-dedicated-p nil t))
+    <span class="cd">;; </span><span class="c">ensure a positive fringe on both sides for `</span><span class="m c">dirvish-subtree</span><span class="c">' (#311)
+</span>    (set-window-fringes nil (1+ dirvish-window-fringe) 1)
+    (<span class="k">dolist</span> (pane w-order)
+      (<span class="k">let*</span> ((buf (dirvish--special-buffer pane dv (eq pane 'preview)))
+             (args (alist-get pane w-args))
+             (win (display-buffer buf `(dirvish--display-buffer . ,args))))
+        (<span class="k">pcase</span> pane
+          ('preview (<span class="k">setf</span> (dv-preview-window dv) win))
+          ('header (<span class="k">when</span> (<span class="k">and</span> gui? (&gt; hh lh)) (fit-window-to-buffer win 2 1)))
+          ('footer (<span class="k">when</span> (<span class="k">and</span> gui? (&gt; mh lh)) (fit-window-to-buffer win 2 1))))
+        (<span class="k">unless</span> (eq pane 'preview) (set-window-dedicated-p win t))
+        (set-window-buffer win buf)))
+    (dirvish--create-parent-windows dv)
+    (dirvish--run-with-delay 'reset) <span class="cd">; </span><span class="c">preview initialization
+</span>    (dirvish--maybe-toggle-cursor)
+    (dirvish--maybe-toggle-details)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

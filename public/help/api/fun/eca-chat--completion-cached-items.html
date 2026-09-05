@@ -1,0 +1,43 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--completion-cached-items – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--completion-cached-items is a natively compiled function
+defined in eca-chat-context.el.
+Return completion items for QUERY, caching them in CACHE-VAR.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--completion-cached-items</code></h1><p><span class="m"><code>eca-chat--completion-cached-items</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-chat-context.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--completion-cached-items <a href="#:~:text=in-,CACHE-VAR"><span class="arg">CACHE-VAR</span></a> <a href="#:~:text=for-,QUERY"><span class="arg">QUERY</span></a> <a href="#:~:text=call-,FETCH-FN"><span class="arg">FETCH-FN</span></a> <a href="#:~:text=its-,KEY"><span class="arg">KEY</span></a> <a href="#:~:text=with-,TO-ITEM-FN"><span class="arg">TO-ITEM-FN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return completion items for <span class="arg">QUERY</span>, caching them in <span class="arg">CACHE-VAR</span>.
+<p><span class="arg">CACHE-VAR</span> is a buffer-local hash table variable, created on
+demand.  On cache miss call <span class="arg">FETCH-FN</span>; when it returns a response
+plist, convert each element of its <span class="arg">KEY</span> list with <span class="arg">TO-ITEM-FN</span> and
+cache the result.  Interrupted requests (nil response) are not
+cached so they are retried on the next keystroke.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-context.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--completion-cached-items</span> (cache-var query fetch-fn key to-item-fn)
+  <span class="doc">"Return completion items for QUERY, caching them in CACHE-VAR.
+CACHE-VAR is a buffer-local hash table variable, created on
+demand.  On cache miss call FETCH-FN; when it returns a response
+plist, convert each element of its KEY list with TO-ITEM-FN and
+cache the result.  Interrupted requests (nil response) are not
+cached so they are retried on the next keystroke."</span>
+  (<span class="k">let*</span> ((cache (<span class="k">or</span> (symbol-value cache-var)
+                    (set cache-var (make-hash-table <span class="bi">:test</span> 'equal))))
+         (cached (gethash query cache <span class="bi">:eca-chat--miss</span>)))
+    (<span class="k">if</span> (not (eq cached <span class="bi">:eca-chat--miss</span>))
+        cached
+      (<span class="k">when-let</span> ((resp (funcall fetch-fn)))
+        (<span class="k">let</span> ((items (-map to-item-fn (append (plist-get resp key) nil))))
+          (<span class="k">when</span> (&gt; (hash-table-count cache) eca-chat--completion-cache-max-size)
+            (clrhash cache))
+          (puthash query items cache)
+          items)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

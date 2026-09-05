@@ -1,0 +1,110 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-jobs--render – Emacs Documentation Online</title>
+<meta name="description" content="eca-jobs--render is a natively compiled function defined in
+eca-jobs.el.
+Render background jobs for SESSION into BUFFER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-jobs--render</code></h1><p><span class="m"><code>eca-jobs--render</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-jobs.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-jobs--render <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=into-,BUFFER"><span class="arg">BUFFER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Render background jobs for <span class="arg">SESSION</span> into <span class="arg">BUFFER</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-jobs.el</span>
+<span class="cd">;; </span><span class="c">Rendering
+</span>
+(<span class="k">defun</span> <span class="f">eca-jobs--render</span> (session buffer)
+  <span class="doc">"Render background jobs for SESSION into BUFFER."</span>
+  (<span class="k">when</span> (buffer-live-p buffer)
+    (<span class="k">with-current-buffer</span> buffer
+      (<span class="k">let</span> ((inhibit-read-only t)
+            (keymap (<span class="k">or</span> (current-local-map) eca-settings-mode-map))
+            (jobs (eca--session-jobs session))
+            (saved-pos (point)))
+        (erase-buffer)
+        (insert <span class="s">"\n"</span>)
+        (insert (propertize <span class="s">"Background Jobs"</span> 'font-lock-face 'eca-settings-heading))
+        (insert <span class="s">"\n\n"</span>)
+        (<span class="k">if</span> (<span class="k">or</span> (null jobs) (seq-empty-p jobs))
+            (insert (propertize <span class="s">"No background jobs"</span> 'font-lock-face font-lock-doc-face))
+          (<span class="k">let</span> ((groups (eca-jobs--group-by-chat jobs))
+                (first-group t))
+            (<span class="k">dolist</span> (group groups)
+              (<span class="k">let</span> ((chat-label (cadr group))
+                    (group-jobs (cddr group)))
+                (<span class="k">unless</span> first-group
+                  (insert <span class="s">"\n"</span>))
+                (<span class="k">setq</span> first-group nil)
+                <span class="cd">;; </span><span class="c">Chat separator
+</span>                (insert (propertize (concat <span class="s">"── "</span> chat-label <span class="s">" "</span>
+                                           (make-string (max 0 (- 60 (length chat-label) 4)) ?─))
+                                   'font-lock-face 'eca-jobs-chat-separator-face))
+                (insert <span class="s">"\n"</span>)
+                <span class="cd">;; </span><span class="c">Jobs in this group
+</span>                (<span class="k">dolist</span> (job group-jobs)
+                  (<span class="k">let*</span> ((id (plist-get job <span class="bi">:id</span>))
+                         (status (plist-get job <span class="bi">:status</span>))
+                         (label (<span class="k">or</span> (plist-get job <span class="bi">:label</span>) <span class="s">""</span>))
+                         (summary (<span class="k">or</span> (plist-get job <span class="bi">:summary</span>) id))
+                         (elapsed (<span class="k">or</span> (<span class="k">when</span> (string= status <span class="s">"running"</span>)
+                                       (eca-jobs--elapsed-since (plist-get job <span class="bi">:startedAt</span>)))
+                                     (plist-get job <span class="bi">:elapsed</span>) <span class="s">""</span>))
+                         (exit-code (plist-get job <span class="bi">:exitCode</span>))
+                         (truncated-label (<span class="k">if</span> (&gt; (length label) 80)
+                                              (concat (substring label 0 77) <span class="s">"..."</span>)
+                                            label))
+                         (start (point)))
+                    <span class="cd">;; </span><span class="c">Line 1: status + summary + elapsed + buttons
+</span>                    (insert (propertize (eca-jobs--status-emoji status)
+                                       'help-echo status))
+                    (insert <span class="s">" "</span>)
+                    (insert (propertize summary 'font-lock-face 'bold))
+                    (insert <span class="s">"  "</span>)
+                    (insert (propertize elapsed 'font-lock-face 'shadow))
+                    (<span class="k">when</span> (<span class="k">and</span> (string= status <span class="s">"failed"</span>) exit-code)
+                      (insert <span class="s">"  "</span>)
+                      (insert (propertize (format <span class="s">"exit:%s"</span> exit-code)
+                                         'font-lock-face 'eca-jobs-status-failed-face)))
+                    (insert <span class="s">"  "</span>)
+                    (insert (eca-buttonize
+                             keymap
+                             (propertize <span class="s">"output"</span>
+                                         'font-lock-face 'eca-jobs-button-output-face)
+                             (<span class="k">lambda</span> ()
+                               (<span class="k">when-let*</span> ((s (<span class="k">ignore-errors</span> (eca-session))))
+                                 (eca-jobs--view-output-by-id s id)))))
+                    (<span class="k">when</span> (string= status <span class="s">"running"</span>)
+                      (insert <span class="s">"  "</span>)
+                      (insert (eca-buttonize
+                               keymap
+                               (propertize <span class="s">"kill"</span>
+                                           'font-lock-face 'eca-jobs-button-kill-face)
+                               (<span class="k">lambda</span> ()
+                                 (<span class="k">when-let*</span> ((s (<span class="k">ignore-errors</span> (eca-session))))
+                                   (eca-api-request-async s
+                                                          <span class="bi">:method</span> <span class="s">"jobs/kill"</span>
+                                                          <span class="bi">:params</span> (list <span class="bi">:job-id</span> id)
+                                                          <span class="bi">:success-callback</span>
+                                                          (<span class="k">lambda</span> (result)
+                                                            (<span class="k">if</span> (plist-get result <span class="bi">:killed</span>)
+                                                                (message <span class="s">"Job %s killed"</span> id)
+                                                              (message <span class="s">"Job %s was not running"</span> id)))
+                                                          <span class="bi">:error-callback</span>
+                                                          (<span class="k">lambda</span> (_err)
+                                                            (<span class="w">user-error</span> <span class="s">"Failed to kill job %s"</span> id))))))))
+                    (insert <span class="s">"\n"</span>)
+                    <span class="cd">;; </span><span class="c">Line 2: command (indented)
+</span>                    (insert (propertize (concat <span class="s">"    "</span> truncated-label)
+                                       'font-lock-face 'shadow))
+                    (insert <span class="s">"\n"</span>)
+                    (put-text-property start (point) 'eca-job-id id)))))))
+        (insert <span class="s">"\n"</span>)
+        (goto-char (min saved-pos (point-max)))
+        (eca-jobs--ensure-timer session buffer)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

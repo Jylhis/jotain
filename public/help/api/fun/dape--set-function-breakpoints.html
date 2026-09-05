@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--set-function-breakpoints – Emacs Documentation Online</title>
+<meta name="description" content="dape--set-function-breakpoints is a natively compiled function defined
+in dape.el.
+Set function breakpoints for adapter CONN.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--set-function-breakpoints</code></h1><p><span class="m"><code>dape--set-function-breakpoints</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--set-function-breakpoints <a href="#:~:text=adapter-,CONN"><span class="arg">CONN</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=expected-,CB"><span class="arg">CB</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Set function breakpoints for adapter <span class="arg">CONN</span>.
+<p>See <a href="../fun/dape-request.html"><code>dape-request</code></a> for expected <span class="arg">CB</span> signature.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--set-function-breakpoints</span> (conn <span class="ty">&amp;optional</span> cb)
+  <span class="doc">"Set function breakpoints for adapter CONN.
+See `</span><span class="m doc">dape-request</span><span class="doc">' for expected CB signature."</span>
+  (<span class="k">let</span> ((function-breakpoints (cl-remove-if-not #'dape--function-breakpoint-p
+                                                dape--breakpoints)))
+    (<span class="k">if</span> (dape--capable-p conn <span class="bi">:supportsFunctionBreakpoints</span>)
+        (<span class="k">dape--with-request-bind</span>
+            ((<span class="ty">&amp;key</span> breakpoints <span class="ty">&amp;allow-other-keys</span>) error)
+            (dape-request conn <span class="bi">:setFunctionBreakpoints</span>
+                          `(<span class="bi">:breakpoints</span>
+                            ,(cl-map 'vector
+                                     (<span class="k">lambda</span> (b)
+                                       `(<span class="bi">:name</span> ,(dape--function-breakpoint-name b)))
+                                     function-breakpoints)))
+          (<span class="k">when</span> error
+            (dape--warn <span class="s">"Failed to set function breakpoints: %s"</span> error))
+          (<span class="k">cl-loop</span>
+           for breakpoint in function-breakpoints
+           for res across (<span class="k">or</span> breakpoints [])
+           do (<span class="k">setf</span> (dape--breakpoint-id breakpoint)
+                    (plist-put (dape--breakpoint-id breakpoint) conn
+                               (plist-get res <span class="bi">:id</span>))
+                    (dape--breakpoint-verified breakpoint)
+                    (plist-put (dape--breakpoint-verified breakpoint) conn
+                               (eq (plist-get res <span class="bi">:verified</span>) t))))
+          (dape--request-continue cb error))
+      (dape--request-continue cb))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape-info-scope-data-breakpoint – Emacs Documentation Online</title>
+<meta name="description" content="dape-info-scope-data-breakpoint is an interactive and natively
+compiled function defined in dape.el.
+Add data breakpoint on variable at current line.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape-info-scope-data-breakpoint</code></h1><p><span class="m"><code>dape-info-scope-data-breakpoint</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape-info-scope-data-breakpoint <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">EVENT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Add data breakpoint on variable at current line.
+<h2>Key Bindings</h2>
+<p><span class="v">dape-info-scope-mode-line-map</span> <span class="key">b</span>
+<span class="v">dape-info-scope-mode-map</span> <span class="key">b</span>
+<span class="v">dape-info-watch-mode-line-map</span> <span class="key">b</span>
+<span class="v">dape-info-watch-mode-map</span> <span class="key">b</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">dape--command-at-line</span> dape-info-scope-data-breakpoint (dape--reference dape--variable)
+  (dape-info-scope-mode dape-info-watch-mode)
+  <span class="s">"Add data breakpoint on variable at current line."</span>
+  (<span class="k">let</span> ((conn (dape--live-connection 'stopped))
+        (name (<span class="k">or</span> (plist-get dape--variable <span class="bi">:evaluateName</span>)
+                  (plist-get dape--variable <span class="bi">:name</span>))))
+    (<span class="k">unless</span> (dape--capable-p conn <span class="bi">:supportsDataBreakpoints</span>)
+      (<span class="w">user-error</span> <span class="s">"Adapter does not support data breakpoints"</span>))
+    (<span class="k">dape--with-request-bind</span>
+        ((<span class="ty">&amp;key</span> dataId description accessTypes <span class="ty">&amp;allow-other-keys</span>) error)
+        (dape-request conn <span class="bi">:dataBreakpointInfo</span>
+                      (<span class="k">if</span> (numberp dape--reference)
+                          (list <span class="bi">:variablesReference</span> dape--reference
+                                <span class="bi">:name</span> name)
+                        (list <span class="bi">:name</span> name
+                              <span class="bi">:frameId</span> (plist-get (dape--current-stack-frame conn) <span class="bi">:id</span>))))
+      (<span class="k">if</span> (<span class="k">or</span> error (not (stringp dataId)))
+          (message <span class="s">"Unable to set data breakpoint: %s"</span> (<span class="k">or</span> error description))
+        (<span class="k">push</span> (make-dape--data-breakpoint
+               <span class="bi">:name</span> name
+               <span class="bi">:data-id</span> dataId
+               <span class="bi">:access-type</span> (completing-read
+                             (format <span class="s">"Breakpoint type for `</span><span class="m s">%s</span><span class="s">': "</span> name)
+                             (append accessTypes nil) nil t))
+              dape--breakpoints)
+        (<span class="k">dape--with-request</span>
+            (dape--set-data-breakpoints conn)
+          <span class="cd">;; </span><span class="c">Make sure breakpoint buffer is displayed
+</span>          (dape--display-buffer
+           (dape--info-get-buffer-create 'dape-info-breakpoints-mode))
+          (run-hooks 'dape-update-ui-hook))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

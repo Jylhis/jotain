@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: projection-multi-projection-targets – Emacs Documentation Online</title>
+<meta name="description" content="projection-multi-projection-targets is a natively compiled function
+defined in projection-multi.el.
+compile-multi target generator function for projection-commands in PROJECT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>projection-multi-projection-targets</code></h1><p><span class="m"><code>projection-multi-projection-targets</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">projection-multi.el</span>.
+<h2>Signature</h2>
+<pre><code>(projection-multi-projection-targets <span class="ty">&amp;optional</span> <a href="#:~:text=with-,PROJECT-TYPE-PREFIX"><span class="arg">PROJECT-TYPE-PREFIX</span></a> <a href="#:~:text=in-,PROJECT"><span class="arg">PROJECT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p><a href="../fun/compile-multi.html"><code>compile-multi</code></a> target generator function for <span class="m"><code>projection-commands</code></span> in <span class="arg">PROJECT</span>.
+<p>When set the generated targets will be prefixed with <span class="arg">PROJECT-TYPE-PREFIX</span>. If
+not set <span class="arg">PROJECT</span> will be determined automatically.
+<p>The generated candidates will be of the form
+prefix:project-type:project-command.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/md0zfwyf8wnwwkh8r5cc9j9ip3z12gp0-emacs-packages-deps/share/emacs/site-lisp/elpa/projection-multi-20260614.1822/projection-multi.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">projection-multi-projection-targets</span> (<span class="ty">&amp;optional</span> project-type-prefix project)
+  <span class="doc">"`</span><span class="m doc">compile-multi</span><span class="doc">' target generator function for `</span><span class="m doc">projection-commands</span><span class="doc">' in PROJECT.
+When set the generated targets will be prefixed with PROJECT-TYPE-PREFIX. If
+not set PROJECT will be determined automatically.
+
+The generated candidates will be of the form
+prefix:project-type:project-command."</span>
+  (<span class="k">setq</span> project-type-prefix (<span class="k">or</span> project-type-prefix <span class="s">"projection"</span>))
+
+  (<span class="k">when-let*</span> ((project (<span class="k">or</span> project (projection--current-project 'no-error)))
+              (current-project-types
+               (projection-project-types (project-root project))))
+    (<span class="k">let</span> (result)
+      (<span class="k">dolist</span> (project-config current-project-types)
+        (<span class="k">dolist</span> (cmd-type-config projection-commands--registered-cmd-types)
+          (<span class="k">when-let*</span> ((cmd
+                       (<span class="k">projection-commands--ignore-no-command</span>
+                        (funcall (cadr cmd-type-config) project project-config <span class="bi">:use-cache</span> nil))))
+            (<span class="k">push</span> `(,(concat project-type-prefix <span class="s">":"</span>
+                             (symbol-name (<span class="k">oref</span> project-config name)) <span class="s">":"</span>
+                             (symbol-name (car cmd-type-config)))
+                    <span class="bi">:command</span> ,(<span class="k">lambda</span> () (<span class="k">interactive</span>)
+                                (funcall-interactively (caddr cmd-type-config) project cmd))
+                    <span class="bi">:annotation</span> ,(<span class="k">when</span> (stringp cmd) cmd))
+                  result))))
+      (nreverse result))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

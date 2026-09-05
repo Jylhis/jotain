@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-markdown--validate-link – Emacs Documentation Online</title>
+<meta name="description" content="gptel-markdown--validate-link is a byte-compiled function defined in
+gptel-request.el.
+Validate a Markdown LINK as sendable under the current gptel settings.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-markdown--validate-link</code></h1><p><span class="m"><code>gptel-markdown--validate-link</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-markdown--validate-link <a href="#:~:text=Markdown-,LINK"><span class="arg">LINK</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Validate a Markdown <span class="arg">LINK</span> as sendable under the current gptel settings.
+<p>Return a form (validp link-type path . REST), where REST is a list
+explaining why sending the link is not supported by gptel.  Only the
+first nil value in REST is guaranteed to be correct.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+(<span class="k">defsubst</span> <span class="f">gptel-markdown--validate-link</span> (link)
+  <span class="doc">"Validate a Markdown LINK as sendable under the current gptel settings.
+
+Return a form (validp link-type path . REST), where REST is a list
+explaining why sending the link is not supported by gptel.  Only the
+first nil value in REST is guaranteed to be correct."</span>
+  (<span class="k">let</span> ((mime))
+    (<span class="k">if-let*</span> ((path (nth 3 link))
+              (prefix (<span class="k">or</span> (string-search <span class="s">"://"</span> path) 0))
+              (link-type (<span class="k">if</span> (= prefix 0) <span class="s">"file"</span> (substring path 0 prefix)))
+              (path (<span class="k">if</span> (<span class="k">and</span> (equal link-type <span class="s">"file"</span>) (&gt; prefix 0))
+                        (substring path (+ prefix 3)) path))
+              (resource-type
+               (<span class="k">or</span> (<span class="k">and</span> (equal link-type <span class="s">"file"</span>) 'file)
+                   (<span class="k">and</span> (gptel--model-capable-p 'url)
+                        (member link-type '(<span class="s">"http"</span> <span class="s">"https"</span> <span class="s">"ftp"</span>)) 'url)))
+              (user-check (funcall gptel-markdown-validate-link link))
+              (readablep (<span class="k">or</span> (member link-type '(<span class="s">"http"</span> <span class="s">"https"</span> <span class="s">"ftp"</span>))
+                             (file-remote-p default-directory)
+                             (file-remote-p path)
+                             (file-readable-p path)))
+              (mime-valid
+               (<span class="k">or</span> (eq resource-type 'url)
+                   (<span class="k">and</span> (<span class="k">with-memoization</span>
+                            (alist-get (expand-file-name path)
+                                       gptel--link-type-cache
+                                       nil nil #'string=)
+                          (<span class="k">if</span> (gptel--file-binary-p path) t))
+                        (<span class="k">setq</span> mime (mailcap-file-name-to-mime-type path))
+                        (gptel--model-mime-capable-p mime))
+                   t)))
+        (list t link-type path resource-type user-check readablep mime-valid mime)
+      (list nil link-type path resource-type user-check readablep mime-valid mime))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

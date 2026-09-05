@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-set-php-controls – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-set-php-controls is a natively compiled function defined in
+web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-set-php-controls</code></h1><p><span class="m"><code>web-mode-set-php-controls</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-set-php-controls <span class="arg">REG-BEG</span> <span class="arg">REG-END</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-set-php-controls</span> (reg-beg reg-end)
+  (goto-char reg-beg)
+  (<span class="k">let</span> (match controls
+              (continue t)
+              (regexp <span class="s">"endif</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">endforeach</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">endfor</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">endwhile</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">elseif</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">else</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">foreach</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">for</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">while"</span>))
+    (<span class="k">while</span> continue
+      (<span class="k">if</span> (not (web-mode-block-rsf regexp reg-end))
+          (<span class="k">setq</span> continue nil)
+          (<span class="k">setq</span> match (match-string-no-properties 0))
+          <span class="cd">;;        </span><span class="c">(message "%S %S" match (point))
+</span>          (<span class="k">cond</span>
+            ((<span class="k">and</span> (member match '(<span class="s">"else"</span> <span class="s">"elseif"</span>))
+                  (looking-at-p <span class="s">"[ ]*[:(]"</span>))
+             (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"if"</span>))))
+             )
+            ((<span class="k">and</span> (&gt;= (length match) 3)
+                  (string= (substring match 0 3) <span class="s">"end"</span>))
+             (<span class="k">setq</span> controls (append controls (list (cons 'close (substring match 3)))))
+             )
+            ((<span class="k">and</span> (<span class="k">progn</span> (skip-chars-forward <span class="s">"[ ]"</span>) t)
+                  (eq (char-after) ?\()
+                  (web-mode-closing-paren reg-end)
+                  <span class="cd">;;</span><span class="c">(progn (message "ixi%S" (point)))
+</span>                  (looking-at-p <span class="s">")[ ]*:"</span>))
+             (<span class="k">setq</span> controls (append controls (list (cons 'open match))))
+             )
+            ) <span class="cd">;</span><span class="c">cond
+</span>          ) <span class="cd">;</span><span class="c">if
+</span>      ) <span class="cd">;</span><span class="c">while
+</span>    <span class="cd">;;</span><span class="c">(message "%S-%S %S" reg-beg reg-end controls)
+</span>    (<span class="k">when</span> (<span class="k">and</span> controls (&gt; (length controls) 1))
+      (<span class="k">setq</span> controls (web-mode-block-controls-reduce controls)))
+    controls))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

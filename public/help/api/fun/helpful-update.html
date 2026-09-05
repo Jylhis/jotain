@@ -1,0 +1,328 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: helpful-update – Emacs Documentation Online</title>
+<meta name="description" content="helpful-update is an interactive and byte-compiled function defined in
+helpful.el.
+Update the current *Helpful* buffer to the latest
+state of the current symbol.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>helpful-update</code></h1><p><span class="m"><code>helpful-update</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in
+<span class="bt">helpful.el</span>.
+<h2>Signature</h2>
+<pre><code>(helpful-update)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update the current *Helpful* buffer to the latest
+state of the current symbol.
+<p>This function has :after advice: <a href="../fun/elisp-doc-shortdoc-advice-helpful-update.html"><code>elisp-doc-shortdoc-advice-helpful-update</code></a>.
+This function has :after advice: <a href="../fun/elisp-demos-advice-helpful-update.html"><code>elisp-demos-advice-helpful-update</code></a>.
+<h2>Key Bindings</h2>
+<p><span class="v">helpful-mode-map</span> <span class="key">C-x x g</span>
+<span class="v">helpful-mode-map</span> <span class="key">g</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/al1y9rq93c50r6aqa0749m04ilfnar06-emacs-packages-deps/share/emacs/site-lisp/elpa/helpful-20250408.334/helpful.el</span>
+(<span class="k">defun</span> <span class="f">helpful-update</span> ()
+  <span class="doc">"Update the current *Helpful* buffer to the latest
+state of the current symbol."</span>
+  (<span class="k">interactive</span>)
+  (<span class="w">cl-assert</span> (not (null helpful--sym)))
+  (<span class="k">unless</span> (buffer-live-p helpful--associated-buffer)
+    (<span class="k">setq</span> helpful--associated-buffer nil))
+  (helpful--ensure-loaded)
+  (<span class="k">-let*</span> ((val
+           <span class="cd">;; </span><span class="c">Look at the value before setting `</span><span class="m c">inhibit-read-only</span><span class="c">', so
+</span>           <span class="cd">;; </span><span class="c">users can see the correct value of that variable.
+</span>           (<span class="k">unless</span> helpful--callable-p
+             (helpful--sym-value helpful--sym helpful--associated-buffer)))
+          (inhibit-read-only t)
+          (start-line (line-number-at-pos))
+          (start-column (current-column))
+          (primitive-p (helpful--primitive-p helpful--sym helpful--callable-p))
+          (canonical-sym (helpful--canonical-symbol helpful--sym helpful--callable-p))
+          (look-for-src (<span class="k">or</span> (not primitive-p)
+                            find-function-C-source-directory))
+          ((buf pos opened)
+           (<span class="k">if</span> look-for-src
+               (helpful--definition helpful--sym helpful--callable-p)
+             '(nil nil nil)))
+          (source (<span class="k">when</span> look-for-src
+                    (helpful--source helpful--sym helpful--callable-p buf pos)))
+          (source-path (<span class="k">when</span> buf
+                         (buffer-file-name buf)))
+          (references (helpful--calculate-references
+                       helpful--sym helpful--callable-p
+                       source-path))
+          (aliases (helpful--aliases helpful--sym helpful--callable-p)))
+
+    (erase-buffer)
+
+    (insert (helpful--summary helpful--sym helpful--callable-p buf pos))
+
+    (<span class="k">when</span> (helpful--obsolete-info helpful--sym helpful--callable-p)
+      (insert
+       <span class="s">"\n\n"</span>
+       (helpful--format-obsolete-info helpful--sym helpful--callable-p)))
+
+    (<span class="k">when</span> (<span class="k">and</span> helpful--callable-p
+               (not (helpful--kbd-macro-p helpful--sym)))
+      (helpful--insert-section-break)
+      (insert
+       (helpful--heading <span class="s">"Signature"</span>)
+       (helpful--syntax-highlight (helpful--signature helpful--sym))))
+
+    (<span class="k">when</span> (not helpful--callable-p)
+      (helpful--insert-section-break)
+      (<span class="k">let*</span> ((sym helpful--sym)
+             (multiple-views-p
+              (<span class="k">or</span> (stringp val)
+                  (keymapp val)
+                  (helpful--hook-p sym val))))
+        (<span class="k">when</span> helpful--first-display
+          (<span class="k">if</span> (stringp val)
+              <span class="cd">;; </span><span class="c">For strings, it's more intuitive to display them as
+</span>              <span class="cd">;; </span><span class="c">literals, so "1" and 1 are distinct.
+</span>              (<span class="k">setq</span> helpful--view-literal t)
+            <span class="cd">;; </span><span class="c">For everything else, prefer the pretty view if available.
+</span>            (<span class="k">setq</span> helpful--view-literal nil)))
+        (insert
+         (helpful--heading
+          (<span class="k">cond</span>
+           <span class="cd">;; </span><span class="c">Buffer-local variable and we're looking at the value in
+</span>           <span class="cd">;; </span><span class="c">a specific buffer.
+</span>           ((<span class="k">and</span>
+             helpful--associated-buffer
+             (local-variable-p sym helpful--associated-buffer))
+            (format <span class="s">"Value in %s"</span>
+                    (helpful--button
+                     (format <span class="s">"#&lt;buffer %s&gt;"</span> (buffer-name helpful--associated-buffer))
+                     'helpful-buffer-button
+                     'buffer helpful--associated-buffer
+                     'position pos)))
+           <span class="cd">;; </span><span class="c">Buffer-local variable but default/global value.
+</span>           ((local-variable-if-set-p sym)
+            <span class="s">"Global Value"</span>)
+           <span class="cd">;; </span><span class="c">This variable is not buffer-local.
+</span>           (t <span class="s">"Value"</span>)))
+         (helpful--format-value sym val)
+         <span class="s">"\n\n"</span>)
+        (<span class="k">when</span> (helpful--original-value-differs-p sym)
+          (insert
+           (helpful--heading <span class="s">"Original Value"</span>)
+           (helpful--format-value
+            sym
+            (car (helpful--original-value sym)))
+           <span class="s">"\n\n"</span>))
+        (<span class="k">when</span> multiple-views-p
+          (insert (helpful--make-toggle-literal-button) <span class="s">" "</span>))
+
+        (<span class="k">when</span> (local-variable-if-set-p sym)
+          (insert
+           (helpful--button
+            <span class="s">"Buffer values"</span>
+            'helpful-associated-buffer-button
+            'symbol sym
+            'prompt-p t)
+           <span class="s">" "</span>
+           (helpful--button
+            <span class="s">"Global value"</span>
+            'helpful-associated-buffer-button
+            'symbol sym
+            'prompt-p nil)
+           <span class="s">" "</span>))
+        (<span class="k">when</span> (memq (helpful--sym-value helpful--sym helpful--associated-buffer) '(nil t))
+          (insert (helpful--make-toggle-button helpful--sym helpful--associated-buffer) <span class="s">" "</span>))
+        (insert (helpful--make-set-button helpful--sym helpful--associated-buffer))
+        (<span class="k">when</span> (custom-variable-p helpful--sym)
+          (insert <span class="s">" "</span> (helpful--make-customize-button helpful--sym)))))
+
+    (<span class="k">let</span> ((docstring (helpful--docstring helpful--sym helpful--callable-p))
+          (version-info (<span class="k">unless</span> helpful--callable-p
+                          (helpful--version-info helpful--sym))))
+      (<span class="k">when</span> (<span class="k">or</span> docstring version-info)
+        (helpful--insert-section-break)
+        (insert
+         (helpful--heading <span class="s">"Documentation"</span>))
+        (<span class="k">when</span> docstring
+          (insert (helpful--format-docstring docstring)))
+        (<span class="k">when</span> version-info
+          (insert <span class="s">"\n\n"</span> (s-word-wrap 70 version-info)))
+        (<span class="k">when</span> (<span class="k">and</span> (symbolp helpful--sym)
+                   helpful--callable-p
+                   (helpful--has-shortdoc-p helpful--sym))
+          (insert <span class="s">"\n\n"</span>)
+          (insert (helpful--make-shortdoc-sentence helpful--sym)))
+        (<span class="k">when</span> (<span class="k">and</span> (symbolp helpful--sym) (helpful--in-manual-p helpful--sym))
+          (insert <span class="s">"\n\n"</span>)
+          (insert (helpful--make-manual-button helpful--sym)))))
+
+    <span class="cd">;; </span><span class="c">Show keybindings.
+</span>    <span class="cd">;; </span><span class="c">TODO: allow users to conveniently add and remove keybindings.
+</span>    (<span class="k">when</span> (commandp helpful--sym)
+      (helpful--insert-section-break)
+      (insert
+       (helpful--heading <span class="s">"Key Bindings"</span>)
+       (helpful--format-keys helpful--sym aliases)))
+
+    (helpful--insert-section-break)
+
+    (insert
+     (helpful--heading <span class="s">"References"</span>)
+     (<span class="k">let</span> ((src-button
+            (<span class="k">when</span> source-path
+              (helpful--navigate-button
+               (file-name-nondirectory source-path)
+               source-path
+               (<span class="k">or</span> pos
+                   0)))))
+       (<span class="k">cond</span>
+        ((<span class="k">and</span> source-path references)
+         (format <span class="s">"References in %s:\n%s"</span>
+                 src-button
+                 (helpful--format-position-heads references source-path)))
+        ((<span class="k">and</span> source-path primitive-p)
+         (format
+          <span class="s">"Finding references in a .%s file is not supported."</span>
+          (f-ext source-path)))
+        (source-path
+         (format <span class="s">"%s is unused in %s."</span>
+                 helpful--sym
+                 src-button))
+        ((<span class="k">and</span> primitive-p (null find-function-C-source-directory))
+         <span class="s">"C code is not yet loaded."</span>)
+        (t
+         <span class="s">"Could not find source file."</span>)))
+     <span class="s">"\n\n"</span>
+     (helpful--make-references-button helpful--sym helpful--callable-p))
+
+    (<span class="k">when</span> (<span class="k">and</span>
+           helpful--callable-p
+           (symbolp helpful--sym)
+           source
+           (not primitive-p))
+      (insert
+       <span class="s">" "</span>
+       (helpful--make-callees-button helpful--sym source)))
+
+    (<span class="k">when</span> (helpful--advised-p helpful--sym)
+      (helpful--insert-section-break)
+      (insert
+       (helpful--heading <span class="s">"Advice"</span>)
+       (format <span class="s">"This %s is advised."</span>
+               (<span class="k">if</span> (macrop helpful--sym) <span class="s">"macro"</span> <span class="s">"function"</span>))))
+
+    (<span class="k">let</span> ((can-edebug
+           (helpful--can-edebug-p helpful--sym helpful--callable-p buf pos))
+          (can-trace
+           (<span class="k">and</span> (symbolp helpful--sym)
+                helpful--callable-p
+                <span class="cd">;; </span><span class="c">Tracing uses advice, and you can't apply advice to
+</span>                <span class="cd">;; </span><span class="c">primitive functions that are replaced with special
+</span>                <span class="cd">;; </span><span class="c">opcodes. For example, `</span><span class="m c">narrow-to-region</span><span class="c">'.
+</span>                (not (plist-get (symbol-plist helpful--sym) 'byte-opcode))))
+          (can-disassemble
+           (<span class="k">and</span> helpful--callable-p (not primitive-p)))
+          (can-forget
+           (<span class="k">and</span> (not (special-form-p helpful--sym))
+                (not primitive-p))))
+      (<span class="k">when</span> (<span class="k">or</span> can-edebug can-trace can-disassemble can-forget)
+        (helpful--insert-section-break)
+        (insert (helpful--heading <span class="s">"Debugging"</span>)))
+      (<span class="k">when</span> can-edebug
+        (insert
+         (helpful--make-edebug-button helpful--sym)))
+      (<span class="k">when</span> can-trace
+        (<span class="k">when</span> can-edebug
+          (insert <span class="s">" "</span>))
+        (insert
+         (helpful--make-tracing-button helpful--sym)))
+
+      (<span class="k">when</span> (<span class="k">and</span>
+             (<span class="k">or</span> can-edebug can-trace)
+             (<span class="k">or</span> can-disassemble can-forget))
+        (insert <span class="s">"\n"</span>))
+
+      (<span class="k">when</span> can-disassemble
+        (insert (helpful--make-disassemble-button helpful--sym)))
+
+      (<span class="k">when</span> can-forget
+        (<span class="k">when</span> can-disassemble
+          (insert <span class="s">" "</span>))
+        (insert (helpful--make-forget-button helpful--sym helpful--callable-p))))
+
+    (<span class="k">when</span> aliases
+      (helpful--insert-section-break)
+      (insert
+       (helpful--heading <span class="s">"Aliases"</span>)
+       (s-join <span class="s">"\n"</span> (<span class="k">--map</span> (helpful--format-alias it helpful--callable-p)
+                           aliases))))
+
+    (<span class="k">when</span> helpful--callable-p
+      (helpful--insert-implementations))
+
+    (helpful--insert-section-break)
+
+    (<span class="k">when</span> (<span class="k">or</span> source-path primitive-p)
+      (insert
+       (helpful--heading
+        (<span class="k">if</span> (eq helpful--sym canonical-sym)
+            <span class="s">"Source Code"</span>
+          <span class="s">"Alias Source Code"</span>))
+       (<span class="k">cond</span>
+        (source-path
+         (concat
+          (propertize (format <span class="s">"%s Defined in "</span> (<span class="k">if</span> primitive-p <span class="s">"//"</span> <span class="s">";;"</span>))
+                      'face 'font-lock-comment-face)
+          (helpful--navigate-button
+           (f-abbrev source-path)
+           source-path
+           pos)
+          <span class="s">"\n"</span>))
+        (primitive-p
+         (concat
+          (propertize
+           <span class="s">"C code is not yet loaded."</span>
+           'face 'font-lock-comment-face)
+          <span class="s">"\n\n"</span>
+          (helpful--button
+           <span class="s">"Set C source directory"</span>
+           'helpful-c-source-directory))))))
+    (<span class="k">when</span> source
+      (insert
+       (<span class="k">cond</span>
+        ((stringp source)
+         (<span class="k">let</span> ((mode (<span class="k">when</span> primitive-p
+                       (<span class="k">pcase</span> (file-name-extension source-path)
+                         (<span class="s">"c"</span> 'c-mode)
+                         (<span class="s">"rs"</span> (<span class="k">when</span> (fboundp 'rust-mode) 'rust-mode))))))
+           (helpful--syntax-highlight source mode)))
+        ((<span class="k">and</span> (consp source) (eq (car source) 'closure))
+         (helpful--syntax-highlight
+          (concat <span class="s">";; Closure converted to defun by helpful.\n"</span>
+                  (helpful--pretty-print
+                   (helpful--format-closure helpful--sym source)))))
+        (t
+         (helpful--syntax-highlight
+          (concat
+           (<span class="k">if</span> (eq helpful--sym canonical-sym)
+               <span class="s">";; Could not find source code, showing raw function object.\n"</span>
+             <span class="s">";; Could not find alias source code, showing raw function object.\n"</span>)
+           (helpful--pretty-print source)))))))
+
+    (helpful--insert-section-break)
+
+    (<span class="k">-when-let</span> (formatted-props (helpful--format-properties helpful--sym))
+      (insert
+       (helpful--heading <span class="s">"Symbol Properties"</span>)
+       formatted-props))
+
+    (goto-char (point-min))
+    (forward-line (1- start-line))
+    (forward-char start-column)
+    (<span class="k">setq</span> helpful--first-display nil)
+
+    (<span class="k">when</span> opened
+      (kill-buffer buf))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

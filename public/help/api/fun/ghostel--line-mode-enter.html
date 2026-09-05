@@ -1,0 +1,120 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--line-mode-enter – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--line-mode-enter is a natively compiled function defined in
+ghostel-line-mode.el.
+Set up line mode in the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--line-mode-enter</code></h1><p><span class="m"><code>ghostel--line-mode-enter</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel-line-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--line-mode-enter)
+</code></pre>
+<h2>Documentation</h2>
+<p>Set up line mode in the current buffer.
+<p>Internal helper used by the interactive <a href="../fun/ghostel-line-mode.html"><code>ghostel-line-mode</code></a> entry
+path and the auto-resume path in
+<a href="../fun/ghostel--line-mode-try-resume.html"><code>ghostel--line-mode-try-resume</code></a>.  Returns t on success, nil when
+the prompt cannot be located (no cursor and no OSC 133 marker —
+e.g. the prompt has not been redrawn yet after an alt-screen
+exit).  Caller decides whether "no prompt" is a user-error or a
+deferred retry.
+<p>Assumes <a href="../var/ghostel--term.html"><code>ghostel--term</code></a> is non-nil and the buffer is not already
+in line mode (the interactive entry validates these).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-line-mode.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--line-mode-enter</span> ()
+  <span class="doc">"Set up line mode in the current buffer.
+Internal helper used by the interactive `</span><span class="m doc">ghostel-line-mode</span><span class="doc">' entry
+path and the auto-resume path in
+`</span><span class="m doc">ghostel--line-mode-try-resume</span><span class="doc">'.  Returns t on success, nil when
+the prompt cannot be located (no cursor and no OSC 133 marker —
+e.g. the prompt has not been redrawn yet after an alt-screen
+exit).  Caller decides whether \"no prompt\" is a user-error or a
+deferred retry.
+
+Assumes `</span><span class="m doc">ghostel--term</span><span class="doc">' is non-nil and the buffer is not already
+in line mode (the interactive entry validates these)."</span>
+  (<span class="k">let</span> ((prompt-end (ghostel-input-start-point))
+        (was-frozen (eq ghostel--input-mode 'copy)))
+    (<span class="k">when</span> prompt-end
+      (<span class="k">pcase</span> ghostel--input-mode
+        ('copy  (ghostel--leave-readonly-state))
+        ('emacs (ghostel--leave-readonly-state)))
+      <span class="cd">;; </span><span class="c">Line mode is the one user-editable ghostel state.  The rendered
+</span>      <span class="cd">;; </span><span class="c">scrollback is still protected below with read-only text properties.
+</span>      (<span class="k">setq</span> buffer-read-only nil)
+      <span class="cd">;; </span><span class="c">Copy mode froze the redraw timer; line mode is live, so the
+</span>      <span class="cd">;; </span><span class="c">timer must be running again before we exit this function or
+</span>      <span class="cd">;; </span><span class="c">the prompt sits there with no scheduled redraw until the next
+</span>      <span class="cd">;; </span><span class="c">PTY byte arrives.  `</span><span class="m c">ghostel--invalidate</span><span class="c">' is idempotent, so the
+</span>      <span class="cd">;; </span><span class="c">emacs/semi-char paths (timer already live) are unaffected.
+</span>      (<span class="k">when</span> (<span class="k">and</span> was-frozen ghostel--term)
+        (ghostel--invalidate))
+      <span class="cd">;; </span><span class="c">Save `</span><span class="m c">cursor-type</span><span class="c">' and force the editor's default for the
+</span>      <span class="cd">;; </span><span class="c">duration of line mode.  The user moves point freely here, so
+</span>      <span class="cd">;; </span><span class="c">the cursor must be visible regardless of any CSI ?25l the
+</span>      <span class="cd">;; </span><span class="c">running terminal app issued in semi-char/char mode.
+</span>      <span class="cd">;; </span><span class="c">`</span><span class="m c">ghostel--apply-cursor-style</span><span class="c">' is a no-op in line mode, so
+</span>      <span class="cd">;; </span><span class="c">further terminal requests are ignored until teardown.
+</span>      (ghostel--cursor-blink-stop)
+      (<span class="k">setq</span> ghostel--line-mode-saved-cursor-type (list cursor-type))
+      (<span class="k">setq</span> cursor-type (default-value 'cursor-type))
+      <span class="cd">;; </span><span class="c">If the user already typed something at this prompt via the
+</span>      <span class="cd">;; </span><span class="c">PTY (e.g. before switching from semi-char to line mode), the
+</span>      <span class="cd">;; </span><span class="c">renderer painted those cells with `</span><span class="m c">ghostel-input</span><span class="c">'.  Adopt
+</span>      <span class="cd">;; </span><span class="c">the span as the initial line-mode input so the user does not
+</span>      <span class="cd">;; </span><span class="c">lose their typing.
+</span>      (<span class="k">let</span> ((input-end (ghostel--line-mode-input-end-pos prompt-end)))
+        <span class="cd">;; </span><span class="c">Trim only PURE-whitespace tails past the input.  Status
+</span>        <span class="cd">;; </span><span class="c">bars / multi-line UI drawn below the prompt row stay put.
+</span>        (ghostel--line-mode-trim-trailing-blank input-end)
+        (<span class="k">setq</span> ghostel--line-input-start (copy-marker prompt-end nil))
+        (set-marker-insertion-type ghostel--line-input-start nil)
+        (<span class="k">setq</span> ghostel--line-input-end (copy-marker input-end t))
+        (set-marker-insertion-type ghostel--line-input-end t)
+        <span class="cd">;; </span><span class="c">Remember how many chars the shell's readline currently
+</span>        <span class="cd">;; </span><span class="c">holds for us — we'll erase them via backspaces before the
+</span>        <span class="cd">;; </span><span class="c">next PTY write so the shell doesn't append our line to its
+</span>        <span class="cd">;; </span><span class="c">existing input and echo a duplicated prefix.
+</span>        (<span class="k">setq</span> ghostel--line-mode-adopted-count (- input-end prompt-end)))
+      (<span class="k">setq</span> ghostel--line-mode-history-index nil)
+      (<span class="k">setq</span> ghostel--char-mode-override-active nil)
+      <span class="cd">;; </span><span class="c">A deliberate alt-screen entry must survive the next redraw's
+</span>      <span class="cd">;; </span><span class="c">auto-pause, and supersedes any armed sentinel.
+</span>      (<span class="k">setq</span> ghostel--line-mode-on-alt-screen (ghostel-alt-screen-p))
+      (<span class="k">setq</span> ghostel--line-mode-paused nil)
+      (<span class="k">setq</span> ghostel--input-mode 'line)
+      (ghostel--sync-read-only)
+      (use-local-map ghostel-line-mode-map)
+      (<span class="k">setq</span> ghostel--mode-line-tag (ghostel--mode-line-tag-make 'line <span class="s">":Line"</span>))
+      (ghostel--mode-line-refresh)
+      <span class="cd">;; </span><span class="c">Protect everything before the input marker with a read-only
+</span>      <span class="cd">;; </span><span class="c">text property so commands that would modify the buffer
+</span>      <span class="cd">;; </span><span class="c">(self-insert, delete-char, yank, …) signal `</span><span class="m c">text-read-only</span><span class="c">'
+</span>      <span class="cd">;; </span><span class="c">when point is in the scrollback / previous output region.
+</span>      <span class="cd">;; </span><span class="c">The redraw path binds `</span><span class="m c">inhibit-read-only</span><span class="c">' so it is
+</span>      <span class="cd">;; </span><span class="c">unaffected.
+</span>      (ghostel--line-mode-apply-readonly
+       (marker-position ghostel--line-input-start))
+      <span class="cd">;; </span><span class="c">Make sure the adopted input carries `</span><span class="m c">ghostel-input</span><span class="c">' (the
+</span>      <span class="cd">;; </span><span class="c">renderer should have applied it for PTY-typed cells; reapply
+</span>      <span class="cd">;; </span><span class="c">for consistency, and so URL detection skips the region even
+</span>      <span class="cd">;; </span><span class="c">if the property was missed for some cells).
+</span>      (<span class="k">let</span> ((start-pos (marker-position ghostel--line-input-start))
+            (end-pos (marker-position ghostel--line-input-end)))
+        (<span class="k">when</span> (&lt; start-pos end-pos)
+          (<span class="k">let</span> ((inhibit-read-only t))
+            (put-text-property start-pos end-pos 'ghostel-input t))))
+      <span class="cd">;; </span><span class="c">Place point at end of (any adopted) input so the user
+</span>      <span class="cd">;; </span><span class="c">continues typing where the shell left them.
+</span>      (goto-char (marker-position ghostel--line-input-end))
+      <span class="cd">;; </span><span class="c">Arm undo recording now that the entry plumbing is done, so the
+</span>      <span class="cd">;; </span><span class="c">user's first edit is the first thing recorded.
+</span>      (<span class="k">setq</span> buffer-undo-list nil)
+      (ghostel--line-mode-maybe-prespawn-bash-completion)
+      t)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

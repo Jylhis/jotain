@@ -1,0 +1,87 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--minibuffer-hint – Emacs Documentation Online</title>
+<meta name="description" content="dape--minibuffer-hint is a natively compiled function defined in
+dape.el.
+Display current configuration in minibuffer in overlay.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--minibuffer-hint</code></h1><p><span class="m"><code>dape--minibuffer-hint</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--minibuffer-hint <span class="ty">&amp;rest</span> _)
+</code></pre>
+<h2>Documentation</h2>
+<p>Display current configuration in minibuffer in overlay.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--minibuffer-hint</span> (<span class="ty">&amp;rest</span> _)
+  <span class="doc">"Display current configuration in minibuffer in overlay."</span>
+  (<span class="k">pcase-let*</span>
+      ((`(,key ,config ,error-message ,hint-rows) dape--minibuffer-cache)
+       (str (string-trim
+             (buffer-substring-no-properties (minibuffer-prompt-end) (point-max))))
+       (`(,hint-key ,hint-config) (<span class="k">ignore-errors</span> (dape--config-from-string str)))
+       (default-directory
+        (<span class="k">or</span> (<span class="k">with-current-buffer</span> dape--minibuffer-last-buffer
+              (<span class="k">ignore-errors</span> (dape--guess-root hint-config)))
+            default-directory))
+       (use-cache (<span class="k">and</span> (equal hint-key key)
+                       (equal hint-config config)))
+       (use-ensure-cache
+        <span class="cd">;; </span><span class="c">Ensure is expensive so we are cheating and don't re run
+</span>        <span class="cd">;; </span><span class="c">ensure if an ensure has evaled without signaling once
+</span>        (<span class="k">and</span> (equal hint-key key)
+             (not error-message)))
+       (error-message
+        (<span class="k">if</span> use-ensure-cache
+            error-message
+          (<span class="k">condition-case</span> err
+              (<span class="k">progn</span> (<span class="k">with-current-buffer</span> dape--minibuffer-last-buffer
+                       (dape--config-ensure hint-config t))
+                     nil)
+            (<span class="w">error</span> (error-message-string err)))))
+       (hint-rows
+        (<span class="k">if</span> use-cache
+            hint-rows
+          (<span class="k">cl-loop</span>
+           with base-config = (alist-get hint-key dape-configs)
+           for (key value) on hint-config by 'cddr
+           unless (<span class="k">or</span> (memq key dape-minibuffer-hint-ignore-properties)
+                      (memq key displayed-keys)
+                      (<span class="k">and</span> (eq key 'port) (eq value <span class="bi">:autoport</span>)))
+           collect key into displayed-keys and collect
+           (concat
+            (propertize (format <span class="s">"%s"</span> key) 'face 'font-lock-keyword-face)
+            <span class="s">" "</span>
+            (<span class="k">with-current-buffer</span> dape--minibuffer-last-buffer
+              (<span class="k">condition-case</span> err
+                  (propertize
+                   (format <span class="s">"%S"</span> (dape--config-eval-value value nil 'skip-interactive))
+                   'face
+                   (<span class="k">when</span> (equal value (plist-get base-config key))
+                     'shadow))
+                (<span class="w">error</span>
+                 (propertize (error-message-string err)
+                             'face 'error)))))))))
+    (<span class="k">setq</span> dape--minibuffer-cache
+          (list hint-key hint-config error-message hint-rows))
+    (overlay-put dape--minibuffer-hint-overlay
+                 'before-string
+                 (concat
+                  (propertize <span class="s">" "</span> 'cursor 0)
+                  (<span class="k">when</span> error-message
+                    (format <span class="s">"%s"</span> (propertize error-message 'face 'error)))))
+    (overlay-put dape--minibuffer-hint-overlay 'after-string
+                 (<span class="k">when</span> (<span class="k">and</span> dape-minibuffer-hint hint-rows)
+                   (concat <span class="s">"\n"</span>
+                           (propertize
+                            <span class="s">" "</span> 'face 'dape-minibuffer-hint-separator-face
+                            'display '(space <span class="bi">:align-to</span> right))
+                           <span class="s">"\n"</span>
+                           (mapconcat #'identity hint-rows <span class="s">"\n"</span>))))
+    (move-overlay dape--minibuffer-hint-overlay
+                  (point-max) (point-max) (current-buffer))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

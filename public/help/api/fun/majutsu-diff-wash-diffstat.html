@@ -1,0 +1,79 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-diff-wash-diffstat – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-diff-wash-diffstat is a natively compiled function defined in
+majutsu-diff.el.
+Wash the diffstat produced by jj diff --stat.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-diff-wash-diffstat</code></h1><p><span class="m"><code>majutsu-diff-wash-diffstat</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-diff-wash-diffstat)
+</code></pre>
+<h2>Documentation</h2>
+<p>Wash the diffstat produced by <span class="m"><code>jj diff --stat</code></span>.
+<p>Assumes point is at the start of the diff output and that the output was
+generated using <span class="m"><code>--git --stat</code></span>, meaning the diffstat appears before the
+first "diff --git" header.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-diff.el</span>
+<span class="cd">;;; </span><span class="c">Diff wash
+</span>
+(<span class="k">defun</span> <span class="f">majutsu-diff-wash-diffstat</span> ()
+  <span class="doc">"Wash the diffstat produced by `jj diff --stat'.
+
+Assumes point is at the start of the diff output and that the output was
+generated using `--git --stat', meaning the diffstat appears before the
+first \"diff --git\" header."</span>
+  (<span class="k">let</span> ((files (majutsu-diff--collect-diff-files))
+        heading
+        (beg (point)))
+    <span class="cd">;; </span><span class="c">Like `</span><span class="m c">magit-diff-wash-diffstat</span><span class="c">': find the summary line first, delete it,
+</span>    <span class="cd">;; </span><span class="c">then rewrite each stat line as a `</span><span class="m c">diffstat</span><span class="c">' section.
+</span>    (<span class="k">when</span> (re-search-forward <span class="s">"^ ?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+ +files? change[</span><span class="neg s">^</span><span class="s">\n]*\n</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> nil t)
+      (<span class="k">setq</span> heading (match-string 1))
+      (delete-region (match-beginning 0) (match-end 0))
+      (goto-char beg)
+      (<span class="k">magit-insert-section</span> (diffstat)
+        (magit-insert-heading
+          (propertize heading 'font-lock-face 'magit-diff-file-heading))
+        (<span class="k">while</span> (looking-at majutsu-diff-statline-re)
+          (<span class="k">let*</span> ((file (match-string-no-properties 1))
+                 (sep  (match-string 2))
+                 (cnt  (match-string 3))
+                 (add  (match-string 4))
+                 (del  (match-string 5)))
+            (majutsu-diff--delete-line)
+            (<span class="k">when</span> (string-match <span class="s">" +$"</span> file)
+              (<span class="k">setq</span> sep (concat (match-string 0 file) sep))
+              (<span class="k">setq</span> file (substring file 0 (match-beginning 0))))
+            (<span class="k">setq</span> file (string-trim-right file))
+            (<span class="k">magit-insert-section</span> (jj-file (<span class="k">or</span> (<span class="k">pop</span> files) file))
+              (insert (magit-format-file 'stat file 'magit-filename))
+              (insert sep)
+              (<span class="k">cond</span>
+               ((string-match <span class="s">"\\`(binary)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s"> +</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[+-][0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> bytes</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?\\'"</span> cnt)
+                (insert (propertize <span class="s">"(binary)"</span> 'font-lock-face
+                                    'majutsu-diffstat-binary))
+                (<span class="k">when-let*</span> ((delta (match-string 1 cnt)))
+                  (insert <span class="s">" "</span>
+                          (propertize delta 'font-lock-face
+                                      (<span class="k">if</span> (string-prefix-p <span class="s">"-"</span> delta)
+                                          'magit-diffstat-removed
+                                        'magit-diffstat-added))
+                          <span class="s">" bytes"</span>)))
+               (t
+                (insert cnt)))
+              (insert <span class="s">" "</span>)
+              (<span class="k">when</span> add
+                (insert (propertize add 'font-lock-face
+                                    'magit-diffstat-added)))
+              (<span class="k">when</span> del
+                (insert (propertize del 'font-lock-face
+                                    'magit-diffstat-removed)))
+              (insert <span class="s">"\n"</span>))))
+        (<span class="k">if</span> (looking-at <span class="s">"^$"</span>) (forward-line) (insert <span class="s">"\n"</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

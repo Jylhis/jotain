@@ -1,0 +1,72 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: orderless-try-completion – Emacs Documentation Online</title>
+<meta name="description" content="orderless-try-completion is a natively compiled function defined in
+orderless.el.
+Complete STRING to unique matching entry in TABLE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>orderless-try-completion</code></h1><p><span class="m"><code>orderless-try-completion</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">orderless.el</span>.
+<h2>Signature</h2>
+<pre><code>(orderless-try-completion <a href="#:~:text=Complete-,STRING"><span class="arg">STRING</span></a> <a href="#:~:text=in-,TABLE"><span class="arg">TABLE</span></a> <a href="#:~:text=satisfying-,PRED"><span class="arg">PRED</span></a> <a href="#:~:text=moving-,POINT"><span class="arg">POINT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Complete <span class="arg">STRING</span> to unique matching entry in <span class="arg">TABLE</span>.
+<p>This uses <a href="../fun/orderless-all-completions.html"><code>orderless-all-completions</code></a> to find matches for <span class="arg">STRING</span>
+in <span class="arg">TABLE</span> among entries satisfying <span class="arg">PRED</span>.  If there is only one
+match, it completes to that match.  If there are no matches, it
+returns nil.  In any other case it "completes" <span class="arg">STRING</span> to
+itself, without moving <span class="arg">POINT</span>.
+This function is part of the <span class="m"><code>orderless</code></span> completion style.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w4nd3vqafwr5yv9m3q76kmi7a9pr8jas-emacs-packages-deps/share/emacs/site-lisp/elpa/orderless-20260830.1156/orderless.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">orderless-try-completion</span> (string table pred point)
+  <span class="doc">"Complete STRING to unique matching entry in TABLE.
+This uses `</span><span class="m doc">orderless-all-completions</span><span class="doc">' to find matches for STRING
+in TABLE among entries satisfying PRED.  If there is only one
+match, it completes to that match.  If there are no matches, it
+returns nil.  In any other case it \"completes\" STRING to
+itself, without moving POINT.
+This function is part of the `</span><span class="m doc">orderless</span><span class="doc">' completion style."</span>
+  (<span class="k">or</span>
+   (<span class="k">pcase</span> orderless-expand-substring
+     ('nil nil)
+     ('prefix (completion-emacs21-try-completion string table pred point))
+     (_ (completion-substring-try-completion string table pred point)))
+   (<span class="k">catch</span> '<span class="m">orderless--many</span>
+     (<span class="k">pcase-let</span> ((`(,prefix ,regexps ,ignore-case ,pred)
+                  (orderless--compile string table pred))
+                 (one nil))
+       <span class="cd">;; </span><span class="c">Abuse all-completions/orderless--filter as a fast search loop.
+</span>       <span class="cd">;; </span><span class="c">Should be almost allocation-free since our "predicate" is not
+</span>       <span class="cd">;; </span><span class="c">called more than two times.
+</span>       (orderless--filter
+        prefix regexps ignore-case table
+        (orderless--predicate-normalized-and
+         pred
+         (<span class="k">lambda</span> (arg)
+           <span class="cd">;; </span><span class="c">Check if there is more than a single match (= many).
+</span>           (<span class="k">when</span> (<span class="k">and</span> one (not (equal one arg)))
+             (<span class="k">throw</span> '<span class="m">orderless--many</span> (cons string point)))
+           (<span class="k">setq</span> one arg)
+           t)))
+       (<span class="k">when</span> one
+         <span class="cd">;; </span><span class="c">Prepend prefix if the candidate does not already have the same
+</span>         <span class="cd">;; </span><span class="c">prefix.  This workaround is needed since the predicate may either
+</span>         <span class="cd">;; </span><span class="c">receive an unprefixed or a prefixed candidate as argument.  Most
+</span>         <span class="cd">;; </span><span class="c">completion tables consistently call the predicate with unprefixed
+</span>         <span class="cd">;; </span><span class="c">candidates, for example `</span><span class="m c">completion-file-name-table</span><span class="c">'.  In contrast,
+</span>         <span class="cd">;; </span><span class="c">`</span><span class="m c">completion-table-with-context</span><span class="c">' calls the predicate with prefixed
+</span>         <span class="cd">;; </span><span class="c">candidates.  This could be an unintended bug or oversight in
+</span>         <span class="cd">;; </span><span class="c">`</span><span class="m c">completion-table-with-context</span><span class="c">'.
+</span>         (<span class="k">unless</span> (<span class="k">or</span> (equal prefix <span class="s">""</span>)
+                     (<span class="k">and</span> (string-prefix-p prefix one)
+                          (test-completion one table pred)))
+           (<span class="k">setq</span> one (concat prefix one)))
+         (<span class="k">or</span> (equal string one) <span class="cd">;; </span><span class="c">Return t for unique exact match
+</span>             (cons one (length one))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

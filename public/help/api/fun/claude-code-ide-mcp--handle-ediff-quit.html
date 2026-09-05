@@ -1,0 +1,87 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp--handle-ediff-quit – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp--handle-ediff-quit is a natively compiled function
+defined in claude-code-ide-mcp-handlers.el.
+Handle ediff quit for TAB-NAME.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp--handle-ediff-quit</code></h1><p><span class="m"><code>claude-code-ide-mcp--handle-ediff-quit</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide-mcp-handlers.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp--handle-ediff-quit <a href="#:~:text=for-,TAB-NAME"><span class="arg">TAB-NAME</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=response.-,SESSION"><span class="arg">SESSION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle ediff quit for <span class="arg">TAB-NAME</span>.
+<p>Prompts user to accept/reject changes and sends appropriate MCP response.
+<span class="arg">SESSION</span> is the MCP session to use - if not provided, uses diff-info stored
+session.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp-handlers.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp--handle-ediff-quit</span> (tab-name <span class="ty">&amp;optional</span> session)
+  <span class="doc">"Handle ediff quit for TAB-NAME.
+Prompts user to accept/reject changes and sends appropriate MCP response.
+SESSION is the MCP session to use - if not provided, uses diff-info stored
+session."</span>
+  (<span class="k">let*</span> ((temp-session session)  <span class="cd">; </span><span class="c">Store the passed session
+</span>         (active-diffs (claude-code-ide-mcp--get-active-diffs temp-session))
+         (diff-info (gethash tab-name active-diffs)))
+    (<span class="k">if</span> (not diff-info)
+        <span class="cd">;; </span><span class="c">Already cleaned up, just exit
+</span>        nil
+      <span class="cd">;; </span><span class="c">Get session from diff-info if not provided
+</span>      (<span class="k">unless</span> temp-session
+        (<span class="k">setq</span> temp-session (alist-get 'session diff-info)))
+      <span class="cd">;; </span><span class="c">Process the diff
+</span>      (<span class="k">let*</span> ((buffer-B (alist-get 'buffer-B diff-info))
+             (final-session (<span class="k">or</span> temp-session
+                                (claude-code-ide-mcp--get-current-session))))
+
+        (<span class="k">let</span> ((accept-changes (y-or-n-p <span class="s">"Accept the changes? "</span>)))
+
+          <span class="cd">;; </span><span class="c">Window configuration is now restored by the quit hook closure
+</span>          <span class="cd">;; </span><span class="c">so we don't need to restore it here
+</span>
+          <span class="cd">;; </span><span class="c">Defer the response to ensure ediff cleanup completes first
+</span>          (run-with-idle-timer claude-code-ide-mcp-handlers-idle-timer-delay nil
+                               (<span class="k">lambda</span> ()
+                                 (<span class="k">if</span> accept-changes
+                                     <span class="cd">;; </span><span class="c">User accepted changes
+</span>                                     (<span class="k">let</span> ((final-content (<span class="k">with-current-buffer</span> buffer-B
+                                                            (buffer-string))))
+                                       <span class="cd">;; </span><span class="c">Don't save the file - let Claude Code handle the actual file modification
+</span>                                       <span class="cd">;; </span><span class="c">Just return the content that should be saved
+</span>
+                                       <span class="cd">;; </span><span class="c">Send FILE_SAVED response with the new content
+</span>                                       (claude-code-ide-mcp-complete-deferred
+                                        final-session
+                                        <span class="s">"openDiff"</span>
+                                        (list `((type . <span class="s">"text"</span>) (text . <span class="s">"FILE_SAVED"</span>))
+                                              `((type . <span class="s">"text"</span>) (text . ,final-content)))
+                                        tab-name)
+
+                                       <span class="cd">;; </span><span class="c">Mark that we've responded so close_tab knows ediff should be cleaned up
+</span>                                       (<span class="k">when</span> final-session
+                                         (<span class="k">let</span> ((session-diffs (claude-code-ide-mcp--get-active-diffs final-session)))
+                                           (puthash tab-name
+                                                    (cons '(responded . t) diff-info)
+                                                    session-diffs))))
+
+                                   <span class="cd">;; </span><span class="c">User rejected changes - send DIFF_REJECTED response
+</span>                                   (claude-code-ide-mcp-complete-deferred
+                                    final-session
+                                    <span class="s">"openDiff"</span>
+                                    (list `((type . <span class="s">"text"</span>) (text . <span class="s">"DIFF_REJECTED"</span>))
+                                          `((type . <span class="s">"text"</span>) (text . ,tab-name)))
+                                    tab-name)
+
+                                   <span class="cd">;; </span><span class="c">Mark that we've responded so close_tab knows ediff should be cleaned up
+</span>                                   <span class="cd">;; </span><span class="c">Don't clean up immediately - let ediff quit process complete first
+</span>                                   (<span class="k">when</span> final-session
+                                     (<span class="k">let</span> ((session-diffs (claude-code-ide-mcp--get-active-diffs final-session)))
+                                       (puthash tab-name
+                                                (cons '(responded . t) diff-info)
+                                                session-diffs)))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

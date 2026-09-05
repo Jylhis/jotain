@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel-line-mode-complete-at-point – Emacs Documentation Online</title>
+<meta name="description" content="ghostel-line-mode-complete-at-point is an interactive and natively
+compiled function defined in ghostel-line-mode.el.
+Complete the line-mode input at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel-line-mode-complete-at-point</code></h1><p><span class="m"><code>ghostel-line-mode-complete-at-point</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <span class="bt">ghostel-line-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel-line-mode-complete-at-point)
+</code></pre>
+<h2>Documentation</h2>
+<p>Complete the line-mode input at point.
+<p>Completion sees only the editable input, not the prompt or scrollback.
+When point is in read-only scrollback, completion starts at the end of
+the input instead.
+<h2>Key Bindings</h2>
+<p><span class="v">ghostel-line-mode-map</span> <span class="key">&lt;tab&gt;</span>
+<span class="v">ghostel-line-mode-map</span> <span class="key">TAB</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-line-mode.el</span>
+(<span class="k">defun</span> <span class="f">ghostel-line-mode-complete-at-point</span> ()
+  <span class="doc">"Complete the line-mode input at point.
+Completion sees only the editable input, not the prompt or scrollback.
+When point is in read-only scrollback, completion starts at the end of
+the input instead."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((start (<span class="k">and</span> (markerp ghostel--line-input-start)
+                    (marker-position ghostel--line-input-start)))
+        (end   (<span class="k">and</span> (markerp ghostel--line-input-end)
+                    (marker-position ghostel--line-input-end))))
+    (<span class="k">cond</span>
+     ((not (<span class="k">and</span> start end))
+      <span class="cd">;; </span><span class="c">No live input markers — nothing to complete against.
+</span>      (<span class="w">user-error</span> <span class="s">"Line mode: no input region to complete"</span>))
+     ((<span class="k">or</span> (&lt; (point) start) (&gt; (point) end))
+      (deactivate-mark)
+      (goto-char end)
+      (ghostel-line-mode-complete-at-point))
+     (t
+      <span class="cd">;; </span><span class="c">Refresh in case directory tracking flipped between
+</span>      <span class="cd">;; </span><span class="c">local/remote since `</span><span class="m c">shell-completion-vars</span><span class="c">' first ran.
+</span>      (<span class="k">setq-local</span> comint-file-name-prefix
+                  (<span class="k">or</span> (file-remote-p default-directory) <span class="s">""</span>))
+      (<span class="k">save-restriction</span>
+        (narrow-to-region start end)
+        (<span class="k">let</span> ((completion-at-point-functions
+               (ghostel--line-mode-effective-capfs)))
+          (completion-at-point)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

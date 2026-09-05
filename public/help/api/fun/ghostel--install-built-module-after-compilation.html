@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--install-built-module-after-compilation – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--install-built-module-after-compilation is a natively compiled
+function defined in ghostel-module-install.el.
+Move the module built by an interactive compile in BUF on successful STATUS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--install-built-module-after-compilation</code></h1><p><span class="m"><code>ghostel--install-built-module-after-compilation</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">ghostel-module-install.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--install-built-module-after-compilation <a href="#:~:text=in-,BUF"><span class="arg">BUF</span></a> <a href="#:~:text=successful-,STATUS"><span class="arg">STATUS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Move the module built by an interactive compile in <span class="arg">BUF</span> on successful <span class="arg">STATUS</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-module-install.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--install-built-module-after-compilation</span> (buf status)
+  <span class="doc">"Move the module built by an interactive compile in BUF on successful STATUS."</span>
+  (<span class="k">when</span> (buffer-live-p buf)
+    (<span class="k">with-current-buffer</span> buf
+      (<span class="k">let</span> ((build-dir ghostel--module-compile-build-dir)
+            (dest-dir ghostel--module-compile-dest-dir))
+        (<span class="k">when</span> (<span class="k">and</span> build-dir dest-dir)
+          (<span class="k">let</span> ((file-name (concat <span class="s">"ghostel-module"</span> module-file-suffix))
+                (sidecar <span class="s">"ghostel-module.version"</span>))
+            (<span class="k">unwind-protect</span>
+                (<span class="k">when</span> (string-match-p <span class="s">"finished"</span> status)
+                  (<span class="k">let</span> ((built (expand-file-name file-name build-dir))
+                        (final (expand-file-name file-name dest-dir))
+                        (built-sidecar (expand-file-name sidecar build-dir))
+                        (final-sidecar (expand-file-name sidecar dest-dir)))
+                    (<span class="k">when</span> (file-exists-p built)
+                      (<span class="k">condition-case</span> err
+                          (<span class="k">progn</span>
+                            (ghostel--install-module-pair
+                             built final built-sidecar final-sidecar)
+                            (ghostel--install-support-assets dest-dir)
+                            (message <span class="s">"ghostel: module installed at %s"</span> final))
+                        (<span class="w">error</span>
+                         (display-warning
+                          'ghostel
+                          (format <span class="s">"Build succeeded but installing into %s failed: %s"</span>
+                                  dest-dir (error-message-string err))))))))
+              (<span class="k">when</span> (file-directory-p build-dir)
+                (<span class="k">ignore-errors</span> (delete-directory build-dir t))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

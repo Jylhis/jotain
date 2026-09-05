@@ -1,0 +1,246 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-query-search-1 – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-query-search-1 is a natively compiled function defined in
+combobulate-navigation.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-query-search-1</code></h1><p><span class="m"><code>combobulate-query-search-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">combobulate-navigation.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-query-search-1 <span class="arg">QUERY-NODE</span> <span class="arg">QUERY</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-navigation.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-query-search-1</span> (query-node query)
+  (<span class="k">when</span> query-node
+    (<span class="k">let</span> ((parent query-node)
+          (children)
+          (stack)
+          (term) (term-type)
+          (stack-delta 0)
+          <span class="cd">;; </span><span class="c">one of `</span><span class="m c">start</span><span class="c">', `</span><span class="m c">field</span><span class="c">', `</span><span class="m c">node</span><span class="c">', `</span><span class="m c">sibling</span><span class="c">' or `</span><span class="m c">label</span><span class="c">'.
+</span>          (state 'start))
+      (<span class="k">cl-flet*</span> ((to-field (v) (<span class="k">and</span> (symbolp v) (string-remove-suffix <span class="s">":"</span> (symbol-name v))))
+                 (label-p (v) (<span class="k">and</span> (symbolp v) (<span class="k">cond</span> ((string-prefix-p <span class="s">"@"</span> (symbol-name v))
+                                                      'node-label)
+                                                     ((string-prefix-p <span class="s">"*"</span> (symbol-name v))
+                                                      'type-label)
+                                                     ((string-prefix-p <span class="s">"!"</span> (symbol-name v))
+                                                      'text-label))))
+                 (make-label (label v)
+                   (cons label (<span class="k">progn</span>
+                                 (<span class="k">setq</span> v (<span class="k">if</span> (consp v) (car v) v))
+                                 (<span class="k">cond</span>
+                                  ((eq (label-p label) 'node-label) v)
+                                  <span class="cd">;; </span><span class="c">NOTE: this can fail if `</span><span class="m c">v</span><span class="c">' is a cons
+</span>                                  <span class="cd">;; </span><span class="c">with more than one element. How
+</span>                                  <span class="cd">;; </span><span class="c">should that be handled? Is it even
+</span>                                  <span class="cd">;; </span><span class="c">possible?
+</span>                                  ((eq (label-p label) 'text-label) (combobulate-node-text v))
+                                  ((eq (label-p label) 'type-label) (combobulate-node-type v))
+                                  (t (<span class="w">error</span> <span class="s">"Unknown label type `</span><span class="m s">%s</span><span class="s">'"</span> (label-p label)))))))
+                 (push-stack (item) (<span class="k">push</span> item stack) item)
+                 (pop-stack () (<span class="k">pop</span> stack))
+                 (state-p (expected-states)
+                   (member state (<span class="k">if</span> (listp expected-states) expected-states (list expected-states))))
+                 (assert-state (expected-states)
+                   (<span class="k">unless</span> (<span class="k">or</span> (not expected-states) (state-p expected-states))
+                     (<span class="w">error</span> <span class="s">"State error. Expected current state to be `</span><span class="m s">%s</span><span class="s">', but it is `</span><span class="m s">%s</span><span class="s">'."</span>
+                            expected-states state)))
+                 (set-expected-state (new-state <span class="ty">&amp;optional</span> expected-states)
+                   (assert-state expected-states)
+
+                   (<span class="k">setq</span> state new-state)))
+
+        (<span class="k">setq</span> children (combobulate-node-children query-node t))
+
+        (<span class="k">while</span> query
+          (<span class="k">setq</span> term (<span class="k">pop</span> query))
+          (<span class="k">setq</span> term-type (combobulate-query--term-type term))
+          (<span class="k">pcase</span> term
+            <span class="cd">;; </span><span class="c">Handle the very first term in the query. This state is
+</span>            <span class="cd">;; </span><span class="c">always treated specially, as it's important that
+</span>            <span class="cd">;; </span><span class="c">`</span><span class="m c">query-node</span><span class="c">' matches against the first `</span><span class="m c">term</span><span class="c">'.
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">This is required or node `</span><span class="m c">foo</span><span class="c">' would match query `(bar)'
+</span>            <span class="cd">;; </span><span class="c">which is wrong.
+</span>            ((<span class="k">and</span> (guard (state-p '(start))))
+             (<span class="k">if</span> (eq term-type 'sibling-query)
+                 (<span class="k">progn</span>
+                   (set-expected-state 'sibling)
+
+                   (<span class="k">push</span> term query))
+               (<span class="k">if</span> (<span class="k">pcase</span> term-type
+                     ('anonymous (equal (combobulate-node-text query-node) term))
+                     ('node (equal term (combobulate-query--node-type query-node)))
+                     ('sub-query (combobulate-query-search-1 query-node term))
+                     ((<span class="k">or</span> 'wildcard 'named-wildcard) t)
+                     (_ (<span class="w">error</span> <span class="s">"Unknown start term %s"</span> term)))
+                   <span class="cd">;; </span><span class="c">ensure the new state is `</span><span class="m c">node</span><span class="c">' as we properly matched the node
+</span>                   (<span class="k">progn</span>
+                     (set-expected-state 'node)
+                     <span class="cd">;; </span><span class="c">return the query-node to the stack so it can be
+</span>                     <span class="cd">;; </span><span class="c">processed properly as a match.
+</span>                     (<span class="k">setq</span> stack-delta 1)
+                     (<span class="k">if</span> (eq term-type 'node)
+                         (push-stack query-node)
+                       (push-stack query-node)))
+                 (set-expected-state 'no-match))))
+            <span class="cd">;; </span><span class="c">handle `</span><span class="m c">field:</span><span class="c">' terms
+</span>            ((<span class="k">and</span> (guard (eq term-type 'field)) (guard (state-p '(node))) field)
+             (set-expected-state 'field '(node))
+             (<span class="k">let</span> ((rule (cadr (assoc-string (combobulate-node-type query-node) (combobulate-production-rules-get-rules)))))
+               (<span class="k">unless</span> (map-contains-key rule (intern (concat <span class="s">":"</span> (to-field field))))
+                 (<span class="w">error</span> <span class="s">"Production rule for node `</span><span class="m s">%s</span><span class="s">' does not support a field named `</span><span class="m s">%s</span><span class="s">'. Known: `</span><span class="m s">%s</span><span class="s">'"</span>
+                        query-node field (map-keys rule))))
+             (push-stack (to-field field)))
+            <span class="cd">;; </span><span class="c">Handle the labels. There are three types:
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">- `</span><span class="m c">@label</span><span class="c">', which maps directly the node;
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">- `</span><span class="m c">!label</span><span class="c">', which maps to the text of the node;
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">- `</span><span class="m c">*label</span><span class="c">', which maps to the type of the node.
+</span>            <span class="cd">;;</span><span class="c">
+</span>            ((<span class="k">and</span> (guard (member term-type '(node-label text-label type-label)))
+                  (guard (state-p '(node))) label)
+             (<span class="k">when</span> stack-delta
+               (<span class="k">let*</span> ((elems))
+                 (<span class="k">dotimes</span> (_ stack-delta)
+                   (<span class="k">push</span> (pop-stack) elems))
+                 (<span class="k">dolist</span> (e elems)
+                   (push-stack (make-label label e))
+                   (<span class="k">when</span> combobulate-query--nested-labels
+                     (<span class="k">push</span> (make-label label e) combobulate-query--labelled-nodes)))
+                 (<span class="k">unless</span> combobulate-query--nested-labels
+                   (combobulate-walk-tree elems (<span class="k">lambda</span> (leaf _)
+                                                  (<span class="k">push</span> (make-label label leaf)
+                                                        combobulate-query--labelled-nodes)))))
+               (<span class="k">setq</span> stack-delta 0))
+             (set-expected-state 'node))
+            <span class="cd">;; </span><span class="c">handle (_), _, "string" and ( ... )
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">NOTE: turn this into a dedicate predicate that returns
+</span>            <span class="cd">;; </span><span class="c">the type of term.
+</span>            ((<span class="k">and</span> (guard (member term-type
+                                 '(anonymous
+                                   sibling-query
+                                   field node sub-query
+                                   wildcard named-wildcard)))
+                  (guard (state-p '(node field)))
+                  `,sub-query)
+             (<span class="k">let*</span> ((starting-children children)
+                    <span class="cd">;; </span><span class="c">determine if it is a wildcard node and what type
+</span>                    <span class="cd">;; </span><span class="c">(is-wildcard-node (member term-type '(named-wildcard
+</span>                    <span class="cd">;;                                       </span><span class="c">wildcard)))
+</span>                    <span class="cd">;; </span><span class="c">named-only searches apply to only some terms
+</span>                    <span class="cd">;; </span><span class="c">(named-only-search
+</span>                    <span class="cd">;;  </span><span class="c">(or (and is-wildcard-node (eq term-type 'named-wildcard))
+</span>                    <span class="cd">;;      </span><span class="c">;; TODO: missing stringp? label check? field check?
+</span>                    <span class="cd">;;      </span><span class="c">(or (and (symbolp sub-query) (not is-wildcard-node))
+</span>                    <span class="cd">;;          </span><span class="c">;; (eq term-type 'sibling-query)
+</span>                    <span class="cd">;;          </span><span class="c">(consp sub-query))))
+</span>                    )
+
+               (<span class="k">pcase</span> state
+                 ('node
+                  (<span class="k">pcase</span> (funcall
+                          #'combobulate-query--match-many-children
+                          children
+                          (<span class="k">if</span> (eq term-type 'sibling-query)
+                              sub-query
+                            (list sub-query))
+                          <span class="cd">;; </span><span class="c">peek at the next term. this would have been
+</span>                          <span class="cd">;; </span><span class="c">better handled with a prefix-style notation
+</span>                          <span class="cd">;; </span><span class="c">as that is in keeping with lisps'
+</span>                          <span class="cd">;; </span><span class="c">roots. however, the tree-sitter query
+</span>                          <span class="cd">;; </span><span class="c">language has postfix, and, well, so do we.
+</span>                          (<span class="k">let</span> ((next-term-type (combobulate-query--term-type (car query))))
+                            (<span class="k">cond</span>
+                             ((<span class="k">and</span> (eq next-term-type 'quantifier)
+                                   (state-p '(node)))
+                              <span class="cd">;; </span><span class="c">we matched a quantifier; now get rid of
+</span>                              <span class="cd">;; </span><span class="c">it from the query list and pass it to
+</span>                              <span class="cd">;; </span><span class="c">the funcall.
+</span>                              (<span class="k">pop</span> query))
+                             <span class="cd">;; </span><span class="c">no explicit quantifier? use `</span><span class="m c">1</span><span class="c">'.
+</span>                             (t '1)))
+                          <span class="cd">;; </span><span class="c">This is a sloppy take on look-ahead for
+</span>                          <span class="cd">;; </span><span class="c">greedy matching: pass on a stop node -- if
+</span>                          <span class="cd">;; </span><span class="c">there is one -- so that the greedy
+</span>                          <span class="cd">;; </span><span class="c">quantifiers stop matching when they
+</span>                          <span class="cd">;; </span><span class="c">encounter it
+</span>                          (<span class="k">let</span> ((look-ahead query))
+                            (seq-find
+                             (<span class="k">lambda</span> (next-term)
+                               (<span class="k">pcase</span> (combobulate-query--term-type next-term)
+                                 ((<span class="k">or</span> 'field 'quantifier 'node-label 'text-label 'type-label)
+                                  nil)
+                                 (_ t)))
+                             look-ahead))
+                          (eq term-type 'sibling-query))
+                    <span class="cd">;; </span><span class="c">`</span><span class="m c">match</span><span class="c">' indicates that one or more matching
+</span>                    <span class="cd">;; </span><span class="c">results were found.
+</span>                    <span class="cd">;;</span><span class="c">
+</span>                    <span class="cd">;; </span><span class="c">The `</span><span class="m c">remaining-children</span><span class="c">' are the ones that we
+</span>                    <span class="cd">;; </span><span class="c">process because
+</span>                    <span class="cd">;; </span><span class="c">`</span><span class="m c">combobulate-query--match-children</span><span class="c">' met its test
+</span>                    <span class="cd">;; </span><span class="c">function and quantifier requirements.
+</span>                    (`(match . (,results . ,remaining-children))
+
+                     (set-expected-state 'node)
+                     (<span class="k">setq</span> children remaining-children)
+                     <span class="cd">;; </span><span class="c">keep tabs of how much we added to the stack this
+</span>                     <span class="cd">;; </span><span class="c">time around. (it'd be better if we could keep a
+</span>                     <span class="cd">;; </span><span class="c">pointer to our position in the list...)
+</span>                     (<span class="k">setq</span> stack-delta (length results))
+                     (<span class="k">when</span> results (mapcar #'push-stack results)))
+                    <span class="cd">;; </span><span class="c">`</span><span class="m c">ignore</span><span class="c">' means that the quantifier (most likely)
+</span>                    <span class="cd">;; </span><span class="c">indicated that attempted a look-ahead (usually
+</span>                    <span class="cd">;; </span><span class="c">greedy) match, but failed to find anything.
+</span>                    <span class="cd">;;</span><span class="c">
+</span>                    <span class="cd">;; </span><span class="c">Because that is legal, we do not exit the search
+</span>                    <span class="cd">;; </span><span class="c">as we ordinarily would: instead we reset children
+</span>                    <span class="cd">;; </span><span class="c">to what they were when we began
+</span>                    (`(ignore . ,_)
+
+                     (set-expected-state 'node)
+                     (<span class="k">setq</span> children starting-children))
+                    <span class="cd">;; </span><span class="c">`</span><span class="m c">no-match</span><span class="c">' indicates that a required match was
+</span>                    <span class="cd">;; </span><span class="c">attempted and failed.
+</span>                    <span class="cd">;;</span><span class="c">
+</span>                    <span class="cd">;; </span><span class="c">This is an exit event.
+</span>                    (`(no-match ,_)
+
+                     <span class="cd">;; </span><span class="c">search failed. we looked ahead and found no
+</span>                     <span class="cd">;; </span><span class="c">children that matched. set the expected state
+</span>                     <span class="cd">;; </span><span class="c">to `</span><span class="m c">no-match</span><span class="c">' and reset `</span><span class="m c">children</span><span class="c">' to nil
+</span>                     (set-expected-state 'no-match)
+                     (<span class="k">setq</span> children nil))
+                    <span class="cd">;; </span><span class="c">for everything else: throw an error.
+</span>                    (`(,unknown-tag ,rest)
+                     (<span class="w">error</span> <span class="s">"Unknown match tag returned: %s %s"</span> unknown-tag rest))))
+                 <span class="cd">;; </span><span class="c">this handles field matching
+</span>                 ('field
+                  (set-expected-state 'node 'field)
+                  (<span class="k">let</span> ((matches (combobulate-query-search-1
+                                  (combobulate-node-child-by-field parent (pop-stack))
+                                  sub-query)))
+                    (<span class="k">when</span> matches
+                      (push-stack matches))
+                    (<span class="k">setq</span> stack-delta (length matches))))
+                 (_ (<span class="w">error</span> <span class="s">"Unknown parse state for query matcher: `</span><span class="m s">%s</span><span class="s">'"</span> state)))))
+            (_ (<span class="k">unless</span> (state-p '(no-match))
+                 (<span class="w">error</span> <span class="s">"Query parse error: %s Query: %s"</span> term query)))))
+        <span class="cd">;; </span><span class="c">If we end our state with a `</span><span class="m c">no-match</span><span class="c">' state, then we've clearly
+</span>        <span class="cd">;; </span><span class="c">failed to match against the `</span><span class="m c">query</span><span class="c">'.
+</span>        <span class="cd">;;</span><span class="c">
+</span>        <span class="cd">;; </span><span class="c">If so, return `</span><span class="m c">nil</span><span class="c">'. Otherwise, reverse `</span><span class="m c">stack</span><span class="c">' and return
+</span>        <span class="cd">;; </span><span class="c">it: it holds the tree of matches.
+</span>
+        (<span class="k">if</span> (state-p '(no-match)) nil
+          (reverse stack))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

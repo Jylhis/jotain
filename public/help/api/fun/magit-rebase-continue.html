@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-rebase-continue – Emacs Documentation Online</title>
+<meta name="description" content="magit-rebase-continue is an interactive and natively compiled function
+defined in magit-sequence.el.
+Restart the current rebasing operation.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-rebase-continue</code></h1><p><span class="m"><code>magit-rebase-continue</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-sequence.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-rebase-continue <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">NOEDIT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Restart the current rebasing operation.
+<p>In some cases this pops up a commit message buffer for you do
+edit.  With a prefix argument the old message is reused as-is.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-sequence.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">magit-rebase-continue</span> (<span class="ty">&amp;optional</span> noedit)
+  <span class="doc">"Restart the current rebasing operation.
+In some cases this pops up a commit message buffer for you do
+edit.  With a prefix argument the old message is reused as-is."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">cond</span>
+    ((not (magit-rebase-in-progress-p))
+     (<span class="w">user-error</span> <span class="s">"No rebase in progress"</span>))
+    ((magit-anything-unstaged-p t)
+     (<span class="w">user-error</span> <span class="s">"Cannot continue rebase with unstaged changes"</span>))
+    (t
+     (<span class="k">let</span> ((dir (magit-gitdir)))
+       (<span class="k">when</span> (<span class="k">and</span> (magit-anything-staged-p)
+                  (file-exists-p (expand-file-name <span class="s">"rebase-merge"</span> dir))
+                  (not (member (magit-toplevel)
+                               magit--rebase-public-edit-confirmed)))
+         (magit-commit-amend-assert
+          (magit-file-line (expand-file-name <span class="s">"rebase-merge/orig-head"</span> dir)))))
+     (<span class="k">if</span> noedit
+         (<span class="k">with-environment-variables</span> ((<span class="s">"GIT_EDITOR"</span> <span class="s">"true"</span>))
+           (magit-run-git-async (magit--rebase-resume-command) <span class="s">"--continue"</span>)
+           (set-process-sentinel magit-this-process
+                                 #'magit-sequencer-process-sentinel)
+           magit-this-process)
+       (magit-run-git-sequencer (magit--rebase-resume-command) <span class="s">"--continue"</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

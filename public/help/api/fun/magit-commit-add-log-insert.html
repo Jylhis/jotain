@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-commit-add-log-insert – Emacs Documentation Online</title>
+<meta name="description" content="magit-commit-add-log-insert is a natively compiled function defined in
+magit-commit.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-commit-add-log-insert</code></h1><p><span class="m"><code>magit-commit-add-log-insert</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-commit.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-commit-add-log-insert <span class="arg">BUFFER</span> <span class="arg">FILE</span> <span class="arg">DEFUN</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-commit.el</span>
+(<span class="k">defun</span> <span class="f">magit-commit-add-log-insert</span> (buffer file defun)
+  (<span class="k">with-current-buffer</span> buffer
+    (undo-boundary)
+    (goto-char (point-max))
+    (git-commit--goto-insert-position nil)
+    (<span class="k">while</span> (re-search-backward (git-commit--trailer-regexp) nil t))
+    (<span class="k">save-restriction</span>
+      (narrow-to-region (point-min) (point))
+      (<span class="k">cond</span> ((re-search-backward (format <span class="s">"* %s</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s"> (</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s">)]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?: "</span> file)
+                                 nil t)
+             (<span class="k">when</span> (equal (match-str 1) defun)
+               (<span class="k">setq</span> defun nil))
+             (re-search-forward <span class="s">": "</span>))
+            (t
+             (<span class="k">when</span> (re-search-backward <span class="s">"^[\\*(].+\n"</span> nil t)
+               (goto-char (match-end 0)))
+             (<span class="k">while</span> (re-search-forward <span class="s">"^[</span><span class="neg s">^</span><span class="s">\\*\n].*\n"</span> nil t))
+             (<span class="k">if</span> defun
+                 (<span class="k">progn</span> (insert (format <span class="s">"* %s (%s): \n"</span> file defun))
+                        (<span class="k">setq</span> defun nil))
+               (insert (format <span class="s">"* %s: \n"</span> file)))
+             (backward-char)
+             (<span class="k">unless</span> (looking-at <span class="s">"\n[\n\\']"</span>)
+               (insert ?\n)
+               (backward-char))))
+      (<span class="k">when</span> defun
+        (forward-line)
+        (<span class="k">let</span> ((limit (<span class="k">save-excursion</span>
+                       (<span class="k">and</span> (re-search-forward <span class="s">"^\\*"</span> nil t)
+                            (point)))))
+          (<span class="k">unless</span> (<span class="k">or</span> (looking-back (format <span class="s">"(%s): "</span> defun)
+                                    (line-beginning-position))
+                      (re-search-forward (format <span class="s">"^(%s): "</span> defun) limit t))
+            (<span class="k">while</span> (re-search-forward <span class="s">"^[</span><span class="neg s">^</span><span class="s">\\*\n].*\n"</span> limit t))
+            (insert (format <span class="s">"(%s): \n"</span> defun))
+            (backward-char)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

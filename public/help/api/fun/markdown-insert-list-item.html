@@ -1,0 +1,139 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-insert-list-item – Emacs Documentation Online</title>
+<meta name="description" content="markdown-insert-list-item is an interactive and natively compiled
+function defined in markdown-mode.el.
+Insert a new list item.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-insert-list-item</code></h1><p><span class="m"><code>markdown-insert-list-item</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-insert-list-item <span class="ty">&amp;optional</span> <a href="#:~:text=when-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert a new list item.
+<p>If the point is inside unordered list, insert a bullet mark.  If
+the point is inside ordered list, insert the next number followed
+by a period.  Use the previous list item to determine the amount
+of whitespace to place before and after list markers.
+<p>With a <kbd>C-u</kbd> (<a href="../fun/universal-argument.html"><code>universal-argument</code></a>) prefix (i.e., when <span class="arg">ARG</span> is (4)),
+decrease the indentation by one level.
+<p>With two <kbd>C-u</kbd> (<a href="../fun/universal-argument.html"><code>universal-argument</code></a>) prefixes (i.e., when <span class="arg">ARG</span> is (16)),
+increase the indentation by one level.
+<h2>Key Bindings</h2>
+<p><span class="v">markdown-mode-map</span> <span class="key">C-c C-j</span>
+<span class="v">markdown-mode-map</span> <span class="key">C-c C-x m</span>
+<span class="v">markdown-mode-map</span> <span class="key">M-RET</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+<span class="cd">;;; </span><span class="c">Lists =====================================================================
+</span>
+(<span class="k">defun</span> <span class="f">markdown-insert-list-item</span> (<span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Insert a new list item.
+If the point is inside unordered list, insert a bullet mark.  If
+the point is inside ordered list, insert the next number followed
+by a period.  Use the previous list item to determine the amount
+of whitespace to place before and after list markers.
+
+With a \\[</span><span class="m doc">universal-argument</span><span class="doc">] prefix (i.e., when ARG is (4)),
+decrease the indentation by one level.
+
+With two \\[</span><span class="m doc">universal-argument</span><span class="doc">] prefixes (i.e., when ARG is (16)),
+increase the indentation by one level."</span>
+  (<span class="k">interactive</span> <span class="s">"p"</span>)
+  (<span class="k">let</span> (bounds cur-indent marker indent new-indent new-loc)
+    (<span class="k">save-match-data</span>
+      <span class="cd">;; </span><span class="c">Look for a list item on current or previous non-blank line
+</span>      (<span class="k">save-excursion</span>
+        (<span class="k">while</span> (<span class="k">and</span> (not (<span class="k">setq</span> bounds (markdown-cur-list-item-bounds)))
+                    (not (bobp))
+                    (markdown-cur-line-blank-p))
+          (forward-line -1)))
+      (<span class="k">when</span> bounds
+        (<span class="k">cond</span> ((<span class="k">save-excursion</span>
+                 (skip-chars-backward <span class="s">" \t"</span>)
+                 (looking-at-p markdown-regex-list))
+               (beginning-of-line)
+               (insert <span class="s">"\n"</span>)
+               (forward-line -1))
+              ((not (markdown-cur-line-blank-p))
+               (newline)))
+        (<span class="k">setq</span> new-loc (point)))
+      <span class="cd">;; </span><span class="c">Look ahead for a list item on next non-blank line
+</span>      (<span class="k">unless</span> bounds
+        (<span class="k">save-excursion</span>
+          (<span class="k">while</span> (<span class="k">and</span> (null bounds)
+                      (not (eobp))
+                      (markdown-cur-line-blank-p))
+            (forward-line)
+            (<span class="k">setq</span> bounds (markdown-cur-list-item-bounds))))
+        (<span class="k">when</span> bounds
+          (<span class="k">setq</span> new-loc (point))
+          (<span class="k">unless</span> (markdown-cur-line-blank-p)
+            (newline))))
+      (<span class="k">if</span> (not bounds)
+          <span class="cd">;; </span><span class="c">When not in a list, start a new unordered one
+</span>          (<span class="k">progn</span>
+            (<span class="k">unless</span> (markdown-cur-line-blank-p)
+              (insert <span class="s">"\n"</span>))
+            (insert markdown-unordered-list-item-prefix))
+        <span class="cd">;; </span><span class="c">Compute indentation and marker for new list item
+</span>        (<span class="k">setq</span> cur-indent (nth 2 bounds))
+        (<span class="k">setq</span> marker (nth 4 bounds))
+        <span class="cd">;; </span><span class="c">If current item is a GFM checkbox, insert new unchecked checkbox.
+</span>        (<span class="k">when</span> (nth 5 bounds)
+          (<span class="k">setq</span> marker
+                (concat marker
+                        (replace-regexp-in-string <span class="s">"[Xx]"</span> <span class="s">" "</span> (nth 5 bounds)))))
+        (<span class="k">cond</span>
+         <span class="cd">;; </span><span class="c">Dedent: decrement indentation, find previous marker.
+</span>         ((= arg 4)
+          (<span class="k">setq</span> indent (max (- cur-indent markdown-list-indent-width) 0))
+          (<span class="k">let</span> ((prev-bounds
+                 (<span class="k">save-excursion</span>
+                   (goto-char (nth 0 bounds))
+                   (<span class="k">when</span> (markdown-up-list)
+                     (markdown-cur-list-item-bounds)))))
+            (<span class="k">when</span> prev-bounds
+              (<span class="k">setq</span> marker (nth 4 prev-bounds)))))
+         <span class="cd">;; </span><span class="c">Indent: increment indentation by 4, use same marker.
+</span>         ((= arg 16) (<span class="k">setq</span> indent (+ cur-indent markdown-list-indent-width)))
+         <span class="cd">;; </span><span class="c">Same level: keep current indentation and marker.
+</span>         (t (<span class="k">setq</span> indent cur-indent)))
+        (<span class="k">setq</span> new-indent (make-string indent 32))
+        (goto-char new-loc)
+        (<span class="k">cond</span>
+         <span class="cd">;; </span><span class="c">Ordered list
+</span>         ((string-match-p <span class="s">"[0-9]"</span> marker)
+          (<span class="k">if</span> (= arg 16) <span class="cd">;; </span><span class="c">starting a new column indented one more level
+</span>              (insert (concat new-indent <span class="s">"1. "</span>))
+            <span class="cd">;; </span><span class="c">Don't use previous match-data
+</span>            (set-match-data nil)
+            <span class="cd">;; </span><span class="c">travel up to the last item and pick the correct number.  If
+</span>            <span class="cd">;; </span><span class="c">the argument was nil, "new-indent = cur-indent" is the same,
+</span>            <span class="cd">;; </span><span class="c">so we don't need special treatment. Neat.
+</span>            (<span class="k">save-excursion</span>
+              (<span class="k">while</span> (<span class="k">and</span> (not (looking-at (concat new-indent <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\.[ \t]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)))
+                          (&gt;= (forward-line -1) 0))))
+            (<span class="k">let*</span> ((old-prefix (match-string 1))
+                   (old-spacing (match-string 2))
+                   (new-prefix (<span class="k">if</span> (<span class="k">and</span> old-prefix markdown-ordered-list-enumeration)
+                                   (int-to-string (1+ (string-to-number old-prefix)))
+                                 <span class="s">"1"</span>))
+                   (space-adjust (- (length old-prefix) (length new-prefix)))
+                   (new-spacing (<span class="k">if</span> (<span class="k">and</span> (match-string 2)
+                                         (not (string-match-p <span class="s">"\t"</span> old-spacing))
+                                         (&lt; space-adjust 0)
+                                         (&gt; space-adjust (- 1 (length (match-string 2)))))
+                                    (substring (match-string 2) 0 space-adjust)
+                                  (<span class="k">or</span> old-spacing <span class="s">". "</span>))))
+              (insert (concat new-indent new-prefix new-spacing)))))
+         <span class="cd">;; </span><span class="c">Unordered list, GFM task list, or ordered list with hash mark
+</span>         ((string-match-p <span class="s">"[\\*\\+-]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">#\\."</span> marker)
+          (insert new-indent marker))))
+      <span class="cd">;; </span><span class="c">Propertize the newly inserted list item now
+</span>      (markdown-syntax-propertize-list-items (line-beginning-position) (line-end-position)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

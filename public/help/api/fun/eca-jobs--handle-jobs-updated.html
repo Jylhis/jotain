@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-jobs--handle-jobs-updated – Emacs Documentation Online</title>
+<meta name="description" content="eca-jobs--handle-jobs-updated is a natively compiled function defined
+in eca-jobs.el.
+Update jobs list in SESSION from PARAMS and refresh tab + modeline.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-jobs--handle-jobs-updated</code></h1><p><span class="m"><code>eca-jobs--handle-jobs-updated</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-jobs.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-jobs--handle-jobs-updated <a href="#:~:text=in-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=from-,PARAMS"><span class="arg">PARAMS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update jobs list in <span class="arg">SESSION</span> from <span class="arg">PARAMS</span> and refresh tab + modeline.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-jobs.el</span>
+<span class="cd">;; </span><span class="c">Notification handler
+</span>
+(<span class="k">defun</span> <span class="f">eca-jobs--handle-jobs-updated</span> (session params)
+  <span class="doc">"Update jobs list in SESSION from PARAMS and refresh tab + modeline."</span>
+  (<span class="k">setf</span> (eca--session-jobs session)
+        (append (plist-get params <span class="bi">:jobs</span>) nil))
+  (eca-settings-refresh-tab <span class="s">"jobs"</span> session)
+  <span class="cd">;; </span><span class="c">Manage timer in any live jobs buffer
+</span>  (<span class="k">dolist</span> (buf (buffer-list))
+    (<span class="k">when</span> (<span class="k">and</span> (buffer-live-p buf)
+               (string-match-p <span class="s">"eca-settings.*:jobs:"</span> (buffer-name buf)))
+      (eca-jobs--ensure-timer session buf)))
+  <span class="cd">;; </span><span class="c">Update modeline and bg job emoji in chat buffers
+</span>  (<span class="k">dolist</span> (chat-entry (eca--session-chats session))
+    (<span class="k">when-let*</span> ((chat-buf (cdr chat-entry)))
+      (<span class="k">when</span> (buffer-live-p chat-buf)
+        (<span class="k">with-current-buffer</span> chat-buf
+          (force-mode-line-update)
+          <span class="cd">;; </span><span class="c">Update tool call labels for background jobs
+</span>          (<span class="k">let</span> ((chat-id (car chat-entry)))
+            (<span class="k">dolist</span> (job (eca--session-jobs session))
+              (<span class="k">when-let*</span> ((tc-id (plist-get job <span class="bi">:toolCallId</span>))
+                          (job-chat (plist-get job <span class="bi">:chatId</span>))
+                          (_ (string= job-chat chat-id))
+                          (emoji (eca-jobs--status-emoji
+                                  (plist-get job <span class="bi">:status</span>))))
+                (eca-chat--update-bg-job-emoji
+                 tc-id emoji)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

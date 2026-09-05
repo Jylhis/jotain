@@ -1,0 +1,93 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-process--download-server – Emacs Documentation Online</title>
+<meta name="description" content="eca-process--download-server is a natively compiled function defined
+in eca-process.el.
+Download eca server of VERSION calling ON-DOWNLOADED when success.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-process--download-server</code></h1><p><span class="m"><code>eca-process--download-server</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-process.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-process--download-server <a href="#:~:text=calling-,ON-DOWNLOADED"><span class="arg">ON-DOWNLOADED</span></a> <a href="#:~:text=of-,VERSION"><span class="arg">VERSION</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=calls-,ON-ERROR"><span class="arg">ON-ERROR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Download eca server of <span class="arg">VERSION</span> calling <span class="arg">ON-DOWNLOADED</span> when success.
+<p>On failure calls <span class="arg">ON-ERROR</span> with the error when provided (at most
+once, even for errors in async download callbacks), otherwise just
+reports the error.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-process.el</span>
+(<span class="k">defun</span> <span class="f">eca-process--download-server</span> (on-downloaded version <span class="ty">&amp;optional</span> on-error)
+  <span class="doc">"Download eca server of VERSION calling ON-DOWNLOADED when success.
+On failure calls ON-ERROR with the error when provided (at most
+once, even for errors in async download callbacks), otherwise just
+reports the error."</span>
+  (<span class="k">-let</span> ((url (eca-process--download-url version))
+         ((download-path . store-path) (eca-process--download-and-store-path))
+         (old-path (concat eca-server-install-path <span class="s">".old"</span>))
+         (temp-extract-dir (concat (f-parent eca-server-install-path) <span class="s">"-temp"</span>))
+         (download-fn (<span class="k">pcase</span> eca-server-download-method
+                        ('url-retrieve #'eca--url-retrieve-download-file)
+                        ('curl #'eca--curl-download-file)
+                        (_ (<span class="w">error</span> (eca-error (format <span class="s">"Unknown download method '</span><span class="m s">%s</span><span class="s">' for eca-server-download-method"</span> eca-server-download-method))))))
+         (failed nil)
+         (fail-fn nil))
+    (<span class="k">setq</span> fail-fn (<span class="k">lambda</span> (err)
+                    (<span class="k">unless</span> failed
+                      (<span class="k">setq</span> failed t)
+                      (<span class="k">if</span> on-error
+                          (funcall on-error err)
+                        (eca-error <span class="s">"Failed to download eca server %s"</span> err)))))
+    (<span class="k">condition-case</span> err
+        (<span class="k">progn</span>
+          <span class="cd">;; </span><span class="c">Clean up any old files from previous updates
+</span>          (eca-process--cleanup-old-server)
+          (<span class="k">when</span> (f-exists? download-path) (f-delete download-path))
+          (<span class="k">when</span> (f-exists? temp-extract-dir) (f-delete temp-extract-dir t))
+          (mkdir (f-parent download-path) t)
+          (eca-info <span class="s">"Downloading eca server from %s to %s..."</span> url download-path)
+          (funcall
+           download-fn
+           <span class="bi">:url</span> url
+           <span class="bi">:path</span> download-path
+           <span class="bi">:on-error</span> fail-fn
+           <span class="bi">:on-done</span> (<span class="k">lambda</span> ()
+                      (<span class="k">condition-case</span> err
+                          (<span class="k">progn</span>
+                            (eca-info <span class="s">"Downloaded eca. Checking sha256..."</span>)
+                            (eca-process--check-sha256 download-path url version)
+                            (eca-info <span class="s">"Unzipping eca..."</span>)
+                            (<span class="k">unless</span> (<span class="k">and</span> eca-unzip-script (funcall eca-unzip-script))
+                              (<span class="w">error</span> <span class="s">"Unable to find `</span><span class="m s">unzip</span><span class="s">' or `</span><span class="m s">powershell</span><span class="s">' on the path, please customize `</span><span class="m s">eca-unzip-script</span><span class="s">'"</span>))
+                            <span class="cd">;; </span><span class="c">Extract to temp directory first
+</span>                            (mkdir temp-extract-dir t)
+                            (shell-command (format (funcall eca-unzip-script) download-path temp-extract-dir))
+                            (<span class="k">let</span> ((new-binary (eca-process--find-extracted-binary
+                                               temp-extract-dir (f-filename store-path))))
+                              (<span class="k">unless</span> new-binary
+                                (<span class="w">error</span> <span class="s">"Expected binary not found after extraction: %s"</span>
+                                       (f-join temp-extract-dir (f-filename store-path))))
+                              <span class="cd">;; </span><span class="c">Rename old binary to .old if it exists
+</span>                              <span class="cd">;; </span><span class="c">On Windows, running executables can be renamed but not deleted
+</span>                              (<span class="k">when</span> (f-exists? store-path)
+                                (<span class="k">when</span> (f-exists? old-path)
+                                  (<span class="k">condition-case</span> nil (f-delete old-path) (<span class="w">error</span> nil)))
+                                (rename-file store-path old-path))
+                              <span class="cd">;; </span><span class="c">Move new binary into place
+</span>                              (rename-file new-binary store-path))
+                            <span class="cd">;; </span><span class="c">Clean up temp directory
+</span>                            (<span class="k">when</span> (f-exists? temp-extract-dir)
+                              (<span class="k">condition-case</span> nil (f-delete temp-extract-dir t) (<span class="w">error</span> nil)))
+                            <span class="cd">;; </span><span class="c">Try to delete old binary (may fail if still in use, that's ok)
+</span>                            (<span class="k">when</span> (f-exists? old-path)
+                              (<span class="k">condition-case</span> nil (f-delete old-path) (<span class="w">error</span> nil)))
+                            (f-write-text version 'utf-8 eca-server-version-file-path)
+                            (set-file-modes store-path #o0700)
+                            (eca-info <span class="s">"Installed eca successfully!"</span>)
+                            (funcall on-downloaded))
+                        (<span class="w">error</span> (funcall fail-fn err))))))
+      (<span class="w">error</span> (funcall fail-fn err)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

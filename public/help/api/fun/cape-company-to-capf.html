@@ -1,0 +1,82 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: cape-company-to-capf – Emacs Documentation Online</title>
+<meta name="description" content="cape-company-to-capf is a natively compiled function defined in
+cape.el.
+Convert Company BACKEND function to Capf.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>cape-company-to-capf</code></h1><p><span class="m"><code>cape-company-to-capf</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">cape.el</span>.
+<h2>Signature</h2>
+<pre><code>(cape-company-to-capf <a href="#:~:text=Company-,BACKEND"><span class="arg">BACKEND</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=Capf.-,VALID"><span class="arg">VALID</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Convert Company <span class="arg">BACKEND</span> function to Capf.
+<p><span class="arg">VALID</span> is a function taking the old and new input string.  It should
+return nil if the cached candidates became invalid.  The default value
+for <span class="arg">VALID</span> is <a href="../fun/string-prefix-p.html"><code>string-prefix-p</code></a> such that the candidates are only fetched
+again if the input prefix changed.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4ylqcdhr31fki9yxzd4rhd2bm54ydhdn-emacs-packages-deps/share/emacs/site-lisp/elpa/cape-20260821.1208/cape.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">cape-company-to-capf</span> (backend <span class="ty">&amp;optional</span> valid)
+  <span class="doc">"Convert Company BACKEND function to Capf.
+VALID is a function taking the old and new input string.  It should
+return nil if the cached candidates became invalid.  The default value
+for VALID is `</span><span class="m doc">string-prefix-p</span><span class="doc">' such that the candidates are only fetched
+again if the input prefix changed."</span>
+  (<span class="k">lambda</span> ()
+    (<span class="k">when</span> (<span class="k">and</span> (symbolp backend) (not (fboundp backend)))
+      (<span class="k">ignore-errors</span> (<span class="k">require</span> <span class="m">backend</span> nil t)))
+    (<span class="k">when</span> (<span class="k">bound-and-true-p</span> company-mode)
+      (<span class="w">error</span> <span class="s">"`</span><span class="m s">cape-company-to-capf</span><span class="s">' should not be used with `</span><span class="m s">company-mode</span><span class="s">', use the Company backend directly instead"</span>))
+    (<span class="k">when</span> (<span class="k">and</span> (symbolp backend) (not (alist-get backend cape--company-init)))
+      (funcall backend 'init)
+      (put backend 'company-init t)
+      (<span class="k">setf</span> (alist-get backend cape--company-init) t))
+    (<span class="k">when-let*</span> ((pre (<span class="k">pcase</span> (cape--company-call backend 'prefix)
+                       ((<span class="k">or</span> `(,p ,_s) (<span class="k">and</span> (pred stringp) p)) (cons p (length p)))
+                       ((<span class="k">or</span> `(,p ,_s ,l) `(,p . ,l)) (cons p l)))))
+      (<span class="k">let*</span> ((end (point)) (beg (- end (length (car pre))))
+             (valid (<span class="k">if</span> (cape--company-call backend 'no-cache (car pre))
+                        #'equal (<span class="k">or</span> valid #'string-prefix-p)))
+             (sort-fun (<span class="k">and</span> (cape--company-call backend 'sorted) #'identity))
+             restore-props)
+        (list beg end
+              (funcall
+               (<span class="k">if</span> (cape--company-call backend 'ignore-case)
+                   #'completion-table-case-fold
+                 #'identity)
+               (cape--dynamic-table
+                beg end
+                (<span class="k">lambda</span> (input)
+                  (<span class="k">let</span> ((cands (cape--company-call backend 'candidates input)))
+                    <span class="cd">;; </span><span class="c">The candidate string including text properties should be
+</span>                    <span class="cd">;; </span><span class="c">restored in the :exit-function, unless the UI guarantees
+</span>                    <span class="cd">;; </span><span class="c">this itself, like Corfu.
+</span>                    (<span class="k">unless</span> (<span class="k">bound-and-true-p</span> corfu-mode)
+                      (<span class="k">setq</span> restore-props cands))
+                    (cons (apply-partially valid input) cands)))))
+              <span class="bi">:category</span> backend
+              <span class="bi">:exclusive</span> 'no
+              <span class="bi">:company-prefix-length</span> (cdr pre)
+              <span class="bi">:company-doc-buffer</span> (<span class="k">lambda</span> (x) (cape--company-call backend 'doc-buffer x))
+              <span class="bi">:company-location</span> (<span class="k">lambda</span> (x) (cape--company-call backend 'location x))
+              <span class="bi">:company-docsig</span> (<span class="k">lambda</span> (x) (cape--company-call backend 'meta x))
+              <span class="bi">:company-deprecated</span> (<span class="k">lambda</span> (x) (cape--company-call backend 'deprecated x))
+              <span class="bi">:company-kind</span> (<span class="k">lambda</span> (x) (cape--company-call backend 'kind x))
+              <span class="bi">:display-sort-function</span> sort-fun
+              <span class="bi">:cycle-sort-function</span> sort-fun
+              <span class="bi">:annotation-function</span> (<span class="k">lambda</span> (x)
+                                     (<span class="k">when-let*</span> ((ann (cape--company-call backend 'annotation x)))
+                                       (concat <span class="s">" "</span> (string-trim ann))))
+              <span class="bi">:exit-function</span> (<span class="k">lambda</span> (x _status)
+                               <span class="cd">;; </span><span class="c">Restore the candidate string including
+</span>                               <span class="cd">;; </span><span class="c">properties if restore-props is non-nil.  See
+</span>                               <span class="cd">;; </span><span class="c">the comment above.
+</span>                               (<span class="k">setq</span> x (<span class="k">or</span> (car (member x restore-props)) x))
+                               (cape--company-call backend 'post-completion x)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

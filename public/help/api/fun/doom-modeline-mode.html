@@ -1,0 +1,122 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: doom-modeline-mode – Emacs Documentation Online</title>
+<meta name="description" content="doom-modeline-mode is an interactive and natively compiled function
+defined in doom-modeline.el.
+Toggle doom-modeline on or off.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>doom-modeline-mode</code></h1><p><span class="m"><code>doom-modeline-mode</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">doom-modeline.el</span>.
+<h2>Signature</h2>
+<pre><code>(doom-modeline-mode <span class="ty">&amp;optional</span> <a href="#:~:text=if-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Toggle <a href="../fun/doom-modeline.html"><code>doom-modeline</code></a> on or off.
+<p>This is a global minor mode.  If called interactively, toggle the
+<span class="m"><code>Doom-Modeline mode</code></span> mode.  If the prefix argument is positive, enable
+the mode, and if it is zero or negative, disable the mode.
+<p>If called from Lisp, toggle the mode if <span class="arg">ARG</span> is <span class="m"><code>toggle</code></span>.  Enable the
+mode if <span class="arg">ARG</span> is nil, omitted, or is a positive number.  Disable the mode
+if <span class="arg">ARG</span> is a negative number.
+<p>To check whether the minor mode is enabled in the current buffer,
+evaluate <span class="m"><code>(default-value \=</code></span>doom-modeline-mode)'.
+<p>The mode's hook is called both when the mode is enabled and when it is
+disabled.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mxkjlhf33q1xxjiii3w5v8nn7avms0p9-emacs-packages-deps/share/emacs/site-lisp/elpa/doom-modeline-20260828.1146/doom-modeline.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">define-minor-mode</span> <span class="f">doom-modeline-mode</span>
+  <span class="doc">"Toggle `</span><span class="m doc">doom-modeline</span><span class="doc">' on or off."</span>
+  <span class="bi">:group</span> 'doom-modeline
+  <span class="bi">:global</span> t
+  <span class="bi">:lighter</span> nil
+  <span class="bi">:keymap</span> doom-modeline-mode-map
+  (<span class="k">if</span> doom-modeline-mode
+      (<span class="k">progn</span>
+        (doom-modeline-refresh-bars)        <span class="cd">; </span><span class="c">Create bars
+</span>        (doom-modeline-set-main-modeline t) <span class="cd">; </span><span class="c">Set default mode-line
+</span>
+        <span class="cd">;; </span><span class="c">Apply to all existing buffers.
+</span>        (<span class="k">dolist</span> (buf (buffer-list))
+          (<span class="k">with-current-buffer</span> buf
+            (<span class="k">when</span> (<span class="k">and</span> mode-line-format
+                       (not (doom-modeline-auto-set-modeline)))
+              (doom-modeline-set-main-modeline))))
+
+        <span class="cd">;; </span><span class="c">For flymake
+</span>        (<span class="k">setq</span> flymake-mode-line-format nil) <span class="cd">; </span><span class="c">remove the lighter of minor mode
+</span>
+        <span class="cd">;; </span><span class="c">For Eldoc
+</span>        (<span class="k">setq</span> eldoc-message-function #'doom-modeline-eldoc-minibuffer-message)
+
+        <span class="cd">;; </span><span class="c">For two-column editing
+</span>        (<span class="k">setq</span> 2C-mode-line-format (doom-modeline 'special))
+
+        <span class="cd">;; </span><span class="c">For window
+</span>        (<span class="k">if</span> (boundp 'after-focus-change-function)
+            (<span class="k">add-function</span> <span class="bi">:after</span> after-focus-change-function #'doom-modeline-focus-change)
+          (with-no-warnings
+            (add-hook 'focus-in-hook #'doom-modeline-set-selected-window)
+            (add-hook 'focus-out-hook #'doom-modeline-unset-selected-window)))
+        (add-hook 'window-selection-change-functions #'doom-modeline-set-selected-window)
+
+        <span class="cd">;; </span><span class="c">Automatically set mode-lines
+</span>        (add-hook 'after-change-major-mode-hook #'doom-modeline-auto-set-modeline)
+
+        <span class="cd">;; </span><span class="c">Setup font height cache
+</span>        (add-hook 'after-setting-font-hook #'doom-modeline--reset-font-height-cache)
+
+        <span class="cd">;; </span><span class="c">Special handles
+</span>        (advice-add #'speedbar-set-mode-line-format <span class="bi">:override</span> #'doom-modeline-set-speebar-modeline)
+
+        (add-hook 'git-timemachine-mode-hook #'doom-modeline-set-git-timemachine-modeline)
+
+        (advice-add #'helm-display-mode-line <span class="bi">:after</span> #'doom-modeline-set-helm-modeline)
+        (<span class="k">setq</span> helm-ag-show-status-function #'doom-modeline-set-helm-modeline))
+    (<span class="k">progn</span>
+      <span class="cd">;; </span><span class="c">Restore mode-line
+</span>      (<span class="k">let</span> ((original-format (doom-modeline--original-value 'mode-line-format)))
+        (<span class="k">setq-default</span> mode-line-format original-format)
+        (<span class="k">dolist</span> (buf (buffer-list))
+          (<span class="k">with-current-buffer</span> buf
+            (<span class="k">when</span> mode-line-format
+              (<span class="k">setq</span> mode-line-format original-format)))))
+
+      <span class="cd">;; </span><span class="c">For flymake
+</span>      (<span class="k">setq</span> flymake-mode-line-format (doom-modeline--original-value 'flymake-mode-line-format))
+
+      <span class="cd">;; </span><span class="c">For Eldoc
+</span>      (<span class="k">setq</span> eldoc-message-function #'eldoc-minibuffer-message)
+
+      <span class="cd">;; </span><span class="c">For two-column editing
+</span>      (<span class="k">setq</span> 2C-mode-line-format (doom-modeline--original-value '2C-mode-line-format))
+
+      <span class="cd">;; </span><span class="c">Cleanup
+</span>      <span class="cd">;; </span><span class="c">For window
+</span>      (<span class="k">if</span> (boundp 'after-focus-change-function)
+          (<span class="k">remove-function</span> after-focus-change-function #'doom-modeline-focus-change)
+        (with-no-warnings
+          (remove-hook 'focus-in-hook #'doom-modeline-set-selected-window)
+          (remove-hook 'focus-out-hook #'doom-modeline-unset-selected-window)))
+      (remove-hook 'window-selection-change-functions #'doom-modeline-set-selected-window)
+
+      <span class="cd">;; </span><span class="c">For major modes
+</span>      (remove-hook 'after-change-major-mode-hook #'doom-modeline-auto-set-modeline)
+
+      <span class="cd">;; </span><span class="c">For font height cache
+</span>      (remove-hook 'after-setting-font-hook #'doom-modeline--reset-font-height-cache)
+
+      <span class="cd">;; </span><span class="c">For special handles
+</span>      (advice-remove #'speedbar-set-mode-line-format #'doom-modeline-set-speebar-modeline)
+      (<span class="k">and</span> (fboundp 'speedbar-set-mode-line-format) (speedbar-set-mode-line-format)) <span class="cd">; </span><span class="c">reset speedbar
+</span>
+      (remove-hook 'git-timemachine-mode-hook #'doom-modeline-set-git-timemachine-modeline)
+
+      (advice-remove #'helm-display-mode-line #'doom-modeline-set-helm-modeline)
+      (<span class="k">setq</span> helm-ag-show-status-function (default-value 'helm-ag-show-status-function)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

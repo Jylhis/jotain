@@ -1,0 +1,68 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apheleia--run-formatter-function – Emacs Documentation Online</title>
+<meta name="description" content="apheleia--run-formatter-function is a natively compiled function
+defined in apheleia-formatters.el.
+Run a formatter using a Lisp function FUNC.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apheleia--run-formatter-function</code></h1><p><span class="m"><code>apheleia--run-formatter-function</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">apheleia-formatters.el</span>.
+<h2>Signature</h2>
+<pre><code>(apheleia--run-formatter-function <a href="#:~:text=function-,FUNC"><span class="arg">FUNC</span></a> <a href="#:~:text=of-,BUFFER"><span class="arg">BUFFER</span></a> <a href="#:~:text=BUFFER,-,REMOTE"><span class="arg">REMOTE</span></a> <a href="#:~:text=REMOTE,-,CALLBACK"><span class="arg">CALLBACK</span></a> <a href="#:~:text=and-,STDIN"><span class="arg">STDIN</span></a> <a href="#:~:text=STDIN.-,FORMATTER"><span class="arg">FORMATTER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run a formatter using a Lisp function <span class="arg">FUNC</span>.
+<p>See <a href="../fun/apheleia--run-formatters.html"><code>apheleia--run-formatters</code></a> for a description of <span class="arg">BUFFER</span>, <span class="arg">REMOTE</span>,
+<span class="arg">CALLBACK</span> and <span class="arg">STDIN</span>. <span class="arg">FORMATTER</span> is the symbol of the current formatter
+being run, for diagnostic purposes.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbykkl13khzh84lv9vw1bf1vijzg30fr-emacs-packages-deps/share/emacs/site-lisp/elpa/apheleia-20260817.2331/apheleia-formatters.el</span>
+(<span class="k">defun</span> <span class="f">apheleia--run-formatter-function</span>
+    (func buffer remote callback stdin formatter)
+  <span class="doc">"Run a formatter using a Lisp function FUNC.
+See `</span><span class="m doc">apheleia--run-formatters</span><span class="doc">' for a description of BUFFER, REMOTE,
+CALLBACK and STDIN. FORMATTER is the symbol of the current formatter
+being run, for diagnostic purposes."</span>
+  (<span class="k">let*</span> ((formatter-name (<span class="k">if</span> (symbolp func) (symbol-name func) <span class="s">"lambda"</span>))
+         (scratch (generate-new-buffer
+                   (format <span class="s">" *apheleia-%s-scratch*"</span> formatter-name))))
+    (<span class="k">with-current-buffer</span> scratch
+      <span class="cd">;; </span><span class="c">We expect FUNC to modify scratch in place so we can't simply pass
+</span>      <span class="cd">;; </span><span class="c">STDIN to it. When STDIN isn't nil, it's the output of a previous
+</span>      <span class="cd">;; </span><span class="c">formatter and we want to keep it alive so we can debug any issues
+</span>      <span class="cd">;; </span><span class="c">with it.
+</span>      (insert-buffer-substring (<span class="k">or</span> stdin buffer))
+      (funcall func
+               <span class="cd">;; </span><span class="c">Original buffer being formatted. This shouldn't be
+</span>               <span class="cd">;; </span><span class="c">modified. You can use it to check things like the
+</span>               <span class="cd">;; </span><span class="c">current major mode, or the buffer filename. If you
+</span>               <span class="cd">;; </span><span class="c">use it as input for the formatter, your formatter
+</span>               <span class="cd">;; </span><span class="c">won't work when chained after another formatter.
+</span>               <span class="bi">:buffer</span> buffer
+               <span class="cd">;; </span><span class="c">Buffer the formatter should modify. This starts out
+</span>               <span class="cd">;; </span><span class="c">containing the original file contents, which will be
+</span>               <span class="cd">;; </span><span class="c">the same as `</span><span class="m c">buffer</span><span class="c">' except it has already been
+</span>               <span class="cd">;; </span><span class="c">transformed by any formatters that ran previously.
+</span>               <span class="bi">:scratch</span> scratch
+               <span class="cd">;; </span><span class="c">Name of the current formatter symbol, e.g. `</span><span class="m c">black</span><span class="c">'.
+</span>               <span class="bi">:formatter</span> formatter
+               <span class="cd">;; </span><span class="c">Callback. Should pass an error value (cons of symbol
+</span>               <span class="cd">;; </span><span class="c">and data, like for `</span><span class="m c">signal</span><span class="c">') or nil. For backwards
+</span>               <span class="cd">;; </span><span class="c">compatibility it can also invoke only on success,
+</span>               <span class="cd">;; </span><span class="c">with no args.
+</span>               <span class="bi">:callback</span>
+               (<span class="k">lambda</span> (<span class="ty">&amp;optional</span> err)
+                 (<span class="k">unwind-protect</span>
+                     (funcall callback err (<span class="k">when</span> (not err) scratch))
+                   (kill-buffer scratch)))
+               <span class="cd">;; </span><span class="c">The remote part of the buffers file-name or directory.
+</span>               <span class="bi">:remote</span> remote
+               <span class="cd">;; </span><span class="c">Whether the formatter should be run async or not.
+</span>               <span class="bi">:async</span> (not remote)
+               <span class="cd">;; </span><span class="c">Callback when formatting scratch has failed.
+</span>               <span class="bi">:callback</span>
+               (apply-partially #'kill-buffer scratch)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

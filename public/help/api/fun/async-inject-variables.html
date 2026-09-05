@@ -1,0 +1,87 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: async-inject-variables – Emacs Documentation Online</title>
+<meta name="description" content="async-inject-variables is a natively compiled function defined in
+async.el.
+Return a setq form that replicates part of the calling environment.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>async-inject-variables</code></h1><p><span class="m"><code>async-inject-variables</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">async.el</span>.
+<h2>Signature</h2>
+<pre><code>(async-inject-variables <a href="#:~:text=matching-,INCLUDE-REGEXP"><span class="arg">INCLUDE-REGEXP</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=also-,PREDICATE"><span class="arg">PREDICATE</span></a> <a href="#:~:text=matching-,EXCLUDE-REGEXP"><span class="arg">EXCLUDE-REGEXP</span></a> <a href="#:~:text=When-,NOPROPS"><span class="arg">NOPROPS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a <a href="../fun/setq.html"><code>setq</code></a> form that replicates part of the calling environment.
+<p>It sets the value for every variable matching <span class="arg">INCLUDE-REGEXP</span> and
+also <span class="arg">PREDICATE</span>.  It will not perform injection for any variable
+matching <span class="arg">EXCLUDE-REGEXP</span> (if present) and variables matching one of
+<a href="../var/async-inject-variables-exclude-regexps.html"><code>async-inject-variables-exclude-regexps</code></a>.
+When <span class="arg">NOPROPS</span> is non nil it tries to strip out text properties of each
+variable's value with <a href="../var/async-variables-noprops-function.html"><code>async-variables-noprops-function</code></a>.
+<p>It is intended to be used as follows:
+<p>&nbsp;&nbsp;&nbsp;&nbsp;(async-start
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`(<span class="k">lambda</span> ()
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">require</span> '<span class="m"><code>smtpmail</code></span>)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">with-temp-buffer</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(insert ,(buffer-substring-no-properties (point-min) (point-max)))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cd">;; </span><span class="c">Pass in the variable environment for smtpmail
+</span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;,(async-inject-variables <span class="s">"\\</span><span class="bi s">\\=</span><span class="s">`</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">smtpmail</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">user-</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?mail</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">-"</span>)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(smtpmail-send-it)))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'ignore)
+<h2>Aliases</h2>
+<p><a href="../fun/async-inject-environment.html"><code>async-inject-environment</code></a>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vpxd64bbf27n3ziyqnh29vmak5xnpk2l-emacs-packages-deps/share/emacs/site-lisp/elpa/async-20260729.1431/async.el</span>
+(<span class="k">defun</span> <span class="f">async-inject-variables</span>
+    (include-regexp <span class="ty">&amp;optional</span> predicate exclude-regexp noprops)
+  <span class="doc">"Return a `</span><span class="m doc">setq</span><span class="doc">' form that replicates part of the calling environment.
+
+It sets the value for every variable matching INCLUDE-REGEXP and
+also PREDICATE.  It will not perform injection for any variable
+matching EXCLUDE-REGEXP (if present) and variables matching one of
+`</span><span class="m doc">async-inject-variables-exclude-regexps</span><span class="doc">'.
+When NOPROPS is non nil it tries to strip out text properties of each
+variable's value with `</span><span class="m doc">async-variables-noprops-function</span><span class="doc">'.
+
+It is intended to be used as follows:
+
+    (async-start
+       </span><span class="bi doc">\\=</span><span class="doc">`(lambda ()
+          (require </span><span class="bi doc">\\=</span><span class="doc">'smtpmail)
+          (with-temp-buffer
+            (insert ,(buffer-substring-no-properties (point-min) (point-max)))
+            ;; Pass in the variable environment for smtpmail
+            ,(async-inject-variables \"\\</span><span class="bi doc">\\=</span><span class="doc">`\\(smtpmail\\|\\(user-\\)?mail\\)-\")
+            (smtpmail-send-it)))
+       </span><span class="bi doc">\\=</span><span class="doc">'ignore)"</span>
+  `(<span class="k">setq</span>
+    ,@(<span class="k">let</span> (bindings)
+        (mapatoms
+         (<span class="k">lambda</span> (sym)
+           (<span class="k">let</span> ((sname (<span class="k">and</span> (boundp sym) (symbol-name sym)))
+                 value)
+             (<span class="k">when</span> (<span class="k">and</span> sname
+                        (<span class="k">or</span> (null include-regexp)
+                            (string-match include-regexp sname))
+                        (<span class="k">or</span> (null exclude-regexp)
+                            (not (string-match exclude-regexp sname)))
+                        (<span class="k">cl-loop</span> for re in async-inject-variables-exclude-regexps
+                                 never (string-match-p re sname)))
+               (<span class="k">setq</span> value (symbol-value sym))
+               (<span class="k">unless</span> (<span class="k">or</span> (stringp value)
+                           (memq value '(nil t))
+                           (numberp value)
+                           (vectorp value))
+                 (<span class="k">setq</span> value `(<span class="k">quote</span> ,value)))
+               (<span class="k">when</span> noprops
+                 (<span class="k">setq</span> value (funcall async-variables-noprops-function
+                                      value)))
+               (<span class="k">when</span> (<span class="k">or</span> (null predicate)
+                         (funcall predicate sym))
+                 (<span class="k">setq</span> bindings (cons value bindings)
+                       bindings (cons sym bindings)))))))
+        bindings)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

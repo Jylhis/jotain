@@ -1,0 +1,97 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--key-pressed-deletion – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--key-pressed-deletion is a natively compiled function defined
+in eca-chat.el.
+Apply SIDE-EFFECT-FN with ARGS before point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--key-pressed-deletion</code></h1><p><span class="m"><code>eca-chat--key-pressed-deletion</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--key-pressed-deletion <a href="#:~:text=Apply-,SIDE-EFFECT-FN"><span class="arg">SIDE-EFFECT-FN</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=with-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply <span class="arg">SIDE-EFFECT-FN</span> with <span class="arg">ARGS</span> before point.
+<p>Unless at the prompt field boundary.
+Checks if it's in a context, removing it if so.
+This is similar to actions like <a href="../fun/backward-delete-char.html"><code>backward-delete-char</code></a> but protects
+the prompt/context line.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--key-pressed-deletion</span> (side-effect-fn <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Apply SIDE-EFFECT-FN with ARGS before point.
+Unless at the prompt field boundary.
+Checks if it's in a context, removing it if so.
+This is similar to actions like `</span><span class="m doc">backward-delete-char</span><span class="doc">' but protects
+the prompt/context line."</span>
+  (<span class="k">if</span> (derived-mode-p 'eca-chat-mode)
+      (<span class="k">let*</span> ((cur-ov (car (overlays-in (line-beginning-position) (line-end-position))))
+             (prompt-ov (eca-chat--prompt-field-ov))
+             (text (thing-at-point 'symbol))
+             (in-prompt? (eca-chat--point-at-prompt-field-p))
+             (context-item (<span class="k">-some-&gt;&gt;</span> text
+                             (get-text-property 0 'eca-chat-context-item)))
+             (item-str-length (<span class="k">-some-&gt;&gt;</span> text
+                                (get-text-property 0 'eca-chat-item-str-length))))
+        (<span class="k">cond</span>
+         <span class="cd">;; </span><span class="c">expandable item in context area
+</span>         ((<span class="k">and</span> cur-ov
+               context-item
+               (not in-prompt?))
+          (<span class="k">setq-local</span> eca-chat--context (delete context-item eca-chat--context))
+          (eca-chat--refresh-context))
+
+         <span class="cd">;; </span><span class="c">expandable item in prompt
+</span>         ((<span class="k">and</span> cur-ov
+               item-str-length
+               in-prompt?)
+          (<span class="k">while</span> (<span class="k">and</span> (not (eolp))
+                      (get-text-property (point) 'eca-chat-item-str-length))
+            (forward-char 1))
+          (delete-region (- (point) item-str-length) (point)))
+
+         <span class="cd">;; </span><span class="c">Handle some evil commands
+</span>         ((<span class="k">and</span> in-prompt?
+               (<span class="k">or</span> (eq #'evil-delete this-command)
+                   (eq #'evil-change-line this-command)))
+          (<span class="k">setf</span> (nth 2 args) nil) <span class="cd">;; </span><span class="c">do not delete prompt line passing nil argument
+</span>          (apply side-effect-fn args))
+
+         <span class="cd">;; </span><span class="c">start of the prompt - keep the guard everywhere above the
+</span>         <span class="cd">;; </span><span class="c">prompt-field start, but at the start itself block only *backward*
+</span>         <span class="cd">;; </span><span class="c">deletions.  A forward deletion there (`</span><span class="m c">delete-char</span><span class="c">' from
+</span>         <span class="cd">;; </span><span class="c">evil-invert-char ~, evil-replace r, evil-delete-char x,
+</span>         <span class="cd">;; </span><span class="c">evil-substitute s, or C-d) removes the first prompt char, which
+</span>         <span class="cd">;; </span><span class="c">is legitimate; everything else is unchanged.  A negative count
+</span>         <span class="cd">;; </span><span class="c">(e.g. `C-u - C-d') makes `</span><span class="m c">delete-char</span><span class="c">' delete backward, so still
+</span>         <span class="cd">;; </span><span class="c">guard that.
+</span>         ((<span class="k">and</span> prompt-ov
+               (<span class="k">or</span> (&lt; (point) (overlay-start prompt-ov))
+                   (<span class="k">and</span> (= (point) (overlay-start prompt-ov))
+                        (<span class="k">or</span> (memq this-command eca-chat--prompt-boundary-guard-commands)
+                            (<span class="k">and</span> (integerp (car args)) (&lt; (car args) 0))))
+                   (<span class="k">and</span> (eq 'backward-kill-word this-command)
+                        (string-blank-p (buffer-substring-no-properties
+                                         (overlay-start prompt-ov) (point))))))
+          (ding))
+
+         <span class="cd">;; </span><span class="c">in context area trying to remove a context space separator
+</span>         ((<span class="k">and</span> cur-ov
+               (overlay-get cur-ov 'eca-chat-context-area)
+               (<span class="k">and</span> (string= <span class="s">" "</span> (string (char-before (point))))
+                    (not (eolp)))))
+
+         <span class="cd">;; </span><span class="c">in context area removing a context
+</span>         ((<span class="k">and</span> cur-ov
+               (overlay-get cur-ov 'eca-chat-context-area)
+               (string= eca-chat-context-prefix (string (char-before (point)))))
+          (<span class="k">setq-local</span> eca-chat--context (delete (car (last eca-chat--context)) eca-chat--context))
+          (eca-chat--refresh-context)
+          (end-of-line))
+
+         (t (apply side-effect-fn args))))
+    (apply side-effect-fn args)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

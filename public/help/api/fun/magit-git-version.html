@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-git-version – Emacs Documentation Online</title>
+<meta name="description" content="magit-git-version is a natively compiled function defined in
+magit-git.el.
+Return the Git version used for default-directory.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-git-version</code></h1><p><span class="m"><code>magit-git-version</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-git.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-git-version)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the Git version used for <a href="../var/default-directory.html"><code>default-directory</code></a>.
+<p>Raise an error if Git cannot be found, if it exits with a
+non-zero status, or the output does not have the expected
+format.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-git.el</span>
+(<span class="k">defun</span> <span class="f">magit-git-version</span> ()
+  <span class="doc">"Return the Git version used for `</span><span class="m doc">default-directory</span><span class="doc">'.
+Raise an error if Git cannot be found, if it exits with a
+non-zero status, or the output does not have the expected
+format."</span>
+  (<span class="k">magit--with-refresh-cache</span> (list default-directory)
+    (<span class="k">let</span> ((host (file-remote-p default-directory)))
+      (<span class="k">or</span> (cdr (assoc host magit--host-git-version-cache))
+          (<span class="k">magit--with-temp-process-buffer</span>
+            <span class="cd">;; </span><span class="c">Unset global arguments for ancient Git versions.
+</span>            (<span class="k">let*</span> ((magit-git-global-arguments nil)
+                   (status (magit-process-git t <span class="s">"version"</span>))
+                   (output (buffer-string)))
+              (<span class="k">cond</span>
+                ((not (zerop status))
+                 (display-warning
+                  'magit
+                  (format <span class="s">"%S\n\nRunning \"%s --version\" failed with output:\n\n%s"</span>
+                          (<span class="k">if</span> host
+                              (format <span class="s">"Magit cannot find Git on host %S.\n
+Check the value of `</span><span class="m s">magit-remote-git-executable</span><span class="s">' using
+`</span><span class="m s">magit-debug-git-executable</span><span class="s">' and consult the info node
+`(tramp)Remote programs'."</span> host)
+                            <span class="s">"Magit cannot find Git.\n
+Check the values of `</span><span class="m s">magit-git-executable</span><span class="s">' and `</span><span class="m s">exec-path</span><span class="s">'
+using `</span><span class="m s">magit-debug-git-executable</span><span class="s">'."</span>)
+                          (magit-git-executable)
+                          output)))
+                ((<span class="k">save-match-data</span>
+                   (<span class="k">and</span> (string-match magit--git-version-regexp output)
+                        (<span class="k">let</span> ((version (match-str 1 output)))
+                          (<span class="k">push</span> (cons host version)
+                                magit--host-git-version-cache)
+                          version))))
+                ((<span class="w">error</span> <span class="s">"Unexpected \"%s --version\" output: %S"</span>
+                        (magit-git-executable)
+                        output)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

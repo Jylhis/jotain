@@ -1,0 +1,135 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-view-mouse-set-region – Emacs Documentation Online</title>
+<meta name="description" content="pdf-view-mouse-set-region is an interactive and natively compiled
+function defined in pdf-view.el.
+Select a region of text using the mouse with mouse event EVENT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-view-mouse-set-region</code></h1><p><span class="m"><code>pdf-view-mouse-set-region</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">pdf-view.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-view-mouse-set-region <a href="#:~:text=event-,EVENT"><span class="arg">EVENT</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=if-,ALLOW-EXTEND-P"><span class="arg">ALLOW-EXTEND-P</span></a> <a href="#:~:text=if-,RECTANGLE-P"><span class="arg">RECTANGLE-P</span></a> <a href="#:~:text=with-,SELECTION-STYLE"><span class="arg">SELECTION-STYLE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Select a region of text using the mouse with mouse event <span class="arg">EVENT</span>.
+<p>Allow for stacking of regions, if <span class="arg">ALLOW-EXTEND-P</span> is non-nil.
+<p>Create a rectangular region, if <span class="arg">RECTANGLE-P</span> is non-nil.
+<p>Overwrite <a href="../var/pdf-view-selection-style.html"><code>pdf-view-selection-style</code></a> with <span class="arg">SELECTION-STYLE</span>,
+which is one of <span class="m"><code>glyph</code></span>, <span class="m"><code>word</code></span>, or <span class="m"><code>line</code></span>.
+<p>Stores the region in <a class="v" href="../var/pdf-view-active-region.html"><code>pdf-view-active-region</code>(var)</a>/<a class="f" href="../fun/pdf-view-active-region.html"><code>pdf-view-active-region</code>(fun)</a>.
+<h2>Key Bindings</h2>
+<p><span class="v">pdf-view-mode-map</span> <span class="key">&lt;down-mouse-1&gt;</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-view.el</span>
+(<span class="k">defun</span> <span class="f">pdf-view-mouse-set-region</span> (event <span class="ty">&amp;optional</span> allow-extend-p
+                                        rectangle-p
+                                        selection-style)
+  <span class="doc">"Select a region of text using the mouse with mouse event EVENT.
+
+Allow for stacking of regions, if ALLOW-EXTEND-P is non-nil.
+
+Create a rectangular region, if RECTANGLE-P is non-nil.
+
+Overwrite `</span><span class="m doc">pdf-view-selection-style</span><span class="doc">' with SELECTION-STYLE,
+which is one of `</span><span class="m doc">glyph</span><span class="doc">', `</span><span class="m doc">word</span><span class="doc">', or `</span><span class="m doc">line</span><span class="doc">'.
+
+Stores the region in `</span><span class="m doc">pdf-view-active-region</span><span class="doc">'."</span>
+  (<span class="k">interactive</span> <span class="s">"@e"</span>)
+  (<span class="k">setq</span> pdf-view--have-rectangle-region rectangle-p)
+  (<span class="k">unless</span> (<span class="k">and</span> (eventp event)
+               (mouse-event-p event))
+    (<span class="w">signal</span> 'wrong-type-argument (list 'mouse-event-p event)))
+  (<span class="k">unless</span> (<span class="k">and</span> allow-extend-p
+               (<span class="k">or</span> (null (get this-command 'pdf-view-region-window))
+                   (equal (get this-command 'pdf-view-region-window)
+                          (selected-window))))
+    (pdf-view-deactivate-region))
+  (put this-command 'pdf-view-region-window
+       (selected-window))
+  (<span class="k">let*</span> ((window (selected-window))
+         (pos (event-start event))
+         (begin-inside-image-p t)
+         (begin (<span class="k">if</span> (posn-image pos)
+                    (posn-object-x-y pos)
+                  (<span class="k">setq</span> begin-inside-image-p nil)
+                  (posn-x-y pos)))
+         (abs-begin (posn-x-y pos))
+         (page (<span class="k">if</span> pdf-view-roll-minor-mode
+                   (/ (+ 3 (posn-point pos)) 4)
+                 (<span class="k">pdf-view-current-page</span>)))
+         (margin (frame-char-height))
+         (selection-style (<span class="k">or</span> selection-style pdf-view-selection-style))
+         pdf-view-continuous
+         region)
+    (<span class="k">setq</span> pdf-view-active-region (list page))
+    (<span class="k">when</span> (<span class="k">pdf-util-track-mouse-dragging</span> (event 0.05)
+            (<span class="k">let*</span> ((pos (event-start event))
+                   (end (posn-object-x-y pos))
+                   (end-inside-image-p
+                    (<span class="k">and</span> (eq window (posn-window pos))
+                         (posn-image pos))))
+              (<span class="k">when</span> (<span class="k">or</span> end-inside-image-p
+                        begin-inside-image-p)
+                (<span class="k">cond</span>
+                 ((<span class="k">and</span> end-inside-image-p
+                       (not begin-inside-image-p))
+                  <span class="cd">;; </span><span class="c">Started selection outside the image, setup begin.
+</span>                  (<span class="k">let*</span> ((xy (posn-x-y pos))
+                         (dxy (cons (- (car xy) (car begin))
+                                    (- (cdr xy) (cdr begin))))
+                         (size (pdf-view-image-size t)))
+                    (<span class="k">setq</span> begin (cons (max 0 (min (car size)
+                                                  (- (car end) (car dxy))))
+                                      (max 0 (min (cdr size)
+                                                  (- (cdr end) (cdr dxy)))))
+                          <span class="cd">;; </span><span class="c">Store absolute position for later.
+</span>                          abs-begin (cons (- (car xy)
+                                             (- (car end)
+                                                (car begin)))
+                                          (- (cdr xy)
+                                             (- (cdr end)
+                                                (cdr begin))))
+                          begin-inside-image-p t)))
+                 ((<span class="k">and</span> begin-inside-image-p
+                       (not end-inside-image-p))
+                  <span class="cd">;; </span><span class="c">Moved outside the image, setup end.
+</span>                  (<span class="k">let*</span> ((xy (posn-x-y pos))
+                         (dxy (cons (- (car xy) (car abs-begin))
+                                    (- (cdr xy) (cdr abs-begin))))
+                         (size (pdf-view-image-size t)))
+                    (<span class="k">setq</span> end (cons (max 0 (min (car size)
+                                                (+ (car begin) (car dxy))))
+                                    (max 0 (min (cdr size)
+                                                (+ (cdr begin) (cdr dxy)))))))))
+                (<span class="k">let*</span> ((iregion (<span class="k">if</span> rectangle-p
+                                    (list (min (car begin) (car end))
+                                          (min (cdr begin) (cdr end))
+                                          (max (car begin) (car end))
+                                          (max (cdr begin) (cdr end)))
+                                  (list (car begin) (cdr begin)
+                                        (car end) (cdr end))))
+                       (y (cdr (posn-x-y pos)))
+                       (dy (- y (cdr abs-begin))))
+                  (<span class="k">setq</span> region
+                        (pdf-util-scale-pixel-to-relative iregion))
+                  (pdf-view-display-region
+                   (cons page (cons region (cdr pdf-view-active-region)))
+                   rectangle-p
+                   selection-style)
+                  (<span class="k">if</span> pdf-view-roll-minor-mode
+                      (<span class="k">cond</span>
+                       ((<span class="k">and</span> (&gt; dy 0) (&lt; (- (window-text-height window t) y) margin))
+                        (pdf-roll-scroll-forward
+                         (min margin
+                              (<span class="k">or</span> (nth 3 (pos-visible-in-window-p (posn-point pos) window t)) 0))))
+                       ((<span class="k">and</span> (&lt; dy 0) (&lt; (- y (window-header-line-height window)) margin))
+                        (pdf-roll-scroll-backward
+                         (min margin
+                              (<span class="k">or</span> (nth 2 (pos-visible-in-window-p (posn-point pos) window t)) 0)))))
+                    (pdf-util-scroll-to-edges iregion))))))
+      (<span class="k">cl-callf</span> append (cdr pdf-view-active-region) (list region))
+      (pdf-view--push-mark))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

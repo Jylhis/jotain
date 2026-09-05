@@ -1,0 +1,212 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-part-scan – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-part-scan is a natively compiled function defined in
+web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-part-scan</code></h1><p><span class="m"><code>web-mode-part-scan</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-part-scan <span class="arg">REG-BEG</span> <span class="arg">REG-END</span> <span class="ty">&amp;optional</span> <span class="arg">CONTENT-TYPE</span> <span class="arg">DEPTH</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-part-scan</span> (reg-beg reg-end <span class="ty">&amp;optional</span> content-type depth)
+  (<span class="k">save-excursion</span>
+    (<span class="k">let</span> (token-re ch-before ch-at ch-next token-type beg continue)
+      <span class="cd">;;</span><span class="c">(message "%S %S" reg-beg reg-end)
+</span>      (<span class="k">cond</span>
+        (content-type
+         )
+        ((member web-mode-content-type web-mode-part-content-types)
+         (<span class="k">setq</span> content-type web-mode-content-type))
+        (t
+         (<span class="k">setq</span> content-type (symbol-name (get-text-property reg-beg 'part-side))))
+        ) <span class="cd">;</span><span class="c">cond
+</span>
+      (goto-char reg-beg)
+
+      (<span class="k">cond</span>
+        ((member content-type '(<span class="s">"javascript"</span> <span class="s">"json"</span>))
+         (<span class="k">setq</span> token-re <span class="s">"/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">`"</span>))
+        ((member content-type '(<span class="s">"typescript"</span>))
+         (<span class="k">setq</span> token-re <span class="s">"/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">`</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">//</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">/\\*"</span>))
+        ((member content-type '(<span class="s">"jsx"</span>))
+         (<span class="k">setq</span> token-re <span class="s">"/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">`</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">&lt;/?[[:alpha:]&gt;]"</span>))
+        ((string= web-mode-content-type <span class="s">"css"</span>)
+         (<span class="k">setq</span> token-re <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">/\\*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">//"</span>))
+        ((string= content-type <span class="s">"css"</span>)
+         (<span class="k">setq</span> token-re <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">/\\*"</span>))
+        (t
+         (<span class="k">setq</span> token-re <span class="s">"/\\*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+        )
+
+      (<span class="k">while</span> (<span class="k">and</span> token-re (&lt; (point) reg-end) (web-mode-dom-rsf token-re reg-end t))
+
+        (<span class="k">setq</span> beg (match-beginning 0)
+              token-type nil
+              continue t
+              ch-at (char-after beg)
+              ch-next (<span class="k">or</span> (char-after (1+ beg)) ?\d)
+              ch-before (<span class="k">or</span> (char-before beg) ?\d))
+
+        <span class="cd">;;</span><span class="c">(message "[%S&gt;%S|%S] %S %c %c %c" reg-beg reg-end depth beg ch-before ch-at ch-next)
+</span>
+        (<span class="k">cond</span>
+
+          ((eq ?\' ch-at)
+           (<span class="k">while</span> (<span class="k">and</span> continue (search-forward <span class="s">"'"</span> reg-end t))
+             (<span class="k">cond</span>
+               ((get-text-property (1- (point)) 'block-side)
+                (<span class="k">setq</span> continue t))
+               (t
+                (<span class="k">setq</span> continue (web-mode-string-continue-p reg-beg)))
+               )
+             ) <span class="cd">;</span><span class="c">while
+</span>           (<span class="k">setq</span> token-type 'string))
+
+          ((eq ?\` ch-at)
+           (<span class="k">while</span> (<span class="k">and</span> continue (search-forward <span class="s">"`"</span> reg-end t))
+             (<span class="k">cond</span>
+               ((get-text-property (1- (point)) 'block-side)
+                (<span class="k">setq</span> continue t))
+               (t
+                (<span class="k">setq</span> continue (web-mode-string-continue-p reg-beg)))
+               )
+             ) <span class="cd">;</span><span class="c">while
+</span>           (<span class="k">setq</span> token-type 'string))
+
+          ((eq ?\" ch-at)
+           (<span class="k">while</span> (<span class="k">and</span> continue (search-forward <span class="s">"\""</span> reg-end t))
+             (<span class="k">cond</span>
+               ((get-text-property (1- (point)) 'block-side)
+                (<span class="k">setq</span> continue t))
+               (t
+                (<span class="k">setq</span> continue (web-mode-string-continue-p reg-beg)))
+               ) <span class="cd">;</span><span class="c">cond
+</span>             ) <span class="cd">;</span><span class="c">while
+</span>           (<span class="k">cond</span>
+             ((string= content-type <span class="s">"json"</span>)
+              (<span class="k">if</span> (looking-at-p <span class="s">"[ ]*:"</span>)
+                  (<span class="k">cond</span>
+                    ((eq ?\@ (char-after (1+ beg)))
+                     (<span class="k">setq</span> token-type 'context))
+                    (t
+                     (<span class="k">setq</span> token-type 'key))
+                    )
+                  (<span class="k">setq</span> token-type 'string))
+              ) <span class="cd">;</span><span class="c">json
+</span>             (t
+              (<span class="k">setq</span> token-type 'string))
+             ) <span class="cd">;</span><span class="c">cond
+</span>           )
+
+          ((<span class="k">and</span> (eq ?\&lt; ch-at)
+                (not (<span class="k">or</span> (<span class="k">and</span> (&gt;= ch-before 97) (&lt;= ch-before 122)) <span class="cd">;; </span><span class="c">a-z
+</span>                         (<span class="k">and</span> (&gt;= ch-before 65) (&lt;= ch-before 90))))) <span class="cd">;; </span><span class="c">A-Z
+</span>           <span class="cd">;;</span><span class="c">(message "before [%S&gt;%S|%S] pt=%S" reg-beg reg-end depth (point))
+</span>           (search-backward <span class="s">"&lt;"</span>)
+           (<span class="k">if</span> (web-mode-jsx-skip reg-end)
+               (web-mode-jsx-scan-element beg (point) depth)
+               (forward-char))
+           <span class="cd">;;</span><span class="c">(message "after [%S&gt;%S|%S] pt=%S" reg-beg reg-end depth (point))
+</span>           )
+
+          ((<span class="k">and</span> (eq ?\/ ch-at) (member content-type '(<span class="s">"javascript"</span> <span class="s">"jsx"</span> <span class="s">"typescript"</span>)))
+           (<span class="k">cond</span>
+             ((eq ?\\ ch-before)
+              )
+             ((eq ?\* ch-next)
+              <span class="cd">;;</span><span class="c">(message "--&gt; %S %S" (point) reg-end)
+</span>              (<span class="k">when</span> (search-forward <span class="s">"*/"</span> reg-end t)
+                (<span class="k">setq</span> token-type 'comment))
+              )
+             ((eq ?\/ ch-next)
+              (<span class="k">setq</span> token-type 'comment)
+              (goto-char (<span class="k">if</span> (&lt; reg-end (line-end-position)) reg-end (line-end-position)))
+              )
+             ((<span class="k">and</span> (looking-at-p <span class="s">".*/"</span>)
+                   (looking-back <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">case</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[[(,=:!&amp;|?{};]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">[ ]*/"</span> (point-min)))
+              <span class="cd">;;</span><span class="c">(re-search-forward "/[gimyu]*" reg-end t))
+</span>              (<span class="k">let</span> ((eol (line-end-position)))
+                (<span class="k">while</span> (<span class="k">and</span> continue (search-forward <span class="s">"/"</span> eol t))
+                  (<span class="k">cond</span>
+                    ((get-text-property (1- (point)) 'block-side)
+                     (<span class="k">setq</span> continue t))
+                    ((looking-back <span class="s">"\\\\+/"</span> reg-beg t)
+                     (<span class="k">setq</span> continue (= (mod (- (point) (match-beginning 0)) 2) 0)))
+                    (t
+                     (re-search-forward <span class="s">"[gimyu]*"</span> eol t)
+                     (<span class="k">setq</span> token-type 'string)
+                     (<span class="k">setq</span> continue nil))
+                    )
+                  ) <span class="cd">;</span><span class="c">while
+</span>                ) <span class="cd">;</span><span class="c">let
+</span>              )
+             ) <span class="cd">;</span><span class="c">cond
+</span>           )
+
+          ((eq ?\/ ch-next)
+           <span class="cd">;;</span><span class="c">(message "%S" (point))
+</span>           (<span class="k">cond</span>
+             ((<span class="k">and</span> (string= content-type <span class="s">"css"</span>)
+                   (eq ?/ ch-at)
+                   (eq ?: ch-before))
+              )
+             (t
+              (<span class="k">unless</span> (eq ?\\ ch-before)
+                (<span class="k">setq</span> token-type 'comment)
+                (goto-char (<span class="k">if</span> (&lt; reg-end (line-end-position)) reg-end (line-end-position)))
+                )
+              )
+             )
+
+           )
+
+          ((eq ?\* ch-next)
+           (<span class="k">cond</span>
+             ((search-forward <span class="s">"*/"</span> reg-end t)
+              (<span class="k">setq</span> token-type 'comment))
+             ((not (eobp))
+              (forward-char))
+             ) <span class="cd">;</span><span class="c">cond
+</span>           )
+
+          ) <span class="cd">;</span><span class="c">cond
+</span>
+        (<span class="k">when</span> (<span class="k">and</span> beg (&gt;= reg-end (point)) token-type)
+          (put-text-property beg (point) 'part-token token-type)
+          (<span class="k">cond</span>
+            ((eq token-type 'comment)
+             (put-text-property beg (1+ beg) 'syntax-table (string-to-syntax <span class="s">"&lt;"</span>))
+             (<span class="k">when</span> (&lt; (point) (point-max))
+               (<span class="k">if</span> (&lt; (point) (line-end-position))
+                   (put-text-property (1- (point)) (point) 'syntax-table (string-to-syntax <span class="s">"&gt;"</span>)) <span class="cd">;</span><span class="c">#445
+</span>                   (put-text-property (point) (1+ (point)) 'syntax-table (string-to-syntax <span class="s">"&gt;"</span>)) <span class="cd">;</span><span class="c">#377
+</span>                   )
+               ) <span class="cd">;</span><span class="c">when
+</span>             ) <span class="cd">;</span><span class="c">comment
+</span>            ((eq token-type 'string)
+             (put-text-property beg (1+ beg) 'syntax-table (string-to-syntax <span class="s">"|"</span>))
+             (<span class="k">when</span> (&lt; (point) (point-max))
+               (<span class="k">if</span> (&lt; (point) (line-end-position))
+                   (put-text-property (1- (point)) (point) 'syntax-table (string-to-syntax <span class="s">"|"</span>))
+                   (put-text-property (point) (1+ (point)) 'syntax-table (string-to-syntax <span class="s">"|"</span>))
+                   )
+               ) <span class="cd">;</span><span class="c">when
+</span>             ) <span class="cd">;</span><span class="c">string
+</span>            ) <span class="cd">;</span><span class="c">cond
+</span>          ) <span class="cd">;</span><span class="c">when
+</span>
+        (<span class="k">when</span> (&gt; (point) reg-end)
+          (message <span class="s">"reg-beg(%S) reg-end(%S) token-type(%S) point(%S)"</span> reg-beg reg-end token-type (point)))
+
+        <span class="cd">;;</span><span class="c">(message "#[%S&gt;%S|%S] %S %c %c %c | (%S)" reg-beg reg-end depth beg ch-before ch-at ch-next (point))
+</span>
+        ) <span class="cd">;</span><span class="c">while
+</span>
+      )))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

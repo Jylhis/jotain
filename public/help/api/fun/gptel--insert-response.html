@@ -1,0 +1,98 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--insert-response – Emacs Documentation Online</title>
+<meta name="description" content="gptel--insert-response is a natively compiled function defined in
+gptel.el.
+Insert the LLM RESPONSE into the gptel buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--insert-response</code></h1><p><span class="m"><code>gptel--insert-response</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--insert-response <a href="#:~:text=LLM-,RESPONSE"><span class="arg">RESPONSE</span></a> <a href="#:~:text=buffer.-,INFO"><span class="arg">INFO</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=Optional-,RAW"><span class="arg">RAW</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert the LLM <span class="arg">RESPONSE</span> into the gptel buffer.
+<p><span class="arg">INFO</span> is a plist containing information relevant to this buffer.
+See <a href="../fun/gptel--url-get-response.html"><code>gptel--url-get-response</code></a> for details.
+<p>Optional <span class="arg">RAW</span> disables text properties and transformation.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--insert-response</span> (response info <span class="ty">&amp;optional</span> raw)
+  <span class="doc">"Insert the LLM RESPONSE into the gptel buffer.
+
+INFO is a plist containing information relevant to this buffer.
+See `</span><span class="m doc">gptel--url-get-response</span><span class="doc">' for details.
+
+Optional RAW disables text properties and transformation."</span>
+  (<span class="k">let*</span> ((gptel-buffer (plist-get info <span class="bi">:buffer</span>))
+         (start-marker (plist-get info <span class="bi">:position</span>))
+         (tracking-marker (plist-get info <span class="bi">:tracking-marker</span>)))
+    (<span class="k">pcase</span> response
+      ((pred stringp)                <span class="cd">;</span><span class="c">Response text
+</span>       (<span class="k">with-current-buffer</span> gptel-buffer
+         (<span class="k">when</span> tracking-marker           <span class="cd">;</span><span class="c">separate from previous response
+</span>           (<span class="k">setq</span> response (concat gptel-response-separator response)))
+         (<span class="k">save-excursion</span>
+           (<span class="k">with-current-buffer</span> (marker-buffer start-marker)
+             (goto-char (<span class="k">or</span> tracking-marker start-marker))
+             <span class="cd">;; </span><span class="c">(run-hooks 'gptel-pre-response-hook)
+</span>             (<span class="k">unless</span> (<span class="k">or</span> (bobp) (plist-get info <span class="bi">:in-place</span>)
+                         tracking-marker)
+               (insert gptel-response-separator)
+               (<span class="k">when</span> gptel-mode
+                 (insert (gptel-response-prefix-string)))
+               (move-marker start-marker (point)))
+             (<span class="k">unless</span> raw
+               (<span class="k">when-let*</span> ((transformer (plist-get info <span class="bi">:transformer</span>)))
+                 (<span class="k">setq</span> response (funcall transformer response)))
+               (add-text-properties
+                0 (length response) '(gptel response front-sticky (gptel)) response))
+             (insert response)
+             (plist-put info <span class="bi">:tracking-marker</span> (<span class="k">setq</span> tracking-marker (point-marker)))
+             <span class="cd">;; </span><span class="c">for uniformity with streaming responses
+</span>             (set-marker-insertion-type tracking-marker t)))))
+      (`(reasoning . ,text)
+       (<span class="k">when-let*</span> ((include (plist-get info <span class="bi">:include-reasoning</span>)))
+         (<span class="k">if</span> (stringp include)
+             (<span class="k">with-current-buffer</span> (get-buffer-create
+                                   (plist-get info <span class="bi">:include-reasoning</span>))
+               (<span class="k">save-excursion</span> (goto-char (point-max)) (insert text)))
+           (<span class="k">with-current-buffer</span> (marker-buffer start-marker)
+             (<span class="k">let</span> ((separator         <span class="cd">;</span><span class="c">Separate from response prefix if required
+</span>                    (<span class="k">and</span> (not tracking-marker) gptel-mode
+                         (not (string-suffix-p <span class="s">"\n"</span> (gptel-response-prefix-string)))
+                         <span class="s">"\n"</span>))
+                   (blocks (<span class="k">if</span> (derived-mode-p 'org-mode)
+                               `(<span class="s">"#+begin_reasoning\n"</span> . ,(concat <span class="s">"\n#+end_reasoning"</span>
+                                                           gptel-response-separator))
+                             <span class="cd">;; </span><span class="c">TODO(reasoning) remove properties and strip instead
+</span>                             (cons (propertize <span class="s">"``` reasoning\n"</span> 'gptel 'ignore
+                                               'keymap gptel--markdown-block-map)
+                                   (concat (propertize <span class="s">"\n```"</span> 'gptel 'ignore
+                                                       'keymap gptel--markdown-block-map)
+                                           gptel-response-separator)))))
+               (<span class="k">if</span> (eq include 'ignore)
+                   (<span class="k">progn</span>
+                     (add-text-properties
+                      0 (length text) '(gptel ignore front-sticky (gptel)) text)
+                     (gptel--insert-response
+                      (concat (car blocks) text (cdr blocks)) info t))
+                 (gptel--insert-response (concat separator (car blocks)) info t)
+                 (gptel--insert-response text info)
+                 (gptel--insert-response (cdr blocks) info t))
+               (<span class="k">save-excursion</span>
+                 (goto-char (plist-get info <span class="bi">:tracking-marker</span>))
+                 (<span class="k">if</span> (derived-mode-p 'org-mode) <span class="cd">;</span><span class="c">fold block
+</span>                     (<span class="k">progn</span> (search-backward <span class="s">"#+end_reasoning"</span> start-marker t)
+                            (<span class="k">when</span> (looking-at <span class="s">"^#\\+end_reasoning"</span>)
+                              (org-cycle)))
+                   (<span class="k">when</span> (re-search-backward <span class="s">"^```"</span> start-marker t)
+                     (gptel-markdown-cycle-block)))))))))
+      (`(tool-call . ,tool-calls)
+       (gptel--display-tool-calls tool-calls info))
+      (`(tool-result . ,tool-results)
+       (gptel--display-tool-results tool-results info)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat-inline--select-chat – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat-inline--select-chat is a natively compiled function defined
+in eca-chat-inline.el.
+Ask which chat of SESSION to attach the inline prompt to.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat-inline--select-chat</code></h1><p><span class="m"><code>eca-chat-inline--select-chat</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-chat-inline.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat-inline--select-chat <a href="#:~:text=of-,SESSION"><span class="arg">SESSION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Ask which chat of <span class="arg">SESSION</span> to attach the inline prompt to.
+<p>Returns a chat buffer, or the symbol <span class="m"><code>new</code></span> for a fresh chat.
+When the session has no chats yet, returns <span class="m"><code>new</code></span> directly.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-inline.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat-inline--select-chat</span> (session)
+  <span class="doc">"Ask which chat of SESSION to attach the inline prompt to.
+Returns a chat buffer, or the symbol `</span><span class="m doc">new</span><span class="doc">' for a fresh chat.
+When the session has no chats yet, returns `</span><span class="m doc">new</span><span class="doc">' directly."</span>
+  (<span class="k">let*</span> ((buf-by-label (make-hash-table <span class="bi">:test</span> 'equal))
+         (labels
+          (-keep (<span class="k">lambda</span> (buffer)
+                   (<span class="k">when</span> (<span class="k">and</span> (buffer-live-p buffer)
+                              (not (buffer-local-value 'eca-chat--closed
+                                                       buffer)))
+                     (<span class="k">with-current-buffer</span> buffer
+                       (<span class="k">let*</span> ((label (concat (eca-chat--chat-status-prefix)
+                                             (eca-chat-title)))
+                              (label (<span class="k">if</span> (gethash label buf-by-label)
+                                         (concat label <span class="s">" ("</span> eca-chat--id <span class="s">")"</span>)
+                                       label)))
+                         (puthash label buffer buf-by-label)
+                         label))))
+                 (eca-vals (eca--session-chats session)))))
+    (<span class="k">if</span> (null labels)
+        'new
+      (<span class="k">let</span> ((choice (completing-read <span class="s">"Select a chat for this prompt: "</span>
+                                     (append labels
+                                             (list eca-chat-new-chat-label))
+                                     nil t)))
+        (<span class="k">or</span> (gethash choice buf-by-label) 'new)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-syntax-propertize-list-items – Emacs Documentation Online</title>
+<meta name="description" content="markdown-syntax-propertize-list-items is a natively compiled function
+defined in markdown-mode.el.
+Propertize list items from START to END.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-syntax-propertize-list-items</code></h1><p><span class="m"><code>markdown-syntax-propertize-list-items</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-syntax-propertize-list-items <a href="#:~:text=from-,START"><span class="arg">START</span></a> <a href="#:~:text=to-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Propertize list items from <span class="arg">START</span> to <span class="arg">END</span>.
+<p>Stores nested list item information in the <span class="m"><code>markdown-list-item</code></span>
+text property to make later syntax analysis easier.  The value of
+this property is a list with elements of the form (begin . end)
+giving the bounds of the current and parent list items.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-syntax-propertize-list-items</span> (start end)
+  <span class="doc">"Propertize list items from START to END.
+Stores nested list item information in the `</span><span class="m doc">markdown-list-item</span><span class="doc">'
+text property to make later syntax analysis easier.  The value of
+this property is a list with elements of the form (begin . end)
+giving the bounds of the current and parent list items."</span>
+  (<span class="k">save-excursion</span>
+    (goto-char start)
+    (<span class="k">let</span> ((prev-list-line -100)
+          bounds level pre-regexp)
+      <span class="cd">;; </span><span class="c">Find a baseline point with zero list indentation
+</span>      (markdown-search-backward-baseline)
+      <span class="cd">;; </span><span class="c">Search for all list items between baseline and END
+</span>      (<span class="k">while</span> (<span class="k">and</span> (&lt; (point) end)
+                  (re-search-forward markdown-regex-list end 'limit))
+        <span class="cd">;; </span><span class="c">Level of list nesting
+</span>        (<span class="k">setq</span> level (length bounds))
+        <span class="cd">;; </span><span class="c">Pre blocks need to be indented one level past the list level
+</span>        (<span class="k">setq</span> pre-regexp (format <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">    </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\t</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\{%d\\}"</span> (1+ level)))
+        (beginning-of-line)
+        (<span class="k">cond</span>
+         <span class="cd">;; </span><span class="c">Reset at headings, horizontal rules, and top-level blank lines.
+</span>         <span class="cd">;; </span><span class="c">Propertize baseline when in range.
+</span>         ((markdown-new-baseline)
+          (<span class="k">setq</span> bounds nil))
+         <span class="cd">;; </span><span class="c">Make sure this is not a line from a pre block
+</span>         ((<span class="k">and</span> (looking-at-p pre-regexp)
+               <span class="cd">;; </span><span class="c">too indented line is also treated as list if previous line is list
+</span>               (&gt;= (- (line-number-at-pos) prev-list-line) 2)))
+         <span class="cd">;; </span><span class="c">If not, then update levels and propertize list item when in range.
+</span>         (t
+          (<span class="k">let*</span> ((indent (current-indentation))
+                 (cur-bounds (markdown--cur-list-item-bounds))
+                 (first (cl-first cur-bounds))
+                 (last (cl-second cur-bounds))
+                 (marker (cl-fifth cur-bounds)))
+            (<span class="k">setq</span> bounds (markdown--append-list-item-bounds
+                          marker indent cur-bounds bounds))
+            (<span class="k">when</span> (<span class="k">and</span> (&lt;= start (point)) (&lt;= (point) end))
+              (<span class="k">setq</span> prev-list-line (line-number-at-pos first))
+              (put-text-property first last 'markdown-list-item bounds)))))
+        (end-of-line)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

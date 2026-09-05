@@ -1,0 +1,99 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-table-convert-region – Emacs Documentation Online</title>
+<meta name="description" content="markdown-table-convert-region is an interactive and natively compiled
+function defined in markdown-mode.el.
+Convert region from BEGIN to END to table with SEPARATOR.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-table-convert-region</code></h1><p><span class="m"><code>markdown-table-convert-region</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-table-convert-region <a href="#:~:text=from-,BEGIN"><span class="arg">BEGIN</span></a> <a href="#:~:text=to-,END"><span class="arg">END</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=with-,SEPARATOR"><span class="arg">SEPARATOR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Convert region from <span class="arg">BEGIN</span> to <span class="arg">END</span> to table with <span class="arg">SEPARATOR</span>.
+<p>If every line contains at least one TAB character, the function
+assumes that the material is tab separated (TSV). If every line
+contains a comma, comma-separated values (CSV) are assumed. If
+not, lines are split at whitespace into cells.
+<p>You can use a prefix argument to force a specific separator:
+<kbd>C-u</kbd> (<a href="../fun/universal-argument.html"><code>universal-argument</code></a>) once forces CSV, <kbd>C-u</kbd> (<a href="../fun/universal-argument.html"><code>universal-argument</code></a>)
+twice forces TAB, and <kbd>C-u</kbd> (<a href="../fun/universal-argument.html"><code>universal-argument</code></a>) three times will
+prompt for a regular expression to match the separator, and a
+numeric argument N indicates that at least N consecutive
+spaces, or alternatively a TAB should be used as the separator.
+<h2>Key Bindings</h2>
+<p><span class="v">markdown-mode-command-map</span> <span class="key">|</span>
+<span class="v">markdown-mode-map</span> <span class="key">C-c C-c |</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-table-convert-region</span> (begin end <span class="ty">&amp;optional</span> separator)
+  <span class="doc">"Convert region from BEGIN to END to table with SEPARATOR.
+
+If every line contains at least one TAB character, the function
+assumes that the material is tab separated (TSV). If every line
+contains a comma, comma-separated values (CSV) are assumed. If
+not, lines are split at whitespace into cells.
+
+You can use a prefix argument to force a specific separator:
+\\[</span><span class="m doc">universal-argument</span><span class="doc">] once forces CSV, \\[</span><span class="m doc">universal-argument</span><span class="doc">]
+twice forces TAB, and \\[</span><span class="m doc">universal-argument</span><span class="doc">] three times will
+prompt for a regular expression to match the separator, and a
+numeric argument N indicates that at least N consecutive
+spaces, or alternatively a TAB should be used as the separator."</span>
+
+  (<span class="k">interactive</span> <span class="s">"r\nP"</span>)
+  (<span class="k">let*</span> ((begin (min begin end)) (end (max begin end)) re)
+    (goto-char begin) (beginning-of-line 1)
+    (<span class="k">setq</span> begin (point-marker))
+    (goto-char end)
+    (<span class="k">if</span> (bolp) (backward-char 1) (end-of-line 1))
+    (<span class="k">setq</span> end (point-marker))
+    (<span class="k">when</span> (equal separator '(64))
+      (<span class="k">setq</span> separator (read-regexp <span class="s">"Regexp for cell separator: "</span>)))
+    (<span class="k">unless</span> separator
+      <span class="cd">;; </span><span class="c">Get the right cell separator
+</span>      (goto-char begin)
+      (<span class="k">setq</span> separator
+            (<span class="k">cond</span>
+             ((not (re-search-forward <span class="s">"^[</span><span class="neg s">^</span><span class="s">\n\t]+$"</span> end t)) '(16))
+             ((not (re-search-forward <span class="s">"^[</span><span class="neg s">^</span><span class="s">\n,]+$"</span> end t)) '(4))
+             (t 1))))
+    (goto-char begin)
+    (<span class="k">if</span> (equal separator '(4))
+        <span class="cd">;; </span><span class="c">Parse CSV
+</span>        (<span class="k">while</span> (&lt; (point) end)
+          (<span class="k">cond</span>
+           ((looking-at <span class="s">"^"</span>) (insert <span class="s">"| "</span>))
+           ((looking-at <span class="s">"[ \t]*$"</span>) (replace-match <span class="s">" |"</span>) (beginning-of-line 2))
+           ((looking-at <span class="s">"[ \t]*\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s">\"\n]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\""</span>)
+            (replace-match <span class="s">"\\1"</span>) (<span class="k">if</span> (looking-at <span class="s">"\""</span>) (insert <span class="s">"\""</span>)))
+           ((looking-at <span class="s">"[</span><span class="neg s">^</span><span class="s">,\n]+"</span>) (goto-char (match-end 0)))
+           ((looking-at <span class="s">"[ \t]*,"</span>) (replace-match <span class="s">" | "</span>))
+           (t (beginning-of-line 2))))
+      (<span class="k">setq</span> re
+            (<span class="k">cond</span>
+             ((equal separator '(4))  <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\"?[ \t]*,[ \t]*\"?"</span>)
+             ((equal separator '(16)) <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\t"</span>)
+             ((integerp separator)
+              (<span class="k">if</span> (&lt; separator 1)
+                  (<span class="w">user-error</span> <span class="s">"Cell separator must contain one or more spaces"</span>)
+                (format <span class="s">"^ *</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s"> *\t *</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s"> \\{%d,\\}</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">$"</span> separator)))
+             ((stringp separator) (format <span class="s">"^ *</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">%s"</span> separator))
+             (t (<span class="w">error</span> <span class="s">"Invalid cell separator"</span>))))
+      (<span class="k">let</span> (finish)
+        (<span class="k">while</span> (<span class="k">and</span> (not finish) (re-search-forward re end t))
+          (<span class="k">if</span> (eolp)
+              (<span class="k">progn</span>
+                (replace-match <span class="s">"|"</span> t t)
+                (forward-line 1)
+                (<span class="k">when</span> (eobp)
+                  (<span class="k">setq</span> finish t)))
+            (replace-match <span class="s">"| "</span> t t)))))
+    (goto-char begin)
+    (<span class="k">when</span> markdown-table-align-p
+      (markdown-table-align))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

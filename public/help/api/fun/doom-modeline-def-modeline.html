@@ -1,0 +1,84 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: doom-modeline-def-modeline – Emacs Documentation Online</title>
+<meta name="description" content="doom-modeline-def-modeline is a natively compiled function defined in
+doom-modeline-core.el.
+Define a modeline format and byte-compiles it.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>doom-modeline-def-modeline</code></h1><p><span class="m"><code>doom-modeline-def-modeline</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">doom-modeline-core.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">doom-modeline-def-modeline </span><a href="#:~:text=it.-,NAME"><span class="arg">NAME</span></a><span class="k"> </span><a href="#:~:text=retrieval).-,LHS"><span class="arg">LHS</span></a><span class="k"> &amp;optional</span> <a href="#:~:text=and-,RHS"><span class="arg">RHS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Define a modeline format and byte-compiles it.
+<p><span class="arg">NAME</span> is a symbol to identify it (used by <a href="../fun/doom-modeline.html"><code>doom-modeline</code></a> for retrieval).
+<span class="arg">LHS</span> and <span class="arg">RHS</span> are lists of symbols of modeline segments defined with
+<a href="../fun/doom-modeline-def-segment.html"><code>doom-modeline-def-segment</code></a>.
+<p>Example:
+<br>&nbsp;&nbsp;(<span class="k">doom-modeline-def-modeline</span> <span class="m"><code>'minimal</code></span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;'(bar matches <span class="s">" "</span> buffer-info)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;'(media-info major-mode))
+<br>&nbsp;&nbsp;(doom-modeline-set-modeline 'minimal t)
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mxkjlhf33q1xxjiii3w5v8nn7avms0p9-emacs-packages-deps/share/emacs/site-lisp/elpa/doom-modeline-20260828.1146/doom-modeline-core.el</span>
+(<span class="k">defun</span> <span class="f">doom-modeline-def-modeline</span> (name lhs <span class="ty">&amp;optional</span> rhs)
+  <span class="doc">"Define a modeline format and byte-compiles it.
+NAME is a symbol to identify it (used by `</span><span class="m doc">doom-modeline</span><span class="doc">' for retrieval).
+LHS and RHS are lists of symbols of modeline segments defined with
+`</span><span class="m doc">doom-modeline-def-segment</span><span class="doc">'.
+
+Example:
+  (doom-modeline-def-modeline </span><span class="bi doc">\\=</span><span class="doc">'minimal
+    </span><span class="bi doc">\\=</span><span class="doc">'(bar matches \" \" buffer-info)
+    </span><span class="bi doc">\\=</span><span class="doc">'(media-info major-mode))
+  (doom-modeline-set-modeline </span><span class="bi doc">\\=</span><span class="doc">'minimal t)"</span>
+  <span class="cd">;; </span><span class="c">Register the modeline definition for runtime manipulation
+</span>  (<span class="k">let</span> ((def (assq name doom-modeline--modelines)))
+    (<span class="k">if</span> def
+        (setcdr def (list lhs rhs))
+      (<span class="k">push</span> (cons name (list lhs rhs)) doom-modeline--modelines)))
+  (<span class="k">let</span> ((sym (intern (format <span class="s">"doom-modeline-format--%s"</span> name)))
+        (lhs-forms (doom-modeline--prepare-segments lhs))
+        (rhs-forms (doom-modeline--prepare-segments rhs)))
+    (<span class="k">defalias</span> <span class="f">sym</span>
+      (<span class="k">lambda</span> ()
+        (list lhs-forms
+              (<span class="k">let*</span> ((rhs-str (format-mode-line `(<span class="s">""</span> ,@rhs-forms)))
+                     (rhs-width (<span class="k">progn</span>
+                                  (add-face-text-property
+                                   0 (length rhs-str) 'mode-line t rhs-str)
+                                  (doom-modeline-string-pixel-width rhs-str))))
+                (propertize
+                 <span class="s">" "</span>
+                 'face (doom-modeline-face)
+                 'display
+                 <span class="cd">;; </span><span class="c">Backport from `</span><span class="m c">mode-line-right-align-edge</span><span class="c">' in 30
+</span>                 (<span class="k">if</span> (<span class="k">and</span> (display-graphic-p)
+                          (not (eq mode-line-right-align-edge 'window)))
+                             `(space <span class="bi">:align-to</span> (- ,mode-line-right-align-edge
+                                          (,rhs-width)))
+                           `(space <span class="bi">:align-to</span> (,(- (window-pixel-width)
+                                          (window-scroll-bar-width)
+                                          (window-right-divider-width)
+                                          (* (<span class="k">or</span> (car (window-margins)) 1)
+                                             (frame-char-width))
+                                          <span class="cd">;; </span><span class="c">Manually account for value of
+</span>                                          <span class="cd">;; </span><span class="c">`</span><span class="m c">mode-line-right-align-edge</span><span class="c">' even
+</span>                                          <span class="cd">;; </span><span class="c">when display is non-graphical
+</span>                                          (<span class="k">pcase</span> mode-line-right-align-edge
+                                            ('right-margin
+                                             (<span class="k">or</span> (cdr (window-margins)) 0))
+                                            ('right-fringe
+                                             (<span class="k">or</span> (cadr (window-fringes)) 0))
+                                            (_ 0))
+                                          rhs-width))))))
+              rhs-forms))
+      (concat <span class="s">"Modeline:\n"</span>
+              (format <span class="s">"  %s\n  %s"</span>
+                      (prin1-to-string lhs)
+                      (prin1-to-string rhs))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

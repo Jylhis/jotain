@@ -1,0 +1,95 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat-resume – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat-resume is an interactive and natively compiled function
+defined in eca-chat.el.
+Select and resume a previous ECA session.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat-resume</code></h1><p><span class="m"><code>eca-chat-resume</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat-resume)
+</code></pre>
+<h2>Documentation</h2>
+<p>Select and resume a previous ECA session.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">eca-chat-resume</span> ()
+  <span class="doc">"Select and resume a previous ECA session."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let*</span> ((session (eca-session))
+         (from-buf (current-buffer)))
+    (eca-assert-session-running session)
+    (<span class="k">let*</span> ((res (eca-api-request-sync session <span class="bi">:method</span> <span class="s">"chat/list"</span>))
+           <span class="cd">;; </span><span class="c">Drop entries the server can't actually re-open: nil ids show up
+</span>           <span class="cd">;; </span><span class="c">for legacy DB rows that pre-date the per-chat `:id` field, and
+</span>           <span class="cd">;; </span><span class="c">picking them would silently no-op because `</span><span class="m c">chat/open</span><span class="c">' returns
+</span>           <span class="cd">;; </span><span class="c">a false `</span><span class="m c">found</span><span class="c">' or legacy `</span><span class="m c">found?</span><span class="c">' field.
+</span>           (chats (cl-remove-if-not (<span class="k">lambda</span> (c) (plist-get c <span class="bi">:id</span>))
+                                    (append (plist-get res <span class="bi">:chats</span>) nil))))
+      (<span class="k">if</span> (null chats)
+          (message <span class="s">"No previous sessions to resume."</span>)
+        (<span class="k">let*</span> ((id-by-label  (make-hash-table <span class="bi">:test</span> 'equal))
+               (ann-by-label (make-hash-table <span class="bi">:test</span> 'equal))
+               (labels       nil))
+          (seq-do
+           (<span class="k">lambda</span> (chat)
+             (<span class="k">let*</span> ((id    (plist-get chat <span class="bi">:id</span>))
+                    (title (<span class="k">or</span> (plist-get chat <span class="bi">:title</span>) <span class="s">"Untitled"</span>))
+                    (model (plist-get chat <span class="bi">:model</span>))
+                    (count (plist-get chat <span class="bi">:messageCount</span>))
+                    (upd   (plist-get chat <span class="bi">:updatedAt</span>))
+                    (label (<span class="k">if</span> (gethash title id-by-label)
+                               (concat title <span class="s">" ("</span> id <span class="s">")"</span>)
+                             title))
+                    (ann   (concat
+                            (<span class="k">when</span> model
+                              (propertize (concat <span class="s">"  "</span> model) 'face 'shadow))
+                            (<span class="k">when</span> count
+                              (propertize (format <span class="s">"  %d msgs"</span> count) 'face 'shadow))
+                            (<span class="k">when-let*</span> ((rel (eca-chat--relative-time upd)))
+                              (propertize (concat <span class="s">"  "</span> rel)
+                                          'face 'eca-chat-elapsed-time-face)))))
+               (puthash label id id-by-label)
+               (puthash label ann ann-by-label)
+               (<span class="k">push</span> label labels)))
+           chats)
+          (<span class="k">setq</span> labels (nreverse labels))
+          (<span class="k">when-let*</span> ((chosen (completing-read
+                               <span class="s">"Resume session: "</span>
+                               (<span class="k">lambda</span> (string pred action)
+                                 (<span class="k">if</span> (eq action 'metadata)
+                                     `(metadata
+                                       (display-sort-function . ,#'identity)
+                                       (annotation-function
+                                        . ,(<span class="k">lambda</span> (candidate)
+                                             (gethash candidate ann-by-label))))
+                                   (complete-with-action action labels string pred)))
+                               nil t))
+                      (chat-id (gethash chosen id-by-label)))
+            (eca-chat--begin-opening session chat-id)
+            (<span class="k">condition-case</span> err
+                (eca-api-request-async
+                 session
+                 <span class="bi">:method</span> <span class="s">"chat/open"</span>
+                 <span class="bi">:params</span> (append (list <span class="bi">:chatId</span> chat-id)
+                                 (<span class="k">when</span> eca-chat-history-page-size
+                                   (list <span class="bi">:limit</span> eca-chat-history-page-size)))
+                 <span class="bi">:success-callback</span>
+                 (<span class="k">lambda</span> (open-res)
+                   (eca-chat--handle-open-response
+                    session from-buf chat-id open-res))
+                 <span class="bi">:error-callback</span>
+                 (<span class="k">lambda</span> (request-err)
+                   (eca-chat--finish-opening session chat-id)
+                   (<span class="w">user-error</span> <span class="s">"Failed to resume: %s"</span> request-err)))
+              (<span class="w">error</span>
+               (eca-chat--finish-opening session chat-id)
+               (<span class="w">signal</span> (car err) (cdr err))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

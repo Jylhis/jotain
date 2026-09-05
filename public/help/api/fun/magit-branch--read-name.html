@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-branch--read-name – Emacs Documentation Online</title>
+<meta name="description" content="magit-branch--read-name is a natively compiled function defined in
+magit-branch.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-branch--read-name</code></h1><p><span class="m"><code>magit-branch--read-name</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-branch.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-branch--read-name <span class="arg">PROMPT</span> <span class="ty">&amp;optional</span> <span class="arg">START-POINT</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-branch.el</span>
+(<span class="k">defun</span> <span class="f">magit-branch--read-name</span> (prompt <span class="ty">&amp;optional</span> start-point)
+  (<span class="k">let</span> ((taken (magit-list-local-branch-names))
+        (choices magit-branch-name-suggestions))
+    (<span class="k">when</span> (<span class="k">and</span> start-point
+               (magit-remote-branch-p start-point)
+               (string-match <span class="s">"/"</span> start-point))
+      (<span class="k">cl-pushnew</span> (substring start-point (match-end 0))
+                  choices <span class="bi">:test</span> #'equal))
+    (magit-completing-read
+     prompt (seq-difference choices taken) nil
+     <span class="cd">;; </span><span class="c">Ivy does not handle the PREDICATE correctly, so give
+</span>     <span class="cd">;; </span><span class="c">up on any validation for the time being when that is
+</span>     <span class="cd">;; </span><span class="c">being used.  See #5599, #5581, and the proposed fix
+</span>     <span class="cd">;; </span><span class="c">https://github.com/abo-abo/swiper/pull/3083.
+</span>     (<span class="k">and</span> (not (<span class="k">bound-and-true-p</span> ivy-mode))
+          (<span class="k">lambda</span> (<span class="ty">&amp;optional</span> choice)
+            (<span class="k">cond</span>
+              ((not choice)
+               <span class="cd">;; </span><span class="c">( This is currently dead code, see above comment.  Even
+</span>               <span class="cd">;;   </span><span class="c">with this, Ivy users would always have to confirm and
+</span>               <span class="cd">;;   </span><span class="c">the below check would remain unreachable. )
+</span>               <span class="cd">;; </span><span class="c">This function ought to be called with one argument (see
+</span>               <span class="cd">;; </span><span class="c">`</span><span class="m c">completing-read</span><span class="c">') but Ivy calls it with zero arguments.
+</span>               <span class="cd">;; </span><span class="c">Since Ivy doesn't tell us what choice the user made, we
+</span>               <span class="cd">;; </span><span class="c">also cannot validate it, and assume it is valid.
+</span>               t)
+              ((member choice taken)
+               (run-with-timer
+                0 nil (##minibuffer-message <span class="s">"conflicts with existing branch"</span>))
+               nil)
+              ((not (magit-git-success <span class="s">"check-ref-format"</span> <span class="s">"--branch"</span> choice))
+               (run-with-timer
+                0 nil (##minibuffer-message <span class="s">"not a valid branch name"</span>))
+               nil)
+              (t)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

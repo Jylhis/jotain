@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--diagnostic-for-warning – Emacs Documentation Online</title>
+<meta name="description" content="bazel--diagnostic-for-warning is a natively compiled function defined
+in bazel.el.
+Return a Flymake diagnostic for the Buildifier WARNING.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--diagnostic-for-warning</code></h1><p><span class="m"><code>bazel--diagnostic-for-warning</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--diagnostic-for-warning <a href="#:~:text=Buildifier-,WARNING"><span class="arg">WARNING</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a Flymake diagnostic for the Buildifier <span class="arg">WARNING</span>.
+<p><span class="arg">WARNING</span> should be a hashtable containing a single warning, as
+described in URL
+<br>‘https://github.com/bazelbuild/buildtools/blob/master/buildifier/README.md#file-diagnostics-in-json’.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--diagnostic-for-warning</span> (warning)
+  <span class="doc">"Return a Flymake diagnostic for the Buildifier WARNING.
+WARNING should be a hashtable containing a single warning, as
+described in URL
+‘https://github.com/bazelbuild/buildtools/blob/master/buildifier/README.md#file-diagnostics-in-json’."</span>
+  (<span class="w">cl-check-type</span> warning hash-table)
+  (<span class="k">let*</span> ((case-fold-search nil)
+         (search-spaces-regexp nil)
+         (start (gethash <span class="s">"start"</span> warning))
+         (end (gethash <span class="s">"end"</span> warning))
+         <span class="cd">;; </span><span class="c">Note: Both line and column are one-based in the Buildifier output.
+</span>         (start-line (gethash <span class="s">"line"</span> start))
+         (start-column (1- (gethash <span class="s">"column"</span> start)))
+         (end-line (gethash <span class="s">"line"</span> end))
+         (end-column (1- (gethash <span class="s">"column"</span> end)))
+         (message (gethash <span class="s">"message"</span> warning)))
+    (<span class="k">when</span> (<span class="k">and</span> (= start-line end-line) (= start-column 0) (= end-column 1))
+      <span class="cd">;; </span><span class="c">Heuristic: assume this means the entire line.  Buildifier emits this
+</span>      <span class="cd">;; </span><span class="c">e.g. for the module-docstring warning.  ‘</span><span class="m c">bazel--line-column-pos</span><span class="c">’
+</span>      <span class="cd">;; </span><span class="c">ensures that we don’t cross line boundaries.
+</span>      (<span class="k">setq</span> end-column (buffer-size)))
+    (flymake-make-diagnostic
+     (current-buffer)
+     (bazel--line-column-pos start-line start-column)
+     (bazel--line-column-pos end-line end-column)
+     <span class="bi">:warning</span>
+     (format-message <span class="s">"%s [%s] (%s)"</span>
+                     <span class="cd">;; </span><span class="c">We only take the first line of the message, otherwise
+</span>                     <span class="cd">;; </span><span class="c">it becomes too long and looks ugly.
+</span>                     (substring-no-properties message nil
+                                              (string-match-p (<span class="k">rx</span> ?\n) message))
+                     (gethash <span class="s">"category"</span> warning)
+                     (gethash <span class="s">"url"</span> warning)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

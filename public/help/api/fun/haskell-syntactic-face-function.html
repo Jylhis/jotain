@@ -1,0 +1,169 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-syntactic-face-function – Emacs Documentation Online</title>
+<meta name="description" content="haskell-syntactic-face-function is a natively compiled function
+defined in haskell-font-lock.el.
+font-lock-syntactic-face-function for Haskell.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-syntactic-face-function</code></h1><p><span class="m"><code>haskell-syntactic-face-function</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">haskell-font-lock.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-syntactic-face-function <a href="#:~:text="><span class="arg">STATE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p><a href="../var/font-lock-syntactic-face-function.html"><code>font-lock-syntactic-face-function</code></a> for Haskell.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-font-lock.el</span>
+(<span class="k">defun</span> <span class="f">haskell-syntactic-face-function</span> (state)
+  <span class="doc">"`</span><span class="m doc">font-lock-syntactic-face-function</span><span class="doc">' for Haskell."</span>
+  (<span class="k">cond</span>
+   ((nth 3 state)
+    (<span class="k">if</span> (equal ?| (nth 3 state))
+        <span class="cd">;; </span><span class="c">find out what kind of QuasiQuote is this
+</span>        (<span class="k">let*</span> ((qqname (<span class="k">save-excursion</span>
+                        (goto-char (nth 8 state))
+                        (skip-syntax-backward <span class="s">"w._"</span>)
+                        (buffer-substring-no-properties (point) (nth 8 state))))
+               (lang-mode (cdr (assoc (haskell-string-drop-qualifier qqname)
+                                      haskell-font-lock-quasi-quote-modes))))
+
+          (<span class="k">if</span> (<span class="k">and</span> lang-mode
+                   (fboundp lang-mode))
+              (<span class="k">save-excursion</span>
+                <span class="cd">;; </span><span class="c">find the end of the QuasiQuote
+</span>                (parse-partial-sexp (point) (point-max) nil nil state
+                                    'syntax-table)
+                (haskell-font-lock-fontify-block lang-mode (1+ (nth 8 state)) (1- (point)))
+                <span class="cd">;; </span><span class="c">must return nil here so that it is not fontified again as string
+</span>                nil)
+            <span class="cd">;; </span><span class="c">fontify normally as string because lang-mode is not present
+</span>            'haskell-quasi-quote-face))
+      (<span class="k">save-excursion</span>
+        (<span class="k">let</span>
+            ((state2
+              (parse-partial-sexp (point) (point-max) nil nil state
+                                  'syntax-table))
+             (end-of-string (point)))
+
+          (put-text-property (nth 8 state) (point)
+                             'face 'font-lock-string-face)
+
+
+          (<span class="k">if</span> (<span class="k">or</span> (equal t (nth 3 state)) (nth 3 state2))
+              <span class="cd">;; </span><span class="c">This is an unterminated string constant, use warning
+</span>              <span class="cd">;; </span><span class="c">face for the opening quote.
+</span>              (put-text-property (nth 8 state) (1+ (nth 8 state))
+                                 'face 'font-lock-warning-face))
+
+          (goto-char (1+ (nth 8 state)))
+          (<span class="k">while</span> (re-search-forward <span class="s">"\\\\"</span> end-of-string t)
+
+            (goto-char (1- (point)))
+
+            (<span class="k">if</span> (looking-at haskell-lexeme-string-literal-inside-item)
+                (goto-char (match-end 0))
+
+              <span class="cd">;; </span><span class="c">We are looking at an unacceptable escape
+</span>              <span class="cd">;; </span><span class="c">sequence. Use warning face to highlight that.
+</span>              (put-text-property (point) (1+ (point))
+                                 'face 'font-lock-warning-face)
+              (goto-char (1+ (point)))))))
+      <span class="cd">;; </span><span class="c">must return nil here so that it is not fontified again as string
+</span>      nil))
+   <span class="cd">;; </span><span class="c">Detect literate comment lines starting with syntax class '</span><span class="m c">&lt;</span><span class="c">'
+</span>   ((<span class="k">save-excursion</span>
+      (goto-char (nth 8 state))
+      (equal (string-to-syntax <span class="s">"&lt;"</span>) (syntax-after (point))))
+    'haskell-literate-comment-face)
+   <span class="cd">;; </span><span class="c">Detect pragmas. A pragma is enclosed in special comment
+</span>   <span class="cd">;; </span><span class="c">delimiters {-# .. #-}.
+</span>   ((<span class="k">save-excursion</span>
+      (goto-char (nth 8 state))
+      (<span class="k">and</span> (looking-at-p <span class="s">"{-#"</span>)
+           (forward-comment 1)
+           (goto-char (- (point) 3))
+           (looking-at-p <span class="s">"#-}"</span>)))
+    'haskell-pragma-face)
+   <span class="cd">;; </span><span class="c">Detect Liquid Haskell annotations enclosed in special comment
+</span>   <span class="cd">;; </span><span class="c">delimiters {-@ .. @-}.
+</span>   ((<span class="k">save-excursion</span>
+      (goto-char (nth 8 state))
+      (<span class="k">and</span> (looking-at-p <span class="s">"{-@"</span>)
+           (forward-comment 1)
+           (goto-char (- (point) 3))
+           (looking-at-p <span class="s">"@-}"</span>)))
+    'haskell-liquid-haskell-annotation-face)
+   <span class="cd">;; </span><span class="c">Haddock comment start with either "-- [|^*$]" or "{- ?[|^*$]"
+</span>   <span class="cd">;; </span><span class="c">(note space optional for nested comments and mandatory for
+</span>   <span class="cd">;; </span><span class="c">double dash comments).
+</span>   <span class="cd">;;</span><span class="c">
+</span>   <span class="cd">;; </span><span class="c">Haddock comment will also continue on next line, provided:
+</span>   <span class="cd">;; </span><span class="c">- current line is a double dash haddock comment
+</span>   <span class="cd">;; </span><span class="c">- next line is also double dash comment
+</span>   <span class="cd">;; </span><span class="c">- there is only whitespace between
+</span>   <span class="cd">;;</span><span class="c">
+</span>   <span class="cd">;; </span><span class="c">We recognize double dash haddock comments by property
+</span>   <span class="cd">;; </span><span class="c">'font-lock-doc-face attached to newline. In case of {- -}
+</span>   <span class="cd">;; </span><span class="c">comments newline is outside of comment.
+</span>   ((<span class="k">save-excursion</span>
+      (goto-char (nth 8 state))
+      (<span class="k">or</span> (looking-at-p <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">{- ?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">-- </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">[|^*$]"</span>)
+          (<span class="k">and</span> (looking-at-p <span class="s">"--"</span>)            <span class="cd">; </span><span class="c">are we at double dash comment
+</span>               (forward-line -1)              <span class="cd">; </span><span class="c">this is nil on first line
+</span>               (eq (get-text-property (line-end-position) 'face)
+                   'font-lock-doc-face)       <span class="cd">; </span><span class="c">is a doc face
+</span>               (forward-line)
+               (skip-syntax-forward <span class="s">"-"</span>)      <span class="cd">; </span><span class="c">see if there is only whitespace
+</span>               (eq (point) (nth 8 state)))))  <span class="cd">; </span><span class="c">we are back in position
+</span>    <span class="cd">;; </span><span class="c">Here we look inside the comment to see if there are substrings
+</span>    <span class="cd">;; </span><span class="c">worth marking inside we try to emulate as much of haddock as
+</span>    <span class="cd">;; </span><span class="c">possible.  First we add comment face all over the comment, then
+</span>    <span class="cd">;; </span><span class="c">we add special features.
+</span>    (<span class="k">let</span> ((beg (nth 8 state))
+          (end (<span class="k">save-excursion</span>
+                 (parse-partial-sexp (point) (point-max) nil nil state
+                                     'syntax-table)
+                 (point)))
+          (emphasis-open-point nil)
+          (strong-open-point nil))
+      (put-text-property beg end 'face 'font-lock-doc-face)
+
+      (<span class="k">when</span> (fboundp 'add-face-text-property)
+        <span class="cd">;; </span><span class="c">`</span><span class="m c">add-face-text-property</span><span class="c">' is not defined in Emacs 23
+</span>
+        <span class="cd">;; </span><span class="c">iterate over chars, take escaped chars unconditionally
+</span>        <span class="cd">;; </span><span class="c">mark when a construct is opened, close and face it when
+</span>        <span class="cd">;; </span><span class="c">it is closed
+</span>
+        (<span class="k">save-excursion</span>
+          (<span class="k">while</span> (&lt; (point) end)
+            (<span class="k">if</span> (looking-at <span class="s">"__</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\\\\.</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\\\n</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[/]"</span>)
+                (<span class="k">progn</span>
+                  (<span class="k">cond</span>
+                   ((equal (match-string 0) <span class="s">"/"</span>)
+                    (<span class="k">if</span> emphasis-open-point
+                        (<span class="k">progn</span>
+                          (add-face-text-property emphasis-open-point (match-end 0)
+                                                  '(<span class="bi">:slant</span> italic))
+                          (<span class="k">setq</span> emphasis-open-point nil))
+                      (<span class="k">setq</span> emphasis-open-point (point))))
+                   ((equal (match-string 0) <span class="s">"__"</span>)
+                    (<span class="k">if</span> strong-open-point
+                        (<span class="k">progn</span>
+                          (add-face-text-property strong-open-point (match-end 0)
+                                                  '(<span class="bi">:weight</span> bold))
+                          (<span class="k">setq</span> strong-open-point nil))
+                      (<span class="k">setq</span> strong-open-point (point))))
+                   (t
+                    <span class="cd">;; </span><span class="c">this is a backslash escape sequence, skip over it
+</span>                    ))
+                  (goto-char (match-end 0)))
+              <span class="cd">;; </span><span class="c">skip chars that are not interesting
+</span>              (goto-char (1+ (point)))
+              (skip-chars-forward <span class="s">"^_\\\\/"</span> end))))))
+    nil)
+   (t 'font-lock-comment-face)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,105 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-kill-thing-at-point – Emacs Documentation Online</title>
+<meta name="description" content="markdown-kill-thing-at-point is an interactive and natively compiled
+function defined in markdown-mode.el.
+Kill thing at point and add important text, without markup, to kill ring.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-kill-thing-at-point</code></h1><p><span class="m"><code>markdown-kill-thing-at-point</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-kill-thing-at-point)
+</code></pre>
+<h2>Documentation</h2>
+<p>Kill thing at point and add important text, without markup, to kill ring.
+<p>Possible things to kill include (roughly in order of precedence):
+inline code, headers, horizontal rules, links (add link text to
+kill ring), images (add alt text to kill ring), angle uri, email
+addresses, bold, italics, reference definition (add URI to kill
+ring), footnote markers and text (kill both marker and text, add
+text to kill ring), and list items.
+<h2>Key Bindings</h2>
+<p><span class="v">markdown-mode-map</span> <span class="key">C-c C-k</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+<span class="cd">;;; </span><span class="c">Element Removal ===========================================================
+</span>
+(<span class="k">defun</span> <span class="f">markdown-kill-thing-at-point</span> ()
+  <span class="doc">"Kill thing at point and add important text, without markup, to kill ring.
+Possible things to kill include (roughly in order of precedence):
+inline code, headers, horizontal rules, links (add link text to
+kill ring), images (add alt text to kill ring), angle uri, email
+addresses, bold, italics, reference definition (add URI to kill
+ring), footnote markers and text (kill both marker and text, add
+text to kill ring), and list items."</span>
+  (<span class="k">interactive</span> <span class="s">"*"</span>)
+  (<span class="k">let</span> (val)
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">Inline code
+</span>     ((markdown-inline-code-at-point)
+      (kill-new (match-string 2))
+      (delete-region (match-beginning 0) (match-end 0)))
+     <span class="cd">;; </span><span class="c">ATX header
+</span>     ((thing-at-point-looking-at markdown-regex-header-atx)
+      (kill-new (match-string 2))
+      (delete-region (match-beginning 0) (match-end 0)))
+     <span class="cd">;; </span><span class="c">Setext header
+</span>     ((thing-at-point-looking-at markdown-regex-header-setext)
+      (kill-new (match-string 1))
+      (delete-region (match-beginning 0) (match-end 0)))
+     <span class="cd">;; </span><span class="c">Horizontal rule
+</span>     ((thing-at-point-looking-at markdown-regex-hr)
+      (kill-new (match-string 0))
+      (delete-region (match-beginning 0) (match-end 0)))
+     <span class="cd">;; </span><span class="c">Inline link or image (add link or alt text to kill ring)
+</span>     ((thing-at-point-looking-at markdown-regex-link-inline)
+      (kill-new (match-string 3))
+      (delete-region (match-beginning 0) (match-end 0)))
+     <span class="cd">;; </span><span class="c">Reference link or image (add link or alt text to kill ring)
+</span>     ((thing-at-point-looking-at markdown-regex-link-reference)
+      (kill-new (match-string 3))
+      (delete-region (match-beginning 0) (match-end 0)))
+     <span class="cd">;; </span><span class="c">Angle URI (add URL to kill ring)
+</span>     ((thing-at-point-looking-at markdown-regex-angle-uri)
+      (kill-new (match-string 2))
+      (delete-region (match-beginning 0) (match-end 0)))
+     <span class="cd">;; </span><span class="c">Email address in angle brackets (add email address to kill ring)
+</span>     ((thing-at-point-looking-at markdown-regex-email)
+      (kill-new (match-string 1))
+      (delete-region (match-beginning 0) (match-end 0)))
+     <span class="cd">;; </span><span class="c">Wiki link (add alias text to kill ring)
+</span>     ((<span class="k">and</span> markdown-enable-wiki-links
+           (thing-at-point-looking-at markdown-regex-wiki-link))
+      (kill-new (markdown-wiki-link-alias))
+      (delete-region (match-beginning 1) (match-end 1)))
+     <span class="cd">;; </span><span class="c">Bold
+</span>     ((thing-at-point-looking-at markdown-regex-bold)
+      (kill-new (match-string 4))
+      (delete-region (match-beginning 2) (match-end 2)))
+     <span class="cd">;; </span><span class="c">Italics
+</span>     ((thing-at-point-looking-at markdown-regex-italic)
+      (kill-new (match-string 3))
+      (delete-region (match-beginning 1) (match-end 1)))
+     <span class="cd">;; </span><span class="c">Strikethrough
+</span>     ((thing-at-point-looking-at markdown-regex-strike-through)
+      (kill-new (match-string 4))
+      (delete-region (match-beginning 2) (match-end 2)))
+     <span class="cd">;; </span><span class="c">Footnote marker (add footnote text to kill ring)
+</span>     ((thing-at-point-looking-at markdown-regex-footnote)
+      (markdown-footnote-kill))
+     <span class="cd">;; </span><span class="c">Footnote text (add footnote text to kill ring)
+</span>     ((<span class="k">setq</span> val (markdown-footnote-text-positions))
+      (markdown-footnote-kill))
+     <span class="cd">;; </span><span class="c">Reference definition (add URL to kill ring)
+</span>     ((thing-at-point-looking-at markdown-regex-reference-definition)
+      (kill-new (match-string 5))
+      (delete-region (match-beginning 0) (match-end 0)))
+     <span class="cd">;; </span><span class="c">List item
+</span>     ((<span class="k">setq</span> val (markdown-cur-list-item-bounds))
+      (kill-new (delete-and-extract-region (cl-first val) (cl-second val))))
+     (t
+      (<span class="w">user-error</span> <span class="s">"Nothing found at point to kill"</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

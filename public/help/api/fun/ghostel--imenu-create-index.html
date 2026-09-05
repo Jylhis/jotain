@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--imenu-create-index – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--imenu-create-index is a natively compiled function defined in
+ghostel-prompt.el.
+Build an imenu alist of OSC 133 prompts in the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--imenu-create-index</code></h1><p><span class="m"><code>ghostel--imenu-create-index</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel-prompt.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--imenu-create-index)
+</code></pre>
+<h2>Documentation</h2>
+<p>Build an imenu alist of OSC 133 prompts in the current buffer.
+<p>Each entry's label is "&lt;cwd&gt;  &lt;command&gt;"; cwd is omitted when no
+<br>recorded entry aligns with the region (e.g. a still-active prompt
+whose 'C' has not fired).  Empty-command prompts are
+skipped.  Labels are truncated to 80 columns.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-prompt.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--imenu-create-index</span> ()
+  <span class="doc">"Build an imenu alist of OSC 133 prompts in the current buffer.
+Each entry's label is \"&lt;cwd&gt;  &lt;command&gt;\"; cwd is omitted when no
+recorded entry aligns with the region (e.g. a still-active prompt
+whose </span><span class="bi doc">\\=</span><span class="doc">'</span><span class="m doc">C</span><span class="bi m doc">\\=</span><span class="doc">' has not fired).  Empty-command prompts are
+skipped.  Labels are truncated to 80 columns."</span>
+  (<span class="k">let*</span> ((regions (ghostel--imenu--collect-prompt-regions))
+         (cwds (reverse ghostel--imenu-cwds))    <span class="cd">; </span><span class="c">oldest first
+</span>         <span class="cd">;; </span><span class="c">Scrollback eviction removes prompts from the buffer top
+</span>         <span class="cd">;; </span><span class="c">but leaves cwds in the list.  Drop the oldest cwds so
+</span>         <span class="cd">;; </span><span class="c">the remaining list aligns with the current regions.
+</span>         (extra (max 0 (- (length cwds) (length regions))))
+         (cwds (nthcdr extra cwds))
+         <span class="cd">;; </span><span class="c">Trim the stored list opportunistically so it doesn't
+</span>         <span class="cd">;; </span><span class="c">grow unboundedly across long sessions.
+</span>         (_ (<span class="k">when</span> (&gt; extra 0)
+              (<span class="k">setq</span> ghostel--imenu-cwds
+                    (seq-take ghostel--imenu-cwds (- (length ghostel--imenu-cwds)
+                                                     extra)))))
+         (index nil))
+    (<span class="k">cl-loop</span> for region in regions
+             for cwd = (<span class="k">pop</span> cwds)
+             do (<span class="k">let*</span> ((pos (car region))
+                       (prompt-end (cdr region))
+                       (cmd-end (<span class="k">save-excursion</span>
+                                  (goto-char prompt-end)
+                                  (line-end-position)))
+                       (cmd (string-trim
+                             (buffer-substring-no-properties prompt-end cmd-end))))
+                  (<span class="k">unless</span> (string-empty-p cmd)
+                    (<span class="k">let</span> ((label (<span class="k">if</span> cwd
+                                     (format <span class="s">"%s  %s"</span>
+                                             (abbreviate-file-name
+                                              (directory-file-name cwd))
+                                             cmd)
+                                   cmd)))
+                      (<span class="k">push</span> (cons (truncate-string-to-width label 80 nil nil t)
+                                  pos)
+                            index)))))
+    (nreverse index)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

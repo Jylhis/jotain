@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult-eglot--transformer – Emacs Documentation Online</title>
+<meta name="description" content="consult-eglot--transformer is a natively compiled function defined in
+consult-eglot.el.
+Default transformer to produce a completion candidate from SYMBOL-INFO.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult-eglot--transformer</code></h1><p><span class="m"><code>consult-eglot--transformer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult-eglot.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult-eglot--transformer <a href="#:~:text=from-,SYMBOL-INFO"><span class="arg">SYMBOL-INFO</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Default transformer to produce a completion candidate from <span class="arg">SYMBOL-INFO</span>.
+<p>The produced candidate follows the same form as <a href="../fun/consult--grep.html"><code>consult--grep</code></a> however it
+contains the <span class="arg">SYMBOL-INFO</span> as the second field instead of the file URI.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mivgqwydkrikd41q5d1scadrg1qgzbw6-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-eglot-20260613.1443/consult-eglot.el</span>
+(<span class="k">defun</span> <span class="f">consult-eglot--transformer</span> (symbol-info)
+  <span class="doc">"Default transformer to produce a completion candidate from SYMBOL-INFO.
+The produced candidate follows the same form as `</span><span class="m doc">consult--grep</span><span class="doc">' however it
+contains the SYMBOL-INFO as the second field instead of the file URI."</span>
+  (<span class="k">eglot--dbind</span> ((SymbolInformation) name kind location)
+      symbol-info
+    (<span class="k">eglot--dbind</span> ((Location) uri range) location
+      (<span class="k">let*</span> ((line (1+ (plist-get (plist-get range <span class="bi">:start</span>) <span class="bi">:line</span>)))
+             (kind-name (alist-get kind eglot--symbol-kind-names))
+             (uri-path (eglot-uri-to-path uri)))
+        (propertize
+         (concat
+          name
+          <span class="s">" "</span>
+          (string-remove-suffix <span class="s">":"</span>
+                                (consult-eglot--format-file-line-match
+                                 <span class="cd">;; </span><span class="c">If the src is relative to our project directory then use
+</span>                                 <span class="cd">;; </span><span class="c">the path from there, otherwise use the absolute file path.
+</span>                                 (<span class="k">let</span> ((relative-uri-path (file-relative-name uri-path)))
+                                   (<span class="k">if</span> (string-prefix-p <span class="s">".."</span> relative-uri-path)
+                                       (abbreviate-file-name uri-path)
+                                     relative-uri-path))
+                                 line)))
+         'consult--type (<span class="k">or</span> (car (rassoc kind-name consult-eglot-narrow))
+                            (car (rassoc <span class="s">"Other"</span> consult-eglot-narrow)))
+         'consult--candidate symbol-info)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--rebuild-semi-char-keymap – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--rebuild-semi-char-keymap is a natively compiled function
+defined in ghostel.el.
+Rebuild ghostel-semi-char-mode-map from ghostel-keymap-exceptions.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--rebuild-semi-char-keymap</code></h1><p><span class="m"><code>ghostel--rebuild-semi-char-keymap</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--rebuild-semi-char-keymap)
+</code></pre>
+<h2>Documentation</h2>
+<p>Rebuild <a href="../var/ghostel-semi-char-mode-map.html"><code>ghostel-semi-char-mode-map</code></a> from <a href="../var/ghostel-keymap-exceptions.html"><code>ghostel-keymap-exceptions</code></a>.
+<p>Mutates the existing keymap object in place so any buffer-local
+reference to it picks up the new bindings.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--rebuild-semi-char-keymap</span> ()
+  <span class="doc">"Rebuild `</span><span class="m doc">ghostel-semi-char-mode-map</span><span class="doc">' from `</span><span class="m doc">ghostel-keymap-exceptions</span><span class="doc">'.
+Mutates the existing keymap object in place so any buffer-local
+reference to it picks up the new bindings."</span>
+  (<span class="k">let</span> ((fresh (make-sparse-keymap)))
+    (set-keymap-parent fresh ghostel-mode-map)
+    (ghostel--define-terminal-keys fresh)
+    <span class="cd">;; </span><span class="c">Yank bindings layer on top of the helper's defaults so the
+</span>    <span class="cd">;; </span><span class="c">kill ring wins over `</span><span class="m c">ghostel--send-event</span><span class="c">' for `</span><span class="m c">M-y</span><span class="c">',
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">S-&lt;insert&gt;</span><span class="c">', etc.
+</span>    (define-keymap <span class="bi">:keymap</span> fresh
+      <span class="s">"C-y"</span>            #'ghostel-yank
+      <span class="s">"S-&lt;insert&gt;"</span>     #'ghostel-yank
+      <span class="s">"&lt;remap&gt; &lt;yank&gt;"</span> #'ghostel-yank
+      <span class="s">"M-y"</span>            #'ghostel-yank-pop)
+    <span class="cd">;; </span><span class="c">C-q quotes the next key to the terminal (`</span><span class="m c">quoted-insert</span><span class="c">' mnemonic).
+</span>    <span class="cd">;; </span><span class="c">Listing "C-q" in the exceptions lets it fall through to Emacs instead.
+</span>    (<span class="k">unless</span> (member <span class="s">"C-q"</span> ghostel-keymap-exceptions)
+      (define-key fresh (kbd <span class="s">"C-q"</span>) #'ghostel-send-next-key))
+    (setcdr ghostel-semi-char-mode-map (cdr fresh)))
+  <span class="cd">;; </span><span class="c">C-g honors the exception list: bound to nil (unbound) when excepted.
+</span>  (define-key ghostel-mode-map (kbd <span class="s">"C-g"</span>)
+              (<span class="k">unless</span> (member <span class="s">"C-g"</span> ghostel-keymap-exceptions)
+                #'ghostel-send-C-g)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

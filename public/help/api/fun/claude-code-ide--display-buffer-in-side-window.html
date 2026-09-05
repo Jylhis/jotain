@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide--display-buffer-in-side-window – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide--display-buffer-in-side-window is a natively compiled
+function defined in claude-code-ide.el.
+Display BUFFER in a side window according to customization.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide--display-buffer-in-side-window</code></h1><p><span class="m"><code>claude-code-ide--display-buffer-in-side-window</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">claude-code-ide.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide--display-buffer-in-side-window <a href="#:~:text=Display-,BUFFER"><span class="arg">BUFFER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Display <span class="arg">BUFFER</span> in a side window according to customization.
+<p>The window is displayed on the side specified by
+<a href="../var/claude-code-ide-window-side.html"><code>claude-code-ide-window-side</code></a> with dimensions from
+<a href="../var/claude-code-ide-window-width.html"><code>claude-code-ide-window-width</code></a> or <a href="../var/claude-code-ide-window-height.html"><code>claude-code-ide-window-height</code></a>.
+If <a href="../var/claude-code-ide-focus-on-open.html"><code>claude-code-ide-focus-on-open</code></a> is non-nil, the window is selected.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide--display-buffer-in-side-window</span> (buffer)
+  <span class="doc">"Display BUFFER in a side window according to customization.
+The window is displayed on the side specified by
+`</span><span class="m doc">claude-code-ide-window-side</span><span class="doc">' with dimensions from
+`</span><span class="m doc">claude-code-ide-window-width</span><span class="doc">' or `</span><span class="m doc">claude-code-ide-window-height</span><span class="doc">'.
+If `</span><span class="m doc">claude-code-ide-focus-on-open</span><span class="doc">' is non-nil, the window is selected."</span>
+  (<span class="k">let</span> ((window
+         (<span class="k">if</span> claude-code-ide-use-side-window
+             <span class="cd">;; </span><span class="c">Use side window
+</span>             (<span class="k">let*</span> ((side claude-code-ide-window-side)
+                    (slot 0)
+                    (window-parameters '((no-delete-other-windows . t)))
+                    (display-buffer-alist
+                     `((,(regexp-quote (buffer-name buffer))
+                        (display-buffer-in-side-window)
+                        (side . ,side)
+                        (slot . ,slot)
+                        ,@(<span class="k">when</span> (memq side '(left right))
+                            `((window-width . ,claude-code-ide-window-width)))
+                        ,@(<span class="k">when</span> (memq side '(top bottom))
+                            `((window-height . ,claude-code-ide-window-height)))
+                        (window-parameters . ,window-parameters)))))
+               (display-buffer buffer))
+           <span class="cd">;; </span><span class="c">Use regular buffer
+</span>           (display-buffer buffer))))
+    <span class="cd">;; </span><span class="c">Update last accessed buffer whenever we display a Claude buffer
+</span>    (<span class="k">setq</span> claude-code-ide--last-accessed-buffer buffer)
+    <span class="cd">;; </span><span class="c">Select the window to give it focus if configured to do so
+</span>    (<span class="k">when</span> (<span class="k">and</span> window claude-code-ide-focus-on-open)
+      (select-window window))
+    <span class="cd">;; </span><span class="c">For bottom/top windows, explicitly set and preserve the height
+</span>    (<span class="k">when</span> (<span class="k">and</span> window
+               claude-code-ide-use-side-window
+               (memq claude-code-ide-window-side '(top bottom)))
+      (set-window-text-height window claude-code-ide-window-height)
+      (set-window-dedicated-p window t))
+    <span class="cd">;; </span><span class="c">Sync terminal dimensions with the actual window size
+</span>    <span class="cd">;; </span><span class="c">This is necessary because vterm/eat may have been created with
+</span>    <span class="cd">;; </span><span class="c">different dimensions before being displayed in this window
+</span>    (<span class="k">when</span> window
+      (claude-code-ide--sync-terminal-dimensions buffer window))
+    window))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

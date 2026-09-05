@@ -1,0 +1,106 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--apply-preset – Emacs Documentation Online</title>
+<meta name="description" content="gptel--apply-preset is a natively compiled function defined in
+gptel.el.
+Apply gptel PRESET with SETTER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--apply-preset</code></h1><p><span class="m"><code>gptel--apply-preset</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--apply-preset <a href="#:~:text=gptel-,PRESET"><span class="arg">PRESET</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=with-,SETTER"><span class="arg">SETTER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply gptel <span class="arg">PRESET</span> with <span class="arg">SETTER</span>.
+<p><span class="arg">PRESET</span> is the name of a preset, or a spec (plist) of the form
+<br>&nbsp;(<span class="bi">:KEY1</span> VAL1 <span class="bi">:KEY2</span> VAL2 ...).
+<p><span class="arg">SETTER</span> is the function used to set the gptel options.  It must accept
+two arguments, the symbol being set and the value to set it to.  It
+defaults to <a href="../fun/set.html"><code>set</code></a>, and can be set to a different function to (for
+example) apply the preset buffer-locally.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--apply-preset</span> (preset <span class="ty">&amp;optional</span> setter)
+  <span class="doc">"Apply gptel PRESET with SETTER.
+
+PRESET is the name of a preset, or a spec (plist) of the form
+ (:KEY1 VAL1 :KEY2 VAL2 ...).
+
+SETTER is the function used to set the gptel options.  It must accept
+two arguments, the symbol being set and the value to set it to.  It
+defaults to `</span><span class="m doc">set</span><span class="doc">', and can be set to a different function to (for
+example) apply the preset buffer-locally."</span>
+  (<span class="k">unless</span> setter (<span class="k">setq</span> setter #'set))
+  (<span class="k">cl-flet</span> ((preset-spec (preset)
+              (<span class="k">if</span> (memq (type-of preset) '(symbol string))
+                  (<span class="k">or</span> (gptel-get-preset preset)
+                      (<span class="w">user-error</span> <span class="s">"gptel preset \"%s\": Cannot find preset"</span>
+                                  preset))
+                preset)))
+    <span class="cd">;; </span><span class="c">Record preset name for persistence and UI display
+</span>    (<span class="k">when</span> (memq (type-of preset) '(string symbol))
+      (funcall setter 'gptel--preset preset))
+    <span class="cd">;; </span><span class="c">Ensure that preset is a plist spec
+</span>    (<span class="k">setq</span> preset (preset-spec preset))
+    (<span class="k">when-let*</span> ((func (plist-get preset <span class="bi">:pre</span>))) (funcall func))
+    (<span class="k">when-let*</span> ((parents (plist-get preset <span class="bi">:parents</span>)))
+      (mapc (<span class="k">lambda</span> (parent) (gptel--apply-preset (preset-spec parent) setter))
+            (ensure-list parents))))
+  (map-do
+   (<span class="k">lambda</span> (key val)
+     (<span class="k">pcase</span> key
+       ((<span class="k">or</span> <span class="bi">:parents</span> <span class="bi">:description</span> <span class="bi">:pre</span> <span class="bi">:post</span>) nil)
+       <span class="cd">;; </span><span class="c">TODO(v1.0): Remove :system-message from this list
+</span>       ((<span class="k">or</span> <span class="bi">:system</span> <span class="bi">:system-prompt</span> <span class="bi">:system-message</span> <span class="bi">:rewrite-directive</span>)
+        (<span class="k">let</span> ((sym (<span class="k">if</span> (eq key <span class="bi">:rewrite-directive</span>)
+                       'gptel--rewrite-directive 'gptel-system-prompt)))
+          (<span class="k">when</span> (consp val)
+            <span class="cd">;; </span><span class="c">Possibly complain about trying to compose a system message string
+</span>            <span class="cd">;; </span><span class="c">with a non-string
+</span>            <span class="cd">;; </span><span class="c">TODO(modify-list): Catch other incompatible combinations
+</span>            (<span class="k">and</span> (<span class="k">or</span> (plist-member val <span class="bi">:append</span>) (plist-member val <span class="bi">:prepend</span>))
+                 (not (stringp (symbol-value sym)))
+                 (<span class="w">user-error</span> <span class="s">"Composing non-string system messages is not implemented"</span>))
+            (<span class="k">setq</span> val (gptel--modify-value (symbol-value sym) val)))
+          (<span class="k">if</span> (<span class="k">and</span> val (symbolp val) (not (functionp val)))
+              (<span class="k">if-let*</span> ((directive (alist-get val gptel-directives)))
+                  (funcall setter sym directive)
+                (<span class="w">user-error</span> <span class="s">"gptel preset: Cannot find directive %s"</span> val))
+            (funcall setter sym val))))
+       (<span class="bi">:backend</span>
+        (<span class="k">when</span> (consp val) (<span class="k">setq</span> val (gptel--modify-value 'gptel-backend val)))
+        (<span class="k">setq</span> val (<span class="k">cl-etypecase</span> val
+                    (gptel-backend val)
+                    (string (gptel-get-backend val))))
+        (<span class="k">unless</span> val
+          (<span class="w">user-error</span> <span class="s">"gptel preset: Cannot find backend %s"</span> val))
+        (funcall setter 'gptel-backend val))
+       (<span class="bi">:tools</span>                          <span class="cd">;</span><span class="c">TEMP Confirm this `</span><span class="m c">:append</span><span class="c">' convention
+</span>        (<span class="k">setq</span> val (gptel--modify-value gptel-tools val))
+        (<span class="k">let*</span> ((tools
+                (flatten-list
+                 (<span class="k">cl-loop</span> for tool-spec in (ensure-list val)
+                          for tool = (<span class="k">ignore-errors</span>
+                                       (gptel-get-tool tool-spec))
+                          do (<span class="k">unless</span> tool
+                               (<span class="w">user-error</span> <span class="s">"gptel preset: Cannot find tool %S"</span>
+                                           tool-spec))
+                          collect tool))))
+          (funcall setter 'gptel-tools (cl-delete-duplicates tools <span class="bi">:test</span> #'eq))))
+       ((<span class="k">and</span> (<span class="k">let</span> sym (<span class="k">or</span> (intern-soft
+                           (concat <span class="s">"gptel-"</span> (substring (symbol-name key) 1)))
+                          (intern-soft
+                           (concat <span class="s">"gptel--"</span> (substring (symbol-name key) 1)))))
+             (guard (<span class="k">and</span> sym (boundp sym))))
+        (funcall setter sym (<span class="k">if</span> (consp val)
+                                (gptel--modify-value (symbol-value sym) val)
+                              val)))
+       (_ (display-warning
+           '(gptel presets)
+           (format <span class="s">"gptel preset: setting for %s not found, ignoring."</span> key)))))
+   preset)
+  (<span class="k">when-let*</span> ((func (plist-get preset <span class="bi">:post</span>))) (funcall func)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

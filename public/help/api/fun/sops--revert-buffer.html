@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sops--revert-buffer – Emacs Documentation Online</title>
+<meta name="description" content="sops--revert-buffer is a natively compiled function defined in
+sops.el.
+Revert function for sops-mode buffers: re-read encrypted file and decrypt.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sops--revert-buffer</code></h1><p><span class="m"><code>sops--revert-buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">sops.el</span>.
+<h2>Signature</h2>
+<pre><code>(sops--revert-buffer <span class="ty">&amp;rest</span> <a href="#:~:text=modtime-,first"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Revert function for sops-mode buffers: re-read encrypted file and decrypt.
+<p>Widens before erasing so a narrowed buffer doesn't corrupt itself with
+mixed encrypted + plaintext content (parallels the narrowing defense
+in <a href="../fun/sops--encrypt-and-write.html"><code>sops--encrypt-and-write</code></a>).
+<p>Refreshes <a href="../fun/visited-file-modtime.html"><code>visited-file-modtime</code></a> BEFORE <a href="../fun/erase-buffer.html"><code>erase-buffer</code></a>.  Two reasons:
+<p>&nbsp;&nbsp;1. After the revert, <a href="../fun/verify-visited-file-modtime.html"><code>verify-visited-file-modtime</code></a> must return t
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;so the next keystroke doesn't re-fire the "FILE has changed on
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;disk" prompt.
+<p>&nbsp;&nbsp;2. <a href="../fun/erase-buffer.html"><code>erase-buffer</code></a> triggers Emacs's <a href="../fun/lock-file.html"><code>lock-file</code></a> path which calls
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../fun/ask-user-about-supersession-threat.html"><code>ask-user-about-supersession-threat</code></a> if the modtime is stale.
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;In batch mode that errors out ("Cannot resolve conflict in
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;batch mode"); interactively it would re-fire the supersession
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prompt mid-revert.  Updating the recorded modtime first
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;suppresses the check because the buffer now "agrees" with disk.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qkr1smn94fw9pj8qis6r47djxqbd30ki-emacs-packages-deps/share/emacs/site-lisp/elpa/sops-20260518.350/sops.el</span>
+(<span class="k">defun</span> <span class="f">sops--revert-buffer</span> (<span class="ty">&amp;rest</span> _args)
+  <span class="doc">"Revert function for sops-mode buffers: re-read encrypted file and decrypt.
+Widens before erasing so a narrowed buffer doesn't corrupt itself with
+mixed encrypted + plaintext content (parallels the narrowing defense
+in `</span><span class="m doc">sops--encrypt-and-write</span><span class="doc">').
+
+Refreshes `</span><span class="m doc">visited-file-modtime</span><span class="doc">' BEFORE `</span><span class="m doc">erase-buffer</span><span class="doc">'.  Two reasons:
+
+  1. After the revert, `</span><span class="m doc">verify-visited-file-modtime</span><span class="doc">' must return t
+     so the next keystroke doesn't re-fire the \"FILE has changed on
+     disk\" prompt.
+
+  2. `</span><span class="m doc">erase-buffer</span><span class="doc">' triggers Emacs's `</span><span class="m doc">lock-file</span><span class="doc">' path which calls
+     `</span><span class="m doc">ask-user-about-supersession-threat</span><span class="doc">' if the modtime is stale.
+     In batch mode that errors out (\"Cannot resolve conflict in
+     batch mode\"); interactively it would re-fire the supersession
+     prompt mid-revert.  Updating the recorded modtime first
+     suppresses the check because the buffer now \"agrees\" with disk."</span>
+  (<span class="k">save-restriction</span>
+    (widen)
+    (set-visited-file-modtime)
+    (<span class="k">let</span> ((inhibit-read-only t))
+      (erase-buffer)
+      (insert-file-contents buffer-file-name)))
+  (sops--decrypt-buffer)
+  (set-buffer-modified-p nil))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

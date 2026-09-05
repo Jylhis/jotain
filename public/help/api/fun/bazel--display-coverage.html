@@ -1,0 +1,91 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--display-coverage – Emacs Documentation Online</title>
+<meta name="description" content="bazel--display-coverage is a natively compiled function defined in
+bazel.el.
+Add overlays for coverage information in BUFFER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--display-coverage</code></h1><p><span class="m"><code>bazel--display-coverage</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--display-coverage <a href="#:~:text=in-,BUFFER"><span class="arg">BUFFER</span></a> <a href="#:~:text=BUFFER.-,COVERAGE"><span class="arg">COVERAGE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Add overlays for coverage information in <span class="arg">BUFFER</span>.
+<p><span class="arg">COVERAGE</span> is a hashtable mapping line numbers to ‘bazel--coverage’
+structures.  Remove existing coverage overlays first.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--display-coverage</span> (buffer coverage)
+  <span class="doc">"Add overlays for coverage information in BUFFER.
+COVERAGE is a hashtable mapping line numbers to ‘</span><span class="m doc">bazel--coverage</span><span class="doc">’
+structures.  Remove existing coverage overlays first."</span>
+  (<span class="w">cl-check-type</span> buffer buffer)
+  (<span class="w">cl-check-type</span> coverage hash-table)
+  (<span class="k">let</span> ((pairs ())
+        (runs ())
+        (some-branch-coverage nil)
+        (margin-width 20))
+    (maphash
+     (<span class="k">lambda</span> (line coverage)
+       (<span class="w">cl-check-type</span> line natnum)
+       (<span class="w">cl-check-type</span> coverage bazel--coverage)
+       (<span class="k">let</span> ((face (<span class="k">if</span> (cl-plusp (bazel--coverage-hits coverage))
+                       'bazel-covered-line
+                     'bazel-uncovered-line))
+             (branches (<span class="k">when-let*</span> ((blocks (bazel--coverage-blocks coverage)))
+                         (bazel--branch-coverage-string blocks))))
+         (<span class="k">push</span> (list line face branches) pairs)))
+     coverage)
+    (<span class="k">cl-callf</span> sort pairs #'car-less-than-car)
+    <span class="cd">;; </span><span class="c">The Emacs Lisp manual cautions that overlays don’t scale well; see Info
+</span>    <span class="cd">;; </span><span class="c">node ‘(elisp) Overlays’.  Therefore, we create as few overlays as
+</span>    <span class="cd">;; </span><span class="c">possible by grouping consecutive lines with identical coverage status
+</span>    <span class="cd">;; </span><span class="c">into runs.
+</span>    (<span class="k">while</span> pairs
+      (<span class="k">cl-loop</span> with (i . f) = (car pairs)
+               for tail on (cdr pairs)
+               for (j . g) = (car tail)
+               for k from (1+ i)  <span class="cd">; </span><span class="c">expected line number for the next element
+</span>               while (<span class="k">and</span> (equal f g) (eql j k))  <span class="cd">; </span><span class="c">stop as soon as run ends
+</span>               finally (<span class="k">push</span> (list f i (1- k)) runs) (<span class="k">setq</span> pairs tail)))
+    (<span class="k">cl-callf</span> nreverse runs)
+    (<span class="k">with-current-buffer</span> buffer
+      (<span class="k">save-excursion</span>
+        (<span class="k">without-restriction</span>
+          <span class="cd">;; </span><span class="c">‘</span><span class="m c">line-beginning-position</span><span class="c">’ and ‘</span><span class="m c">line-end-position</span><span class="c">’ below count lines
+</span>          <span class="cd">;; </span><span class="c">starting from the current line, so to be able to use absolute line
+</span>          <span class="cd">;; </span><span class="c">numbers from ‘</span><span class="m c">coverage.dat</span><span class="c">’, we need to go to the very beginning of
+</span>          <span class="cd">;; </span><span class="c">the buffer.
+</span>          (goto-char (point-min))
+          <span class="cd">;; </span><span class="c">See remark at the bottom of Info node ‘(elisp) Managing Overlays’.
+</span>          (overlay-recenter (point-max))
+          <span class="cd">;; </span><span class="c">We first remove existing coverage overlays because they are likely
+</span>          <span class="cd">;; </span><span class="c">stale.
+</span>          (bazel--remove-coverage-overlays)
+          (<span class="k">cl-loop</span> for ((face branches) i j) in runs
+                   <span class="cd">;; </span><span class="c">Choose overlay positions and stickiness so that inserting
+</span>                   <span class="cd">;; </span><span class="c">text before or after a run doesn’t appear to extend the
+</span>                   <span class="cd">;; </span><span class="c">covered region.
+</span>                   for o = (make-overlay (line-beginning-position i)
+                                         (line-end-position j)
+                                         buffer <span class="bi">:front-advance</span>)
+                   do
+                   <span class="cd">;; </span><span class="c">Add ‘</span><span class="m c">category</span><span class="c">’ property to find the overlays later (see
+</span>                   <span class="cd">;; </span><span class="c">‘</span><span class="m c">bazel-remove-coverage-display</span><span class="c">’).
+</span>                   (overlay-put o 'category 'bazel-coverage)
+                   (overlay-put o 'face face)
+                   (<span class="k">when</span> branches
+                     (bazel--add-left-margin
+                      (truncate-string-to-width branches margin-width
+                                                nil nil <span class="s">"…"</span>)
+                      o)
+                     (<span class="k">setq</span> some-branch-coverage t)))))
+      (<span class="k">when</span> (<span class="k">and</span> some-branch-coverage (&lt; left-margin-width margin-width))
+        (<span class="k">setq</span> left-margin-width margin-width)
+        (bazel--update-margin-display))))
+  nil)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

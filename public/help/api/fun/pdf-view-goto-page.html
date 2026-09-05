@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-view-goto-page – Emacs Documentation Online</title>
+<meta name="description" content="pdf-view-goto-page is an interactive and natively compiled function
+defined in pdf-view.el.
+Go to PAGE in PDF.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-view-goto-page</code></h1><p><span class="m"><code>pdf-view-goto-page</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">pdf-view.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-view-goto-page <a href="#:~:text=to-,PAGE"><span class="arg">PAGE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=parameter-,WINDOW"><span class="arg">WINDOW</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Go to <span class="arg">PAGE</span> in PDF.
+<p>If optional parameter <span class="arg">WINDOW</span>, go to <span class="arg">PAGE</span> in all <span class="m"><code>pdf-view</code></span>
+windows.
+<h2>Key Bindings</h2>
+<p><span class="v">pdf-view-mode-map</span> <span class="key">M-g M-g</span>
+<span class="v">pdf-view-mode-map</span> <span class="key">M-g g</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-view.el</span>
+(<span class="k">defun</span> <span class="f">pdf-view-goto-page</span> (page <span class="ty">&amp;optional</span> window)
+  <span class="doc">"Go to PAGE in PDF.
+
+If optional parameter WINDOW, go to PAGE in all `</span><span class="m doc">pdf-view</span><span class="doc">'
+windows."</span>
+  (<span class="k">interactive</span>
+   (list (<span class="k">if</span> current-prefix-arg
+             (prefix-numeric-value current-prefix-arg)
+           (read-number <span class="s">"Page: "</span>))))
+  (<span class="k">unless</span> (<span class="k">and</span> (&gt;= page 1)
+               (&lt;= page (pdf-cache-number-of-pages)))
+    (<span class="w">error</span> <span class="s">"No such page: %d"</span> page))
+  (<span class="k">unless</span> window
+    (<span class="k">setq</span> window
+          (<span class="k">if</span> (pdf-util-pdf-window-p)
+              (selected-window)
+            t)))
+  (<span class="k">save-selected-window</span>
+    <span class="cd">;; </span><span class="c">Select the window for the hooks below.
+</span>    (<span class="k">when</span> (window-live-p window)
+      (select-window window 'norecord))
+    (<span class="k">let</span> ((changing-p
+           (not (eq page (<span class="k">pdf-view-current-page</span> window)))))
+      (<span class="k">when</span> changing-p
+        (run-hooks 'pdf-view-before-change-page-hook)
+        (<span class="k">setf</span> (<span class="k">pdf-view-current-page</span> window) page)
+        (run-hooks 'pdf-view-change-page-hook))
+      (<span class="k">when</span> (window-live-p window)
+        (image-set-window-vscroll 0)
+        (<span class="k">if</span> pdf-view-roll-minor-mode
+            (pdf-roll-pre-redisplay window)
+          (pdf-view-redisplay window)))
+      (<span class="k">when</span> changing-p
+        (pdf-view-deactivate-region)
+        (force-mode-line-update)
+        (run-hooks 'pdf-view-after-change-page-hook))))
+  nil)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

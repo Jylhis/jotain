@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-info-query--transform-annotation – Emacs Documentation Online</title>
+<meta name="description" content="pdf-info-query--transform-annotation is a natively compiled function
+defined in pdf-info.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-info-query--transform-annotation</code></h1><p><span class="m"><code>pdf-info-query--transform-annotation</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">pdf-info.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-info-query--transform-annotation <span class="arg">A</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-info.el</span>
+(<span class="k">defun</span> <span class="f">pdf-info-query--transform-annotation</span> (a)
+  (<span class="k">cl-labels</span> ((not-empty (s)
+                (<span class="k">if</span> (not (equal s <span class="s">""</span>)) s)))
+    (<span class="k">let</span> (a1 a2 a3)
+      (<span class="k">cl-destructuring-bind</span> (page edges type id flags color contents modified <span class="ty">&amp;rest</span> rest)
+          a
+        (<span class="k">setq</span> a1 `((page . ,(string-to-number page))
+                   (edges . ,(mapcar #'string-to-number
+                                     (split-string edges <span class="s">" "</span> t)))
+                   (type . ,(intern type))
+                   (id . ,(intern id))
+                   (flags . ,(string-to-number flags))
+                   (color . ,(not-empty color))
+                   (contents . ,contents)
+                   (modified . ,(pdf-info-parse-pdf-date modified))))
+        (<span class="k">when</span> rest
+          (<span class="k">cl-destructuring-bind</span> (label subject opacity popup-edges popup-is-open created
+                                        <span class="ty">&amp;rest</span> rest)
+              rest
+            (<span class="k">setq</span> a2
+                  `((label . ,(not-empty label))
+                    (subject . ,(not-empty subject))
+                    (opacity . ,(<span class="k">let</span> ((o (not-empty opacity)))
+                                  (<span class="k">and</span> o (string-to-number o))))
+                    (popup-edges . ,(<span class="k">let</span> ((p (not-empty popup-edges)))
+                                      (<span class="k">when</span> p
+                                        (mapcar #'string-to-number
+                                                (split-string p <span class="s">" "</span> t)))))
+                    (popup-is-open . ,(equal popup-is-open <span class="s">"1"</span>))
+                    (created . ,(pdf-info-parse-pdf-date (not-empty created)))))
+            (<span class="k">cond</span>
+             ((eq (cdr (assoc 'type a1)) 'text)
+              (<span class="k">cl-destructuring-bind</span> (icon state is-open)
+                  rest
+                (<span class="k">setq</span> a3
+                      `((icon . ,(not-empty icon))
+                        (state . ,(not-empty state))
+                        (is-open . ,(equal is-open <span class="s">"1"</span>))))))
+             ((memq (cdr (assoc 'type a1))
+                    '(squiggly highlight underline strike-out))
+              (<span class="k">setq</span> a3 `((markup-edges
+                          . ,(mapcar (<span class="k">lambda</span> (r)
+                                       (mapcar #'string-to-number
+                                               (split-string r <span class="s">" "</span> t)))
+                                     rest)))))))))
+      (append a1 a2 a3))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

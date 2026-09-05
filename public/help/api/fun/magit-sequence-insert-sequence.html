@@ -1,0 +1,81 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-sequence-insert-sequence – Emacs Documentation Online</title>
+<meta name="description" content="magit-sequence-insert-sequence is a natively compiled function defined
+in magit-sequence.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-sequence-insert-sequence</code></h1><p><span class="m"><code>magit-sequence-insert-sequence</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">magit-sequence.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-sequence-insert-sequence <span class="arg">STOP</span> <span class="arg">ONTO</span> <span class="ty">&amp;optional</span> <span class="arg">ORIG</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-sequence.el</span>
+(<span class="k">defun</span> <span class="f">magit-sequence-insert-sequence</span> (stop onto <span class="ty">&amp;optional</span> orig)
+  (<span class="k">let</span> ((head (magit-rev-parse <span class="s">"HEAD"</span>)) done)
+    (<span class="k">setq</span> onto (<span class="k">if</span> onto (magit-rev-parse onto) head))
+    (<span class="k">setq</span> done (mapcar (##split-string % <span class="s">"\0"</span>)
+                       (magit-git-lines <span class="s">"log"</span> <span class="s">"--format=%H%x00%h%x00%s"</span>
+                                        (concat onto <span class="s">"..HEAD"</span>))))
+    (<span class="k">when</span> (<span class="k">and</span> stop (not (assoc (magit-rev-parse stop) done)))
+      (<span class="k">let</span> ((id (magit-patch-id stop)))
+        (<span class="k">if-let</span> ((matched (car (assoc (##equal (magit-patch-id %) id) done))))
+            (<span class="k">setq</span> stop matched)
+          (<span class="k">cond</span>
+            ((assoc (##magit-rev-equal % stop) done)
+             <span class="cd">;; </span><span class="c">The commit's testament has been executed.
+</span>             (magit-sequence-insert-commit <span class="s">"void"</span> stop 'magit-sequence-drop))
+            <span class="cd">;; </span><span class="c">The faith of the commit is still undecided...
+</span>            ((magit-anything-unmerged-p)
+             <span class="cd">;; </span><span class="c">...and time travel isn't for the faint of heart.
+</span>             (magit-sequence-insert-commit <span class="s">"join"</span> stop 'magit-sequence-part))
+            ((magit-anything-modified-p t)
+             <span class="cd">;; </span><span class="c">...and the dust hasn't settled yet...
+</span>             (magit-sequence-insert-commit
+              (<span class="k">let*</span> ((magit--refresh-cache nil)
+                     (staged   (magit-commit-tree <span class="s">"oO"</span> nil <span class="s">"HEAD"</span>))
+                     (unstaged (magit-commit-worktree <span class="s">"oO"</span> <span class="s">"--reset"</span>)))
+                (<span class="k">cond</span>
+                  <span class="cd">;; </span><span class="c">...but we could end up at the same tree just by committing.
+</span>                  ((<span class="k">or</span> (magit-rev-equal staged   stop)
+                       (magit-rev-equal unstaged stop))
+                   <span class="s">"goal"</span>)
+                  <span class="cd">;; </span><span class="c">...but the changes are still there, untainted.
+</span>                  ((<span class="k">or</span> (equal (magit-patch-id staged)   id)
+                       (equal (magit-patch-id unstaged) id))
+                   <span class="s">"same"</span>)
+                  <span class="cd">;; </span><span class="c">...and some changes are gone and/or others were added.
+</span>                  (<span class="s">"work"</span>)))
+              stop 'magit-sequence-part))
+            <span class="cd">;; </span><span class="c">The commit is definitely gone...
+</span>            ((assoc (##magit-rev-equal % stop) done)
+             <span class="cd">;; </span><span class="c">...but all of its changes are still in effect.
+</span>             (magit-sequence-insert-commit <span class="s">"poof"</span> stop 'magit-sequence-drop))
+            <span class="cd">;; </span><span class="c">...and some changes are gone and/or other changes were added.
+</span>            ((magit-sequence-insert-commit <span class="s">"gone"</span> stop 'magit-sequence-drop)))
+          (<span class="k">setq</span> stop nil))))
+    (<span class="k">pcase-dolist</span> (`(,rev ,abbrev ,msg) done)
+      (apply #'magit-sequence-insert-commit
+             (<span class="k">cond</span> ((equal rev stop)
+                    <span class="cd">;; </span><span class="c">...but its reincarnation lives on.
+</span>                    <span class="cd">;; </span><span class="c">Or it didn't die in the first place.
+</span>                    (list (<span class="k">if</span> (<span class="k">and</span> (equal rev head)
+                                   (equal (magit-patch-id rev)
+                                          (magit-patch-id orig)))
+                              <span class="s">"stop"</span> <span class="cd">; </span><span class="c">We haven't done anything yet.
+</span>                            <span class="s">"like"</span>)  <span class="cd">; </span><span class="c">There are new commits.
+</span>                          rev (<span class="k">if</span> (equal rev head)
+                                  'magit-sequence-head
+                                'magit-sequence-stop)
+                          abbrev msg))
+                   ((equal rev head)
+                    (list <span class="s">"done"</span> rev 'magit-sequence-head abbrev msg))
+                   ((list <span class="s">"done"</span> rev 'magit-sequence-done abbrev msg)))))
+    (magit-sequence-insert-commit <span class="s">"onto"</span> onto
+                                  (<span class="k">if</span> (equal onto head)
+                                      'magit-sequence-head
+                                    'magit-sequence-onto))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

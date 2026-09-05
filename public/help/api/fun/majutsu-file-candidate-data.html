@@ -1,0 +1,43 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-file-candidate-data – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-file-candidate-data is a natively compiled function defined in
+majutsu-file.el.
+Return completion payload for file CANDIDATES in REVSET at ROOT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-file-candidate-data</code></h1><p><span class="m"><code>majutsu-file-candidate-data</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-file.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-file-candidate-data <span class="ty">&amp;optional</span> <a href="#:~:text=in-,REVSET"><span class="arg">REVSET</span></a> <a href="#:~:text=at-,ROOT"><span class="arg">ROOT</span></a> <a href="#:~:text=file-,CANDIDATES"><span class="arg">CANDIDATES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return completion payload for file <span class="arg">CANDIDATES</span> in <span class="arg">REVSET</span> at <span class="arg">ROOT</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-file.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-file-candidate-data</span> (<span class="ty">&amp;optional</span> revset root candidates)
+  <span class="doc">"Return completion payload for file CANDIDATES in REVSET at ROOT."</span>
+  (<span class="k">let*</span> ((revset (<span class="k">or</span> revset <span class="s">"@"</span>))
+         (root (<span class="k">or</span> root (majutsu-file--root)))
+         (candidates (<span class="k">or</span> candidates (majutsu-file--list revset root)))
+         (statuses (majutsu-file--summary-entry-map revset root))
+         (entries (make-hash-table <span class="bi">:test</span> #'equal)))
+    (<span class="k">condition-case</span> nil
+        (<span class="k">dolist</span> (entry (majutsu-file--completion-entries revset root))
+          (<span class="k">when-let*</span> ((path (plist-get entry <span class="bi">:path</span>)))
+            (<span class="k">when-let*</span> ((status (gethash path statuses)))
+              (<span class="k">setq</span> entry (append status entry)))
+            (puthash path entry entries)))
+      (<span class="w">error</span> nil))
+    (<span class="k">dolist</span> (path candidates)
+      (<span class="k">when</span> (<span class="k">and</span> (not (gethash path entries))
+                 (gethash path statuses))
+        (puthash path (gethash path statuses) entries)))
+    (list <span class="bi">:category</span> 'majutsu-file
+          <span class="bi">:candidates</span> candidates
+          <span class="bi">:entries</span> entries
+          <span class="bi">:annotation-suffix-function</span>
+          (majutsu-file--completion-suffix-function entries))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,87 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vc-jj-dir-status-files – Emacs Documentation Online</title>
+<meta name="description" content="vc-jj-dir-status-files is a natively compiled function defined in
+vc-jj.el.
+Calculate a list of (FILE STATE EXTRA) entries for DIR.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vc-jj-dir-status-files</code></h1><p><span class="m"><code>vc-jj-dir-status-files</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">vc-jj.el</span>.
+<h2>Signature</h2>
+<pre><code>(vc-jj-dir-status-files <a href="#:~:text=for-,DIR"><span class="arg">DIR</span></a> <a href="#:~:text="><span class="arg">FILES</span></a> <a href="#:~:text=applying-,UPDATE-FUNCTION"><span class="arg">UPDATE-FUNCTION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Calculate a list of (FILE STATE EXTRA) entries for <span class="arg">DIR</span>.
+<p>Return the result of applying <span class="arg">UPDATE-FUNCTION</span> to that list.
+<p>For a description of the states relevant to jj, see <a href="../fun/vc-jj-state.html"><code>vc-jj-state</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/smb5w83hp9nz5jm5ish4kf6mshmmif86-emacs-packages-deps/share/emacs/site-lisp/elpa/vc-jj-0.5/vc-jj.el</span>
+<span class="cd">;;;; </span><span class="c">dir-status-file
+</span>
+(<span class="k">defun</span> <span class="f">vc-jj-dir-status-files</span> (dir _files update-function)
+  <span class="doc">"Calculate a list of (FILE STATE EXTRA) entries for DIR.
+Return the result of applying UPDATE-FUNCTION to that list.
+
+For a description of the states relevant to jj, see `</span><span class="m doc">vc-jj-state</span><span class="doc">'."</span>
+  <span class="cd">;; </span><span class="c">This function is specified below the STATE-QUERYING FUNCTIONS
+</span>  <span class="cd">;; </span><span class="c">header in the comments at the beginning of vc.el.  The
+</span>  <span class="cd">;; </span><span class="c">specification says the '</span><span class="m c">dir-status-files</span><span class="c">' backend function
+</span>  <span class="cd">;; </span><span class="c">returns "a list of lists ... for FILES in DIR", which does not
+</span>  <span class="cd">;; </span><span class="c">say anything about subdirectories.  We follow the example of
+</span>  <span class="cd">;; </span><span class="c">'</span><span class="m c">vc-git</span><span class="c">' and return the state of files in subdirectories of DIR
+</span>  <span class="cd">;; </span><span class="c">as well (except for ignored files, since we don't want to cons up
+</span>  <span class="cd">;; </span><span class="c">a list of every file below DIR).
+</span>  <span class="cd">;;</span><span class="c">
+</span>  <span class="cd">;; </span><span class="c">Unfortunately this function needs to do a lot of work:
+</span>  <span class="cd">;; </span><span class="c">- There is no single jj command that gives us all the info we
+</span>  <span class="cd">;;   </span><span class="c">need, so we cannot run asynchronously.
+</span>  <span class="cd">;; </span><span class="c">- jj prints filenames relative to the repository root, while we
+</span>  <span class="cd">;;   </span><span class="c">need them relative to DIR.
+</span>  <span class="cd">;;</span><span class="c">
+</span>  <span class="cd">;; </span><span class="c">TODO: we should use hash tables, since we're doing a lot of set
+</span>  <span class="cd">;; </span><span class="c">operations, which are slow on lists.
+</span>  (<span class="k">with-demoted-errors</span> <span class="s">"JJ error during `</span><span class="m s">vc-dir-status-files</span><span class="s">': %S"</span>
+    (<span class="k">let*</span> ((dir (expand-file-name dir))
+           (default-directory dir)
+           (project-root (vc-jj-root dir))
+           (registered-files (vc-jj--process-lines <span class="s">"file"</span> <span class="s">"list"</span> <span class="s">"--"</span> dir))
+           (ignored-files (seq-difference (cl-delete-if #'file-directory-p
+                                                        (directory-files dir nil nil t))
+                                          registered-files))
+           (changed (vc-jj--process-lines <span class="s">"diff"</span> <span class="s">"--summary"</span> <span class="s">"--"</span> dir))
+           (added-files (mapcan (<span class="k">lambda</span> (entry)
+                                  (<span class="k">and</span> (string-prefix-p <span class="s">"A "</span> entry)
+                                       (list (substring entry 2))))
+                                changed))
+           (removed-files (mapcan (<span class="k">lambda</span> (entry)
+                                    (<span class="k">and</span> (string-prefix-p <span class="s">"D "</span> entry)
+                                         (list (substring entry 2))))
+                                  changed))
+           (edited-files (mapcan (<span class="k">lambda</span> (entry)
+                                     (<span class="k">and</span> (string-prefix-p <span class="s">"M "</span> entry)
+                                          (list (substring entry 2))))
+                                   changed))
+           <span class="cd">;; </span><span class="c">The command below only prints conflicted files in DIR, but
+</span>           <span class="cd">;; </span><span class="c">relative to project-root, hence the dance with
+</span>           <span class="cd">;; </span><span class="c">expand-file-name / file-relative-name
+</span>           (conflicted-files (mapcar (<span class="k">lambda</span> (entry)
+                                       (file-relative-name (expand-file-name entry project-root) dir))
+                                     (vc-jj--process-lines <span class="s">"file"</span> <span class="s">"list"</span>
+                                                           <span class="s">"-T"</span> <span class="s">"if(conflict, path ++ \"\\n\")"</span> <span class="s">"--"</span> dir)))
+           (up-to-date-files (cl-remove-if (<span class="k">lambda</span> (entry) (<span class="k">or</span> (member entry conflicted-files)
+                                                              (member entry edited-files)
+                                                              (member entry added-files)
+                                                              (member entry ignored-files)))
+                                          registered-files))
+           (result
+            (nconc (mapcar (<span class="k">lambda</span> (entry) (list entry 'conflict)) conflicted-files)
+                   (mapcar (<span class="k">lambda</span> (entry) (list entry 'added)) added-files)
+                   (mapcar (<span class="k">lambda</span> (entry) (list entry 'removed)) removed-files)
+                   (mapcar (<span class="k">lambda</span> (entry) (list entry 'edited)) edited-files)
+                   (mapcar (<span class="k">lambda</span> (entry) (list entry 'ignored)) ignored-files)
+                   (mapcar (<span class="k">lambda</span> (entry) (list entry 'up-to-date)) up-to-date-files))))
+      (funcall update-function result nil))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,210 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--doctor-format – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--doctor-format is a natively compiled function defined in
+eca-chat.el.
+Return a markdown diagnostic string describing chat buffer SRC-BUF.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--doctor-format</code></h1><p><span class="m"><code>eca-chat--doctor-format</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--doctor-format <a href="#:~:text=buffer-,SRC-BUF"><span class="arg">SRC-BUF</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a markdown diagnostic string describing chat buffer <span class="arg">SRC-BUF</span>.
+<p>Captures <a href="../var/major-mode.html"><code>major-mode</code></a> derivation, RET binding, shadowing minor modes,
+ECA chat state, prompt overlays, and rule-based hints.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--doctor-format</span> (src-buf)
+  <span class="doc">"Return a markdown diagnostic string describing chat buffer SRC-BUF.
+Captures `</span><span class="m doc">major-mode</span><span class="doc">' derivation, RET binding, shadowing minor modes,
+ECA chat state, prompt overlays, and rule-based hints."</span>
+  (<span class="k">let*</span> ((mm (buffer-local-value 'major-mode src-buf))
+         (in-chat-p (<span class="k">with-current-buffer</span> src-buf
+                      (derived-mode-p 'eca-chat-mode)))
+         (parent-mode (<span class="k">and</span> (boundp 'eca-chat-parent-mode)
+                           eca-chat-parent-mode))
+         (def-dir (buffer-local-value 'default-directory src-buf))
+         (ret-cmd (<span class="k">with-current-buffer</span> src-buf
+                    (key-binding (kbd <span class="s">"RET"</span>))))
+         (return-cmd (<span class="k">with-current-buffer</span> src-buf
+                       (key-binding (kbd <span class="s">"&lt;return&gt;"</span>))))
+         (cm-cmd (<span class="k">with-current-buffer</span> src-buf
+                   (key-binding (kbd <span class="s">"C-m"</span>))))
+         (input-method (buffer-local-value 'current-input-method src-buf))
+         (e-indent (<span class="k">and</span> (boundp 'electric-indent-mode)
+                        (buffer-local-value 'electric-indent-mode src-buf)))
+         (e-pair (<span class="k">and</span> (boundp 'electric-pair-mode)
+                      (buffer-local-value 'electric-pair-mode src-buf)))
+         (e-quote (<span class="k">and</span> (boundp 'electric-quote-mode)
+                       (buffer-local-value 'electric-quote-mode src-buf)))
+         (evil-on (<span class="k">and</span> (boundp 'evil-mode) (symbol-value 'evil-mode)))
+         (evil-state-val (<span class="k">and</span> (boundp 'evil-state)
+                              (buffer-local-value 'evil-state src-buf)))
+         (viper-on (<span class="k">and</span> (boundp 'viper-mode) (symbol-value 'viper-mode)))
+         (god-on (<span class="k">and</span> (boundp 'god-local-mode)
+                      (buffer-local-value 'god-local-mode src-buf)))
+         (sp-on (<span class="k">and</span> (boundp 'smartparens-mode)
+                     (buffer-local-value 'smartparens-mode src-buf)))
+         (paredit-on (<span class="k">and</span> (boundp 'paredit-mode)
+                          (buffer-local-value 'paredit-mode src-buf)))
+         (corfu-on (<span class="k">and</span> (boundp 'corfu-mode)
+                        (buffer-local-value 'corfu-mode src-buf)))
+         (company-on (<span class="k">and</span> (boundp 'company-mode)
+                          (buffer-local-value 'company-mode src-buf)))
+         (chat-id (buffer-local-value 'eca-chat--id src-buf))
+         (closed (buffer-local-value 'eca-chat--closed src-buf))
+         (loading (buffer-local-value 'eca-chat--chat-loading src-buf))
+         (pending (buffer-local-value 'eca-chat--pending-question src-buf))
+         (session (<span class="k">with-current-buffer</span> src-buf
+                    (<span class="k">ignore-errors</span> (eca-session))))
+         (prompt-area (<span class="k">with-current-buffer</span> src-buf
+                        (<span class="k">ignore-errors</span> (eca-chat--prompt-area-ov))))
+         (prompt-field (<span class="k">with-current-buffer</span> src-buf
+                         (<span class="k">ignore-errors</span> (eca-chat--prompt-field-ov))))
+         (prompt-content (<span class="k">with-current-buffer</span> src-buf
+                           (<span class="k">ignore-errors</span> (eca-chat--prompt-content))))
+         (pt (<span class="k">with-current-buffer</span> src-buf (point)))
+         (self (eca-chat--doctor-self-check src-buf))
+         (hints nil))
+    <span class="cd">;; </span><span class="c">--- compute hints ---
+</span>    (<span class="k">unless</span> in-chat-p
+      (<span class="k">push</span> (format <span class="s">"Inspected buffer's `</span><span class="m s">major-mode</span><span class="s">' is `</span><span class="m s">%s</span><span class="s">' and is not \
+derived from `</span><span class="m s">eca-chat-mode</span><span class="s">'.  `</span><span class="m s">eca-chat-mode</span><span class="s">' likely failed to activate."</span> mm)
+            hints))
+    (<span class="k">when</span> (<span class="k">and</span> in-chat-p
+               (not (eq ret-cmd 'eca-chat--key-pressed-return)))
+      (<span class="k">push</span> (format <span class="s">"RET is bound to `</span><span class="m s">%s</span><span class="s">', not \
+`</span><span class="m s">eca-chat--key-pressed-return</span><span class="s">'.  Another keymap is intercepting RET — see \
+\"Likely shadowing\" below."</span> ret-cmd)
+            hints))
+    (<span class="k">when</span> (<span class="k">and</span> in-chat-p (null session))
+      (<span class="k">push</span> <span class="s">"(eca-session) returned nil from inside the chat buffer — \
+the buffer is not registered to any ECA workspace."</span> hints))
+    (<span class="k">when</span> (<span class="k">and</span> in-chat-p (null prompt-area))
+      (<span class="k">push</span> <span class="s">"The `</span><span class="m s">eca-chat-prompt-area</span><span class="s">' overlay is missing — chat buffer is \
+in an inconsistent state.  Try `M-x eca-chat-reset'."</span> hints))
+    (<span class="k">when</span> (<span class="k">and</span> in-chat-p evil-on (eq evil-state-val 'insert))
+      (<span class="k">push</span> <span class="s">"evil-mode is in insert state.  `</span><span class="m s">evil-insert-state-map</span><span class="s">' (an \
+emulation map) beats major-mode maps.  If RET above is `</span><span class="m s">evil-ret</span><span class="s">' / \
+`</span><span class="m s">newline</span><span class="s">', that is the cause."</span> hints))
+    (<span class="k">when</span> (<span class="k">and</span> in-chat-p pending)
+      (<span class="k">push</span> <span class="s">"An unanswered question is pending \
+(`</span><span class="m s">eca-chat--pending-question</span><span class="s">' non-nil).  RET without freeform input is \
+intentionally a no-op until you answer the question."</span> hints))
+    (<span class="k">when</span> (<span class="k">and</span> in-chat-p closed)
+      (<span class="k">push</span> <span class="s">"This chat is marked closed (`</span><span class="m s">eca-chat--closed</span><span class="s">' non-nil); \
+sending will raise a user-error."</span> hints))
+    (<span class="k">when</span> (<span class="k">and</span> in-chat-p (not (plist-get self <span class="bi">:mode-map-ret-ok</span>)))
+      (<span class="k">push</span> (format <span class="s">"`</span><span class="m s">eca-chat-mode-map</span><span class="s">' RET is `</span><span class="m s">%s</span><span class="s">', expected \
+`</span><span class="m s">eca-chat--key-pressed-return</span><span class="s">'.  Some code has clobbered the mode-map \
+after `</span><span class="m s">eca-chat</span><span class="s">' was loaded; check your user config."</span>
+                    (plist-get self <span class="bi">:mode-map-ret</span>))
+            hints))
+    (<span class="k">when</span> (<span class="k">and</span> in-chat-p (eq (plist-get self <span class="bi">:cond-ok</span>) nil))
+      (<span class="k">push</span> <span class="s">"`</span><span class="m s">eca-chat--key-pressed-return</span><span class="s">' references the markdown-link \
+clause before the expandable clause.  Loaded code predates commit \
+`</span><span class="m s">dac33d8</span><span class="s">'; pull master, restart Emacs, and `M-x byte-recompile-directory' \
+if the warning persists."</span> hints))
+    (<span class="k">when</span> (<span class="k">and</span> in-chat-p (plist-get self <span class="bi">:has-label</span>)
+               (not (plist-get self <span class="bi">:label-ret-ok</span>)))
+      (<span class="k">push</span> <span class="s">"The first expandable block label has no RET binding in its \
+`</span><span class="m s">keymap</span><span class="s">' text-property.  Either the loaded `</span><span class="m s">eca-chat-expandable.el</span><span class="s">' \
+predates commit `</span><span class="m s">dac33d8</span><span class="s">' or this block was rendered before the fix was \
+reloaded; start a new chat or wait for a fresh tool call to be rendered."</span>
+            hints))
+    (<span class="k">when</span> (<span class="k">and</span> in-chat-p (plist-get self <span class="bi">:stale-elc-p</span>))
+      (<span class="k">push</span> (format <span class="s">"`</span><span class="m s">%s</span><span class="s">' is newer than the loaded `</span><span class="m s">%s</span><span class="s">'.  Recompile \
+(`M-x byte-recompile-directory') or delete the stale `</span><span class="m s">.elc</span><span class="s">' and restart \
+Emacs."</span> (plist-get self <span class="bi">:source-file</span>) (plist-get self <span class="bi">:loaded-file</span>))
+            hints))
+    <span class="cd">;; </span><span class="c">--- render report into temp buffer and return as string ---
+</span>    (<span class="k">with-temp-buffer</span>
+      (insert <span class="s">"### Inspected chat buffer\n\n"</span>)
+      (insert (format <span class="s">"- buffer:            %s\n"</span> (buffer-name src-buf)))
+      (insert (format <span class="s">"- major-mode:        %s\n"</span> mm))
+      (insert (format <span class="s">"- derived from `</span><span class="m s">eca-chat-mode</span><span class="s">': %s\n"</span>
+                      (<span class="k">if</span> in-chat-p <span class="s">"yes"</span> <span class="s">"NO"</span>)))
+      (insert (format <span class="s">"- `</span><span class="m s">eca-chat-parent-mode</span><span class="s">': %s\n"</span> parent-mode))
+      (insert (format <span class="s">"- default-directory: %s\n\n"</span> def-dir))
+      (insert <span class="s">"### Key bindings in chat buffer\n\n"</span>)
+      (insert (format <span class="s">"- RET        → %s\n"</span> (<span class="k">or</span> ret-cmd <span class="s">"&lt;unbound&gt;"</span>)))
+      (insert (format <span class="s">"- &lt;return&gt;   → %s\n"</span> (<span class="k">or</span> return-cmd <span class="s">"&lt;unbound&gt;"</span>)))
+      (insert (format <span class="s">"- C-m        → %s\n\n"</span> (<span class="k">or</span> cm-cmd <span class="s">"&lt;unbound&gt;"</span>)))
+      (insert <span class="s">"### Likely shadowing / input translation\n\n"</span>)
+      (insert (format <span class="s">"- current-input-method:  %s\n"</span> (<span class="k">or</span> input-method <span class="s">"nil"</span>)))
+      (insert (format <span class="s">"- electric-indent-mode:  %s\n"</span> e-indent))
+      (insert (format <span class="s">"- electric-pair-mode:    %s\n"</span> e-pair))
+      (insert (format <span class="s">"- electric-quote-mode:   %s\n"</span> e-quote))
+      (insert (format <span class="s">"- evil-mode:             %s (state=%s)\n"</span>
+                      evil-on evil-state-val))
+      (insert (format <span class="s">"- viper-mode:            %s\n"</span> viper-on))
+      (insert (format <span class="s">"- god-local-mode:        %s\n"</span> god-on))
+      (insert (format <span class="s">"- smartparens-mode:      %s\n"</span> sp-on))
+      (insert (format <span class="s">"- paredit-mode:          %s\n"</span> paredit-on))
+      (insert (format <span class="s">"- corfu-mode:            %s\n"</span> corfu-on))
+      (insert (format <span class="s">"- company-mode:          %s\n\n"</span> company-on))
+      (insert <span class="s">"### ECA chat state\n\n"</span>)
+      (insert (format <span class="s">"- eca-chat--id:               %s\n"</span> chat-id))
+      (insert (format <span class="s">"- eca-chat--closed:           %s\n"</span> closed))
+      (insert (format <span class="s">"- eca-chat--chat-loading:     %s\n"</span> loading))
+      (insert (format <span class="s">"- eca-chat--pending-question: %s\n"</span>
+                      (<span class="k">if</span> pending <span class="s">"set"</span> <span class="s">"nil"</span>)))
+      (insert <span class="s">"- (eca-session): "</span>)
+      (<span class="k">if</span> session
+          (insert (format <span class="s">"found (id=%s, roots=%S)\n\n"</span>
+                          (eca--session-id session)
+                          (eca--session-workspace-folders session)))
+        (insert <span class="s">"NIL — buffer is not registered to a workspace\n\n"</span>))
+      (insert <span class="s">"### Self-check\n\n"</span>)
+      (insert (format <span class="s">"- `</span><span class="m s">eca-chat-mode-map</span><span class="s">' RET → %s  %s\n"</span>
+                      (<span class="k">or</span> (plist-get self <span class="bi">:mode-map-ret</span>) <span class="s">"&lt;unbound&gt;"</span>)
+                      (<span class="k">if</span> (plist-get self <span class="bi">:mode-map-ret-ok</span>) <span class="s">"✓"</span> <span class="s">"✗"</span>)))
+      (insert (format
+               <span class="s">"- `</span><span class="m s">eca-chat--key-pressed-return</span><span class="s">': expandable before \
+markdown-link  %s\n"</span>
+               (<span class="k">let</span> ((status (plist-get self <span class="bi">:cond-ok</span>)))
+                 (<span class="k">cond</span> ((eq status t) <span class="s">"✓"</span>)
+                       ((null status) <span class="s">"✗"</span>)
+                       (t <span class="s">"? (could not introspect)"</span>)))))
+      (<span class="k">if</span> (plist-get self <span class="bi">:has-label</span>)
+          (insert (format <span class="s">"- nearest expandable label RET → %s  %s\n"</span>
+                          (<span class="k">let</span> ((b (plist-get self <span class="bi">:label-ret</span>)))
+                            (<span class="k">cond</span> ((null b) <span class="s">"&lt;unbound&gt;"</span>)
+                                  ((functionp b) <span class="s">"&lt;toggle lambda&gt;"</span>)
+                                  (t (format <span class="s">"%s"</span> b))))
+                          (<span class="k">if</span> (plist-get self <span class="bi">:label-ret-ok</span>) <span class="s">"✓"</span> <span class="s">"✗"</span>)))
+        (insert <span class="s">"- nearest expandable label RET: n.a. \
+(no blocks rendered yet)\n"</span>))
+      (insert (format <span class="s">"- loaded from: %s\n"</span>
+                      (<span class="k">or</span> (plist-get self <span class="bi">:loaded-file</span>) <span class="s">"&lt;unknown&gt;"</span>)))
+      (<span class="k">when</span> (plist-get self <span class="bi">:stale-elc-p</span>)
+        (insert (format <span class="s">"  ⚠ source `</span><span class="m s">%s</span><span class="s">' is newer than the loaded `</span><span class="m s">.elc</span><span class="s">'\n"</span>
+                        (plist-get self <span class="bi">:source-file</span>))))
+      (insert <span class="s">"\n"</span>)
+      (insert <span class="s">"### Prompt overlays\n\n"</span>)
+      (insert (format <span class="s">"- prompt-area overlay:  %s\n"</span>
+                      (<span class="k">if</span> prompt-area
+                          (format <span class="s">"%d..%d"</span>
+                                  (overlay-start prompt-area)
+                                  (overlay-end prompt-area))
+                        <span class="s">"MISSING"</span>)))
+      (insert (format <span class="s">"- prompt-field overlay: %s\n"</span>
+                      (<span class="k">if</span> prompt-field
+                          (format <span class="s">"%d..%d"</span>
+                                  (overlay-start prompt-field)
+                                  (overlay-end prompt-field))
+                        <span class="s">"MISSING"</span>)))
+      (insert (format <span class="s">"- point:                %d\n"</span> pt))
+      (insert (format <span class="s">"- (eca-chat--prompt-content): %S\n\n"</span> prompt-content))
+      (insert <span class="s">"### Hints\n\n"</span>)
+      (<span class="k">if</span> hints
+          (<span class="k">dolist</span> (h (nreverse hints))
+            (insert <span class="s">"- "</span> h <span class="s">"\n"</span>))
+        (insert <span class="s">"- No obvious issue detected by the static checks.\n"</span>))
+      (buffer-string))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

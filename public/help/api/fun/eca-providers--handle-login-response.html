@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-providers--handle-login-response – Emacs Documentation Online</title>
+<meta name="description" content="eca-providers--handle-login-response is a natively compiled function
+defined in eca-providers.el.
+Handle login RESULT for PROVIDER-ID from SESSION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-providers--handle-login-response</code></h1><p><span class="m"><code>eca-providers--handle-login-response</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-providers.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-providers--handle-login-response <a href="#:~:text=from-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=for-,PROVIDER-ID"><span class="arg">PROVIDER-ID</span></a> <a href="#:~:text=login-,RESULT"><span class="arg">RESULT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle login <span class="arg">RESULT</span> for <span class="arg">PROVIDER-ID</span> from <span class="arg">SESSION</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-providers.el</span>
+(<span class="k">defun</span> <span class="f">eca-providers--handle-login-response</span> (session provider-id result)
+  <span class="doc">"Handle login RESULT for PROVIDER-ID from SESSION."</span>
+  (<span class="k">pcase</span> (plist-get result <span class="bi">:action</span>)
+    (<span class="s">"choose-method"</span>
+     (<span class="k">let*</span> ((methods (append (plist-get result <span class="bi">:methods</span>) nil))
+            (choices (mapcar (<span class="k">lambda</span> (m)
+                              (cons (plist-get m <span class="bi">:label</span>)
+                                    (plist-get m <span class="bi">:key</span>)))
+                            methods))
+            (selected (completing-read <span class="s">"Login method: "</span> choices nil t)))
+       (<span class="k">when-let*</span> ((method (cdr (assoc selected choices))))
+         (eca-providers--do-login session provider-id method))))
+    (<span class="s">"input"</span>
+     (<span class="k">let</span> ((data (eca-providers--collect-fields
+                  (append (plist-get result <span class="bi">:fields</span>) nil))))
+       (eca-api-request-async session
+         <span class="bi">:method</span> <span class="s">"providers/loginInput"</span>
+         <span class="bi">:params</span> (list <span class="bi">:provider</span> provider-id <span class="bi">:data</span> data)
+         <span class="bi">:success-callback</span> (<span class="k">lambda</span> (_) (eca-info <span class="s">"Login complete"</span>))
+         <span class="bi">:error-callback</span> (<span class="k">lambda</span> (err) (eca-warn <span class="s">"Login failed: %s"</span> err)))))
+    (<span class="s">"authorize"</span>
+     (<span class="k">let</span> ((url (plist-get result <span class="bi">:url</span>))
+           (fields (plist-get result <span class="bi">:fields</span>))
+           (msg (plist-get result <span class="bi">:message</span>)))
+       (browse-url url)
+       (<span class="k">if</span> fields
+           <span class="cd">;; </span><span class="c">Browser auth + code paste (e.g. Anthropic)
+</span>           (<span class="k">let</span> ((data (eca-providers--collect-fields (append fields nil))))
+             (eca-api-request-async session
+               <span class="bi">:method</span> <span class="s">"providers/loginInput"</span>
+               <span class="bi">:params</span> (list <span class="bi">:provider</span> provider-id <span class="bi">:data</span> data)
+               <span class="bi">:success-callback</span> (<span class="k">lambda</span> (_) (eca-info <span class="s">"Login complete"</span>))
+               <span class="bi">:error-callback</span> (<span class="k">lambda</span> (err) (eca-warn <span class="s">"Login failed: %s"</span> err))))
+         <span class="cd">;; </span><span class="c">Auto-callback (e.g. OpenAI) — wait for providers/updated
+</span>         (eca-info <span class="s">"%s"</span> (<span class="k">or</span> msg <span class="s">"Completing authentication in browser..."</span>)))))
+    (<span class="s">"device-code"</span>
+     (<span class="k">let</span> ((url (plist-get result <span class="bi">:url</span>))
+           (code (plist-get result <span class="bi">:code</span>))
+           (msg (plist-get result <span class="bi">:message</span>)))
+       (kill-new code)
+       (browse-url url)
+       (eca-info <span class="s">"Code %s copied to clipboard. %s"</span> code (<span class="k">or</span> msg <span class="s">""</span>))))
+    (<span class="s">"done"</span>
+     (eca-info <span class="s">"Login complete"</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

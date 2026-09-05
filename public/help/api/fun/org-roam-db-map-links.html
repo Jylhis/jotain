@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-db-map-links – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-db-map-links is a natively compiled function defined in
+org-roam-db.el.
+Run FNS over all links in the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-db-map-links</code></h1><p><span class="m"><code>org-roam-db-map-links</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">org-roam-db.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-db-map-links <a href="#:~:text=Run-,FNS"><span class="arg">FNS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run <span class="arg">FNS</span> over all links in the current buffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-db.el</span>
+(<span class="k">defun</span> <span class="f">org-roam-db-map-links</span> (fns)
+  <span class="doc">"Run FNS over all links in the current buffer."</span>
+  (<span class="k">org-with-point-at</span> 1
+    (<span class="k">while</span> (re-search-forward org-link-any-re nil <span class="bi">:no-error</span>)
+      <span class="cd">;; </span><span class="c">`</span><span class="m c">re-search-forward</span><span class="c">' let the cursor one character after the link, we need to go backward one char to
+</span>      <span class="cd">;; </span><span class="c">make the point be on the link.
+</span>      (backward-char)
+      (<span class="k">let*</span> ((begin (match-beginning 0))
+             (element (org-element-context))
+             (type (org-element-type element))
+             link)
+        (<span class="k">cond</span>
+         <span class="cd">;; </span><span class="c">Links correctly recognized by Org Mode
+</span>         ((eq type 'link)
+          (<span class="k">setq</span> link element))
+         <span class="cd">;; </span><span class="c">Links in property drawers and lines starting with #+. Recall that, as for Org Mode v9.4.4, the
+</span>         <span class="cd">;; </span><span class="c">org-element-type of links within properties drawers is "node-property" and for lines starting with
+</span>         <span class="cd">;; </span><span class="c">#+ is "keyword".
+</span>         ((<span class="k">and</span> (member type org-roam-db-extra-links-elements)
+               (not (member-ignore-case (org-element-property <span class="bi">:key</span> element)
+                                        (cdr (assoc type org-roam-db-extra-links-exclude-keys))))
+               (<span class="k">setq</span> link (<span class="k">save-excursion</span>
+                            (goto-char begin)
+                            (<span class="k">save-match-data</span> (org-element-link-parser)))))))
+        (<span class="k">when</span> link
+          (<span class="k">dolist</span> (fn fns)
+            (funcall fn link)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

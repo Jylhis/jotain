@@ -1,0 +1,162 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: logview--fontify-region – Emacs Documentation Online</title>
+<meta name="description" content="logview--fontify-region is a natively compiled function defined in
+logview.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>logview--fontify-region</code></h1><p><span class="m"><code>logview--fontify-region</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">logview.el</span>.
+<h2>Signature</h2>
+<pre><code>(logview--fontify-region <span class="arg">REGION-START</span> <span class="arg">REGION-END</span> <span class="arg">LOUDLY</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qid656ql5mh048bd0k84vvsbc2517lh9-emacs-packages-deps/share/emacs/site-lisp/elpa/logview-20260218.2013/logview.el</span>
+(<span class="k">defun</span> <span class="f">logview--fontify-region</span> (region-start region-end loudly)
+  (<span class="k">when</span> (logview-initialized-p)
+    <span class="cd">;; </span><span class="c">We are basically managing narrowing indirectly, by not fontifying further than
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">region-end</span><span class="c">' (possibly expanded).  Not using `</span><span class="m c">std</span><span class="c">' here to prevent
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">logview--iterate-entries-forward</span><span class="c">' from stopping early because of outer narrowing.
+</span>    (<span class="k">logview--temporarily-widening</span>
+      <span class="cd">;; </span><span class="c">We are very fast.  Don't fontify too little to avoid overhead.
+</span>      <span class="cd">;; </span><span class="c">FIXME: See `</span><span class="m c">font-lock-extend-region-functions</span><span class="c">'.  Might want to reuse that instead.
+</span>      (<span class="k">when</span> (<span class="k">and</span> (&lt; region-end (point-max)) (not (get-text-property (1+ region-end) 'fontified)))
+        (<span class="k">let</span> ((expanded-region-end (min (point-max) (+ region-start logview--lazy-region-size))))
+          (<span class="k">when</span> (&lt; region-end expanded-region-end)
+            (<span class="k">setq</span> region-end (<span class="k">or</span> (next-single-property-change (1+ region-end) 'fontified nil expanded-region-end) expanded-region-end)))))
+      (<span class="k">when</span> (<span class="k">and</span> (&gt; region-start (point-min)) (not (get-text-property (1- region-start) 'fontified)))
+        (<span class="k">let</span> ((expanded-region-start (max (point-min) (- region-end logview--lazy-region-size))))
+          (<span class="k">when</span> (&gt; region-start expanded-region-start)
+            (<span class="k">setq</span> region-start (<span class="k">or</span> (previous-single-property-change (1- region-start) 'fontified nil expanded-region-start) expanded-region-start)))))
+      <span class="cd">;; </span><span class="c">Largely for derived modes.  Logview itself simply replaces all relevant
+</span>      <span class="cd">;; </span><span class="c">properties (e.g. faces) everywhere in the fontified region and that's normally
+</span>      <span class="cd">;; </span><span class="c">enough.
+</span>      (font-lock-unfontify-region region-start region-end)
+      (<span class="k">logview--std-altering</span>
+        (<span class="k">if</span> logview--postpone-fontification
+            (<span class="k">progn</span> (add-face-text-property region-start region-end 'logview-unprocessed)
+                   (<span class="k">unless</span> logview--pending-refontifications
+                     (run-with-idle-timer 0 nil #'logview--schedule-pending-refontification))
+                   (<span class="k">push</span> (list (current-buffer) region-start region-end) logview--pending-refontifications))
+          (<span class="k">save-match-data</span>
+            (<span class="k">let</span> ((region-start (cdr (logview--do-locate-current-entry region-start))))
+              (<span class="k">when</span> region-start
+                (<span class="k">let*</span> ((have-timestamp                (memq 'timestamp logview--submode-features))
+                       (have-level                    (memq 'level     logview--submode-features))
+                       (have-name                     (memq 'name      logview--submode-features))
+                       (have-thread                   (memq 'thread    logview--submode-features))
+                       (validator                     (cdr logview--effective-filter))
+                       (difference-to-section-headers logview--timestamp-difference-to-section-headers)
+                       (sections-thread-bound         (<span class="k">when</span> difference-to-section-headers (logview-sections-thread-bound-p)))
+                       (common-difference-base        (<span class="k">or</span> logview--timestamp-difference-base
+                                                          (<span class="k">when</span> (<span class="k">and</span> difference-to-section-headers (not sections-thread-bound)) <span class="bi">:unknown</span>)))
+                       (difference-bases-per-thread   (<span class="k">or</span> logview--timestamp-difference-per-thread-bases
+                                                          (<span class="k">when</span> (<span class="k">and</span> difference-to-section-headers sections-thread-bound)       (make-hash-table <span class="bi">:test</span> #'equal))))
+                       (displaying-differences        (<span class="k">or</span> common-difference-base difference-bases-per-thread))
+                       (difference-format-string      logview--timestamp-difference-format-string)
+                       (header-filter                 (cdr logview--section-header-filter))
+                       (show-only-headers             (<span class="k">and</span> header-filter logview--narrow-to-section-headers))
+                       (highlighter                   (cdr logview--highlighted-filter))
+                       (highlighted-part              logview-highlighted-entry-part)
+                       (dim-unsearchable              (<span class="k">and</span> logview-search-only-in-messages isearch-mode)))
+                  (logview--iterate-entries-forward
+                   region-start
+                   (<span class="k">lambda</span> (entry start)
+                     (<span class="k">let</span> ((end (logview--entry-end entry start))
+                           filtered)
+                       (<span class="k">if</span> (<span class="k">or</span> (null validator) (funcall validator entry start))
+                           (<span class="k">let</span> ((header-entry (<span class="k">and</span> header-filter (funcall header-filter entry start))))
+                             (<span class="k">if</span> (<span class="k">and</span> show-only-headers (not header-entry))
+                                 (<span class="k">setf</span> filtered t)
+                               (<span class="k">when</span> have-level
+                                 (<span class="k">let</span> ((entry-faces (aref logview--submode-level-faces (logview--entry-level entry))))
+                                   (put-text-property start end 'face (car entry-faces))
+                                   (add-face-text-property (logview--entry-group-start entry start logview--level-group)
+                                                           (logview--entry-group-end   entry start logview--level-group)
+                                                           (cdr entry-faces))))
+                               (<span class="k">when</span> have-timestamp
+                                 (<span class="k">let</span> ((from   (logview--entry-group-start entry start logview--timestamp-group))
+                                       (to     (logview--entry-group-end   entry start logview--timestamp-group))
+                                       (thread (<span class="k">when</span> difference-bases-per-thread (logview--entry-group entry start logview--thread-group)))
+                                       timestamp-replaced)
+                                   (add-face-text-property from to 'logview-timestamp)
+                                   (<span class="k">when</span> displaying-differences
+                                     (<span class="k">when</span> (<span class="k">and</span> header-entry difference-to-section-headers)
+                                       (<span class="k">let</span> ((base `(,entry . ,start)))
+                                         (<span class="k">if</span> difference-bases-per-thread
+                                             (puthash thread base difference-bases-per-thread)
+                                           (<span class="k">setf</span> common-difference-base base))))
+                                     (<span class="k">let</span> ((difference-base (<span class="k">or</span> (<span class="k">when</span> difference-bases-per-thread
+                                                                  (gethash thread difference-bases-per-thread (<span class="k">when</span> difference-bases-per-thread <span class="bi">:unknown</span>)))
+                                                                common-difference-base)))
+                                       <span class="cd">;; </span><span class="c">This is possible only when displaying differences to section header.
+</span>                                       <span class="cd">;; </span><span class="c">Means that we don't yet know where the header is.
+</span>                                       (<span class="k">when</span> (eq difference-base <span class="bi">:unknown</span>)
+                                         <span class="cd">;; </span><span class="c">FIXME: Might need to improve performance here, e.g. using cache.
+</span>                                         (<span class="k">save-excursion</span>
+                                           (goto-char start)
+                                           (logview--forward-section 0)
+                                           (<span class="k">logview--locate-current-entry</span> entry start
+                                             (<span class="k">setf</span> difference-base (<span class="k">when</span> (funcall header-filter entry start) `(,entry . ,start)))
+                                             (<span class="k">if</span> difference-bases-per-thread
+                                                 (puthash thread difference-base difference-bases-per-thread)
+                                               (<span class="k">setf</span> common-difference-base difference-base)))))
+                                       <span class="cd">;; </span><span class="c">Hide timestamp with time difference if there is a difference
+</span>                                       <span class="cd">;; </span><span class="c">base entry and we are not positioned over it right now.
+</span>                                       (<span class="k">when</span> (<span class="k">and</span> difference-base (not (<span class="k">and</span> (= (cdr difference-base) start)
+                                                                            (<span class="k">progn</span> (logview--entry-timestamp entry start)  <span class="cd">; </span><span class="c">Make sure that it is parsed.
+</span>                                                                                   (equal (car difference-base) entry)))))
+                                         <span class="cd">;; </span><span class="c">FIXME: It is possible that fractionals are not the last
+</span>                                         <span class="cd">;;        </span><span class="c">thing in the timestamp, in which case it would be
+</span>                                         <span class="cd">;;        </span><span class="c">nicer to add some spaces on the right. However,
+</span>                                         <span class="cd">;;        </span><span class="c">it's not easy to do and is also quite unlikely,
+</span>                                         <span class="cd">;;        </span><span class="c">so ignoring that for now.
+</span>                                         (<span class="k">let*</span> ((difference        (- (logview--entry-timestamp entry start)
+                                                                      (logview--entry-timestamp (car difference-base) (cdr difference-base))))
+                                                (difference-string (format difference-format-string difference))
+                                                (length-delta      (- to from (length difference-string))))
+                                           (<span class="k">when</span> (&gt; length-delta 0)
+                                             (<span class="k">setq</span> difference-string (concat (make-string length-delta ? ) difference-string)))
+                                           (put-text-property from to 'display difference-string)
+                                           (<span class="k">setq</span> timestamp-replaced t)))))
+                                   (<span class="k">unless</span> timestamp-replaced
+                                     (remove-list-of-text-properties from to '(display)))))
+                               (<span class="k">when</span> have-name
+                                 (add-face-text-property (logview--entry-group-start entry start logview--name-group)
+                                                         (logview--entry-group-end   entry start logview--name-group)
+                                                         'logview-name))
+                               (<span class="k">when</span> have-thread
+                                 (add-face-text-property (logview--entry-group-start entry start logview--thread-group)
+                                                         (logview--entry-group-end   entry start logview--thread-group)
+                                                         'logview-thread))
+                               (<span class="k">when</span> header-entry
+                                 (add-face-text-property start end 'logview-section))
+                               (<span class="k">when</span> dim-unsearchable
+                                 (add-face-text-property start (logview--entry-message-start entry start) 'logview-unsearchable))
+                               (<span class="k">when</span> (<span class="k">and</span> highlighter (funcall highlighter entry start))
+                                 (add-face-text-property (<span class="k">if</span> (eq highlighted-part 'message) (logview--entry-message-start entry start) start)
+                                                         (<span class="k">if</span> (eq highlighted-part 'header)  (logview--space-back (logview--entry-message-start entry start)) end)
+                                                         'logview-highlight))))
+                         (<span class="k">setq</span> filtered t))
+                       (logview--update-entry-invisibility start (logview--entry-details-start entry start) end filtered 'propagate 'propagate)
+                       <span class="cd">;; </span><span class="c">There appears to be a bug in displaying code for the case that
+</span>                       <span class="cd">;; </span><span class="c">fontifying function hides all the text in the region it has been
+</span>                       <span class="cd">;; </span><span class="c">called for: Emacs still displays an empty line or at least the
+</span>                       <span class="cd">;; </span><span class="c">ellipses to denote hidden text (i.e. not merged with the
+</span>                       <span class="cd">;; </span><span class="c">previous ellipses).  Previously, we'd work around this by
+</span>                       <span class="cd">;; </span><span class="c">continuing past the region.  However, now we stop anyway because
+</span>                       <span class="cd">;; </span><span class="c">of responsiveness improvements: that is more important than
+</span>                       <span class="cd">;; </span><span class="c">minor displaying glitches.
+</span>                       (&lt; end region-end)))))))
+            (<span class="k">setf</span> logview--num-fontified-in-row (1+ (<span class="k">or</span> logview--num-fontified-in-row 0)))
+            (<span class="k">when</span> (<span class="k">or</span> (input-pending-p) (&gt;= logview--num-fontified-in-row logview--max-fontified-in-row))
+              (<span class="k">setf</span> logview--postpone-fontification t))
+            <span class="cd">;; </span><span class="c">`</span><span class="m c">font-lock-default-fontify-region</span><span class="c">' includes some other calls that we simply
+</span>            <span class="cd">;; </span><span class="c">drop for now.  It is unlikely that e.g. a syntax table would be useful here.
+</span>            (<span class="k">unless</span> (equal font-lock-keywords '(t nil))
+              <span class="cd">;; </span><span class="c">This is largely for derived modes.  Logview itself doesn't define any keywords.
+</span>              (font-lock-fontify-keywords-region region-start region-end loudly)))))))
+  `(jit-lock-bounds ,region-start . ,region-end))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

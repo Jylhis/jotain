@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- Jotain - a GNU Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer.
+
+Copyright © Markus Jylhänkangas. -->
+<title>Architecture Overview (Jotain Emacs Configuration)</title>
+
+<meta name="description" content="Architecture Overview (Jotain Emacs Configuration)">
+<meta name="keywords" content="Architecture Overview (Jotain Emacs Configuration)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Nix-Build-Layer.html" rel="next" title="Nix Build Layer">
+<link href="Quickstart.html" rel="prev" title="Quickstart">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+span:hover a.copiable-link {visibility: visible}
+ul.mark-bullet {list-style-type: disc}
+</style>
+<link rel="stylesheet" type="text/css" href="manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Architecture-Overview">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Nix-Build-Layer.html" rel="next">Nix Build Layer</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Quickstart.html" rel="prev">Quickstart</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+<h2 class="chapter" id="Architecture-Overview-1"><span>4 Architecture Overview<a class="copiable-link" href="#Architecture-Overview-1"> &para;</a></span></h2>
+
+<p>Jotain is organised into distinct layers, each with a clear responsibility.
+</p>
+<ul class="mini-toc">
+<li><a href="#File-Structure">File Structure</a></li>
+<li><a href="#Layers">Layers</a></li>
+</ul>
+<div class="section-level-extent" id="File-Structure">
+<h3 class="section"><span>4.1 File Structure<a class="copiable-link" href="#File-Structure"> &para;</a></span></h3>
+
+<pre class="verbatim">jotain/
+├── early-init.el       # Pre-package/GUI initialisation
+├── init.el             # Entry point — loads modules in order
+├── lisp/               # Modular Elisp config (init-*.el, one per concern)
+├── emacs.nix           # GNU Emacs build from source (cache-parity invariant)
+├── default.nix         # Non-flake entry point (flake-compat wrapper)
+├── overlay.nix         # Standalone nixpkgs overlay (wraps nix/mk-overlay.nix)
+├── module.nix          # Home Manager module for the daemon
+├── module-system.nix   # Shared NixOS / nix-darwin module
+├── module-nix-on-droid.nix  # nix-on-droid module (terminal-only build)
+├── nix/
+│   ├── mk-overlay.nix         # Overlay implementation — distribution assembly
+│   ├── checks.nix             # Flake checks (lint, compile, tests, builds)
+│   ├── use-package.nix        # use-package scanner (Elisp → epkgs mapping)
+│   └── ...                    # docs, site, extra packages, treefmt helpers
+├── devenv.nix          # Development shell (tooling only — no Emacs)
+├── devenv.yaml         # devenv inputs (pinned to flake.lock revs)
+├── flake.nix           # Flake entry point — source of truth for pins
+├── Justfile            # Task runner recipes
+├── docs/               # Documentation sources (rendered into the site,
+│                       #   the Info manual, and the man page; docs.json
+│                       #   defines page order for all three)
+├── website/            # jotain.j10s.io site shell (assembled by nix build .#site)
+├── test/               # ERT tests (every *.el here is loaded by elisp-test)
+├── bench/              # Startup-benchmark wrapper init files
+├── templates/          # Tempel snippet templates (jotain.eld)
+├── config/             # Auxiliary tool config (e.g. eca)
+├── scripts/            # Bootstrap helpers (e.g. bootstrap-agent-env.sh)
+└── journal/            # Development journal entries
+</pre>
+</div>
+<div class="section-level-extent" id="Layers">
+<h3 class="section"><span>4.2 Layers<a class="copiable-link" href="#Layers"> &para;</a></span></h3>
+
+
+<ul class="mini-toc">
+<li><a href="#Emacs-Lisp-Layer">Emacs Lisp Layer</a></li>
+<li><a href="#Nix-Layer">Nix Layer</a></li>
+<li><a href="#Development-Layer">Development Layer</a></li>
+</ul>
+<div class="subsection-level-extent" id="Emacs-Lisp-Layer">
+<h4 class="subsection"><span>4.2.1 Emacs Lisp Layer<a class="copiable-link" href="#Emacs-Lisp-Layer"> &para;</a></span></h4>
+<p>The Elisp configuration is split into three parts:
+</p>
+<ol class="enumerate">
+<li> <strong class="strong"><code class="code">early-init.el</code></strong> &mdash; loaded before <code class="code">package.el</code>, before the first frame, before <code class="code">init.el</code>. Handles anything that <em class="emph">must</em> happen that early: the startup GC threshold, <code class="code">use-package-always-ensure</code>, frame chrome defaults, native-comp and eln-cache redirection, terminal aliases.
+
+</li><li> <strong class="strong"><code class="code">init.el</code></strong> &mdash; tiny entry point. Registers MELPA/NonGNU ELPA as fallback archives, puts <code class="code">lisp/</code> on the load-path, points <code class="code">custom-file</code> at <code class="code">var/custom.el</code> (write-only &mdash; never loaded back), and <code class="code">require</code>s each module in order. Archive refresh is off the startup path entirely &mdash; there is no background warm-up; archives are fetched only when <code class="code">package-install</code> finds an empty cache, or on an explicit <code class="code">M-x package-refresh-contents</code>.
+
+</li><li> <strong class="strong"><code class="code">lisp/init-*.el</code></strong> &mdash; one file per concern. See <a class="uref" href="/architecture/modules">Modules</a> for the full list and their responsibilities.
+
+</li></ol>
+
+</div>
+<div class="subsection-level-extent" id="Nix-Layer">
+<h4 class="subsection"><span>4.2.2 Nix Layer<a class="copiable-link" href="#Nix-Layer"> &para;</a></span></h4>
+<p>The Nix layer provides reproducible Emacs builds:
+</p>
+<ol class="enumerate">
+<li> <strong class="strong"><code class="code">emacs.nix</code></strong> &mdash; wraps the git-based attrs from <a class="uref" href="https://github.com/nix-community/emacs-overlay"><code class="code">nix-community/emacs-overlay</code></a> (<code class="code">git</code>/<code class="code">unstable</code>/<code class="code">igc</code>; <code class="code">unstable</code> is the default) or nixpkgs&rsquo; default <code class="code">emacs</code> attribute (<code class="code">mainline</code>, the cache-parity canary), with the supported build flags exposed as arguments. The build matrix is deliberately narrow: pgtk/Wayland GUI or terminal-only on Linux, patched NS GUI or terminal-only on Darwin &mdash; everything else is asserted away. A cache-parity invariant guarantees the Linux and terminal builds produce the same store paths as the matching prebuilt attrs, so their default-rev builds are cache hits against Hydra and <code class="code">nix-community.cachix.org</code>. Custom <code class="code">rev</code> pins and the Darwin GUI (whose nix-giant patches are on by default) run through <code class="code">overrideAttrs</code> and intentionally rebuild from source.
+
+</li><li> <strong class="strong"><code class="code">default.nix</code></strong> &mdash; flake-compat wrapper for the default package set.
+
+</li><li> <strong class="strong"><code class="code">module.nix</code></strong> &mdash; Home Manager module that runs Jotain as a user-session Emacs daemon (<code class="code">services.jotain</code>), generates a desktop entry for <code class="code">emacsclient</code>, and can install itself as <code class="code">EDITOR</code>/<code class="code">VISUAL</code>. Supports systemd on Linux and launchd on macOS; <code class="code">services.jotain.package</code> swaps in any other Jotain-shaped distribution.
+
+</li></ol>
+
+</div>
+<div class="subsection-level-extent" id="Development-Layer">
+<h4 class="subsection"><span>4.2.3 Development Layer<a class="copiable-link" href="#Development-Layer"> &para;</a></span></h4>
+<ul class="itemize mark-bullet">
+<li><strong class="strong"><code class="code">devenv.nix</code></strong> &mdash; development shell, <strong class="strong">tooling only</strong>: there is no <code class="code">emacs</code> binary in it (see its top-of-file note). It ships Nix tooling and linters (<code class="code">nil</code>, <code class="code">nixfmt-rfc-style</code>, <code class="code">treefmt</code>, <code class="code">statix</code>, <code class="code">deadnix</code>), the language servers and CLIs the Elisp config shells out to, the docs toolchain, and the fonts the UI config probes. Build and launch the editor with <code class="code">just run-built</code> (see the current-state note in <a class="uref" href="/usage/launching">Launching Emacs</a>).
+</li><li><strong class="strong"><code class="code">Justfile</code></strong> &mdash; every recipe you run day-to-day: <code class="code">run-built</code> / <code class="code">run-built-debug</code> (build via Nix, then launch), <code class="code">check</code>, <code class="code">test</code>, the <code class="code">build-*</code> matrix, <code class="code">fmt</code>, <code class="code">update</code>, <code class="code">verify</code>, <code class="code">clean</code>, <code class="code">clean-all</code>. The direct-launch and in-shell compile recipes (<code class="code">run</code>, <code class="code">debug</code>, <code class="code">tty</code>, <code class="code">check-elisp</code>, <code class="code">compile</code>, <code class="code">bench</code>, &hellip;) are disabled stubs; their coverage lives in the <code class="code">elisp-lint</code> / <code class="code">elisp-compile</code> / <code class="code">elisp-test</code> flake checks.
+</li><li><strong class="strong">Pinning</strong> &mdash; <code class="code">flake.lock</code> is the single source of truth; <code class="code">default.nix</code> and <code class="code">emacs.nix</code> read it directly via <code class="code">fetchTarball</code> so non-flake <code class="code">nix-build</code> consumers get the same pin. <code class="code">devenv.yaml</code> mirrors the flake&rsquo;s shared input revs (<code class="code">nixpkgs</code>, <code class="code">treefmt-nix</code>, <code class="code">emacs-overlay</code>), and <code class="code">just update</code> keeps <code class="code">devenv.lock</code> in lockstep.
+</li></ul>
+
+</div>
+</div>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Nix-Build-Layer.html" rel="next">Nix Build Layer</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Quickstart.html" rel="prev">Quickstart</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+
+
+
+</body>
+</html>

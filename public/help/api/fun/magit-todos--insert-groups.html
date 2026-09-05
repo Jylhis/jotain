@@ -1,0 +1,104 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-todos--insert-groups – Emacs Documentation Online</title>
+<meta name="description" content="magit-todos--insert-groups is a natively compiled function defined in
+magit-todos.el.
+Insert ITEMS into grouped Magit section and return the section.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-todos--insert-groups</code></h1><p><span class="m"><code>magit-todos--insert-groups</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-todos.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-todos--insert-groups <span class="ty">&amp;key</span> <a href="#:~:text=section.-,DEPTH"><span class="arg">DEPTH</span></a> <a href="#:~:text=itself.-,GROUP-FNS"><span class="arg">GROUP-FNS</span></a> <a href="#:~:text=functions.-,HEADING"><span class="arg">HEADING</span></a> <a href="#:~:text=appended.-,TYPE"><span class="arg">TYPE</span></a> <a href="#:~:text=Insert-,ITEMS"><span class="arg">ITEMS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert <span class="arg">ITEMS</span> into grouped Magit section and return the section.
+<p><span class="arg">DEPTH</span> sets indentation and should be 0 for a top-level group.  It
+is automatically incremented when this function calls itself.
+<p><span class="arg">GROUP-FNS</span> may be a list of functions to which <span class="arg">ITEMS</span> are applied
+with <a href="../fun/-group-by.html"><code>-group-by</code></a> to group them.  Items are grouped
+hierarchically, i.e. when <span class="arg">GROUP-FNS</span> has more than one function,
+items are first grouped by the first function, then subgroups are
+created which group items by subsequent functions.
+<p><span class="arg">HEADING</span> is a string which is the group's heading.  The count of
+items in each group is automatically appended.
+<p><span class="arg">TYPE</span> is a symbol which is used by Magit internally to identify
+sections.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/na5pd87dpfy16i19v2xzgb9ry6gjpyvw-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-todos-20250928.1611/magit-todos.el</span>
+(<span class="k">cl-defun</span> <span class="f">magit-todos--insert-groups</span> (<span class="ty">&amp;key</span> depth group-fns heading type items)
+  <span class="doc">"Insert ITEMS into grouped Magit section and return the section.
+
+DEPTH sets indentation and should be 0 for a top-level group.  It
+is automatically incremented when this function calls itself.
+
+GROUP-FNS may be a list of functions to which ITEMS are applied
+with `</span><span class="m doc">-group-by</span><span class="doc">' to group them.  Items are grouped
+hierarchically, i.e. when GROUP-FNS has more than one function,
+items are first grouped by the first function, then subgroups are
+created which group items by subsequent functions.
+
+HEADING is a string which is the group's heading.  The count of
+items in each group is automatically appended.
+
+TYPE is a symbol which is used by Magit internally to identify
+sections."</span>
+  <span class="cd">;; </span><span class="c">NOTE: `</span><span class="m c">magit-insert-section</span><span class="c">' seems to bind `</span><span class="m c">magit-section-visibility-cache</span><span class="c">' to nil, so setting
+</span>  <span class="cd">;; </span><span class="c">visibility within calls to it probably won't work as intended.
+</span>  (<span class="k">declare</span> (indent defun))
+  (<span class="k">let*</span> ((indent (propertize (s-repeat (* 2 depth) <span class="s">" "</span>) 'face nil 'font-lock-face nil))
+         (heading (concat indent heading))
+         (magit-insert-section--parent (<span class="k">if</span> (= 0 depth)
+                                           magit-root-section
+                                         magit-insert-section--parent)))
+    (<span class="k">if</span> (<span class="k">and</span> (consp group-fns)
+             (&gt; (length group-fns) 0))
+        <span class="cd">;; </span><span class="c">Insert more groups
+</span>        (<span class="k">let*</span> ((groups (<span class="k">--&gt;</span> (-group-by (car group-fns) items)
+                            (<span class="k">cl-loop</span> for group in-ref it
+                                     <span class="cd">;; </span><span class="c">HACK: Set ":" keys to nil so they'll be grouped together.
+</span>                                     do (<span class="k">pcase</span> (car group)
+                                          (<span class="s">":"</span> (<span class="k">setf</span> (car group) nil)))
+                                     finally return it)
+                            (magit-todos--coalesce-groups it)))
+               (section (<span class="k">magit-insert-section</span> ((eval type))
+                          (<span class="k">magit-insert-heading</span> heading)
+                          (<span class="k">cl-loop</span> for (group-type . items) in groups
+                                   for group-name = (<span class="k">pcase</span> group-type
+                                                      <span class="cd">;; </span><span class="c">Use "[Other]" instead of empty group name.
+</span>                                                      <span class="cd">;; </span><span class="c">HACK: ":" is hard-coded, even though the
+</span>                                                      <span class="cd">;; </span><span class="c">suffix regexp could differ. If users change
+</span>                                                      <span class="cd">;; </span><span class="c">the suffix so this doesn't apply, it
+</span>                                                      <span class="cd">;; </span><span class="c">shouldn't cause any problems, it just won't
+</span>                                                      <span class="cd">;; </span><span class="c">look as pretty.
+</span>                                                      ((<span class="k">or</span> <span class="s">""</span> <span class="s">":"</span> 'nil) <span class="s">"[Other]"</span>)
+                                                      (_ (s-chop-suffix <span class="s">":"</span> group-type)))
+                                   do (magit-todos--insert-groups
+                                        <span class="bi">:depth</span> (1+ depth) <span class="bi">:group-fns</span> (cdr group-fns)
+                                        <span class="bi">:type</span> (intern group-name) <span class="bi">:items</span> items
+                                        <span class="bi">:heading</span> (concat
+                                                  (<span class="k">if</span> (<span class="k">and</span> magit-todos-fontify-keyword-headers
+                                                           (member group-name magit-todos-keywords-list))
+                                                      (<span class="k">let</span> ((face (magit-todos--keyword-face group-name)))
+                                                        (propertize group-name 'face face 'font-lock-face face))
+                                                    group-name)
+                                                  <span class="cd">;; </span><span class="c">Item count
+</span>                                                  (<span class="k">if</span> (= 1 (length group-fns))
+                                                      <span class="s">":"</span> <span class="cd">; </span><span class="c">Let Magit add the count.
+</span>                                                    <span class="cd">;; </span><span class="c">Add count ourselves.
+</span>                                                    (concat <span class="s">" "</span> (format <span class="s">"(%s)"</span> (length items)))))))
+                          (<span class="k">when</span> (= 0 depth)
+                            <span class="cd">;; </span><span class="c">Insert a blank line only in the body of the top-level section, so it
+</span>                            <span class="cd">;; </span><span class="c">will appear only when the section is expanded, matching other sections.
+</span>                            (insert <span class="s">"\n"</span>)))))
+          (magit-todos--set-visibility <span class="bi">:depth</span> depth <span class="bi">:num-items</span> (length items) <span class="bi">:section</span> section)
+          <span class="cd">;; </span><span class="c">Add top-level section to root section's children
+</span>          (<span class="k">when</span> (= 0 depth)
+            (<span class="k">push</span> section (<span class="k">oref</span> magit-root-section children)))
+          <span class="cd">;; </span><span class="c">Don't forget to return the section!
+</span>          section)
+      <span class="cd">;; </span><span class="c">Insert individual to-do items
+</span>      (magit-todos--insert-group <span class="bi">:depth</span> (1+ depth) <span class="bi">:type</span> type <span class="bi">:items</span> items <span class="bi">:heading</span> heading))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

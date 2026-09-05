@@ -1,0 +1,42 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-current-blame-chunk – Emacs Documentation Online</title>
+<meta name="description" content="magit-current-blame-chunk is a natively compiled function defined in
+magit-blame.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-current-blame-chunk</code></h1><p><span class="m"><code>magit-current-blame-chunk</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-blame.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-current-blame-chunk <span class="ty">&amp;optional</span> <span class="arg">TYPE</span> <span class="arg">NOERROR</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-blame.el</span>
+(<span class="k">defun</span> <span class="f">magit-current-blame-chunk</span> (<span class="ty">&amp;optional</span> type noerror)
+  (<span class="k">or</span> (<span class="k">and</span> (not (<span class="k">and</span> type (not (eq type magit-blame-type))))
+           (magit-blame-chunk-at (point)))
+      (<span class="k">and</span> type
+           (<span class="k">let</span> ((rev magit-buffer-revision)
+                 (file (<span class="k">and</span> (not (derived-mode-p 'dired-mode))
+                            (magit-file-relative-name
+                             nil (not magit-buffer-file-name))))
+                 (line (format <span class="s">"%d,+1"</span> (line-number-at-pos))))
+             (<span class="k">cond</span> (file
+                    (<span class="k">with-temp-buffer</span>
+                      (<span class="k">magit-with-toplevel</span>
+                        (magit-git-insert
+                         <span class="s">"blame"</span> <span class="s">"--porcelain"</span>
+                         (<span class="k">if</span> (memq magit-blame-type '(final removal))
+                             (cons <span class="s">"--reverse"</span> (magit-blame-arguments))
+                           (magit-blame-arguments))
+                         <span class="s">"-L"</span> line rev <span class="s">"--"</span> file)
+                        (goto-char (point-min))
+                        (<span class="k">cond</span> ((not (eobp))
+                               (car (magit-blame--parse-chunk type)))
+                              ((not noerror)
+                               (<span class="w">error</span> <span class="s">"Cannot get blame chunk at eob"</span>))))))
+                   ((not noerror)
+                    (<span class="w">error</span> <span class="s">"Buffer does not visit a tracked file"</span>)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

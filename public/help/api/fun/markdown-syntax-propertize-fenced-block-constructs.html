@@ -1,0 +1,90 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-syntax-propertize-fenced-block-constructs – Emacs Documentation Online</title>
+<meta name="description" content="markdown-syntax-propertize-fenced-block-constructs is a natively
+compiled function defined in markdown-mode.el.
+Propertize according to markdown-fenced-block-pairs from START to END.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-syntax-propertize-fenced-block-constructs</code></h1><p><span class="m"><code>markdown-syntax-propertize-fenced-block-constructs</code></span> is a <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-syntax-propertize-fenced-block-constructs <a href="#:~:text=from-,START"><span class="arg">START</span></a> <a href="#:~:text=to-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Propertize according to <a href="../var/markdown-fenced-block-pairs.html"><code>markdown-fenced-block-pairs</code></a> from <span class="arg">START</span> to <span class="arg">END</span>.
+<p>If unable to propertize an entire block (if the start of a block is within <span class="arg">START</span>
+and <span class="arg">END</span>, but the end of the block is not), propertize the start section of a
+block, then in a subsequent call propertize both middle and end by finding the
+start which was previously propertized.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-syntax-propertize-fenced-block-constructs</span> (start end)
+  <span class="doc">"Propertize according to `</span><span class="m doc">markdown-fenced-block-pairs</span><span class="doc">' from START to END.
+If unable to propertize an entire block (if the start of a block is within START
+and END, but the end of the block is not), propertize the start section of a
+block, then in a subsequent call propertize both middle and end by finding the
+start which was previously propertized."</span>
+  (<span class="k">let</span> ((start-reg (markdown-get-start-fence-regexp)))
+    (<span class="k">save-excursion</span>
+      (goto-char start)
+      <span class="cd">;; </span><span class="c">start from previous unclosed block, if exists
+</span>      (<span class="k">let</span> ((prev-begin-block (markdown-find-previous-block)))
+        (<span class="k">when</span> prev-begin-block
+          (<span class="k">let*</span> ((correct-entry
+                  (cl-find-if (<span class="k">lambda</span> (entry)
+                                (eq (cdr prev-begin-block) (cl-cadar entry)))
+                              markdown-fenced-block-pairs))
+                 (enclosed-text-start (1+ (car prev-begin-block)))
+                 (start-length
+                  (<span class="k">save-excursion</span>
+                    (goto-char (car prev-begin-block))
+                    (string-match
+                     (markdown-maybe-funcall-regexp
+                      (caar correct-entry))
+                     (buffer-substring
+                      (line-beginning-position) (line-end-position)))
+                    (- (match-end 1) (match-beginning 1))))
+                 (end-reg (markdown-maybe-funcall-regexp
+                           (cl-caadr correct-entry) start-length)))
+            (markdown-propertize-end-match
+             end-reg end correct-entry enclosed-text-start))))
+      <span class="cd">;; </span><span class="c">find all new blocks within region
+</span>      (<span class="k">while</span> (re-search-forward start-reg end t)
+        <span class="cd">;; </span><span class="c">we assume the opening constructs take up (only) an entire line,
+</span>        <span class="cd">;; </span><span class="c">so we re-check the current line
+</span>        (<span class="k">let*</span> ((block-start (match-beginning 0))
+               (cur-line (buffer-substring (line-beginning-position) (line-end-position)))
+               <span class="cd">;; </span><span class="c">find entry in `</span><span class="m c">markdown-fenced-block-pairs</span><span class="c">' corresponding
+</span>               <span class="cd">;; </span><span class="c">to regex which was matched
+</span>               (correct-entry
+                (cl-find-if
+                 (<span class="k">lambda</span> (fenced-pair)
+                   (string-match-p
+                    (markdown-maybe-funcall-regexp (caar fenced-pair))
+                    cur-line))
+                 markdown-fenced-block-pairs))
+               (enclosed-text-start
+                (<span class="k">save-excursion</span> (1+ (line-end-position))))
+               (end-reg
+                (markdown-maybe-funcall-regexp
+                 (cl-caadr correct-entry)
+                 (<span class="k">if</span> (<span class="k">and</span> (match-beginning 1) (match-end 1))
+                     (- (match-end 1) (match-beginning 1))
+                   0)))
+               (prop (cl-cadar correct-entry)))
+          (<span class="k">when</span> (<span class="k">or</span> (not (eq prop 'markdown-gfm-block-begin))
+                    (not (markdown--code-fence-single-line-p block-start)))
+            <span class="cd">;; </span><span class="c">get correct match data
+</span>            (<span class="k">save-excursion</span>
+              (beginning-of-line)
+              (re-search-forward
+               (markdown-maybe-funcall-regexp (caar correct-entry))
+               (line-end-position)))
+            <span class="cd">;; </span><span class="c">mark starting, even if ending is outside of region
+</span>            (put-text-property (match-beginning 0) (match-end 0) prop (match-data t))
+            (markdown-propertize-end-match
+             end-reg end correct-entry enclosed-text-start)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

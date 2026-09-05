@@ -1,0 +1,74 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: exec-path-from-shell-getenvs--nushell – Emacs Documentation Online</title>
+<meta name="description" content="exec-path-from-shell-getenvs--nushell is a natively compiled function
+defined in exec-path-from-shell.el.
+Use nushell to get the value of env vars with the given NAMES.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>exec-path-from-shell-getenvs--nushell</code></h1><p><span class="m"><code>exec-path-from-shell-getenvs--nushell</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">exec-path-from-shell.el</span>.
+<h2>Signature</h2>
+<pre><code>(exec-path-from-shell-getenvs--nushell <a href="#:~:text=given-,NAMES"><span class="arg">NAMES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Use nushell to get the value of env vars with the given <span class="arg">NAMES</span>.
+<p>Execute the shell according to <a href="../var/exec-path-from-shell-arguments.html"><code>exec-path-from-shell-arguments</code></a>.
+The result is a list of (NAME . VALUE) pairs.
+<p>Nushell sometimes produces output like e.g. flag deprecation warnings.
+These messages are written to an error buffer (*exec-path-from-shell:
+nushell errors*); unless Nushell produces a non-zero exit code, this
+buffer is left undisplayed.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lzrv36jn1gafnd9x3mmwlizw57dr87rp-emacs-packages-deps/share/emacs/site-lisp/elpa/exec-path-from-shell-20260423.1833/exec-path-from-shell.el</span>
+(<span class="k">defun</span> <span class="f">exec-path-from-shell-getenvs--nushell</span> (names)
+  <span class="doc">"Use nushell to get the value of env vars with the given NAMES.
+
+Execute the shell according to `</span><span class="m doc">exec-path-from-shell-arguments</span><span class="doc">'.
+The result is a list of (NAME . VALUE) pairs.
+
+Nushell sometimes produces output like e.g. flag deprecation warnings.
+These messages are written to an error buffer (*exec-path-from-shell:
+nushell errors*); unless Nushell produces a non-zero exit code, this
+buffer is left undisplayed."</span>
+  (<span class="k">let*</span> ((shell (exec-path-from-shell--shell))
+         (expr (format <span class="s">"[ %s ] | to json"</span>
+                       (string-join
+                        (mapcar (<span class="k">lambda</span> (name)
+                                  (format <span class="s">"$env.%s?"</span> (exec-path-from-shell--double-quote name)))
+                                names)
+                        <span class="s">", "</span>)))
+         (shell-args (append exec-path-from-shell-arguments (list <span class="s">"-c"</span> expr)))
+         (err-buff-name <span class="s">"*exec-path-from-shell: nushell errors*"</span>)
+         (err-file (make-temp-file err-buff-name)))
+    (<span class="k">with-temp-buffer</span>
+      (<span class="k">when</span> (get-buffer err-buff-name) (kill-buffer err-buff-name))
+      (exec-path-from-shell--debug <span class="s">"Invoking shell %s with args %S"</span> shell shell-args)
+      (<span class="k">let</span> ((exit-code (<span class="k">exec-path-from-shell--warn-duration</span>
+                        (apply #'call-process shell nil `(t ,err-file) nil shell-args)))
+            (err-buff (generate-new-buffer err-buff-name)))
+        (exec-path-from-shell--debug <span class="s">"Shell printed: %S"</span> (buffer-string))
+        (<span class="k">with-current-buffer</span> err-buff (insert-file-contents err-file))
+        (<span class="k">unless</span> (zerop exit-code)
+          (<span class="w">error</span> <span class="s">"Non-zero exit code from shell %s invoked with args %S.  Output was:\n%S"</span>
+                 shell shell-args (buffer-string))
+          (display-buffer err-buff)))
+      (goto-char (point-min))
+      (<span class="k">let</span> ((json-array-type 'list)
+            (json-null <span class="bi">:null</span>))
+        (<span class="k">let</span> ((values (json-read-array))
+              result)
+          (<span class="k">while</span> values
+            (<span class="k">let</span> ((value (car values)))
+              (<span class="k">push</span> (cons (car names)
+                          (<span class="k">unless</span> (eq <span class="bi">:null</span> value)
+                            (<span class="k">if</span> (listp value)
+                                (string-join value path-separator)
+                              value)))
+                    result))
+            (<span class="k">setq</span> values (cdr values)
+                  names (cdr names)))
+          result)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

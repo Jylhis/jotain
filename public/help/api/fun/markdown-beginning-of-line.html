@@ -1,0 +1,93 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-beginning-of-line – Emacs Documentation Online</title>
+<meta name="description" content="markdown-beginning-of-line is an interactive and natively compiled
+function defined in markdown-mode.el.
+Go to the beginning of the current visible line.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-beginning-of-line</code></h1><p><span class="m"><code>markdown-beginning-of-line</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-beginning-of-line <span class="ty">&amp;optional</span> <a href="#:~:text=argument-,N"><span class="arg">N</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Go to the beginning of the current visible line.
+<p>If this is a headline, and <a href="../var/markdown-special-ctrl-a_002fe.html"><code>markdown-special-ctrl-a/e</code></a> is not nil
+or symbol <span class="m"><code>reversed</code></span>, on the first attempt move to where the
+headline text hashes, and only move to beginning of line when the
+cursor is already before the hashes of the text of the headline.
+<p>If <a href="../var/markdown-special-ctrl-a_002fe.html"><code>markdown-special-ctrl-a/e</code></a> is symbol <span class="m"><code>reversed</code></span> then go to
+the hashes of the text on the second attempt.
+<p>With argument <span class="arg">N</span> not nil or 1, move forward <span class="arg">N</span> - 1 lines first.
+<h2>Key Bindings</h2>
+<p><span class="v">gfm-mode-map</span> <span class="key">&lt;home&gt;</span>
+<span class="v">gfm-mode-map</span> <span class="key">C-a</span>
+<span class="v">markdown-mode-map</span> <span class="key">&lt;home&gt;</span>
+<span class="v">markdown-mode-map</span> <span class="key">C-a</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+<span class="cd">;;; </span><span class="c">Movement ==================================================================
+</span>
+<span class="cd">;; </span><span class="c">This function was originally derived from `</span><span class="m c">org-beginning-of-line</span><span class="c">' from org.el.
+</span>(<span class="k">defun</span> <span class="f">markdown-beginning-of-line</span> (<span class="ty">&amp;optional</span> n)
+  <span class="doc">"Go to the beginning of the current visible line.
+
+If this is a headline, and `</span><span class="m doc">markdown-special-ctrl-a/e</span><span class="doc">' is not nil
+or symbol `</span><span class="m doc">reversed</span><span class="doc">', on the first attempt move to where the
+headline text hashes, and only move to beginning of line when the
+cursor is already before the hashes of the text of the headline.
+
+If `</span><span class="m doc">markdown-special-ctrl-a/e</span><span class="doc">' is symbol `</span><span class="m doc">reversed</span><span class="doc">' then go to
+the hashes of the text on the second attempt.
+
+With argument N not nil or 1, move forward N - 1 lines first."</span>
+  (<span class="k">interactive</span> <span class="s">"^p"</span>)
+  (<span class="k">let</span> ((origin (point))
+        (special (<span class="k">pcase</span> markdown-special-ctrl-a/e
+                   (`(,C-a . ,_) C-a) (_ markdown-special-ctrl-a/e)))
+        deactivate-mark)
+    <span class="cd">;; </span><span class="c">First move to a visible line.
+</span>    (<span class="k">if</span> visual-line-mode
+        (beginning-of-visual-line n)
+      (move-beginning-of-line n)
+      <span class="cd">;; </span><span class="c">`</span><span class="m c">move-beginning-of-line</span><span class="c">' may leave point after invisible
+</span>      <span class="cd">;; </span><span class="c">characters if line starts with such of these (e.g., with
+</span>      <span class="cd">;; </span><span class="c">a link at column 0).  Really move to the beginning of the
+</span>      <span class="cd">;; </span><span class="c">current visible line.
+</span>      (forward-line 0))
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">No special behavior.  Point is already at the beginning of
+</span>     <span class="cd">;; </span><span class="c">a line, logical or visual.
+</span>     ((not special))
+     <span class="cd">;; </span><span class="c">`</span><span class="m c">beginning-of-visual-line</span><span class="c">' left point before logical beginning
+</span>     <span class="cd">;; </span><span class="c">of line: point is at the beginning of a visual line.  Bail
+</span>     <span class="cd">;; </span><span class="c">out.
+</span>     ((<span class="k">and</span> visual-line-mode (not (bolp))))
+     ((looking-at markdown-regex-header-atx)
+      <span class="cd">;; </span><span class="c">At a header, special position is before the title.
+</span>      (<span class="k">let</span> ((refpos (match-beginning 2))
+            (bol (point)))
+        (<span class="k">if</span> (eq special 'reversed)
+            (<span class="k">when</span> (<span class="k">and</span> (= origin bol) (eq last-command this-command))
+              (goto-char refpos))
+          (<span class="k">when</span> (<span class="k">or</span> (&gt; origin refpos) (&lt;= origin bol))
+            (goto-char refpos)))
+        <span class="cd">;; </span><span class="c">Prevent automatic cursor movement caused by the command loop.
+</span>        <span class="cd">;; </span><span class="c">Enable disable-point-adjustment to avoid unintended cursor repositioning.
+</span>        (<span class="k">when</span> (<span class="k">and</span> markdown-hide-markup
+                   (equal (get-char-property (point) 'display) <span class="s">""</span>))
+          (<span class="k">setq</span> disable-point-adjustment t))))
+     ((looking-at markdown-regex-list)
+      <span class="cd">;; </span><span class="c">At a list item, special position is after the list marker or checkbox.
+</span>      (<span class="k">let</span> ((refpos (<span class="k">or</span> (match-end 4) (match-end 3))))
+        (<span class="k">if</span> (eq special 'reversed)
+            (<span class="k">when</span> (<span class="k">and</span> (= (point) origin) (eq last-command this-command))
+              (goto-char refpos))
+          (<span class="k">when</span> (<span class="k">or</span> (&gt; origin refpos) (&lt;= origin (line-beginning-position)))
+          (goto-char refpos)))))
+     <span class="cd">;; </span><span class="c">No special case, already at beginning of line.
+</span>     (t nil))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

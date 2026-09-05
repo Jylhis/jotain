@@ -1,0 +1,94 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--download-http-archive – Emacs Documentation Online</title>
+<meta name="description" content="bazel--download-http-archive is a natively compiled function defined
+in bazel.el.
+Download and interpret HTTP archive at URL.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--download-http-archive</code></h1><p><span class="m"><code>bazel--download-http-archive</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--download-http-archive <a href="#:~:text=at-,URL"><span class="arg">URL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Download and interpret HTTP archive at <span class="arg">URL</span>.
+<p>Return a list (NAME INTEGRITY PREFIX TIME) for
+<br>‘bazel-insert-http-archive’.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--download-http-archive</span> (url)
+  <span class="doc">"Download and interpret HTTP archive at URL.
+Return a list (NAME INTEGRITY PREFIX TIME) for
+‘</span><span class="m doc">bazel-insert-http-archive</span><span class="doc">’."</span>
+  (<span class="w">cl-check-type</span> url string)
+  (<span class="k">let*</span> ((temp-dir (make-temp-file <span class="s">"bazel-http-archive-"</span> <span class="bi">:directory</span>))
+         (name (url-file-nondirectory url))
+         (archive-file (expand-file-name
+                        (<span class="k">if</span> (string-empty-p name) <span class="s">"archive"</span> name) temp-dir))
+         (reporter (make-progress-reporter
+                    (format-message <span class="s">"Downloading %s into %s..."</span> url temp-dir)))
+         (coding-system-for-read 'no-conversion)
+         (coding-system-for-write 'no-conversion))
+    (url-copy-file url archive-file)
+    (progress-reporter-update reporter)
+    <span class="cd">;; </span><span class="c">The ‘</span><span class="m c">bound-and-true-p</span><span class="c">’ check below won’t load ‘</span><span class="m c">tramp-archive</span><span class="c">’, so load it
+</span>    <span class="cd">;; </span><span class="c">manually here.
+</span>    (<span class="k">require</span> '<span class="m">tramp-archive</span> nil <span class="bi">:noerror</span>)
+    (<span class="k">let*</span> ((archive-dir
+            <span class="cd">;; </span><span class="c">Prefer TRAMP’s archive support if available.
+</span>            (<span class="k">if</span> (<span class="k">bound-and-true-p</span> tramp-archive-enabled)
+                (file-name-as-directory (file-name-unquote archive-file))
+              <span class="cd">;; </span><span class="c">Fall back to extracting the archive locally.
+</span>              (<span class="k">let</span> ((dir (expand-file-name <span class="s">"extract/"</span> temp-dir)))
+                (make-directory dir)
+                (bazel--extract-archive archive-file dir)
+                (progress-reporter-update reporter)
+                dir)))
+           (archive-entries
+            (<span class="k">or</span> (<span class="k">prog1</span> (directory-files-and-attributes
+                        archive-dir nil directory-files-no-dot-files-regexp)
+                  (progress-reporter-update reporter))
+                (<span class="w">user-error</span> <span class="s">"Empty archive"</span>)))
+           (candidates
+            <span class="cd">;; </span><span class="c">Find directories in the archive.  If there’s more than one,
+</span>            <span class="cd">;; </span><span class="c">prompt the user which prefix to strip.
+</span>            (<span class="k">cl-loop</span> for (name . attrs) in archive-entries
+                     when (eq (file-attribute-type attrs) t)
+                     <span class="cd">;; </span><span class="c">Put attribute list into text property so that
+</span>                     <span class="cd">;; </span><span class="c">‘</span><span class="m c">completing-read</span><span class="c">’ won’t lose it.
+</span>                     collect (propertize (file-name-as-directory name)
+                                         'attributes attrs)))
+           (prefix (<span class="k">cl-case</span> (length candidates)
+                     (0 <span class="s">""</span>)               <span class="cd">; </span><span class="c">no directories, prefix must be empty
+</span>                     (1 (car candidates)) <span class="cd">; </span><span class="c">no need to prompt user
+</span>                     (t (completing-read <span class="s">"Prefix to strip: "</span> candidates
+                                         nil nil nil nil <span class="s">""</span>))))
+           (time (file-attribute-modification-time
+                  (<span class="k">if</span> (string-empty-p prefix)
+                      <span class="cd">;; </span><span class="c">No prefix directory selected (or archive doesn’t
+</span>                      <span class="cd">;; </span><span class="c">contain any directory), pick an arbitrary file for the
+</span>                      <span class="cd">;; </span><span class="c">modification time.
+</span>                      (cdar archive-entries)
+                    (get-text-property 0 'attributes prefix))))
+           (root-dir (expand-file-name prefix archive-dir))
+           (name (<span class="k">when-let*</span> ((workspace (bazel--locate-workspace-file root-dir)))
+                   (<span class="k">with-temp-buffer</span>
+                     (insert-file-contents workspace)
+                     (bazel-workspace-mode)
+                     (progress-reporter-update reporter)
+                     (bazel--workspace-name))))
+           (sha256 (<span class="k">with-temp-buffer</span>
+                     (insert-file-contents-literally archive-file)
+                     (progress-reporter-update reporter)
+                     (secure-hash 'sha256 (current-buffer) nil nil <span class="bi">:binary</span>)))
+           (integrity
+            (concat <span class="s">"sha256-"</span> (base64-encode-string sha256 <span class="bi">:no-line-break</span>))))
+      <span class="cd">;; </span><span class="c">We delete the temporary directory only when successful to make
+</span>      <span class="cd">;; </span><span class="c">debugging easier.
+</span>      (delete-directory temp-dir <span class="bi">:recursive</span>)
+      (progress-reporter-done reporter)
+      (list name integrity prefix time))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

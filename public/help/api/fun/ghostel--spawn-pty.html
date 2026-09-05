@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--spawn-pty – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--spawn-pty is a natively compiled function defined in
+ghostel.el.
+Spawn PROGRAM with PROGRAM-ARGS as a PTY-backed process in the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--spawn-pty</code></h1><p><span class="m"><code>ghostel--spawn-pty</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--spawn-pty <a href="#:~:text=Spawn-,PROGRAM"><span class="arg">PROGRAM</span></a> <a href="#:~:text=with-,PROGRAM-ARGS"><span class="arg">PROGRAM-ARGS</span></a> <a href="#:~:text=emacs).-,EXTRA-ENV"><span class="arg">EXTRA-ENV</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=nil-,REMOTE-P"><span class="arg">REMOTE-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Spawn <span class="arg">PROGRAM</span> with <span class="arg">PROGRAM-ARGS</span> as a PTY-backed process in the current buffer.
+<p>The native local path execs <span class="arg">PROGRAM</span> directly and configures the PTY
+in C (see <a href="../fun/ghostel--spawn-via-native.html"><code>ghostel--spawn-via-native</code></a>).  The Emacs path wraps <span class="arg">PROGRAM</span>
+in <span class="m"><code>/bin/sh -c</code></span> so <span class="m"><code>stty</code></span> can configure the PTY before <span class="arg">PROGRAM</span> reads
+its terminal attributes (see <a href="../fun/ghostel--spawn-via-emacs.html"><code>ghostel--spawn-via-emacs</code></a>).  <span class="arg">EXTRA-ENV</span>
+is prepended to <a href="../var/process-environment.html"><code>process-environment</code></a>.  Non-nil <span class="arg">REMOTE-P</span> spawns the
+process via the TRAMP file handler (for remote shells).
+<p>Returns the lifecycle process object for the PTY path: the shell
+process for Emacs-owned PTYs, or the event pipe process that stands in
+for the native child process.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--spawn-pty</span> (program program-args extra-env <span class="ty">&amp;optional</span> remote-p)
+  <span class="doc">"Spawn PROGRAM with PROGRAM-ARGS as a PTY-backed process in the current buffer.
+
+The native local path execs PROGRAM directly and configures the PTY
+in C (see `</span><span class="m doc">ghostel--spawn-via-native</span><span class="doc">').  The Emacs path wraps PROGRAM
+in `/bin/sh -c' so `</span><span class="m doc">stty</span><span class="doc">' can configure the PTY before PROGRAM reads
+its terminal attributes (see `</span><span class="m doc">ghostel--spawn-via-emacs</span><span class="doc">').  EXTRA-ENV
+is prepended to `</span><span class="m doc">process-environment</span><span class="doc">'.  Non-nil REMOTE-P spawns the
+process via the TRAMP file handler (for remote shells).
+
+Returns the lifecycle process object for the PTY path: the shell
+process for Emacs-owned PTYs, or the event pipe process that stands in
+for the native child process."</span>
+  (<span class="k">let*</span> ((process-environment
+          (append
+           ghostel-environment
+           (cons <span class="s">"INSIDE_EMACS=ghostel"</span>
+                 <span class="cd">;; </span><span class="c">The remote wrapper sets TERM/TERMINFO/COLORTERM/
+</span>                 <span class="cd">;; </span><span class="c">TERM_PROGRAM* itself; keeping the local entries
+</span>                 <span class="cd">;; </span><span class="c">here would also push the local TERMINFO path,
+</span>                 <span class="cd">;; </span><span class="c">which is meaningless on the remote and (per
+</span>                 <span class="cd">;; </span><span class="c">terminfo(5)) makes ncurses ignore system entries.
+</span>                 (<span class="k">if</span> remote-p '() (ghostel--terminal-env)))
+           extra-env
+           (ghostel--logical-pwd-env remote-p)
+           process-environment))
+         <span class="cd">;; </span><span class="c">Large TUI redraws (Claude Code, pi on resize) can emit
+</span>         <span class="cd">;; </span><span class="c">hundreds of KB in one write.  Before Emacs 31,
+</span>         <span class="cd">;; </span><span class="c">`</span><span class="m c">process-adaptive-read-buffering</span><span class="c">' defaults to t and
+</span>         <span class="cd">;; </span><span class="c">throttles the filter to ~40 KB/s for bursty processes,
+</span>         <span class="cd">;; </span><span class="c">making resize feel like a slow cascade.
+</span>         <span class="cd">;; </span><span class="c">Also raise the per-read cap so one filter call can
+</span>         <span class="cd">;; </span><span class="c">consume a full redraw frame.  Both are captured at
+</span>         <span class="cd">;; </span><span class="c">`</span><span class="m c">make-process</span><span class="c">' time, so they must be let-bound here.
+</span>         (process-adaptive-read-buffering nil)
+         (read-process-output-max (max read-process-output-max (* 1024 1024))))
+    <span class="cd">;; </span><span class="c">Pre-spawn hook: runs while `</span><span class="m c">process-environment</span><span class="c">' is dynamically
+</span>    <span class="cd">;; </span><span class="c">bound to the about-to-be-spawned env, so hook functions can
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">setenv</span><span class="c">' to inject/override entries that the child inherits.
+</span>    <span class="cd">;; </span><span class="c">See `</span><span class="m c">ghostel-pre-spawn-hook</span><span class="c">'.
+</span>    (run-hooks 'ghostel-pre-spawn-hook)
+    (ghostel--spawn-process program program-args remote-p)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

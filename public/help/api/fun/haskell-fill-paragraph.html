@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-fill-paragraph – Emacs Documentation Online</title>
+<meta name="description" content="haskell-fill-paragraph is a natively compiled function defined in
+haskell-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-fill-paragraph</code></h1><p><span class="m"><code>haskell-fill-paragraph</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">haskell-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-fill-paragraph <span class="arg">JUSTIFY</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-mode.el</span>
+(<span class="k">defun</span> <span class="f">haskell-fill-paragraph</span> (justify)
+  (<span class="k">save-excursion</span>
+    <span class="cd">;; </span><span class="c">Fill paragraph should only work in comments.
+</span>    <span class="cd">;; </span><span class="c">The -- comments are handled properly by default
+</span>    <span class="cd">;; </span><span class="c">The {- -} comments need some extra love.
+</span>    (<span class="k">let*</span> ((syntax-values (syntax-ppss))
+           (comment-num (nth 4 syntax-values)))
+      (<span class="k">cond</span>
+       ((eq t comment-num)
+        <span class="cd">;; </span><span class="c">standard fill works wonders inside a non-nested comment
+</span>        (fill-comment-paragraph justify))
+
+       ((integerp comment-num)
+        <span class="cd">;; </span><span class="c">we are in a nested comment. lets narrow to comment content
+</span>        <span class="cd">;; </span><span class="c">and use plain paragraph fill for that
+</span>        (<span class="k">let*</span> ((comment-start-point (nth 8 syntax-values))
+               (comment-end-point
+                (<span class="k">save-excursion</span>
+                  (goto-char comment-start-point)
+                  (forward-sexp)
+                  <span class="cd">;; </span><span class="c">Find end of any comment even if forward-sexp
+</span>                  <span class="cd">;; </span><span class="c">fails to find the right braces.
+</span>                  (backward-char 3)
+                  (re-search-forward <span class="s">"[ \t]?-}"</span> nil t)
+                  (match-beginning 0)))
+               (fill-start (+ 2 comment-start-point))
+               (fill-end comment-end-point)
+               (fill-paragraph-handle-comment nil))
+          (<span class="k">save-restriction</span>
+            (narrow-to-region fill-start fill-end)
+            (fill-paragraph justify)
+            <span class="cd">;; </span><span class="c">If no filling happens, whatever called us should not
+</span>            <span class="cd">;; </span><span class="c">continue with standard text filling, so return t
+</span>            t)))
+       ((eolp)
+        <span class="cd">;; </span><span class="c">do nothing outside of a comment
+</span>        t)
+       (t
+        <span class="cd">;; </span><span class="c">go to end of line and try again
+</span>        (end-of-line)
+        (haskell-fill-paragraph justify))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

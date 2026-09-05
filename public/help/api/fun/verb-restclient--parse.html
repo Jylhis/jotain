@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb-restclient--parse – Emacs Documentation Online</title>
+<meta name="description" content="verb-restclient--parse is a natively compiled function defined in
+verb-restclient.el.
+Parse restclient.el requests from BUF.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb-restclient--parse</code></h1><p><span class="m"><code>verb-restclient--parse</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">verb-restclient.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb-restclient--parse <a href="#:~:text=from-,BUF"><span class="arg">BUF</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse restclient.el requests from <span class="arg">BUF</span>.
+<p>Return a list of <span class="m"><code>verb-restclient--request</code></span> structures.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb-restclient.el</span>
+(<span class="k">defun</span> <span class="f">verb-restclient--parse</span> (buf)
+  <span class="doc">"Parse restclient.el requests from BUF.
+Return a list of `</span><span class="m doc">verb-restclient--request</span><span class="doc">' structures."</span>
+  (<span class="k">with-current-buffer</span> buf
+    (<span class="k">save-excursion</span>
+      (goto-char (point-min))
+      (<span class="k">when</span> (re-search-forward <span class="s">"#.+mode:\\s-*restclient"</span> (line-end-position) t)
+        (end-of-line)
+        (forward-char))
+
+      (<span class="k">let</span> (requests comments-start comments-end comments body done)
+        (<span class="k">catch</span> '<span class="m">end</span>
+          (<span class="k">while</span> t
+            (<span class="k">setq</span> comments-start (point)
+                  done nil)
+            <span class="cd">;; </span><span class="c">Go over comments
+</span>            (<span class="k">while</span> (re-search-forward <span class="s">"^#.*$"</span> (line-end-position) t)
+              (end-of-line)
+              (<span class="k">if</span> (eobp) (<span class="k">throw</span> '<span class="m">end</span> nil) (forward-char)))
+            (<span class="k">setq</span> comments-end (point))
+            <span class="cd">;; </span><span class="c">Go over the actual request
+</span>            (<span class="k">while</span> (<span class="k">and</span> (not done)
+                        (re-search-forward <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[</span><span class="neg s">^</span><span class="s">#].*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?$"</span>
+                                           (line-end-position) t))
+              (end-of-line)
+              (<span class="k">if</span> (<span class="k">or</span> (eobp)
+                        (string-empty-p (string-trim
+                                         (buffer-substring (point)
+                                                           (point-max)))))
+                  (<span class="k">setq</span> done t)
+                (forward-char)))
+
+            (<span class="k">setq</span> comments (buffer-substring comments-start comments-end)
+                  body (buffer-substring comments-end (point)))
+
+            (<span class="k">push</span> (verb-restclient--build-request comments body) requests)
+            (<span class="k">when</span> done (<span class="k">throw</span> '<span class="m">end</span> nil))))
+        (nreverse requests)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

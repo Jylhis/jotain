@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-interactive-toggle-region – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-interactive-toggle-region is an interactive and natively
+compiled function defined in majutsu-interactive.el.
+Toggle selection of the region within the current hunk.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-interactive-toggle-region</code></h1><p><span class="m"><code>majutsu-interactive-toggle-region</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <span class="bt">majutsu-interactive.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-interactive-toggle-region)
+</code></pre>
+<h2>Documentation</h2>
+<p>Toggle selection of the region within the current hunk.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-interactive.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-interactive-toggle-region</span> ()
+  <span class="doc">"Toggle selection of the region within the current hunk."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">unless</span> (use-region-p)
+    (<span class="w">user-error</span> <span class="s">"No region active"</span>))
+  (<span class="k">magit-section-case</span>
+    (jj-hunk
+     (<span class="k">let*</span> ((hunk-id (majutsu-interactive--hunk-id it))
+            (range (majutsu-interactive--normalize-line-range
+                    (region-beginning) (region-end)
+                    (<span class="k">oref</span> it content) (<span class="k">oref</span> it end)))
+            (current (majutsu-interactive--get-selection hunk-id)))
+       (<span class="k">unless</span> range
+         (<span class="w">user-error</span> <span class="s">"Region is outside hunk"</span>))
+       (<span class="k">cond</span>
+        ((eq current <span class="bi">:all</span>)
+         (majutsu-interactive--set-selection hunk-id (list range)))
+        ((consp current)
+         (<span class="k">let*</span> ((ranges (<span class="k">if</span> (<span class="k">and</span> current (consp (car current))) current (list current)))
+                (ranges (<span class="k">if</span> (member range ranges)
+                            (remove range ranges)
+                          (cons range ranges)))
+                (ranges (majutsu-interactive--ranges-merge ranges)))
+           (majutsu-interactive--set-selection hunk-id (<span class="k">and</span> ranges ranges))))
+        (t
+         (majutsu-interactive--set-selection hunk-id (list range))))
+       (majutsu-interactive--render-overlays)
+       (deactivate-mark)
+       (message <span class="s">"Region selection updated"</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

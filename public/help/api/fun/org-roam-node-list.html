@@ -1,0 +1,106 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-node-list – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-node-list is a natively compiled function defined in
+org-roam-node.el.
+Return all nodes stored in the database as a list of org-roam-nodes.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-node-list</code></h1><p><span class="m"><code>org-roam-node-list</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">org-roam-node.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-node-list)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return all nodes stored in the database as a list of <span class="m"><code>org-roam-node</code></span>s.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-node.el</span>
+(<span class="k">defun</span> <span class="f">org-roam-node-list</span> ()
+  <span class="doc">"Return all nodes stored in the database as a list of `</span><span class="m doc">org-roam-node</span><span class="doc">'s."</span>
+  (<span class="k">let</span> ((rows (org-roam-db-query
+               <span class="s">"
+SELECT
+  title,
+  aliases,
+
+  id,
+  file,
+  filetitle,
+  \"level\",
+  todo,
+
+  pos,
+  priority ,
+  scheduled ,
+  deadline ,
+  properties ,
+
+  olp,
+  atime,
+  mtime,
+  '(' || group_concat(tags, ' ') || ')' as tags,
+  refs
+FROM
+  (
+  SELECT
+    id,
+    file,
+    filetitle,
+    \"level\",
+    todo,
+    pos,
+    priority ,
+    scheduled ,
+    deadline ,
+    title,
+    properties ,
+    olp,
+    atime,
+    mtime,
+    tags,
+    '(' || group_concat(aliases, ' ') || ')' as aliases,
+    refs
+  FROM
+    (
+    SELECT
+      nodes.id as id,
+      nodes.file as file,
+      nodes.\"level\" as \"level\",
+      nodes.todo as todo,
+      nodes.pos as pos,
+      nodes.priority as priority,
+      nodes.scheduled as scheduled,
+      nodes.deadline as deadline,
+      nodes.title as title,
+      nodes.properties as properties,
+      nodes.olp as olp,
+      files.atime as atime,
+      files.mtime as mtime,
+      files.title as filetitle,
+      tags.tag as tags,
+      aliases.alias as aliases,
+      '(' || group_concat(RTRIM (refs.\"type\", '</span><span class="m s">\"</span><span class="s">') || '</span><span class="m s">:</span><span class="s">' || LTRIM(refs.ref, '</span><span class="m s">\"</span><span class="s">'), ' ') || ')' as refs
+    FROM nodes
+    LEFT JOIN files ON files.file = nodes.file
+    LEFT JOIN tags ON tags.node_id = nodes.id
+    LEFT JOIN aliases ON aliases.node_id = nodes.id
+    LEFT JOIN refs ON refs.node_id = nodes.id
+    GROUP BY nodes.id, tags.tag, aliases.alias )
+  GROUP BY id, tags )
+GROUP BY id
+"</span>)))
+    (mapcan
+     (<span class="k">lambda</span> (row)
+       (<span class="k">let</span> (
+             (all-titles (cons (car row) (nth 1 row)))
+             )
+         (mapcar (<span class="k">lambda</span> (temp-title)
+                   (apply 'org-roam-node-create-from-db (cons temp-title (cdr row))))
+                 all-titles)
+         ))
+     rows)
+    )
+  )</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

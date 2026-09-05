@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-find-file--internal – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-find-file--internal is a natively compiled function defined in
+majutsu-file.el.
+Visit FILE from REV using FN to display the buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-find-file--internal</code></h1><p><span class="m"><code>majutsu-find-file--internal</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-file.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-find-file--internal <a href="#:~:text=from-,REV"><span class="arg">REV</span></a> <a href="#:~:text=Visit-,FILE"><span class="arg">FILE</span></a> <a href="#:~:text=using-,FN"><span class="arg">FN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Visit <span class="arg">FILE</span> from <span class="arg">REV</span> using <span class="arg">FN</span> to display the buffer.
+<p><span class="arg">REV</span> is a revset, or nil to visit the file directly from the filesystem.
+Preserves line/column position when jumping between revisions.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-file.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-find-file--internal</span> (rev file fn)
+  <span class="doc">"Visit FILE from REV using FN to display the buffer.
+REV is a revset, or nil to visit the file directly from the filesystem.
+Preserves line/column position when jumping between revisions."</span>
+  (<span class="k">let*</span> ((root (majutsu-file--root))
+         (rel-file (majutsu-file--relative-path root file))
+         (visited-file (<span class="k">when</span> majutsu-buffer-blob-path
+                         majutsu-buffer-blob-path))
+         (from-rev majutsu-buffer-blob-revision)
+         line col buf)
+    <span class="cd">;; </span><span class="c">Capture position if visiting same file
+</span>    (<span class="k">when</span> (<span class="k">and</span> visited-file (equal visited-file rel-file))
+      (<span class="k">setq</span> line (line-number-at-pos))
+      (<span class="k">setq</span> col (current-column))
+      <span class="cd">;; </span><span class="c">Adjust line when jumping to different revision
+</span>      (<span class="k">when</span> (<span class="k">and</span> line from-rev)
+        (<span class="k">let</span> ((to-rev (<span class="k">or</span> rev <span class="s">"@"</span>)))
+          (<span class="k">unless</span> (equal from-rev to-rev)
+            (<span class="k">setq</span> line (majutsu-diff-visit--offset root rel-file from-rev to-rev line))))))
+    <span class="cd">;; </span><span class="c">Get or create buffer using majutsu-find-file-noselect
+</span>    (<span class="k">setq</span> buf (majutsu-find-file-noselect rev rel-file))
+    <span class="cd">;; </span><span class="c">Display and position
+</span>    (funcall fn buf)
+    (<span class="k">when</span> line
+      (<span class="k">with-current-buffer</span> buf
+        (majutsu-file--goto-line-col line (<span class="k">or</span> col 0))))
+    buf))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

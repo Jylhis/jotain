@@ -1,0 +1,115 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-lexeme-looking-at-token – Emacs Documentation Online</title>
+<meta name="description" content="haskell-lexeme-looking-at-token is a natively compiled function
+defined in haskell-lexeme.el.
+Like looking-at but understands Haskell lexemes.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-lexeme-looking-at-token</code></h1><p><span class="m"><code>haskell-lexeme-looking-at-token</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">haskell-lexeme.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-lexeme-looking-at-token <span class="ty">&amp;rest</span> <a href="#:~:text=by--,first"><span class="arg">FLAGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Like <a href="../fun/looking-at.html"><code>looking-at</code></a> but understands Haskell lexemes.
+<p>Moves point forward over whitespace.  Returns a symbol describing
+type of Haskell token recognized.  Use <a href="../fun/match-string.html"><code>match-string</code></a>,
+<a href="../fun/match-beginning.html"><code>match-beginning</code></a> and <a href="../fun/match-end.html"><code>match-end</code></a> with argument 0 to query match
+result.
+<p>Possible results are:
+<br>- 'special: for chars [](){}<span class="m"><code>,;
+</code></span><br><span class="m"><code>- \=</code></span>comment: for single line comments
+<br>- 'nested-comment: for multiline comments
+<br>- 'qsymid: for qualified identifiers or symbols
+<br>- 'string: for strings literals
+<br>- 'char: for char literals
+<br>- 'number: for decimal, float, hexadecimal and octal number literals
+<br>- 'template-haskell-quote: for a string of apostrophes for template
+<br>&nbsp;&nbsp;&nbsp;haskell
+<br>- 'template-haskell-quasi-quote: for a string of apostrophes for template
+<br>&nbsp;&nbsp;&nbsp;haskell
+<p>Note that for qualified symbols (match-string 1) returns the
+unqualified identifier or symbol.  Further qualification for
+symbol or identifier can be done with:
+<p>&nbsp;&nbsp;&nbsp;(haskell-lexeme-classify-by-first-char (char-after (match-beginning 1)))
+<p>See <a href="../fun/haskell-lexeme-classify-by-first-char.html"><code>haskell-lexeme-classify-by-first-char</code></a> for details.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-lexeme.el</span>
+(<span class="k">defun</span> <span class="f">haskell-lexeme-looking-at-token</span> (<span class="ty">&amp;rest</span> flags)
+  <span class="doc">"Like `</span><span class="m doc">looking-at</span><span class="doc">' but understands Haskell lexemes.
+
+Moves point forward over whitespace.  Returns a symbol describing
+type of Haskell token recognized.  Use `</span><span class="m doc">match-string</span><span class="doc">',
+`</span><span class="m doc">match-beginning</span><span class="doc">' and `</span><span class="m doc">match-end</span><span class="doc">' with argument 0 to query match
+result.
+
+Possible results are:
+- </span><span class="bi doc">\\=</span><span class="doc">'special: for chars [](){}`,;
+- </span><span class="bi doc">\\=</span><span class="doc">'comment: for single line comments
+- </span><span class="bi doc">\\=</span><span class="doc">'nested-comment: for multiline comments
+- </span><span class="bi doc">\\=</span><span class="doc">'qsymid: for qualified identifiers or symbols
+- </span><span class="bi doc">\\=</span><span class="doc">'string: for strings literals
+- </span><span class="bi doc">\\=</span><span class="doc">'char: for char literals
+- </span><span class="bi doc">\\=</span><span class="doc">'number: for decimal, float, hexadecimal and octal number literals
+- </span><span class="bi doc">\\=</span><span class="doc">'template-haskell-quote: for a string of apostrophes for template
+   haskell
+- </span><span class="bi doc">\\=</span><span class="doc">'template-haskell-quasi-quote: for a string of apostrophes for template
+   haskell
+
+Note that for qualified symbols (match-string 1) returns the
+unqualified identifier or symbol.  Further qualification for
+symbol or identifier can be done with:
+
+   (haskell-lexeme-classify-by-first-char (char-after (match-beginning 1)))
+
+See `</span><span class="m doc">haskell-lexeme-classify-by-first-char</span><span class="doc">' for details."</span>
+  (<span class="k">while</span>
+      <span class="cd">;; </span><span class="c">Due to how unterminated strings terminate at newline, some
+</span>      <span class="cd">;; </span><span class="c">newlines have syntax set to generic string delimeter. We want
+</span>      <span class="cd">;; </span><span class="c">those to be treated as whitespace anyway
+</span>      (<span class="k">or</span>
+       (&gt; (skip-syntax-forward <span class="s">"-"</span>) 0)
+       (<span class="k">and</span> (not (member 'newline flags))
+            (&gt; (skip-chars-forward <span class="s">"\n"</span>) 0))))
+  (<span class="k">let</span>
+      ((case-fold-search nil)
+       (point (point)))
+    (<span class="k">or</span>
+     (<span class="k">and</span>
+      (equal (string-to-syntax <span class="s">"&lt;"</span>)
+             (get-char-property (point) 'syntax-table))
+      (<span class="k">progn</span>
+        (set-match-data (list point (line-end-position)))
+        'literate-comment))
+     (<span class="k">and</span> (looking-at <span class="s">"\n"</span>)
+          'newline)
+     (<span class="k">and</span> (looking-at <span class="s">"{-"</span>)
+          (<span class="k">save-excursion</span>
+            (forward-comment 1)
+            (set-match-data (list point (point)))
+            'nested-comment))
+     (<span class="k">and</span> (haskell-lexeme-looking-at-char-literal)
+          'char)
+     (<span class="k">and</span> (haskell-lexeme-looking-at-string-literal)
+          'string)
+     (<span class="k">and</span> (looking-at <span class="s">"[][(){}`,;]"</span>)
+          (<span class="k">if</span> (haskell-lexeme-looking-at-quasi-quote-literal)
+              'template-haskell-quasi-quote
+            'special))
+     (<span class="k">and</span> (haskell-lexeme-looking-at-qidsym)
+          (<span class="k">if</span> (<span class="k">save-match-data</span>
+                (string-match <span class="s">"\\`</span><span class="m m s">---*\\</span><span class="s">'"</span> (match-string-no-properties 0)))
+              (<span class="k">progn</span>
+                (set-match-data (list point (line-end-position)))
+                'comment)
+            'qsymid))
+     (<span class="k">and</span> (looking-at haskell-lexeme-number)
+          'number)
+     (<span class="k">and</span> (looking-at <span class="s">"'+"</span>)
+          'template-haskell-quote)
+     (<span class="k">and</span> (looking-at <span class="s">"."</span>)
+          'illegal))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

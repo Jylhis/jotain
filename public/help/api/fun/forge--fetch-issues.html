@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--fetch-issues – Emacs Documentation Online</title>
+<meta name="description" content="forge--fetch-issues is a byte-compiled function defined in
+forge-gitlab.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--fetch-issues</code></h1><p><span class="m"><code>forge--fetch-issues</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in
+<span class="bt">forge-gitlab.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--fetch-issues <span class="ty">&amp;rest</span> <span class="arg">ARGS</span>)
+</code></pre>
+<h2>Implementations</h2>
+<p>(forge--fetch-issues (REPO forge-gitlab-repository) CALLBACK SINCE) in `<span class="bt">forge-gitlab.el</span>'.
+<p>Undocumented
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-gitlab.el</span>
+  (forge--pull repo callback)) <span class="cd">; </span><span class="c">TODO Pull only the one topic.
+</span>
+<span class="cd">;;;; </span><span class="c">Issues
+</span>
+(<span class="k">cl-defmethod</span> <span class="f">forge--fetch-issues</span> ((repo forge-gitlab-repository) callback since)
+  (<span class="k">letrec</span>
+      (( cb (<span class="k">let</span> (val cur cnt pos)
+              (<span class="k">lambda</span> (<span class="ty">&amp;optional</span> v)
+                (<span class="k">cond</span>
+                  ((<span class="k">and</span> (not pos) v)
+                   (<span class="k">setq</span> val v)
+                   (<span class="k">setq</span> cur v)
+                   (<span class="k">setq</span> pos 1)
+                   (<span class="k">setq</span> cnt (length val))
+                   (forge--msg nil nil nil <span class="s">"Pulling issue %s/%s"</span> pos cnt)
+                   (forge--fetch-issue-posts repo cur cb))
+                  ((<span class="k">setq</span> cur (cdr cur))
+                   (<span class="k">incf</span> pos)
+                   (forge--msg nil nil nil <span class="s">"Pulling issue %s/%s"</span> pos cnt)
+                   (forge--fetch-issue-posts repo cur cb))
+                  (t
+                   (forge--msg repo t t <span class="s">"Pulling REPO issues"</span>)
+                   (funcall callback val)))))))
+    (forge--msg repo t nil <span class="s">"Pulling REPO issues"</span>)
+    (forge--glab-get repo <span class="s">"/projects/:project/issues"</span>
+      `((per_page . 100)
+        (order_by . <span class="s">"updated_at"</span>)
+        ,@(and$ (<span class="k">or</span> since (<span class="k">oref</span> repo issues-until))
+                `((updated_after . ,$))))
+      <span class="bi">:unpaginate</span> t
+      <span class="bi">:callback</span> cb)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

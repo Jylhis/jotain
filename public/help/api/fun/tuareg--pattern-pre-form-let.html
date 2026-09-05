@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg--pattern-pre-form-let – Emacs Documentation Online</title>
+<meta name="description" content="tuareg--pattern-pre-form-let is a natively compiled function defined
+in tuareg.el.
+Return the position of &quot;=&quot; marking the end of &quot;let&quot;.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg--pattern-pre-form-let</code></h1><p><span class="m"><code>tuareg--pattern-pre-form-let</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg--pattern-pre-form-let)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the position of "=" marking the end of "let".
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg--pattern-pre-form-let</span> ()
+  <span class="doc">"Return the position of \"=\" marking the end of \"let\"."</span>
+  (<span class="k">if</span> (<span class="k">or</span> (tuareg--font-lock-in-string-or-comment)
+          (looking-at <span class="s">"[ \t\n]*open\\_&gt;"</span>)       <span class="cd">; </span><span class="c">"let open"
+</span>          (looking-at <span class="s">"[ \t\n]*exception\\_&gt;"</span>)) <span class="cd">; </span><span class="c">"let exception"
+</span>      (<span class="k">progn</span> <span class="cd">; </span><span class="c">bail out
+</span>        (<span class="k">setq</span> tuareg--pattern-matcher-limit (point))
+        (<span class="k">setq</span> tuareg--pattern-matcher-type-limit (point)))
+
+    (<span class="k">let*</span> ((opoint (point))
+           (limit (+ opoint 800))
+           pos)
+      (<span class="k">setq</span> tuareg--pattern-matcher-limit nil)
+      (<span class="k">while</span> (<span class="k">and</span>
+              (&lt;= (point) limit)
+              (<span class="k">setq</span> pos (re-search-forward <span class="s">"[=({:]"</span> limit t))
+              (<span class="k">progn</span>
+                (backward-char)
+                (<span class="k">cond</span>
+                 ((memq (char-after) '(?\( ?\{))
+                  <span class="cd">;; </span><span class="c">Skip balanced braces
+</span>                  (<span class="k">if</span> (<span class="k">ignore-errors</span> (forward-list))
+                      t
+                    (goto-char (1- pos))
+                    nil)) <span class="cd">; </span><span class="c">If braces are not balanced, stop.
+</span>                 ((char-equal ?: (char-after))
+                  <span class="cd">;; </span><span class="c">Make sure it is not a label
+</span>                  (skip-chars-backward <span class="s">"[:alpha:]0-9_'"</span>)
+                  (<span class="k">if</span> (not (memq (char-before) '(?~ ??)))
+                      (<span class="k">setq</span> tuareg--pattern-matcher-limit (1- pos)))
+                  (goto-char pos)
+                  t)
+                 (t nil)))))
+      (<span class="k">setq</span> tuareg--pattern-matcher-type-limit (1+ (point)))<span class="cd">; </span><span class="c">include "="
+</span>      (<span class="k">unless</span> tuareg--pattern-matcher-limit
+        (<span class="k">setq</span> tuareg--pattern-matcher-limit (point)))
+      <span class="cd">;; </span><span class="c">Remove any possible highlighting on "="
+</span>      (<span class="k">unless</span> (eobp)
+        (put-text-property (point) (1+ (point)) 'face nil))
+      <span class="cd">;; </span><span class="c">move the point back for the sub-matcher
+</span>      (goto-char opoint))
+    (put-text-property (point) tuareg--pattern-matcher-limit
+                       'font-lock-multiline t)
+    tuareg--pattern-matcher-limit))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

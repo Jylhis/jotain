@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-ref-candidate-data – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-ref-candidate-data is a natively compiled function defined in
+majutsu-ref.el.
+Return completion payload for ref KIND in DIRECTORY.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-ref-candidate-data</code></h1><p><span class="m"><code>majutsu-ref-candidate-data</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-ref.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-ref-candidate-data <a href="#:~:text=ref-,KIND"><span class="arg">KIND</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=When-,CANDIDATES"><span class="arg">CANDIDATES</span></a> <a href="#:~:text=in-,DIRECTORY"><span class="arg">DIRECTORY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return completion payload for ref <span class="arg">KIND</span> in <span class="arg">DIRECTORY</span>.
+<p>When <span class="arg">CANDIDATES</span> is non-nil, use it instead of derived local ref candidates.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-ref.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-ref-candidate-data</span> (kind <span class="ty">&amp;optional</span> candidates directory)
+  <span class="doc">"Return completion payload for ref KIND in DIRECTORY.
+When CANDIDATES is non-nil, use it instead of derived local ref candidates."</span>
+  (<span class="k">let</span> ((default-directory (<span class="k">or</span> directory default-directory))
+        (entries (make-hash-table <span class="bi">:test</span> #'equal))
+        local-candidates)
+    (<span class="k">condition-case</span> _
+        (<span class="k">dolist</span> (row (majutsu-ref-completion-entries kind default-directory))
+          (<span class="k">let*</span> ((name (plist-get row <span class="bi">:name</span>))
+                 (remote (plist-get row <span class="bi">:remote</span>))
+                 (entry (<span class="k">or</span> (gethash name entries)
+                            (list <span class="bi">:name</span> name
+                                  <span class="bi">:tracked-remotes</span> nil
+                                  <span class="bi">:untracked-remotes</span> nil))))
+            (<span class="k">when</span> (plist-get row <span class="bi">:conflict</span>)
+              (<span class="k">setq</span> entry (plist-put entry <span class="bi">:conflict</span> t)))
+            (<span class="k">if</span> remote
+                (<span class="k">setq</span> entry
+                      (plist-put entry
+                                 (<span class="k">if</span> (plist-get row <span class="bi">:tracked</span>)
+                                     <span class="bi">:tracked-remotes</span>
+                                   <span class="bi">:untracked-remotes</span>)
+                                 (majutsu--append-unique
+                                  (plist-get entry
+                                             (<span class="k">if</span> (plist-get row <span class="bi">:tracked</span>)
+                                                 <span class="bi">:tracked-remotes</span>
+                                               <span class="bi">:untracked-remotes</span>))
+                                  remote)))
+              (<span class="k">setq</span> entry (plist-put entry <span class="bi">:local</span> t))
+              (<span class="k">when</span> (plist-get row <span class="bi">:synced</span>)
+                (<span class="k">setq</span> entry (plist-put entry <span class="bi">:synced</span> t)))
+              (<span class="k">setq</span> local-candidates
+                    (majutsu--append-unique local-candidates name)))
+            (puthash name entry entries)))
+      (<span class="w">error</span> nil))
+    (list <span class="bi">:category</span> (majutsu-ref--category kind)
+          <span class="bi">:candidates</span> (<span class="k">or</span> candidates local-candidates)
+          <span class="bi">:entries</span> entries
+          <span class="bi">:annotation-suffix-function</span>
+          (majutsu-ref--completion-suffix-function kind entries))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

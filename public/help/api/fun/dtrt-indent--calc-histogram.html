@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dtrt-indent--calc-histogram – Emacs Documentation Online</title>
+<meta name="description" content="dtrt-indent--calc-histogram is a natively compiled function defined in
+dtrt-indent.el.
+Calculate an indendation histogram.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dtrt-indent--calc-histogram</code></h1><p><span class="m"><code>dtrt-indent--calc-histogram</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dtrt-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(dtrt-indent--calc-histogram <a href="#:~:text=using-,LANGUAGE"><span class="arg">LANGUAGE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Calculate an indendation histogram.
+<p>The histogram is calculated for the current buffer using <span class="arg">LANGUAGE</span>
+to determine which lines to exclude from the histogram.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/07pi18l0q79xmgqf3amadq86iinldk0s-emacs-packages-deps/share/emacs/site-lisp/elpa/dtrt-indent-20260709.2011/dtrt-indent.el</span>
+(<span class="k">defun</span> <span class="f">dtrt-indent--calc-histogram</span> (language)
+  <span class="doc">"Calculate an indendation histogram.
+
+The histogram is calculated for the current buffer using LANGUAGE
+to determine which lines to exclude from the histogram."</span>
+  (<span class="k">let</span> ((histogram (make-hash-table))
+        (hard-tab-line-count 0)
+        (soft-tab-line-count 0)
+        (line-count 0))
+
+    (dtrt-indent--for-each-indentation
+     language
+     (<span class="k">lambda</span> (histogram-and-count)
+       (<span class="k">setq</span> line-count (1+ line-count))
+       (<span class="k">when</span> (<span class="k">and</span> (&gt; (current-column) 0)
+                  (not (looking-at <span class="s">"$"</span>))
+                  (<span class="k">or</span> (not dtrt-indent-ignore-single-chars-flag)
+                      (<span class="k">save-excursion</span>
+                        (forward-char)
+                        (not (looking-at <span class="s">"[ \t]*$"</span>)))))
+         (puthash (current-column)
+                  (1+ (gethash (current-column)
+                               (car histogram-and-count) 0))
+                  (car histogram-and-count))
+         (beginning-of-line)
+         (<span class="k">if</span> (looking-at <span class="s">"[\t]+"</span>)
+             (<span class="k">setq</span> hard-tab-line-count (1+ hard-tab-line-count))
+           (<span class="k">setq</span> soft-tab-line-count (1+ soft-tab-line-count)))
+         (setcdr histogram-and-count (1+ (cdr histogram-and-count))))
+       (&lt; line-count dtrt-indent-max-lines))
+     (cons histogram 0))
+    (<span class="k">let</span> ((histogram-list '()) (total-lines 0))
+      (maphash (<span class="k">lambda</span> (key value)
+                 (<span class="k">setq</span> histogram-list (append histogram-list
+                                              (list (list key value))))
+                 (<span class="k">setq</span> total-lines (+ total-lines value)))
+               histogram)
+      (list histogram-list
+            total-lines
+            hard-tab-line-count
+            soft-tab-line-count))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

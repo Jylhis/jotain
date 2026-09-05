@@ -1,0 +1,98 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam--directory-files-recursively – Emacs Documentation Online</title>
+<meta name="description" content="org-roam--directory-files-recursively is a natively compiled function
+defined in org-roam-compat.el.
+Return list of all files under directory DIR whose names match REGEXP.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam--directory-files-recursively</code></h1><p><span class="m"><code>org-roam--directory-files-recursively</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">org-roam-compat.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam--directory-files-recursively <a href="#:~:text=directory-,DIR"><span class="arg">DIR</span></a> <a href="#:~:text=match-,REGEXP"><span class="arg">REGEXP</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=argument-,INCLUDE-DIRECTORIES"><span class="arg">INCLUDE-DIRECTORIES</span></a> <a href="#:~:text=included.-,PREDICATE"><span class="arg">PREDICATE</span></a> <a href="#:~:text=If-,FOLLOW-SYMLINKS"><span class="arg">FOLLOW-SYMLINKS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return list of all files under directory <span class="arg">DIR</span> whose names match <span class="arg">REGEXP</span>.
+<p>This function works recursively.  Files are returned in "depth
+first" order, and files from each directory are sorted in
+alphabetical order.  Each file name appears in the returned list
+in its absolute form.
+<p>By default, the returned list excludes directories, but if
+optional argument <span class="arg">INCLUDE-DIRECTORIES</span> is non-nil, they are
+included.
+<p><span class="arg">PREDICATE</span> can be either nil (which means that all subdirectories
+of <span class="arg">DIR</span> are descended into), t (which means that subdirectories that
+can't be read are ignored), or a function (which is called with
+the name of each subdirectory, and should return non-nil if the
+subdirectory is to be descended into).
+<p>If <span class="arg">FOLLOW-SYMLINKS</span> is non-nil, symbolic links that point to
+directories are followed.  Note that this can lead to infinite
+recursion.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-compat.el</span>
+<span class="cd">;;; </span><span class="c">Backports
+</span><span class="cd">;; </span><span class="c">REVIEW Remove when 26.x support is dropped. This is exact the same as
+</span><span class="cd">;; </span><span class="c">`</span><span class="m c">directory-files-recursively</span><span class="c">' from Emacs 26, but with FOLLOW-SYMLINKS
+</span><span class="cd">;; </span><span class="c">parameter from Emacs 27.
+</span>(<span class="k">defun</span> <span class="f">org-roam--directory-files-recursively</span> (dir regexp
+                                                  <span class="ty">&amp;optional</span> include-directories predicate
+                                                  follow-symlinks)
+  <span class="doc">"Return list of all files under directory DIR whose names match REGEXP.
+This function works recursively.  Files are returned in \"depth
+first\" order, and files from each directory are sorted in
+alphabetical order.  Each file name appears in the returned list
+in its absolute form.
+
+By default, the returned list excludes directories, but if
+optional argument INCLUDE-DIRECTORIES is non-nil, they are
+included.
+
+PREDICATE can be either nil (which means that all subdirectories
+of DIR are descended into), t (which means that subdirectories that
+can't be read are ignored), or a function (which is called with
+the name of each subdirectory, and should return non-nil if the
+subdirectory is to be descended into).
+
+If FOLLOW-SYMLINKS is non-nil, symbolic links that point to
+directories are followed.  Note that this can lead to infinite
+recursion."</span>
+  (<span class="k">let*</span> ((result nil)
+         (files nil)
+         (dir (directory-file-name dir))
+         <span class="cd">;; </span><span class="c">When DIR is "/", remote file names like "/method:" could
+</span>         <span class="cd">;; </span><span class="c">also be offered.  We shall suppress them.
+</span>         (tramp-mode (<span class="k">and</span> tramp-mode (file-remote-p (expand-file-name dir)))))
+    (<span class="k">dolist</span> (file (sort (file-name-all-completions <span class="s">""</span> dir)
+                        'string&lt;))
+      (<span class="k">unless</span> (member file '(<span class="s">"./"</span> <span class="s">"../"</span>))
+        (<span class="k">if</span> (directory-name-p file)
+            (<span class="k">let*</span> ((leaf (substring file 0 (1- (length file))))
+                   (full-file (concat dir <span class="s">"/"</span> leaf)))
+              <span class="cd">;; </span><span class="c">Don't follow symlinks to other directories.
+</span>              (<span class="k">when</span> (<span class="k">and</span> (<span class="k">or</span> (not (file-symlink-p full-file))
+                             (<span class="k">and</span> (file-symlink-p full-file)
+                                  follow-symlinks))
+                         <span class="cd">;; </span><span class="c">Allow filtering subdirectories.
+</span>                         (<span class="k">or</span> (eq predicate nil)
+                             (eq predicate t)
+                             (funcall predicate full-file)))
+                (<span class="k">let</span> ((sub-files
+                       (<span class="k">if</span> (eq predicate t)
+                           (<span class="k">condition-case</span> nil
+                               (org-roam--directory-files-recursively
+                                full-file regexp include-directories
+                                predicate follow-symlinks)
+                             (file-error nil))
+                         (org-roam--directory-files-recursively
+                          full-file regexp include-directories
+                          predicate follow-symlinks))))
+                  (<span class="k">setq</span> result (nconc result sub-files))))
+              (<span class="k">when</span> (<span class="k">and</span> include-directories
+                         (string-match regexp leaf))
+                (<span class="k">setq</span> result (nconc result (list full-file)))))
+          (<span class="k">when</span> (string-match regexp file)
+            (<span class="k">push</span> (concat dir <span class="s">"/"</span> file) files)))))
+    (nconc result (nreverse files))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

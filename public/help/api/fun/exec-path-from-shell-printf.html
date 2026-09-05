@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: exec-path-from-shell-printf – Emacs Documentation Online</title>
+<meta name="description" content="exec-path-from-shell-printf is a natively compiled function defined in
+exec-path-from-shell.el.
+Return the result of printing STR in the user's shell.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>exec-path-from-shell-printf</code></h1><p><span class="m"><code>exec-path-from-shell-printf</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">exec-path-from-shell.el</span>.
+<h2>Signature</h2>
+<pre><code>(exec-path-from-shell-printf <a href="#:~:text=printing-,STR"><span class="arg">STR</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=printf.-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the result of printing <span class="arg">STR</span> in the user's shell.
+<p>Executes the shell as interactive login shell.
+<p><span class="arg">STR</span> is inserted literally in a single-quoted argument to printf,
+and may therefore contain backslashed escape sequences understood
+by printf.
+<p><span class="arg">ARGS</span> is an optional list of args which will be inserted by printf
+in place of any % placeholders in <span class="arg">STR</span>.  <span class="arg">ARGS</span> are not automatically
+shell-escaped, so they may contain $ etc.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lzrv36jn1gafnd9x3mmwlizw57dr87rp-emacs-packages-deps/share/emacs/site-lisp/elpa/exec-path-from-shell-20260423.1833/exec-path-from-shell.el</span>
+(<span class="k">defun</span> <span class="f">exec-path-from-shell-printf</span> (str <span class="ty">&amp;optional</span> args)
+  <span class="doc">"Return the result of printing STR in the user's shell.
+
+Executes the shell as interactive login shell.
+
+STR is inserted literally in a single-quoted argument to printf,
+and may therefore contain backslashed escape sequences understood
+by printf.
+
+ARGS is an optional list of args which will be inserted by printf
+in place of any % placeholders in STR.  ARGS are not automatically
+shell-escaped, so they may contain $ etc."</span>
+  (<span class="k">let*</span> ((printf-bin (<span class="k">or</span> (executable-find <span class="s">"printf"</span>) <span class="s">"printf"</span>))
+         (printf-command
+          (concat (shell-quote-argument printf-bin)
+                  <span class="s">" '__RESULT\\000"</span> str <span class="s">"\\000__RESULT' "</span>
+                  (mapconcat #'exec-path-from-shell--double-quote args <span class="s">" "</span>)))
+         (shell (exec-path-from-shell--shell))
+         (shell-args (append exec-path-from-shell-arguments
+                             (list <span class="s">"-c"</span>
+                                   (<span class="k">if</span> (exec-path-from-shell--standard-shell-p shell)
+                                       printf-command
+                                     (concat <span class="s">"sh -c "</span> (shell-quote-argument printf-command)))))))
+    (<span class="k">with-temp-buffer</span>
+      (exec-path-from-shell--debug <span class="s">"Invoking shell %s with args %S"</span> shell shell-args)
+      (<span class="k">let</span> ((exit-code (<span class="k">exec-path-from-shell--warn-duration</span>
+                        (apply #'call-process shell nil t nil shell-args))))
+        (exec-path-from-shell--debug <span class="s">"Shell printed: %S"</span> (buffer-string))
+        (<span class="k">unless</span> (zerop exit-code)
+          (<span class="w">error</span> <span class="s">"Non-zero exit code from shell %s invoked with args %S.  Output was:\n%S"</span>
+                 shell shell-args (buffer-string))))
+      (goto-char (point-min))
+      (<span class="k">if</span> (re-search-forward <span class="s">"__RESULT\0</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\0__RESULT"</span> nil t)
+          (match-string 1)
+        (<span class="w">error</span> <span class="s">"Expected printf output from shell, but got: %S"</span> (buffer-string))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

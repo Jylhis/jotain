@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- Jotain - a GNU Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer.
+
+Copyright © Markus Jylhänkangas. -->
+<title>Init File (Jotain Emacs Configuration)</title>
+
+<meta name="description" content="Init File (Jotain Emacs Configuration)">
+<meta name="keywords" content="Init File (Jotain Emacs Configuration)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Early-Init.html" rel="next" title="Early Init">
+<link href="Module-Reference.html" rel="prev" title="Module Reference">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+span:hover a.copiable-link {visibility: visible}
+ul.mark-bullet {list-style-type: disc}
+</style>
+<link rel="stylesheet" type="text/css" href="manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Init-File">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Early-Init.html" rel="next">Early Init</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Module-Reference.html" rel="prev">Module Reference</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+<h2 class="chapter" id="Init-File-1"><span>7 Init File<a class="copiable-link" href="#Init-File-1"> &para;</a></span></h2>
+
+<p><code class="code">init.el</code> is deliberately tiny. Its only jobs are:
+</p>
+<ol class="enumerate">
+<li> Register MELPA and NonGNU ELPA as fallback archives for anything Nix does not ship.
+</li><li> Put <code class="code">lisp/</code> on the load-path.
+</li><li> Point <code class="code">custom-file</code> at <code class="code">var/custom.el</code> so <code class="code">M-x customize</code> has somewhere to scribble.
+</li><li> <code class="code">require</code> each module in the right order. Archive refresh is <em class="emph">not</em> on the startup path &mdash; there is no background warm-up at all; archives are fetched only on demand.
+</li></ol>
+
+<p>Everything else &mdash; GC, encoding, theme, modeline, keybindings, package configuration &mdash; lives in <code class="code">early-init.el</code> or one of the <code class="code">lisp/init-*.el</code> modules.
+</p>
+<ul class="mini-toc">
+<li><a href="#Package-archives">Package archives</a></li>
+<li><a href="#Load-path">Load path</a></li>
+<li><a href="#Custom-file">Custom file</a></li>
+<li><a href="#Module-loading">Module loading</a></li>
+</ul>
+<div class="section-level-extent" id="Package-archives">
+<h3 class="section"><span>7.1 Package archives<a class="copiable-link" href="#Package-archives"> &para;</a></span></h3>
+
+<pre class="verbatim">(require 'package)
+(add-to-list 'package-archives '(&quot;melpa&quot;  . &quot;https://melpa.org/packages/&quot;)     t)
+(add-to-list 'package-archives '(&quot;nongnu&quot; . &quot;https://elpa.nongnu.org/nongnu/&quot;) t)
+</pre>
+<p>Nix provides most packages via <code class="code">load-path</code>, so <code class="code">use-package</code> finds them without touching the network. The archives above only come into play for packages that Nix does not ship.
+</p>
+<p>Registering an archive performs no I/O, and nothing in the config refreshes the archive index at launch. A download happens only when it is actually needed:
+</p>
+<ul class="itemize mark-bullet">
+<li><code class="code">package-install</code> &mdash; including the <code class="code">:ensure t</code> path &mdash; calls <code class="code">package--archives-initialize</code>, which reads the on-disk cache under <code class="code">elpa/archives/</code> and downloads only when that cache is empty.
+</li><li><code class="code">M-x package-refresh-contents</code> and <code class="code">M-x list-packages</code> refresh when you ask them to.
+</li></ul>
+
+<p>So a fresh Nix deployment, where every <code class="code">:ensure</code>d package is already on <code class="code">load-path</code>, starts up without contacting MELPA at all.
+</p>
+</div>
+<div class="section-level-extent" id="Load-path">
+<h3 class="section"><span>7.2 Load path<a class="copiable-link" href="#Load-path"> &para;</a></span></h3>
+
+<pre class="verbatim">(add-to-list 'load-path (expand-file-name &quot;lisp&quot; user-emacs-directory))
+</pre>
+</div>
+<div class="section-level-extent" id="Custom-file">
+<h3 class="section"><span>7.3 Custom file<a class="copiable-link" href="#Custom-file"> &para;</a></span></h3>
+
+<pre class="verbatim">(setq custom-file (locate-user-emacs-file &quot;var/custom.el&quot;))
+</pre>
+<p><code class="code">custom.el</code> is write-only: Jotain never loads it back. The declarative config in git remains the single source of truth; the file exists only so <code class="code">M-x customize</code> has somewhere to scribble without touching <code class="code">init.el</code>.
+</p>
+</div>
+<div class="section-level-extent" id="Module-loading">
+<h3 class="section"><span>7.4 Module loading<a class="copiable-link" href="#Module-loading"> &para;</a></span></h3>
+<p><code class="code">init.el</code> then <code class="code">require</code>s each module in order. See <a class="uref" href="/architecture/modules">Modules</a> for what each file owns and the full load order.
+</p>
+<pre class="verbatim">(require 'init-core)         ; GC, encoding, var/ paths, sane defaults
+(require 'init-keys)         ; Global keymap and leader-key setup
+(require 'init-ui)           ; Theme, modeline, fonts, frame tweaks
+(require 'init-tabs)         ; Workspace tabs via tab-bar-mode
+(require 'init-help)         ; helpful + built-in help tweaks
+(require 'init-docs)         ; Surface jotain.info under C-h i
+(require 'init-editing)      ; Electric pairs, delsel, whitespace, region tools
+(require 'init-completion)   ; Vertico, marginalia, orderless, consult, corfu
+(require 'init-navigation)   ; Dired + dirvish, project, windmove, winner
+(require 'init-vc)           ; vc + magit + diff-hl + forge
+(require 'init-prog)         ; prog-mode, treesit, eglot, flymake, eldoc, compile
+(require 'init-snippets)     ; tempel snippets + eglot-tempel LSP expansion
+(require 'init-project)      ; project + projection + compile-multi
+(require 'init-devenv)       ; devenv.sh: tasks, processes, env, LSP, MCP
+(require 'init-ai)           ; eca, claude-code-ide, gptel, mcp
+(require 'init-shell)        ; eshell, comint, ielm
+(require 'init-terminal)     ; ghostel terminal + tty integration (kkp, clipetty)
+(require 'init-systems)      ; sops, logview, auth-source-1password
+(require 'init-writing)      ; jinx, markdown-mode, denote, pdf-tools
+(require 'init-org)          ; org, org-modern, capture templates
+
+(require 'init-lang-nix)
+(require 'init-lang-rust)
+(require 'init-lang-python)
+(require 'init-lang-go)
+(require 'init-lang-web)       ; TS/TSX/CSS/HTML/JSON/web-mode
+(require 'init-lang-devops)    ; Dockerfile, terraform, just, ansible
+(require 'init-lang-data)      ; yaml, csv, sql, jinja2, gnuplot
+(require 'init-lang-systems)   ; C/C++, CMake, Meson, Haskell, Zig
+</pre>
+</div>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Early-Init.html" rel="next">Early Init</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Module-Reference.html" rel="prev">Module Reference</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+
+
+
+</body>
+</html>

@@ -1,0 +1,41 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu--process-strip-with-editor-control-packets – Emacs Documentation Online</title>
+<meta name="description" content="majutsu--process-strip-with-editor-control-packets is a natively
+compiled function defined in majutsu-process.el.
+Strip control packets from INPUT and keep partial state on PROC.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu--process-strip-with-editor-control-packets</code></h1><p><span class="m"><code>majutsu--process-strip-with-editor-control-packets</code></span> is a <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <span class="bt">majutsu-process.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu--process-strip-with-editor-control-packets <a href="#:~:text=on-,PROC"><span class="arg">PROC</span></a> <a href="#:~:text=from-,INPUT"><span class="arg">INPUT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Strip control packets from <span class="arg">INPUT</span> and keep partial state on <span class="arg">PROC</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-process.el</span>
+(<span class="k">defun</span> <span class="f">majutsu--process-strip-with-editor-control-packets</span> (proc input)
+  <span class="doc">"Strip control packets from INPUT and keep partial state on PROC."</span>
+  (<span class="k">let</span> ((start 0)
+        (visible nil))
+    (<span class="k">while</span> (string-match <span class="s">"\n"</span> input start)
+      (<span class="k">let*</span> ((end (match-beginning 0))
+             (line (substring input start end)))
+        (<span class="k">unless</span> (majutsu--process-handle-control-line proc line)
+          (<span class="k">push</span> (concat line <span class="s">"\n"</span>) visible))
+        (<span class="k">setq</span> start (1+ end))))
+    (<span class="k">let</span> ((trailing (substring input start)))
+      (<span class="k">cond</span>
+       ((<span class="k">or</span> (majutsu--with-editor-control-fragment-p trailing)
+            (majutsu--ediff-control-fragment-p trailing))
+        (process-put proc 'majutsu--with-editor-filter-pending trailing))
+       ((string-empty-p trailing)
+        (process-put proc 'majutsu--with-editor-filter-pending <span class="s">""</span>))
+       (t
+        (process-put proc 'majutsu--with-editor-filter-pending <span class="s">""</span>)
+        (<span class="k">push</span> trailing visible)))
+      (apply #'concat (nreverse visible)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,82 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-maybe-insert-attribute – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-maybe-insert-attribute is an interactive and natively
+compiled function defined in combobulate-html.el.
+Insert = or maybe a an attribute.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-maybe-insert-attribute</code></h1><p><span class="m"><code>combobulate-maybe-insert-attribute</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <span class="bt">combobulate-html.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-maybe-insert-attribute)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert <a href="../fun/%3D.html"><code>=</code></a> or maybe a an attribute.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-html.el</span>
+<span class="cd">;; </span><span class="c">Note: brittle.
+</span><span class="cd">;; </span><span class="c">(defun combobulate-maybe-close-tag-or-self-insert ()
+</span><span class="cd">;;   </span><span class="c">"Insert `</span><span class="m c">/</span><span class="c">' or maybe close the nearest unopened tag."
+</span><span class="cd">;;   </span><span class="c">(interactive)
+</span><span class="cd">;;   </span><span class="c">(cl-flet ((get-text (node closing)
+</span><span class="cd">;;               </span><span class="c">(if (equal (combobulate-parser-language (combobulate-parser-node node)) 'html)
+</span><span class="cd">;;                   </span><span class="c">(thread-first node
+</span><span class="cd">;;                                 </span><span class="c">(combobulate-node-child
+</span><span class="cd">;;                                  </span><span class="c">(if (equal field combobulate-sgml-close-tag)
+</span><span class="cd">;;                                      </span><span class="c">-1
+</span><span class="cd">;;                                    </span><span class="c">0))
+</span><span class="cd">;;                                 </span><span class="c">(combobulate-node-child 0)
+</span><span class="cd">;;                                 </span><span class="c">(combobulate-node-text))
+</span><span class="cd">;;                 </span><span class="c">(thread-first node
+</span><span class="cd">;;                               </span><span class="c">(combobulate-node-child-by-field
+</span><span class="cd">;;                                </span><span class="c">(if closing "close_tag" "open_tag"))
+</span><span class="cd">;;                               </span><span class="c">(combobulate-node-child-by-field "name")
+</span><span class="cd">;;                               </span><span class="c">(combobulate-node-text)))))
+</span><span class="cd">;;     </span><span class="c">(if (looking-back "&lt;" 1)
+</span><span class="cd">;;         </span><span class="c">(progn
+</span><span class="cd">;;           </span><span class="c">(let* ((element (combobulate-node-at-point (list combobulate-sgml-whole-tag))))
+</span><span class="cd">;;             </span><span class="c">(if (equal (get-text element nil)
+</span><span class="cd">;;                        </span><span class="c">(get-text element t))
+</span><span class="cd">;;                 </span><span class="c">(self-insert-command 1 ?/)
+</span><span class="cd">;;               </span><span class="c">(combobulate-message "Closing node" element)
+</span><span class="cd">;;               </span><span class="c">(combobulate-pulse-node (combobulate-node-child element 0))
+</span><span class="cd">;;               </span><span class="c">(insert (format "/%s&gt;" (get-text element combobulate-sgml-open-tag))))))
+</span><span class="cd">;;       </span><span class="c">(self-insert-command 1 ?/))))
+</span>
+(<span class="k">defun</span> <span class="f">combobulate-maybe-insert-attribute</span> ()
+  <span class="doc">"Insert `</span><span class="m doc">=</span><span class="doc">' or maybe a an attribute."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">if-let</span> ((node (combobulate-node-at-point (list combobulate-sgml-open-tag
+                                                  combobulate-sgml-self-closing-tag))))
+      <span class="cd">;; </span><span class="c">Expanding an attribute is only desirable if we are inside an
+</span>      <span class="cd">;; </span><span class="c">open (or self-closing) node, but *also not* inside a node
+</span>      <span class="cd">;; </span><span class="c">type in `</span><span class="m c">combobulate-sgml-exempted-tags</span><span class="c">' which happens to be
+</span>      <span class="cd">;; </span><span class="c">inside one of those node types.
+</span>      (<span class="k">if</span> (combobulate-node-contains-node-p
+           (combobulate-node-at-point combobulate-sgml-exempted-tags)
+           node)
+          (self-insert-command 1 ?=)
+        (<span class="k">combobulate-atomic-change-group</span>
+          (<span class="k">catch</span> '<span class="m">done</span>
+            (<span class="k">unless</span> (equal (combobulate-parser-language (combobulate-parser-node node)) 'html)
+              (<span class="k">pcase-dolist</span> (`(,attribute . ,envelope) (<span class="k">combobulate-read</span> attribute-envelope-alist))
+                (<span class="k">when</span> (looking-back (concat <span class="s">"\\&lt;"</span> attribute <span class="s">"\\&gt;"</span>) (length attribute))
+                  (combobulate-execute-envelope envelope node)
+                  (<span class="k">throw</span> '<span class="m">done</span> t))))
+            <span class="cd">;; </span><span class="c">catch flagrant, out-of-place uses of `</span><span class="m c">=</span><span class="c">'.
+</span>            (<span class="k">if</span> (looking-back <span class="s">"[[:alpha:]]"</span> 1)
+                (<span class="k">cond</span>
+                 <span class="cd">;; </span><span class="c">html can only do strings, so just use that.
+</span>                 ((equal (combobulate-parser-language (combobulate-parser-node node)) 'html)
+                  (combobulate-execute-envelope <span class="s">"attr-string"</span> node))
+                 ((<span class="k">combobulate-read</span> attribute-envelope-default)
+                  (combobulate-execute-envelope (<span class="k">combobulate-read</span> attribute-envelope-default) node))
+                 (t (self-insert-command 1 ?=)))
+              (self-insert-command 1 ?=)))))
+    (self-insert-command 1 ?=)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

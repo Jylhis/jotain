@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: async--purecopy – Emacs Documentation Online</title>
+<meta name="description" content="async--purecopy is a natively compiled function defined in async.el.
+Remove text properties in OBJECT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>async--purecopy</code></h1><p><span class="m"><code>async--purecopy</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">async.el</span>.
+<h2>Signature</h2>
+<pre><code>(async--purecopy <a href="#:~:text=in-,OBJECT"><span class="arg">OBJECT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Remove text properties in <span class="arg">OBJECT</span>.
+<p>Argument <span class="arg">OBJECT</span> may be a list or a string, if anything else it
+is returned unmodified.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vpxd64bbf27n3ziyqnh29vmak5xnpk2l-emacs-packages-deps/share/emacs/site-lisp/elpa/async-20260729.1431/async.el</span>
+(<span class="k">defun</span> <span class="f">async--purecopy</span> (object)
+  <span class="doc">"Remove text properties in OBJECT.
+
+Argument OBJECT may be a list or a string, if anything else it
+is returned unmodified."</span>
+  (<span class="k">cond</span> ((stringp object)
+         (substring-no-properties object))
+        ((consp object)
+         (<span class="k">cl-loop</span> for elm in object
+                  <span class="cd">;; </span><span class="c">A string.
+</span>                  if (stringp elm)
+                  collect (substring-no-properties elm)
+                  else
+                  <span class="cd">;; </span><span class="c">Proper lists.
+</span>                  if (<span class="k">and</span> (consp elm) (null (cdr (last elm))))
+                  collect (async--purecopy elm)
+                  else
+                  <span class="cd">;; </span><span class="c">Dotted lists.
+</span>                  <span class="cd">;; </span><span class="c">We handle here only dotted list where car and cdr
+</span>                  <span class="cd">;; </span><span class="c">are atoms i.e. (x . y) and not (x . (x . y)) or
+</span>                  <span class="cd">;; </span><span class="c">(x . (x y)) which should fit most cases.
+</span>                  if (<span class="k">and</span> (consp elm) (cdr (last elm)))
+                  collect (<span class="k">let</span> ((key (car elm))
+                                (val (cdr elm)))
+                            (cons (<span class="k">if</span> (stringp key)
+                                      (substring-no-properties key)
+                                    key)
+                                  (<span class="k">if</span> (stringp val)
+                                      (substring-no-properties val)
+                                    val)))
+                  else
+                  collect elm))
+        (t object)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

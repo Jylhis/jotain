@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dirvish-dired-noselect-a – Emacs Documentation Online</title>
+<meta name="description" content="dirvish-dired-noselect-a is a natively compiled function defined in
+dirvish.el.
+Return buffer for DIR-OR-LIST with FLAGS, FN is dired-noselect.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dirvish-dired-noselect-a</code></h1><p><span class="m"><code>dirvish-dired-noselect-a</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dirvish.el</span>.
+<h2>Signature</h2>
+<pre><code>(dirvish-dired-noselect-a <a href="#:~:text=FLAGS,-,FN"><span class="arg">FN</span></a> <a href="#:~:text=for-,DIR-OR-LIST"><span class="arg">DIR-OR-LIST</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=with-,FLAGS"><span class="arg">FLAGS</span></a> <a href="#:~:text="><span class="arg">RE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return buffer for <span class="arg">DIR-OR-LIST</span> with <span class="arg">FLAGS</span>, <span class="arg">FN</span> is <a href="../fun/dired-noselect.html"><code>dired-noselect</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a7h73ip6x5m1pxn38j7f0al6n93w904q-emacs-packages-deps/share/emacs/site-lisp/elpa/dirvish-20260725.1520/dirvish.el</span>
+(<span class="k">defun</span> <span class="f">dirvish-dired-noselect-a</span> (fn dir-or-list <span class="ty">&amp;optional</span> flags re)
+  <span class="doc">"Return buffer for DIR-OR-LIST with FLAGS, FN is `</span><span class="m doc">dired-noselect</span><span class="doc">'."</span>
+  (<span class="k">let*</span> ((dir (<span class="k">if</span> (consp dir-or-list) (car dir-or-list) dir-or-list))
+         (key (file-name-as-directory (expand-file-name dir)))
+         (dvc (dirvish-curr))
+         (dv (<span class="k">if</span> (<span class="k">and</span> dvc (not (eq (dv-type dvc) 'peek))) dvc
+               (<span class="k">or</span> (dirvish--get-session) (dirvish--new))))
+         (bname buffer-file-name) (remote (file-remote-p dir))
+         (flags (<span class="k">or</span> flags (dv-ls-switches dv)))
+         (mc dirvish-large-directory-threshold)
+         (buffer (alist-get key (dv-roots dv) nil nil #'equal))
+         (new? (null buffer)) (dps (dv-preview-dispatchers dv))
+         (hist (cons key nil)) tramp fd)
+    (<span class="k">setf</span> (dv-timestamp dv) (dirvish--timestamp))
+    (<span class="k">cond</span> ((<span class="k">and</span> new? remote)
+           (<span class="k">setq</span> tramp (<span class="k">prog1</span> 'dirvish-tramp-noselect (<span class="k">require</span> '<span class="m">dirvish-tramp</span>))
+                 buffer (apply tramp (list fn dir-or-list flags remote dps))))
+          ((<span class="k">or</span> re (<span class="k">and</span> mc (length&gt; (directory-files key nil nil t mc) (1- mc))))
+           (<span class="k">setq</span> fd (<span class="k">prog1</span> 'dirvish-fd-noselect (<span class="k">require</span> '<span class="m">dirvish-fd</span> nil t))
+                 buffer (apply fd (list dv key (<span class="k">or</span> re <span class="s">""</span>)))
+                 re (<span class="k">if</span> (stringp re) re (mapconcat #'concat re <span class="s">","</span>))
+                 key (concat key <span class="s">"🔍"</span> re)))
+          (new? (<span class="k">let</span> (dired-buffers) <span class="cd">; </span><span class="c">disable reuse from `</span><span class="m c">dired</span><span class="c">'
+</span>                  (<span class="k">setq</span> buffer (apply fn (list dir-or-list flags))))))
+    (<span class="k">when</span> (<span class="k">setq</span> new? (null (alist-get key (dv-roots dv) nil nil #'equal)))
+      (<span class="k">push</span> (cons key buffer) (dv-roots dv)))
+    (<span class="k">unless</span> (member (car hist) (mapcar #'car dired-buffers))
+      (<span class="k">setq</span> dired-buffers (seq-take (<span class="k">push</span> hist dired-buffers) 20000)))
+    (setcdr (assoc (car hist) dired-buffers) buffer)
+    (<span class="k">with-current-buffer</span> buffer
+      (dirvish--setup-dired)
+      (funcall (dv-root-conf dv) buffer)
+      (<span class="k">dirvish-prop</span> <span class="bi">:dv</span> (dv-id dv))
+      (<span class="k">dirvish-prop</span> <span class="bi">:gui</span> (display-graphic-p))
+      (<span class="k">dirvish-prop</span> <span class="bi">:remote</span> remote)
+      (<span class="k">dirvish-prop</span> <span class="bi">:root</span> key)
+      (<span class="k">unless</span> remote (<span class="k">dirvish-prop</span> <span class="bi">:preview-dps</span> dps))
+      (<span class="k">dirvish-prop</span> <span class="bi">:attrs</span> (dv-attributes dv))
+      (<span class="k">cl-loop</span> for (k v) on dirvish--scopes by 'cddr
+               do (<span class="k">dirvish-prop</span> k (<span class="k">and</span> (functionp v) (funcall v))))
+      (<span class="k">when</span> new? (dirvish--dir-data-async (car hist) buffer))
+      (<span class="k">when</span> bname (dired-goto-file bname))
+      (<span class="k">setf</span> (dv-index dv) (cons key buffer))
+      (run-hook-with-args 'dirvish-find-entry-hook (car hist) 'dired)
+      buffer)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark-consult--export-grep – Emacs Documentation Online</title>
+<meta name="description" content="embark-consult--export-grep is a natively compiled function defined in
+embark-consult.el.
+Create a grep mode buffer listing LINES.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark-consult--export-grep</code></h1><p><span class="m"><code>embark-consult--export-grep</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">embark-consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark-consult--export-grep <span class="ty">&amp;key</span> <a href="#:~:text=The-,HEADER"><span class="arg">HEADER</span></a> <a href="#:~:text=listing-,LINES"><span class="arg">LINES</span></a> <a href="#:~:text=function-,INSERT"><span class="arg">INSERT</span></a> <a href="#:~:text=function-,FOOTER"><span class="arg">FOOTER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create a grep mode buffer listing <span class="arg">LINES</span>.
+<p>The <span class="arg">HEADER</span> string is inserted at the top of the buffer.  The
+function <span class="arg">INSERT</span> is called to insert the <span class="arg">LINES</span> and should return a
+count of the matches (there may be more than one match per line).
+The function <span class="arg">FOOTER</span> is called to insert a footer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/crpi6mclpni00p24053ic2ap2amj6rbh-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-consult-20260503.118/embark-consult.el</span>
+(<span class="k">cl-defun</span> <span class="f">embark-consult--export-grep</span> (<span class="ty">&amp;key</span> header lines insert footer)
+  <span class="doc">"Create a grep mode buffer listing LINES.
+The HEADER string is inserted at the top of the buffer.  The
+function INSERT is called to insert the LINES and should return a
+count of the matches (there may be more than one match per line).
+The function FOOTER is called to insert a footer."</span>
+  (<span class="k">let</span> ((buf (generate-new-buffer <span class="s">"*Embark Export Grep*"</span>)))
+    (<span class="k">with-current-buffer</span> buf
+      (grep-mode)
+      (<span class="k">setq-local</span> mode-line-process grep-mode-line-matches)
+      (<span class="k">let</span> ((inhibit-read-only t))
+        (insert (propertize header 'wgrep-header t 'front-sticky t))
+        (<span class="k">dlet</span> ((compilation-filter-start (point)))
+          (<span class="k">setq-local</span> grep-num-matches-found (funcall insert lines))
+          (goto-char (point-max))
+          <span class="cd">;; </span><span class="c">Ensure that all `</span><span class="m c">compilation-message</span><span class="c">' text properties are added.
+</span>          (compilation--ensure-parse (point))
+          <span class="cd">;; </span><span class="c">Instead of (run-hooks 'compilation-filter-hook), we only run the
+</span>          <span class="cd">;; </span><span class="c">Emacs 30 grep heading filter. The other `</span><span class="m c">compilation-filter-hook</span><span class="c">'
+</span>          <span class="cd">;; </span><span class="c">functions handle escape sequences, which we do not need here.
+</span>          (<span class="k">when</span> (<span class="k">and</span> (<span class="k">bound-and-true-p</span> grep-use-headings)
+                     (fboundp 'grep--heading-filter))
+            (grep--heading-filter))
+          (funcall footer)
+          (goto-char (point-min))))
+      <span class="cd">;; </span><span class="c">Make this buffer current for next/previous-error
+</span>      (<span class="k">setq</span> next-error-last-buffer buf)
+      <span class="cd">;; </span><span class="c">Set up keymap before possible wgrep-setup, so that wgrep
+</span>      <span class="cd">;; </span><span class="c">restores our binding too when the user finishes editing.
+</span>      (use-local-map (make-composed-keymap
+                      embark-consult-rerun-map
+                      (current-local-map)))
+      <span class="cd">;; </span><span class="c">NOTE Wgrep is not needed anymore on Emacs 31 with `</span><span class="m c">grep-edit-mode</span><span class="c">'.
+</span>      (<span class="k">when</span> (fboundp 'wgrep-setup)
+        <span class="cd">;; </span><span class="c">TODO Wgrep 3.0 and development versions use different names for the
+</span>        <span class="cd">;; </span><span class="c">parser variable.
+</span>        (<span class="k">defvar</span> <span class="v">wgrep-header/footer-parser</span>)
+        (<span class="k">defvar</span> <span class="v">wgrep-header&amp;footer-parser</span>)
+        (<span class="k">setq-local</span> wgrep-header/footer-parser #'ignore
+                    wgrep-header&amp;footer-parser #'ignore)
+        (wgrep-setup)))
+    (pop-to-buffer buf)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

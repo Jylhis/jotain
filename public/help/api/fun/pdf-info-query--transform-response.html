@@ -1,0 +1,133 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-info-query--transform-response – Emacs Documentation Online</title>
+<meta name="description" content="pdf-info-query--transform-response is a natively compiled function
+defined in pdf-info.el.
+Transform a RESPONSE to CMD into a Lisp form.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-info-query--transform-response</code></h1><p><span class="m"><code>pdf-info-query--transform-response</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">pdf-info.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-info-query--transform-response <a href="#:~:text=to-,CMD"><span class="arg">CMD</span></a> <a href="#:~:text=a-,RESPONSE"><span class="arg">RESPONSE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Transform a <span class="arg">RESPONSE</span> to <span class="arg">CMD</span> into a Lisp form.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-info.el</span>
+(<span class="k">defun</span> <span class="f">pdf-info-query--transform-response</span> (cmd response)
+  <span class="doc">"Transform a RESPONSE to CMD into a Lisp form."</span>
+  (<span class="k">cl-case</span> cmd
+    (open nil)
+    (close (equal <span class="s">"1"</span> (caar response)))
+    (number-of-pages (string-to-number (caar response)))
+    (charlayout
+     (mapcar (<span class="k">lambda</span> (elt)
+               (<span class="w">cl-assert</span> (= 1 (length (cadr elt))) t)
+               `(,(aref (cadr elt) 0)
+                 ,(mapcar #'string-to-number
+                          (split-string (car elt) <span class="s">" "</span> t))))
+             response))
+    (regexp-flags
+     (mapcar (<span class="k">lambda</span> (elt)
+               (cons (intern (car elt))
+                     (string-to-number (cadr elt))))
+             response))
+    ((search-string search-regexp)
+     (mapcar
+      (<span class="k">lambda</span> (r)
+        `((page . ,(string-to-number (nth 0 r)))
+          (text . ,(<span class="k">let</span> (case-fold-search)
+                     (pdf-util-highlight-regexp-in-string
+                      (regexp-quote (nth 1 r)) (nth 2 r))))
+          (edges . ,(mapcar (<span class="k">lambda</span> (m)
+                              (mapcar #'string-to-number
+                                      (split-string m <span class="s">" "</span> t)))
+                            (cddr (cdr r))))))
+      response))
+    (outline
+     (mapcar (<span class="k">lambda</span> (r)
+               `((depth . ,(string-to-number (<span class="k">pop</span> r)))
+                 ,@(pdf-info-query--transform-action r)))
+             response))
+    (pagelinks
+     (mapcar (<span class="k">lambda</span> (r)
+               `((edges .
+                        ,(mapcar #'string-to-number <span class="cd">;</span><span class="c">area
+</span>                                 (split-string (<span class="k">pop</span> r) <span class="s">" "</span> t)))
+                 ,@(pdf-info-query--transform-action r)))
+             response))
+    (metadata
+     (<span class="k">let</span> ((md (car response)))
+       (<span class="k">if</span> (= 1 (length md))
+           (list (cons 'title (car md)))
+         (list
+          (cons 'title (<span class="k">pop</span> md))
+          (cons 'author (<span class="k">pop</span> md))
+          (cons 'subject (<span class="k">pop</span> md))
+          (cons 'keywords-raw (car md))
+          (cons 'keywords (split-string (<span class="k">pop</span> md) <span class="s">"[\t\n ]*,[\t\n ]*"</span> t))
+          (cons 'creator (<span class="k">pop</span> md))
+          (cons 'producer (<span class="k">pop</span> md))
+          (cons 'format (<span class="k">pop</span> md))
+          (cons 'created (<span class="k">pop</span> md))
+          (cons 'modified (<span class="k">pop</span> md))))))
+    (gettext
+     (<span class="k">or</span> (caar response) <span class="s">""</span>))
+    (getselection
+     (mapcar (<span class="k">lambda</span> (line)
+               (mapcar #'string-to-number
+                       (split-string (car line) <span class="s">" "</span> t)))
+             response))
+    (features (mapcar #'intern (car response)))
+    (pagesize
+     (<span class="k">setq</span> response (car response))
+     (cons (round (string-to-number (car response)))
+           (round (string-to-number (cadr response)))))
+    ((getannot editannot addannot)
+     (pdf-info-query--transform-annotation (car response)))
+    (getannots
+     (mapcar #'pdf-info-query--transform-annotation response))
+    (getattachments
+     (mapcar #'pdf-info-query--transform-attachment response))
+    ((getattachment-from-annot)
+     (pdf-info-query--transform-attachment (car response)))
+    (boundingbox
+     (mapcar #'string-to-number (car response)))
+    (synctex-forward-search
+     (<span class="k">let</span> ((list (mapcar #'string-to-number (car response))))
+       `((page . ,(car list))
+         (edges . ,(cdr list)))))
+    (synctex-backward-search
+     `((filename . ,(caar response))
+       (line . ,(string-to-number (cadr (car response))))
+       (column . ,(string-to-number (cadr (cdar response))))))
+    (delannot nil)
+    ((save) (caar response))
+    ((renderpage renderpage-text-regions renderpage-highlight)
+     (pdf-util-munch-file (caar response)))
+    ((setoptions getoptions)
+     (<span class="k">let</span> (options)
+       (<span class="k">dolist</span> (key-value response)
+         (<span class="k">let</span> ((key (intern (car key-value)))
+               (value (cadr key-value)))
+           (<span class="k">cl-case</span> key
+             ((<span class="bi">:render/printed</span>)
+              (<span class="k">setq</span> value (equal value <span class="s">"1"</span>)))
+             ((<span class="bi">:render/gammabeforeinvert</span>)
+              (<span class="k">setq</span> value (equal value <span class="s">"1"</span>)))
+             ((<span class="bi">:render/usecolors</span>)
+              (<span class="k">setq</span> value (<span class="k">ignore-errors</span>
+                            (<span class="k">let</span> ((int-val (cl-parse-integer value)))
+                              (<span class="k">if</span> (&gt; 3 int-val 0)
+                                  int-val
+                                0))))))
+           (<span class="k">push</span> value options)
+           (<span class="k">push</span> key options)))
+       options))
+    (pagelabels (mapcar #'car response))
+    (ping (caar response))
+    (t response)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

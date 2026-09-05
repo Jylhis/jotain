@@ -1,0 +1,87 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg--comment-region-default – Emacs Documentation Online</title>
+<meta name="description" content="tuareg--comment-region-default is a natively compiled function defined
+in tuareg-compat.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg--comment-region-default</code></h1><p><span class="m"><code>tuareg--comment-region-default</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">tuareg-compat.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg--comment-region-default <span class="arg">BEG</span> <span class="arg">END</span> <span class="ty">&amp;optional</span> <span class="arg">ARG</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg-compat.el</span>
+<span class="cd">;; </span><span class="c">Emacs &lt; 27
+</span>(<span class="k">defun</span> <span class="f">tuareg--comment-region-default</span> (beg end <span class="ty">&amp;optional</span> arg)
+  (<span class="k">let*</span> ((numarg (prefix-numeric-value arg))
+	 (style (cdr (assoc comment-style comment-styles)))
+	 (lines (nth 2 style))
+	 (block (nth 1 style))
+	 (multi (nth 0 style)))
+
+    <span class="cd">;; </span><span class="c">We use `</span><span class="m c">chars</span><span class="c">' instead of `</span><span class="m c">syntax</span><span class="c">' because `</span><span class="m c">\n</span><span class="c">' might be
+</span>    <span class="cd">;; </span><span class="c">of end-comment syntax rather than of whitespace syntax.
+</span>    <span class="cd">;; </span><span class="c">sanitize BEG and END
+</span>    (goto-char beg) (skip-chars-forward <span class="s">" \t\n\r"</span>) (beginning-of-line)
+    (<span class="k">setq</span> beg (max beg (point)))
+    (goto-char end) (skip-chars-backward <span class="s">" \t\n\r"</span>) (end-of-line)
+    (<span class="k">setq</span> end (min end (point)))
+    (<span class="k">if</span> (&gt;= beg end) (<span class="w">error</span> <span class="s">"Nothing to comment"</span>))
+
+    <span class="cd">;; </span><span class="c">sanitize LINES
+</span>    (<span class="k">setq</span> lines
+	  (<span class="k">and</span>
+	   lines <span class="cd">;; </span><span class="c">multi
+</span>	   (<span class="k">progn</span> (goto-char beg) (beginning-of-line)
+		  (skip-syntax-forward <span class="s">" "</span>)
+		  (&gt;= (point) beg))
+	   (<span class="k">progn</span> (goto-char end) (end-of-line) (skip-syntax-backward <span class="s">" "</span>)
+		  (&lt;= (point) end))
+	   (<span class="k">or</span> block (not (string= <span class="s">""</span> comment-end)))
+           (<span class="k">or</span> block (<span class="k">progn</span> (goto-char beg) (re-search-forward <span class="s">"$"</span> end t)))))
+
+    <span class="cd">;; </span><span class="c">don't add end-markers just because the user asked for `</span><span class="m c">block</span><span class="c">'
+</span>    (<span class="k">unless</span> (<span class="k">or</span> lines (string= <span class="s">""</span> comment-end)) (<span class="k">setq</span> block nil))
+
+    (<span class="k">cond</span>
+     ((consp arg) (uncomment-region beg end))
+     ((&lt; numarg 0) (uncomment-region beg end (- numarg)))
+     (t
+      (<span class="k">let</span> ((multi-char (/= (string-match <span class="s">"[ \t]*\\'"</span> comment-start) 1))
+	    indent triple)
+	(<span class="k">if</span> (eq (nth 3 style) 'multi-char)
+	    (<span class="k">save-excursion</span>
+	      (goto-char beg)
+	      (<span class="k">setq</span> indent multi-char
+		    <span class="cd">;; </span><span class="c">Triple if we will put the comment starter at the margin
+</span>		    <span class="cd">;; </span><span class="c">and the first line of the region isn't indented
+</span>		    <span class="cd">;; </span><span class="c">at least two spaces.
+</span>		    triple (<span class="k">and</span> (not multi-char) (looking-at <span class="s">"\t</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">  "</span>))))
+	  (<span class="k">setq</span> indent (nth 3 style)))
+
+	<span class="cd">;; </span><span class="c">In Lisp and similar modes with one-character comment starters,
+</span>	<span class="cd">;; </span><span class="c">double it by default if `</span><span class="m c">comment-add</span><span class="c">' says so.
+</span>	<span class="cd">;; </span><span class="c">If it isn't indented, triple it.
+</span>	(<span class="k">if</span> (<span class="k">and</span> (null arg) (not multi-char))
+	    (<span class="k">setq</span> numarg (* comment-add (<span class="k">if</span> triple 2 1)))
+	  (<span class="k">setq</span> numarg (1- (prefix-numeric-value arg))))
+
+	(comment-region-internal
+	 beg end
+	 (<span class="k">let</span> ((s (comment-padright comment-start numarg)))
+	   (<span class="k">if</span> (string-match comment-start-skip s) s
+	     (comment-padright comment-start)))
+	 (<span class="k">let</span> ((s (comment-padleft comment-end numarg)))
+	   (<span class="k">and</span> s (<span class="k">if</span> (string-match comment-end-skip s) s
+		    (comment-padright comment-end))))
+	 (<span class="k">if</span> multi (<span class="k">or</span> (comment-padright comment-continue numarg)
+                       (<span class="k">and</span> (stringp comment-continue) comment-continue)))
+	 (<span class="k">if</span> multi
+	     (comment-padleft (comment-string-reverse comment-continue) numarg))
+	 block
+	 lines
+	 indent))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

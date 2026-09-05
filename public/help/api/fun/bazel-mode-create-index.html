@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel-mode-create-index – Emacs Documentation Online</title>
+<meta name="description" content="bazel-mode-create-index is a natively compiled function defined in
+bazel.el.
+Return an Imenu index for the rule targets defined in the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel-mode-create-index</code></h1><p><span class="m"><code>bazel-mode-create-index</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel-mode-create-index)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return an Imenu index for the rule targets defined in the current buffer.
+<p>This function is useful as ‘imenu-create-index-function’ for
+<br>‘bazel-build-mode’, ‘bazel-workspace-mode’, and
+<br>‘bazel-module-mode’.  See Info node <a href="/info/elisp/imenu.html">(elisp) Imenu</a> for details.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+<span class="cd">;;;; </span><span class="c">Imenu support
+</span>
+(<span class="k">defun</span> <span class="f">bazel-mode-create-index</span> ()
+  <span class="doc">"Return an Imenu index for the rule targets defined in the current buffer.
+This function is useful as ‘</span><span class="m doc">imenu-create-index-function</span><span class="doc">’ for
+‘</span><span class="m doc">bazel-build-mode</span><span class="doc">’, ‘</span><span class="m doc">bazel-workspace-mode</span><span class="doc">’, and
+‘</span><span class="m doc">bazel-module-mode</span><span class="doc">’.  See Info node ‘(elisp) Imenu’ for details."</span>
+  (<span class="k">save-excursion</span>
+    (<span class="k">without-restriction</span>
+      (goto-char (point-min))
+      (<span class="k">let</span> ((case-fold-search nil)
+            (search-spaces-regexp nil)
+            (index ()))
+        <span class="cd">;; </span><span class="c">Heuristic: We search for “name” attributes as they would show in
+</span>        <span class="cd">;; </span><span class="c">typical BUILD files.  That’s not 100% correct, but doesn’t rely on
+</span>        <span class="cd">;; </span><span class="c">external processes and should work fine in common cases.
+</span>        (<span class="k">while</span> (re-search-forward
+                <span class="cd">;; </span><span class="c">The target pattern isn’t the same as
+</span>                <span class="cd">;; </span><span class="c">https://bazel.build/concepts/labels#target-names (we don’t
+</span>                <span class="cd">;; </span><span class="c">allow quotation marks in target names), but should be good
+</span>                <span class="cd">;; </span><span class="c">enough here.
+</span>                (<span class="k">rx</span> symbol-start <span class="s">"name"</span> (* blank) ?= (* blank)
+                    (group (any ?\" ?'))
+                    (group (+ (any <span class="s">"a-z"</span> <span class="s">"A-Z"</span> <span class="s">"0-9"</span>
+                                   ?- <span class="s">"!%@^_` #$&amp;()*+,;&lt;=&gt;?[]{|}~/."</span>)))
+                    (backref 1))
+                nil t)
+          (<span class="k">let</span> ((name (match-string-no-properties 2)))
+            (<span class="k">unless</span> (python-syntax-comment-or-string-p)
+              (<span class="k">let</span> ((pos (<span class="k">save-excursion</span>
+                           (python-nav-beginning-of-statement)
+                           (<span class="k">if</span> imenu-use-markers (point-marker) (point)))))
+                (<span class="k">push</span> (cons name pos) index)))))
+        (nreverse index)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

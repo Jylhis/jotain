@@ -1,0 +1,84 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--info-scope-add-variable – Emacs Documentation Online</title>
+<meta name="description" content="dape--info-scope-add-variable is a natively compiled function defined
+in dape.el.
+Add variable OBJECT with REFERENCE and PATH to TABLE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--info-scope-add-variable</code></h1><p><span class="m"><code>dape--info-scope-add-variable</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--info-scope-add-variable <a href="#:~:text=to-,TABLE"><span class="arg">TABLE</span></a> <a href="#:~:text=variable-,OBJECT"><span class="arg">OBJECT</span></a> <a href="#:~:text=with-,REFERENCE"><span class="arg">REFERENCE</span></a> <a href="#:~:text=and-,PATH"><span class="arg">PATH</span></a> <a href="#:~:text=TABLE.-,TEST-EXPANDED"><span class="arg">TEST-EXPANDED</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,NO-HANDLES"><span class="arg">NO-HANDLES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Add variable <span class="arg">OBJECT</span> with <span class="arg">REFERENCE</span> and <span class="arg">PATH</span> to <span class="arg">TABLE</span>.
+<p><span class="arg">TEST-EXPANDED</span> is called with <span class="arg">PATH</span> and <span class="arg">OBJECT</span> to determine if recursive
+calls should continue.  If <span class="arg">NO-HANDLES</span> is non-nil skip + - handles.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--info-scope-add-variable</span> (table object reference path test-expanded
+                                            <span class="ty">&amp;optional</span> no-handles)
+  <span class="doc">"Add variable OBJECT with REFERENCE and PATH to TABLE.
+TEST-EXPANDED is called with PATH and OBJECT to determine if recursive
+calls should continue.  If NO-HANDLES is non-nil skip + - handles."</span>
+  (<span class="k">let*</span> ((name (<span class="k">or</span> (plist-get object <span class="bi">:name</span>) <span class="s">""</span>))
+         (name (<span class="k">if</span> (string-empty-p name)
+                   (<span class="k">or</span> (plist-get object <span class="bi">:evaluateName</span>) <span class="s">""</span>)
+                 name))
+         (type (<span class="k">or</span> (plist-get object <span class="bi">:type</span>) <span class="s">""</span>))
+         (value (<span class="k">or</span> (plist-get object <span class="bi">:value</span>)
+                    (plist-get object <span class="bi">:result</span>)
+                    <span class="s">" "</span>))
+         (prefix (make-string (* (1- (length path)) 2) ?\s))
+         (path (cons name path))
+         (expanded-p (funcall test-expanded path))
+         row)
+    (<span class="k">setq</span>
+     name (propertize name
+                      'font-lock-face 'font-lock-variable-name-face
+                      'mouse-face 'highlight
+                      'help-echo <span class="s">"mouse-2: create or remove watch expression"</span>
+                      'keymap dape-info-variable-name-map)
+     type (propertize type 'font-lock-face 'font-lock-type-face)
+     value (propertize value
+                       'mouse-face 'highlight
+                       'help-echo <span class="s">"mouse-2: edit value"</span>
+                       'keymap dape-info-variable-value-map)
+     prefix (<span class="k">cond</span> (no-handles prefix)
+                  ((zerop (<span class="k">or</span> (plist-get object <span class="bi">:variablesReference</span>) 0))
+                   (concat prefix <span class="s">"  "</span>))
+                  ((<span class="k">and</span> expanded-p (plist-get object <span class="bi">:variables</span>))
+                   (concat
+                    (propertize (concat prefix <span class="s">"-"</span>)
+                                'mouse-face 'highlight
+                                'help-echo <span class="s">"mouse-2: contract"</span>
+                                'keymap dape-info-variable-prefix-map)
+                    <span class="s">" "</span>))
+                  ((concat
+                    (propertize (concat prefix <span class="s">"+"</span>)
+                                'mouse-face 'highlight
+                                'help-echo <span class="s">"mouse-2: expand"</span>
+                                'keymap dape-info-variable-prefix-map)
+                    <span class="s">" "</span>)))
+     row (dape--info-locals-table-columns-list `((name  . ,name)
+                                                 (type  . ,type)
+                                                 (value . ,value))))
+    (setcar row (concat prefix (car row)))
+    (gdb-table-add-row table
+                       (<span class="k">if</span> dape-info-variable-table-aligned
+                           row
+                         (list (mapconcat #'identity row <span class="s">" "</span>)))
+                       `( dape--variable ,object
+                          dape--path ,path
+                          <span class="cd">;; </span><span class="c">`</span><span class="m c">dape--command-at-line</span><span class="c">' expects non-nil
+</span>                          dape--reference ,(<span class="k">or</span> reference 'nothing)))
+    (<span class="k">when</span> expanded-p
+      <span class="cd">;; </span><span class="c">TODO Should be paged
+</span>      (<span class="k">dolist</span> (variable (plist-get object <span class="bi">:variables</span>))
+        (dape--info-scope-add-variable table variable
+                                       (plist-get object <span class="bi">:variablesReference</span>)
+                                       path test-expanded no-handles)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

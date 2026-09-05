@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb-export-request-on-point – Emacs Documentation Online</title>
+<meta name="description" content="verb-export-request-on-point is an interactive and natively compiled
+function defined in verb.el.
+Export the request specification on point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb-export-request-on-point</code></h1><p><span class="m"><code>verb-export-request-on-point</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">verb.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb-export-request-on-point <span class="ty">&amp;optional</span> <a href="#:~:text=under-,NAME"><span class="arg">NAME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Export the request specification on point.
+<p>Interactively, prompt the user for an export function, and call that
+function with the request specification object.  See the
+<a href="../var/verb-export-functions.html"><code>verb-export-functions</code></a> variable for more details.  If called from
+Lisp, use the export function under <span class="arg">NAME</span>.  If <span class="arg">NAME</span> is nil, prompt the
+user anyways.
+<p>No HTTP request is sent, unless the export function does this
+explicitly.  Lisp code tags are evaluated when exporting.
+<h2>Key Bindings</h2>
+<p><span class="v">verb-command-map</span> <span class="key">C-e</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">verb-export-request-on-point</span> (<span class="ty">&amp;optional</span> name)
+  <span class="doc">"Export the request specification on point.
+Interactively, prompt the user for an export function, and call that
+function with the request specification object.  See the
+`</span><span class="m doc">verb-export-functions</span><span class="doc">' variable for more details.  If called from
+Lisp, use the export function under NAME.  If NAME is nil, prompt the
+user anyways.
+
+No HTTP request is sent, unless the export function does this
+explicitly.  Lisp code tags are evaluated when exporting."</span>
+  (<span class="k">interactive</span>)
+  (verb--ensure-verb-mode)
+  (<span class="k">let</span> ((rs (verb--request-spec-from-hierarchy))
+        (prompt (string-join
+                 (append
+                  (mapcar (<span class="k">lambda</span> (x)
+                            (format <span class="s">"[%c]: Export to %s"</span> (nth 1 x) (nth 0 x)))
+                          verb-export-functions)
+                  '(<span class="s">"Choice: "</span>))
+                 <span class="s">"\n"</span>))
+        (choice))
+    (<span class="k">unless</span> name
+      (<span class="k">setq</span> choice (read-char-choice prompt
+                                     (mapcar (<span class="k">lambda</span> (x)
+                                               (nth 1 x))
+                                             verb-export-functions))))
+    (mapc (<span class="k">lambda</span> (x)
+            (<span class="k">when</span> (<span class="k">or</span> (string= name (nth 0 x))
+                      (equal choice (nth 1 x)))
+              (funcall (nth 2 x) rs)
+              (verb-util--log nil 'I <span class="s">"Exported request to %s format"</span>
+                              (nth 0 x))))
+          verb-export-functions)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

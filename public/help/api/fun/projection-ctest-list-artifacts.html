@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: projection-ctest-list-artifacts – Emacs Documentation Online</title>
+<meta name="description" content="projection-ctest-list-artifacts is an autoloaded and natively compiled
+function defined in projection-type-cmake.el.
+List CTest target artifacts.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>projection-ctest-list-artifacts</code></h1><p><span class="m"><code>projection-ctest-list-artifacts</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">projection-type-cmake.el</span>.
+<h2>Signature</h2>
+<pre><code>(projection-ctest-list-artifacts)
+</code></pre>
+<h2>Documentation</h2>
+<p>List CTest target artifacts.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kqajmnl5vwqnlsg3vcmlj2d28ylc2n0n-emacs-packages-deps/share/emacs/site-lisp/elpa/projection-20260614.1822/projection-type-cmake.el</span>
+(<span class="k">defun</span> <span class="f">projection-ctest-list-artifacts</span> ()
+  <span class="doc">"List CTest target artifacts."</span>
+  (<span class="k">let</span> (result)
+    (<span class="k">dolist</span> (test-target (alist-get 'tests (projection-cmake-ctest--targets)))
+      (<span class="k">let-alist</span> test-target
+        (<span class="k">if</span> .command
+            (<span class="k">push</span>
+             `((name . ,.name)
+               (category . <span class="s">"CTest"</span>)
+               (arg0 . ,(car .command))
+               ,@(<span class="k">when-let*</span> ((argv (cdr .command)))
+                   `((argv . ,argv)))
+               (type . cmake-test)
+               (debuggable . t)
+               ,@(<span class="k">when-let*</span> ((working-directory
+                              (projection-ctest--read-property .properties <span class="s">"WORKING_DIRECTORY"</span>)))
+                   `((working-directory . ,working-directory)))
+               ,@(<span class="k">when-let*</span> ((environment
+                              (projection-ctest--read-property .properties <span class="s">"ENVIRONMENT"</span>)))
+                   (<span class="k">setq</span> environment
+                         (<span class="k">cl-loop</span>
+                          for env-variable in environment
+                          do (<span class="k">setq</span> env-variable (s-split-up-to <span class="s">"="</span> env-variable 1))
+                          collect (cons (car env-variable)
+                                        (<span class="k">or</span> (cadr env-variable) <span class="s">""</span>))))
+                   `((environment . ,environment))))
+             result)
+          (<span class="k">projection--log</span> <span class="bi">:warning</span> <span class="s">"CTest target=%S has no defined command.\
+ This is known to happen when the test executable hasn't been compiled yet."</span> test-target)
+          )))
+    (nreverse result)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

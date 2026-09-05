@@ -1,0 +1,147 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dtrt-indent-diagnosis – Emacs Documentation Online</title>
+<meta name="description" content="dtrt-indent-diagnosis is an autoloaded, interactive and natively
+compiled function defined in dtrt-indent-diag.el.
+Guess indentation for the current buffer and output diagnostics.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dtrt-indent-diagnosis</code></h1><p><span class="m"><code>dtrt-indent-diagnosis</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a>, <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <span class="bt">dtrt-indent-diag.el</span>.
+<h2>Signature</h2>
+<pre><code>(dtrt-indent-diagnosis)
+</code></pre>
+<h2>Documentation</h2>
+<p>Guess indentation for the current buffer and output diagnostics.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/07pi18l0q79xmgqf3amadq86iinldk0s-emacs-packages-deps/share/emacs/site-lisp/elpa/dtrt-indent-20260709.2011/dtrt-indent-diag.el</span>
+(<span class="k">defun</span> <span class="f">dtrt-indent-diagnosis</span> ()
+  <span class="doc">"Guess indentation for the current buffer and output diagnostics."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((language-and-variable
+         (cdr (dtrt-indent--search-hook-mapping major-mode))))
+
+    (<span class="k">with-output-to-temp-buffer</span> <span class="s">"*dtrt-indent-debug*"</span>
+    (<span class="k">if</span> (null language-and-variable)
+        (princ (format <span class="s">"Major mode %s not supported by dtrt-indent"</span> major-mode))
+      (<span class="k">let*</span> ((language-and-variable
+              (cdr (dtrt-indent--search-hook-mapping major-mode)))
+             result
+             (time-for-analysis
+              (<span class="k">benchmark-elapse</span>
+                (<span class="k">setq</span> result
+                      (dtrt-indent--analyze
+                       (dtrt-indent--calc-histogram
+                        (car language-and-variable))))))
+             (histogram
+              (cdr (assoc <span class="bi">:histogram</span> result)))
+             (total-lines
+              (cdr (assoc <span class="bi">:total-lines</span> result)))
+             (hard-tab-lines
+              (cdr (assoc <span class="bi">:hard-tab-lines</span> result)))
+             (hard-tab-percentage
+              (cdr (assoc <span class="bi">:hard-tab-percentage</span> result)))
+             (soft-tab-lines
+              (cdr (assoc <span class="bi">:soft-tab-lines</span> result)))
+             (soft-tab-percentage
+              (cdr (assoc <span class="bi">:soft-tab-percentage</span> result)))
+             (change-indent-tabs-mode
+              (cdr (assoc <span class="bi">:change-indent-tabs-mode</span> result)))
+             (indent-tabs-mode-setting
+              (cdr (assoc <span class="bi">:indent-tabs-mode-setting</span> result)))
+             (analysis
+              (cdr (assoc <span class="bi">:analysis</span> result)))
+             (best-guess
+              (cdr (assoc <span class="bi">:best-guess</span> result)))
+             (rejected
+              (cdr (assoc <span class="bi">:rejected</span> result)))
+             (confidence
+              (cdr (assoc <span class="bi">:confidence</span> result))))
+
+        (princ (format <span class="s">"\nGuessing offset for %s\n\n"</span>
+                       (<span class="k">or</span> (buffer-file-name) (buffer-name))))
+        (princ (format <span class="s">"Elapsed time for analysis: %.3f seconds\n\n"</span>
+                       time-for-analysis))
+        (princ (format <span class="s">"Total relevant lines: %d out of %d (limit: %d)\n"</span>
+                       total-lines
+                       (line-number-at-pos (point-max))
+                       dtrt-indent-max-lines))
+        (<span class="k">if</span> (&lt; total-lines
+               dtrt-indent-min-relevant-lines)
+            (princ
+             (format <span class="s">"\
+\n\
+Analysis cancelled: not enough relevant lines (%d required) - not \
+modifying offset or indent-tabs-mode\n\n"</span>
+                     dtrt-indent-min-relevant-lines))
+          (princ <span class="s">"\nHistogram:\n\n"</span>)
+          (princ
+           (eval
+            (append '(concat)
+                    (mapcar (<span class="k">lambda</span> (x)
+                              (format <span class="s">"  %4dx %3d spaces\n"</span>
+                                      (nth 1 x)
+                                      (nth 0 x)))
+                            (sort
+                             histogram
+                             (<span class="k">lambda</span> (x y)
+                               (<span class="k">or</span> (not y)
+                                   (<span class="k">and</span> x (&lt; (car x) (car y))))))))))
+          (princ <span class="s">"\nAnalysis:\n\n"</span>)
+          (princ
+           (eval
+            (append '(concat)
+                    (mapcar
+                     (<span class="k">lambda</span> (analysis-entry)
+                       (format <span class="s">"\
+  offset %d works for %6.2f%% of relevant lines, matching %d \
+distinct offsets - %s\n"</span>
+                               (nth 0 analysis-entry)
+                               (* 100.0 (nth 1 analysis-entry))
+                               (nth 2 analysis-entry)
+                               (<span class="k">or</span> (nth 3 analysis-entry) <span class="s">"CONSIDERED"</span>)))
+                     analysis))))
+          (princ <span class="s">"\nSummary:\n\n"</span>)
+
+          (princ
+           (format <span class="s">"\
+  Best guess is offset %d with %.2f%% matching lines </span><span class="w s">\</span><span class="s">(%.2f%% \
+required)\n"</span>
+                   (nth 0 best-guess)
+                   (* 100.0 (nth 1 best-guess))
+                   dtrt-indent-min-quality))
+
+          (princ (format <span class="s">"  Hard tab percentage: %.2f%% (%d lines), \
+%.2f%% superior to soft tabs (threshold %.2f%%)\n"</span>
+                         (* 100.0 hard-tab-percentage)
+                         hard-tab-lines
+                         (- (* 100.0 (/ hard-tab-percentage
+                                        soft-tab-percentage))
+                            100.0)
+                         dtrt-indent-min-hard-tab-superiority
+                         ))
+          (princ (format <span class="s">"  Soft tab percentage: %.2f%% (%d lines), \
+%.2f%% superior to hard tabs (threshold %.2f%%)\n"</span>
+                         (* 100.0 soft-tab-percentage)
+                         soft-tab-lines
+                         (- (* 100.0 (/ soft-tab-percentage
+                                        hard-tab-percentage))
+                            100.0)
+                         dtrt-indent-min-soft-tab-superiority))
+
+          (princ <span class="s">"\nConclusion:\n\n"</span>)
+
+          (princ (format <span class="s">"\
+  Guessed offset %s with %.0f%% confidence.\n"</span>
+                         (nth 0 best-guess)
+                         (* 100.0 confidence)))
+          (<span class="k">if</span> rejected (princ (format <span class="s">"  Rejected: %s\n"</span> rejected)))
+          (princ (format <span class="s">"  Change indent-tab-setting: %s\n"</span>
+                         (<span class="k">if</span> change-indent-tabs-mode
+                             (format <span class="s">"yes, to %s"</span> indent-tabs-mode-setting)
+                           <span class="s">"no"</span>)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

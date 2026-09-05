@@ -1,0 +1,81 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: auto-dark-themes – Emacs Documentation Online</title>
+<meta name="description" content="auto-dark-themes is a customizable variable defined in auto-dark.el.
+The themes to enable for dark and light modes.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>auto-dark-themes</code></h1><p><span class="m"><code>auto-dark-themes</code></span> is a <a href="/info/elisp/variable-definitions.html">customizable</a> variable defined in <span class="bt">auto-dark.el</span>.
+<h2>Value</h2>
+<pre><code>nil
+</code></pre>
+<h2>Documentation</h2>
+<p>The themes to enable for dark and light modes.
+<p>The default is to use the themes in <a href="../var/custom-enabled-themes.html"><code>custom-enabled-themes</code></a>, but that only works
+if the themes are aware of <a href="../var/frame-background-mode.html"><code>frame-background-mode</code></a>, which many aren’t.
+<p>If your themes aren’t aware of <a href="../var/frame-background-mode.html"><code>frame-background-mode</code></a> (or you just prefer
+different themes for dark and light modes), you can set explicit lists of themes
+for each mode. Like with <a href="../var/custom-enabled-themes.html"><code>custom-enabled-themes</code></a>, the earlier themes in the list
+have higher precedence.
+<p>One other thing to be aware of is that when you first load a theme, you may be
+prompted to acknowledge that the theme can run arbitrary Lisp code.
+Acknowledging this and then allowing Emacs to treat the theme as safe in future
+sessions will silence the prompt (for that particular theme). If you would just
+prefer to ignore this warning for all themes, you can set <a href="../var/custom-safe-themes.html"><code>custom-safe-themes</code></a>
+to t.
+<p>This variable was added, or its default value changed, in Emacs 0.13.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bsy6s0b3kb4pmxsgxn385p8xfkhwnj6b-emacs-packages-deps/share/emacs/site-lisp/elpa/auto-dark-20260313.2356/auto-dark.el</span>
+<span class="cd">;; </span><span class="c">Dark &amp; light themes need to be set together because enabling and disabling
+</span><span class="cd">;; </span><span class="c">themes modifies `</span><span class="m c">custom-enabled-themes</span><span class="c">', so if only one mode were expected to
+</span><span class="cd">;; </span><span class="c">default to `</span><span class="m c">custom-enabled-themes</span><span class="c">', it would use the wrong list of themes
+</span><span class="cd">;; </span><span class="c">after the first time the other mode enables its themes.
+</span>(<span class="k">defcustom</span> <span class="v">auto-dark-themes</span> nil
+  <span class="doc">"The themes to enable for dark and light modes.
+The default is to use the themes in `</span><span class="m doc">custom-enabled-themes</span><span class="doc">', but that only works
+if the themes are aware of `</span><span class="m doc">frame-background-mode</span><span class="doc">', which many aren’t.
+
+If your themes aren’t aware of `</span><span class="m doc">frame-background-mode</span><span class="doc">' (or you just prefer
+different themes for dark and light modes), you can set explicit lists of themes
+for each mode. Like with `</span><span class="m doc">custom-enabled-themes</span><span class="doc">', the earlier themes in the list
+have higher precedence.
+
+One other thing to be aware of is that when you first load a theme, you may be
+prompted to acknowledge that the theme can run arbitrary Lisp code.
+Acknowledging this and then allowing Emacs to treat the theme as safe in future
+sessions will silence the prompt (for that particular theme). If you would just
+prefer to ignore this warning for all themes, you can set `</span><span class="m doc">custom-safe-themes</span><span class="doc">'
+to t."</span>
+  <span class="bi">:group</span> 'auto-dark
+  <span class="bi">:type</span> '(choice
+          (const <span class="bi">:tag</span> <span class="s">"Use custom-enabled-themes"</span> nil)
+          (list <span class="bi">:tag</span> <span class="s">"Use distinct dark &amp; light lists"</span>
+                (repeat <span class="bi">:tag</span> <span class="s">"Dark"</span> symbol)
+                (repeat <span class="bi">:tag</span> <span class="s">"Light"</span> symbol)))
+  <span class="bi">:set</span> (<span class="k">lambda</span> (symbol value)
+         <span class="cd">;; </span><span class="c">Pre-load themes so that:
+</span>         <span class="cd">;; </span><span class="c">1. `</span><span class="m c">custom-safe-themes</span><span class="c">’ prompts happen here (during
+</span>         <span class="cd">;;    </span><span class="c">customization) rather than at init or mode-switch
+</span>         <span class="cd">;;    </span><span class="c">time (#64, #67, #82).
+</span>         <span class="cd">;; </span><span class="c">2. `</span><span class="m c">auto-dark--enable-themes</span><span class="c">’ can later use the fast
+</span>         <span class="cd">;;    </span><span class="c">`</span><span class="m c">enable-theme</span><span class="c">’ path instead of `</span><span class="m c">load-theme</span><span class="c">’.
+</span>         <span class="cd">;; </span><span class="c">We check `</span><span class="m c">theme-settings</span><span class="c">’ instead of `</span><span class="m c">custom-theme-p</span><span class="c">’
+</span>         <span class="cd">;; </span><span class="c">because some theme libraries (e.g. modus-themes v5)
+</span>         <span class="cd">;; </span><span class="c">eagerly declare all their themes at `</span><span class="m c">require</span><span class="c">’-time
+</span>         <span class="cd">;; </span><span class="c">without loading them, which would cause this pre-load
+</span>         <span class="cd">;; </span><span class="c">to be skipped (#96).
+</span>         (mapc (<span class="k">lambda</span> (mode-themes)
+                 (mapc (<span class="k">lambda</span> (theme)
+                         (<span class="k">unless</span> (get theme 'theme-settings)
+                           (load-theme theme nil t)))
+                       mode-themes))
+               value)
+         (set-default symbol value)
+         (<span class="k">when</span> auto-dark-mode
+           <span class="cd">;; </span><span class="c">Make sure Auto Dark is showing the updated themes for the current
+</span>           <span class="cd">;; </span><span class="c">‘</span><span class="m c">frame-background-mode</span><span class="c">’.
+</span>           (auto-dark--check-and-set-dark-mode)))
+  <span class="bi">:version</span> <span class="s">"0.13"</span>)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

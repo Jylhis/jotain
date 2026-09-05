@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gnuplot--insert-inline-image-output – Emacs Documentation Online</title>
+<meta name="description" content="gnuplot--insert-inline-image-output is a natively compiled function
+defined in gnuplot.el.
+Insert Gnuplot graphical output STRING in the gnuplot-comint buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gnuplot--insert-inline-image-output</code></h1><p><span class="m"><code>gnuplot--insert-inline-image-output</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">gnuplot.el</span>.
+<h2>Signature</h2>
+<pre><code>(gnuplot--insert-inline-image-output <a href="#:~:text=output-,STRING"><span class="arg">STRING</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert Gnuplot graphical output <span class="arg">STRING</span> in the gnuplot-comint buffer.
+<p>Called via <a href="../var/comint-preoutput-filter-functions.html"><code>comint-preoutput-filter-functions</code></a> hook when
+<a href="../var/gnuplot-inline-image-mode.html"><code>gnuplot-inline-image-mode</code></a> is enabled.  Checks the status of the
+file <a href="../var/gnuplot--inline-image-filename.html"><code>gnuplot--inline-image-filename</code></a>; if it exists and has
+nonzero size, inserts it as an inline image, stores a new
+temporary filename in <a href="../var/gnuplot--inline-image-filename.html"><code>gnuplot--inline-image-filename</code></a>, and
+updates Gnuplot with the appropriate "set output" command.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/2zm7pyv0fhyszazmqzf4kn1y6kaaizg4-emacs-packages-deps/share/emacs/site-lisp/elpa/gnuplot-20260623.1111/gnuplot.el</span>
+(<span class="k">defun</span> <span class="f">gnuplot--insert-inline-image-output</span> (_string)
+  <span class="doc">"Insert Gnuplot graphical output STRING in the gnuplot-comint buffer.
+
+Called via `</span><span class="m doc">comint-preoutput-filter-functions</span><span class="doc">' hook when
+`</span><span class="m doc">gnuplot-inline-image-mode</span><span class="doc">' is enabled.  Checks the status of the
+file `</span><span class="m doc">gnuplot--inline-image-filename</span><span class="doc">'; if it exists and has
+nonzero size, inserts it as an inline image, stores a new
+temporary filename in `</span><span class="m doc">gnuplot--inline-image-filename</span><span class="doc">', and
+updates Gnuplot with the appropriate \"set output\" command."</span>
+  (<span class="k">unless</span> gnuplot--inhibit-filter        <span class="cd">; </span><span class="c">Prevent recursively entering this filter
+</span>    (<span class="k">let</span> ((gnuplot--inhibit-filter t))   <span class="cd">; </span><span class="c">(causing an infinite loop)
+</span>      (<span class="k">save-excursion</span>
+        (goto-char (point-max))
+        (beginning-of-line)
+        (<span class="k">when</span> (looking-at gnuplot--prompt-regexp)
+          (<span class="k">let*</span> ((filename gnuplot--inline-image-filename)
+                 (size (nth 7 (file-attributes filename))))
+            (<span class="k">when</span> (<span class="k">and</span> size (&gt; size 0))
+              (gnuplot-send-hiding-output <span class="s">"set output\n"</span>) <span class="cd">; </span><span class="c">Flush output file
+</span>              (sit-for 0.1)             <span class="cd">; </span><span class="c">Hack: wait for Gnuplot IO to finish
+</span>              (<span class="k">cl-ecase</span> gnuplot-inline-image-mode
+                ((nil) nil)
+                (<span class="k">inline</span>
+                  (<span class="k">ignore-errors</span>
+                    (<span class="k">let</span> ((image (create-image filename)))
+                      (beginning-of-line)
+                      (insert-image image)
+                      (insert <span class="s">"\n"</span>)
+                      (gnuplot--inline-image-set-output))))
+                (dedicated
+                 (<span class="k">with-current-buffer</span> (get-buffer-create gnuplot-image-buffer)
+                   (<span class="k">let</span> ((inhibit-read-only t))
+                     (erase-buffer)
+                     (insert-file-contents filename)
+                     (<span class="k">ignore-errors</span> (normal-mode))
+                     (display-buffer (current-buffer))
+                     (gnuplot--inline-image-set-output))))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

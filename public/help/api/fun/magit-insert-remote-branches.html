@@ -1,0 +1,73 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-insert-remote-branches – Emacs Documentation Online</title>
+<meta name="description" content="magit-insert-remote-branches is a natively compiled function defined
+in magit-refs.el.
+Insert sections showing all remote-tracking branches.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-insert-remote-branches</code></h1><p><span class="m"><code>magit-insert-remote-branches</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">magit-refs.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-insert-remote-branches)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert sections showing all remote-tracking branches.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-refs.el</span>
+(<span class="k">defun</span> <span class="f">magit-insert-remote-branches</span> ()
+  <span class="doc">"Insert sections showing all remote-tracking branches."</span>
+  (<span class="k">dolist</span> (remote (magit-list-remotes))
+    (<span class="k">magit-insert-section</span> (remote remote)
+      (<span class="k">magit-insert-heading</span>
+        (<span class="k">let</span> ((pull (magit-get <span class="s">"remote"</span> remote <span class="s">"url"</span>))
+              (push (magit-get <span class="s">"remote"</span> remote <span class="s">"pushurl"</span>)))
+          (format (propertize <span class="s">"Remote %s (%s):"</span>
+                              'font-lock-face 'magit-section-heading)
+                  (propertize remote 'font-lock-face 'magit-branch-remote)
+                  (concat pull (<span class="k">and</span> pull push <span class="s">", "</span>) push))))
+      (<span class="k">let</span> (head)
+        (<span class="k">dolist</span> (line (magit-git-lines <span class="s">"for-each-ref"</span> <span class="s">"--format=\
+%(symref:short)%00%(refname:short)%00%(refname)%00%(subject)"</span>
+                                       (concat <span class="s">"refs/remotes/"</span> remote)
+                                       magit-buffer-refs-args))
+          (<span class="k">pcase-let</span> ((`(,head-branch ,branch ,ref ,msg)
+                       (cl-substitute nil <span class="s">""</span>
+                                      (split-string line <span class="s">"\0"</span>)
+                                      <span class="bi">:test</span> #'equal)))
+            (<span class="k">cond</span>
+              (head-branch
+               <span class="cd">;; </span><span class="c">Note: Use `</span><span class="m c">ref</span><span class="c">' instead of `</span><span class="m c">branch</span><span class="c">' for the check
+</span>               <span class="cd">;; </span><span class="c">below because '</span><span class="m c">refname:short</span><span class="c">' shortens the remote
+</span>               <span class="cd">;; </span><span class="c">HEAD to '</span><span class="m c">&lt;remote&gt;</span><span class="c">' instead of '</span><span class="m c">&lt;remote&gt;/HEAD</span><span class="c">' as of
+</span>               <span class="cd">;; </span><span class="c">Git v2.40.0.
+</span>               (<span class="w">cl-assert</span>
+                (equal ref (concat <span class="s">"refs/remotes/"</span> remote <span class="s">"/HEAD"</span>)))
+               (<span class="k">setq</span> head head-branch))
+              ((not (equal ref (concat <span class="s">"refs/remotes/"</span> remote <span class="s">"/HEAD"</span>)))
+               <span class="cd">;; </span><span class="c">^ Skip mis-configured remotes where HEAD is not a
+</span>               <span class="cd">;; </span><span class="c">symref.  See #5092.
+</span>               (<span class="k">when</span> (magit-refs--insert-refname-p branch)
+                 (<span class="k">magit-insert-section</span> (branch branch t)
+                   (<span class="k">let</span> ((headp (equal branch head))
+                         (abbrev (<span class="k">if</span> magit-refs-show-remote-prefix
+                                     branch
+                                   (substring branch (1+ (length remote))))))
+                     (<span class="k">magit-insert-heading</span>
+                       (magit-refs--format-focus-column branch)
+                       (magit-refs--propertize-branch
+                        abbrev ref (<span class="k">and</span> headp 'magit-branch-remote-head))
+                       (make-string
+                        (max 1 (- (<span class="k">if</span> (consp magit-refs-primary-column-width)
+                                      (car magit-refs-primary-column-width)
+                                    magit-refs-primary-column-width)
+                                  (length abbrev)))
+                        ?\s)
+                       (<span class="k">and</span> msg (magit-log--wash-summary msg))))
+                   (magit-refs--maybe-format-margin branch)
+                   (magit-refs--insert-cherry-commits branch))))))))
+      (insert ?\n)
+      (magit-make-margin-overlay))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

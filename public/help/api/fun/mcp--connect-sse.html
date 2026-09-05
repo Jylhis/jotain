@@ -1,0 +1,70 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: mcp--connect-sse – Emacs Documentation Online</title>
+<meta name="description" content="mcp--connect-sse is a byte-compiled function defined in mcp.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>mcp--connect-sse</code></h1><p><span class="m"><code>mcp--connect-sse</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in <span class="bt">mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(mcp--connect-sse <span class="ty">&amp;rest</span> <span class="arg">ARGS</span>)
+</code></pre>
+<h2>Implementations</h2>
+<p>(mcp--connect-sse (CONN mcp-http-process-connection)) in `<span class="bt">mcp.el</span>'.
+<p>Establish SSE (Server-Sent Events) connection for HTTP CONN.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a854ba0xan3il3xqm2sx95la5018xp8i-emacs-packages-deps/share/emacs/site-lisp/elpa/mcp-20260615.940/mcp.el</span>
+(<span class="k">cl-defmethod</span> <span class="f">mcp--connect-sse</span> ((conn mcp-http-process-connection))
+  <span class="doc">"Establish SSE (Server-Sent Events) connection for HTTP CONN."</span>
+  (<span class="k">let*</span> ((name (jsonrpc-name conn))
+         (buffer-name (format <span class="s">"*Mcp %s server*"</span> name))
+         (process-name (format <span class="s">"mcp-%s-server"</span> name))
+         (host (mcp--host conn))
+         (port (mcp--port conn))
+         (path (mcp--path conn))
+         (proc (<span class="k">progn</span>
+                 (get-buffer-create buffer-name)
+                 (open-network-stream process-name
+                                      buffer-name
+                                      host
+                                      port
+                                      <span class="bi">:type</span> (<span class="k">if</span> (mcp--tls conn)
+                                                'tls
+                                              'network)
+                                      <span class="bi">:coding</span> 'utf-8-unix))))
+    (<span class="k">let*</span> ((stderr-buffer-name (format <span class="s">"*%s stderr*"</span> name))
+           (stderr-buffer (jsonrpc--forwarding-buffer stderr-buffer-name <span class="s">"[stderr] "</span> conn))
+           (hidden-name (concat <span class="s">" "</span> stderr-buffer-name)))
+      (<span class="k">with-current-buffer</span> stderr-buffer
+        (<span class="k">ignore-errors</span> (kill-buffer hidden-name))
+        (rename-buffer hidden-name)
+        (<span class="k">setq</span> buffer-read-only t))
+      (process-put proc 'jsonrpc-stderr stderr-buffer))
+    (<span class="k">setf</span> (jsonrpc--process conn) proc)
+    (set-process-buffer proc (get-buffer-create (format <span class="s">" *%s output*"</span> name)))
+    (set-process-filter proc #'mcp--process-filter)
+    (set-process-sentinel proc #'jsonrpc--process-sentinel)
+    (<span class="k">with-current-buffer</span> (process-buffer proc)
+      (buffer-disable-undo)
+      (set-marker (process-mark proc) (point-min))
+      (<span class="k">let</span> ((inhibit-read-only t))
+        (erase-buffer))
+      (<span class="k">setq</span> buffer-read-only t))
+    (process-put proc 'jsonrpc-connection conn)
+
+    (process-send-string proc
+                         (concat
+                          (format <span class="s">"GET %s HTTP/1.1\r\n"</span>
+                                  path)
+                          (format <span class="s">"Host: %s:%s\r\n"</span>
+                                  host
+                                  port)
+                          <span class="s">"Accept: text/event-stream\r\n"</span>
+                          (<span class="k">when-let*</span> ((token (mcp--resolve-value (mcp--token conn))))
+                            (format <span class="s">"Authorization: Bearer %s\r\n"</span> token))
+                          (<span class="k">unless</span> (mcp--sse conn)
+                            (format <span class="s">"Mcp-Session-Id: %s\r\n"</span> (mcp--session-id conn)))
+                          <span class="s">"Cache-Control: no-cache\r\n"</span>
+                          <span class="s">"Connection: keep-alive\r\n\r\n"</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,39 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: diff-hl-update – Emacs Documentation Online</title>
+<meta name="description" content="diff-hl-update is a natively compiled function defined in diff-hl.el.
+Updates the diff-hl overlay.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>diff-hl-update</code></h1><p><span class="m"><code>diff-hl-update</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">diff-hl.el</span>.
+<h2>Signature</h2>
+<pre><code>(diff-hl-update)
+</code></pre>
+<h2>Documentation</h2>
+<p>Updates the diff-hl overlay.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/742jfhd6j9y7y1gqxy624dchx31gwmax-emacs-packages-deps/share/emacs/site-lisp/elpa/diff-hl-20260830.1400/diff-hl.el</span>
+(<span class="k">defun</span> <span class="f">diff-hl-update</span> ()
+  <span class="doc">"Updates the diff-hl overlay."</span>
+  (<span class="k">setq</span> diff-hl-timer nil)
+  (<span class="k">if</span> (<span class="k">and</span> (diff-hl--use-async-p)
+           (eq diff-hl-update-async 'thread))
+      <span class="cd">;; </span><span class="c">TODO: debounce if a thread is already running.
+</span>      (<span class="k">let</span> ((buf (current-buffer))
+            (temp-buffer
+             (<span class="k">static-if</span> (&lt; emacs-major-version 28)
+                 (generate-new-buffer <span class="s">" *temp*"</span>)
+               (generate-new-buffer <span class="s">" *temp*"</span> t))))
+        <span class="cd">;; </span><span class="c">Switch buffer temporarily, to "unlock" it for other threads.
+</span>        (<span class="k">with-current-buffer</span> temp-buffer
+          (make-thread
+           (<span class="k">lambda</span> ()
+             (kill-buffer temp-buffer)
+             (<span class="k">when</span> (buffer-live-p buf)
+               (set-buffer buf)
+               (diff-hl--update-safe)))
+           <span class="s">"diff-hl--update-safe"</span>)))
+    (diff-hl--update)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

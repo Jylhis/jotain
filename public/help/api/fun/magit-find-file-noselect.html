@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-find-file-noselect – Emacs Documentation Online</title>
+<meta name="description" content="magit-find-file-noselect is a natively compiled function defined in
+magit-files.el.
+Read FILE from REV into a buffer and return the buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-find-file-noselect</code></h1><p><span class="m"><code>magit-find-file-noselect</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-files.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-find-file-noselect <a href="#:~:text=from-,REV"><span class="arg">REV</span></a> <a href="#:~:text=Read-,FILE"><span class="arg">FILE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">NO-RESTORE-POSITION</span></a> <a href="#:~:text="><span class="arg">VOLATILE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Read <span class="arg">FILE</span> from <span class="arg">REV</span> into a buffer and return the buffer.
+<p><span class="arg">REV</span> is a revision or one of "{worktree}" or "{index}".
+Non-interactively <span class="arg">REV</span> can also be a blob object.
+<h2>Aliases</h2>
+<p><a href="../fun/magit-find-file-noselect-1.html"><code>magit-find-file-noselect-1</code></a> (obsolete since Magit 4.4.0)
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-files.el</span>
+(<span class="k">defun</span> <span class="f">magit-find-file-noselect</span> (rev file <span class="ty">&amp;optional</span> no-restore-position volatile)
+  <span class="doc">"Read FILE from REV into a buffer and return the buffer.
+REV is a revision or one of \"{worktree}\" or \"{index}\".
+Non-interactively REV can also be a blob object."</span>
+  (<span class="k">let*</span> ((rev (<span class="k">pcase</span> rev
+                ('nil <span class="s">"{worktree}"</span>)
+                ((<span class="k">and</span> <span class="s">"{index}"</span>
+                      (guard (length&gt; (magit--file-index-stages file) 1)))
+                 <span class="s">"{worktree}"</span>)
+                (rev rev)))
+         (topdir (magit-toplevel))
+         (file (expand-file-name file topdir))
+         (buffer
+          (<span class="k">cond-let</span>
+            ((equal rev <span class="s">"{worktree}"</span>)
+             (<span class="k">let</span> ((revert-without-query
+                    (<span class="k">if</span> (and$ (find-buffer-visiting file)
+                              (buffer-local-value 'auto-revert-mode $))
+                        (cons <span class="s">"."</span> revert-without-query)
+                      revert-without-query)))
+               (find-file-noselect file volatile)))
+            ((not topdir)
+             (<span class="w">error</span> <span class="s">"%s is not inside a Git repository"</span> file))
+            ([defdir (file-name-directory file)]
+             [rev (magit--abbrev-if-oid rev)]
+             (<span class="k">unless</span> (file-in-directory-p file topdir)
+               (<span class="w">error</span> <span class="s">"%s is not inside Git repository %s"</span> file topdir))
+             (<span class="k">with-current-buffer</span>
+                 (magit--get-blob-buffer rev file volatile)
+               (<span class="k">if</span> (magit-blob-p rev)
+                   (<span class="k">setq</span> magit-buffer-blob-oid--init (magit-rev-parse rev))
+                 (<span class="k">setq</span> magit-buffer-revision rev))
+               (<span class="k">setq</span> magit-buffer-file-name file)
+               (<span class="k">setq</span> default-directory
+                     (<span class="k">if</span> (file-exists-p defdir) defdir topdir))
+               (<span class="k">setq-local</span> revert-buffer-function #'magit--revert-blob-buffer)
+               (<span class="k">setq-local</span> buffer-read-only t)
+               (<span class="k">setq-local</span> read-only-mode--state t)
+               (magit--refresh-blob-buffer)
+               (current-buffer)))
+            ((<span class="w">error</span> <span class="s">"Unexpected error"</span>)))))
+    (<span class="k">when</span> (<span class="k">and</span> (not no-restore-position)
+               (equal magit-buffer-file-name file))
+      (<span class="k">let</span> ((pos (magit-find-file--position)))
+        (<span class="k">with-current-buffer</span> buffer
+          (apply #'magit-find-file--restore-position pos))))
+    buffer))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

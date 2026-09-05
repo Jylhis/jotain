@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-procedure-try – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-procedure-try is a natively compiled function defined in
+combobulate-procedure.el.
+Apply PROCEDURE to NODE and return the result, if any.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-procedure-try</code></h1><p><span class="m"><code>combobulate-procedure-try</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">combobulate-procedure.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-procedure-try <a href="#:~:text=Apply-,PROCEDURE"><span class="arg">PROCEDURE</span></a> <a href="#:~:text=to-,NODE"><span class="arg">NODE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply <span class="arg">PROCEDURE</span> to <span class="arg">NODE</span> and return the result, if any.
+<p>See <a href="../fun/combobulate-procedure-apply.html"><code>combobulate-procedure-apply</code></a> for more information on how to write a
+<span class="arg">PROCEDURE</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-procedure.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-procedure-try</span> (procedure node)
+  <span class="doc">"Apply PROCEDURE to NODE and return the result, if any.
+
+See `</span><span class="m doc">combobulate-procedure-apply</span><span class="doc">' for more information on how to write a
+PROCEDURE."</span>
+  (<span class="k">let</span> ((procedure-result))
+    (<span class="k">setq</span> procedure-result (combobulate-procedure-apply procedure node))
+    (<span class="k">pcase</span> procedure-result
+      ('nil nil)
+      ((cl-struct combobulate-procedure-result
+                  matched-selection
+                  selected-nodes)
+       <span class="cd">;; </span><span class="c">We define a successful result as one of the following:
+</span>       <span class="cd">;;</span><span class="c">
+</span>       <span class="cd">;; </span><span class="c">Either the matched selection is `</span><span class="m c">n/a</span><span class="c">', indicating that there
+</span>       <span class="cd">;; </span><span class="c">were no `</span><span class="m c">:selector</span><span class="c">' properties to further refine the
+</span>       <span class="cd">;; </span><span class="c">activated nodes.
+</span>       <span class="cd">;;</span><span class="c">
+</span>       <span class="cd">;; </span><span class="c">Or the matched selection is `</span><span class="m c">t</span><span class="c">' *and* that there is at least
+</span>       <span class="cd">;; </span><span class="c">one selected node with a `</span><span class="m c">@match</span><span class="c">' or `</span><span class="m c">match</span><span class="c">' tag.
+</span>       (<span class="k">when</span> (<span class="k">or</span> (eq matched-selection 'n/a)
+                 (<span class="k">and</span> (eq matched-selection t)
+                      (seq-find (<span class="k">pcase-lambda</span> (`(,mark . ,_))
+                                  (<span class="k">or</span> (eq mark '@match) (eq mark 'match)))
+                                selected-nodes)))
+         (<span class="k">when</span> combobulate-debug (combobulate-procedure-debug-print-result procedure-result))
+         procedure-result))
+      (_ (<span class="w">error</span> <span class="s">"Unknown procedure result `</span><span class="m s">%s</span><span class="s">'"</span> procedure-result)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,40 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-blame-process-filter – Emacs Documentation Online</title>
+<meta name="description" content="magit-blame-process-filter is a natively compiled function defined in
+magit-blame.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-blame-process-filter</code></h1><p><span class="m"><code>magit-blame-process-filter</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-blame.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-blame-process-filter <span class="arg">PROCESS</span> <span class="arg">STRING</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-blame.el</span>
+(<span class="k">defun</span> <span class="f">magit-blame-process-filter</span> (process string)
+  (internal-default-process-filter process string)
+  (<span class="k">let</span> ((buf  (process-get process 'command-buf))
+        (pos  (process-get process 'parsed))
+        (mark (process-mark process))
+        type cache)
+    (<span class="k">with-current-buffer</span> buf
+      (<span class="k">setq</span> type  magit-blame-type)
+      (<span class="k">setq</span> cache magit-blame-cache))
+    (<span class="k">with-current-buffer</span> (process-buffer process)
+      (goto-char pos)
+      (<span class="k">while</span> (<span class="k">and</span> (&lt; (point) mark)
+                  (<span class="k">save-excursion</span> (re-search-forward <span class="s">"^filename .+\n"</span> nil t)))
+        (<span class="k">pcase-let*</span> ((`(,chunk ,revinfo)
+                      (magit-blame--parse-chunk type))
+                     (rev (<span class="k">oref</span> chunk orig-rev)))
+          (<span class="k">if</span> revinfo
+              (puthash rev revinfo cache)
+            (<span class="k">setq</span> revinfo
+                  (<span class="k">or</span> (gethash rev cache)
+                      (puthash rev (magit-blame--commit-alist rev) cache))))
+          (magit-blame--make-overlays buf chunk revinfo))
+        (process-put process 'parsed (point))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

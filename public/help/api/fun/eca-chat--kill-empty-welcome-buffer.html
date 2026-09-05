@@ -1,0 +1,45 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--kill-empty-welcome-buffer – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--kill-empty-welcome-buffer is a natively compiled function
+defined in eca-chat.el.
+Kill BUFFER for SESSION if it's a fresh welcome chat.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--kill-empty-welcome-buffer</code></h1><p><span class="m"><code>eca-chat--kill-empty-welcome-buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--kill-empty-welcome-buffer <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=Kill-,BUFFER"><span class="arg">BUFFER</span></a> <a href="#:~:text=equals-,KEEP-BUFFER"><span class="arg">KEEP-BUFFER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Kill <span class="arg">BUFFER</span> for <span class="arg">SESSION</span> if it's a fresh welcome chat.
+<p>Skips when <span class="arg">BUFFER</span> equals <span class="arg">KEEP-BUFFER</span> or when the welcome banner is
+no longer present (i.e. the user already exchanged messages there).
+Marks the chat as <a href="../var/eca-chat--closed.html"><code>eca-chat--closed</code></a> so the <a href="../fun/kill-buffer.html"><code>kill-buffer</code></a> hook does
+not prompt for server-side deletion, and dissocs it from the
+session's chat registry.  Used by <a href="../fun/eca-chat-resume.html"><code>eca-chat-resume</code></a> to clean up
+the empty buffer that was used to trigger the resume.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--kill-empty-welcome-buffer</span> (session buffer keep-buffer)
+  <span class="doc">"Kill BUFFER for SESSION if it's a fresh welcome chat.
+Skips when BUFFER equals KEEP-BUFFER or when the welcome banner is
+no longer present (i.e. the user already exchanged messages there).
+Marks the chat as `</span><span class="m doc">eca-chat--closed</span><span class="doc">' so the `</span><span class="m doc">kill-buffer</span><span class="doc">' hook does
+not prompt for server-side deletion, and dissocs it from the
+session's chat registry.  Used by `</span><span class="m doc">eca-chat-resume</span><span class="doc">' to clean up
+the empty buffer that was used to trigger the resume."</span>
+  (<span class="k">when</span> (<span class="k">and</span> (buffer-live-p buffer)
+             (not (eq buffer keep-buffer))
+             (<span class="k">with-current-buffer</span> buffer eca-chat--welcome-shown))
+    (<span class="k">with-current-buffer</span> buffer
+      (<span class="k">setq-local</span> eca-chat--closed t)
+      (<span class="k">when-let*</span> ((cid eca-chat--id))
+        (<span class="k">setf</span> (eca--session-chats session)
+              (eca-dissoc (eca--session-chats session) cid))))
+    (kill-buffer buffer)
+    (eca-chat--force-tab-line-update)
+    (eca-chat--notify-status-changed session)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

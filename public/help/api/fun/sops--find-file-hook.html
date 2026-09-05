@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sops--find-file-hook – Emacs Documentation Online</title>
+<meta name="description" content="sops--find-file-hook is a natively compiled function defined in
+sops.el.
+On find-file: if file matches prefilter and is sops-encrypted, decrypt.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sops--find-file-hook</code></h1><p><span class="m"><code>sops--find-file-hook</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">sops.el</span>.
+<h2>Signature</h2>
+<pre><code>(sops--find-file-hook)
+</code></pre>
+<h2>Documentation</h2>
+<p>On find-file: if file matches prefilter and is sops-encrypted, decrypt.
+<p>Skips remote (TRAMP) files in v0.2 — local sops binary cannot read TRAMP
+paths.  Remote support belongs in the separate <span class="m"><code>tramp-sops</code></span> package.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qkr1smn94fw9pj8qis6r47djxqbd30ki-emacs-packages-deps/share/emacs/site-lisp/elpa/sops-20260518.350/sops.el</span>
+(<span class="k">defun</span> <span class="f">sops--find-file-hook</span> ()
+  <span class="doc">"On find-file: if file matches prefilter and is sops-encrypted, decrypt.
+Skips remote (TRAMP) files in v0.2 — local sops binary cannot read TRAMP
+paths.  Remote support belongs in the separate `</span><span class="m doc">tramp-sops</span><span class="doc">' package."</span>
+  (<span class="k">when</span> (<span class="k">and</span> buffer-file-name
+             (not (file-remote-p buffer-file-name))
+             (sops--prefilter-p buffer-file-name)
+             (file-readable-p buffer-file-name))
+    (<span class="k">condition-case</span> err
+        (<span class="k">when</span> (sops--ensure-version)
+          (<span class="k">when</span> (sops--filestatus buffer-file-name)
+            (<span class="k">if</span> (sops--decrypt-buffer)
+                (<span class="k">progn</span>
+                  <span class="cd">;; </span><span class="c">Pre-set state so the `</span><span class="m c">sops-mode</span><span class="c">' enable guard skips
+</span>                  <span class="cd">;; </span><span class="c">its own `</span><span class="m c">sops--filestatus</span><span class="c">' re-check -- we just
+</span>                  <span class="cd">;; </span><span class="c">validated above and ran decrypt successfully.
+</span>                  (<span class="k">setq</span> sops--state
+                        (sops-state-create <span class="bi">:status</span> 'decrypted))
+                  (sops-mode 1))
+              <span class="cd">;; </span><span class="c">Decrypt failed: park the retry function on
+</span>              <span class="cd">;; </span><span class="c">`</span><span class="m c">revert-buffer-function</span><span class="c">' so the popped error buffer's
+</span>              <span class="cd">;; </span><span class="c">"M-x revert-buffer to retry" hint actually works.  On
+</span>              <span class="cd">;; </span><span class="c">successful retry, sops-mode activation replaces this with
+</span>              <span class="cd">;; </span><span class="c">the real `</span><span class="m c">sops--revert-buffer</span><span class="c">'.
+</span>              (<span class="k">setq-local</span> revert-buffer-function
+                          #'sops--retry-decrypt-on-revert)
+              <span class="cd">;; </span><span class="c">Set `</span><span class="m c">buffer-read-only</span><span class="c">' directly rather than calling
+</span>              <span class="cd">;; </span><span class="c">`</span><span class="m c">read-only-mode</span><span class="c">' so we don't populate
+</span>              <span class="cd">;; </span><span class="c">`</span><span class="m c">read-only-mode--state</span><span class="c">'.  `</span><span class="m c">revert-buffer</span><span class="c">' on Emacs 29.1
+</span>              <span class="cd">;; </span><span class="c">(inline) and 30+ (`</span><span class="m c">revert-buffer-restore-read-only</span><span class="c">')
+</span>              <span class="cd">;; </span><span class="c">both capture that state pre-revert and re-apply
+</span>              <span class="cd">;; </span><span class="c">`</span><span class="m c">buffer-read-only</span><span class="c">' from it post-revert, which would
+</span>              <span class="cd">;; </span><span class="c">undo the `(setq buffer-read-only nil)' our retry path
+</span>              <span class="cd">;; </span><span class="c">performs on successful re-decrypt.  With the state var
+</span>              <span class="cd">;; </span><span class="c">left untouched, the captured value is nil and the
+</span>              <span class="cd">;; </span><span class="c">restoration is a no-op.
+</span>              (<span class="k">setq</span> buffer-read-only t))))
+      (<span class="w">user-error</span>
+       <span class="cd">;; </span><span class="c">sops missing or too old: log once, do nothing
+</span>       (message <span class="s">"sops: %s"</span> (error-message-string err))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

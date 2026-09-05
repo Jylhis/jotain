@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg-end-of-defun – Emacs Documentation Online</title>
+<meta name="description" content="tuareg-end-of-defun is an interactive and natively compiled function
+defined in tuareg.el.
+Assuming that we are at the beginning of a definition, move to its end.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg-end-of-defun</code></h1><p><span class="m"><code>tuareg-end-of-defun</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg-end-of-defun)
+</code></pre>
+<h2>Documentation</h2>
+<p>Assuming that we are at the beginning of a definition, move to its end.
+<p>See variable <a href="../var/end-of-defun-function.html"><code>end-of-defun-function</code></a>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg-end-of-defun</span> ()
+  <span class="doc">"Assuming that we are at the beginning of a definition, move to its end.
+See variable `</span><span class="m doc">end-of-defun-function</span><span class="doc">'."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let*</span> ((start (point))
+         (head (tuareg-smie--forward-token)))       <span class="cd">; </span><span class="c">Skip the head token.
+</span>    (<span class="k">cond</span>
+     ((member head '(<span class="s">"type"</span> <span class="s">"d-let"</span> <span class="s">"let"</span> <span class="s">"and"</span> <span class="s">"exception"</span> <span class="s">"module"</span>
+                     <span class="s">"class"</span> <span class="s">"val"</span> <span class="s">"external"</span> <span class="s">"open"</span>))
+      <span class="cd">;; </span><span class="c">Non-expression defun.
+</span>      (tuareg-smie--forward-sexp-and)
+      (<span class="k">let</span> ((end (point)))
+        <span class="cd">;; </span><span class="c">Check whether this defun is part of a let...and... chain that
+</span>        <span class="cd">;; </span><span class="c">ends with "in", in which case it is a single big defun.
+</span>        <span class="cd">;; </span><span class="c">Otherwise, go back to the first end position.
+</span>        (<span class="k">while</span>
+            (<span class="k">let</span> ((tok (tuareg-smie--forward-token)))
+              (<span class="k">cond</span> ((equal tok <span class="s">"and"</span>)
+                     <span class="cd">;; </span><span class="c">Skip the "and" clause and keep looking.
+</span>                     (tuareg-smie--forward-sexp-and)
+                     t)
+                    ((equal tok <span class="s">"in"</span>)
+                     <span class="cd">;; </span><span class="c">It's an expression, not a declaration: go to its end.
+</span>                     (tuareg-smie--forward-sexp-and)
+                     nil)
+                    (t
+                     <span class="cd">;; </span><span class="c">No "in" found; use what we had at the start.
+</span>                     (goto-char end)
+                     nil))))))
+     (t
+      <span class="cd">;; </span><span class="c">Expression: go back and skip it all at once.
+</span>      (goto-char start)
+      (smie-forward-sexp <span class="s">";;"</span>))))
+  (tuareg--skip-forward-comments-semicolon))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

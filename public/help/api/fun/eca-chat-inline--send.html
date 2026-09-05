@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat-inline--send – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat-inline--send is a natively compiled function defined in
+eca-chat-inline.el.
+Send TEXT with raw CONTEXTS for OV's chat via SESSION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat-inline--send</code></h1><p><span class="m"><code>eca-chat-inline--send</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-chat-inline.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat-inline--send <a href="#:~:text=via-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=for-,OV"><span class="arg">OV</span></a> <a href="#:~:text=Send-,TEXT"><span class="arg">TEXT</span></a> <a href="#:~:text=raw-,CONTEXTS"><span class="arg">CONTEXTS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=id.-,SOURCE-CHAT-ID"><span class="arg">SOURCE-CHAT-ID</span></a> <a href="#:~:text=when-,CREATED-CHAT-BUFFER"><span class="arg">CREATED-CHAT-BUFFER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Send <span class="arg">TEXT</span> with raw <span class="arg">CONTEXTS</span> for <span class="arg">OV</span>'s chat via <span class="arg">SESSION</span>.
+<p>Uses the <span class="m"><code>chat/inlinePrompt</code></span> method with the overlay's chat-id.
+<span class="arg">SOURCE-CHAT-ID</span> asks the server to fork that chat's history into
+the inline chat when it is being created.  Request errors are
+surfaced on the overlay; when <span class="arg">CREATED-CHAT-BUFFER</span> is non-nil (the
+mirror pre-created by this request), a failure also rolls it back
+so no ghost chat lingers in the session.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-inline.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat-inline--send</span> (session ov text contexts
+                                      <span class="ty">&amp;optional</span> source-chat-id created-chat-buffer)
+  <span class="doc">"Send TEXT with raw CONTEXTS for OV's chat via SESSION.
+Uses the `</span><span class="m doc">chat/inlinePrompt</span><span class="doc">' method with the overlay's chat-id.
+SOURCE-CHAT-ID asks the server to fork that chat's history into
+the inline chat when it is being created.  Request errors are
+surfaced on the overlay; when CREATED-CHAT-BUFFER is non-nil (the
+mirror pre-created by this request), a failure also rolls it back
+so no ghost chat lingers in the session."</span>
+  (<span class="k">let</span> ((chat-id (overlay-get ov 'eca-chat-inline--chat-id))
+        (refined (<span class="k">-&gt;&gt;</span> contexts
+                      (-map #'eca-chat--refine-context)
+                      (-keep #'eca-chat--materialize-context))))
+    (eca-api-request-async
+     session
+     <span class="bi">:method</span> <span class="s">"chat/inlinePrompt"</span>
+     <span class="bi">:params</span> (append (list <span class="bi">:chatId</span> chat-id
+                           <span class="bi">:message</span> text
+                           <span class="bi">:contexts</span> (vconcat refined))
+                     (<span class="k">when</span> source-chat-id
+                       (list <span class="bi">:sourceChatId</span> source-chat-id))
+                     (<span class="k">when</span> eca-chat-inline-model
+                       (list <span class="bi">:model</span> eca-chat-inline-model))
+                     (<span class="k">when</span> eca-chat-inline-agent
+                       (list <span class="bi">:agent</span> eca-chat-inline-agent))
+                     (<span class="k">when</span> eca-chat-inline-variant
+                       (list <span class="bi">:variant</span> eca-chat-inline-variant)))
+     <span class="bi">:success-callback</span>
+     (<span class="k">lambda</span> (res)
+       <span class="cd">;; </span><span class="c">Param validation failures and internal server errors come
+</span>       <span class="cd">;; </span><span class="c">back as a normal response with an error status instead of a
+</span>       <span class="cd">;; </span><span class="c">jsonrpc error.
+</span>       (<span class="k">when</span> (equal <span class="s">"error"</span> (plist-get res <span class="bi">:status</span>))
+         (eca-chat-inline--discard-failed-chat session ov created-chat-buffer)
+         (<span class="k">when</span> (overlay-buffer ov)
+           (eca-chat-inline--set-status
+            ov <span class="s">"Prompt failed, open the chat for details"</span> 'finished))))
+     <span class="bi">:error-callback</span>
+     (<span class="k">lambda</span> (err)
+       (eca-chat-inline--discard-failed-chat session ov created-chat-buffer)
+       (<span class="k">when</span> (overlay-buffer ov)
+         (eca-chat-inline--set-status
+          ov
+          (format <span class="s">"Error: %s"</span> (<span class="k">or</span> (plist-get err <span class="bi">:message</span>) err))
+          'finished))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

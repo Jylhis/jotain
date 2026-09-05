@@ -1,0 +1,45 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: projection-cmake-list-artifacts – Emacs Documentation Online</title>
+<meta name="description" content="projection-cmake-list-artifacts is an autoloaded and natively compiled
+function defined in projection-type-cmake.el.
+List CMake target artifacts.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>projection-cmake-list-artifacts</code></h1><p><span class="m"><code>projection-cmake-list-artifacts</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">projection-type-cmake.el</span>.
+<h2>Signature</h2>
+<pre><code>(projection-cmake-list-artifacts)
+</code></pre>
+<h2>Documentation</h2>
+<p>List CMake target artifacts.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kqajmnl5vwqnlsg3vcmlj2d28ylc2n0n-emacs-packages-deps/share/emacs/site-lisp/elpa/projection-20260614.1822/projection-type-cmake.el</span>
+(<span class="k">defun</span> <span class="f">projection-cmake-list-artifacts</span> ()
+  <span class="doc">"List CMake target artifacts."</span>
+  (<span class="k">let*</span> ((build-directory
+          (projection-cmake--build-directory 'expand))
+         (build-directory-remote (file-remote-p build-directory))
+         (build-directory (substring build-directory
+                                     (<span class="k">when</span> build-directory-remote
+                                       (length build-directory-remote))))
+         (targets (projection-cmake--file-api-target-config)))
+    (<span class="k">let</span> ((result nil))
+      (<span class="k">dolist</span> (target targets)
+        (<span class="k">let-alist</span> target
+          (<span class="k">when-let*</span> ((props
+                       (alist-get .type projection-cmake--artifact-types nil nil #'string-equal)))
+            (<span class="k">dolist</span> (artifact .artifacts)
+              (<span class="k">setq</span> artifact (alist-get 'path artifact))
+              (<span class="k">push</span>
+               `((name . ,artifact)
+                 ,@props
+                 (category . ,(concat <span class="s">"CMake "</span>
+                                      (string-remove-prefix
+                                       <span class="s">"cmake-"</span> (symbol-name (alist-get 'type props)))))
+                 (arg0 . ,(f-join build-directory artifact)))
+               result)))))
+      (nreverse result))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

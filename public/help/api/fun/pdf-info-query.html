@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-info-query – Emacs Documentation Online</title>
+<meta name="description" content="pdf-info-query is a natively compiled function defined in pdf-info.el.
+Query the server using CMD and ARGS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-info-query</code></h1><p><span class="m"><code>pdf-info-query</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">pdf-info.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-info-query <a href="#:~:text=using-,CMD"><span class="arg">CMD</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=and-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Query the server using <span class="arg">CMD</span> and <span class="arg">ARGS</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-info.el</span>
+<span class="cd">;; </span><span class="c">* ================================================================== *
+</span><span class="cd">;; </span><span class="c">* Sending and receiving
+</span><span class="cd">;; </span><span class="c">* ================================================================== *
+</span>
+(<span class="k">defun</span> <span class="f">pdf-info-query</span> (cmd <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Query the server using CMD and ARGS."</span>
+  (pdf-info-process-assert-running)
+  (<span class="k">unless</span> (symbolp cmd)
+    (<span class="k">setq</span> cmd (intern cmd)))
+  (<span class="k">let*</span> ((query (concat (mapconcat #'pdf-info-query--escape
+                                   (cons cmd args) <span class="s">":"</span>)
+                        <span class="s">"\n"</span>))
+         (callback
+          (<span class="k">lambda</span> (closure response)
+            (<span class="k">cl-destructuring-bind</span> (status <span class="ty">&amp;rest</span> result)
+                (pdf-info-query--parse-response cmd response)
+              (pdf-info-query--log response)
+              (<span class="k">let*</span> (pdf-info-asynchronous)
+                (<span class="k">if</span> (functionp closure)
+                    (funcall closure status result)
+                  (apply (car closure) status result (cdr closure)))))))
+         response status done
+         (closure (<span class="k">or</span> pdf-info-asynchronous
+                      (<span class="k">lambda</span> (s r)
+                        (<span class="k">setq</span> status s response r done t)))))
+    (pdf-info-query--log query t)
+    (tq-enqueue
+     pdf-info--queue query <span class="s">"^\\.\n"</span> closure callback)
+    (<span class="k">unless</span> pdf-info-asynchronous
+      (<span class="k">while</span> (<span class="k">and</span> (not done)
+                  (eq (process-status (pdf-info-process))
+                      'run))
+        (accept-process-output (pdf-info-process) 0.01))
+      (<span class="k">when</span> (<span class="k">and</span> (not done)
+                 (not (eq (process-status (pdf-info-process))
+                          'run))
+                 (not (eq cmd 'quit)))
+        (<span class="w">error</span> <span class="s">"The epdfinfo server quit unexpectedly"</span>))
+      (<span class="k">cond</span>
+       ((null status) response)
+       ((eq status 'error)
+        (<span class="w">error</span> <span class="s">"epdfinfo: %s"</span> response))
+       ((eq status 'interrupted)
+        (<span class="w">error</span> <span class="s">"epdfinfo: Command was interrupted"</span>))
+       (t
+        (<span class="w">error</span> <span class="s">"Internal error: invalid response status"</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

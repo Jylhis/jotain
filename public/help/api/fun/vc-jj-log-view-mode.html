@@ -1,0 +1,81 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vc-jj-log-view-mode – Emacs Documentation Online</title>
+<meta name="description" content="vc-jj-log-view-mode is an interactive and natively compiled function
+defined in vc-jj.el.
+Log View mode specific for JJ.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vc-jj-log-view-mode</code></h1><p><span class="m"><code>vc-jj-log-view-mode</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">vc-jj.el</span>.
+<h2>Signature</h2>
+<pre><code>(vc-jj-log-view-mode)
+</code></pre>
+<h2>Documentation</h2>
+<p>Log View mode specific for JJ.
+<p>In addition to any hooks its parent mode <a href="../fun/log-view-mode.html"><code>log-view-mode</code></a> might have
+run, this mode runs the hook <a href="../var/vc-jj-log-view-mode-hook.html"><code>vc-jj-log-view-mode-hook</code></a>, as the final
+or penultimate step during initialization.
+<p>b D  <a href="../fun/vc-jj-log-view-bookmark-delete.html"><code>vc-jj-log-view-bookmark-delete</code></a>
+<br>b r  <a href="../fun/vc-jj-log-view-bookmark-rename.html"><code>vc-jj-log-view-bookmark-rename</code></a>
+<br>b s  <a href="../fun/vc-jj-log-view-bookmark-set.html"><code>vc-jj-log-view-bookmark-set</code></a>
+<br>i    <a href="../fun/vc-jj-log-view-new-change.html"><code>vc-jj-log-view-new-change</code></a>
+<br>r    <a href="../fun/vc-jj-log-view-edit-change.html"><code>vc-jj-log-view-edit-change</code></a>
+<br>x    <a href="../fun/vc-jj-log-view-abandon-change.html"><code>vc-jj-log-view-abandon-change</code></a>
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/smb5w83hp9nz5jm5ish4kf6mshmmif86-emacs-packages-deps/share/emacs/site-lisp/elpa/vc-jj-0.5/vc-jj.el</span>
+(<span class="k">define-derived-mode</span> <span class="f">vc-jj-log-view-mode</span> log-view-mode <span class="s">"JJ-Log-View"</span>
+  <span class="doc">"Log View mode specific for JJ."</span>
+  <span class="bi">:keymap</span> vc-jj-log-view-mode-map
+
+  (<span class="k">require</span> '<span class="m">add-log</span>) <span class="cd">;; </span><span class="c">We need the faces add-log.
+</span>  <span class="cd">;; </span><span class="c">Don't have file markers, so use impossible regexp.
+</span>  (<span class="k">setq-local</span> log-view-file-re regexp-unmatchable)
+  (<span class="k">setq-local</span> log-view-per-file-logs nil)
+  <span class="cd">;; </span><span class="c">The `</span><span class="m c">log-view-message-re</span><span class="c">' is a regexp matching a revision.  Its
+</span>  <span class="cd">;; </span><span class="c">first match group must match the revision number itself
+</span>  (<span class="k">setq-local</span> log-view-message-re
+              (<span class="k">if</span> (not (memq vc-log-view-type '(long log-search with-diff)))
+                  (cadr vc-jj-root-log-format)
+                (<span class="k">rx</span> bol <span class="s">"Commit ID: "</span> (1+ (any alnum)) <span class="s">"\n"</span>
+                    <span class="s">"Change ID: "</span> (group (1+ (any alpha))))))
+  <span class="cd">;; </span><span class="c">Allow expanding short log entries.
+</span>  (<span class="k">when</span> (memq vc-log-view-type '(short log-outgoing log-incoming mergebase))
+    (<span class="k">setq</span> truncate-lines t)
+    (<span class="k">setq-local</span> log-view-expanded-log-entry-function 'vc-jj--expanded-log-entry))
+  <span class="cd">;; </span><span class="c">Fontify according to regexp capture groups (for "short" format
+</span>  <span class="cd">;; </span><span class="c">log views, the relevant regexp is found in
+</span>  <span class="cd">;; </span><span class="c">`</span><span class="m c">vc-jj-root-log-format</span><span class="c">')
+</span>  (<span class="k">setq-local</span> log-view-font-lock-keywords
+              (<span class="k">if</span> (not (memq vc-log-view-type '(long log-search with-diff)))
+                  (list (cons (nth 1 vc-jj-root-log-format)
+                              (nth 2 vc-jj-root-log-format)))
+                `((,log-view-message-re
+                   (1 'change-log-acknowledgment))
+                  (,(<span class="k">rx</span> bol <span class="s">"Commit ID"</span> (0+ (any space)) <span class="s">": "</span> (group (1+ (any alnum))) <span class="s">"\n"</span>)
+                   (1 'vc-jj-log-view-commit))
+                  (,(<span class="k">rx</span> bol <span class="s">"Bookmarks"</span> (0+ (any space)) <span class="s">": "</span> (group (1+ not-newline)) <span class="s">"\n"</span>)
+                   (1 'vc-jj-log-view-bookmark))
+                  (,(<span class="k">rx</span> bol (<span class="k">or</span> <span class="s">"Author"</span> <span class="s">"Committer"</span>) (0+ (any space)) <span class="s">": "</span>
+                        <span class="cd">;; </span><span class="c">Name
+</span>                        (group (+? anything))
+                        <span class="cd">;; </span><span class="c">Email (based on `</span><span class="m c">goto-address-mail-regexp</span><span class="c">')
+</span>                        (group <span class="s">" &lt;"</span>
+                               (+ (<span class="k">or</span> alnum (any <span class="s">"-=._+"</span>)))
+                               <span class="s">"@"</span>
+                               (+ (seq (+ (<span class="k">or</span> alnum (any <span class="s">"-_"</span>))) <span class="s">"."</span>))
+                               (+ alnum)
+                               <span class="s">"&gt; "</span>)
+                        <span class="cd">;; </span><span class="c">Date and time
+</span>                        <span class="s">"("</span> (group (+ (<span class="k">or</span> digit space (any <span class="s">"-:"</span>)))) <span class="s">")\n"</span>)
+                   (1 'change-log-name)
+                   (2 'change-log-email)
+                   (3 'change-log-date)))))
+
+  (<span class="k">when</span> (boundp 'revert-buffer-restore-functions) <span class="cd">; </span><span class="c">Emacs 30.1
+</span>    (add-hook 'revert-buffer-restore-functions #'vc-jj-log-view-restore-position nil t)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

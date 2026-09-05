@@ -1,0 +1,43 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-discard-files--discard – Emacs Documentation Online</title>
+<meta name="description" content="magit-discard-files--discard is a natively compiled function defined
+in magit-apply.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-discard-files--discard</code></h1><p><span class="m"><code>magit-discard-files--discard</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">magit-apply.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-discard-files--discard <span class="arg">SECTIONS</span> <span class="arg">NEW-FILES</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-apply.el</span>
+(<span class="k">defun</span> <span class="f">magit-discard-files--discard</span> (sections new-files)
+  (<span class="k">let</span> ((files (mapcar (##oref % value) sections)))
+    (magit-confirm-files 'discard (append files new-files)
+                         (format <span class="s">"Discard %s changes in"</span> (magit-diff-type)))
+    (<span class="k">if</span> (eq (magit-diff-type (car sections)) 'unstaged)
+        (magit-call-git <span class="s">"checkout"</span> <span class="s">"--"</span> files)
+      (<span class="k">when</span> new-files
+        (magit-call-git <span class="s">"add"</span>   <span class="s">"--"</span> new-files)
+        (magit-call-git <span class="s">"reset"</span> <span class="s">"--"</span> new-files))
+      (<span class="k">let</span> ((binaries (magit-binary-files <span class="s">"--cached"</span>)))
+        (<span class="k">when</span> binaries
+          (<span class="k">setq</span> sections
+                (seq-remove (##member (<span class="k">oref</span> % value) binaries)
+                            sections)))
+        (<span class="k">when</span> sections
+          (magit-discard-apply sections #'magit-apply-diffs))
+        (<span class="k">when</span> binaries
+          (<span class="k">let</span> ((modified (magit-unstaged-files t)))
+            (<span class="k">setq</span> binaries (magit--separate (##member % modified) binaries)))
+          (<span class="k">when</span> (cadr binaries)
+            (magit-call-git <span class="s">"reset"</span> <span class="s">"--"</span> (cadr binaries)))
+          (<span class="k">when</span> (car binaries)
+            (<span class="w">user-error</span>
+             (concat
+              <span class="s">"Cannot discard staged changes to binary files, "</span>
+              <span class="s">"which also have unstaged changes.  Unstage instead."</span>))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

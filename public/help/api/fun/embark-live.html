@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark-live – Emacs Documentation Online</title>
+<meta name="description" content="embark-live is an interactive and natively compiled function defined
+in embark.el.
+Create a live-updating Embark Collect buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark-live</code></h1><p><span class="m"><code>embark-live</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark-live)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create a live-updating Embark Collect buffer.
+<p>To control the display, add an entry to <a href="../var/display-buffer-alist.html"><code>display-buffer-alist</code></a>
+with key "Embark Live".
+<h2>Key Bindings</h2>
+<p><span class="v">embark-general-map</span> <span class="key">L</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">embark-live</span> ()
+  <span class="doc">"Create a live-updating Embark Collect buffer.
+
+To control the display, add an entry to `</span><span class="m doc">display-buffer-alist</span><span class="doc">'
+with key \"Embark Live\"."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((live-buffer (embark--collect
+                      (format <span class="s">"*Embark Live: %s*"</span>
+                              (<span class="k">if</span> (minibufferp)
+                                  (format <span class="s">"M-x %s"</span> embark--command)
+                                (buffer-name)))))
+        (run-collect (make-symbol <span class="s">"run-collect"</span>))
+        (stop-collect (make-symbol <span class="s">"stop-collect"</span>))
+        timer)
+    (<span class="k">setf</span> (symbol-function stop-collect)
+          (<span class="k">lambda</span> ()
+            (remove-hook 'change-major-mode-hook stop-collect t)
+            (remove-hook 'after-change-functions run-collect t)))
+    (<span class="k">setf</span> (symbol-function run-collect)
+          (<span class="k">lambda</span> (_1 _2 _3)
+            (<span class="k">unless</span> timer
+              (<span class="k">setq</span> timer
+                    (run-with-idle-timer
+                     0.05 nil
+                     (<span class="k">lambda</span> ()
+                       (<span class="k">if</span> (not (buffer-live-p live-buffer))
+                           (funcall stop-collect)
+                         (embark-collect--update-candidates live-buffer)
+                         (<span class="k">with-current-buffer</span> live-buffer
+                           <span class="cd">;; </span><span class="c">TODO figure out why I can't restore point
+</span>                           (tabulated-list-print t t))
+                         (<span class="k">setq</span> timer nil))))))))
+    (add-hook 'after-change-functions run-collect nil t)
+    (<span class="k">when</span> (minibufferp)
+      (add-hook 'change-major-mode-hook stop-collect nil t))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

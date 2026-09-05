@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: meson--syntax-stringify – Emacs Documentation Online</title>
+<meta name="description" content="meson--syntax-stringify is a natively compiled function defined in
+meson-mode.el.
+Put syntax-table property correctly on single/triple apostrophes.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>meson--syntax-stringify</code></h1><p><span class="m"><code>meson--syntax-stringify</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">meson-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(meson--syntax-stringify)
+</code></pre>
+<h2>Documentation</h2>
+<p>Put <a href="../fun/syntax-table.html"><code>syntax-table</code></a> property correctly on single/triple apostrophes.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ajn730848zmcji1jjy9y0s8x1mck32q9-emacs-packages-deps/share/emacs/site-lisp/elpa/meson-mode-20240601.1647/meson-mode.el</span>
+(<span class="k">defun</span> <span class="f">meson--syntax-stringify</span> ()
+  <span class="doc">"Put `</span><span class="m doc">syntax-table</span><span class="doc">' property correctly on single/triple apostrophes."</span>
+  <span class="cd">;; </span><span class="c">Inspired by python-mode
+</span>  (<span class="k">let*</span> ((num-quotes (length (match-string-no-properties 0)))
+         (ppss (<span class="k">prog2</span>
+                   (backward-char num-quotes)
+                   (syntax-ppss)
+                 (forward-char num-quotes)))
+	 (in-comment (nth 4 ppss))
+         (string-start (<span class="k">and</span> (not in-comment) (nth 8 ppss)))
+         (quote-starting-pos (- (point) num-quotes))
+         (quote-ending-pos (point))
+	 (num-closing-quotes
+          (<span class="k">and</span> string-start
+               (meson-syntax-count-quotes
+                string-start quote-starting-pos))))
+    (<span class="k">cond</span> ((<span class="k">and</span> string-start (= num-closing-quotes 0))
+           <span class="cd">;; </span><span class="c">This set of quotes doesn't match the string starting
+</span>           <span class="cd">;; </span><span class="c">kind. Do nothing.
+</span>           nil)
+          ((not string-start)
+           <span class="cd">;; </span><span class="c">This set of quotes delimit the start of a string.
+</span>           (put-text-property quote-starting-pos (1+ quote-starting-pos)
+                              'syntax-table (string-to-syntax <span class="s">"|"</span>)))
+          ((= num-quotes num-closing-quotes)
+           <span class="cd">;; </span><span class="c">This set of quotes delimit the end of a string.
+</span>           (put-text-property (1- quote-ending-pos) quote-ending-pos
+                              'syntax-table (string-to-syntax <span class="s">"|"</span>)))
+          ((&gt; num-quotes num-closing-quotes)
+           <span class="cd">;; </span><span class="c">This may only happen whenever a triple quote is closing
+</span>           <span class="cd">;; </span><span class="c">a single quoted string. Add string delimiter syntax to
+</span>           <span class="cd">;; </span><span class="c">all three quotes.
+</span>           (put-text-property quote-starting-pos quote-ending-pos
+                              'syntax-table (string-to-syntax <span class="s">"|"</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

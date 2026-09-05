@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--cached-overlay – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--cached-overlay is a macro defined in eca-chat.el.
+Return the singleton overlay tagged with PROP, memoized in CACHE-VAR.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--cached-overlay</code></h1><p><span class="m"><code>eca-chat--cached-overlay</code></span> is a macro defined in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">eca-chat--cached-overlay</span> <a href="#:~:text=in-,CACHE-VAR"><span class="arg">CACHE-VAR</span></a> <a href="#:~:text=with-,PROP"><span class="arg">PROP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the singleton overlay tagged with <span class="arg">PROP</span>, memoized in <span class="arg">CACHE-VAR</span>.
+<p>Falls back to a single linear scan of overlays in the current
+buffer when the cache is empty, holds a deleted overlay, or
+points to an overlay in a different buffer.  <span class="arg">CACHE-VAR</span> must be a
+buffer-local variable (defined with <a href="../fun/defvar-local.html"><code>defvar-local</code></a>).
+<p>The returned overlay is the same one a plain
+<br><span class="m"><code>(-first (-lambda (ov) (eq t (overlay-get ov </code></span><span class="arg">PROP</span><span class="m"><code>)))
+</code></span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(overlays-in (point-min) (point-max)))
+<br>would produce, but cached so that subsequent calls skip the scan.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defmacro</span> <span class="f">eca-chat--cached-overlay</span> (cache-var prop)
+  <span class="doc">"Return the singleton overlay tagged with PROP, memoized in CACHE-VAR.
+Falls back to a single linear scan of overlays in the current
+buffer when the cache is empty, holds a deleted overlay, or
+points to an overlay in a different buffer.  CACHE-VAR must be a
+buffer-local variable (defined with `</span><span class="m doc">defvar-local</span><span class="doc">').
+
+The returned overlay is the same one a plain
+`(-first (-lambda (ov) (eq t (overlay-get ov PROP)))
+         (overlays-in (point-min) (point-max)))'
+would produce, but cached so that subsequent calls skip the scan."</span>
+  (<span class="k">declare</span> (debug (symbolp form)))
+  `(<span class="k">or</span> (<span class="k">let</span> ((ov ,cache-var))
+         (<span class="k">when</span> (<span class="k">and</span> (overlayp ov)
+                    (overlay-buffer ov)
+                    (eq (overlay-buffer ov) (current-buffer))
+                    (eq t (overlay-get ov ,prop)))
+           ov))
+       (<span class="k">setq</span> ,cache-var
+             (-first (<span class="k">-lambda</span> (ov) (eq t (overlay-get ov ,prop)))
+                     (overlays-in (point-min) (point-max))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

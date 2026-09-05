@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb-set-var – Emacs Documentation Online</title>
+<meta name="description" content="verb-set-var is an interactive and natively compiled function defined
+in verb.el.
+Set new value for variable VAR previously set with verb-var.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb-set-var</code></h1><p><span class="m"><code>verb-set-var</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">verb.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb-set-var <span class="ty">&amp;optional</span> <a href="#:~:text=variable-,VAR"><span class="arg">VAR</span></a> <a href="#:~:text=for-,VALUE"><span class="arg">VALUE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Set new value for variable <span class="arg">VAR</span> previously set with <a href="../fun/verb-var.html"><code>verb-var</code></a>.
+<p>When called interactively, prompt the user for a variable that has
+been set once with <a href="../fun/verb-var.html"><code>verb-var</code></a>, and then prompt for <span class="arg">VALUE</span>.  Otherwise,
+use string <span class="arg">VAR</span> and value <span class="arg">VALUE</span>.
+<p>When called with a non-nil prefix argument, copy the current variable
+value to the kill ring instead of setting it, and ignore <span class="arg">VALUE</span>.
+<h2>Key Bindings</h2>
+<p><span class="v">verb-command-map</span> <span class="key">C-v</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb.el</span>
+(<span class="k">defun</span> <span class="f">verb-set-var</span> (<span class="ty">&amp;optional</span> var value)
+  <span class="doc">"Set new value for variable VAR previously set with `</span><span class="m doc">verb-var</span><span class="doc">'.
+When called interactively, prompt the user for a variable that has
+been set once with `</span><span class="m doc">verb-var</span><span class="doc">', and then prompt for VALUE.  Otherwise,
+use string VAR and value VALUE.
+
+When called with a non-nil prefix argument, copy the current variable
+value to the kill ring instead of setting it, and ignore VALUE."</span>
+  (<span class="k">interactive</span>)
+  (verb--ensure-verb-mode)
+  (<span class="k">let*</span> ((name (<span class="k">or</span> (<span class="k">and</span> (stringp var) var)
+                   (<span class="k">and</span> (symbolp var) var (symbol-name var))
+                   (completing-read <span class="s">"Variable: "</span>
+                                    (mapcar (<span class="k">lambda</span> (e)
+                                              (symbol-name (car e)))
+                                            verb--vars)
+                                    nil nil nil
+                                    'verb--set-var-hist)))
+         (key (intern name))
+         (val (<span class="k">or</span> current-prefix-arg
+                  value
+                  (read-string (format <span class="s">"Set value for %s: "</span> name))))
+         (elem (assq key verb--vars)))
+    (<span class="k">when</span> (string-empty-p name)
+      (<span class="w">user-error</span> <span class="s">"%s"</span> <span class="s">"Variable name can't be empty"</span>))
+    (<span class="k">if</span> elem
+        (<span class="k">if</span> current-prefix-arg
+            (<span class="k">progn</span>
+              (kill-new (format <span class="s">"%s"</span> (cdr elem)))
+              (message <span class="s">"Variable value copied to the kill ring"</span>))
+          (setcdr elem val))
+      (<span class="k">if</span> current-prefix-arg
+          (<span class="w">user-error</span> <span class="s">"%s"</span> <span class="s">"Variable has no value set"</span>)
+        (<span class="k">push</span> (cons key val) verb--vars)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

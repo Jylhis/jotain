@@ -1,0 +1,86 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--parse-label – Emacs Documentation Online</title>
+<meta name="description" content="bazel--parse-label is a natively compiled function defined in
+bazel.el.
+Parse Bazel label LABEL.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--parse-label</code></h1><p><span class="m"><code>bazel--parse-label</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--parse-label <a href="#:~:text=label-,LABEL"><span class="arg">LABEL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse Bazel label <span class="arg">LABEL</span>.
+<p>If <span class="arg">LABEL</span> isn’t syntactically valid, return nil.  Otherwise,
+return a triple (REPOSITORY PACKAGE TARGET).  REPOSITORY is
+nil (for the current repository) or a string referring to some
+external repository.  PACKAGE is nil (for the current package) or
+a package name string.  TARGET is a string referring to the local
+name of <span class="arg">LABEL</span>.  See URL
+<br>‘https://bazel.build/concepts/labels#labels-lexical-specification’
+<br>for the lexical syntax of labels.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--parse-label</span> (label)
+  <span class="doc">"Parse Bazel label LABEL.
+If LABEL isn’t syntactically valid, return nil.  Otherwise,
+return a triple (REPOSITORY PACKAGE TARGET).  REPOSITORY is
+nil (for the current repository) or a string referring to some
+external repository.  PACKAGE is nil (for the current package) or
+a package name string.  TARGET is a string referring to the local
+name of LABEL.  See URL
+‘https://bazel.build/concepts/labels#labels-lexical-specification’
+for the lexical syntax of labels."</span>
+  (<span class="w">cl-check-type</span> label string)
+  (<span class="k">let</span> ((case-fold-search nil)
+        (search-spaces-regexp nil))
+    (<span class="k">pcase</span> (substring-no-properties label)
+      ((<span class="k">rx</span> bos
+           (<span class="k">or</span>
+            <span class="cd">;; </span><span class="c">@repository//package:target
+</span>            (seq <span class="s">"@"</span> (<span class="k">let</span> repository (+ (not (any ?: ?/))))
+                 <span class="s">"//"</span> (<span class="k">let</span> package (* (not (any ?:))))
+                 ?: (<span class="k">let</span> target (+ (not (any ?:)))))
+            <span class="cd">;; </span><span class="c">@repository//package
+</span>            (seq <span class="s">"@"</span> (<span class="k">let</span> repository (+ (not (any ?: ?/))))
+                 <span class="s">"//"</span> (<span class="k">let</span> package (+ (not (any ?:)))))
+            <span class="cd">;; </span><span class="c">@repository
+</span>            <span class="cd">;; </span><span class="c">This syntax isn’t documented in
+</span>            <span class="cd">;; </span><span class="c">https://bazel.build/concepts/labels, but follows from
+</span>            <span class="cd">;; </span><span class="c">https://github.com/bazelbuild/buildtools/blob/v6.3.3/build/rewrite.go#L260-L261.
+</span>            (seq ?@ (<span class="k">let</span> repository (+ (not (any ?: ?/)))))
+            <span class="cd">;; </span><span class="c">//package:target
+</span>            (seq <span class="s">"//"</span> (<span class="k">let</span> package (* (not (any ?:))))
+                 ?: (<span class="k">let</span> target (+ (not (any ?:)))))
+            <span class="cd">;; </span><span class="c">//package
+</span>            (seq <span class="s">"//"</span> (<span class="k">let</span> package (+ (not (any ?:)))))
+            <span class="cd">;; </span><span class="c">:target
+</span>            (seq ?: (<span class="k">let</span> target (+ (not (any ?:)))))
+            <span class="cd">;; </span><span class="c">target
+</span>            (seq (<span class="k">let</span> target (not (any ?: ?/ ?@)) (* (not (any ?:))))))
+           eos)
+       (<span class="k">unless</span> target (<span class="k">setq</span> target (bazel--default-target repository package)))
+       (<span class="k">and</span> (<span class="k">or</span> (null repository)
+                <span class="cd">;; </span><span class="c">https://bazel.build/rules/lib/globals/workspace#parameters_3
+</span>                (string-match-p
+                 (<span class="k">rx</span> bos (any <span class="s">"A-Z"</span> <span class="s">"a-z"</span>) (* (any ?- ?. ?_ <span class="s">"A-Z"</span> <span class="s">"a-z"</span>)) eos)
+                 repository))
+            (<span class="k">or</span> (null package) (string-empty-p package)
+                <span class="cd">;; </span><span class="c">https://bazel.build/concepts/labels#package-names
+</span>                (string-match-p (<span class="k">rx</span> bos
+                                    (any <span class="s">"A-Z"</span> <span class="s">"a-z"</span> <span class="s">"0-9"</span> ?- ?. ?_)
+                                    (* (any <span class="s">"A-Z"</span> <span class="s">"a-z"</span> <span class="s">"0-9"</span> ?/ ?- ?. ?_))
+                                    eos)
+                                package))
+            <span class="cd">;; </span><span class="c">https://bazel.build/concepts/labels#target-names
+</span>            (string-match-p (<span class="k">rx</span> bos
+                                (+ (any <span class="s">"a-z"</span> <span class="s">"A-Z"</span> <span class="s">"0-9"</span> ?-
+                                        <span class="s">"!%@^_` \"#$&amp;'()*+,;&lt;=&gt;?[]{|}~/."</span>))
+                                eos)
+                            target)
+            (list repository package target))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

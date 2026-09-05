@@ -1,0 +1,39 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark--prompt – Emacs Documentation Online</title>
+<meta name="description" content="embark--prompt is a natively compiled function defined in embark.el.
+Call the prompter with KEYMAP and INDICATORS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark--prompt</code></h1><p><span class="m"><code>embark--prompt</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark--prompt <a href="#:~:text=and-,INDICATORS"><span class="arg">INDICATORS</span></a> <a href="#:~:text=with-,KEYMAP"><span class="arg">KEYMAP</span></a> <a href="#:~:text=The-,TARGETS"><span class="arg">TARGETS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Call the prompter with <span class="arg">KEYMAP</span> and <span class="arg">INDICATORS</span>.
+<p>The <span class="arg">TARGETS</span> are displayed for actions outside the minibuffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+(<span class="k">defun</span> <span class="f">embark--prompt</span> (indicators keymap targets)
+  <span class="doc">"Call the prompter with KEYMAP and INDICATORS.
+The TARGETS are displayed for actions outside the minibuffer."</span>
+  (mapc (<span class="k">lambda</span> (i) (funcall i keymap targets)) indicators)
+  (<span class="k">condition-case</span> nil
+      (<span class="k">minibuffer-with-setup-hook</span>
+          (<span class="k">lambda</span> ()
+            <span class="cd">;; </span><span class="c">if the prompter opens its own minibuffer, show
+</span>            <span class="cd">;; </span><span class="c">the indicator there too
+</span>            (<span class="k">let</span> ((inner-indicators (mapcar #'funcall embark-indicators)))
+              (mapc (<span class="k">lambda</span> (i) (funcall i keymap targets)) inner-indicators)
+              (add-hook 'minibuffer-exit-hook
+                        (<span class="k">lambda</span> () (mapc #'funcall inner-indicators))
+                        nil t)))
+        (<span class="k">let</span> ((enable-recursive-minibuffers t))
+          (funcall embark-prompter keymap
+                   (<span class="k">lambda</span> (prefix)
+                     (mapc (<span class="k">lambda</span> (i) (funcall i keymap targets prefix))
+                           indicators)))))
+    (quit nil)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

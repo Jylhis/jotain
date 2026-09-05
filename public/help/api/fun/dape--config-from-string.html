@@ -1,0 +1,86 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--config-from-string – Emacs Documentation Online</title>
+<meta name="description" content="dape--config-from-string is a natively compiled function defined in
+dape.el.
+Return list of (KEY CONFIG) from STR.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--config-from-string</code></h1><p><span class="m"><code>dape--config-from-string</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--config-from-string <a href="#:~:text=from-,STR"><span class="arg">STR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return list of (KEY CONFIG) from <span class="arg">STR</span>.
+<p>Expects <span class="arg">STR</span> format:
+<br>”ALIST-KEY KEY VALUE ... - ENV= PROGRAM ARG ...”
+<br>Where ALIST-KEY exists in <a href="../var/dape-configs.html"><code>dape-configs</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--config-from-string</span> (str)
+  <span class="doc">"Return list of (KEY CONFIG) from STR.
+Expects STR format:
+\”ALIST-KEY KEY VALUE ... - ENV= PROGRAM ARG ...</span><span class="w doc">\</span><span class="doc">”
+Where ALIST-KEY exists in `</span><span class="m doc">dape-configs</span><span class="doc">'."</span>
+  (<span class="k">let</span> ((buffer (current-buffer))
+        name read-config base-config)
+    (<span class="k">with-temp-buffer</span>
+      <span class="cd">;; </span><span class="c">Keep possible local `</span><span class="m c">dape-configs</span><span class="c">' value
+</span>      (<span class="k">setq-local</span> dape-configs
+                  (buffer-local-value 'dape-configs buffer))
+      (insert str)
+      (goto-char (point-min))
+      (<span class="k">unless</span> (<span class="k">setq</span> name (<span class="k">ignore-errors</span> (read (current-buffer))))
+        (<span class="w">user-error</span> <span class="s">"Expects config name (%s)"</span>
+                    (mapconcat (<span class="k">lambda</span> (e) (symbol-name (car e)))
+                               dape-configs <span class="s">", "</span>)))
+      (<span class="k">unless</span> (alist-get name dape-configs)
+        (<span class="w">user-error</span> <span class="s">"No configuration named `</span><span class="m s">%s</span><span class="s">'"</span> name))
+      (<span class="k">setq</span> base-config (copy-tree (alist-get name dape-configs)))
+      (<span class="k">ignore-errors</span>
+        (<span class="k">while</span>
+            <span class="cd">;; </span><span class="c">Do we have non whitespace chars after `</span><span class="m c">point</span><span class="c">'?
+</span>            (<span class="k">thread-first</span> (buffer-substring (point) (point-max))
+                          (string-trim)
+                          (string-empty-p)
+                          (not))
+          (<span class="k">let</span> ((thing (read (current-buffer))))
+            (<span class="k">cond</span>
+             ((eq thing '-)
+              (<span class="k">unless</span> (dape--plistp read-config)
+                (<span class="w">user-error</span> <span class="s">"Expecting complete options list before `</span><span class="m s">-</span><span class="s">'"</span>))
+              (<span class="k">cl-loop</span>
+               with command = (split-string-shell-command
+                               (buffer-substring (point) (point-max)))
+               with setvar = <span class="s">"\\`</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[A-Za-z_][A-Za-z0-9_]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">=</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\'"</span>
+               for cell on command for (program . args) = cell
+               when (string-match setvar program)
+               append `(,(intern (concat <span class="s">":"</span> (match-string 1 program)))
+                        ,(match-string 2 program))
+               into env and do (<span class="k">setq</span> program nil)
+               when (<span class="k">or</span> (<span class="k">and</span> (not program) (not args)) program) do
+               (<span class="k">setq</span> read-config
+                     (append (nreverse
+                              (append (<span class="k">when</span> program `(<span class="bi">:program</span> ,program))
+                                      (<span class="k">when</span> args `(<span class="bi">:args</span> ,(apply #'vector args)))
+                                      (<span class="k">when</span> env `(<span class="bi">:env</span> ,env))))
+                             read-config))
+               <span class="cd">;; </span><span class="c">Stop and eat rest of buffer
+</span>               and return (goto-char (point-max))))
+             (t
+              (<span class="k">push</span> thing read-config))))))
+      <span class="cd">;; </span><span class="c">Balance half baked options list
+</span>      (<span class="k">when</span> (not (dape--plistp read-config))
+        (<span class="k">pop</span> read-config))
+      (<span class="k">unless</span> (dape--plistp read-config)
+        (<span class="w">user-error</span> <span class="s">"Bad options format, see `</span><span class="m s">dape-configs</span><span class="s">'"</span>))
+      (<span class="k">setq</span> read-config (nreverse read-config))
+      <span class="cd">;; </span><span class="c">Apply properties from parsed PLIST to `</span><span class="m c">dape-configs</span><span class="c">' item
+</span>      (<span class="k">cl-loop</span> for (key value) on base-config by 'cddr
+               unless (plist-member read-config key) do
+               (<span class="k">setq</span> read-config (plist-put read-config key value)))
+      (list name read-config))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

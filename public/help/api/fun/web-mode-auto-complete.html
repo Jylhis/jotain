@@ -1,0 +1,199 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-auto-complete – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-auto-complete is an interactive and natively compiled
+function defined in web-mode.el.
+Autocomple at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-auto-complete</code></h1><p><span class="m"><code>web-mode-auto-complete</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-auto-complete)
+</code></pre>
+<h2>Documentation</h2>
+<p>Autocomple at point.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-auto-complete</span> ()
+  <span class="doc">"Autocomple at point."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((pos (point))
+        (char (char-before))
+        (chunk (buffer-substring-no-properties (- (point) 2) (point)))
+        (expanders nil) (tag nil)
+        (auto-closed   nil)
+        (auto-expanded nil)
+        (auto-paired   nil)
+        (auto-quoted   nil))
+
+    <span class="cd">;;</span><span class="c">-- auto-closing
+</span>    (<span class="k">when</span> web-mode-enable-auto-closing
+
+      (<span class="k">cond</span>
+
+        ((<span class="k">and</span> (= web-mode-auto-close-style 3)
+              (eq char ?\&lt;))
+         (insert <span class="s">"/&gt;"</span>)
+         (backward-char 2)
+         (<span class="k">setq</span> auto-closed t))
+
+        ((<span class="k">and</span> (= web-mode-auto-close-style 3)
+              (eq char ?\&gt;)
+              (looking-at-p <span class="s">"/&gt;"</span>))
+         (<span class="k">save-excursion</span>
+           (re-search-backward web-mode-start-tag-regexp)
+           (<span class="k">setq</span> tag (match-string-no-properties 1)))
+         (insert <span class="s">"&lt;"</span>)
+         (forward-char)
+         (insert tag)
+         (<span class="k">setq</span> auto-closed t))
+
+        ((<span class="k">and</span> (&gt;= pos 4)
+              (<span class="k">or</span> (string= <span class="s">"&lt;/"</span> chunk)
+                  <span class="cd">;;</span><span class="c">(progn (message "%c" char) nil)
+</span>                  (<span class="k">and</span> (= web-mode-auto-close-style 2)
+                       (<span class="k">or</span> (string= web-mode-content-type <span class="s">"jsx"</span>)
+                           (not (get-text-property pos 'part-side)))
+                       (string-match-p <span class="s">"[[:alnum:]'\"]&gt;"</span> chunk)))
+              (not (get-text-property (- pos 2) 'block-side))
+              (web-mode-element-close))
+         (<span class="k">setq</span> auto-closed t))
+
+        ) <span class="cd">;</span><span class="c">cond
+</span>      ) <span class="cd">;</span><span class="c">when
+</span>
+    <span class="cd">;;</span><span class="c">-- auto-pairing
+</span>    (<span class="k">when</span> (<span class="k">and</span> web-mode-enable-auto-pairing
+               (&gt;= pos 4)
+               (not auto-closed))
+      (<span class="k">let</span> ((i 0) expr after pos-end (l (length web-mode-auto-pairs)))
+        (<span class="k">setq</span> pos-end (<span class="k">if</span> (&gt; (+ pos 32) (line-end-position))
+                          (line-end-position)
+                          (+ pos 10)))
+        (<span class="k">setq</span> chunk (buffer-substring-no-properties (- pos 3) pos)
+              after (buffer-substring-no-properties pos pos-end))
+        (<span class="k">while</span> (<span class="k">and</span> (&lt; i l) (not auto-paired))
+          (<span class="k">setq</span> expr (elt web-mode-auto-pairs i)
+                i (1+ i))
+          <span class="cd">;;</span><span class="c">(message "chunk=%S expr=%S after=%S" chunk expr after)
+</span>          (<span class="k">when</span> (<span class="k">and</span> (string= (car expr) chunk)
+                     (not (string-match-p (regexp-quote (cdr expr)) after)))
+            (<span class="k">setq</span> auto-paired t)
+            (insert (cdr expr))
+            (<span class="k">if</span> (string-match-p <span class="s">"|"</span> (cdr expr))
+                (<span class="k">progn</span>
+                  (search-backward <span class="s">"|"</span>)
+                  (delete-char 1))
+                (goto-char pos))
+            ) <span class="cd">;</span><span class="c">when
+</span>          ) <span class="cd">;</span><span class="c">while
+</span>        ) <span class="cd">;</span><span class="c">let
+</span>      )
+
+    <span class="cd">;;</span><span class="c">-- auto-expanding
+</span>    (<span class="k">when</span> (<span class="k">and</span> web-mode-enable-auto-expanding
+               (not auto-closed)
+               (not auto-paired)
+               (eq char ?\/)
+               (looking-back <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[[:punct:][:space:]&gt;]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">./"</span> (point-min))
+               (<span class="k">or</span> (web-mode-jsx-is-html (1- pos))
+                   (<span class="k">and</span> (not (get-text-property (1- pos) 'tag-type))
+                        (not (get-text-property (1- pos) 'part-side))))
+               (not (get-text-property (1- pos) 'block-side))
+               )
+      (<span class="k">setq</span> expanders (append web-mode-extra-expanders web-mode-expanders))
+      (<span class="k">let</span> ((i 0) pair (l (length expanders)))
+        (<span class="k">setq</span> chunk (buffer-substring-no-properties (- pos 2) pos))
+        <span class="cd">;;</span><span class="c">(message "%S" chunk)
+</span>        (<span class="k">while</span> (<span class="k">and</span> (&lt; i l) (not auto-expanded))
+          (<span class="k">setq</span> pair (elt expanders i)
+                i (1+ i))
+          (<span class="k">when</span> (string= (car pair) chunk)
+            (<span class="k">setq</span> auto-expanded t)
+            (delete-char -2)
+            (insert (cdr pair))
+            (<span class="k">when</span> (string-match-p <span class="s">"|"</span> (cdr pair))
+              (search-backward <span class="s">"|"</span>)
+              (delete-char 1))
+            ) <span class="cd">;</span><span class="c">when
+</span>          ) <span class="cd">;</span><span class="c">while
+</span>        ) <span class="cd">;</span><span class="c">let
+</span>      )
+
+    <span class="cd">;;</span><span class="c">-- auto-quoting
+</span>    (<span class="k">when</span> (<span class="k">and</span> web-mode-enable-auto-quoting
+               (&gt;= pos 4)
+               (not (get-text-property pos 'block-side))
+               (not auto-closed)
+               (not auto-paired)
+               (not auto-expanded)
+               (get-text-property (- pos 2) 'tag-attr))
+      (<span class="k">cond</span>
+        ((<span class="k">and</span> (eq char ?\=)
+              (not (looking-at-p <span class="s">"[ ]*[\"']"</span>)))
+         (<span class="k">cond</span> ((= web-mode-auto-quote-style 2)
+                (insert <span class="s">"''"</span>))
+               ((= web-mode-auto-quote-style 3)
+                (insert <span class="s">"{}"</span>))
+               (t
+                (insert <span class="s">"\"\""</span>)))
+         (<span class="k">if</span> (looking-at-p <span class="s">"[ \n&gt;]"</span>)
+             (backward-char)
+             (insert <span class="s">" "</span>)
+             (backward-char 2)
+             )
+         (<span class="k">setq</span> auto-quoted t))
+        ((<span class="k">and</span> (eq char ?\")
+              (looking-back <span class="s">"=[ ]*\""</span> (point-min))
+              (not (looking-at-p <span class="s">"[ ]*[\"]"</span>)))
+         (insert-and-inherit <span class="s">"\""</span>)
+         (backward-char)
+         (<span class="k">setq</span> auto-quoted t))
+        ((<span class="k">and</span> (eq char ?\')
+              (looking-back <span class="s">"=[ ]*'"</span> (point-min))
+              (not (looking-at-p <span class="s">"[ ]*[']"</span>)))
+         (insert-and-inherit <span class="s">"'"</span>)
+         (backward-char)
+         (<span class="k">setq</span> auto-quoted t))
+        ((<span class="k">and</span> (eq char ?\{)
+              (eq (get-text-property pos 'part-side) 'jsx)
+              (looking-back <span class="s">"=[ ]*{"</span> (point-min))
+              (not (looking-at-p <span class="s">"[ ]*[}]"</span>)))
+         (insert-and-inherit <span class="s">"}"</span>)
+         (backward-char)
+         (<span class="k">setq</span> auto-quoted t))
+        ((<span class="k">and</span> (eq char ?\")
+              (eq (char-after) ?\"))
+         (delete-char 1)
+         (<span class="k">cond</span>
+           ((looking-back <span class="s">"=\"\""</span> (point-min))
+            (backward-char))
+           ((eq (char-after) ?\s)
+            (forward-char))
+           (t
+            (insert <span class="s">" "</span>))
+           ) <span class="cd">;</span><span class="c">cond
+</span>         )
+        ) <span class="cd">;</span><span class="c">cond
+</span>      ) <span class="cd">;</span><span class="c">when
+</span>
+    <span class="cd">;;</span><span class="c">--
+</span>    (<span class="k">cond</span>
+      ((<span class="k">or</span> auto-closed auto-paired auto-expanded auto-quoted)
+       (<span class="k">when</span> (<span class="k">and</span> web-mode-change-end (&gt;= (line-end-position) web-mode-change-end))
+         (<span class="k">setq</span> web-mode-change-end (line-end-position)))
+       (list <span class="bi">:auto-closed</span> auto-closed
+             <span class="bi">:auto-paired</span> auto-paired
+             <span class="bi">:auto-expanded</span> auto-expanded
+             <span class="bi">:auto-quoted</span> auto-quoted))
+      (t
+       nil)
+      )
+
+    ))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

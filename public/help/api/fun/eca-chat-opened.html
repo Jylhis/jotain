@@ -1,0 +1,75 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat-opened – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat-opened is a natively compiled function defined in
+eca-chat.el.
+Handle chat/opened notification for SESSION with PARAMS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat-opened</code></h1><p><span class="m"><code>eca-chat-opened</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat-opened <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=with-,PARAMS"><span class="arg">PARAMS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle chat/opened notification for <span class="arg">SESSION</span> with <span class="arg">PARAMS</span>.
+<p>Idempotent: if the chat-id is already known on the client side
+<br>(e.g. a client-initiated chat where the client minted the id and
+<br>the server is just announcing the new chat to other observers),
+update the title and return without creating a duplicate buffer.
+Otherwise, creates a new chat buffer for a server-initiated chat
+<br>(e.g. /fork or replay via chat/open) and registers it under the
+<br>real chat-id so subsequent <span class="m"><code>chat/contentReceived</code></span> notifications
+render into it.
+<p>A registered buffer marked <a href="../var/eca-chat--closed.html"><code>eca-chat--closed</code></a> (left behind by
+<a href="../fun/eca-chat-exit.html"><code>eca-chat-exit</code></a> on restart) is treated as stale, not reused, so a
+resumed chat gets a fresh writable buffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat-opened</span> (session params)
+  <span class="doc">"Handle chat/opened notification for SESSION with PARAMS.
+Idempotent: if the chat-id is already known on the client side
+\(e.g. a client-initiated chat where the client minted the id and
+the server is just announcing the new chat to other observers</span><span class="w doc">\</span><span class="doc">),
+update the title and return without creating a duplicate buffer.
+Otherwise, creates a new chat buffer for a server-initiated chat
+\(e.g. /fork or replay via chat/open</span><span class="w doc">\</span><span class="doc">) and registers it under the
+real chat-id so subsequent `</span><span class="m doc">chat/contentReceived</span><span class="doc">' notifications
+render into it.
+
+A registered buffer marked `</span><span class="m doc">eca-chat--closed</span><span class="doc">' (left behind by
+`</span><span class="m doc">eca-chat-exit</span><span class="doc">' on restart) is treated as stale, not reused, so a
+resumed chat gets a fresh writable buffer."</span>
+  (<span class="k">let*</span> ((chat-id (plist-get params <span class="bi">:chatId</span>))
+         (title (plist-get params <span class="bi">:title</span>))
+         (existing (eca-get (eca--session-chats session) chat-id)))
+    (<span class="k">cond</span>
+     ((<span class="k">and</span> existing (buffer-live-p existing)
+           (not (buffer-local-value 'eca-chat--closed existing)))
+      <span class="cd">;; </span><span class="c">Already known: propagate title (if any) but do not duplicate.
+</span>      (<span class="k">when</span> title
+        (<span class="k">with-current-buffer</span> existing
+          (<span class="k">setq-local</span> eca-chat--title title)))
+      (eca-chat--force-tab-line-update)
+      (eca-chat--notify-status-changed session))
+     (t
+      <span class="cd">;; </span><span class="c">Any live buffer reaching here is a stale closed one; kill it so
+</span>      <span class="cd">;; </span><span class="c">it doesn't linger as an orphan `</span><span class="m c">:closed</span><span class="c">' buffer.
+</span>      (<span class="k">when</span> (<span class="k">and</span> existing (buffer-live-p existing))
+        (kill-buffer existing))
+      (<span class="k">cl-incf</span> eca-chat--new-chat-id)
+      (<span class="k">let</span> ((new-buffer (eca-chat--create-buffer session)))
+        (<span class="k">with-current-buffer</span> new-buffer
+          (<span class="k">let</span> ((eca--chat-init-session session)
+                (eca--chat-init-skip-welcome t))
+            (eca-chat-mode))
+          (<span class="k">setq-local</span> eca-chat--id chat-id)
+          (<span class="k">setq-local</span> eca-chat--title title)
+          (eca-chat--initialize-selection-state session))
+        (<span class="k">setf</span> (eca--session-chats session)
+              (eca-assoc (eca--session-chats session) chat-id new-buffer))
+        (eca-chat--force-tab-line-update)
+        (eca-chat--notify-status-changed session))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

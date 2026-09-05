@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb-restclient--import – Emacs Documentation Online</title>
+<meta name="description" content="verb-restclient--import is a natively compiled function defined in
+verb-restclient.el.
+Import restclient.el requests from current buffer to Verb format.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb-restclient--import</code></h1><p><span class="m"><code>verb-restclient--import</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">verb-restclient.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb-restclient--import <a href="#:~:text=format.-,VALIDATOR"><span class="arg">VALIDATOR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Import restclient.el requests from current buffer to Verb format.
+<p><span class="arg">VALIDATOR</span> is a function that validates each request body.
+Return a buffer with the imported results.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb-restclient.el</span>
+(<span class="k">defun</span> <span class="f">verb-restclient--import</span> (validator)
+  <span class="doc">"Import restclient.el requests from current buffer to Verb format.
+VALIDATOR is a function that validates each request body.
+Return a buffer with the imported results."</span>
+  (<span class="k">let</span> ((name (buffer-name))
+        (requests (verb-restclient--parse (current-buffer)))
+        (i 1)
+        comments body valid)
+    (<span class="k">with-current-buffer</span> (get-buffer-create
+                          (generate-new-buffer-name <span class="s">"*restclient.el Import*"</span>))
+      (insert (format <span class="s">"* Imported from %s (restclient.el)  :verb:\n"</span> name))
+      (insert
+       <span class="s">"# NOTE: Some imported requests may not be correctly formatted.\n"</span>
+       <span class="s">"# It's recommended to go over all of them carefully, specially the\n"</span>
+       <span class="s">"# ones marked with the [Unsupported] label.\n\n"</span>)
+      (<span class="k">dolist</span> (req requests)
+        (<span class="k">setq</span> comments (verb-restclient--request-comments req)
+              body (verb-restclient--request-body req))
+        (<span class="k">setq</span> valid
+              (<span class="k">ignore-errors</span>
+                (funcall validator (concat comments <span class="s">"\n"</span> body)) t))
+        (insert (format <span class="s">"** Request #%s\n"</span> i))
+        (<span class="k">unless</span> valid
+          (insert
+           <span class="s">"# [Unsupported] This request could not be parsed correctly.\n"</span>))
+        (insert comments <span class="s">"\n"</span>)
+        (<span class="k">unless</span> (string-empty-p body)
+          (insert body <span class="s">"\n"</span>))
+        (newline)
+        (<span class="k">setq</span> i (1+ i)))
+      (org-mode)
+      (goto-char (point-min))
+      (current-buffer))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

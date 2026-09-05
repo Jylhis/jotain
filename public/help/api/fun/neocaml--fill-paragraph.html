@@ -1,0 +1,76 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: neocaml--fill-paragraph – Emacs Documentation Online</title>
+<meta name="description" content="neocaml--fill-paragraph is a natively compiled function defined in
+neocaml.el.
+Fill the OCaml comment at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>neocaml--fill-paragraph</code></h1><p><span class="m"><code>neocaml--fill-paragraph</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">neocaml.el</span>.
+<h2>Signature</h2>
+<pre><code>(neocaml--fill-paragraph <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">JUSTIFY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Fill the OCaml comment at point.
+<p>Uses tree-sitter to find comment boundaries, then narrows to the
+comment body (excluding delimiters) and fills.  Returns t if point
+was in a comment, nil otherwise to let the default handler run.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/6yvzbjq5ljnchx97n8s5w91crk1nh47b-emacs-packages-deps/share/emacs/site-lisp/elpa/neocaml-20260710.532/neocaml.el</span>
+(<span class="k">defun</span> <span class="f">neocaml--fill-paragraph</span> (<span class="ty">&amp;optional</span> _justify)
+  <span class="doc">"Fill the OCaml comment at point.
+Uses tree-sitter to find comment boundaries, then narrows to the
+comment body (excluding delimiters) and fills.  Returns t if point
+was in a comment, nil otherwise to let the default handler run."</span>
+  (<span class="k">let*</span> ((comment (neocaml--comment-at-point)))
+    (<span class="k">when</span> comment
+      (<span class="k">let</span> ((start (treesit-node-start comment))
+            (end (treesit-node-end comment)))
+        (<span class="k">save-excursion</span>
+          (<span class="k">save-restriction</span>
+            <span class="cd">;; </span><span class="c">Narrow to comment body: skip (* prefix and *) suffix
+</span>            (goto-char start)
+            (<span class="k">when</span> (looking-at <span class="s">"(\\*+[ \t]*"</span>)
+              (<span class="k">setq</span> start (match-end 0)))
+            (goto-char end)
+            (<span class="k">when</span> (looking-back <span class="s">"\\*+)"</span> nil)
+              (goto-char (match-beginning 0))
+              (skip-chars-backward <span class="s">" \t"</span>)
+              (<span class="k">setq</span> end (point)))
+            <span class="cd">;; </span><span class="c">Compute body column before narrowing.
+</span>            (goto-char start)
+            (<span class="k">let</span> ((body-col (current-column)))
+              (narrow-to-region start end)
+              <span class="cd">;; </span><span class="c">Treat list items (- foo, * foo, + foo) and odoc tags
+</span>              <span class="cd">;; </span><span class="c">(@param, @return) as paragraph boundaries so they
+</span>              <span class="cd">;; </span><span class="c">don't get merged into prose.
+</span>              (<span class="k">let*</span> ((paragraph-start
+                      (concat paragraph-start
+                              <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[ \t]*[-*+][ \t]"</span>
+                              <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[ \t]*@[a-z]+\\b"</span>))
+                     par-start par-end)
+                <span class="cd">;; </span><span class="c">Find the paragraph containing point (without
+</span>                <span class="cd">;; </span><span class="c">fill-prefix set, so list items are recognized as
+</span>                <span class="cd">;; </span><span class="c">paragraph boundaries).
+</span>                (<span class="k">save-excursion</span>
+                  (skip-chars-forward <span class="s">" \t"</span>)
+                  (backward-paragraph)
+                  (skip-chars-forward <span class="s">" \t\n"</span>)
+                  (<span class="k">setq</span> par-start (point))
+                  (forward-paragraph)
+                  (<span class="k">setq</span> par-end (point)))
+                <span class="cd">;; </span><span class="c">Use body-col for first-line paragraphs, actual
+</span>                <span class="cd">;; </span><span class="c">indentation for indented paragraphs (list items).
+</span>                (<span class="k">let*</span> ((par-col (<span class="k">save-excursion</span>
+                                  (goto-char par-start)
+                                  (skip-chars-forward <span class="s">" \t"</span>)
+                                  (current-column)))
+                       (fill-prefix
+                        (make-string (max body-col par-col) ?\s))
+                       (fill-paragraph-function nil))
+                  (fill-region-as-paragraph par-start par-end)))))
+          t)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

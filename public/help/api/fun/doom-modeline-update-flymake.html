@@ -1,0 +1,93 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: doom-modeline-update-flymake – Emacs Documentation Online</title>
+<meta name="description" content="doom-modeline-update-flymake is a natively compiled function defined
+in doom-modeline-segments.el.
+Update flymake.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>doom-modeline-update-flymake</code></h1><p><span class="m"><code>doom-modeline-update-flymake</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">doom-modeline-segments.el</span>.
+<h2>Signature</h2>
+<pre><code>(doom-modeline-update-flymake <span class="ty">&amp;rest</span> _)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update flymake.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mxkjlhf33q1xxjiii3w5v8nn7avms0p9-emacs-packages-deps/share/emacs/site-lisp/elpa/doom-modeline-20260828.1146/doom-modeline-segments.el</span>
+(<span class="k">defun</span> <span class="f">doom-modeline-update-flymake</span> (<span class="ty">&amp;rest</span> _)
+  <span class="doc">"Update flymake."</span>
+  (<span class="k">setq</span> doom-modeline--flymake
+        (<span class="k">when</span> (<span class="k">and</span> (<span class="k">bound-and-true-p</span> flymake-mode)
+                   (<span class="k">bound-and-true-p</span> flymake--state))
+          (<span class="k">let*</span> ((known (hash-table-keys flymake--state))
+                 (running (flymake-running-backends))
+                 (disabled (flymake-disabled-backends))
+                 (reported (flymake-reporting-backends))
+                 (all-disabled (<span class="k">and</span> disabled (null running)))
+                 (some-waiting (cl-set-difference running reported)))
+            (<span class="k">let-alist</span> (doom-modeline--flymake-count-errors)
+              (<span class="k">let*</span> ((vsep (doom-modeline-vspc))
+                     (seg (<span class="k">cond</span>
+                           ((<span class="k">or</span> (eq doom-modeline-check 'simple)
+                                (<span class="k">and</span> doom-modeline--limited-width-p (eq doom-modeline-check 'auto)))
+                            (<span class="k">let</span> ((count (+ .error .warning .note)))
+                              (<span class="k">cond</span>
+                               (some-waiting
+                                (concat
+                                 (doom-modeline-check-icon <span class="s">"nf-md-timer_sand"</span> <span class="s">"⏳"</span> <span class="s">"*"</span> 'doom-modeline-debug)
+                                 (<span class="k">when</span> (&gt; count 0)
+                                   (concat
+                                    vsep
+                                    (doom-modeline-check-text (number-to-string count) 'doom-modeline-debug)))))
+                               ((null known)
+                                (doom-modeline-check-icon <span class="s">"nf-md-alert_box_outline"</span> <span class="s">"⚠"</span> <span class="s">"!"</span> 'doom-modeline-urgent))
+                               (all-disabled
+                                (doom-modeline-check-icon <span class="s">"nf-md-alert_box_outline"</span> <span class="s">"⚠"</span> <span class="s">"!"</span> 'doom-modeline-warning))
+                               (t
+                                (<span class="k">if</span> (&gt; count 0)
+                                    (<span class="k">let</span> ((face (<span class="k">cond</span> ((&gt; .error 0) 'doom-modeline-urgent)
+                                                      ((&gt; .warning 0) 'doom-modeline-warning)
+                                                      (t 'doom-modeline-info))))
+                                      (concat
+                                       (doom-modeline-check-icon <span class="s">"nf-md-alert_circle_outline"</span> <span class="s">"⚠"</span> <span class="s">"!"</span> face)
+                                       vsep
+                                       (doom-modeline-check-text (number-to-string count) face)))
+                                  (doom-modeline-check-icon <span class="s">"nf-md-check_circle_outline"</span> <span class="s">"✔"</span> <span class="s">"*"</span> 'doom-modeline-info))))))
+                           ((<span class="k">or</span> (eq doom-modeline-check 'full)
+                                (<span class="k">and</span> (not doom-modeline--limited-width-p) (eq doom-modeline-check 'auto)))
+                            (concat
+                             (doom-modeline-check-icon <span class="s">"nf-md-close_circle_outline"</span> <span class="s">"⮾"</span> <span class="s">"!"</span> 'doom-modeline-urgent)
+                             vsep
+                             (doom-modeline-check-text (number-to-string .error) 'doom-modeline-urgent)
+                             vsep
+                             (doom-modeline-check-icon <span class="s">"nf-md-alert_outline"</span> <span class="s">"⚠"</span> <span class="s">"!"</span> 'doom-modeline-warning)
+                             vsep
+                             (doom-modeline-check-text (number-to-string .warning) 'doom-modeline-warning)
+                             vsep
+                             (doom-modeline-check-icon <span class="s">"nf-md-information_outline"</span> <span class="s">"🛈"</span> <span class="s">"!"</span> 'doom-modeline-info)
+                             vsep
+                             (doom-modeline-check-text (number-to-string .note) 'doom-modeline-info)))
+                           (t <span class="s">""</span>))))
+                (propertize
+                 seg
+                 'help-echo (concat
+                             <span class="s">"Flymake\n"</span>
+                             (<span class="k">cond</span> (some-waiting <span class="s">"Checking..."</span>)
+                                   ((null known) <span class="s">"No Checker"</span>)
+                                   (all-disabled <span class="s">"All Checkers Disabled"</span>)
+                                   (t (format <span class="s">"%d/%d backends running\nerror: %d, warning: %d, note: %d"</span>
+                                              (length running) (length known) .error .warning .note)))
+                             <span class="s">"\nmouse-1: Display minor mode menu\nmouse-2: Show help for minor mode"</span>)
+                 'mouse-face 'doom-modeline-highlight
+                 'local-map (<span class="k">let</span> ((map (make-sparse-keymap)))
+                              (define-key map [mode-line down-mouse-1]
+                                flymake-menu)
+                              (define-key map [mode-line mouse-2]
+                                (<span class="k">lambda</span> ()
+                                  (<span class="k">interactive</span>)
+                                  (describe-function 'flymake-mode)))
+                              map))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

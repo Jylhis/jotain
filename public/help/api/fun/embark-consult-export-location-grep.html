@@ -1,0 +1,67 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark-consult-export-location-grep – Emacs Documentation Online</title>
+<meta name="description" content="embark-consult-export-location-grep is a natively compiled function
+defined in embark-consult.el.
+Create a grep mode buffer listing LINES.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark-consult-export-location-grep</code></h1><p><span class="m"><code>embark-consult-export-location-grep</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">embark-consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark-consult-export-location-grep <a href="#:~:text=listing-,LINES"><span class="arg">LINES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create a grep mode buffer listing <span class="arg">LINES</span>.
+<p>Any <span class="arg">LINES</span> that come from a buffer which is not visiting a file
+will be excluded from the grep buffer, since grep mode only works
+with files.  The elements of <span class="arg">LINES</span> should be completion
+candidates with category <span class="m"><code>consult-location</code></span>.  No matches will be
+highlighted in the exported buffer, since the <span class="m"><code>consult-location</code></span>
+candidates do not carry that information.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/crpi6mclpni00p24053ic2ap2amj6rbh-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-consult-20260503.118/embark-consult.el</span>
+(<span class="k">defun</span> <span class="f">embark-consult-export-location-grep</span> (lines)
+  <span class="doc">"Create a grep mode buffer listing LINES.
+Any LINES that come from a buffer which is not visiting a file
+will be excluded from the grep buffer, since grep mode only works
+with files.  The elements of LINES should be completion
+candidates with category `</span><span class="m doc">consult-location</span><span class="doc">'.  No matches will be
+highlighted in the exported buffer, since the `</span><span class="m doc">consult-location</span><span class="doc">'
+candidates do not carry that information."</span>
+  (<span class="k">let</span> (non-file-buffers)
+    (embark-consult--export-grep
+     <span class="bi">:header</span> <span class="s">"Exported line search results (file-backed buffers only):\n\n"</span>
+     <span class="bi">:lines</span> lines
+     <span class="bi">:insert</span>
+     (<span class="k">lambda</span> (lines)
+       (<span class="k">let</span> ((count 0))
+         (<span class="k">dolist</span> (line lines)
+           (<span class="k">pcase-let*</span> ((`(,loc . ,num) (consult--get-location line))
+                        (lineno (format <span class="s">"%d"</span> num))
+                        (contents (embark-consult--strip line))
+                        (buffer (marker-buffer loc))
+                        (file (buffer-file-name buffer)))
+             (<span class="k">if</span> (null file)
+                 (<span class="k">cl-pushnew</span> buffer non-file-buffers)
+               (insert (file-relative-name file) <span class="s">":"</span> lineno <span class="s">":"</span> contents <span class="s">"\n"</span>)
+               (<span class="k">incf</span> count))))
+         count))
+     <span class="bi">:footer</span>
+     (<span class="k">lambda</span> ()
+       (<span class="k">when</span> non-file-buffers
+         (<span class="k">let</span> ((start (goto-char (point-max))))
+           (insert <span class="s">"\nSome results were in buffers with no associated file"</span>
+                   <span class="s">" and are missing\nfrom the exported result:\n"</span>)
+           (<span class="k">dolist</span> (buf non-file-buffers)
+             (insert <span class="s">"- "</span> (buffer-name buf) <span class="s">"\n"</span>))
+           (insert <span class="s">"\nEither save the buffers or use the"</span>
+                   <span class="s">" `</span><span class="m s">embark-consult-export-location-occur</span><span class="s">'\nexporter."</span>)
+           (message <span class="s">"This exporter does not support non-file buffers: %s"</span>
+                    non-file-buffers)
+           (add-text-properties
+            start (point-max)
+            '(read-only t wgrep-footer t front-sticky t))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

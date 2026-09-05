@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-maybe-activate – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-maybe-activate is a natively compiled function defined in
+combobulate-setup.el.
+Maybe activate Combobulate in the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-maybe-activate</code></h1><p><span class="m"><code>combobulate-maybe-activate</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">combobulate-setup.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-maybe-activate <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">RAISE-IF-MISSING</span></a> <a href="#:~:text="><span class="arg">CALLED-INTERACTIVELY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Maybe activate Combobulate in the current buffer.
+<p>Do not call this directly. Please use <kbd>M-x combobulate-mode</kbd> (<a href="../fun/combobulate-mode.html"><code>combobulate-mode</code></a>) to
+enable Combobulate.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-setup.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-maybe-activate</span> (<span class="ty">&amp;optional</span> raise-if-missing called-interactively)
+  <span class="doc">"Maybe activate Combobulate in the current buffer.
+
+Do not call this directly. Please use \\[</span><span class="m doc">combobulate-mode</span><span class="doc">] to
+enable Combobulate."</span>
+  <span class="cd">;; </span><span class="c">(unless combobulate-mode
+</span>  <span class="cd">;;   </span><span class="c">(error "Do not call `</span><span class="m c">combobulate-maybe-activate</span><span class="c">' directly. Invoke \\[</span><span class="m c">combobulate-mode</span><span class="c">] instead"))
+</span>  <span class="cd">;; </span><span class="c">Combobulate can activate in any major mode provided it's listed
+</span>  <span class="cd">;; </span><span class="c">in `</span><span class="m c">combobulate-registered-languages-alist</span><span class="c">'.
+</span>  <span class="cd">;;</span><span class="c">
+</span>  (<span class="k">when-let</span> (match (combobulate-get-registered-language major-mode))
+    (<span class="k">pcase-let</span> ((`(,language _ ,minor-mode-fn) match))
+      <span class="cd">;; </span><span class="c">Only error out if RAISE-IF-MISSING is non-nil. The expected
+</span>      <span class="cd">;; </span><span class="c">behaviour is that Combobulate may get activated in major
+</span>      <span class="cd">;; </span><span class="c">modes for which no grammar exists. Raising an error
+</span>      <span class="cd">;; </span><span class="c">unconditionally in that case would be annoying to users.
+</span>      (<span class="k">if</span> (<span class="k">and</span> raise-if-missing (not (combobulate-language-available-p language)))
+          (<span class="w">error</span> <span class="s">"Cannot activate Combobulate in buffer `</span><span class="m s">%s</span><span class="s">' because tree-sitter is missing a language library.
+
+The major mode `</span><span class="m s">%s</span><span class="s">' is registered as supporting the tree-sitter
+language `</span><span class="m s">%s</span><span class="s">' but that language is not known to tree-sitter.
+
+Try reinstalling the grammar for that language and try again."</span>
+                 (current-buffer) major-mode language)
+        <span class="cd">;; </span><span class="c">Language parser exists. Make sure that, if we already have
+</span>        <span class="cd">;; </span><span class="c">an initialised language in the buffer that it is not
+</span>        <span class="cd">;; </span><span class="c">different from the one we think it should be.
+</span>        (<span class="k">when-let</span> ((existing-parsers (mapcar #'combobulate-parser-language (combobulate-parser-list))))
+          (<span class="k">unless</span> (member language existing-parsers)
+            (<span class="w">error</span> <span class="s">"Cannot activate Combobulate in buffer `</span><span class="m s">%s</span><span class="s">' because of a parser mismatch.
+
+The buffer's language is `</span><span class="m s">%s</span><span class="s">' and does not match Combobulate's
+expected language of `</span><span class="m s">%s</span><span class="s">'. This can happen if you have major
+modes with conflicting ideas of what type of language to use."</span>
+                   (current-buffer) (car-safe existing-parsers) language)))
+        <span class="cd">;; </span><span class="c">Okay. All good, then... Create the language parser.
+</span>        (combobulate-create-language language (current-buffer) nil)
+        (<span class="k">let</span> ((toggle (<span class="k">if</span> (<span class="k">combobulate-read</span> minor-mode language) -1 1)))
+          (<span class="k">prog1</span>
+              (funcall minor-mode-fn toggle)
+            (<span class="k">when</span> (<span class="k">and</span> (&gt; toggle 0) called-interactively)
+              (combobulate-message
+               (substitute-command-keys <span class="s">"Activating Combobulate. Type \\[</span><span class="m s">combobulate</span><span class="s">] to start."</span>)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--wrap-joined-region – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--wrap-joined-region is a natively compiled function defined in
+ghostel-links.el.
+Return (STRING . CHUNKS) for BEGIN..END with soft-wrap newlines removed.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--wrap-joined-region</code></h1><p><span class="m"><code>ghostel--wrap-joined-region</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel-links.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--wrap-joined-region <a href="#:~:text=for-,BEGIN"><span class="arg">BEGIN</span></a> <a href="#:~:text=BEGIN..-,END"><span class="arg">END</span></a> <a href="#:~:text=ascending.-,LIMIT"><span class="arg">LIMIT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return (STRING . CHUNKS) for <span class="arg">BEGIN</span>..<span class="arg">END</span> with soft-wrap newlines removed.
+<p>STRING is the region's text as the terminal program wrote it, so a
+value split across rows matches as one token.  CHUNKS maps it back:
+a vector of (STRING-OFFSET . BUFFER-POS) pairs, one per row, ascending.
+<p><span class="arg">LIMIT</span> bounds how many rows may be joined into one line, which keeps a
+megabyte-long line of output from becoming one unbroken token for the
+regexps to chew through.  The count is per logical line: a hard
+newline in the region ends one line and starts the next from zero.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-links.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--wrap-joined-region</span> (begin end limit)
+  <span class="doc">"Return (STRING . CHUNKS) for BEGIN..END with soft-wrap newlines removed.
+STRING is the region's text as the terminal program wrote it, so a
+value split across rows matches as one token.  CHUNKS maps it back:
+a vector of (STRING-OFFSET . BUFFER-POS) pairs, one per row, ascending.
+
+LIMIT bounds how many rows may be joined into one line, which keeps a
+megabyte-long line of output from becoming one unbroken token for the
+regexps to chew through.  The count is per logical line: a hard
+newline in the region ends one line and starts the next from zero."</span>
+  (<span class="k">let</span> ((chunks nil)
+        (parts nil)
+        (offset 0)
+        (rows 0)
+        (pos begin))
+    (<span class="k">while</span> (&lt; pos end)
+      (<span class="k">let*</span> ((wrap (text-property-not-all pos end 'ghostel-wrap nil))
+             (wrapped (<span class="k">and</span> wrap (eq (char-after wrap) ?\n)))
+             (join (<span class="k">and</span> wrapped (&lt; rows limit)))
+             (piece (buffer-substring-no-properties
+                     pos (<span class="k">cond</span> (join wrap)
+                               (wrapped (1+ wrap))
+                               (t end)))))
+        (<span class="k">push</span> (cons offset pos) chunks)
+        (<span class="k">push</span> piece parts)
+        <span class="cd">;; </span><span class="c">A hard newline inside PIECE ended the logical line the count was
+</span>        <span class="cd">;; </span><span class="c">for; the row being joined now is the first of a new one.
+</span>        (<span class="k">setq</span> rows (<span class="k">cond</span> ((not join) 0)
+                         ((string-search <span class="s">"\n"</span> piece) 1)
+                         (t (1+ rows)))
+              offset (+ offset (length piece))
+              pos (<span class="k">if</span> wrapped (1+ wrap) end))))
+    (cons (string-join (nreverse parts))
+          (vconcat (nreverse chunks)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

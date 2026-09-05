@@ -1,0 +1,80 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-refs--format-local-branch – Emacs Documentation Online</title>
+<meta name="description" content="magit-refs--format-local-branch is a natively compiled function
+defined in magit-refs.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-refs--format-local-branch</code></h1><p><span class="m"><code>magit-refs--format-local-branch</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-refs.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-refs--format-local-branch <span class="arg">LINE</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-refs.el</span>
+(<span class="k">defun</span> <span class="f">magit-refs--format-local-branch</span> (line)
+  (<span class="k">pcase-let</span> ((`(,head ,branch ,ref ,upstream ,u:ref ,u:track
+                       ,push ,p:ref ,p:track ,msg)
+               (cl-substitute nil <span class="s">""</span> (split-string line <span class="s">"\0"</span>) <span class="bi">:test</span> #'equal)))
+    (<span class="k">when</span> (<span class="k">or</span> (not branch)
+              (magit-refs--insert-refname-p branch))
+      (<span class="k">let*</span> ((headp (equal head <span class="s">"*"</span>))
+             (pushp (<span class="k">and</span> push
+                         magit-refs-show-push-remote
+                         (magit-rev-verify p:ref)
+                         (not (equal p:ref u:ref))))
+             (branch-pretty
+              (<span class="k">if</span> branch
+                  (magit-refs--propertize-branch
+                   branch ref (<span class="k">and</span> headp 'magit-branch-current))
+                (magit--propertize-face <span class="s">"(detached)"</span> 'magit-branch-warning)))
+             (u:ahead  (<span class="k">and</span> u:track
+                            (string-match <span class="s">"ahead </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> u:track)
+                            (magit--propertize-face
+                             (concat (<span class="k">and</span> magit-refs-pad-commit-counts <span class="s">" "</span>)
+                                     (match-str 1 u:track)
+                                     <span class="s">"&gt;"</span>)
+                             'magit-dimmed)))
+             (u:behind (<span class="k">and</span> u:track
+                            (string-match <span class="s">"behind </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> u:track)
+                            (magit--propertize-face
+                             (concat <span class="s">"&lt;"</span>
+                                     (match-str 1 u:track)
+                                     (<span class="k">and</span> magit-refs-pad-commit-counts <span class="s">" "</span>))
+                             'magit-dimmed)))
+             (p:ahead  (<span class="k">and</span> pushp p:track
+                            (string-match <span class="s">"ahead </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> p:track)
+                            (magit--propertize-face
+                             (concat (match-str 1 p:track)
+                                     <span class="s">"&gt;"</span>
+                                     (<span class="k">and</span> magit-refs-pad-commit-counts <span class="s">" "</span>))
+                             'magit-branch-remote)))
+             (p:behind (<span class="k">and</span> pushp p:track
+                            (string-match <span class="s">"behind </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> p:track)
+                            (magit--propertize-face
+                             (concat <span class="s">"&lt;"</span>
+                                     (match-str 1 p:track)
+                                     (<span class="k">and</span> magit-refs-pad-commit-counts <span class="s">" "</span>))
+                             'magit-dimmed))))
+        (list (1+ (length (concat branch-pretty u:ahead p:ahead u:behind)))
+              branch
+              (magit-refs--format-focus-column branch headp)
+              branch-pretty u:ahead p:ahead
+              u:behind
+              (<span class="k">and</span> upstream
+                   (concat (<span class="k">if</span> (equal u:track <span class="s">"[gone]"</span>)
+                               (magit--propertize-face upstream 'error)
+                             (magit-refs--propertize-branch upstream u:ref))
+                           <span class="s">" "</span>))
+              (<span class="k">and</span> pushp
+                   (concat p:behind
+                           (magit--propertize-face
+                            push 'magit-branch-remote)
+                           <span class="s">" "</span>))
+              (<span class="k">if-let</span> ((_ magit-refs-show-branch-descriptions)
+                       (desc (magit-get <span class="s">"branch"</span> branch <span class="s">"description"</span>)))
+                  (magit--propertize-face desc 'bold)
+                (<span class="k">and</span> msg (magit-log--wash-summary msg))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

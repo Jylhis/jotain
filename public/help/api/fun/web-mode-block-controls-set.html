@@ -1,0 +1,514 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-block-controls-set – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-block-controls-set is a natively compiled function defined in
+web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-block-controls-set</code></h1><p><span class="m"><code>web-mode-block-controls-set</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-block-controls-set <span class="arg">REG-BEG</span> <span class="arg">REG-END</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-block-controls-set</span> (reg-beg reg-end)
+  (<span class="k">save-excursion</span>
+    (goto-char reg-beg)
+    (<span class="k">let</span> (controls pos type control)
+
+      (<span class="k">cond</span>
+
+        ((null web-mode-engine)
+         (message <span class="s">"block-controls-set ** unknown engine (%S) **"</span> web-mode-engine)
+         )
+
+        ((string= web-mode-engine <span class="s">"php"</span>)
+         (<span class="k">setq</span> controls (web-mode-set-php-controls reg-beg reg-end))
+         (<span class="k">when</span> (web-mode-block-starts-with <span class="s">"}"</span> reg-beg)
+           (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"{"</span>)))))
+         (<span class="k">when</span> (web-mode-block-ends-with (cons <span class="s">"{"</span> <span class="s">"}"</span>) reg-beg)
+           (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"{"</span>)))))
+         ) <span class="cd">;</span><span class="c">php
+</span>
+        ((string= web-mode-engine <span class="s">"ejs"</span>)
+         (<span class="k">cond</span>
+           ((web-mode-block-ends-with <span class="s">"}[ ]*else[ ]*{"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"{"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"}"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"{"</span>)))))
+           ((web-mode-block-ends-with <span class="s">"{"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"{"</span>)))))
+           )
+         ) <span class="cd">;</span><span class="c">ejs
+</span>
+        ((string= web-mode-engine <span class="s">"erb"</span>)
+         (<span class="k">cond</span>
+           ((web-mode-block-starts-with <span class="s">"else</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">elsif</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">when"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"ctrl"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"end"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"ctrl"</span>)))))
+           ((web-mode-block-ends-with <span class="s">" do</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s"> |.*|</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"ctrl"</span>)))))
+           ((<span class="k">and</span> (web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">for</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">unless</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">case</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;"</span> reg-beg)
+                 (not (web-mode-block-ends-with <span class="s">"end"</span> reg-end)))
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"ctrl"</span>)))))
+           )
+         ) <span class="cd">;</span><span class="c">erb
+</span>
+        ((string= web-mode-engine <span class="s">"django"</span>)
+         (<span class="k">cond</span>
+           ((<span class="k">and</span> (string= web-mode-minor-engine <span class="s">"jinja"</span>) <span class="cd">;</span><span class="c">#504
+</span>                 (web-mode-block-starts-with <span class="s">"else\\_&gt;"</span> reg-beg))
+            (<span class="k">let</span> ((continue t)
+                  (pos reg-beg)
+                  (ctrl nil))
+              (<span class="k">while</span> continue
+                (<span class="k">cond</span>
+                  ((null (<span class="k">setq</span> pos (web-mode-block-control-previous-position 'open pos)))
+                   (<span class="k">setq</span> continue nil))
+                  ((member (<span class="k">setq</span> ctrl (cdr (car (get-text-property pos 'block-controls)))) '(<span class="s">"if"</span> <span class="s">"ifequal"</span> <span class="s">"ifnotequal"</span> <span class="s">"for"</span>))
+                   (<span class="k">setq</span> continue nil)
+                   )
+                  ) <span class="cd">;</span><span class="c">cond
+</span>                )
+              (<span class="k">setq</span> controls (append controls (list (cons 'inside (<span class="k">or</span> ctrl <span class="s">"if"</span>)))))
+              )
+            )
+           ((web-mode-block-starts-with <span class="s">"form_start[ ]*("</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"form_start"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"form_end[ ]*("</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"form_start"</span>)))))
+           ((not (eq (char-after (1+ reg-beg)) ?\%))
+            )
+           ((web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">else</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">els?if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg)
+            (<span class="k">let</span> ((continue t)
+                  (pos reg-beg)
+                  (ctrl nil))
+              (<span class="k">while</span> continue
+                (<span class="k">cond</span>
+                  ((null (<span class="k">setq</span> pos (web-mode-block-control-previous-position 'open pos)))
+                   (<span class="k">setq</span> continue nil))
+                  ((member (<span class="k">setq</span> ctrl (cdr (car (get-text-property pos 'block-controls)))) '(<span class="s">"if"</span> <span class="s">"ifequal"</span> <span class="s">"ifnotequal"</span>))
+                   (<span class="k">setq</span> continue nil)
+                   )
+                  ) <span class="cd">;</span><span class="c">cond
+</span>                ) <span class="cd">;</span><span class="c">while
+</span>              (<span class="k">setq</span> controls (append controls (list (cons 'inside (<span class="k">or</span> ctrl <span class="s">"if"</span>)))))
+              ) <span class="cd">;</span><span class="c">let
+</span>            ) <span class="cd">;</span><span class="c">case else
+</span>           ((web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">empty</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"for"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"end</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alpha:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close (match-string-no-properties 1))))))
+           ((web-mode-block-starts-with <span class="s">"set [[:alpha:]]+[ ]*%}"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"set"</span>)))))
+           ((web-mode-block-starts-with (concat web-mode-django-control-blocks-regexp <span class="s">"[ %]"</span>) reg-beg)
+            (<span class="k">let</span> (control)
+              (<span class="k">setq</span> control (match-string-no-properties 1))
+              <span class="cd">;;</span><span class="c">(message "%S %S %S" control (concat "end" control) web-mode-django-control-blocks)
+</span>              (<span class="k">when</span> (member (concat <span class="s">"end"</span> control) web-mode-django-control-blocks)
+                (<span class="k">setq</span> controls (append controls (list (cons 'open control))))
+                ) <span class="cd">;</span><span class="c">when
+</span>              ) <span class="cd">;</span><span class="c">let
+</span>            ) <span class="cd">;</span><span class="c">case
+</span>           ) <span class="cd">;</span><span class="c">cond
+</span>         ) <span class="cd">;</span><span class="c">django
+</span>
+        ((string= web-mode-engine <span class="s">"smarty"</span>)
+         (<span class="k">cond</span>
+           ((<span class="k">and</span> (eq (char-after (1+ reg-beg)) ?\/)
+                 (web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alpha:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg))
+            (<span class="k">setq</span> controls (append controls (list (cons 'close (match-string-no-properties 1))))))
+           ((web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">else</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">elseif</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"if"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">block</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">foreach</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">for</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">section</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">while</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open (match-string-no-properties 1))))))
+           )
+         ) <span class="cd">;</span><span class="c">smarty
+</span>
+        ((string= web-mode-engine <span class="s">"expressionengine"</span>)
+         (<span class="k">cond</span>
+           ((<span class="k">and</span> (eq (char-after (1+ reg-beg)) ?\/)
+                 (web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg))
+            (<span class="k">setq</span> controls (append controls (list (cons 'close (match-string-no-properties 1))))))
+           ((web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">if:else</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">if:ifelse</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"if"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open (match-string-no-properties 1))))))
+           )
+         ) <span class="cd">;</span><span class="c">expressionengine
+</span>
+        ((string= web-mode-engine <span class="s">"xoops"</span>)
+         (<span class="k">cond</span>
+           ((<span class="k">and</span> (eq (char-after (+ reg-beg 2)) ?\/)
+                 (web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alpha:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg))
+            (<span class="k">setq</span> controls (append controls (list (cons 'close (match-string-no-properties 1))))))
+           ((web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">else</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">elseif</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"if"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">block</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">foreach</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">for</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">section</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">while</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open (match-string-no-properties 1))))))
+           )
+         ) <span class="cd">;</span><span class="c">xoops
+</span>
+        ((string= web-mode-engine <span class="s">"web2py"</span>)
+         (<span class="k">cond</span>
+           ((web-mode-block-starts-with <span class="s">"def"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"def"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"return"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"def"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"block"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"block"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"end"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"block"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"pass"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"ctrl"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">except</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">finally</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">els</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"ctrl"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">for</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">try</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">while</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"ctrl"</span>)))))
+           )
+         ) <span class="cd">;</span><span class="c">web2py
+</span>
+        ((string= web-mode-engine <span class="s">"dust"</span>)
+         (<span class="k">cond</span>
+           ((eq (char-after (1- reg-end)) ?\/)
+            )
+           ((eq (char-after (1+ reg-beg)) ?\:)
+            (<span class="k">setq</span> pos (web-mode-block-control-previous-position 'open reg-beg))
+            (<span class="k">when</span> pos
+              (<span class="k">setq</span> controls (append controls
+                                     (list
+                                      (cons 'inside
+                                            (cdr (car (web-mode-block-controls-get pos))))))))
+            )
+           ((looking-at <span class="s">"{/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alpha:].]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close (match-string-no-properties 1))))))
+           ((looking-at <span class="s">"{[#?@&gt;&lt;+^]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alpha:].]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open (match-string-no-properties 1))))))
+           )
+         ) <span class="cd">;</span><span class="c">dust
+</span>
+        ((string= web-mode-engine <span class="s">"anki"</span>)
+         (<span class="k">cond</span>
+           ((looking-at <span class="s">"{{[#^]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alpha:].]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open (match-string-no-properties 1))))))
+           ((looking-at <span class="s">"{{/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alpha:].]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close (match-string-no-properties 1))))))
+           )
+         ) <span class="cd">;</span><span class="c">anki
+</span>
+        ((member web-mode-engine '(<span class="s">"mojolicious"</span>))
+         (<span class="k">cond</span>
+           ((web-mode-block-ends-with <span class="s">"begin"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"begin"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"end"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"begin"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"}[ ]*else[ ]*{"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"{"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"}"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"{"</span>)))))
+           ((web-mode-block-ends-with <span class="s">"{"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"{"</span>)))))
+           )
+         ) <span class="cd">;</span><span class="c">mojolicious
+</span>
+        ((member web-mode-engine '(<span class="s">"aspx"</span> <span class="s">"underscore"</span>))
+         (<span class="k">cond</span>
+           ((<span class="k">and</span> (web-mode-block-starts-with <span class="s">"}"</span> reg-beg)
+                 (web-mode-block-ends-with <span class="s">"{"</span> reg-beg))
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"{"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"}"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"{"</span>)))))
+           ((web-mode-block-ends-with <span class="s">"{"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"{"</span>)))))
+           )
+         ) <span class="cd">;</span><span class="c">aspx underscore
+</span>
+        ((member web-mode-engine '(<span class="s">"jsp"</span> <span class="s">"asp"</span> <span class="s">"clip"</span> <span class="s">"perl"</span>))
+         (<span class="k">cond</span>
+           ((eq (char-after (1- reg-end)) ?\/)
+            )
+           ((looking-at <span class="s">"&lt;TMPL_ELSE"</span>)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"TMPL_IF"</span>)))))
+           ((looking-at <span class="s">"&lt;/?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alpha:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[:.][[:alpha:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[[:alpha:]]+Template</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">TMPL_[[:alpha:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> control (match-string-no-properties 1)
+                  type (<span class="k">if</span> (eq (aref (match-string-no-properties 0) 1) ?\/) 'close 'open))
+            (<span class="k">when</span> (not (member control '(<span class="s">"h:inputtext"</span> <span class="s">"jsp:usebean"</span> <span class="s">"jsp:forward"</span> <span class="s">"struts:property"</span>)))
+              (<span class="k">setq</span> controls (append controls (list (cons type control)))))
+            )
+           (t
+            (<span class="k">when</span> (web-mode-block-starts-with <span class="s">"}"</span> reg-beg)
+              (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"{"</span>)))))
+            (<span class="k">when</span> (web-mode-block-ends-with <span class="s">"{"</span> reg-beg)
+              (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"{"</span>)))))
+            )
+           )
+         ) <span class="cd">;</span><span class="c">jsp asp
+</span>
+        ((string= web-mode-engine <span class="s">"mako"</span>)
+         (<span class="k">cond</span>
+           ((looking-at <span class="s">"&lt;/?%</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alpha:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[:][[:alpha:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">cond</span>
+              ((eq (char-after (- (web-mode-block-end-position reg-beg) 1)) ?\/)
+               )
+              (t
+               (<span class="k">setq</span> control (match-string-no-properties 1)
+                     type (<span class="k">if</span> (eq (aref (match-string-no-properties 0) 1) ?\/) 'close 'open))
+               (<span class="k">setq</span> controls (append controls (list (cons type control)))))
+              )
+            )
+           ((web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">else</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">elif</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"if"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"end</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">for</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close (match-string-no-properties 1))))))
+           ((<span class="k">and</span> (web-mode-block-starts-with <span class="s">"if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">for"</span> reg-beg)
+                 (web-mode-block-ends-with <span class="s">":"</span> reg-beg))
+            (<span class="k">setq</span> controls (append controls (list (cons 'open (match-string-no-properties 0))))))
+           )
+         ) <span class="cd">;</span><span class="c">mako
+</span>
+        ((string= web-mode-engine <span class="s">"mason"</span>)
+         (<span class="k">cond</span>
+           ((looking-at <span class="s">"&lt;/?%</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">after</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">around</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">augment</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">before</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">def</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">filter</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">method</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">override</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> control (match-string-no-properties 1)
+                  type (<span class="k">if</span> (eq (aref (match-string-no-properties 0) 1) ?\/) 'close 'open))
+            (<span class="k">setq</span> controls (append controls (list (cons type control))))
+            )
+           )
+         ) <span class="cd">;</span><span class="c">mason
+</span>
+        ((string= web-mode-engine <span class="s">"ctemplate"</span>)
+         (<span class="k">cond</span>
+           ((looking-at-p <span class="s">"{{else"</span>) <span class="cd">;</span><span class="c">#721
+</span>            (<span class="k">let</span> ((continue t)
+                  (pos reg-beg)
+                  (ctrl nil))
+              (<span class="k">while</span> continue
+                (<span class="k">cond</span>
+                  ((null (<span class="k">setq</span> pos (web-mode-block-control-previous-position 'open pos)))
+                   (<span class="k">setq</span> continue nil))
+                  ((member (<span class="k">setq</span> ctrl (cdr (car (get-text-property pos 'block-controls)))) '(<span class="s">"if"</span> <span class="s">"each"</span>))
+                   (<span class="k">setq</span> continue nil)
+                   )
+                  ) <span class="cd">;</span><span class="c">cond
+</span>                ) <span class="cd">;</span><span class="c">while
+</span>              (<span class="k">setq</span> controls (append controls (list (cons 'inside (<span class="k">or</span> ctrl <span class="s">"if"</span>)))))
+              )
+            )
+
+           ((looking-at <span class="s">"{{[#^/][ ]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alpha:]_.-]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> control (match-string-no-properties 1)
+                  type (<span class="k">if</span> (eq (aref (match-string-no-properties 0) 2) ?\/) 'close 'open))
+            (<span class="k">setq</span> controls (append controls (list (cons type control))))
+            )
+           )
+         ) <span class="cd">;</span><span class="c">ctemplate
+</span>
+        ((string= web-mode-engine <span class="s">"antlers"</span>)
+         (<span class="k">cond</span>
+           ((web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">else</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">elseif</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"if"</span>)))))
+           ((looking-at  <span class="s">"{{[ ]*/?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">unless</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> control (match-string-no-properties 1)
+                  type (<span class="k">if</span> (eq (aref (match-string-no-properties 0) 3) ?\/) 'close 'open))
+            (<span class="k">setq</span> controls (append controls (list (cons type control))))
+            )
+           )
+         ) <span class="cd">;</span><span class="c">antlers
+</span>
+        ((string= web-mode-engine <span class="s">"blade"</span>)
+         (<span class="k">cond</span>
+           ((not (eq (char-after) ?\@))
+            )
+           ((web-mode-block-starts-with
+             <span class="s">"section</span><span class="w s">\</span><span class="s">(\s*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">['\"]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">.*\\1\s*,\s*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">['\"]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">.*\\2\s*</span><span class="w s">\</span><span class="s">)"</span> reg-beg)
+            )
+           ((web-mode-block-starts-with <span class="s">"case</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">break"</span> reg-beg)
+            (<span class="k">setq</span> type (<span class="k">if</span> (eq (aref (match-string-no-properties 0) 0) ?b) 'close 'open))
+            (<span class="k">setq</span> controls (append controls (list (cons type <span class="s">"case"</span>))))
+            )
+           ((web-mode-block-starts-with
+             (concat <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">end</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">"</span> web-mode-blade-control-blocks-regexp <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+             reg-beg)
+            (<span class="k">setq</span> control (match-string-no-properties 1)
+                  type (<span class="k">if</span> (eq (aref (match-string-no-properties 0) 0) ?e) 'close 'open))
+            (<span class="k">setq</span> controls (append controls (list (cons type control))))
+            )
+           ((web-mode-block-starts-with <span class="s">"stop</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">show</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">overwrite"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"section"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"else</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">elseif"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"if"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"empty"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"forelse"</span>)))))
+           )
+         ) <span class="cd">;</span><span class="c">blade
+</span>
+        ((string= web-mode-engine <span class="s">"closure"</span>)
+         (<span class="k">cond</span>
+           ((eq (char-after (1- reg-end)) ?\/)
+            )
+           ((looking-at <span class="s">"alias</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">namespace"</span>)
+            )
+           ((web-mode-block-starts-with <span class="s">"ifempty"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"foreach"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"else</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">elseif"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"if"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"case</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">default"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"switch"</span>)))))
+           ((looking-at
+             <span class="s">"{/?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">call</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">deltemplate</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">for</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">foreach</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">let</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">literal</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">msg</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">param</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">switch</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">template</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> control (match-string-no-properties 1)
+                  type (<span class="k">if</span> (eq (aref (match-string-no-properties 0) 1) ?\/) 'close 'open))
+            (<span class="k">setq</span> controls (append controls (list (cons type control))))
+            )
+           )
+         ) <span class="cd">;</span><span class="c">closure
+</span>
+        ((string= web-mode-engine <span class="s">"go"</span>)
+         (<span class="k">cond</span>
+           ((web-mode-block-starts-with <span class="s">"end\\_&gt;"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"ctrl"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"else\\_&gt;"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"ctrl"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">range</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">with</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">define</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">block</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"ctrl"</span>)))))
+           )
+         ) <span class="cd">;</span><span class="c">go
+</span>
+        ((string= web-mode-engine <span class="s">"template-toolkit"</span>)
+         (<span class="k">cond</span>
+           ((web-mode-block-starts-with <span class="s">"end"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"ctrl"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"els</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">catch</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">final"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"ctrl"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"filter</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">foreach</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">last</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">next</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">perl</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">rawperl</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">try</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">unless</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">while"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"ctrl"</span>)))))
+           )
+         ) <span class="cd">;</span><span class="c">template-toolkit
+</span>
+        ((string= web-mode-engine <span class="s">"cl-emb"</span>)
+         (<span class="k">cond</span>
+           ((web-mode-block-starts-with <span class="s">"@else"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"if"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"@</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">end</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">unless</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">repeat</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">loop</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">with</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">genloop</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg)
+            (<span class="k">setq</span> control (match-string-no-properties 1)
+                  type (<span class="k">if</span> (eq (aref (match-string-no-properties 0) 1) ?e) 'close 'open))
+            (<span class="k">setq</span> controls (append controls (list (cons type control)))))
+           )
+         ) <span class="cd">;</span><span class="c">cl-emb
+</span>
+        ((string= web-mode-engine <span class="s">"elixir"</span>)
+         (<span class="k">cond</span>
+           ((web-mode-block-starts-with <span class="s">"end"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"ctrl"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"else"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"ctrl"</span>)))))
+           ((web-mode-block-ends-with <span class="s">" do"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"ctrl"</span>)))))
+           ((web-mode-block-ends-with <span class="s">" -&gt;"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"ctrl"</span>)))))
+           )
+         ) <span class="cd">;</span><span class="c">elixir
+</span>
+        ((string= web-mode-engine <span class="s">"velocity"</span>)
+         (<span class="k">cond</span>
+           ((web-mode-block-starts-with <span class="s">"{?end"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"ctrl"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"{?els"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"ctrl"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"{?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">def</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">for</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">foreach</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">macro</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg)
+            <span class="cd">;;</span><span class="c">((web-mode-block-starts-with "{?\\(define\\|\\|if\\|for\\|foreach\\|macro\\)" reg-beg)
+</span>            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"ctrl"</span>)))))
+           )
+         ) <span class="cd">;</span><span class="c">velocity
+</span>
+        ((string= web-mode-engine <span class="s">"freemarker"</span>)
+         (<span class="k">cond</span>
+           ((looking-at <span class="s">"[&lt;[]#</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">import</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">include</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">assign</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">return</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">local</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            )
+           ((eq (char-after (1- reg-end)) ?\/)
+            )
+           ((looking-at <span class="s">"[&lt;[]#</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">break</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">case</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">default</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"switch"</span>))))
+            )
+           ((looking-at <span class="s">"[&lt;[]#els"</span>)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"if"</span>))))
+            )
+           ((looking-at <span class="s">"&lt;/?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alpha:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[:][[:alpha:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> control (match-string-no-properties 1)
+                  type (<span class="k">if</span> (eq (aref (match-string-no-properties 0) 1) ?\/) 'close 'open))
+            (<span class="k">setq</span> controls (append controls (list (cons type control))))
+            )
+           ((looking-at <span class="s">"[&lt;[]/?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">@</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> control (match-string-no-properties 1)
+                  type (<span class="k">if</span> (eq (aref (match-string-no-properties 0) 1) ?\/) 'close 'open))
+            (<span class="k">setq</span> controls (append controls (list (cons type control))))
+            )
+           ((looking-at <span class="s">"[&lt;[]/?#</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alpha:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[:][[:alpha:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> control (match-string-no-properties 1)
+                  type (<span class="k">if</span> (eq (aref (match-string-no-properties 0) 1) ?\/) 'close 'open))
+            (<span class="k">setq</span> controls (append controls (list (cons type control))))
+            )
+           (t
+            (<span class="k">when</span> (web-mode-block-starts-with <span class="s">"}"</span> reg-beg)
+              (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"{"</span>)))))
+            (<span class="k">when</span> (web-mode-block-ends-with <span class="s">"{"</span> reg-beg)
+              (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"{"</span>)))))
+            )
+           )
+         ) <span class="cd">;</span><span class="c">freemarker
+</span>
+        ((string= web-mode-engine <span class="s">"razor"</span>)
+         (<span class="k">when</span> (web-mode-block-starts-with <span class="s">"}"</span> reg-beg)
+           (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"{"</span>)))))
+         (<span class="k">when</span> (web-mode-block-ends-with <span class="s">"{"</span> reg-beg)
+           (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"{"</span>)))))
+         ) <span class="cd">;</span><span class="c">razor
+</span>
+        ((string= web-mode-engine <span class="s">"lsp"</span>)
+         (<span class="k">when</span> (web-mode-block-starts-with <span class="s">")"</span> reg-beg)
+           (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"("</span>)))))
+         (<span class="k">when</span> (web-mode-block-is-opened-sexp reg-beg reg-end)
+           (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"("</span>)))))
+         ) <span class="cd">;</span><span class="c">lsp
+</span>
+        ((string= web-mode-engine <span class="s">"hero"</span>)
+         (<span class="k">cond</span>
+           ((web-mode-block-ends-with <span class="s">"}[ ]*else[ ]*{"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'inside <span class="s">"{"</span>)))))
+           ((web-mode-block-starts-with <span class="s">"}"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close <span class="s">"{"</span>)))))
+           ((web-mode-block-ends-with <span class="s">"{"</span> reg-beg)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open <span class="s">"{"</span>)))))
+           )
+         ) <span class="cd">;</span><span class="c">hero
+</span>
+        ((string= web-mode-engine <span class="s">"svelte"</span>)
+         (<span class="k">cond</span>
+           ((eq (char-after (1- reg-end)) ?\/)
+            )
+           ((eq (char-after (1+ reg-beg)) ?\:)
+            (<span class="k">setq</span> pos (web-mode-block-control-previous-position 'open reg-beg))
+            (<span class="k">when</span> pos
+              (<span class="k">setq</span> controls (append controls
+                                     (list
+                                      (cons 'inside
+                                            (cdr (car (web-mode-block-controls-get pos))))))))
+            )
+           ((looking-at <span class="s">"{/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alpha:].]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> controls (append controls (list (cons 'close (match-string-no-properties 1))))))
+           ((looking-at <span class="s">"{[#?&gt;&lt;+^]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alpha:].]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">setq</span> controls (append controls (list (cons 'open (match-string-no-properties 1))))))
+           )
+         ) <span class="cd">;</span><span class="c">svelte
+</span>
+        ) <span class="cd">;</span><span class="c">cond engine
+</span>
+      (put-text-property reg-beg (1+ reg-beg) 'block-controls controls)
+      <span class="cd">;;</span><span class="c">(message "(%S) controls=%S" reg-beg controls)
+</span>
+      )))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,79 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dirvish--render-attrs-1 – Emacs Documentation Online</title>
+<meta name="description" content="dirvish--render-attrs-1 is a natively compiled function defined in
+dirvish.el.
+HEIGHT WIDTH POS REMOTE FNS ALIGN-TO HL W-WIDTH.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dirvish--render-attrs-1</code></h1><p><span class="m"><code>dirvish--render-attrs-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dirvish.el</span>.
+<h2>Signature</h2>
+<pre><code>(dirvish--render-attrs-1 <a href="#:~:text=Documentation-,HEIGHT"><span class="arg">HEIGHT</span></a> <a href="#:~:text=HEIGHT-,WIDTH"><span class="arg">WIDTH</span></a> <a href="#:~:text=WIDTH-,POS"><span class="arg">POS</span></a> <a href="#:~:text=POS-,REMOTE"><span class="arg">REMOTE</span></a> <a href="#:~:text=REMOTE-,FNS"><span class="arg">FNS</span></a> <a href="#:~:text=FNS-,ALIGN-TO"><span class="arg">ALIGN-TO</span></a> <a href="#:~:text=TO-,HL"><span class="arg">HL</span></a> <a href="#:~:text=HL-,W-WIDTH"><span class="arg">W-WIDTH</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p><span class="arg">HEIGHT</span> <span class="arg">WIDTH</span> <span class="arg">POS</span> <span class="arg">REMOTE</span> <span class="arg">FNS</span> <span class="arg">ALIGN-TO</span> <span class="arg">HL</span> <span class="arg">W-WIDTH</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a7h73ip6x5m1pxn38j7f0al6n93w904q-emacs-packages-deps/share/emacs/site-lisp/elpa/dirvish-20260725.1520/dirvish.el</span>
+(<span class="k">defun</span> <span class="f">dirvish--render-attrs-1</span>
+    (height width pos remote fns align-to hl w-width)
+  <span class="doc">"HEIGHT WIDTH POS REMOTE FNS ALIGN-TO HL W-WIDTH."</span>
+  <span class="cd">;; </span><span class="c">jump over subdir header lines where `</span><span class="m c">forward-line</span><span class="c">' is ignored
+</span>  (<span class="k">when</span> (cdr dired-subdir-alist) (goto-char (window-start)))
+  (forward-line (- 0 height))
+  (<span class="k">cl-dotimes</span> (_ (* 2 height))
+    (<span class="k">when</span> (eobp) (<span class="k">cl-return</span>))
+    (<span class="k">let</span> ((f-beg (dired-move-to-filename))
+          (f-end (dired-move-to-end-of-filename t))
+          (l-beg (line-beginning-position)) (l-end (line-end-position))
+          (f-wid 0) f-str f-name f-attrs f-type hl-face left right f-line?)
+      (<span class="k">setq</span> hl-face (<span class="k">and</span> (eq (<span class="k">or</span> f-beg l-beg) pos) hl))
+      (<span class="k">when</span> (<span class="k">setq</span> f-line? (<span class="k">and</span> f-beg f-end (eq (char-after l-end) 10)))
+        (<span class="k">setq</span> f-str (buffer-substring f-beg f-end)
+              f-wid (string-width f-str)
+              f-name (concat (<span class="k">if</span> remote (dired-current-directory)
+                               (file-local-name (dired-current-directory)))
+                             f-str)
+              f-attrs (<span class="k">dirvish-attribute-cache</span> f-name <span class="bi">:builtin</span>
+                        (<span class="k">unless</span> remote (<span class="k">ignore-errors</span> (file-attributes f-name))))
+              f-type (<span class="k">dirvish-attribute-cache</span> f-name <span class="bi">:type</span>
+                       (<span class="k">let</span> ((ch (<span class="k">progn</span> (back-to-indentation) (char-after))))
+                         (<span class="k">cond</span> <span class="cd">; </span><span class="c">ASCII: d -&gt; 100, l -&gt; 108, LF(\n) -&gt; 10
+</span>                          (remote `(,(<span class="k">if</span> (eq ch 100) 'dir 'file) . nil))
+                          ((eq ch 100) '(dir . nil))
+                          ((eq ch 108) <span class="cd">; </span><span class="c">use slash for dir check is unreliable
+</span>                           `(,(<span class="k">if</span> (file-directory-p f-name) 'dir 'file) .
+                             ,(buffer-substring (+ f-end 4) l-end)))
+                          (t '(file . nil))))))
+        (<span class="k">unless</span> (get-text-property f-beg 'mouse-face)
+          (dired-insert-set-properties l-beg l-end)))
+      (<span class="k">cl-loop</span>
+       for fn in (<span class="k">if</span> f-line? fns '(dirvish-attribute-hl-line-rd))
+       for (k . v) = (funcall fn f-beg f-end f-str f-name
+                              f-attrs f-type l-beg l-end hl-face w-width)
+       do (<span class="k">pcase</span> k ('ov (overlay-put v 'dirvish-a-ov t))
+                 ('ovs (<span class="k">dolist</span> (ov v) (overlay-put ov 'dirvish-a-ov t)))
+                 ('left (<span class="k">setq</span> left (concat v left)))
+                 ('right (<span class="k">setq</span> right (concat v right))))
+       finally
+       (<span class="k">prog1</span> (<span class="k">unless</span> (<span class="k">or</span> left right) (<span class="k">cl-return</span>))
+         (<span class="k">let*</span> ((len1 (string-width (<span class="k">or</span> right <span class="s">""</span>)))
+                (remain (- width len1
+                           (<span class="k">or</span> (get-text-property l-beg 'line-prefix) 0)))
+                (len2 (min (length left) (max 0 (- remain f-wid 1))))
+                (ovl (make-overlay f-end f-end))
+                (r-pos (<span class="k">if</span> (&gt; remain f-wid) l-end
+                         (<span class="k">let</span> ((end (+ f-beg remain))
+                               (offset (- f-wid (length f-str))))
+                           (- end offset))))
+                (spec `(space <span class="bi">:align-to</span> (- right-fringe ,len1 ,align-to)))
+                (spc (propertize <span class="s">" "</span> 'display spec 'face hl-face))
+                (ovr (make-overlay r-pos r-pos)))
+           (overlay-put ovl 'dirvish-l-ov t)
+           (overlay-put ovl 'after-string (substring (<span class="k">or</span> left <span class="s">""</span>) 0 len2))
+           (overlay-put ovr 'dirvish-r-ov t)
+           (overlay-put ovr 'after-string (concat spc right))))))
+    (forward-line 1)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

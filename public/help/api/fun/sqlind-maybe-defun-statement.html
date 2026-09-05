@@ -1,0 +1,83 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sqlind-maybe-defun-statement – Emacs Documentation Online</title>
+<meta name="description" content="sqlind-maybe-defun-statement is a natively compiled function defined
+in sql-indent.el.
+If (point) is on a procedure definition statement, report its syntax.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sqlind-maybe-defun-statement</code></h1><p><span class="m"><code>sqlind-maybe-defun-statement</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">sql-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(sqlind-maybe-defun-statement)
+</code></pre>
+<h2>Documentation</h2>
+<p>If (point) is on a procedure definition statement, report its syntax.
+<p>See also <a href="../fun/sqlind-beginning-of-block.html"><code>sqlind-beginning-of-block</code></a>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vgm6xb2iy00bs19rdw9z3nfi5nf8g873-emacs-packages-deps/share/emacs/site-lisp/elpa/sql-indent-1.7/sql-indent.el</span>
+(<span class="k">defun</span> <span class="f">sqlind-maybe-defun-statement</span> ()
+  <span class="doc">"If (point) is on a procedure definition statement, report its syntax.
+See also `</span><span class="m doc">sqlind-beginning-of-block</span><span class="doc">'"</span>
+  (<span class="k">catch</span> '<span class="m">exit</span>
+    (<span class="k">when</span> (looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">procedure</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">function</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[ \t\n\r\f]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[a-z0-9_]+\\.</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[a-z0-9_]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+      (<span class="k">prog1</span> t                          <span class="cd">; </span><span class="c">make sure we return t
+</span>	(<span class="k">let</span> ((proc-name (sqlind-match-string 2)))
+	  <span class="cd">;; </span><span class="c">need to find out if this is a procedure/function
+</span>	  <span class="cd">;; </span><span class="c">declaration or a definition
+</span>	  (<span class="k">save-excursion</span>
+	    (goto-char (match-end 0))
+            (sqlind-forward-syntactic-ws)
+	    <span class="cd">;; </span><span class="c">skip param list, if any.
+</span>	    (<span class="k">when</span> (looking-at <span class="s">"("</span>)
+	      (<span class="k">ignore-errors</span> (forward-sexp 1))
+	      (sqlind-forward-syntactic-ws))
+	    (<span class="k">when</span> (looking-at <span class="s">"return</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[ \t\n\r\f]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[a-z0-9_.]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">%</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">row</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?type</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+	      (goto-char (match-end 0))
+	      (sqlind-forward-syntactic-ws))
+	    (<span class="k">when</span> (looking-at <span class="s">";"</span>)
+	      <span class="cd">;; </span><span class="c">not a procedure after all.
+</span>	      (<span class="k">throw</span> '<span class="m">exit</span> nil)))
+
+          (<span class="k">save-excursion</span>
+            (sqlind-backward-syntactic-ws)
+            <span class="cd">;; </span><span class="c">Find out if it is a drop procedure or function statement
+</span>            (forward-word -1)
+            (<span class="k">when</span> (looking-at <span class="s">"drop"</span>)
+              <span class="cd">;; </span><span class="c">not a procedure after all
+</span>              (<span class="k">throw</span> '<span class="m">exit</span> nil))
+            <span class="cd">;; </span><span class="c">Find out if it is a "comment on" statement (postgres only)
+</span>            (<span class="k">when</span> (<span class="k">and</span> (eq sql-product 'postgres)
+                       (looking-at <span class="s">"on"</span>))
+              (sqlind-backward-syntactic-ws)
+              (forward-word -1)
+              (<span class="k">when</span> (looking-at <span class="s">"comment"</span>)
+                <span class="cd">;; </span><span class="c">not a procedure after all.
+</span>                (<span class="k">throw</span> '<span class="m">exit</span> nil))))
+
+	  <span class="cd">;; </span><span class="c">so it is a definition
+</span>
+	  <span class="cd">;; </span><span class="c">if the procedure starts with "create or replace", move
+</span>	  <span class="cd">;; </span><span class="c">point to the real start
+</span>	  (<span class="k">let</span> ((real-start (point)))
+	    (<span class="k">save-excursion</span>
+	      (forward-word -1)
+	      (<span class="k">when</span> (looking-at <span class="s">"replace"</span>)
+		(forward-word -2))
+	      (<span class="k">when</span> (<span class="k">and</span> (<span class="k">or</span> (looking-at <span class="s">"create</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[ \t\r\n\f]+or[ \t\r\n\f]+replace</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?"</span>)
+                             (looking-at <span class="s">"alter"</span>))
+			 (not (sqlind-in-comment-or-string (point))))
+		(<span class="k">setq</span> real-start (point))))
+	    (goto-char real-start))
+
+	  (<span class="k">when</span> (null sqlind-end-stmt-stack)
+	    (<span class="k">throw</span> '<span class="m">finished</span> (list 'defun-start proc-name)))
+
+	  (<span class="k">cl-destructuring-bind</span> (pos kind label) (<span class="k">pop</span> sqlind-end-stmt-stack)
+	    (<span class="k">unless</span> (<span class="k">and</span> (eq kind nil)
+			 (sqlind-labels-match label proc-name))
+	      (<span class="k">throw</span> '<span class="m">finished</span>
+		(list 'syntax-error <span class="s">"bad end label for defun"</span> (point) pos)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

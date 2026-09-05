@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--read-topic – Emacs Documentation Online</title>
+<meta name="description" content="forge--read-topic is a natively compiled function defined in
+forge-topic.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--read-topic</code></h1><p><span class="m"><code>forge--read-topic</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">forge-topic.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--read-topic <span class="arg">PROMPT</span> <span class="arg">CURRENT</span> <span class="arg">ACTIVE</span> <span class="arg">ALL</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-topic.el</span>
+(<span class="k">defun</span> <span class="f">forge--read-topic</span> (prompt current active all)
+  (<span class="k">let*</span> ((current (funcall current))
+         (repo    (forge-get-repository (<span class="k">or</span> current <span class="bi">:tracked</span>)))
+         (default (<span class="k">and</span> current (forge--format-topic-line current)))
+         (alist   (forge--topic-collection
+                   (forge--list-topics (<span class="k">if</span> forge-limit-topic-choices active all)
+                                       repo)))
+         (choices (mapcar #'car alist))
+         (choices (<span class="k">cond</span> ((<span class="k">and</span> forge-limit-topic-choices
+                              default
+                              (not (member default choices)))
+                         (<span class="k">push</span> (cons default (<span class="k">oref</span> current id)) alist)
+                         (cons default choices))
+                        (choices)))
+         (choice
+          (<span class="k">if</span> forge-limit-topic-choices
+              (<span class="k">minibuffer-with-setup-hook</span>
+                  (<span class="k">lambda</span> ()
+                    (use-local-map (make-composed-keymap
+                                    forge-read-topic-minibuffer-map
+                                    (current-local-map))))
+                (magit-completing-read
+                 (substitute-command-keys
+                  (format <span class="s">"%s (\\&lt;</span><span class="v s">%s</span><span class="s">&gt;\\[</span><span class="m s">%s</span><span class="s">] for all)"</span> prompt
+                          'forge-read-topic-minibuffer-map
+                          'forge-read-topic-lift-limit))
+                 (completion-table-dynamic
+                  (<span class="k">let</span> (all-choices)
+                    (<span class="k">lambda</span> (_string)
+                      <span class="cd">;; </span><span class="c">For other frameworks, the minibuffer is current
+</span>                      <span class="cd">;; </span><span class="c">when this function is called, but for Helm we
+</span>                      <span class="cd">;; </span><span class="c">have to make it so.  Starting with Helm commit
+</span>                      <span class="cd">;; </span><span class="c">5e7c8498, this isn't necessary anymore.  See
+</span>                      <span class="cd">;; </span><span class="c">https://github.com/emacs-helm/helm/issues/2744.
+</span>                      (<span class="k">with-selected-window</span> (minibuffer-window)
+                        (<span class="k">cond</span>
+                          (all-choices)
+                          (forge-limit-topic-choices choices)
+                          (t
+                           (<span class="k">setq</span> alist (forge--topic-collection
+                                        (forge--list-topics all repo)))
+                           (<span class="k">setq</span> all-choices (mapcar #'car alist))))))))
+                 nil t nil nil default))
+            (magit-completing-read prompt choices nil t nil nil default))))
+    (cdr (assoc choice alist))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

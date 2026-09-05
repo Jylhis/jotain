@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-fontify-code-block-natively – Emacs Documentation Online</title>
+<meta name="description" content="markdown-fontify-code-block-natively is a natively compiled function
+defined in markdown-mode.el.
+Fontify given GFM or fenced code block.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-fontify-code-block-natively</code></h1><p><span class="m"><code>markdown-fontify-code-block-natively</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-fontify-code-block-natively <a href="#:~:text=nil.-,LANG"><span class="arg">LANG</span></a> <a href="#:~:text=block.-,START"><span class="arg">START</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Fontify given GFM or fenced code block.
+<p>This function is called by Emacs for automatic fontification when
+<a href="../var/markdown-fontify-code-blocks-natively.html"><code>markdown-fontify-code-blocks-natively</code></a> is non-nil.  <span class="arg">LANG</span> is the
+language used in the block. <span class="arg">START</span> and <span class="arg">END</span> specify the block
+position.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+<span class="cd">;; </span><span class="c">Based on `</span><span class="m c">org-src-font-lock-fontify-block</span><span class="c">' from org-src.el.
+</span>(<span class="k">defun</span> <span class="f">markdown-fontify-code-block-natively</span> (lang start end)
+  <span class="doc">"Fontify given GFM or fenced code block.
+This function is called by Emacs for automatic fontification when
+`</span><span class="m doc">markdown-fontify-code-blocks-natively</span><span class="doc">' is non-nil.  LANG is the
+language used in the block. START and END specify the block
+position."</span>
+  (<span class="k">let</span> ((lang-mode (<span class="k">if</span> lang (markdown-get-lang-mode lang)
+                     markdown-fontify-code-block-default-mode)))
+    (<span class="k">when</span> (fboundp lang-mode)
+      (<span class="k">let</span> ((string (buffer-substring-no-properties start end))
+            (modified (buffer-modified-p))
+            (markdown-buffer (current-buffer)) pos next)
+        (remove-text-properties start end '(face nil))
+        (<span class="k">with-current-buffer</span>
+            (get-buffer-create
+             (format <span class="s">" *markdown-code-fontification:%s*"</span> (symbol-name lang-mode)))
+          <span class="cd">;; </span><span class="c">Make sure that modification hooks are not inhibited in
+</span>          <span class="cd">;; </span><span class="c">the org-src-fontification buffer in case we're called
+</span>          <span class="cd">;; </span><span class="c">from `</span><span class="m c">jit-lock-function</span><span class="c">' (Bug#25132).
+</span>          (<span class="k">let</span> ((inhibit-modification-hooks nil))
+            (delete-region (point-min) (point-max))
+            (insert string <span class="s">" "</span>)) <span class="cd">;; </span><span class="c">so there's a final property change
+</span>          (<span class="k">unless</span> (eq major-mode lang-mode) (funcall lang-mode))
+          (font-lock-ensure)
+          (<span class="k">setq</span> pos (point-min))
+          (<span class="k">while</span> (<span class="k">setq</span> next (next-single-property-change pos 'face))
+            (<span class="k">let</span> ((val (get-text-property pos 'face)))
+              (<span class="k">when</span> val
+                (put-text-property
+                 (+ start (1- pos)) (1- (+ start next)) 'face
+                 val markdown-buffer)))
+            (<span class="k">setq</span> pos next)))
+        (add-text-properties
+         start end
+         '(font-lock-fontified t fontified t font-lock-multiline t))
+        (set-buffer-modified-p modified)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

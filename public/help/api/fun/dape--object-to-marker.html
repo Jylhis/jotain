@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--object-to-marker – Emacs Documentation Online</title>
+<meta name="description" content="dape--object-to-marker is a natively compiled function defined in
+dape.el.
+Return marker created from PLIST and CONN config.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--object-to-marker</code></h1><p><span class="m"><code>dape--object-to-marker</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--object-to-marker <a href="#:~:text=and-,CONN"><span class="arg">CONN</span></a> <a href="#:~:text=from-,PLIST"><span class="arg">PLIST</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return marker created from <span class="arg">PLIST</span> and <span class="arg">CONN</span> config.
+<p>Marker is created from <span class="arg">PLIST</span> keys :source and :line.
+Note requires <a href="../fun/dape--source-ensure.html"><code>dape--source-ensure</code></a> if source is by reference.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--object-to-marker</span> (conn plist)
+  <span class="doc">"Return marker created from PLIST and CONN config.
+Marker is created from PLIST keys :source and :line.
+Note requires `</span><span class="m doc">dape--source-ensure</span><span class="doc">' if source is by reference."</span>
+  (<span class="k">when-let*</span> ((source (plist-get plist <span class="bi">:source</span>))
+              (line (<span class="k">or</span> (plist-get plist <span class="bi">:line</span>) 1))
+              (buffer (<span class="k">or</span>
+                       <span class="cd">;; </span><span class="c">Take buffer by source reference
+</span>                       (<span class="k">when-let*</span> ((reference (plist-get source <span class="bi">:sourceReference</span>))
+                                   (buffer (plist-get (dape--source-buffers
+                                                       (dape--root-of conn))
+                                                      reference))
+                                   ((buffer-live-p buffer)))
+                         buffer)
+                       <span class="cd">;; </span><span class="c">Take buffer by path
+</span>                       (<span class="k">when-let*</span> ((remote-path (plist-get source <span class="bi">:path</span>))
+                                   (filename
+                                    (dape--file-name-local conn remote-path))
+                                   ((file-exists-p filename)))
+                         (find-file-noselect filename t)))))
+    (<span class="k">dape--with-line</span> buffer line
+      (<span class="k">when-let*</span> ((column (plist-get plist <span class="bi">:column</span>)))
+        (<span class="k">when</span> (&gt; column 0)
+          (forward-char (1- column))))
+      (point-marker))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

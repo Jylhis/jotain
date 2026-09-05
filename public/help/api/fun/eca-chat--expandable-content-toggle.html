@@ -1,0 +1,92 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--expandable-content-toggle – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--expandable-content-toggle is a natively compiled function
+defined in eca-chat-expandable.el.
+Toggle the expandable-content of ID.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--expandable-content-toggle</code></h1><p><span class="m"><code>eca-chat--expandable-content-toggle</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-chat-expandable.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--expandable-content-toggle <a href="#:~:text=of-,ID"><span class="arg">ID</span></a> <span class="ty">&amp;optional</span> FORCE? CLOSE?)
+</code></pre>
+<h2>Documentation</h2>
+<p>Toggle the expandable-content of <span class="arg">ID</span>.
+<p>If FORCE? decide to CLOSE? or not.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-expandable.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--expandable-content-toggle</span> (id <span class="ty">&amp;optional</span> force? close?)
+  <span class="doc">"Toggle the expandable-content of ID.
+If FORCE? decide to CLOSE? or not."</span>
+  (<span class="k">when-let*</span> ((ov-label (eca-chat--get-expandable-content id)))
+    (<span class="k">let*</span> ((inhibit-read-only t)
+           (ov-content (overlay-get ov-label 'eca-chat--expandable-content-ov-content))
+           (content (overlay-get ov-content 'eca-chat--expandable-content-content))
+           (segments (overlay-get ov-label 'eca-chat--expandable-content-segments))
+           (children (eca-chat--segments-children segments))
+           (has-content? (<span class="k">or</span> (not (string-empty-p content)) children))
+           (currently-open? (overlay-get ov-label 'eca-chat--expandable-content-toggle))
+           (close? (<span class="k">if</span> force?
+                       close?
+                     currently-open?))
+           <span class="cd">;; </span><span class="c">Skip when force-toggling to a state we're already in
+</span>           (already-in-state? (<span class="k">and</span> force?
+                                   (<span class="k">if</span> close? (not currently-open?) currently-open?))))
+      (<span class="k">unless</span> already-in-state?
+        (<span class="k">eca-chat--with-preserved-scroll</span>
+          (<span class="k">save-excursion</span>
+            (goto-char (overlay-start ov-label))
+            (<span class="k">if</span> (<span class="k">or</span> close? (not has-content?))
+                (<span class="k">progn</span>
+                  (put-text-property (point) (line-end-position)
+                                     'line-prefix (<span class="k">when</span> has-content?
+                                                    (overlay-get ov-label 'eca-chat--expandable-content-open-icon)))
+                  (goto-char (1+ (line-end-position)))
+                  <span class="cd">;; </span><span class="c">Destroy nested blocks first (they are within content region)
+</span>                  (eca-chat--destroy-nested-blocks id)
+                  (delete-region (overlay-start ov-content) (overlay-end ov-content))
+                  (overlay-put ov-content 'face nil)
+                  (overlay-put ov-label 'eca-chat--expandable-content-toggle nil))
+              (<span class="k">progn</span>
+                (put-text-property (point) (line-end-position)
+                                   'line-prefix (overlay-get ov-label 'eca-chat--expandable-content-close-icon))
+                (goto-char (overlay-start ov-content))
+                (<span class="k">if</span> segments
+                    <span class="cd">;; </span><span class="c">Segments-aware rendering: interleave text and children in order
+</span>                    (<span class="k">let*</span> ((full-content content)
+                           (segmented-text (eca-chat--segments-total-text segments))
+                           (trailing-text (<span class="k">when</span> (&gt; (length full-content) (length segmented-text))
+                                            (substring full-content (length segmented-text)))))
+                      (<span class="k">dolist</span> (seg segments)
+                        (<span class="k">pcase</span> (plist-get seg <span class="bi">:type</span>)
+                          ('text (eca-chat--insert (plist-get seg <span class="bi">:content</span>)))
+                          ('child
+                           (eca-chat--render-nested-block ov-label seg)
+                           <span class="cd">;; </span><span class="c">render-nested-block uses save-excursion so point stays
+</span>                           <span class="cd">;; </span><span class="c">before the child; advance past it to maintain order
+</span>                           (goto-char (overlay-end ov-content)))))
+                      <span class="cd">;; </span><span class="c">Insert any trailing text not yet captured in segments
+</span>                      (<span class="k">when</span> (<span class="k">and</span> trailing-text (not (string-empty-p trailing-text)))
+                        (eca-chat--insert trailing-text))
+                      (eca-chat--insert <span class="s">"\n"</span>))
+                  <span class="cd">;; </span><span class="c">Legacy path: no segments, insert content then children
+</span>                  (eca-chat--insert content <span class="s">"\n"</span>)
+                  (<span class="k">dolist</span> (child-spec children)
+                    (eca-chat--render-nested-block ov-label child-spec)))
+                (<span class="k">let</span> ((block-face (eca-chat--expandable-block-face
+                                  (overlay-get ov-content 'eca-chat--expandable-block-nested))))
+                  (overlay-put ov-content 'face block-face)
+                  (eca-chat--apply-face-to-line-prefixes
+                   (overlay-start ov-content) (overlay-end ov-content) block-face))
+                (overlay-put ov-label 'eca-chat--expandable-content-toggle t)))
+            <span class="cd">;; </span><span class="c">Repaint nested label's line-prefix after icon swap
+</span>            (eca-chat--paint-nested-label ov-label)))
+        <span class="cd">;; </span><span class="c">Toggling open inserts block content into the read-only history
+</span>        <span class="cd">;; </span><span class="c">region, so re-protect it (from point-min, since the block may
+</span>        <span class="cd">;; </span><span class="c">belong to an earlier turn outside the streamed scope).
+</span>        (eca-chat--protect-non-prompt))
+      close?)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

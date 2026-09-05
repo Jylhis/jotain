@@ -1,0 +1,77 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--raw-key-sequence – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--raw-key-sequence is a natively compiled function defined in
+ghostel.el.
+Build a raw escape sequence for KEY-NAME with MODS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--raw-key-sequence</code></h1><p><span class="m"><code>ghostel--raw-key-sequence</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--raw-key-sequence <a href="#:~:text=for-,KEY-NAME"><span class="arg">KEY-NAME</span></a> <a href="#:~:text=with-,MODS"><span class="arg">MODS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Build a raw escape sequence for <span class="arg">KEY-NAME</span> with <span class="arg">MODS</span>.
+<p>Returns the sequence string, or nil for unknown keys.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--raw-key-sequence</span> (key-name mods)
+  <span class="doc">"Build a raw escape sequence for KEY-NAME with MODS.
+Returns the sequence string, or nil for unknown keys."</span>
+  (<span class="k">let</span> ((mod-num (ghostel--modifier-number mods)))
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">Ctrl + a single ASCII char with a C0 control code.  Both a-z and
+</span>     <span class="cd">;; </span><span class="c">the @ A-Z [ \ ] ^ _ range fold to (char &amp; #x1f): ctrl-a=1,
+</span>     <span class="cd">;; </span><span class="c">ctrl-z=26, ctrl-^=#x1e, ctrl-_=#x1f (readline / zle undo).
+</span>     <span class="cd">;; </span><span class="c">Meta additionally prefixes the C0 byte with ESC.
+</span>     ((<span class="k">and</span> (= (length key-name) 1)
+           (<span class="k">let</span> ((c (aref key-name 0)))
+             (<span class="k">or</span> (<span class="k">and</span> (&lt;= ?a c) (&lt;= c ?z))
+                 (<span class="k">and</span> (&lt;= ?@ c) (&lt;= c ?_))))
+           (&gt; (logand mod-num 4) 0))        <span class="cd">; </span><span class="c">ctrl bit
+</span>      (<span class="k">let</span> ((c0 (string (logand (aref key-name 0) #x1f))))
+        (<span class="k">if</span> (&gt; (logand mod-num 2) 0)        <span class="cd">; </span><span class="c">alt/meta bit
+</span>            (concat <span class="s">"\e"</span> c0)
+          c0)))
+     <span class="cd">;; </span><span class="c">Meta + printable ASCII → ESC + char (legacy alt encoding)
+</span>     ((<span class="k">and</span> (= (length key-name) 1)
+           (<span class="k">let</span> ((c (aref key-name 0)))
+             (<span class="k">and</span> (&gt;= c 32) (&lt;= c 126)))
+           (&gt; (logand mod-num 2) 0))        <span class="cd">; </span><span class="c">alt/meta bit
+</span>      (format <span class="s">"\e%c"</span> (aref key-name 0)))
+     <span class="cd">;; </span><span class="c">Simple special keys (CSI u encoding for modified variants)
+</span>     ((string= key-name <span class="s">"backspace"</span>) (<span class="k">if</span> (&gt; mod-num 0) (format <span class="s">"\e[127;%du"</span> (1+ mod-num)) <span class="s">"\x7f"</span>))
+     ((string= key-name <span class="s">"return"</span>)    (<span class="k">if</span> (&gt; mod-num 0) (format <span class="s">"\e[13;%du"</span> (1+ mod-num)) <span class="s">"\r"</span>))
+     ((string= key-name <span class="s">"tab"</span>)       (<span class="k">if</span> (&gt; mod-num 0) (format <span class="s">"\e[9;%du"</span> (1+ mod-num)) <span class="s">"\t"</span>))
+     ((string= key-name <span class="s">"escape"</span>)    (<span class="k">if</span> (&gt; mod-num 0) (format <span class="s">"\e[27;%du"</span> (1+ mod-num)) <span class="s">"\e"</span>))
+     ((string= key-name <span class="s">"space"</span>)     (<span class="k">if</span> (&gt; mod-num 0) (format <span class="s">"\e[32;%du"</span> (1+ mod-num)) <span class="s">" "</span>))
+     <span class="cd">;; </span><span class="c">Cursor keys
+</span>     ((string= key-name <span class="s">"up"</span>)    (ghostel--csi-letter <span class="s">"A"</span> mod-num))
+     ((string= key-name <span class="s">"down"</span>)  (ghostel--csi-letter <span class="s">"B"</span> mod-num))
+     ((string= key-name <span class="s">"right"</span>) (ghostel--csi-letter <span class="s">"C"</span> mod-num))
+     ((string= key-name <span class="s">"left"</span>)  (ghostel--csi-letter <span class="s">"D"</span> mod-num))
+     ((string= key-name <span class="s">"home"</span>)  (ghostel--csi-letter <span class="s">"H"</span> mod-num))
+     ((string= key-name <span class="s">"end"</span>)   (ghostel--csi-letter <span class="s">"F"</span> mod-num))
+     <span class="cd">;; </span><span class="c">Tilde keys
+</span>     ((string= key-name <span class="s">"insert"</span>) (ghostel--csi-tilde 2 mod-num))
+     ((string= key-name <span class="s">"delete"</span>) (ghostel--csi-tilde 3 mod-num))
+     ((string= key-name <span class="s">"prior"</span>)  (ghostel--csi-tilde 5 mod-num))
+     ((string= key-name <span class="s">"next"</span>)   (ghostel--csi-tilde 6 mod-num))
+     <span class="cd">;; </span><span class="c">Function keys (F1-F4 use SS3, F5-F12 use tilde)
+</span>     ((string= key-name <span class="s">"f1"</span>)  (<span class="k">if</span> (&gt; mod-num 0) (format <span class="s">"\e[1;%dP"</span> (1+ mod-num)) <span class="s">"\eOP"</span>))
+     ((string= key-name <span class="s">"f2"</span>)  (<span class="k">if</span> (&gt; mod-num 0) (format <span class="s">"\e[1;%dQ"</span> (1+ mod-num)) <span class="s">"\eOQ"</span>))
+     ((string= key-name <span class="s">"f3"</span>)  (<span class="k">if</span> (&gt; mod-num 0) (format <span class="s">"\e[1;%dR"</span> (1+ mod-num)) <span class="s">"\eOR"</span>))
+     ((string= key-name <span class="s">"f4"</span>)  (<span class="k">if</span> (&gt; mod-num 0) (format <span class="s">"\e[1;%dS"</span> (1+ mod-num)) <span class="s">"\eOS"</span>))
+     ((string= key-name <span class="s">"f5"</span>)  (ghostel--csi-tilde 15 mod-num))
+     ((string= key-name <span class="s">"f6"</span>)  (ghostel--csi-tilde 17 mod-num))
+     ((string= key-name <span class="s">"f7"</span>)  (ghostel--csi-tilde 18 mod-num))
+     ((string= key-name <span class="s">"f8"</span>)  (ghostel--csi-tilde 19 mod-num))
+     ((string= key-name <span class="s">"f9"</span>)  (ghostel--csi-tilde 20 mod-num))
+     ((string= key-name <span class="s">"f10"</span>) (ghostel--csi-tilde 21 mod-num))
+     ((string= key-name <span class="s">"f11"</span>) (ghostel--csi-tilde 23 mod-num))
+     ((string= key-name <span class="s">"f12"</span>) (ghostel--csi-tilde 24 mod-num))
+     (t nil))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

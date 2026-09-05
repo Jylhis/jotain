@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-font-lock-compose-symbol – Emacs Documentation Online</title>
+<meta name="description" content="haskell-font-lock-compose-symbol is a natively compiled function
+defined in haskell-font-lock.el.
+Compose a sequence of ascii chars into a symbol.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-font-lock-compose-symbol</code></h1><p><span class="m"><code>haskell-font-lock-compose-symbol</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">haskell-font-lock.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-font-lock-compose-symbol <a href="#:~:text="><span class="arg">ALIST</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Compose a sequence of ascii chars into a symbol.
+<p>Regexp match data 0 points to the chars.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-font-lock.el</span>
+(<span class="k">defun</span> <span class="f">haskell-font-lock-compose-symbol</span> (alist)
+  <span class="doc">"Compose a sequence of ascii chars into a symbol.
+Regexp match data 0 points to the chars."</span>
+  <span class="cd">;; </span><span class="c">Check that the chars should really be composed into a symbol.
+</span>  (<span class="k">let*</span> ((start (match-beginning 0))
+         (end (match-end 0))
+         (syntaxes (<span class="k">cond</span>
+                    ((eq (char-syntax (char-after start)) ?w) '(?w))
+                    ((eq (char-syntax (char-after start)) ?.) '(?.))
+                    <span class="cd">;; </span><span class="c">Special case for the . used for qualified names.
+</span>                    ((<span class="k">and</span> (eq (char-after start) ?\.) (= end (1+ start)))
+                     '(?_ ?\\ ?w))
+                    (t '(?_ ?\\))))
+         sym-data)
+    (<span class="k">if</span> (<span class="k">or</span> (memq (char-syntax (<span class="k">or</span> (char-before start) ?\ )) syntaxes)
+            (memq (char-syntax (<span class="k">or</span> (char-after end) ?\ )) syntaxes)
+            (<span class="k">or</span> (elt (syntax-ppss) 3) (elt (syntax-ppss) 4))
+            (<span class="k">and</span> (consp (<span class="k">setq</span> sym-data (cdr (assoc (match-string 0) alist))))
+                 (<span class="k">let</span> ((pred (cadr sym-data)))
+                   (<span class="k">setq</span> sym-data (car sym-data))
+                   (funcall pred start))))
+        <span class="cd">;; </span><span class="c">No composition for you.  Let's actually remove any composition
+</span>        <span class="cd">;; </span><span class="c">we may have added earlier and which is now incorrect.
+</span>        (remove-text-properties start end '(composition))
+      <span class="cd">;; </span><span class="c">That's a symbol alright, so add the composition.
+</span>      (compose-region start end sym-data)))
+  <span class="cd">;; </span><span class="c">Return nil because we're not adding any face property.
+</span>  nil)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-query-mode – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-query-mode is a natively compiled function defined in
+combobulate-query.el.
+Major mode for interactively constructing tree-sitter queries.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-query-mode</code></h1><p><span class="m"><code>combobulate-query-mode</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">combobulate-query.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-query-mode)
+</code></pre>
+<h2>Documentation</h2>
+<p>Major mode for interactively constructing tree-sitter queries.
+<p>To use, call <kbd>M-x combobulate-query-builder</kbd> (<a href="../fun/combobulate-query-builder.html"><code>combobulate-query-builder</code></a>).
+<p>In addition to any hooks its parent mode <a href="../fun/prog-mode.html"><code>prog-mode</code></a> might have run,
+this mode runs the hook <a href="../var/combobulate-query-mode-hook.html"><code>combobulate-query-mode-hook</code></a>, as the final or
+penultimate step during initialization.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-query.el</span>
+(<span class="k">define-derived-mode</span> <span class="f">combobulate-query-mode</span> prog-mode <span class="s">"Combobulate Query Builder"</span>
+  <span class="doc">"Major mode for interactively constructing tree-sitter queries.
+
+To use, call \\[</span><span class="m doc">combobulate-query-builder</span><span class="doc">]."</span>
+  <span class="bi">:syntax-table</span> combobulate-query-syntax-table
+  <span class="bi">:interactive</span> nil
+  <span class="bi">:group</span> 'combobulate
+  <span class="bi">:abbrev-table</span> scheme-mode-abbrev-table
+  (<span class="k">let</span> ((parser-lang-name (combobulate-parser-language combobulate-query-builder-parser)))
+    (<span class="k">setq</span> combobulate-query-builder-rules (combobulate-production-rules-get-rules parser-lang-name))
+    (<span class="k">setq</span> combobulate-query-builder-rule-names (combobulate-production-rules-get-types parser-lang-name))
+    (<span class="k">setq</span> combobulate-query-builder-field-names
+          (mapcar #'combobulate-query-builder-prop-name-to-field-name
+                  (seq-remove (<span class="k">lambda</span> (prop) (equal prop <span class="bi">:*unnamed*</span>))
+                              (seq-uniq (mapcan #'map-keys (mapcar #'cadr (combobulate-production-rules-get-rules parser-lang-name)))))))
+    (<span class="k">setq-local</span> comment-start <span class="s">";"</span>
+                comment-end <span class="s">""</span>)
+    (<span class="k">setq-local</span> completion-at-point-functions '(combobulate-query-builder-completion-at-point-function))
+    (combobulate-query-builder-update-header <span class="s">"Ready"</span>)
+    (<span class="k">setq-local</span> combobulate-query-builder-font-lock-keywords
+                <span class="cd">;; </span><span class="c">all the various supported rule names
+</span>                `((,(regexp-opt combobulate-query-builder-rule-names)
+                   . 'combobulate-query-query-constant-face)
+                  <span class="cd">;; </span><span class="c">`</span><span class="m c">field:</span><span class="c">' names
+</span>                  (,(regexp-opt
+                     combobulate-query-builder-field-names)
+                   . 'combobulate-query-query-keyword-face)
+                  ,@combobulate-query-match-face-alist
+                  <span class="cd">;; </span><span class="c">@match capturing groups
+</span>                  (<span class="s">"#</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[a-zA-Z0-9-_?]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> . 'combobulate-query-query-builtin-face)
+                  <span class="cd">;; </span><span class="c">#predicates
+</span>                  (<span class="s">"#</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[a-zA-Z0-9-_?]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> . 'combobulate-query-query-predicate-builtin-face)
+                  <span class="cd">;; </span><span class="c">misc. quantifiers and operators
+</span>                  (<span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[?!+*]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> . 'combobulate-query-query-doc-markup-face)
+                  <span class="cd">;; </span><span class="c">match `</span><span class="m c">.</span><span class="c">' anchors
+</span>                  (<span class="s">"\\Sw&lt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[.]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\Sw"</span> . 'combobulate-query-query-constant-face)
+                  <span class="cd">;; </span><span class="c">strings
+</span>                  (<span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s">\"]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\""</span> . 'combobulate-query-query-string-face)
+                  <span class="cd">;; </span><span class="c">anonymous named and unnamed nodes
+</span>                  (<span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">(_)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\s-+_\s-+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> . 'combobulate-query-query-anonymous-face)))
+    (<span class="k">setq-local</span> font-lock-defaults '(combobulate-query-builder-font-lock-keywords t))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

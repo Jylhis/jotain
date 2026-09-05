@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg-smie--monadic-rule – Emacs Documentation Online</title>
+<meta name="description" content="tuareg-smie--monadic-rule is a natively compiled function defined in
+tuareg.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg-smie--monadic-rule</code></h1><p><span class="m"><code>tuareg-smie--monadic-rule</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg-smie--monadic-rule <span class="arg">TOKEN</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg-smie--monadic-rule</span> (token)
+  <span class="cd">;; </span><span class="c">When trying to indent a &gt;&gt;=, try to look back to find any earlier
+</span>  <span class="cd">;; </span><span class="c">&gt;&gt;= in a sequence of "monadic steps".
+</span>  (<span class="k">or</span> (<span class="k">and</span> (equal token <span class="s">"&gt;…"</span>) (looking-at tuareg-smie--monadic-op-re)
+           (<span class="k">save-excursion</span>
+             (tuareg-smie--forward-token)
+             (<span class="k">let</span> ((indent nil))
+               (<span class="k">while</span>
+                   (<span class="k">let</span> ((parent-data (smie-backward-sexp 'halfsexp)))
+                     (<span class="k">cond</span>
+                      ((car parent-data) (member (nth 2 parent-data) '(<span class="s">"-&gt;"</span>)))
+                      ((member (nth 2 parent-data) '(<span class="s">";"</span> <span class="s">"d="</span>)) nil)
+                      ((member (nth 2 parent-data) '(<span class="s">"fun"</span> <span class="s">"function"</span>))
+                       (<span class="k">if</span> (member (tuareg-smie--backward-token)
+                                   tuareg-smie--monadic-operators)
+                           (<span class="k">progn</span>
+                             (<span class="k">setq</span> indent (cons 'column
+                                                (smie-indent-virtual)))
+                             nil)
+                         t)))))
+               indent)))
+      <span class="cd">;; </span><span class="c">In "foo &gt;&gt;= fun x -&gt; bar" indent `</span><span class="m c">bar</span><span class="c">' relative to `</span><span class="m c">foo</span><span class="c">'.
+</span>      (<span class="k">and</span> (member token '(<span class="s">"fun"</span> <span class="s">"function"</span>)) (not (smie-rule-bolp))
+           (<span class="k">save-excursion</span>
+             (<span class="k">let</span> ((prev (tuareg-smie-backward-token)))
+               <span class="cd">;; </span><span class="c">FIXME: Should we use the same loop as above?
+</span>               (<span class="k">and</span> (equal prev <span class="s">"&gt;…"</span>) (looking-at tuareg-smie--monadic-op-re)
+                    (<span class="k">progn</span> (smie-backward-sexp prev)
+                           (cons 'column (current-column)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

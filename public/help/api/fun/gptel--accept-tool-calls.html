@@ -1,0 +1,70 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--accept-tool-calls – Emacs Documentation Online</title>
+<meta name="description" content="gptel--accept-tool-calls is an interactive and natively compiled
+function defined in gptel.el.
+Run pending tool-calls.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--accept-tool-calls</code></h1><p><span class="m"><code>gptel--accept-tool-calls</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--accept-tool-calls <span class="ty">&amp;optional</span> <a href="#:~:text=calls.-,TOOL-CALLS"><span class="arg">TOOL-CALLS</span></a> <a href="#:~:text=list,-,OV"><span class="arg">OV</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run pending tool-calls.
+<p><span class="arg">TOOL-CALLS</span> is the edited tool call list, <span class="arg">OV</span> is the tool call dispatch
+overlay in the query buffer.
+<h2>Key Bindings</h2>
+<p><span class="v">gptel-tool-call-actions-map</span> <span class="key">C-c C-c</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--accept-tool-calls</span> (<span class="ty">&amp;optional</span> tool-calls ov)
+  <span class="doc">"Run pending tool-calls.
+
+TOOL-CALLS is the edited tool call list, OV is the tool call dispatch
+overlay in the query buffer."</span>
+  (<span class="k">interactive</span> (<span class="k">pcase-let</span> ((`(,resp . ,o) (get-char-property-and-overlay
+                                           (point) 'gptel-tool)))
+                 (list resp o)))
+  (<span class="k">when</span> (overlayp ov)                   <span class="cd">;</span><span class="c">Update UI indicator
+</span>    (<span class="k">with-current-buffer</span> (overlay-buffer ov)
+      (<span class="k">when</span> gptel-mode
+        (<span class="k">let</span> ((names (<span class="k">cl-loop</span> for call in tool-calls
+                              collect (gptel-tool-name (car call)))))
+          (gptel--update-status
+           (concat
+            (propertize
+             (<span class="k">if</span> (length&gt; names 1) <span class="s">" Calling tools ("</span> <span class="s">" Calling tool ("</span>)
+             'face 'mode-line-emphasis)
+            (mapconcat (<span class="k">lambda</span> (name) (propertize name 'face 'font-lock-keyword-face))
+                       names (propertize <span class="s">", "</span> 'face 'mode-line-emphasis))
+            (propertize <span class="s">")"</span> 'face 'mode-line-emphasis)))))))
+  <span class="cd">;; </span><span class="c">Clear the overlays first, because we need the buffer to be cleaned up
+</span>  <span class="cd">;; </span><span class="c">before inserting synchronous tool results.
+</span>  (<span class="k">when</span> (<span class="k">and</span> (overlayp ov) (overlay-buffer ov))
+    (<span class="k">with-current-buffer</span> (overlay-buffer ov)
+      (<span class="k">when-let*</span> ((preview-handles (overlay-get ov 'previews)))
+        (<span class="k">dolist</span> (func-to-handle preview-handles)
+          (<span class="k">when</span> (car func-to-handle) (apply func-to-handle))))
+      (<span class="k">dolist</span> (prompt-ov (overlay-get ov 'prompt))
+        (<span class="k">when-let*</span> (((overlay-buffer prompt-ov))
+                    (inhibit-read-only t))
+          (delete-region (overlay-start prompt-ov)
+                         (overlay-end prompt-ov)))))
+    (delete-overlay ov))
+  (message <span class="s">"Continuing query..."</span>)
+  (<span class="k">cl-loop</span> for (tool-spec arg-plist process-tool-result) in tool-calls
+           for arg-values = (gptel--map-tool-args tool-spec arg-plist)
+           do
+           (<span class="k">if</span> (gptel-tool-async tool-spec)
+               (apply (gptel-tool-function tool-spec)
+                      process-tool-result arg-values)
+             (<span class="k">let</span> ((result
+                    (<span class="k">condition-case</span> errdata
+                        (apply (gptel-tool-function tool-spec) arg-values)
+                      (<span class="w">error</span> (mapconcat #'gptel--to-string errdata <span class="s">" "</span>)))))
+               (funcall process-tool-result result)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

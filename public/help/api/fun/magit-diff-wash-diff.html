@@ -1,0 +1,151 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-diff-wash-diff – Emacs Documentation Online</title>
+<meta name="description" content="magit-diff-wash-diff is a natively compiled function defined in
+magit-diff.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-diff-wash-diff</code></h1><p><span class="m"><code>magit-diff-wash-diff</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-diff-wash-diff <span class="arg">ARGS</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-diff.el</span>
+(<span class="k">defun</span> <span class="f">magit-diff-wash-diff</span> (args)
+  (<span class="k">cond</span>
+    ((looking-at <span class="s">"^Submodule"</span>)
+     (magit-diff-wash-submodule))
+    ((looking-at <span class="s">"^\\* Unmerged path </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+     (<span class="k">let</span> ((file (magit-decode-git-path (match-str 1))))
+       (magit-delete-line)
+       (<span class="k">unless</span> (<span class="k">and</span> (derived-mode-p 'magit-status-mode)
+                    (not (member <span class="s">"--cached"</span> args)))
+         (<span class="k">magit-insert-section</span> (file file)
+           (insert (propertize
+                    (format <span class="s">"unmerged   %s%s"</span> file
+                            (<span class="k">pcase</span> (cddr (car (magit-file-status file)))
+                              ('(?D ?D) <span class="s">" (both deleted)"</span>)
+                              ('(?D ?U) <span class="s">" (deleted by us)"</span>)
+                              ('(?U ?D) <span class="s">" (deleted by them)"</span>)
+                              ('(?A ?A) <span class="s">" (both added)"</span>)
+                              ('(?A ?U) <span class="s">" (added by us)"</span>)
+                              ('(?U ?A) <span class="s">" (added by them)"</span>)
+                              ('(?U ?U) <span class="s">""</span>)))
+                    'font-lock-face 'magit-diff-file-heading))
+           (insert ?\n))))
+     t)
+    ((looking-at magit-diff-conflict-headline-re)
+     (<span class="k">let</span> ((long-status (match-str 0))
+           (status <span class="s">"BUG"</span>)
+           file orig base)
+       (<span class="k">cond</span> ((equal long-status <span class="s">"merged"</span>)
+              (<span class="k">setq</span> status long-status)
+              (<span class="k">setq</span> long-status nil))
+             ((<span class="k">setq</span> status
+                    (<span class="k">pcase-exhaustive</span> long-status
+                      (<span class="s">"added in remote"</span>   <span class="s">"new file"</span>)
+                      (<span class="s">"added in both"</span>     <span class="s">"new file"</span>)
+                      (<span class="s">"added in local"</span>    <span class="s">"new file"</span>)
+                      (<span class="s">"removed in both"</span>   <span class="s">"removed"</span>)
+                      (<span class="s">"changed in both"</span>   <span class="s">"changed"</span>)
+                      (<span class="s">"removed in local"</span>  <span class="s">"removed"</span>)
+                      (<span class="s">"removed in remote"</span> <span class="s">"removed"</span>)))))
+       (magit-delete-line)
+       (<span class="k">while</span> (looking-at
+               <span class="s">"^  </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s"> ]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> +[0-9]\\{6\\} </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[a-z0-9]\\{40,\\}</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">$"</span>)
+         (<span class="k">magit-bind-match-strings</span> (side _blob name) nil
+           (<span class="k">pcase</span> side
+             (<span class="s">"result"</span> (<span class="k">setq</span> file name))
+             (<span class="s">"our"</span>    (<span class="k">setq</span> orig name))
+             (<span class="s">"their"</span>  (<span class="k">setq</span> file name))
+             (<span class="s">"base"</span>   (<span class="k">setq</span> base name))))
+         (magit-delete-line))
+       (<span class="k">when</span> orig (<span class="k">setq</span> orig (magit-decode-git-path orig)))
+       (<span class="k">when</span> file (<span class="k">setq</span> file (magit-decode-git-path file)))
+       (magit-diff-insert-file-section
+        (<span class="k">or</span> file base) orig status nil nil nil nil long-status)))
+    <span class="cd">;; </span><span class="c">The files on this line may be ambiguous due to whitespace.
+</span>    <span class="cd">;; </span><span class="c">That's okay. We can get their names from subsequent headers.
+</span>    ((looking-at <span class="s">"^diff --\
+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?1:</span><span class="s">git</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?2:</span><span class="s">.+?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> \\2</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?\
+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">cc</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">combined</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?3:</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+     (<span class="k">let</span> ((status (<span class="k">cond</span> ((equal (match-str 1) <span class="s">"git"</span>)           <span class="s">"modified"</span>)
+                         ((derived-mode-p 'magit-revision-mode) <span class="s">"resolved"</span>)
+                         (t                                     <span class="s">"unmerged"</span>)))
+           (orig nil)
+           (file (<span class="k">or</span> (match-str 2) (match-str 3)))
+           (header (list (buffer-substring-no-properties
+                          (line-beginning-position) (1+ (line-end-position)))))
+           (modes nil)
+           (rename nil)
+           (binary nil))
+       (magit-delete-line)
+       (<span class="k">while</span> (not (<span class="k">or</span> (eobp)
+                       (looking-at magit-diff-headline-re)
+                       (looking-at magit-log-heading-re)))
+         (<span class="k">cond</span>
+           ((looking-at <span class="s">"old mode </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[</span><span class="neg s">^</span><span class="s">\n]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\nnew mode </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[</span><span class="neg s">^</span><span class="s">\n]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\n"</span>)
+            (<span class="k">setq</span> modes (match-str 0)))
+           ((looking-at <span class="s">"deleted file .+\n"</span>)
+            (<span class="k">setq</span> status <span class="s">"deleted"</span>))
+           ((looking-at <span class="s">"new file .+\n"</span>)
+            (<span class="k">setq</span> status <span class="s">"new file"</span>))
+           ((looking-at <span class="s">"rename from </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\nrename to </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\n"</span>)
+            (<span class="k">setq</span> rename (match-str 0))
+            (<span class="k">setq</span> orig (match-str 1))
+            (<span class="k">setq</span> file (match-str 2))
+            (<span class="k">setq</span> status <span class="s">"renamed"</span>))
+           ((looking-at <span class="s">"copy from </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\ncopy to </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\n"</span>)
+            (<span class="k">setq</span> orig (match-str 1))
+            (<span class="k">setq</span> file (match-str 2))
+            (<span class="k">setq</span> status <span class="s">"copied"</span>))
+           ((looking-at <span class="s">"similarity index .+\n"</span>))
+           ((looking-at <span class="s">"dissimilarity index .+\n"</span>))
+           ((looking-at <span class="s">"index .+\n"</span>))
+           ((looking-at <span class="s">"--- </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\t?\n"</span>)
+            (<span class="k">unless</span> (equal (match-str 1) <span class="s">"/dev/null"</span>)
+              (<span class="k">setq</span> orig (match-str 1))))
+           ((looking-at <span class="s">"\\+\\+\\+ </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\t?\n"</span>)
+            (<span class="k">unless</span> (equal (match-str 1) <span class="s">"/dev/null"</span>)
+              (<span class="k">setq</span> file (match-str 1))))
+           ((looking-at <span class="s">"Binary files .+ and .+ differ\n"</span>)
+            (<span class="k">setq</span> binary t))
+           ((looking-at <span class="s">"Binary files differ\n"</span>)
+            (<span class="k">setq</span> binary t))
+           <span class="cd">;; </span><span class="c">TODO Use all combined diff extended headers.
+</span>           ((looking-at <span class="s">"mode .+\n"</span>))
+           ((<span class="w">error</span> <span class="s">"BUG: Unknown extended header: %S"</span>
+                   (buffer-substring (point) (line-end-position)))))
+         <span class="cd">;; </span><span class="c">These headers are treated as some sort of special hunk.
+</span>         (<span class="k">unless</span> (<span class="k">or</span> (string-prefix-p <span class="s">"old mode"</span> (match-str 0))
+                     (string-prefix-p <span class="s">"rename"</span>   (match-str 0)))
+           (<span class="k">push</span> (match-str 0) header))
+         (magit-delete-match))
+       (<span class="k">when</span> orig
+         (<span class="k">setq</span> orig (magit-decode-git-path orig)))
+       (<span class="k">setq</span> file (magit-decode-git-path file))
+       (<span class="k">setq</span> header (nreverse header))
+       <span class="cd">;; </span><span class="c">KLUDGE Before v2.54, "git log" ignored "--no-prefix"
+</span>       <span class="cd">;; </span><span class="c">when "-L" is used.
+</span>       (<span class="k">when</span> (<span class="k">and</span> (magit-git-version&lt; <span class="s">"2.54"</span>)
+                  (derived-mode-p 'magit-log-mode)
+                  (seq-some (##string-prefix-p <span class="s">"-L"</span> %)
+                            magit-buffer-log-args))
+         (<span class="k">when</span> orig
+           (<span class="k">setq</span> orig (substring orig 2)))
+         (<span class="k">setq</span> file (substring file 2))
+         (<span class="k">setq</span> header (list (<span class="k">save-excursion</span>
+                              (string-match <span class="s">"diff [</span><span class="neg s">^</span><span class="s"> ]+"</span> (car header))
+                              (format <span class="s">"%s %s %s\n"</span>
+                                      (match-str 0 (car header))
+                                      (<span class="k">or</span> orig file)
+                                      (<span class="k">or</span> file orig)))
+                            (format <span class="s">"--- %s\n"</span> (<span class="k">or</span> orig <span class="s">"/dev/null"</span>))
+                            (format <span class="s">"+++ %s\n"</span> (<span class="k">or</span> file <span class="s">"/dev/null"</span>)))))
+       (<span class="k">setq</span> header (string-join header))
+       (magit-diff-insert-file-section
+        file orig status modes rename header binary nil)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

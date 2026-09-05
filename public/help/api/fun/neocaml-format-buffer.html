@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: neocaml-format-buffer – Emacs Documentation Online</title>
+<meta name="description" content="neocaml-format-buffer is an interactive and natively compiled function
+defined in neocaml.el.
+Format the current buffer using ocamlformat.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>neocaml-format-buffer</code></h1><p><span class="m"><code>neocaml-format-buffer</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">neocaml.el</span>.
+<h2>Signature</h2>
+<pre><code>(neocaml-format-buffer)
+</code></pre>
+<h2>Documentation</h2>
+<p>Format the current buffer using <span class="m"><code>ocamlformat</code></span>.
+<p>Pipes the buffer through <a href="../var/neocaml-ocamlformat-program.html"><code>neocaml-ocamlformat-program</code></a> and replaces the
+buffer text with the formatted output, preserving point.  ocamlformat
+formats whole compilation units, so there is no region/defun variant.
+<h2>Key Bindings</h2>
+<p><span class="v">neocaml-base-mode-map</span> <span class="key">C-c C-f</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/6yvzbjq5ljnchx97n8s5w91crk1nh47b-emacs-packages-deps/share/emacs/site-lisp/elpa/neocaml-20260710.532/neocaml.el</span>
+(<span class="k">defun</span> <span class="f">neocaml-format-buffer</span> ()
+  <span class="doc">"Format the current buffer using `</span><span class="m doc">ocamlformat</span><span class="doc">'.
+Pipes the buffer through `</span><span class="m doc">neocaml-ocamlformat-program</span><span class="doc">' and replaces the
+buffer text with the formatted output, preserving point.  ocamlformat
+formats whole compilation units, so there is no region/defun variant."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((outbuf (generate-new-buffer <span class="s">" *neocaml-ocamlformat*"</span>))
+        (errfile (make-temp-file <span class="s">"neocaml-ocamlformat-err"</span>))
+        (orig-point (point))
+        (orig-window-start (window-start)))
+    (<span class="k">unwind-protect</span>
+        (<span class="k">let</span> ((exit-code (apply #'call-process-region
+                                (point-min) (point-max)
+                                neocaml-ocamlformat-program nil
+                                (list outbuf errfile) nil
+                                (neocaml--ocamlformat-args))))
+          (<span class="k">if</span> (zerop exit-code)
+              (<span class="k">progn</span>
+                (erase-buffer)
+                (insert-buffer-substring outbuf)
+                (goto-char (min orig-point (point-max)))
+                (set-window-start (selected-window) orig-window-start))
+            (<span class="w">user-error</span> <span class="s">"Running ocamlformat failed: %s"</span>
+                        (<span class="k">with-temp-buffer</span>
+                          (insert-file-contents errfile)
+                          (string-trim (buffer-string))))))
+      (kill-buffer outbuf)
+      (delete-file errfile))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

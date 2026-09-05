@@ -1,0 +1,220 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb--request-spec-callback – Emacs Documentation Online</title>
+<meta name="description" content="verb--request-spec-callback is a natively compiled function defined in
+verb.el.
+Callback for verb--request-spec-send for request RS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb--request-spec-callback</code></h1><p><span class="m"><code>verb--request-spec-callback</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">verb.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb--request-spec-callback <a href="#:~:text=from-,STATUS"><span class="arg">STATUS</span></a> <a href="#:~:text=request-,RS"><span class="arg">RS</span></a> <a href="#:~:text=STATUS.-,RESPONSE-BUF"><span class="arg">RESPONSE-BUF</span></a> <a href="#:~:text=freely.-,START"><span class="arg">START</span></a> <a href="#:~:text=sent.-,TIMEOUT-TIMER"><span class="arg">TIMEOUT-TIMER</span></a> <a href="#:~:text=nil.-,WHERE"><span class="arg">WHERE</span></a> <a href="#:~:text=point).-,NUM"><span class="arg">NUM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Callback for <a href="../fun/verb--request-spec-send.html"><code>verb--request-spec-send</code></a> for request <span class="arg">RS</span>.
+<p>Set up the current buffer so that it can be used to view the HTTP
+response in a user-friendly way.
+<p>More response information can be read from <span class="arg">STATUS</span>.
+<span class="arg">RESPONSE-BUF</span> points to a buffer where the response should be copied
+to, which the user can then use or edit freely.
+<span class="arg">START</span> contains a floating point number indicating the timestamp at
+which the request was sent.
+<span class="arg">TIMEOUT-TIMER</span> contains a timer set to call <a href="../fun/verb--timeout-warn.html"><code>verb--timeout-warn</code></a>, or
+nil.
+<span class="arg">WHERE</span> describes where the results should be shown in (see
+<a href="../fun/verb-send-request-on-point.html"><code>verb-send-request-on-point</code></a>).
+<span class="arg">NUM</span> is this request's identification number.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb.el</span>
+(<span class="k">defun</span> <span class="f">verb--request-spec-callback</span> (status rs response-buf start timeout-timer
+                                           where num)
+  <span class="doc">"Callback for `</span><span class="m doc">verb--request-spec-send</span><span class="doc">' for request RS.
+Set up the current buffer so that it can be used to view the HTTP
+response in a user-friendly way.
+
+More response information can be read from STATUS.
+RESPONSE-BUF points to a buffer where the response should be copied
+to, which the user can then use or edit freely.
+START contains a floating point number indicating the timestamp at
+which the request was sent.
+TIMEOUT-TIMER contains a timer set to call `</span><span class="m doc">verb--timeout-warn</span><span class="doc">', or
+nil.
+WHERE describes where the results should be shown in (see
+`</span><span class="m doc">verb-send-request-on-point</span><span class="doc">').
+NUM is this request's identification number."</span>
+  (<span class="k">when</span> timeout-timer
+    (cancel-timer timeout-timer))
+
+  (verb--teardown-request-environment rs)
+
+  <span class="cd">;; </span><span class="c">Handle errors first.
+</span>  (<span class="k">when-let</span> ((http-error (plist-get status <span class="bi">:error</span>))
+             (error-info (cdr http-error))
+             (error-code (car error-info))
+             (url (<span class="k">oref</span> rs url)))
+    <span class="cd">;; </span><span class="c">If there's an HTTP error code (404, 405, etc.) in the error
+</span>    <span class="cd">;; </span><span class="c">information, or if we hit the max redirections limit, continue
+</span>    <span class="cd">;; </span><span class="c">as usual.
+</span>    (<span class="k">unless</span> (<span class="k">or</span> (numberp (<span class="k">and</span> (eq error-code 'http)
+                              (cadr error-info)))
+                (eq error-code 'http-redirect-limit))
+      (kill-buffer (current-buffer))
+      (kill-buffer response-buf)
+      (<span class="k">let</span> ((msg (format <span class="s">"Request error: could not connect to %s:%s"</span>
+                         (url-host url) (url-port url))))
+        (verb-util--log num 'E msg)
+        (verb-util--log num 'E <span class="s">"Error details: %s"</span> http-error)
+        (<span class="w">user-error</span> <span class="s">"%s"</span> msg))))
+
+  <span class="cd">;; </span><span class="c">No errors, continue to read response.
+</span>  (<span class="k">let</span> ((elapsed (- (time-to-seconds) start))
+        (original-buffer (current-buffer))
+        status-line headers content-type charset coding-system body-bytes
+        binary-handler text-handler)
+
+    (widen)
+    (goto-char (point-min))
+    <span class="cd">;; </span><span class="c">Skip HTTP/1.X status line.
+</span>    (<span class="k">setq</span> status-line (verb-util--nonempty-string
+                       (buffer-substring-no-properties (point)
+                                                       (line-end-position))))
+
+    (verb-util--log num 'I <span class="s">"%s"</span> status-line)
+
+    (forward-line)
+    <span class="cd">;; </span><span class="c">Skip all HTTP headers.
+</span>    (<span class="k">while</span> (re-search-forward verb-util--http-header-parse-regexp
+                              (line-end-position) t)
+      (<span class="k">let</span> ((key (string-trim (match-string 1)))
+            (value (string-trim (match-string 2))))
+        <span class="cd">;; </span><span class="c">Save header to alist.
+</span>        (<span class="k">push</span> (cons key value) headers)
+        (<span class="k">unless</span> (eobp) (forward-char))))
+
+    <span class="cd">;; </span><span class="c">Read Content-Type and charset.
+</span>    (<span class="k">setq</span> content-type (verb--headers-content-type headers))
+    (<span class="k">setq</span> charset (<span class="k">or</span> (cdr content-type) verb-default-response-charset))
+
+    <span class="cd">;; </span><span class="c">Try to get a buffer handler function for this content type.
+</span>    (<span class="k">let</span> ((handler (verb--get-handler content-type)))
+      (<span class="k">unless</span> handler
+        <span class="cd">;; </span><span class="c">Use default content type handler instead.
+</span>        (<span class="k">setq</span> handler verb-default-content-type-handler))
+
+      (<span class="k">if</span> (= (length handler) 1)
+          <span class="cd">;; </span><span class="c">Text handler.
+</span>          (<span class="k">setq</span> text-handler (nth 0 handler))
+        <span class="cd">;; </span><span class="c">Binary handler (maybe).
+</span>        (<span class="k">unless</span> (<span class="k">and</span> (consp handler)
+                     (functionp (nth 0 handler))
+                     (eq (nth 1 handler) t)
+                     (= (length handler) 2))
+          (<span class="w">user-error</span> <span class="s">"Invalid content handler: %s"</span> handler))
+        (<span class="k">setq</span> binary-handler (nth 0 handler))))
+
+    <span class="cd">;; </span><span class="c">Remove headers and blank line from buffer.
+</span>    <span class="cd">;; </span><span class="c">All left should be the content.
+</span>    (beginning-of-line)
+    (forward-line)
+    (delete-region (point-min) (point))
+
+    <span class="cd">;; </span><span class="c">Current buffer should be unibyte.
+</span>    (<span class="k">when</span> enable-multibyte-characters
+      <span class="cd">;; </span><span class="c">If this fails, then something changed in url.el.
+</span>      (<span class="w">error</span> <span class="s">"%s"</span> <span class="s">"Expected a unibyte buffer for HTTP response"</span>))
+
+    <span class="cd">;; </span><span class="c">Record body size in bytes.
+</span>    <span class="cd">;; </span><span class="c">Since the current buffer is unibyte, this will return the correct value
+</span>    <span class="cd">;; </span><span class="c">(i.e. not number of characters).
+</span>    (<span class="k">setq</span> body-bytes (buffer-size))
+
+    <span class="cd">;; </span><span class="c">Make RESPONSE-BUF the current buffer, as we'll need to change
+</span>    <span class="cd">;; </span><span class="c">its major mode, coding system, etc.
+</span>    (set-buffer response-buf)
+
+    <span class="cd">;; </span><span class="c">Copy bytes from `</span><span class="m c">original-buffer</span><span class="c">' into it.
+</span>    (insert-buffer-substring original-buffer)
+
+    (<span class="k">if</span> binary-handler
+        (<span class="k">progn</span>
+          <span class="cd">;; </span><span class="c">Response content is a binary format:
+</span>          (verb-util--log num 'I <span class="s">"Using binary handler: %s"</span> binary-handler)
+
+          (set-buffer-multibyte nil)
+          (set-buffer-file-coding-system 'binary)
+          (buffer-disable-undo)
+          (funcall binary-handler))
+
+      <span class="cd">;; </span><span class="c">else: Response content is text:
+</span>      (verb-util--log num 'I <span class="s">"Using text handler: %s"</span> text-handler)
+
+      <span class="cd">;; </span><span class="c">Choose corresponding coding system for charset.
+</span>      (<span class="k">setq</span> coding-system (<span class="k">or</span> (mm-charset-to-coding-system charset)
+                              'utf-8))
+
+      <span class="cd">;; </span><span class="c">Decode contents using coding system.
+</span>      (decode-coding-region (point-min) (point-max) coding-system)
+
+      (set-buffer-file-coding-system coding-system)
+
+      <span class="cd">;; </span><span class="c">Prepare buffer for editing by user.
+</span>      (funcall text-handler))
+
+    (goto-char (point-min))
+
+    <span class="cd">;; </span><span class="c">Kill original response buffer.
+</span>    (kill-buffer original-buffer)
+
+    <span class="cd">;; </span><span class="c">Store details of request and response
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">verb-http-response</span><span class="c">' is a permanent buffer local variable.
+</span>    (<span class="k">setq</span> verb-http-response
+          (verb-response <span class="bi">:headers</span> (nreverse headers)
+                         <span class="bi">:request</span> rs
+                         <span class="bi">:status</span> status-line
+                         <span class="bi">:duration</span> elapsed
+                         <span class="bi">:body-bytes</span> body-bytes
+                         <span class="cd">;; </span><span class="c">TODO: Could this potentially be expensive
+</span>                         <span class="cd">;; </span><span class="c">for large responses?
+</span>                         <span class="bi">:body</span> (<span class="k">unless</span> (zerop body-bytes)
+                                 (verb--buffer-string-no-properties))))
+
+    <span class="cd">;; </span><span class="c">Apply the response mapping function, if one was specified.
+</span>    (<span class="k">when-let</span> ((map-response (verb--request-spec-metadata-get
+                              rs <span class="s">"map-response"</span>))
+               (original-body (<span class="k">or</span> (<span class="k">oref</span> verb-http-response body) t)))
+      (<span class="k">setq</span> verb-http-response (funcall map-response verb-http-response))
+      (<span class="k">unless</span> (verb--object-of-class-p verb-http-response 'verb-response)
+        (<span class="w">user-error</span> (concat <span class="s">"Response mapping function `</span><span class="m s">%s</span><span class="s">' must return a "</span>
+                            <span class="s">"`</span><span class="m s">verb-response</span><span class="s">' value"</span>)
+                    map-response))
+
+      <span class="cd">;; </span><span class="c">If response mapping function updated the body, then update
+</span>      <span class="cd">;; </span><span class="c">the buffer contents as well.
+</span>      <span class="cd">;; </span><span class="c">Note that we compare using `</span><span class="m c">eq</span><span class="c">' instead of `</span><span class="m c">string=</span><span class="c">'.
+</span>      <span class="cd">;; </span><span class="c">Technically `</span><span class="m c">string=</span><span class="c">' should be used since strings are
+</span>      <span class="cd">;; </span><span class="c">mutable, but this is cheaper and probably good enough.
+</span>      (<span class="k">unless</span> (eq original-body (<span class="k">or</span> (<span class="k">oref</span> verb-http-response body) t))
+        (erase-buffer)
+        (insert (<span class="k">oref</span> verb-http-response body))))
+
+    <span class="cd">;; </span><span class="c">Update global last response variable.
+</span>    (<span class="k">setq</span> verb-last verb-http-response)
+
+    <span class="cd">;; </span><span class="c">Store the response separately as well depending on user
+</span>    <span class="cd">;; </span><span class="c">metadata.
+</span>    (verb--maybe-store-response verb-http-response)
+
+    (verb-response-body-mode)
+
+    (<span class="k">when</span> where
+      (message <span class="s">"%s | %s %s"</span>
+               (<span class="k">oref</span> verb-http-response status)
+               (<span class="k">oref</span> rs method)
+               (verb-request-spec-url-to-string rs)))
+
+    <span class="cd">;; </span><span class="c">Run post response hook.
+</span>    (run-hooks 'verb-post-response-hook)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

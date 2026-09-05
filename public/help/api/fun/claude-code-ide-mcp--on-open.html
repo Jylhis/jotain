@@ -1,0 +1,75 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp--on-open – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp--on-open is a natively compiled function defined
+in claude-code-ide-mcp.el.
+Handle new WebSocket connection WS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp--on-open</code></h1><p><span class="m"><code>claude-code-ide-mcp--on-open</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">claude-code-ide-mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp--on-open <a href="#:~:text=connection-,WS"><span class="arg">WS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle new WebSocket connection <span class="arg">WS</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp--on-open</span> (ws)
+  <span class="doc">"Handle new WebSocket connection WS."</span>
+  (<span class="k">claude-code-ide-debug</span> <span class="s">"=== WebSocket connection opened ==="</span>)
+  (<span class="k">claude-code-ide-debug</span> <span class="s">"WebSocket object: %S"</span> ws)
+  (<span class="k">claude-code-ide-debug</span> <span class="s">"WebSocket state: %s"</span> (websocket-ready-state ws))
+  (<span class="k">claude-code-ide-debug</span> <span class="s">"WebSocket URL: %s"</span> (websocket-url ws))
+
+  <span class="cd">;; </span><span class="c">Find the session that owns this connection
+</span>  <span class="cd">;; </span><span class="c">We need to extract the port from the websocket connection info
+</span>  (<span class="k">let</span> ((session nil)
+        (port nil))
+    <span class="cd">;; </span><span class="c">Try to extract port from the websocket string representation
+</span>    <span class="cd">;; </span><span class="c">Format: "websocket server on port XXXXX &lt;127.0.0.1:YYYYY&gt;"
+</span>    (<span class="k">let</span> ((ws-string (format <span class="s">"%s"</span> ws)))
+      (<span class="k">claude-code-ide-debug</span> <span class="s">"WebSocket string representation: %s"</span> ws-string)
+      (<span class="k">when</span> (string-match <span class="s">"on port </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> ws-string)
+        (<span class="k">setq</span> port (string-to-number (match-string 1 ws-string)))
+        (<span class="k">claude-code-ide-debug</span> <span class="s">"Extracted port: %d"</span> port)))
+    <span class="cd">;; </span><span class="c">If we couldn't extract port from string, we'll have to search all sessions
+</span>    <span class="cd">;; </span><span class="c">Find session by matching port
+</span>    (<span class="k">when</span> port
+      (maphash (<span class="k">lambda</span> (_project-dir s)
+                 (<span class="k">when</span> (eq (claude-code-ide-mcp-session-port s) port)
+                   (<span class="k">setq</span> session s)))
+               claude-code-ide-mcp--sessions))
+
+    (<span class="k">if</span> session
+        (<span class="k">progn</span>
+          <span class="cd">;; </span><span class="c">Update session with client
+</span>          (<span class="k">setf</span> (claude-code-ide-mcp-session-client session) ws)
+          (<span class="k">claude-code-ide-debug</span> <span class="s">"Claude Code connected to MCP server for %s"</span>
+                                 (file-name-nondirectory
+                                  (directory-file-name (claude-code-ide-mcp-session-project-dir session))))
+
+          <span class="cd">;; </span><span class="c">Send initial active editor notification if we have one in the project
+</span>          (<span class="k">let</span> ((file-path (buffer-file-name))
+                (project-dir (claude-code-ide-mcp-session-project-dir session)))
+            (<span class="k">when</span> (<span class="k">and</span> file-path
+                       project-dir
+                       (string-prefix-p (expand-file-name project-dir)
+                                        (expand-file-name file-path)))
+              (<span class="k">setf</span> (claude-code-ide-mcp-session-last-buffer session) (current-buffer))
+              <span class="cd">;; </span><span class="c">Update MCP tools server's last active buffer
+</span>              (<span class="k">when-let</span> ((session-id (gethash project-dir claude-code-ide--session-ids)))
+                (claude-code-ide-mcp-server-update-last-active-buffer session-id (current-buffer)))
+              (run-at-time claude-code-ide-mcp-initial-notification-delay nil
+                           (<span class="k">lambda</span> ()
+                             (<span class="k">when-let</span> ((s (gethash project-dir claude-code-ide-mcp--sessions)))
+                               (<span class="k">let</span> ((file-path (buffer-file-name)))
+                                 (claude-code-ide-mcp--send-notification
+                                  <span class="s">"workspace/didChangeActiveEditor"</span>
+                                  `((uri . ,(concat <span class="s">"file://"</span> file-path))
+                                    (path . ,file-path)
+                                    (name . ,(buffer-name))))))))))
+          (<span class="k">claude-code-ide-debug</span> <span class="s">"Warning: Could not find session for WebSocket connection"</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

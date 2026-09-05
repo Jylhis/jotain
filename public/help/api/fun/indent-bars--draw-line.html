@@ -1,0 +1,109 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: indent-bars--draw-line – Emacs Documentation Online</title>
+<meta name="description" content="indent-bars--draw-line is a natively compiled function defined in
+indent-bars.el.
+Draw NBARS bars on the line between positions START and END.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>indent-bars--draw-line</code></h1><p><span class="m"><code>indent-bars--draw-line</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">indent-bars.el</span>.
+<h2>Signature</h2>
+<pre><code>(indent-bars--draw-line <a href="#:~:text=style-,STYLE"><span class="arg">STYLE</span></a> <a href="#:~:text=Draw-,NBARS"><span class="arg">NBARS</span></a> <a href="#:~:text=positions-,START"><span class="arg">START</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,SKIP"><span class="arg">SKIP</span></a> <a href="#:~:text=If-,INVENT"><span class="arg">INVENT</span></a> <a href="#:~:text=If-,SWITCH-AFTER"><span class="arg">SWITCH-AFTER</span></a> <a href="#:~:text=to-,STYLE2"><span class="arg">STYLE2</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Draw <span class="arg">NBARS</span> bars on the line between positions <span class="arg">START</span> and <span class="arg">END</span>.
+<p>Bars are drawn in style <span class="arg">STYLE</span>, <a href="../var/indent-bars-style.html"><code>indent-bars-style</code></a> by default.  <span class="arg">START</span> is
+assumed to be on a line beginning position.  Drawing starts at a column
+determined by <a href="../var/indent-bars-starting-column.html"><code>indent-bars-starting-column</code></a>.  Tabs at the line beginning
+have appropriate display properties applied if <a class="v" href="../var/indent-tabs-mode.html"><code>indent-tabs-mode</code>(var)</a>/<a class="f" href="../fun/indent-tabs-mode.html"><code>indent-tabs-mode</code>(fun)</a> is
+enabled.
+<p>If <span class="arg">SWITCH-AFTER</span> is an integer, switch from <span class="arg">STYLE</span> to <span class="arg">STYLE2</span> after
+drawing (or skipping) that many bars.  If it is t, use <span class="arg">STYLE2</span>
+exclusively.
+<p>If <span class="arg">SKIP</span> is non-nil, it should be a list of bar numbers to skip while
+drawing (where the first and leftmost possible bar is number 1).
+<p>If <span class="arg">INVENT</span> is non-nil and the line's length is insufficient to display
+all <span class="arg">NBARS</span> bars (whether by replacing tabs or adding properties to
+existing non-tab whitespace), bars will be "invented".  That is, the
+line's final newline, which is (only in this case) expected to be
+located at <span class="arg">END</span>, will have its display properties set to fill out the
+remaining bars, if any are needed.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kmdsnipwffgk5c0fs4785bhqa9fl17c5-emacs-packages-deps/share/emacs/site-lisp/elpa/indent-bars-1.0.1/indent-bars.el</span>
+(<span class="k">defun</span> <span class="f">indent-bars--draw-line</span> ( style nbars start end <span class="ty">&amp;optional</span>
+				skip invent switch-after style2)
+  <span class="doc">"Draw NBARS bars on the line between positions START and END.
+Bars are drawn in style STYLE, `</span><span class="m doc">indent-bars-style</span><span class="doc">' by default.  START is
+assumed to be on a line beginning position.  Drawing starts at a column
+determined by `</span><span class="m doc">indent-bars-starting-column</span><span class="doc">'.  Tabs at the line beginning
+have appropriate display properties applied if `</span><span class="m doc">indent-tabs-mode</span><span class="doc">' is
+enabled.
+
+If SWITCH-AFTER is an integer, switch from STYLE to STYLE2 after
+drawing (or skipping) that many bars.  If it is t, use STYLE2
+exclusively.
+
+If SKIP is non-nil, it should be a list of bar numbers to skip while
+drawing (where the first and leftmost possible bar is number 1).
+
+If INVENT is non-nil and the line's length is insufficient to display
+all NBARS bars (whether by replacing tabs or adding properties to
+existing non-tab whitespace), bars will be \"invented\".  That is, the
+line's final newline, which is (only in this case) expected to be
+located at END, will have its display properties set to fill out the
+remaining bars, if any are needed."</span>
+  (<span class="k">let*</span> ((tabs (<span class="k">and</span> indent-tabs-mode
+		    (<span class="k">save-excursion</span>
+		      (goto-char start) (looking-at <span class="s">"^\t+"</span>))
+		    (- (match-end 0) (match-beginning 0))))
+	 (vp indent-bars--offset)
+	 (style (<span class="k">or</span> style indent-bars-style))
+	 (bar 1) prop fun tnum bars-drawn)
+    (<span class="k">when</span> tabs				<span class="cd">; </span><span class="c">deal with initial tabs
+</span>      (<span class="k">while</span> (<span class="k">and</span> (&lt;= bar nbars) (&lt; (<span class="k">setq</span> tnum (/ vp tab-width)) tabs))
+	(<span class="k">setq</span> bars-drawn
+	      (indent-bars--tab-display style (+ start tnum) (mod vp tab-width)
+					bar skip (- nbars bar -1)
+					switch-after style2))
+	(<span class="k">when</span> (integerp switch-after)
+	  (<span class="k">cl-decf</span> switch-after bars-drawn)
+	  (<span class="k">when</span> (&lt;= switch-after 0)
+	    (<span class="k">setq</span> switch-after t)))	<span class="cd">; </span><span class="c">switch style of the rest
+</span>	(<span class="k">cl-incf</span> bar bars-drawn)
+	(<span class="k">cl-incf</span> vp (* bars-drawn indent-bars-spacing)))
+      (<span class="k">cl-incf</span> start (+ (/ vp tab-width) (mod vp tab-width))))
+    (<span class="k">when</span> (&lt;= bar nbars)		<span class="cd">; </span><span class="c">still bars to show?
+</span>      (<span class="k">if</span> indent-bars--no-stipple
+	  (<span class="k">setq</span> prop 'indent-bars-display fun #'indent-bars--no-stipple-char)
+	(<span class="k">setq</span> prop 'face fun #'indent-bars--face))
+      (<span class="k">let</span> ((pos (<span class="k">if</span> tabs start (+ start indent-bars--offset))))
+	(<span class="k">while</span> (<span class="k">and</span> (&lt;= bar nbars) (&lt; pos end))
+	  (<span class="k">unless</span> (memql bar skip)
+	    (put-text-property
+	     pos (1+ pos)
+	     prop (funcall fun
+			   (<span class="k">cond</span> ((integerp switch-after)
+				  (<span class="k">prog1</span>
+				      (<span class="k">if</span> (&gt; switch-after 0) style style2)
+				    (<span class="k">cl-decf</span> switch-after)
+				    (<span class="k">when</span> (&lt;= switch-after 0)
+				      (<span class="k">setq</span> switch-after t))))
+				 ((eq switch-after t) style2)
+				 (t style))
+			   bar)))
+	  (<span class="k">cl-incf</span> bar)
+	  (<span class="k">cl-incf</span> pos indent-bars-spacing))
+	<span class="cd">;; </span><span class="c">STILL bars to show: invent them (if requested)
+</span>	(<span class="k">when</span> (<span class="k">and</span> invent (&lt;= bar nbars))
+	  (add-text-properties
+	   end (1+ end) <span class="cd">; </span><span class="c">atop the final newline
+</span>	   `(indent-bars-display
+	     ,(concat (indent-bars--blank-string
+		       style (- pos end) (- nbars bar -1) bar skip nil
+		       switch-after style2)
+		      <span class="s">"\n"</span>)
+	    rear-nonsticky t)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

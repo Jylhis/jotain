@@ -1,0 +1,92 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sqlind-maybe-create-statement – Emacs Documentation Online</title>
+<meta name="description" content="sqlind-maybe-create-statement is a natively compiled function defined
+in sql-indent.el.
+If (point) is on a CREATE statement, report its syntax.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sqlind-maybe-create-statement</code></h1><p><span class="m"><code>sqlind-maybe-create-statement</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">sql-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(sqlind-maybe-create-statement <span class="ty">&amp;optional</span> <a href="#:~:text=the-,ALL-STATEMENTS"><span class="arg">ALL-STATEMENTS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>If (point) is on a CREATE statement, report its syntax.
+<p>See also <a href="../fun/sqlind-beginning-of-block.html"><code>sqlind-beginning-of-block</code></a>
+<p>Normally, only block start create statements are considered (such
+as creation of procedures).  In particular, create
+table/view/index statements are ignored unless the <span class="arg">ALL-STATEMENTS</span>
+argument is t
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vgm6xb2iy00bs19rdw9z3nfi5nf8g873-emacs-packages-deps/share/emacs/site-lisp/elpa/sql-indent-1.7/sql-indent.el</span>
+(<span class="k">defun</span> <span class="f">sqlind-maybe-create-statement</span> (<span class="ty">&amp;optional</span> all-statements)
+  <span class="doc">"If (point) is on a CREATE statement, report its syntax.
+See also `</span><span class="m doc">sqlind-beginning-of-block</span><span class="doc">'
+
+Normally, only block start create statements are considered (such
+as creation of procedures).  In particular, create
+table/view/index statements are ignored unless the ALL-STATEMENTS
+argument is t"</span>
+  (<span class="k">when</span> (<span class="k">or</span> (looking-at <span class="s">"create\\_&gt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[ \t\n\r\f]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">or</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[ \t\n\r\f]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">replace\\_&gt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?"</span>)
+            (looking-at <span class="s">"alter\\_&gt;"</span>))
+    (<span class="k">prog1</span> t                            <span class="cd">; </span><span class="c">make sure we return t
+</span>      (<span class="k">save-excursion</span>
+	<span class="cd">;; </span><span class="c">let's see what are we creating
+</span>	(goto-char (match-end 0))
+        (sqlind-forward-syntactic-ws)
+        (sqlind-maybe-skip-create-options)
+	(<span class="k">let</span> ((what (intern (downcase (buffer-substring-no-properties
+				       (point)
+				       (<span class="k">progn</span> (forward-word) (point))))))
+	      (name (downcase (buffer-substring-no-properties
+			       (<span class="k">progn</span> (sqlind-forward-syntactic-ws)
+                                      <span class="cd">;; </span><span class="c">Skip over a possible "if (not)
+</span>                                      <span class="cd">;; </span><span class="c">exists", to get the actual name
+</span>                                      (<span class="k">when</span> (looking-at <span class="s">"if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\s-</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[\n]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">not</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\s-</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[\n]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">exists"</span>)
+                                        (goto-char (match-end 0))
+                                        (sqlind-forward-syntactic-ws))
+                                      (point))
+			       (<span class="k">progn</span> (skip-syntax-forward <span class="s">"w_()"</span>) (point))))))
+	  (<span class="k">when</span> (<span class="k">and</span> (eq what 'package) (equal name <span class="s">"body"</span>))
+	    (<span class="k">setq</span> what 'package-body)
+	    (<span class="k">setq</span> name (downcase
+			(buffer-substring-no-properties
+			 (<span class="k">progn</span> (sqlind-forward-syntactic-ws) (point))
+			 (<span class="k">progn</span> (skip-syntax-forward <span class="s">"w_()"</span>) (point))))))
+
+          <span class="cd">;; </span><span class="c">Keep just the name, not the argument list
+</span>          (<span class="k">when</span> (string-match <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.*?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">("</span> name)
+            (<span class="k">setq</span> name (match-string 1 name)))
+
+	  (<span class="k">cond</span>
+            ((memq what '(procedure function package package-body))
+             <span class="cd">;; </span><span class="c">check is name is in the form user.name, if so then suppress user part.
+</span>	     (<span class="k">when</span> (string-match <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">.*\\.</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> name)
+	       (<span class="k">setq</span> name (match-string 1 name)))
+	     (<span class="k">if</span> (null sqlind-end-stmt-stack)
+		 (<span class="k">throw</span> '<span class="m">finished</span>
+		   (list (<span class="k">if</span> (memq what '(procedure function)) 'defun-start what)
+			 name))
+	       (<span class="k">cl-destructuring-bind</span> (pos kind label) (<span class="k">pop</span> sqlind-end-stmt-stack)
+		 (<span class="k">when</span> (not (eq kind nil))
+		   (<span class="k">throw</span> '<span class="m">finished</span>
+		     (list 'syntax-error
+			   <span class="s">"bad closing for create block"</span> (point) pos)))
+		 (<span class="k">unless</span> (sqlind-labels-match label name)
+		   (<span class="k">throw</span> '<span class="m">finished</span>
+		     (list 'syntax-error
+			   <span class="s">"label mismatch in create block"</span> (point) pos))))))
+            ((memq what '(table view index))
+             <span class="cd">;; </span><span class="c">Table, view and index creations do not begin blocks and they
+</span>             <span class="cd">;; </span><span class="c">are ignored unless the ALL-STATEMENTS parameter is t
+</span>             (<span class="k">when</span> all-statements
+               (<span class="k">throw</span> '<span class="m">finished</span> (list 'create-statement what name))))
+            (t
+	     (<span class="k">unless</span> (null sqlind-end-stmt-stack)
+	       (<span class="k">throw</span> '<span class="m">finished</span>
+		 (list 'syntax-error <span class="s">"nested create statement"</span> (point) (point))))
+	     (<span class="k">throw</span> '<span class="m">finished</span> (list 'create-statement what name)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

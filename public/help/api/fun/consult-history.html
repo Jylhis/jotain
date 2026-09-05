@@ -1,0 +1,70 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult-history – Emacs Documentation Online</title>
+<meta name="description" content="consult-history is an interactive and natively compiled function
+defined in consult.el.
+Insert string from HISTORY of current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult-history</code></h1><p><span class="m"><code>consult-history</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult-history <span class="ty">&amp;optional</span> <a href="#:~:text=from-,HISTORY"><span class="arg">HISTORY</span></a> <a href="#:~:text=argument.-,INDEX"><span class="arg">INDEX</span></a> <a href="#:~:text=any.-,BOL"><span class="arg">BOL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert string from <span class="arg">HISTORY</span> of current buffer.
+<p>In order to select from a specific <span class="arg">HISTORY</span>, pass the history
+variable as argument.  <span class="arg">INDEX</span> is the name of the index variable to
+update, if any.  <span class="arg">BOL</span> is the function which jumps to the beginning
+of the prompt.  See also <span class="m"><code>cape-history</code></span> from the Cape package.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">consult-history</span> (<span class="ty">&amp;optional</span> history index bol)
+  <span class="doc">"Insert string from HISTORY of current buffer.
+In order to select from a specific HISTORY, pass the history
+variable as argument.  INDEX is the name of the index variable to
+update, if any.  BOL is the function which jumps to the beginning
+of the prompt.  See also `</span><span class="m doc">cape-history</span><span class="doc">' from the Cape package."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">declare-function</span> ring-elements <span class="s">"ring"</span>)
+  (<span class="k">pcase-let*</span> ((`(,history ,index ,bol) (<span class="k">if</span> history
+                                            (list history index bol)
+                                          (consult--current-history)))
+               (history (<span class="k">if</span> (ring-p history) (ring-elements history) history))
+               (`(,beg . ,end)
+                (<span class="k">if</span> (minibufferp)
+                    (cons (minibuffer-prompt-end) (point-max))
+                  (<span class="k">if</span> bol
+                      (<span class="k">save-excursion</span>
+                        (funcall bol)
+                        (cons (point) (pos-eol)))
+                    (cons (point) (point)))))
+               (str (<span class="k">consult--local-let</span> ((enable-recursive-minibuffers t))
+                      (consult--read
+                       (<span class="k">or</span> (consult--remove-dups history)
+                           (<span class="w">user-error</span> <span class="s">"History is empty"</span>))
+                       <span class="bi">:prompt</span> <span class="s">"History: "</span>
+                       <span class="bi">:history</span> t <span class="cd">;; </span><span class="c">disable history
+</span>                       <span class="bi">:category</span> <span class="cd">;; </span><span class="c">Report category depending on history variable
+</span>                       (<span class="k">and</span> (minibufferp)
+                            (<span class="k">pcase</span> minibuffer-history-variable
+                              ('extended-command-history 'command)
+                              ('buffer-name-history 'buffer)
+                              ('face-name-history 'face)
+                              ('read-envvar-name-history 'environment-variable)
+                              ('bookmark-history 'bookmark)
+                              ('file-name-history 'file)))
+                       <span class="bi">:sort</span> nil
+                       <span class="bi">:initial</span> (buffer-substring-no-properties beg end)
+                       <span class="bi">:lookup</span> #'consult--lookup-member
+                       <span class="bi">:state</span> (consult--insertion-preview beg end)))))
+    (delete-region beg end)
+    (<span class="k">when</span> index
+      (set index (seq-position history str)))
+    (insert (substring-no-properties str))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

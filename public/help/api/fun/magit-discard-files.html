@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-discard-files – Emacs Documentation Online</title>
+<meta name="description" content="magit-discard-files is a natively compiled function defined in
+magit-apply.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-discard-files</code></h1><p><span class="m"><code>magit-discard-files</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-apply.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-discard-files <span class="arg">SECTIONS</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-apply.el</span>
+(<span class="k">defun</span> <span class="f">magit-discard-files</span> (sections)
+  (<span class="k">let</span> ((auto-revert-verbose nil)
+        (type (magit-diff-type (car sections)))
+        (status (magit-file-status))
+        files delete resurrect rename discard discard-new resolve)
+    (<span class="k">dolist</span> (section sections)
+      (<span class="k">let</span> ((file (<span class="k">oref</span> section value)))
+        (<span class="k">push</span> file files)
+        (<span class="k">pcase</span> (cons (<span class="k">pcase</span> type
+                       (`staged ?X)
+                       (`unstaged ?Y)
+                       (`untracked ?Z))
+                     (cddr (assoc file status)))
+          ('(?Z) (<span class="k">dolist</span> (f (magit-untracked-files nil file))
+                   (<span class="k">push</span> f delete)))
+          ((<span class="k">or</span> '(?Z ?? ??) '(?Z ?! ?!)) (<span class="k">push</span> file delete))
+          ('(?Z ?D ? )                  (<span class="k">push</span> file delete))
+          (`(,_ ?D ?D)                  (<span class="k">push</span> file resolve))
+          ((<span class="k">or</span> `(,_ ?U ,_) `(,_ ,_ ?U)) (<span class="k">push</span> file resolve))
+          (`(,_ ?A ?A)                  (<span class="k">push</span> file resolve))
+          (`(?X ?M ,(<span class="k">or</span> ?  ?M ?D)) (<span class="k">push</span> section discard))
+          (`(?Y ,_         ?M    ) (<span class="k">push</span> section discard))
+          ('(?X ?A         ?M    ) (<span class="k">push</span> file discard-new))
+          ('(?X ?C         ?M    ) (<span class="k">push</span> file discard-new))
+          (`(?X ?A ,(<span class="k">or</span> ?     ?D)) (<span class="k">push</span> file delete))
+          (`(?X ?C ,(<span class="k">or</span> ?     ?D)) (<span class="k">push</span> file delete))
+          (`(?X ?D ,(<span class="k">or</span> ?  ?M   )) (<span class="k">push</span> file resurrect))
+          (`(?Y ,_            ?D ) (<span class="k">push</span> file resurrect))
+          (`(?X ?R ,(<span class="k">or</span> ?  ?M ?D)) (<span class="k">push</span> file rename)))))
+    (<span class="k">unwind-protect</span>
+        (<span class="k">let</span> ((magit-inhibit-refresh t))
+          (magit-run-before-change-functions files <span class="s">"discard"</span>)
+          (<span class="k">when</span> resolve
+            (magit-discard-files--resolve (nreverse resolve)))
+          (<span class="k">when</span> resurrect
+            (magit-discard-files--resurrect (nreverse resurrect)))
+          (<span class="k">when</span> delete
+            (magit-discard-files--delete (nreverse delete) status))
+          (<span class="k">when</span> rename
+            (magit-discard-files--rename (nreverse rename) status))
+          (<span class="k">when</span> (<span class="k">or</span> discard discard-new)
+            (magit-discard-files--discard (nreverse discard)
+                                          (nreverse discard-new)))
+          (magit-run-after-apply-functions files <span class="s">"discard"</span>))
+      (magit-refresh))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

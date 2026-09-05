@@ -1,0 +1,114 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--define-terminal-keys – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--define-terminal-keys is a natively compiled function defined
+in ghostel.el.
+Populate MAP with terminal key-sending bindings.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--define-terminal-keys</code></h1><p><span class="m"><code>ghostel--define-terminal-keys</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--define-terminal-keys <a href="#:~:text=Populate-,MAP"><span class="arg">MAP</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=When-,NO-EXCEPTIONS"><span class="arg">NO-EXCEPTIONS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Populate <span class="arg">MAP</span> with terminal key-sending bindings.
+<p>When <span class="arg">NO-EXCEPTIONS</span> is non-nil, also bind the keys in
+<a href="../var/ghostel-keymap-exceptions.html"><code>ghostel-keymap-exceptions</code></a> (used by char mode).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+<span class="cd">;;; </span><span class="c">Keymap
+</span>
+(<span class="k">defun</span> <span class="f">ghostel--define-terminal-keys</span> (map <span class="ty">&amp;optional</span> no-exceptions)
+  <span class="doc">"Populate MAP with terminal key-sending bindings.
+When NO-EXCEPTIONS is non-nil, also bind the keys in
+`</span><span class="m doc">ghostel-keymap-exceptions</span><span class="doc">' (used by char mode)."</span>
+  <span class="cd">;; </span><span class="c">Self-insert characters
+</span>  (define-key map [remap self-insert-command] #'ghostel--self-insert)
+  <span class="cd">;; </span><span class="c">Special keys — routed through the ghostty key encoder which
+</span>  <span class="cd">;; </span><span class="c">respects terminal modes and handles all modifier combinations.
+</span>  <span class="cd">;; </span><span class="c">Use angle-bracket forms so modifier prefixes compose correctly.
+</span>  <span class="cd">;; </span><span class="c">Skip keys in `</span><span class="m c">ghostel-keymap-exceptions</span><span class="c">' unless NO-EXCEPTIONS is
+</span>  <span class="cd">;; </span><span class="c">non-nil (char mode binds everything).
+</span>  (<span class="k">dolist</span> (key '(<span class="s">"&lt;return&gt;"</span> <span class="s">"&lt;tab&gt;"</span> <span class="s">"&lt;backspace&gt;"</span> <span class="s">"&lt;escape&gt;"</span>
+                 <span class="s">"&lt;up&gt;"</span> <span class="s">"&lt;down&gt;"</span> <span class="s">"&lt;right&gt;"</span> <span class="s">"&lt;left&gt;"</span>
+                 <span class="s">"&lt;home&gt;"</span> <span class="s">"&lt;end&gt;"</span> <span class="s">"&lt;prior&gt;"</span> <span class="s">"&lt;next&gt;"</span>
+                 <span class="s">"&lt;deletechar&gt;"</span> <span class="s">"&lt;insert&gt;"</span>
+                 <span class="s">"&lt;f1&gt;"</span> <span class="s">"&lt;f2&gt;"</span> <span class="s">"&lt;f3&gt;"</span> <span class="s">"&lt;f4&gt;"</span> <span class="s">"&lt;f5&gt;"</span> <span class="s">"&lt;f6&gt;"</span>
+                 <span class="s">"&lt;f7&gt;"</span> <span class="s">"&lt;f8&gt;"</span> <span class="s">"&lt;f9&gt;"</span> <span class="s">"&lt;f10&gt;"</span> <span class="s">"&lt;f11&gt;"</span> <span class="s">"&lt;f12&gt;"</span>))
+    (<span class="k">when</span> (<span class="k">or</span> no-exceptions (not (member key ghostel-keymap-exceptions)))
+      (define-key map (kbd key) #'ghostel--send-event))
+    (<span class="k">dolist</span> (mod '(<span class="s">"S-"</span> <span class="s">"C-"</span> <span class="s">"M-"</span> <span class="s">"C-S-"</span> <span class="s">"M-S-"</span> <span class="s">"C-M-"</span>))
+      (<span class="k">let</span> ((key-str (concat mod key)))
+        (<span class="k">when</span> (<span class="k">or</span> no-exceptions
+                  (not (member key-str ghostel-keymap-exceptions)))
+          (<span class="k">ignore-errors</span>
+            (define-key map (kbd key-str) #'ghostel--send-event))))))
+  <span class="cd">;; </span><span class="c">Bare aliases for unmodified keys (RET=\r, TAB=\t, DEL=\x7f)
+</span>  (define-key map (kbd <span class="s">"RET"</span>) #'ghostel--send-event)
+  (define-key map (kbd <span class="s">"TAB"</span>) #'ghostel--send-event)
+  (define-key map (kbd <span class="s">"DEL"</span>) #'ghostel--send-event)
+  <span class="cd">;; </span><span class="c">Emacs reports S-TAB as &lt;backtab&gt;
+</span>  (define-key map (kbd <span class="s">"&lt;backtab&gt;"</span>) #'ghostel--send-event)
+  <span class="cd">;; </span><span class="c">Control keys - bind all C-&lt;letter&gt; to go through the key encoder
+</span>  <span class="cd">;; </span><span class="c">(C0 byte in legacy mode, CSI-u when kitty mode is active).
+</span>  <span class="cd">;; </span><span class="c">C-i = TAB and C-m = RET are equivalent to &lt;tab&gt;/&lt;return&gt; (bound above).
+</span>  <span class="cd">;; </span><span class="c">C-y is reserved for ghostel-yank in semi-char mode.
+</span>  <span class="cd">;; </span><span class="c">C-g is bound separately via `</span><span class="m c">ghostel--rebuild-semi-char-keymap</span><span class="c">'.
+</span>  (<span class="k">let</span> ((skip (<span class="k">if</span> no-exceptions '(?i ?m ?g) '(?i ?m ?y ?g))))
+    (<span class="k">dolist</span> (c (number-sequence ?a ?z))
+      (<span class="k">let</span> ((key-str (format <span class="s">"C-%c"</span> c)))
+        (<span class="k">unless</span> (<span class="k">or</span> (memq c skip)
+                    (<span class="k">and</span> (not no-exceptions)
+                         (member key-str ghostel-keymap-exceptions)))
+          (define-key map (kbd key-str) #'ghostel--send-event)))))
+  <span class="cd">;; </span><span class="c">Meta keys - bind M-&lt;printable ASCII&gt; so the full set reaches the terminal.
+</span>  <span class="cd">;; </span><span class="c">Skip ?\[ and ?O: those are escape-sequence prefixes (CSI / SS3)
+</span>  <span class="cd">;; </span><span class="c">used by Emacs input decoding for arrow/function keys in TTY mode.
+</span>  (<span class="k">dolist</span> (c (number-sequence ?! ?~))
+    (<span class="k">unless</span> (memq c '(?\[ ?O))
+      (<span class="k">let</span> ((key-str (format <span class="s">"M-%c"</span> c)))
+        (<span class="k">when</span> (<span class="k">or</span> no-exceptions
+                  (not (member key-str ghostel-keymap-exceptions)))
+          (<span class="k">ignore-errors</span>
+            (define-key map (kbd key-str) #'ghostel--send-event))))))
+  <span class="cd">;; </span><span class="c">M-SPC: `(format "M-%c" ?\s)' yields "M- ", which `</span><span class="m c">kbd</span><span class="c">' rejects.
+</span>  (<span class="k">let</span> ((key-str <span class="s">"M-SPC"</span>))
+    (<span class="k">when</span> (<span class="k">or</span> no-exceptions
+              (not (member key-str ghostel-keymap-exceptions)))
+      (define-key map (kbd key-str) #'ghostel--send-event)))
+  <span class="cd">;; </span><span class="c">TTY double-tap ESC: a second ESC byte within
+</span>  <span class="cd">;; </span><span class="c">`</span><span class="m c">ghostel-tty-escape-delay</span><span class="c">' passes the lone-ESC filter raw as [27 27].
+</span>  <span class="cd">;; </span><span class="c">Send it as alt+escape (GUI M-&lt;escape&gt; parity) rather than pending
+</span>  <span class="cd">;; </span><span class="c">on the global `ESC ESC ESC' prefix.
+</span>  (<span class="k">let</span> ((key-str <span class="s">"ESC ESC"</span>))
+    (<span class="k">when</span> (<span class="k">or</span> no-exceptions
+              (not (member key-str ghostel-keymap-exceptions)))
+      (define-key map (kbd key-str) #'ghostel--send-event)))
+  <span class="cd">;; </span><span class="c">C-M-&lt;letter&gt;, plus C-] / C-/ and their C-M- forms.
+</span>  <span class="cd">;; </span><span class="c">The non-letter keys the encoder maps to a control byte.
+</span>  (<span class="k">dolist</span> (key-str (append
+                    (mapcar (<span class="k">lambda</span> (c) (format <span class="s">"C-M-%c"</span> c))
+                            (number-sequence ?a ?z))
+                    '(<span class="s">"C-]"</span> <span class="s">"C-/"</span> <span class="s">"C-M-]"</span> <span class="s">"C-M-/"</span>)))
+    (<span class="k">when</span> (<span class="k">or</span> no-exceptions
+              (not (member key-str ghostel-keymap-exceptions)))
+      (define-key map (kbd key-str) #'ghostel--send-event)))
+  <span class="cd">;; </span><span class="c">M-DEL: TTY Emacs delivers Alt-Backspace as ESC + 0x7f, which
+</span>  <span class="cd">;; </span><span class="c">resolves to ?\M-\d.  The `</span><span class="m c">M-&lt;backspace&gt;</span><span class="c">' form above only covers
+</span>  <span class="cd">;; </span><span class="c">the `[M-backspace]' symbol path; without this binding, TTY
+</span>  <span class="cd">;; </span><span class="c">Alt-Backspace falls through to global `</span><span class="m c">backward-kill-word</span><span class="c">'.
+</span>  (define-key map (kbd <span class="s">"M-DEL"</span>) #'ghostel--send-event)
+  <span class="cd">;; </span><span class="c">Ctrl+Space is NUL. A TTY delivers it as `</span><span class="m c">C-@</span><span class="c">'.  GUI Emacs as the distinct
+</span>  <span class="cd">;; </span><span class="c">event `</span><span class="m c">C-SPC</span><span class="c">', which only char mode captures.  In semi-char `</span><span class="m c">C-SPC</span><span class="c">' falls
+</span>  <span class="cd">;; </span><span class="c">through to the global map so mark commands run there.
+</span>  (define-key map (kbd <span class="s">"C-@"</span>) #'ghostel--send-event)
+  <span class="cd">;; </span><span class="c">Char mode extras: also bind non-letter exception keys so nothing
+</span>  <span class="cd">;; </span><span class="c">gets stolen by Emacs while a TUI app runs.
+</span>  (<span class="k">when</span> no-exceptions
+    (define-key map (kbd <span class="s">"C-SPC"</span>) #'ghostel--send-event)
+    (define-key map (kbd <span class="s">"C-\\"</span>) #'ghostel--send-event)
+    (define-key map (kbd <span class="s">"M-:"</span>) #'ghostel--send-event)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

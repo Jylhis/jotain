@@ -1,0 +1,84 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-visit-ref – Emacs Documentation Online</title>
+<meta name="description" content="magit-visit-ref is an interactive and natively compiled function
+defined in magit-refs.el.
+Visit the reference or revision at point in another buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-visit-ref</code></h1><p><span class="m"><code>magit-visit-ref</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-refs.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-visit-ref)
+</code></pre>
+<h2>Documentation</h2>
+<p>Visit the reference or revision at point in another buffer.
+<p>If there is no revision at point or with a prefix argument prompt
+for a revision.
+<p>This command behaves just like <a href="../fun/magit-show-commit.html"><code>magit-show-commit</code></a>, except if
+point is on a reference in a <a href="../fun/magit-refs-mode.html"><code>magit-refs-mode</code></a> buffer (a buffer
+listing branches and tags), in which case the behavior may be
+different, but only if you have customized the option
+<a href="../var/magit-visit-ref-behavior.html"><code>magit-visit-ref-behavior</code></a> (which see).  When invoked from a
+menu this command always behaves like <a href="../fun/magit-show-commit.html"><code>magit-show-commit</code></a>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-refs.el</span>
+(<span class="k">defun</span> <span class="f">magit-visit-ref</span> ()
+  <span class="doc">"Visit the reference or revision at point in another buffer.
+If there is no revision at point or with a prefix argument prompt
+for a revision.
+
+This command behaves just like `</span><span class="m doc">magit-show-commit</span><span class="doc">', except if
+point is on a reference in a `</span><span class="m doc">magit-refs-mode</span><span class="doc">' buffer (a buffer
+listing branches and tags), in which case the behavior may be
+different, but only if you have customized the option
+`</span><span class="m doc">magit-visit-ref-behavior</span><span class="doc">' (which see).  When invoked from a
+menu this command always behaves like `</span><span class="m doc">magit-show-commit</span><span class="doc">'."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">cond-let</span>
+    ((not (<span class="k">and</span> (derived-mode-p 'magit-refs-mode)
+               (magit-section-match '(branch tag))
+               (not (magit-menu-position))))
+     (call-interactively #'magit-show-commit))
+    [[ref (<span class="k">oref</span> (magit-current-section) value)]]
+    ((<span class="k">and</span> current-prefix-arg
+          (memq 'focus-on-ref magit-visit-ref-behavior))
+     (magit-refs-setup-buffer ref (magit-show-refs-arguments)))
+    ((<span class="k">and</span> current-prefix-arg
+          magit-visit-ref-behavior
+          <span class="cd">;; </span><span class="c">Don't prompt for commit to visit.
+</span>          (<span class="k">let</span> ((current-prefix-arg nil))
+            (call-interactively #'magit-show-commit))))
+    ((<span class="k">and</span> (memq 'create-branch magit-visit-ref-behavior)
+          (magit-section-match [branch remote]))
+     (<span class="k">let</span> ((branch (cdr (magit-split-branch-name ref))))
+       (<span class="k">if</span> (magit-branch-p branch)
+           (<span class="k">if</span> (magit-rev-eq branch ref)
+               (magit-call-git <span class="s">"checkout"</span> branch)
+             (<span class="k">setq</span> branch (propertize branch 'face 'magit-branch-local))
+             (<span class="k">setq</span> ref (propertize ref 'face 'magit-branch-remote))
+             (<span class="k">pcase</span> (<span class="k">prog1</span> (read-char-choice (format (propertize <span class="s">"\
+Branch %s already exists.
+  [c]heckout %s as-is
+  [r]reset %s to %s and checkout %s
+  [a]bort "</span> 'face 'minibuffer-prompt) branch branch branch ref branch)
+                                             '(?c ?r ?a))
+                      (message <span class="s">""</span>)) <span class="cd">; </span><span class="c">otherwise prompt sticks
+</span>               (?c (magit-call-git <span class="s">"checkout"</span> branch))
+               (?r (magit-call-git <span class="s">"checkout"</span> <span class="s">"-B"</span> branch ref))
+               (?a (<span class="w">user-error</span> <span class="s">"Abort"</span>))))
+         (magit-call-git <span class="s">"checkout"</span> <span class="s">"-b"</span> branch ref))
+       (<span class="k">setq</span> magit-buffer-refs-upstream branch)
+       (magit-refresh)))
+    ((<span class="k">or</span> (memq 'checkout-any magit-visit-ref-behavior)
+         (<span class="k">and</span> (memq 'checkout-branch magit-visit-ref-behavior)
+              (magit-section-match [branch local])))
+     (magit-call-git <span class="s">"checkout"</span> ref)
+     (<span class="k">setq</span> magit-buffer-refs-upstream ref)
+     (magit-refresh))
+    ((call-interactively #'magit-show-commit))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

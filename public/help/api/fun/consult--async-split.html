@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--async-split – Emacs Documentation Online</title>
+<meta name="description" content="consult--async-split is a natively compiled function defined in
+consult.el.
+Async function, which splits the input string.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--async-split</code></h1><p><span class="m"><code>consult--async-split</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--async-split <span class="ty">&amp;optional</span> <a href="#:~:text=string.-,STYLE"><span class="arg">STYLE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Async function, which splits the input string.
+<p><span class="arg">STYLE</span> is the splitting style and defaults to the splitting style
+configured by <a href="../var/consult-async-split-style.html"><code>consult-async-split-style</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--async-split</span> (<span class="ty">&amp;optional</span> style)
+  <span class="doc">"Async function, which splits the input string.
+STYLE is the splitting style and defaults to the splitting style
+configured by `</span><span class="m doc">consult-async-split-style</span><span class="doc">'."</span>
+  (<span class="k">setq</span> style (<span class="k">or</span> style consult-async-split-style 'none)
+        style (<span class="k">or</span> (alist-get style consult-async-split-styles-alist)
+                  (<span class="w">user-error</span> <span class="s">"Splitting style `</span><span class="m s">%s</span><span class="s">' not found"</span> style)))
+  (<span class="k">lambda</span> (sink)
+    (<span class="k">lambda</span> (action)
+      (<span class="k">pcase</span> action
+        ('setup
+         (consult--split-setup (<span class="k">let</span> ((fun (plist-get style <span class="bi">:function</span>)))
+                                 (<span class="k">lambda</span> (str) (funcall fun str style))))
+         (<span class="k">when-let*</span> ((initial (plist-get style <span class="bi">:initial</span>)))
+           (<span class="k">save-excursion</span>
+             (goto-char (minibuffer-prompt-end))
+             (<span class="k">unless</span> (equal initial (char-after))
+               (insert-before-markers initial))))
+         (funcall sink 'setup))
+        ((pred stringp)
+         (<span class="k">pcase-let</span> ((`(,input ,_ . ,highlights)
+                      (funcall (plist-get style <span class="bi">:function</span>) action style))
+                     (end (minibuffer-prompt-end)))
+           <span class="cd">;; </span><span class="c">Highlight punctuation characters
+</span>           (<span class="k">pcase-dolist</span> (`(,x . ,y) highlights)
+             (add-text-properties (+ end x) (+ end y)
+                                  '(face consult-async-split consult--split t rear-nonsticky t)))
+           (funcall sink input)))
+        (_ (funcall sink action))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

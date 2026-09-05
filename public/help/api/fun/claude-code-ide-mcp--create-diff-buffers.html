@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp--create-diff-buffers – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp--create-diff-buffers is a natively compiled
+function defined in claude-code-ide-mcp-handlers.el.
+Create buffers for diff comparison.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp--create-diff-buffers</code></h1><p><span class="m"><code>claude-code-ide-mcp--create-diff-buffers</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">claude-code-ide-mcp-handlers.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp--create-diff-buffers <a href="#:~:text=comparison.-,OLD-FILE-PATH"><span class="arg">OLD-FILE-PATH</span></a> <a href="#:~:text=file.-,NEW-FILE-CONTENTS"><span class="arg">NEW-FILE-CONTENTS</span></a> <a href="#:~:text=against.-,TAB-NAME"><span class="arg">TAB-NAME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create buffers for diff comparison.
+<p><span class="arg">OLD-FILE-PATH</span> is the path to the original file.
+<span class="arg">NEW-FILE-CONTENTS</span> is the new content to diff against.
+<span class="arg">TAB-NAME</span> is used for naming the new buffer.
+Returns a cons cell (buffer-A . buffer-B).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp-handlers.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp--create-diff-buffers</span> (old-file-path new-file-contents tab-name)
+  <span class="doc">"Create buffers for diff comparison.
+OLD-FILE-PATH is the path to the original file.
+NEW-FILE-CONTENTS is the new content to diff against.
+TAB-NAME is used for naming the new buffer.
+Returns a cons cell (buffer-A . buffer-B)."</span>
+  (<span class="k">let</span> ((file-exists (file-exists-p old-file-path))
+        buffer-A buffer-B)
+    <span class="cd">;; </span><span class="c">Create or find buffer A (original file)
+</span>    (<span class="k">if</span> file-exists
+        <span class="cd">;; </span><span class="c">File exists - use it
+</span>        (<span class="k">setq</span> buffer-A (find-file-noselect old-file-path))
+      <span class="cd">;; </span><span class="c">New file - create empty buffer
+</span>      (<span class="k">setq</span> buffer-A (generate-new-buffer (format <span class="s">"*New file: %s*"</span>
+                                                  (file-name-nondirectory old-file-path))))
+      (<span class="k">with-current-buffer</span> buffer-A
+        (<span class="k">setq</span> buffer-file-name old-file-path)))
+
+    <span class="cd">;; </span><span class="c">Create buffer B (new content)
+</span>    (<span class="k">setq</span> buffer-B (generate-new-buffer (format <span class="s">"*%s*"</span> tab-name)))
+    (<span class="k">with-current-buffer</span> buffer-B
+      (insert new-file-contents)
+      <span class="cd">;; </span><span class="c">Set the mode based on the file extension
+</span>      (<span class="k">let</span> ((mode (assoc-default old-file-path auto-mode-alist 'string-match)))
+        (<span class="k">when</span> mode
+          (<span class="k">condition-case</span> err
+              (funcall mode)
+            (<span class="w">error</span>
+             <span class="cd">;; </span><span class="c">If mode activation fails (e.g., syntax errors), use fundamental-mode
+</span>             (<span class="k">claude-code-ide-debug</span> <span class="s">"Failed to activate %s for diff buffer: %s. Using fundamental-mode."</span>
+                                    mode (error-message-string err))
+             (fundamental-mode))))))
+
+    (cons buffer-A buffer-B)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

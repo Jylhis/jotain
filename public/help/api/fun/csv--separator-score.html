@@ -1,0 +1,68 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: csv--separator-score – Emacs Documentation Online</title>
+<meta name="description" content="csv--separator-score is a natively compiled function defined in
+csv-mode.el.
+Return a score on how likely SEPARATOR is a separator in TEXT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>csv--separator-score</code></h1><p><span class="m"><code>csv--separator-score</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">csv-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(csv--separator-score <a href="#:~:text=likely-,SEPARATOR"><span class="arg">SEPARATOR</span></a> <a href="#:~:text=in-,TEXT"><span class="arg">TEXT</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=When-,CUTOFF"><span class="arg">CUTOFF</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a score on how likely <span class="arg">SEPARATOR</span> is a separator in <span class="arg">TEXT</span>.
+<p>When <span class="arg">CUTOFF</span> is passed, stop the calculation at the next whole
+line after having read <span class="arg">CUTOFF</span> number of characters.
+<p>The scoring is based on the idea that most CSV data is tabular,
+i.e. separators should appear equally often on each line.
+Furthermore, more commonly appearing characters are scored higher
+than those who appear less often.
+<p>Adapted from the paper "Wrangling Messy CSV Files by Detecting
+Row and Type Patterns" by Gerrit J.J. van den Burg , Alfredo
+Nazábal, and Charles Sutton: <a href="https://arxiv.org/abs/1811.11242">https://arxiv.org/abs/1811.11242</a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mrygxsladaca2yfyr2cy0am5zm9lzddg-emacs-packages-deps/share/emacs/site-lisp/elpa/csv-mode-1.27/csv-mode.el</span>
+(<span class="k">defun</span> <span class="f">csv--separator-score</span> (separator text <span class="ty">&amp;optional</span> cutoff)
+  <span class="doc">"Return a score on how likely SEPARATOR is a separator in TEXT.
+
+When CUTOFF is passed, stop the calculation at the next whole
+line after having read CUTOFF number of characters.
+
+The scoring is based on the idea that most CSV data is tabular,
+i.e. separators should appear equally often on each line.
+Furthermore, more commonly appearing characters are scored higher
+than those who appear less often.
+
+Adapted from the paper \"Wrangling Messy CSV Files by Detecting
+Row and Type Patterns\" by Gerrit J.J. van den Burg , Alfredo
+Nazábal, and Charles Sutton: https://arxiv.org/abs/1811.11242."</span>
+  (<span class="k">let</span> ((groups
+         (<span class="k">with-temp-buffer</span>
+           (csv-set-separator separator)
+           (<span class="k">save-excursion</span>
+             (insert text))
+           (<span class="k">let</span> ((groups (make-hash-table))
+                 (chars-read 0))
+             (<span class="k">while</span> (<span class="k">and</span> (/= (point) (point-max))
+                         (<span class="k">or</span> (not cutoff)
+                             (&lt; chars-read cutoff)))
+               (<span class="k">let*</span> ((lep (line-end-position))
+                      (nfields (length (csv--collect-fields lep))))
+                 (<span class="k">cl-incf</span> (gethash nfields groups 0))
+                 (<span class="k">cl-incf</span> chars-read (- lep (point)))
+                 (goto-char (+ lep 1))))
+             groups)))
+        (sum 0))
+    (maphash
+     (<span class="k">lambda</span> (length num)
+       (<span class="k">cl-incf</span> sum (* num (/ (- length 1) (float length)))))
+     groups)
+    (<span class="k">let</span> ((unique-groups (hash-table-count groups)))
+      (<span class="k">if</span> (= 0 unique-groups)
+          0
+        (/ sum unique-groups)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

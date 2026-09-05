@@ -1,0 +1,74 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: diff-hl-stage-some – Emacs Documentation Online</title>
+<meta name="description" content="diff-hl-stage-some is an interactive and natively compiled function
+defined in diff-hl.el.
+Stage some or all of the current changes, interactively.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>diff-hl-stage-some</code></h1><p><span class="m"><code>diff-hl-stage-some</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">diff-hl.el</span>.
+<h2>Signature</h2>
+<pre><code>(diff-hl-stage-some <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">BEG</span></a> <a href="#:~:text="><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Stage some or all of the current changes, interactively.
+<p>Pops up a diff buffer that can be edited to choose the changes to stage.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/742jfhd6j9y7y1gqxy624dchx31gwmax-emacs-packages-deps/share/emacs/site-lisp/elpa/diff-hl-20260830.1400/diff-hl.el</span>
+(<span class="k">defun</span> <span class="f">diff-hl-stage-some</span> (<span class="ty">&amp;optional</span> beg end)
+  <span class="doc">"Stage some or all of the current changes, interactively.
+Pops up a diff buffer that can be edited to choose the changes to stage."</span>
+  (<span class="k">interactive</span> <span class="s">"r"</span>)
+  (diff-hl--ensure-staging-supported)
+  (<span class="k">let*</span> ((line-beg (<span class="k">and</span> beg (line-number-at-pos beg t)))
+         (line-end (<span class="k">and</span> end (line-number-at-pos end t)))
+         (file (diff-hl--buffer-file-name))
+         (dest-buffer (get-buffer-create <span class="s">"*diff-hl-stage-some*"</span>))
+         (orig-buffer (current-buffer))
+         (diff-hl-update-async nil)
+         <span class="cd">;; </span><span class="c">FIXME: If the file name has double quotes, these need to be quoted.
+</span>         (file-base (file-name-nondirectory file)))
+    (<span class="k">with-current-buffer</span> dest-buffer
+      (<span class="k">let</span> ((inhibit-read-only t))
+        (erase-buffer)))
+    (<span class="k">let</span> (diff-hl-reference-revision)
+      (diff-hl-diff-buffer-with-reference file dest-buffer nil 3))
+    (<span class="k">with-current-buffer</span> dest-buffer
+      (<span class="k">let</span> ((inhibit-read-only t))
+        (<span class="k">when</span> end
+          (with-no-warnings
+            (<span class="k">let</span> (diff-auto-refine-mode)
+              (diff-hl-diff-skip-to line-end)
+              (diff-hl-split-away-changes 3)
+              (diff-end-of-hunk)))
+          (delete-region (point) (point-max)))
+        (<span class="k">if</span> beg
+            (with-no-warnings
+              (<span class="k">let</span> (diff-auto-refine-mode)
+                (diff-hl-diff-skip-to line-beg)
+                (diff-hl-split-away-changes 3)
+                (diff-beginning-of-hunk)))
+          (goto-char (point-min))
+          (forward-line 3))
+        (delete-region (point-min) (point))
+        <span class="cd">;; </span><span class="c">diff-no-select creates a very ugly header; Git rejects it
+</span>        (insert (format <span class="s">"diff a/%s b/%s\n"</span> file-base file-base))
+        (insert (format <span class="s">"--- a/%s\n"</span> file-base))
+        (insert (format <span class="s">"+++ b/%s\n"</span> file-base)))
+      (<span class="k">let</span> ((diff-default-read-only t))
+        (diff-hl-stage-diff-mode))
+      (<span class="k">setq-local</span> diff-hl-stage--orig orig-buffer))
+    (pop-to-buffer dest-buffer)
+    (message <span class="s">"Press %s and %s to navigate, %s to split, %s to kill hunk, %s to undo, and %s to stage the diff after editing"</span>
+             (substitute-command-keys <span class="s">"\\`</span><span class="m m s">n</span><span class="s">'"</span>)
+             (substitute-command-keys <span class="s">"\\`</span><span class="m m s">p</span><span class="s">'"</span>)
+             (substitute-command-keys <span class="s">"\\[</span><span class="m s">diff-split-hunk</span><span class="s">]"</span>)
+             (substitute-command-keys <span class="s">"\\[</span><span class="m s">diff-hunk-kill</span><span class="s">]"</span>)
+             (substitute-command-keys <span class="s">"\\[</span><span class="m s">diff-undo</span><span class="s">]"</span>)
+             (substitute-command-keys <span class="s">"\\[</span><span class="m s">diff-hl-stage-finish</span><span class="s">]"</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

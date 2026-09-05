@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit--refresh-buffer-set-positions – Emacs Documentation Online</title>
+<meta name="description" content="magit--refresh-buffer-set-positions is a natively compiled function
+defined in magit-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit--refresh-buffer-set-positions</code></h1><p><span class="m"><code>magit--refresh-buffer-set-positions</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit--refresh-buffer-set-positions <span class="arg">POSITIONS</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-mode.el</span>
+(<span class="k">defun</span> <span class="f">magit--refresh-buffer-set-positions</span> (positions)
+  (<span class="k">pcase-dolist</span>
+      (`(,window ,section ,line ,char ,ws-section ,ws-line ,window-start)
+       positions)
+    (<span class="k">if</span> window
+        (<span class="k">with-selected-window</span> window
+          (magit-section-goto-successor section line char)
+          (<span class="k">cond-let</span>
+            ((derived-mode-p 'magit-log-mode))
+            ((<span class="k">or</span> (not window-start)
+                 (&gt; window-start (point))))
+            ((magit-section-equal ws-section (magit-section-at window-start))
+             (set-window-start window window-start t))
+            ([pos (<span class="k">save-excursion</span>
+                    (<span class="k">and</span> (magit-section-goto-successor--same
+                          ws-section ws-line 0)
+                         (point)))]
+             (set-window-start window pos t))))
+      <span class="cd">;; </span><span class="c">We must make sure this does not call `</span><span class="m c">set-window-start</span><span class="c">',
+</span>      <span class="cd">;; </span><span class="c">which the HUNK METHOD does by calling `</span><span class="m c">magit-section-goto</span><span class="c">'
+</span>      <span class="cd">;; </span><span class="c">because that runs the `</span><span class="m c">magit-section-goto-successor-hook</span><span class="c">'
+</span>      <span class="cd">;; </span><span class="c">and thus `</span><span class="m c">magit-hunk-set-window-start</span><span class="c">'.  The window does
+</span>      <span class="cd">;; </span><span class="c">not display this buffer, so the window start would be set
+</span>      <span class="cd">;; </span><span class="c">for the wrong buffer.  Originally reported in #4196 and
+</span>      <span class="cd">;; </span><span class="c">fixed with 482c25a3204468a4f6c2fe12ff061666b61f5f4d.
+</span>      (<span class="k">let</span> ((magit-section-movement-hook nil))
+        (magit-section-goto-successor section line char)
+        <span class="cd">;; </span><span class="c">To store the point value for the selected window, it isn't
+</span>        <span class="cd">;; </span><span class="c">enough for it to be current, the window has to "display" it.
+</span>        <span class="cd">;; </span><span class="c">The effect of `</span><span class="m c">goto-char</span><span class="c">', used by the above function, is not
+</span>        <span class="cd">;; </span><span class="c">preserved, and using just `</span><span class="m c">set-window-point</span><span class="c">' would affect the
+</span>        <span class="cd">;; </span><span class="c">wrong buffer.
+</span>        (<span class="k">unless</span> (eq (window-dedicated-p) t)
+          (<span class="k">let</span> ((restore (window-buffer))
+                (window-scroll-functions nil)
+                (window-configuration-change-hook nil))
+            (<span class="k">unwind-protect</span>
+                (<span class="k">progn</span>
+                  (set-window-buffer nil (current-buffer) t)
+                  (set-window-point nil (point)))
+              (set-window-buffer nil restore t))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: denote--act-on-query-link – Emacs Documentation Online</title>
+<meta name="description" content="denote--act-on-query-link is a natively compiled function defined in
+denote.el.
+Act on QUERY link.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>denote--act-on-query-link</code></h1><p><span class="m"><code>denote--act-on-query-link</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">denote.el</span>.
+<h2>Signature</h2>
+<pre><code>(denote--act-on-query-link <a href="#:~:text=on-,QUERY"><span class="arg">QUERY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Act on <span class="arg">QUERY</span> link.
+<p><span class="arg">QUERY</span> is a string of the form TYPE:SEARCH, where TYPE is one among
+<a href="../var/denote-query-link-types.html"><code>denote-query-link-types</code></a> while SEARCH is the regular expression to
+search for.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/5x9606vmybcj80x6qrajp43rma9pa1i7-emacs-packages-deps/share/emacs/site-lisp/elpa/denote-4.2.3/denote.el</span>
+(<span class="k">defun</span> <span class="f">denote--act-on-query-link</span> (query)
+  <span class="doc">"Act on QUERY link.
+QUERY is a string of the form TYPE:SEARCH, where TYPE is one among
+`</span><span class="m doc">denote-query-link-types</span><span class="doc">' while SEARCH is the regular expression to
+search for."</span>
+  (<span class="k">cond</span>
+   ((string-prefix-p <span class="s">"query-contents:"</span> query)
+    (<span class="k">setq</span> query (replace-regexp-in-string <span class="s">"query-contents:"</span> <span class="s">""</span> query))
+    (funcall denote-query-links-buffer-function query nil nil denote-query-links-display-buffer-action))
+   ((string-prefix-p <span class="s">"query-filenames:"</span> query)
+    (<span class="k">setq</span> query (replace-regexp-in-string <span class="s">"query-filenames:"</span> <span class="s">""</span> query))
+    <span class="cd">;; </span><span class="c">NOTE 2025-03-27: I do not think we need to add another
+</span>    <span class="cd">;; </span><span class="c">parameter to `</span><span class="m c">denote-sort-dired</span><span class="c">' for handling the
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">display-buffer</span><span class="c">'.  This is a special case, but we can always
+</span>    <span class="cd">;; </span><span class="c">change it later if the need arises.
+</span>    <span class="cd">;;</span><span class="c">
+</span>    <span class="cd">;; </span><span class="c">Here we handle the buffer and window state to make it behave
+</span>    <span class="cd">;; </span><span class="c">like the Xref buffer.  Otherwise, Dired does not reuse its
+</span>    <span class="cd">;; </span><span class="c">buffer (which is generally okay).
+</span>    (<span class="k">let</span> ((buffer (<span class="k">save-window-excursion</span>
+                    (denote-sort-dired query nil nil nil)
+                    (current-buffer))))
+      (<span class="k">when</span> (bufferp denote--query-last-dired-buffer)
+        (<span class="k">when-let*</span> ((window (get-buffer-window denote--query-last-dired-buffer))
+                    (_ (window-live-p window)))
+          (delete-window window))
+        (kill-buffer denote--query-last-dired-buffer))
+      (display-buffer buffer denote-query-links-display-buffer-action)
+      (<span class="k">setq</span> denote--query-last-dired-buffer buffer)))
+   (t
+    (<span class="w">error</span> <span class="s">"Cannot open `</span><span class="m s">%s</span><span class="s">' of unknown link type"</span> query))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

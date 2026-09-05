@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--tramp-shell-spec – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--tramp-shell-spec is a natively compiled function defined in
+ghostel.el.
+Return (PROGRAM . EXTRA-ARGS) for TRAMP METHOD from ghostel-tramp-shells.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--tramp-shell-spec</code></h1><p><span class="m"><code>ghostel--tramp-shell-spec</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--tramp-shell-spec <a href="#:~:text=TRAMP-,METHOD"><span class="arg">METHOD</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return (PROGRAM . EXTRA-ARGS) for TRAMP <span class="arg">METHOD</span> from <a href="../var/ghostel-tramp-shells.html"><code>ghostel-tramp-shells</code></a>.
+<p><span class="arg">METHOD</span> is a TRAMP method string or t for the default.
+PROGRAM is the shell path: either the configured string or, for the
+<span class="m"><code>login-shell</code></span> symbol, the remote user's login shell auto-detected
+via <span class="m"><code>getent passwd</code></span> (falling back to the entry's FALLBACK).
+EXTRA-ARGS are the optional arguments listed after the FALLBACK slot.
+Returns nil when no program resolves for <span class="arg">METHOD</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--tramp-shell-spec</span> (method)
+  <span class="doc">"Return (PROGRAM . EXTRA-ARGS) for TRAMP METHOD from `</span><span class="m doc">ghostel-tramp-shells</span><span class="doc">'.
+METHOD is a TRAMP method string or t for the default.
+PROGRAM is the shell path: either the configured string or, for the
+`</span><span class="m doc">login-shell</span><span class="doc">' symbol, the remote user's login shell auto-detected
+via `getent passwd' </span><span class="w doc">\</span><span class="doc">(falling back to the entry's FALLBACK).
+EXTRA-ARGS are the optional arguments listed after the FALLBACK slot.
+Returns nil when no program resolves for METHOD."</span>
+  (<span class="k">let*</span> ((specs (cdr (assoc method ghostel-tramp-shells)))
+         (first (car specs))
+         (second (cadr specs))
+         (args (cddr specs))
+         (program
+          (<span class="k">if</span> (eq first 'login-shell)
+              (<span class="k">let*</span> ((entry (<span class="k">ignore-errors</span>
+                              (<span class="k">with-output-to-string</span>
+                                (<span class="k">with-current-buffer</span> standard-output
+                                  (<span class="k">unless</span> (= 0 (process-file-shell-command
+                                                <span class="s">"getent passwd $LOGNAME"</span>
+                                                nil (current-buffer) nil))
+                                    (<span class="w">error</span> <span class="s">"Unexpected return value"</span>))
+                                  (<span class="k">when</span> (&gt; (count-lines (point-min) (point-max)) 1)
+                                    (<span class="w">error</span> <span class="s">"Unexpected output"</span>))))))
+                     (shell (<span class="k">when</span> entry
+                              (nth 6 (split-string entry <span class="s">":"</span> nil <span class="s">"[ \t\n\r]+"</span>)))))
+                (<span class="k">or</span> shell second))
+            first)))
+    (<span class="k">and</span> program (cons program args))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

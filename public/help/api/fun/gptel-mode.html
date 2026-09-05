@@ -1,0 +1,79 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-mode – Emacs Documentation Online</title>
+<meta name="description" content="gptel-mode is an interactive and natively compiled function defined in
+gptel.el.
+Minor mode for interacting with LLMs.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-mode</code></h1><p><span class="m"><code>gptel-mode</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-mode <span class="ty">&amp;optional</span> <a href="#:~:text=if-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Minor mode for interacting with LLMs.
+<p>This is a minor mode.  If called interactively, toggle the <span class="m"><code>GPTel mode</code></span>
+mode.  If the prefix argument is positive, enable the mode, and if it is
+zero or negative, disable the mode.
+<p>If called from Lisp, toggle the mode if <span class="arg">ARG</span> is <span class="m"><code>toggle</code></span>.  Enable the
+mode if <span class="arg">ARG</span> is nil, omitted, or is a positive number.  Disable the mode
+if <span class="arg">ARG</span> is a negative number.
+<p>To check whether the minor mode is enabled in the current buffer,
+evaluate the variable <a class="v" href="../var/gptel-mode.html"><code>gptel-mode</code>(var)</a>/<a class="f" href="../fun/gptel-mode.html"><code>gptel-mode</code>(fun)</a>.
+<p>The mode's hook is called both when the mode is enabled and when it is
+disabled.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+<span class="cd">;;;; </span><span class="c">Minor mode
+</span><span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">define-minor-mode</span> <span class="f">gptel-mode</span>
+  <span class="doc">"Minor mode for interacting with LLMs."</span>
+  <span class="bi">:lighter</span> <span class="s">" GPT"</span>
+  <span class="bi">:keymap</span>
+  (<span class="k">let</span> ((map (make-sparse-keymap)))
+    (define-key map (kbd <span class="s">"C-c RET"</span>) #'gptel-send)
+    map)
+  (<span class="k">if</span> gptel-mode
+      (<span class="k">progn</span>
+        (<span class="k">unless</span> (derived-mode-p 'org-mode 'markdown-mode 'text-mode)
+          (gptel-mode -1)
+          (<span class="w">user-error</span> (format <span class="s">"`</span><span class="m s">gptel-mode</span><span class="s">' is not supported in `</span><span class="m s">%s</span><span class="s">'."</span> major-mode)))
+        (add-hook 'before-save-hook #'gptel--save-state nil t)
+        (add-hook 'after-change-functions 'gptel--inherit-stickiness nil t)
+        (gptel--prettify-preset)
+        (<span class="k">cond</span>
+         ((derived-mode-p 'org-mode)
+          (<span class="k">require</span> '<span class="m">gptel-org</span>)
+          (jit-lock-register 'gptel-org--annotate-links)
+          <span class="cd">;; </span><span class="c">Work around bug in `</span><span class="m c">org-fontify-extend-region</span><span class="c">'.
+</span>          (add-hook 'gptel-post-response-functions #'font-lock-flush nil t))
+         ((derived-mode-p 'markdown-mode)
+          (font-lock-add-keywords <span class="cd">;</span><span class="c">keymap is a font-lock-managed property in markdown-mode
+</span>           nil '((<span class="s">"^```[ \t]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:alpha:]][</span><span class="neg s">^</span><span class="s">\n]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?$"</span> <span class="cd">;</span><span class="c">match code fences
+</span>                  0 (list 'face nil 'keymap gptel--markdown-block-map))))
+          (jit-lock-register 'gptel-markdown--annotate-links)))
+        (gptel--restore-state)
+        (<span class="k">if</span> gptel-use-header-line
+            (<span class="k">progn</span> (<span class="k">setq</span> gptel--old-header-line header-line-format)
+                   (gptel-use-header-line))
+          (gptel--update-status <span class="s">" Ready"</span> 'success)))
+    (remove-hook 'before-save-hook #'gptel--save-state t)
+    (remove-hook 'after-change-functions 'gptel--inherit-stickiness t)
+    (<span class="k">cond</span>
+     ((derived-mode-p 'org-mode)
+      (jit-lock-unregister #'gptel-org--annotate-links)
+      (<span class="k">without-restriction</span> (gptel--annotate-link-clear)))
+     ((derived-mode-p 'markdown-mode)
+      (jit-lock-unregister #'gptel-markdown--annotate-links)
+      (<span class="k">without-restriction</span> (gptel--annotate-link-clear))))
+    (gptel--prettify-preset)
+    (<span class="k">if</span> gptel-use-header-line
+        (<span class="k">setq</span> header-line-format gptel--old-header-line
+              gptel--old-header-line nil)
+      (<span class="k">setq</span> mode-line-process nil))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

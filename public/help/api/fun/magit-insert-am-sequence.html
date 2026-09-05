@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-insert-am-sequence – Emacs Documentation Online</title>
+<meta name="description" content="magit-insert-am-sequence is a natively compiled function defined in
+magit-sequence.el.
+Insert section for the on-going patch applying sequence.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-insert-am-sequence</code></h1><p><span class="m"><code>magit-insert-am-sequence</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-sequence.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-insert-am-sequence)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert section for the on-going patch applying sequence.
+<p>If no such sequence is in progress, do nothing.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-sequence.el</span>
+(<span class="k">defun</span> <span class="f">magit-insert-am-sequence</span> ()
+  <span class="doc">"Insert section for the on-going patch applying sequence.
+If no such sequence is in progress, do nothing."</span>
+  (<span class="k">when</span> (magit-am-in-progress-p)
+    (<span class="k">magit-insert-section</span> (rebase-sequence)
+      (<span class="k">magit-insert-heading</span> <span class="s">"Applying patches"</span>)
+      (<span class="k">let*</span> ((patches (nreverse (magit-rebase-patches)))
+             (dir (expand-file-name <span class="s">"rebase-apply"</span> (magit-gitdir)))
+             (i (string-to-number
+                 (magit-file-line (expand-file-name <span class="s">"last"</span> dir))))
+             (cur (string-to-number
+                   (magit-file-line (expand-file-name <span class="s">"next"</span> dir))))
+             patch commit)
+        (<span class="k">while</span> (<span class="k">and</span> patches (&gt;= i cur))
+          (<span class="k">setq</span> patch (<span class="k">pop</span> patches))
+          (<span class="k">setq</span> commit
+                (magit-commit-oid (cadr (split-string (magit-file-line patch)))
+                                  t))
+          (<span class="k">cond</span> ((<span class="k">and</span> commit (= i cur))
+                 (magit-sequence-insert-commit
+                  <span class="s">"stop"</span> commit 'magit-sequence-stop))
+                ((= i cur)
+                 (magit-sequence-insert-am-patch
+                  <span class="s">"stop"</span> patch 'magit-sequence-stop))
+                (commit
+                 (magit-sequence-insert-commit
+                  <span class="s">"pick"</span> commit 'magit-sequence-pick))
+                ((magit-sequence-insert-am-patch
+                  <span class="s">"pick"</span> patch 'magit-sequence-pick)))
+          (<span class="k">decf</span> i)))
+      (magit-sequence-insert-sequence nil <span class="s">"ORIG_HEAD"</span>)
+      (insert ?\n))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

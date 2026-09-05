@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: defun-markdown-ref-checker – Emacs Documentation Online</title>
+<meta name="description" content="defun-markdown-ref-checker is a macro defined in markdown-mode.el.
+Define a function NAME acting on result of CHECKER-FUNCTION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>defun-markdown-ref-checker</code></h1><p><span class="m"><code>defun-markdown-ref-checker</code></span> is a macro defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">defun-markdown-ref-checker</span> <a href="#:~:text=function-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=FUNCTION.-,DOCSTRING"><span class="arg">DOCSTRING</span></a> <a href="#:~:text=of-,CHECKER-FUNCTION"><span class="arg">CHECKER-FUNCTION</span></a> <a href="#:~:text=function.-,BUFFER-FUNCTION"><span class="arg">BUFFER-FUNCTION</span></a> <a href="#:~:text=in.-,NONE-MESSAGE"><span class="arg">NONE-MESSAGE</span></a> <a href="#:~:text=results.-,BUFFER-HEADER"><span class="arg">BUFFER-HEADER</span></a> <a href="#:~:text=calling-,INSERT-REFERENCE"><span class="arg">INSERT-REFERENCE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Define a function <span class="arg">NAME</span> acting on result of <span class="arg">CHECKER-FUNCTION</span>.
+<p><span class="arg">DOCSTRING</span> is used as a docstring for the defined function.
+<p><span class="arg">BUFFER-FUNCTION</span> should name and return an auxiliary buffer to put
+results in.
+<p><span class="arg">NONE-MESSAGE</span> is used when <span class="arg">CHECKER-FUNCTION</span> returns no results.
+<p><span class="arg">BUFFER-HEADER</span> is put into the auxiliary buffer first, followed by
+calling <span class="arg">INSERT-REFERENCE</span> for each element in the list returned by
+<span class="arg">CHECKER-FUNCTION</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defmacro</span> <span class="f">defun-markdown-ref-checker</span>
+    (name docstring checker-function buffer-function none-message buffer-header insert-reference)
+  <span class="doc">"Define a function NAME acting on result of CHECKER-FUNCTION.
+
+DOCSTRING is used as a docstring for the defined function.
+
+BUFFER-FUNCTION should name and return an auxiliary buffer to put
+results in.
+
+NONE-MESSAGE is used when CHECKER-FUNCTION returns no results.
+
+BUFFER-HEADER is put into the auxiliary buffer first, followed by
+calling INSERT-REFERENCE for each element in the list returned by
+CHECKER-FUNCTION."</span>
+  `(<span class="k">defun</span> ,name (<span class="ty">&amp;optional</span> silent)
+     ,(concat
+       docstring
+       <span class="s">"\n\nIf SILENT is non-nil, do not message anything when no
+such references found."</span>)
+     (<span class="k">interactive</span> <span class="s">"P"</span>)
+     (<span class="k">unless</span> (derived-mode-p 'markdown-mode)
+       (<span class="w">user-error</span> <span class="s">"Not available in current mode"</span>))
+     (<span class="k">let</span> ((oldbuf (current-buffer))
+           (refs (,checker-function))
+           (refbuf (,buffer-function)))
+       (<span class="k">if</span> (null refs)
+           (<span class="k">progn</span>
+             (<span class="k">when</span> (not silent)
+               (message ,none-message))
+             (kill-buffer refbuf))
+         (<span class="k">with-current-buffer</span> refbuf
+           (insert ,buffer-header)
+           (<span class="k">dolist</span> (ref refs)
+             (,insert-reference ref oldbuf))
+           (view-buffer-other-window refbuf)
+           (goto-char (point-min))
+           (forward-line 2))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

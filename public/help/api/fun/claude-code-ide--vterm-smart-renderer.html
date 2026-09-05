@@ -1,0 +1,96 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide--vterm-smart-renderer – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide--vterm-smart-renderer is a natively compiled function
+defined in claude-code-ide.el.
+Smart rendering filter for optimized vterm display updates.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide--vterm-smart-renderer</code></h1><p><span class="m"><code>claude-code-ide--vterm-smart-renderer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide--vterm-smart-renderer <a href="#:~:text=operations.-,ORIG-FUN"><span class="arg">ORIG-FUN</span></a> <a href="#:~:text=enhance.-,PROCESS"><span class="arg">PROCESS</span></a> <a href="#:~:text=optimized.-,INPUT"><span class="arg">INPUT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Smart rendering filter for optimized vterm display updates.
+<p>This advanced filter analyzes terminal output patterns to identify
+rapid update sequences that benefit from batched processing.
+It significantly improves visual quality during complex operations.
+<p><span class="arg">ORIG-FUN</span> is the underlying filter to enhance.
+<span class="arg">PROCESS</span> is the terminal process being optimized.
+<span class="arg">INPUT</span> contains the terminal output stream.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide--vterm-smart-renderer</span> (orig-fun process input)
+  <span class="doc">"Smart rendering filter for optimized vterm display updates.
+This advanced filter analyzes terminal output patterns to identify
+rapid update sequences that benefit from batched processing.
+It significantly improves visual quality during complex operations.
+
+ORIG-FUN is the underlying filter to enhance.
+PROCESS is the terminal process being optimized.
+INPUT contains the terminal output stream."</span>
+  (<span class="k">if</span> (<span class="k">or</span> (not claude-code-ide-vterm-anti-flicker)
+          (not (claude-code-ide--session-buffer-p (process-buffer process))))
+      <span class="cd">;; </span><span class="c">Feature disabled or not a Claude buffer, pass through normally
+</span>      (funcall orig-fun process input)
+    (<span class="k">with-current-buffer</span> (process-buffer process)
+      <span class="cd">;; </span><span class="c">Fast path: plain text with no active queue skips all pattern detection
+</span>      <span class="cd">;; </span><span class="c">This optimizes the common case of typing in the prompt
+</span>      (<span class="k">if</span> (<span class="k">and</span> (not claude-code-ide--vterm-render-queue)
+               (not (string-search <span class="s">"\033"</span> input)))
+          (funcall orig-fun process input)
+        <span class="cd">;; </span><span class="c">Detect rapid terminal redraw sequences
+</span>        <span class="cd">;; </span><span class="c">Pattern analysis for complex terminal updates:
+</span>        <span class="cd">;; </span><span class="c">- Vertical cursor movements (ESC[&lt;n&gt;A)
+</span>        <span class="cd">;; </span><span class="c">- Line clearing operations (ESC[K)
+</span>        <span class="cd">;; </span><span class="c">- High escape sequence density
+</span>        (<span class="k">let*</span> ((complex-redraw-detected
+                <span class="cd">;; </span><span class="c">Pattern: vertical movement + clear, repeated
+</span>                (string-match-p <span class="s">"\033\\[[0-9]*A.*\033\\[K.*\033\\[[0-9]*A.*\033\\[K"</span> input))
+               (clear-count (claude-code-ide--count-escape-sequence <span class="s">"\033[K"</span> input))
+               (escape-count (cl-count ?\033 input))
+               (input-length (length input))
+               <span class="cd">;; </span><span class="c">High escape density indicates redrawing, not normal output
+</span>               (escape-density (<span class="k">if</span> (&gt; input-length 0)
+                                   (/ (float escape-count) input-length)
+                                 0)))
+          <span class="cd">;; </span><span class="c">Optimize rendering for detected patterns:
+</span>          <span class="cd">;; </span><span class="c">1. Complex redraw sequence detected, OR
+</span>          <span class="cd">;; </span><span class="c">2. Escape sequence density exceeds threshold with line operations
+</span>          <span class="cd">;; </span><span class="c">3. OR already queuing (to complete the sequence)
+</span>          (<span class="k">if</span> (<span class="k">or</span> complex-redraw-detected
+                  (<span class="k">and</span> (&gt; escape-density 0.3)
+                       (&gt;= clear-count 2))
+                  claude-code-ide--vterm-render-queue)
+              (<span class="k">progn</span>
+                <span class="cd">;; </span><span class="c">Add to queue (list for O(1) push, joined at flush time)
+</span>                (<span class="k">push</span> input claude-code-ide--vterm-render-queue)
+                <span class="cd">;; </span><span class="c">Reset existing render timer
+</span>                (<span class="k">when</span> claude-code-ide--vterm-render-timer
+                  (cancel-timer claude-code-ide--vterm-render-timer))
+                <span class="cd">;; </span><span class="c">Schedule optimized rendering
+</span>                <span class="cd">;; </span><span class="c">Timing calibrated for visual quality
+</span>                (<span class="k">setq</span> claude-code-ide--vterm-render-timer
+                      (run-at-time claude-code-ide-vterm-render-delay nil
+                                   (<span class="k">lambda</span> (buf)
+                                     (<span class="k">when</span> (buffer-live-p buf)
+                                       (<span class="k">with-current-buffer</span> buf
+                                         (<span class="k">when</span> claude-code-ide--vterm-render-queue
+                                           (<span class="k">let*</span> ((inhibit-redisplay t)
+                                                  (queue claude-code-ide--vterm-render-queue)
+                                                  <span class="cd">;; </span><span class="c">Join list in correct order
+</span>                                                  (data (apply #'concat (nreverse queue))))
+                                             <span class="cd">;; </span><span class="c">Clear queue first to prevent recursion
+</span>                                             (<span class="k">setq</span> claude-code-ide--vterm-render-queue nil
+                                                   claude-code-ide--vterm-render-timer nil)
+                                             <span class="cd">;; </span><span class="c">Execute queued rendering
+</span>                                             (funcall orig-fun
+                                                      (get-buffer-process buf)
+                                                      data))))))
+                                   (current-buffer))))
+            <span class="cd">;; </span><span class="c">Standard processing for regular output
+</span>            (funcall orig-fun process input)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

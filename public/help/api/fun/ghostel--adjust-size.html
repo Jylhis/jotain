@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--adjust-size – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--adjust-size is a natively compiled function defined in
+ghostel.el.
+Resize the terminal to match WINDOW's buffer dimensions.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--adjust-size</code></h1><p><span class="m"><code>ghostel--adjust-size</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--adjust-size <a href="#:~:text=match-,WINDOW"><span class="arg">WINDOW</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=When-,FORCE"><span class="arg">FORCE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Resize the terminal to match <span class="arg">WINDOW</span>'s buffer dimensions.
+<p>If <span class="arg">WINDOW</span> was anchored to the live viewport before the size change,
+keep it anchored.  Redraw synchronously when the terminal size
+actually changes.  When <span class="arg">FORCE</span> is non-nil, run the resize/redraw
+path even when the row/column count is unchanged.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--adjust-size</span> (window <span class="ty">&amp;optional</span> force)
+  <span class="doc">"Resize the terminal to match WINDOW's buffer dimensions.
+If WINDOW was anchored to the live viewport before the size change,
+keep it anchored.  Redraw synchronously when the terminal size
+actually changes.  When FORCE is non-nil, run the resize/redraw
+path even when the row/column count is unchanged."</span>
+  <span class="cd">;; </span><span class="c">Buffer-local `</span><span class="m c">window-size-change-functions</span><span class="c">' are run by redisplay
+</span>  <span class="cd">;; </span><span class="c">with an arbitrary buffer current, so the terminal state must be
+</span>  <span class="cd">;; </span><span class="c">resolved from WINDOW's buffer.
+</span>  (<span class="k">with-current-buffer</span> (window-buffer window)
+    (<span class="k">when</span> (<span class="k">and</span> ghostel--term ghostel--process (ghostel--terminal-live-p))
+      (<span class="k">when</span> (ghostel--window-anchored-p
+             window (window-old-body-pixel-height window))
+        (ghostel--anchor-window window))
+      (<span class="k">when-let*</span> ((adjust-fn (<span class="k">or</span> (default-value 'window-adjust-process-window-size-function)
+                                 #'window-adjust-process-window-size-smallest))
+                  (windows (ghostel--windows (current-buffer) t))
+                  (size (funcall adjust-fn ghostel--process windows))
+                  (width (car size))
+                  (height (cdr size)))
+        (<span class="k">let*</span> ((same-size-p (<span class="k">and</span> (eql height ghostel--term-rows)
+                                 (eql width ghostel--term-cols)))
+               <span class="cd">;; </span><span class="c">Don't resize on minibuffer-induced rows-only change.
+</span>               <span class="cd">;; </span><span class="c">E.g. fish clears and re-emits its prompt on every SIGWINCH; a
+</span>               <span class="cd">;; </span><span class="c">`</span><span class="m c">consult-buffer</span><span class="c">'/`</span><span class="m c">M-x</span><span class="c">' cycle that grows then shrinks the body
+</span>               <span class="cd">;; </span><span class="c">would otherwise produce two prompt repaints in quick succession.
+</span>               <span class="cd">;; </span><span class="c">Skip the deferral on the alt screen TUIs.
+</span>               (minibuffer-excepted-p (<span class="k">and</span> (active-minibuffer-window)
+                                           (eql width ghostel--term-cols)
+                                           (not (ghostel--alt-screen-p ghostel--term)))))
+          (<span class="k">when</span> (<span class="k">or</span> force (<span class="k">and</span> (not same-size-p) (not minibuffer-excepted-p)))
+            (ghostel--set-size-with-cell-dims ghostel--term (max 1 height) (max 1 width))
+            (<span class="k">setq</span> ghostel--force-next-redraw t)
+            <span class="cd">;; </span><span class="c">Redraw synchronously so the buffer is updated before
+</span>            <span class="cd">;; </span><span class="c">Emacs displays the stale content at the new window size.
+</span>            (ghostel--redraw-now (current-buffer))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

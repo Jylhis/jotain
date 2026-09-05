@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-apply-envelope – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-apply-envelope is a natively compiled function defined in
+combobulate-envelope.el.
+Envelop NODE near point or active region with ENVELOPE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-apply-envelope</code></h1><p><span class="m"><code>combobulate-apply-envelope</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">combobulate-envelope.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-apply-envelope <a href="#:~:text=with-,ENVELOPE"><span class="arg">ENVELOPE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=Envelop-,NODE"><span class="arg">NODE</span></a> <a href="#:~:text=If-,REGION"><span class="arg">REGION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Envelop <span class="arg">NODE</span> near point or active region with <span class="arg">ENVELOPE</span>.
+<p>If <span class="arg">REGION</span> is non-nil, envelop the region instead of <span class="arg">NODE</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-envelope.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-apply-envelope</span> (envelope <span class="ty">&amp;optional</span> node region)
+  <span class="doc">"Envelop NODE near point or active region with ENVELOPE.
+
+If REGION is non-nil, envelop the region instead of NODE."</span>
+  (<span class="k">map-let</span> (<span class="bi">:nodes</span> <span class="bi">:mark-node</span> <span class="bi">:description</span> <span class="bi">:template</span> <span class="bi">:point-placement</span> <span class="bi">:name</span> <span class="bi">:procedures</span>) envelope
+    (<span class="k">unless</span> (<span class="k">and</span> name)
+      (<span class="w">error</span> <span class="s">"Envelope `</span><span class="m s">%s</span><span class="s">' is not valid."</span> envelope))
+    (<span class="k">if</span> region
+        (combobulate-envelop-region template)
+      (<span class="k">with-navigation-nodes</span> (<span class="bi">:nodes</span> nodes <span class="bi">:procedures</span> procedures)
+        (<span class="k">if</span> (<span class="k">setq</span> node (<span class="k">or</span> node (combobulate--get-nearest-navigable-node)))
+            (<span class="k">save-excursion</span>
+              <span class="cd">;; </span><span class="c">If we are asked to mark the node, we do. If not, we still go to
+</span>              <span class="cd">;; </span><span class="c">the beginning
+</span>              (<span class="k">if</span> mark-node
+                  (combobulate--mark-node node t)
+                (<span class="k">cond</span>
+                 <span class="cd">;; </span><span class="c">nothing to do if point is `</span><span class="m c">stay</span><span class="c">'.
+</span>                 ((<span class="k">or</span> (null point-placement) (member point-placement '(start end)))
+                  (combobulate--goto-node node (eq point-placement 'end)))))
+              <span class="cd">;; </span><span class="c">triggering an envelope will invalidate `</span><span class="m c">node</span><span class="c">'.
+</span>              (<span class="k">setq</span> node (combobulate-proxy-node-make-from-nodes node))
+              (<span class="k">prog1</span> (combobulate-envelope-expand-instructions template)
+                (combobulate-message <span class="s">"Enveloping"</span> node <span class="s">"in"</span> description)))
+          (<span class="w">error</span> <span class="s">"Cannot apply envelope `</span><span class="m s">%s</span><span class="s">'. Point must be in one of \
+these nodes: `</span><span class="m s">%s</span><span class="s">'."</span> name nodes))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

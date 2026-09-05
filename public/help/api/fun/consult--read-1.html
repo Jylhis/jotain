@@ -1,0 +1,78 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--read-1 – Emacs Documentation Online</title>
+<meta name="description" content="consult--read-1 is a natively compiled function defined in consult.el.
+See consult--read for documentation.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--read-1</code></h1><p><span class="m"><code>consult--read-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--read-1 <a href="#:~:text="><span class="arg">TABLE</span></a> <span class="ty">&amp;key</span> <a href="#:~:text="><span class="arg">PROMPT</span></a> <a href="#:~:text="><span class="arg">PREDICATE</span></a> <a href="#:~:text="><span class="arg">REQUIRE-MATCH</span></a> <a href="#:~:text="><span class="arg">HISTORY</span></a> <a href="#:~:text="><span class="arg">DEFAULT</span></a> <a href="#:~:text="><span class="arg">KEYMAP</span></a> <a href="#:~:text="><span class="arg">CATEGORY</span></a> <a href="#:~:text="><span class="arg">INITIAL</span></a> <a href="#:~:text="><span class="arg">NARROW</span></a> <a href="#:~:text="><span class="arg">INITIAL-NARROW</span></a> <a href="#:~:text="><span class="arg">ADD-HISTORY</span></a> <a href="#:~:text="><span class="arg">ANNOTATE</span></a> <a href="#:~:text="><span class="arg">STATE</span></a> <a href="#:~:text="><span class="arg">PREVIEW-KEY</span></a> <a href="#:~:text="><span class="arg">SORT</span></a> <a href="#:~:text="><span class="arg">LOOKUP</span></a> <a href="#:~:text="><span class="arg">GROUP</span></a> <a href="#:~:text="><span class="arg">INHERIT-INPUT-METHOD</span></a> <a href="#:~:text="><span class="arg">ASYNC-WRAP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>See <a href="../fun/consult--read.html"><code>consult--read</code></a> for documentation.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">cl-defun</span> <span class="f">consult--read-1</span> ( table <span class="ty">&amp;key</span>
+                            prompt predicate require-match history default keymap category
+                            initial narrow initial-narrow add-history annotate state
+                            preview-key sort lookup group inherit-input-method async-wrap)
+  <span class="doc">"See `</span><span class="m doc">consult--read</span><span class="doc">' for documentation."</span>
+  (<span class="k">when</span> (<span class="k">and</span> async-wrap (consult--async-p table))
+    (<span class="k">setq</span> table (funcall (funcall async-wrap table) (consult--async-sink))))
+  (<span class="k">minibuffer-with-setup-hook</span>
+      (<span class="bi">:append</span> (<span class="k">lambda</span> ()
+                 (add-hook 'after-change-functions #'consult--tofu-hide-in-minibuffer nil 'local)
+                 (consult--setup-keymap keymap (consult--async-p table) narrow preview-key)
+                 (<span class="k">when</span> initial-narrow (consult-narrow initial-narrow))
+                 (<span class="k">setq-local</span> minibuffer-default-add-function
+                             (apply-partially #'consult--add-history (consult--async-p table) add-history)
+                             kill-transform-function #'consult--tofu-strip)))
+    (<span class="k">consult--with-async</span> table
+      (<span class="k">consult--with-preview</span>
+          preview-key state
+          (<span class="k">lambda</span> (narrow input cand)
+            (funcall lookup cand (funcall table nil) input narrow))
+          (apply-partially #'run-hook-with-args-until-success
+                           'consult--completion-candidate-hook)
+          (<span class="k">pcase-exhaustive</span> history
+            (`(<span class="bi">:input</span> ,var) var)
+            ((pred symbolp)))
+        <span class="cd">;; </span><span class="c">Do not unnecessarily let-bind the lambdas to avoid over-capturing in
+</span>        <span class="cd">;; </span><span class="c">the interpreter.  This will make closures and the lambda string
+</span>        <span class="cd">;; </span><span class="c">representation larger, which makes debugging much worse.  Fortunately
+</span>        <span class="cd">;; </span><span class="c">the over-capturing problem does not affect the bytecode interpreter
+</span>        <span class="cd">;; </span><span class="c">which does a proper scope analysis.
+</span>        (<span class="k">let*</span> ((metadata `(metadata
+                           ,@(<span class="k">when</span> category `((category . ,category)))
+                           ,@(<span class="k">when</span> group `((group-function . ,group)))
+                           ,@(<span class="k">when</span> annotate
+                               `((affixation-function
+                                  . ,(apply-partially #'consult--read-affixate annotate))))
+                           ,@(<span class="k">unless</span> sort '((cycle-sort-function . identity)
+                                            (display-sort-function . identity)))))
+               (consult--annotate-align-width 0)
+               (selected
+                (completing-read
+                 prompt
+                 (<span class="k">lambda</span> (str pred action)
+                   (<span class="k">let</span> ((result (complete-with-action action (funcall table nil) str pred)))
+                     (<span class="k">if</span> (eq action 'metadata)
+                         (<span class="k">if</span> (<span class="k">and</span> (eq (car result) 'metadata) (cdr result))
+                             <span class="cd">;; </span><span class="c">Merge metadata
+</span>                             `(metadata ,@(cdr metadata) ,@(cdr result))
+                           metadata)
+                       result)))
+                 predicate require-match initial
+                 (<span class="k">if</span> (symbolp history) history (cadr history))
+                 default
+                 inherit-input-method)))
+          <span class="cd">;; </span><span class="c">Repair the null completion semantics. `</span><span class="m c">completing-read</span><span class="c">' may return
+</span>          <span class="cd">;; </span><span class="c">an empty string even if REQUIRE-MATCH is non-nil. One can always
+</span>          <span class="cd">;; </span><span class="c">opt-in to null completion by passing the empty string for DEFAULT.
+</span>          (<span class="k">when</span> (<span class="k">and</span> (eq require-match t) (not default) (equal selected <span class="s">""</span>))
+            (<span class="w">user-error</span> <span class="s">"No selection"</span>))
+          selected)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

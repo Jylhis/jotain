@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat-inline--setup-overlay – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat-inline--setup-overlay is a natively compiled function defined
+in eca-chat-inline.el.
+Create the inline overlay for SESSION between START and END.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat-inline--setup-overlay</code></h1><p><span class="m"><code>eca-chat-inline--setup-overlay</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-chat-inline.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat-inline--setup-overlay <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=between-,START"><span class="arg">START</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create the inline overlay for <span class="arg">SESSION</span> between <span class="arg">START</span> and <span class="arg">END</span>.
+<p><span class="arg">START</span> and <span class="arg">END</span> are clamped to the buffer limits: they can be stale
+when the buffer changed while the prompt minibuffer was open
+<br>(e.g. a tool call editing this file).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-inline.el</span>
+<span class="cd">;;;; </span><span class="c">Overlay rendering
+</span>
+(<span class="k">defun</span> <span class="f">eca-chat-inline--setup-overlay</span> (session start end)
+  <span class="doc">"Create the inline overlay for SESSION between START and END.
+START and END are clamped to the buffer limits: they can be stale
+when the buffer changed while the prompt minibuffer was open
+\(e.g. a tool call editing this file)."</span>
+  (<span class="k">let*</span> ((start (max (point-min) (min start (point-max))))
+         (end (min (max start end) (point-max)))
+         (ov (make-overlay start end nil t)))
+    (overlay-put ov 'category 'eca-chat-inline)
+    <span class="cd">;; </span><span class="c">Evaporating a zero-width overlay (empty buffer) would delete
+</span>    <span class="cd">;; </span><span class="c">it right away, so only evaporate real anchors.
+</span>    (<span class="k">when</span> (&lt; start end)
+      (overlay-put ov 'evaporate t))
+    (overlay-put ov 'eca-chat-inline--chat-id nil)
+    (overlay-put ov 'eca-chat-inline--session-id (eca--session-id session))
+    (overlay-put ov 'eca-chat-inline--source-buffer (current-buffer))
+    (overlay-put ov 'eca-chat-inline--text-acc <span class="s">""</span>)
+    (overlay-put ov 'eca-chat-inline--status <span class="s">"Sending prompt..."</span>)
+    (overlay-put ov 'eca-chat-inline--state 'running)
+    (overlay-put ov 'eca-chat-inline--pending-tools '())
+    (overlay-put ov 'eca-chat-inline--pending-summaries '())
+    (overlay-put ov 'eca-chat-inline--temp-buffer
+                 (generate-new-buffer <span class="s">" *eca-chat-inline*"</span>))
+    (overlay-put ov 'face 'eca-chat-inline-anchor-face)
+    <span class="cd">;; </span><span class="c">Just below eca-rewrite's 2000 so a rewrite over the same text
+</span>    <span class="cd">;; </span><span class="c">(which replaces its display) deterministically wins.
+</span>    (overlay-put ov 'priority 1999)
+    (overlay-put ov 'keymap eca-chat-inline-actions-map)
+    (overlay-put ov 'help-echo <span class="s">"ECA inline prompt"</span>)
+    (add-hook 'kill-buffer-hook
+              #'eca-chat-inline--on-source-buffer-killed nil t)
+    (eca-chat-inline--viewport-mode 1)
+    (eca-chat-inline--refresh ov)
+    ov))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

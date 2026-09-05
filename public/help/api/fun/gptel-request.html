@@ -1,0 +1,433 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-request – Emacs Documentation Online</title>
+<meta name="description" content="gptel-request is a natively compiled function defined in
+gptel-request.el.
+Request a response from the gptel-backend for PROMPT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-request</code></h1><p><span class="m"><code>gptel-request</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-request <span class="ty">&amp;optional</span> <a href="#:~:text=for-,PROMPT"><span class="arg">PROMPT</span></a> <span class="ty">&amp;key</span> <a href="#:~:text=arguments:-,CALLBACK"><span class="arg">CALLBACK</span></a> (<a href="#:~:text=unless-,BUFFER"><span class="arg">BUFFER</span></a> (current-buffer)) <a href="#:~:text=and-,POSITION"><span class="arg">POSITION</span></a> <a href="#:~:text=active.-,CONTEXT"><span class="arg">CONTEXT</span></a> <a href="#:~:text=If-,DRY-RUN"><span class="arg">DRY-RUN</span></a> (<a href="#:~:text=see-,STREAM"><span class="arg">STREAM</span></a> nil) (<a href="#:~:text=use:-,IN-PLACE"><span class="arg">IN-PLACE</span></a> nil) (<a href="#:~:text=LLM.-,SYSTEM"><span class="arg">SYSTEM</span></a> gptel-system-prompt) <a href="#:~:text=provided,-,SCHEMA"><span class="arg">SCHEMA</span></a> <a href="#:~:text=resumed.-,TRANSFORMS"><span class="arg">TRANSFORMS</span></a> (<a href="#:~:text=output.-,FSM"><span class="arg">FSM</span></a> (gptel-make-fsm)))
+</code></pre>
+<h2>Documentation</h2>
+<p>Request a response from the <a href="../var/gptel-backend.html"><code>gptel-backend</code></a> for <span class="arg">PROMPT</span>.
+<p>The request is asynchronous, this function returns immediately.
+<p>If <span class="arg">PROMPT</span> is
+<br>- a string, it is used to create a full prompt suitable for
+<br>&nbsp;&nbsp;sending to the LLM.
+<br>- A list of strings, it is interpreted as a conversation, i.e. a
+<br>&nbsp;&nbsp;series of alternating user prompts and LLM responses.
+<br>&nbsp;&nbsp;(<span class="s">"user msg 1"</span> <span class="s">"llm msg 1"</span> <span class="s">"user msg 2"</span> <span class="s">"llm msg 2"</span> ...)
+<br>- nil but region is active, the region contents are used.
+<br>- nil, the current buffer's contents up to (point) are used.
+<br>&nbsp;&nbsp;Previous responses from the LLM are identified as responses.
+<p>Keyword arguments:
+<p><span class="arg">CALLBACK</span>, if supplied, is a function of two arguments, called
+with the RESPONSE (usually a string) and INFO (a plist):
+<p>&nbsp;(funcall <span class="arg">CALLBACK</span> RESPONSE INFO)
+<p>RESPONSE is
+<p>- A string if the request was successful
+<br>- nil if there was no response or an error.
+<p>These are the only two cases you typically need to consider,
+unless you need to clean up after aborted requests, use LLM
+tools, handle "reasoning" content specially or stream
+responses (see <span class="arg">STREAM</span>).  In these cases, RESPONSE can be
+<p>- The symbol <span class="m"><code>abort</code></span> if the request is aborted, see <a href="../fun/gptel-abort.html"><code>gptel-abort</code></a>.
+<p>- A cons cell of the form
+<p>&nbsp;&nbsp;(tool-call . ((TOOL ARGS CB) ...))
+<p>&nbsp;&nbsp;where TOOL is a gptel-tool struct, ARGS is a plist of
+<br>&nbsp;&nbsp;arguments, and CB is a function for handling the results.  You
+<br>&nbsp;&nbsp;can call CB with the result of calling the tool to continue the
+<br>&nbsp;&nbsp;request.
+<p>- A cons cell of the form
+<p>&nbsp;&nbsp;(tool-result . ((TOOL ARGS RESULT) ...))
+<p>&nbsp;&nbsp;where TOOL is a gptel-tool struct, ARGS is a plist of
+<br>&nbsp;&nbsp;arguments, and RESULT was returned from calling the tool
+<br>&nbsp;&nbsp;function.
+<p>- A cons cell of the form
+<p>&nbsp;&nbsp;(reasoning . text)
+<p>&nbsp;&nbsp;where text is the contents of the reasoning block.  (Also see
+<br>&nbsp;&nbsp;<span class="arg">STREAM</span> if you are using streaming.)
+<p>See <a href="../fun/gptel--insert-response.html"><code>gptel--insert-response</code></a> for an example callback handling all
+cases.
+<p>The INFO plist has (at least) the following keys:
+<br>:data         - The request data included with the query
+<br>:position     - marker where the response will (nominally) be inserted.
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Of course, the insertion is left to the <span class="arg">CALLBACK</span>.
+<br>:buffer       - The buffer current when the request was sent,
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;unless <span class="arg">BUFFER</span> is specified.
+<br>:status       - Short string describing the result of the request,
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;including possible HTTP errors.
+<p>Example of a callback that messages the user with the response
+and info:
+<p>&nbsp;(<span class="k">lambda</span> (response info)
+<br>&nbsp;&nbsp;(<span class="k">if</span> (stringp response)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">let</span> ((posn (marker-position (plist-get info <span class="bi">:position</span>)))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(buf  (buffer-name (plist-get info <span class="bi">:buffer</span>))))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(message <span class="s">"Response for request from %S at %d: %s"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;buf posn response))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;(message <span class="s">"gptel-request failed with message: %s"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(plist-get info <span class="bi">:status</span>))))
+<p>Or, for just the response:
+<p>&nbsp;(<span class="k">lambda</span> (response _)
+<br>&nbsp;&nbsp;<span class="cd">;; </span><span class="c">Do something with response
+</span><br>&nbsp;&nbsp;(message (rot13-string response)))
+<p>If <span class="arg">CALLBACK</span> is omitted, the response is inserted at the point the
+request was sent.
+<p><span class="arg">STREAM</span> is a boolean that determines if the response should be
+streamed, as in <a href="../var/gptel-stream.html"><code>gptel-stream</code></a>.  If the model or the backend does
+not support streaming, this will be ignored.
+<p>When streaming responses
+<p>- <span class="arg">CALLBACK</span> will be called repeatedly with each RESPONSE text
+<br>&nbsp;&nbsp;chunk (a string) as it is received.
+<br>- When the HTTP request ends successfully, <span class="arg">CALLBACK</span> will be
+<br>&nbsp;&nbsp;called with a RESPONSE argument of t to indicate success.
+<br>- Similarly, <span class="arg">CALLBACK</span> will be called with
+<br>&nbsp;&nbsp;(reasoning . text-chunk) for each reasoning chunk, and
+<br>&nbsp;&nbsp;(reasoning . t) to indicate the end of the reasoning block.
+<p><span class="arg">BUFFER</span> and <span class="arg">POSITION</span> are the buffer and position (integer or
+marker) at which the response is inserted.  If a <span class="arg">CALLBACK</span> is
+specified, no response is inserted and these arguments are
+ignored, but they are still available in the INFO plist passed
+to <span class="arg">CALLBACK</span> for you to use.
+<p><span class="arg">BUFFER</span> defaults to the current buffer, and <span class="arg">POSITION</span> to the value
+of (point) or (region-end), depending on whether the region is
+active.
+<p><span class="arg">CONTEXT</span> is any additional data needed for the callback to run. It
+is included in the INFO argument to the callback.
+Note: This is intended for storing Emacs state to be used by
+<span class="arg">CALLBACK</span>, and unrelated to the context supplied to the LLM.
+<p><span class="arg">SYSTEM</span> is the system message or extended chat directive sent to
+the LLM.  This can be a string, a list of strings or a function
+that returns either; see <a href="../var/gptel-directives.html"><code>gptel-directives</code></a> for more
+information. If <span class="arg">SYSTEM</span> is omitted, the value of
+<a href="../var/gptel-system-prompt.html"><code>gptel-system-prompt</code></a> in the current buffer is used.
+<p>The following keywords are mainly for internal use:
+<p><span class="arg">IN-PLACE</span> is a boolean used by the default callback when inserting
+the response to determine if delimiters are needed between the
+prompt and the response.
+<p>If <span class="arg">DRY-RUN</span> is non-nil, do not send the request.  Construct and
+return a state machine object that can be introspected and
+resumed.
+<p><span class="arg">TRANSFORMS</span> is a list of functions used to transform the prompt or query
+parameters dynamically.  Each function is called in a temporary buffer
+containing the prompt to be sent, and can conditionally modify this
+buffer.  This can include changing the (buffer-local) values of the
+model, backend or system prompt, or augmenting the prompt with
+additional information (such as from a RAG engine).
+<p>- Synchronous transformers are called with zero or one argument, the
+<br>&nbsp;&nbsp;state machine for the request.
+<p>- Asynchronous transformers are called with two arguments, a callback
+<br>&nbsp;&nbsp;and the state machine.  It should run the callback after finishing its
+<br>&nbsp;&nbsp;transformation.
+<p>See <a href="../var/gptel-prompt-transform-functions.html"><code>gptel-prompt-transform-functions</code></a> for more.
+<p>If provided, <span class="arg">SCHEMA</span> forces the LLM to generate JSON output.  Its value
+is a JSON schema, which can be provided as
+<br>- an elisp object, a nested plist structure.
+<br>- A JSON schema serialized to a string
+<br>- A shorthand object/array description, see <a href="../fun/gptel--dispatch-schema-type.html"><code>gptel--dispatch-schema-type</code></a>.
+<br>See the manual or the wiki for examples.
+<p>Note: <span class="arg">SCHEMA</span> is presently experimental and subject to change, and not
+all providers support structured output.
+<p><span class="arg">FSM</span> is the state machine driving the request.  This can be used
+to define a custom request control flow, see <span class="m"><code>gptel-fsm</code></span> for
+details.  You can safely ignore this -- <span class="arg">FSM</span> is an unstable
+feature and subject to change.
+<p>Note:
+<p>1. This function is not fully self-contained.  Consider
+<br>let-binding the parameters <a href="../var/gptel-backend.html"><code>gptel-backend</code></a>, <a href="../var/gptel-model.html"><code>gptel-model</code></a>,
+<a href="../var/gptel-use-tools.html"><code>gptel-use-tools</code></a> and <a href="../var/gptel-use-context.html"><code>gptel-use-context</code></a> around calls to it as
+required.
+<p>2. The return value of this function is a state machine that may
+<br>be used to rerun or continue the request at a later time.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+<span class="cd">;;; </span><span class="c">Send gptel requests
+</span>(<span class="k">cl-defun</span> <span class="f">gptel-request</span>
+    (<span class="ty">&amp;optional</span> prompt <span class="ty">&amp;key</span> callback
+               (buffer (current-buffer))
+               position context dry-run
+               (stream nil) (in-place nil)
+               (system gptel-system-prompt)
+               schema transforms (fsm (gptel-make-fsm)))
+  <span class="doc">"Request a response from the `</span><span class="m doc">gptel-backend</span><span class="doc">' for PROMPT.
+
+The request is asynchronous, this function returns immediately.
+
+If PROMPT is
+- a string, it is used to create a full prompt suitable for
+  sending to the LLM.
+- A list of strings, it is interpreted as a conversation, i.e. a
+  series of alternating user prompts and LLM responses.
+  (\"user msg 1\" \"llm msg 1\" \"user msg 2\" \"llm msg 2\" ...)
+- nil but region is active, the region contents are used.
+- nil, the current buffer's contents up to (point) are used.
+  Previous responses from the LLM are identified as responses.
+
+Keyword arguments:
+
+CALLBACK, if supplied, is a function of two arguments, called
+with the RESPONSE (usually a string) and INFO (a plist):
+
+ (funcall CALLBACK RESPONSE INFO)
+
+RESPONSE is
+
+- A string if the request was successful
+- nil if there was no response or an error.
+
+These are the only two cases you typically need to consider,
+unless you need to clean up after aborted requests, use LLM
+tools, handle \"reasoning\" content specially or stream
+responses (see STREAM).  In these cases, RESPONSE can be
+
+- The symbol `</span><span class="m doc">abort</span><span class="doc">' if the request is aborted, see `</span><span class="m doc">gptel-abort</span><span class="doc">'.
+
+- A cons cell of the form
+
+  (tool-call . ((TOOL ARGS CB) ...))
+
+  where TOOL is a gptel-tool struct, ARGS is a plist of
+  arguments, and CB is a function for handling the results.  You
+  can call CB with the result of calling the tool to continue the
+  request.
+
+- A cons cell of the form
+
+  (tool-result . ((TOOL ARGS RESULT) ...))
+
+  where TOOL is a gptel-tool struct, ARGS is a plist of
+  arguments, and RESULT was returned from calling the tool
+  function.
+
+- A cons cell of the form
+
+  (reasoning . text)
+
+  where text is the contents of the reasoning block.  (Also see
+  STREAM if you are using streaming.)
+
+See `</span><span class="m doc">gptel--insert-response</span><span class="doc">' for an example callback handling all
+cases.
+
+The INFO plist has (at least) the following keys:
+:data         - The request data included with the query
+:position     - marker where the response will (nominally) be inserted.
+                Of course, the insertion is left to the CALLBACK.
+:buffer       - The buffer current when the request was sent,
+                unless BUFFER is specified.
+:status       - Short string describing the result of the request,
+                including possible HTTP errors.
+
+Example of a callback that messages the user with the response
+and info:
+
+ (lambda (response info)
+  (if (stringp response)
+      (let ((posn (marker-position (plist-get info :position)))
+            (buf  (buffer-name (plist-get info :buffer))))
+        (message \"Response for request from %S at %d: %s\"
+                 buf posn response))
+    (message \"gptel-request failed with message: %s\"
+             (plist-get info :status))))
+
+Or, for just the response:
+
+ (lambda (response _)
+  ;; Do something with response
+  (message (rot13-string response)))
+
+If CALLBACK is omitted, the response is inserted at the point the
+request was sent.
+
+STREAM is a boolean that determines if the response should be
+streamed, as in `</span><span class="m doc">gptel-stream</span><span class="doc">'.  If the model or the backend does
+not support streaming, this will be ignored.
+
+When streaming responses
+
+- CALLBACK will be called repeatedly with each RESPONSE text
+  chunk (a string) as it is received.
+- When the HTTP request ends successfully, CALLBACK will be
+  called with a RESPONSE argument of t to indicate success.
+- Similarly, CALLBACK will be called with
+  (reasoning . text-chunk) for each reasoning chunk, and
+  (reasoning . t) to indicate the end of the reasoning block.
+
+BUFFER and POSITION are the buffer and position (integer or
+marker) at which the response is inserted.  If a CALLBACK is
+specified, no response is inserted and these arguments are
+ignored, but they are still available in the INFO plist passed
+to CALLBACK for you to use.
+
+BUFFER defaults to the current buffer, and POSITION to the value
+of (point) or (region-end), depending on whether the region is
+active.
+
+CONTEXT is any additional data needed for the callback to run. It
+is included in the INFO argument to the callback.
+Note: This is intended for storing Emacs state to be used by
+CALLBACK, and unrelated to the context supplied to the LLM.
+
+SYSTEM is the system message or extended chat directive sent to
+the LLM.  This can be a string, a list of strings or a function
+that returns either; see `</span><span class="m doc">gptel-directives</span><span class="doc">' for more
+information. If SYSTEM is omitted, the value of
+`</span><span class="m doc">gptel-system-prompt</span><span class="doc">' in the current buffer is used.
+
+The following keywords are mainly for internal use:
+
+IN-PLACE is a boolean used by the default callback when inserting
+the response to determine if delimiters are needed between the
+prompt and the response.
+
+If DRY-RUN is non-nil, do not send the request.  Construct and
+return a state machine object that can be introspected and
+resumed.
+
+TRANSFORMS is a list of functions used to transform the prompt or query
+parameters dynamically.  Each function is called in a temporary buffer
+containing the prompt to be sent, and can conditionally modify this
+buffer.  This can include changing the (buffer-local) values of the
+model, backend or system prompt, or augmenting the prompt with
+additional information (such as from a RAG engine).
+
+- Synchronous transformers are called with zero or one argument, the
+  state machine for the request.
+
+- Asynchronous transformers are called with two arguments, a callback
+  and the state machine.  It should run the callback after finishing its
+  transformation.
+
+See `</span><span class="m doc">gptel-prompt-transform-functions</span><span class="doc">' for more.
+
+If provided, SCHEMA forces the LLM to generate JSON output.  Its value
+is a JSON schema, which can be provided as
+- an elisp object, a nested plist structure.
+- A JSON schema serialized to a string
+- A shorthand object/array description, see `</span><span class="m doc">gptel--dispatch-schema-type</span><span class="doc">'.
+See the manual or the wiki for examples.
+
+Note: SCHEMA is presently experimental and subject to change, and not
+all providers support structured output.
+
+FSM is the state machine driving the request.  This can be used
+to define a custom request control flow, see `</span><span class="m doc">gptel-fsm</span><span class="doc">' for
+details.  You can safely ignore this -- FSM is an unstable
+feature and subject to change.
+
+Note:
+
+1. This function is not fully self-contained.  Consider
+let-binding the parameters `</span><span class="m doc">gptel-backend</span><span class="doc">', `</span><span class="m doc">gptel-model</span><span class="doc">',
+`</span><span class="m doc">gptel-use-tools</span><span class="doc">' and `</span><span class="m doc">gptel-use-context</span><span class="doc">' around calls to it as
+required.
+
+2. The return value of this function is a state machine that may
+be used to rerun or continue the request at a later time."</span>
+  (<span class="k">declare</span> (indent 1))
+  <span class="cd">;; </span><span class="c">TODO Remove this check in version 1.0
+</span>  (gptel--sanitize-model)
+  (<span class="k">let*</span> ((start-marker
+          (<span class="k">cond</span>
+           ((null position)
+            (<span class="k">if</span> (use-region-p)
+                (set-marker (make-marker) (region-end))
+              (<span class="k">gptel--at-word-end</span> (point-marker))))
+           ((markerp position) position)
+           ((integerp position)
+            (set-marker (make-marker) position buffer))))
+         (gptel-system-prompt system) <span class="cd">;</span><span class="c">Required for copying into the prompt buffer
+</span>         (gptel--schema schema)
+         (prompt-buffer
+          (<span class="k">cond</span>                       <span class="cd">;</span><span class="c">prompt from buffer or explicitly supplied
+</span>           ((null prompt)           <span class="cd">;</span><span class="c">Send text up to end of word (for evil-mode users)
+</span>            (<span class="k">with-current-buffer</span> buffer
+              (gptel--create-prompt-buffer (<span class="k">gptel--at-word-end</span> (point)))))
+           ((stringp prompt)
+            (<span class="k">gptel--with-buffer-copy</span> buffer nil nil
+              (insert prompt)
+              (<span class="k">setq</span> major-mode 'fundamental-mode) <span class="cd">;</span><span class="c">Avoid mode-specific behavior
+</span>              (current-buffer)))
+           ((consp prompt)
+            <span class="cd">;; </span><span class="c">(gptel--parse-list gptel-backend prompt)
+</span>            (<span class="k">gptel--with-buffer-copy</span> buffer nil nil
+              <span class="cd">;; </span><span class="c">TEMP Decide on the annotated prompt-list format
+</span>              (gptel--parse-list-and-insert prompt)
+              (<span class="k">setq</span> major-mode 'fundamental-mode) <span class="cd">;</span><span class="c">Avoid mode-specific behavior
+</span>              (current-buffer)))))
+         (info (list <span class="bi">:data</span> prompt-buffer
+                     <span class="bi">:buffer</span> buffer
+                     <span class="bi">:position</span> start-marker)))
+    (<span class="k">when</span> transforms (plist-put info <span class="bi">:transforms</span> transforms))
+    <span class="cd">;; </span><span class="c">Evaluate function valued system prompts in the request buffer, but then
+</span>    <span class="cd">;; </span><span class="c">set it in the prompt construction buffer
+</span>    (<span class="k">when-let*</span> ((system (buffer-local-value 'gptel-system-prompt prompt-buffer))
+                ((functionp system)))
+      (<span class="k">let</span> ((system-list (<span class="k">with-current-buffer</span> buffer
+                           (gptel--parse-directive system 'raw))))
+        (<span class="k">with-current-buffer</span> prompt-buffer <span class="cd">;</span><span class="c">and then set the result in the prompt buffer
+</span>          (<span class="k">setq</span> gptel-system-prompt        <span class="cd">;</span><span class="c">guaranteed to be buffer-local
+</span>                <span class="cd">;; </span><span class="c">Retain single-part system messages as strings to avoid surprises
+</span>                <span class="cd">;; </span><span class="c">when applying presets
+</span>                (<span class="k">if</span> (cdr system-list) system-list (car system-list))))))
+    (<span class="k">when</span> stream (plist-put info <span class="bi">:stream</span> stream))
+    <span class="cd">;; </span><span class="c">This context should not be confused with the context aggregation context!
+</span>    (<span class="k">when</span> callback (plist-put info <span class="bi">:callback</span> callback))
+    (<span class="k">when</span> context (plist-put info <span class="bi">:context</span> context))
+    (<span class="k">when</span> in-place (plist-put info <span class="bi">:in-place</span> in-place))
+    <span class="cd">;; </span><span class="c">Add info to state machine context
+</span>    (<span class="k">when</span> dry-run (plist-put info <span class="bi">:dry-run</span> dry-run))
+    (<span class="k">setf</span> (gptel-fsm-info fsm) info))
+
+  <span class="cd">;; </span><span class="c">TEMP: Augment in separate let block for now.  Are we overcapturing?
+</span>  <span class="cd">;; </span><span class="c">FIXME(augment): Call augmentors with INFO, not FSM
+</span>  (<span class="k">let</span> ((info (gptel-fsm-info fsm)))
+    (<span class="k">with-current-buffer</span> (plist-get info <span class="bi">:data</span>)
+      (<span class="k">setq-local</span> gptel-prompt-transform-functions (plist-get info <span class="bi">:transforms</span>))
+      <span class="cd">;; </span><span class="c">Preset has highest priority because it can change prompt-transform-functions
+</span>      (<span class="k">when</span> (memq 'gptel--transform-apply-preset gptel-prompt-transform-functions)
+        (gptel--transform-apply-preset fsm)
+        (<span class="k">setq</span> gptel-prompt-transform-functions <span class="cd">;</span><span class="c">avoid mutation, copy transforms
+</span>              (remq 'gptel--transform-apply-preset gptel-prompt-transform-functions)))
+      (<span class="k">let</span> ((augment-total              <span class="cd">;</span><span class="c">act like a hook, count total
+</span>             (<span class="k">if</span> (memq t gptel-prompt-transform-functions)
+                 (length
+                  (<span class="k">setq</span> gptel-prompt-transform-functions
+                        (nconc (remq t gptel-prompt-transform-functions)
+                               (default-value 'gptel-prompt-transform-functions))))
+               (length gptel-prompt-transform-functions)))
+            (augment-idx 0))
+        (<span class="k">if</span> (null gptel-prompt-transform-functions)
+            (gptel--realize-query fsm)
+          <span class="cd">;; </span><span class="c">FIXME(request-lib): Cannot use gptel--update-status from this file
+</span>          <span class="cd">;; </span><span class="c">(with-current-buffer (plist-get info :buffer) ;Apply prompt transformations
+</span>          <span class="cd">;;   </span><span class="c">(gptel--update-status " Augmenting..." 'mode-line-emphasis))
+</span>
+          <span class="cd">;; </span><span class="c">FIXME(augment): This needs to be converted into a linear callback
+</span>          <span class="cd">;; </span><span class="c">chain to avoid race conditions with multiple async augmentors.
+</span>          (run-hook-wrapped
+           'gptel-prompt-transform-functions
+           (<span class="k">lambda</span> (func fsm-arg)
+             (<span class="k">with-current-buffer</span> (plist-get info <span class="bi">:data</span>)
+               (goto-char (point-max))
+               (<span class="k">if</span> (= (car (func-arity func)) 2) <span class="cd">;</span><span class="c">async augmentor
+</span>                   (funcall func (<span class="k">lambda</span> ()
+                                   (<span class="k">cl-incf</span> augment-idx)
+                                   (<span class="k">when</span> (&gt;= augment-idx augment-total) <span class="cd">;</span><span class="c">All augmentors have run
+</span>                                     (gptel--realize-query fsm-arg)))
+                            fsm-arg)
+                 (<span class="k">if</span> (= (car (func-arity func)) 0)
+                     (funcall func)
+                   (funcall func fsm-arg)) <span class="cd">;</span><span class="c">sync augmentor
+</span>                 (<span class="k">cl-incf</span> augment-idx)
+                 (<span class="k">when</span> (&gt;= augment-idx augment-total) <span class="cd">;</span><span class="c">All augmentors have run
+</span>                   (gptel--realize-query fsm-arg))))
+             nil)           <span class="cd">;</span><span class="c">always return nil so run-hook-wrapped doesn't abort
+</span>           fsm)))))
+  fsm)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

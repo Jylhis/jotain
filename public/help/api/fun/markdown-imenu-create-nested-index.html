@@ -1,0 +1,89 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-imenu-create-nested-index – Emacs Documentation Online</title>
+<meta name="description" content="markdown-imenu-create-nested-index is a natively compiled function
+defined in markdown-mode.el.
+Create and return a nested imenu index alist for the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-imenu-create-nested-index</code></h1><p><span class="m"><code>markdown-imenu-create-nested-index</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-imenu-create-nested-index)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create and return a nested imenu index alist for the current buffer.
+<p>See <a href="../var/imenu-create-index-function.html"><code>imenu-create-index-function</code></a> and <a href="../var/imenu--index-alist.html"><code>imenu--index-alist</code></a> for details.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+<span class="cd">;;; </span><span class="c">imenu =====================================================================
+</span>
+(<span class="k">defun</span> <span class="f">markdown-imenu-create-nested-index</span> ()
+  <span class="doc">"Create and return a nested imenu index alist for the current buffer.
+See `</span><span class="m doc">imenu-create-index-function</span><span class="doc">' and `</span><span class="m doc">imenu--index-alist</span><span class="doc">' for details."</span>
+  (<span class="k">let*</span> ((root (list nil))
+         (min-level 9999)
+         hashes headers)
+    (<span class="k">save-excursion</span>
+      <span class="cd">;; </span><span class="c">Headings
+</span>      (goto-char (point-min))
+      (<span class="k">while</span> (re-search-forward markdown-regex-header (point-max) t)
+        (<span class="k">unless</span> (<span class="k">or</span> (markdown-code-block-at-point-p)
+                    (<span class="k">and</span> (match-beginning 3)
+                         (get-text-property (match-beginning 3) 'markdown-yaml-metadata-end)))
+          (<span class="k">cond</span>
+           ((match-string-no-properties 2) <span class="cd">;; </span><span class="c">level 1 setext
+</span>            (<span class="k">setq</span> min-level 1)
+            (<span class="k">push</span> (list <span class="bi">:heading</span> (match-string-no-properties 1)
+                        <span class="bi">:point</span> (match-beginning 1)
+                        <span class="bi">:level</span> 1) <span class="w">headers))</span>
+           ((match-string-no-properties 3) <span class="cd">;; </span><span class="c">level 2 setext
+</span>            (<span class="k">setq</span> min-level (min min-level 2))
+            (<span class="k">push</span> (list <span class="bi">:heading</span> (match-string-no-properties 1)
+                        <span class="bi">:point</span> (match-beginning 1)
+                        <span class="bi">:level</span> (- 2 (1- min-level))) <span class="w">headers))</span>
+           ((<span class="k">setq</span> hashes (markdown-trim-whitespace
+                          (match-string-no-properties 4)))
+            (<span class="k">setq</span> min-level (min min-level (length hashes)))
+            (<span class="k">push</span> (list <span class="bi">:heading</span> (match-string-no-properties 5)
+                        <span class="bi">:point</span> (match-beginning 4)
+                        <span class="bi">:level</span> (- (length hashes) (1- min-level))) <span class="w">headers)))))</span>
+      (<span class="k">cl-loop</span> with cur-level = 0
+               with cur-alist = nil
+               with empty-heading = <span class="s">"-"</span>
+               with self-heading = <span class="s">"."</span>
+               for header in (reverse headers)
+               for level = (plist-get header <span class="bi">:level</span>)
+               do
+               (<span class="k">let</span> ((alist (list (cons (plist-get header <span class="bi">:heading</span>) (plist-get header <span class="bi">:point</span>)))))
+                 (<span class="k">cond</span>
+                  ((= cur-level level)  <span class="cd">; </span><span class="c">new sibling
+</span>                   (setcdr cur-alist alist)
+                   (<span class="k">setq</span> cur-alist alist))
+                  ((&lt; cur-level level)  <span class="cd">; </span><span class="c">first child
+</span>                   (<span class="k">dotimes</span> (_ (- level cur-level 1))
+                     (<span class="k">setq</span> alist (list (cons empty-heading alist))))
+                   (<span class="k">if</span> cur-alist
+                       (<span class="k">let*</span> ((parent (car cur-alist))
+                              (self-pos (cdr parent)))
+                         (setcdr parent (cons (cons self-heading self-pos) alist)))
+                     (setcdr root alist)) <span class="cd">; </span><span class="c">primogenitor
+</span>                   (<span class="k">setq</span> cur-alist alist)
+                   (<span class="k">setq</span> cur-level level))
+                  (t                    <span class="cd">; </span><span class="c">new sibling of an ancestor
+</span>                   (<span class="k">let</span> ((sibling-alist (last (cdr root))))
+                     (<span class="k">dotimes</span> (_ (1- level))
+                       (<span class="k">setq</span> sibling-alist (last (cdar sibling-alist))))
+                     (setcdr sibling-alist alist)
+                     (<span class="k">setq</span> cur-alist alist))
+                   (<span class="k">setq</span> cur-level level)))))
+      (<span class="k">setq</span> root (copy-tree root))
+      <span class="cd">;; </span><span class="c">Footnotes
+</span>      (<span class="k">let</span> ((fn (markdown-get-defined-footnotes)))
+        (<span class="k">if</span> (<span class="k">or</span> (zerop (length fn))
+                (null markdown-add-footnotes-to-imenu))
+            (cdr root)
+          (nconc (cdr root) (list (cons <span class="s">"Footnotes"</span> fn))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

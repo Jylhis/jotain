@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--maybe-finalize-context-token – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--maybe-finalize-context-token is a natively compiled function
+defined in eca-chat-context.el.
+Turn a raw @path or #path token before point into a proper item.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--maybe-finalize-context-token</code></h1><p><span class="m"><code>eca-chat--maybe-finalize-context-token</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-chat-context.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--maybe-finalize-context-token)
+</code></pre>
+<h2>Documentation</h2>
+<p>Turn a raw @path or #path token before point into a proper item.
+<p>Meant to be called right after a space was inserted.  Does
+nothing when the previous word does not resolve to an existing
+file or directory.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-context.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--maybe-finalize-context-token</span> ()
+  <span class="doc">"Turn a raw @path or #path token before point into a proper item.
+Meant to be called right after a space was inserted.  Does
+nothing when the previous word does not resolve to an existing
+file or directory."</span>
+  (<span class="k">let*</span> ((end (1- (point)))
+         (start (<span class="k">save-excursion</span>
+                  (goto-char end)
+                  (<span class="k">if</span> (re-search-backward <span class="s">"[[:space:]]"</span> (line-beginning-position) t)
+                      (1+ (point))
+                    (line-beginning-position)))))
+    (<span class="k">when</span> (&lt; start end)
+      (<span class="k">let</span> ((word (buffer-substring-no-properties start end)))
+        (<span class="k">when</span> (<span class="k">and</span> (&gt; (length word) 1)
+                   (<span class="k">or</span> (string-prefix-p eca-chat-context-prefix word)
+                       (string-prefix-p eca-chat-filepath-prefix word))
+                   (not (get-text-property start 'eca-chat-item-type)))
+          (<span class="k">when-let</span> ((path (eca-chat--resolve-path-token (substring word 1))))
+            (<span class="k">let</span> ((context? (string-prefix-p eca-chat-context-prefix word)))
+              (<span class="k">cond</span>
+               <span class="cd">;; </span><span class="c">On the context line: add to the context list; the
+</span>               <span class="cd">;; </span><span class="c">refresh wipes the typed text.
+</span>               ((<span class="k">and</span> context? (eca-chat--point-at-new-context-p))
+                (eca-chat--add-context
+                 (list <span class="bi">:type</span> (<span class="k">if</span> (f-dir? path) <span class="s">"directory"</span> <span class="s">"file"</span>)
+                       <span class="bi">:path</span> path)))
+               <span class="cd">;; </span><span class="c">In the prompt: replace the raw token with an item.
+</span>               ((eca-chat--point-at-prompt-field-p)
+                (<span class="k">let</span> ((item-str (<span class="k">if</span> context?
+                                    (eca-chat--context-&gt;str
+                                     (list <span class="bi">:type</span> (<span class="k">if</span> (f-dir? path) <span class="s">"directory"</span> <span class="s">"file"</span>)
+                                           <span class="bi">:path</span> path)
+                                     'static)
+                                  (eca-chat--filepath-&gt;str path nil))))
+                  (delete-region start (point))
+                  (eca-chat--insert item-str)
+                  (eca-chat--insert <span class="s">" "</span>)))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

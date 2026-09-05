@@ -1,0 +1,95 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat-inline--handle-content – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat-inline--handle-content is a natively compiled function
+defined in eca-chat-inline.el.
+Update OV given chat CONTENT owned by ROLE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat-inline--handle-content</code></h1><p><span class="m"><code>eca-chat-inline--handle-content</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-chat-inline.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat-inline--handle-content <a href="#:~:text=Update-,OV"><span class="arg">OV</span></a> <a href="#:~:text=by-,ROLE"><span class="arg">ROLE</span></a> <a href="#:~:text=chat-,CONTENT"><span class="arg">CONTENT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update <span class="arg">OV</span> given chat <span class="arg">CONTENT</span> owned by <span class="arg">ROLE</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-inline.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat-inline--handle-content</span> (ov role content)
+  <span class="doc">"Update OV given chat CONTENT owned by ROLE."</span>
+  (<span class="k">let</span> ((type (plist-get content <span class="bi">:type</span>)))
+    (<span class="k">pcase</span> type
+      (<span class="s">"text"</span>
+       (<span class="k">pcase</span> role
+         <span class="cd">;; </span><span class="c">A user message starts a turn: reset the answer area so the
+</span>         <span class="cd">;; </span><span class="c">overlay always shows the answer to the last question.
+</span>         (<span class="s">"user"</span> (eca-chat-inline--start-turn ov))
+         (<span class="s">"assistant"</span>
+          (overlay-put ov 'eca-chat-inline--text-acc
+                       (concat (overlay-get ov 'eca-chat-inline--text-acc)
+                               (<span class="k">or</span> (plist-get content <span class="bi">:text</span>) <span class="s">""</span>)))
+          (eca-chat-inline--set-status ov <span class="s">"Streaming..."</span> 'running))
+         <span class="cd">;; </span><span class="c">System text carries errors and notices (e.g. provider
+</span>         <span class="cd">;; </span><span class="c">failures after the prompt started); surface it in the
+</span>         <span class="cd">;; </span><span class="c">answer area so failed turns don't render as a clean Done.
+</span>         (<span class="s">"system"</span>
+          (overlay-put ov 'eca-chat-inline--text-acc
+                       (concat (overlay-get ov 'eca-chat-inline--text-acc)
+                               (<span class="k">or</span> (plist-get content <span class="bi">:text</span>) <span class="s">""</span>)))
+          (eca-chat-inline--refresh ov))
+         (_ nil)))
+      (<span class="s">"progress"</span>
+       (<span class="k">pcase</span> (plist-get content <span class="bi">:state</span>)
+         (<span class="s">"running"</span>
+          <span class="cd">;; </span><span class="c">While tool calls wait for approval, keep their summaries
+</span>          <span class="cd">;; </span><span class="c">as the status instead of the generic server progress text
+</span>          <span class="cd">;; </span><span class="c">("Waiting for tool call approval").
+</span>          (<span class="k">unless</span> (overlay-get ov 'eca-chat-inline--pending-tools)
+            (eca-chat-inline--set-status
+             ov (<span class="k">or</span> (plist-get content <span class="bi">:text</span>) <span class="s">"Running..."</span>) 'running)))
+         (<span class="s">"finished"</span> (eca-chat-inline--finalize ov))))
+      (<span class="s">"reasonStarted"</span>
+       (eca-chat-inline--set-status ov <span class="s">"Thinking..."</span> 'running))
+      (<span class="s">"reasonFinished"</span>
+       (eca-chat-inline--set-status ov <span class="s">"Waiting model..."</span> 'running))
+      (<span class="s">"toolCallPrepare"</span>
+       (eca-chat-inline--set-status
+        ov
+        (<span class="k">or</span> (plist-get content <span class="bi">:summary</span>)
+            (format <span class="s">"Preparing tool %s..."</span> (plist-get content <span class="bi">:name</span>)))
+        'running))
+      (<span class="s">"toolCallRun"</span>
+       (<span class="k">if</span> (plist-get content <span class="bi">:manualApproval</span>)
+           (eca-chat-inline--set-status
+            ov (eca-chat-inline--track-pending-tool
+                ov (plist-get content <span class="bi">:id</span>)
+                (<span class="k">or</span> (plist-get content <span class="bi">:summary</span>)
+                    (format <span class="s">"Tool %s needs approval"</span>
+                            (plist-get content <span class="bi">:name</span>)))))
+         (eca-chat-inline--set-status
+          ov
+          (<span class="k">or</span> (plist-get content <span class="bi">:summary</span>)
+              (format <span class="s">"Running tool %s..."</span> (plist-get content <span class="bi">:name</span>)))
+          'running)))
+      (<span class="s">"toolCallRunning"</span>
+       <span class="cd">;; </span><span class="c">Approved (possibly from another client): no longer pending.
+</span>       (eca-chat-inline--drop-pending-tool ov (plist-get content <span class="bi">:id</span>))
+       (eca-chat-inline--set-status
+        ov
+        (<span class="k">or</span> (plist-get content <span class="bi">:summary</span>)
+            (format <span class="s">"Running tool %s..."</span> (plist-get content <span class="bi">:name</span>)))
+        'running))
+      (<span class="s">"toolCalled"</span>
+       (<span class="k">if-let*</span> ((remaining (eca-chat-inline--drop-pending-tool
+                             ov (plist-get content <span class="bi">:id</span>))))
+           (eca-chat-inline--set-status ov remaining)
+         (eca-chat-inline--set-status ov <span class="s">"Waiting model..."</span> 'running)))
+      (<span class="s">"toolCallRejected"</span>
+       (<span class="k">if-let*</span> ((remaining (eca-chat-inline--drop-pending-tool
+                             ov (plist-get content <span class="bi">:id</span>))))
+           (eca-chat-inline--set-status ov remaining)
+         (eca-chat-inline--set-status ov <span class="s">"Tool call rejected"</span>)))
+      (_ nil))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

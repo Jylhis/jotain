@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--project-buffers – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--project-buffers is a natively compiled function defined in
+ghostel.el.
+Return ghostel buffers belonging to the current project, sorted by name.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--project-buffers</code></h1><p><span class="m"><code>ghostel--project-buffers</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--project-buffers)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return ghostel buffers belonging to the current project, sorted by name.
+<p>Scoping is controlled by <a href="../var/ghostel-project-buffer-scope.html"><code>ghostel-project-buffer-scope</code></a>.  Signals
+<a href="../fun/user-error.html"><code>user-error</code></a> if there is no current project.
+<p>Buffers whose <a href="../var/default-directory.html"><code>default-directory</code></a> is remote are skipped in the
+<a href="../var/default-directory.html"><code>default-directory</code></a> scope branch — querying <a href="../fun/project-current.html"><code>project-current</code></a>
+against a TRAMP path would walk the remote filesystem
+synchronously on every cycle.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--project-buffers</span> ()
+  <span class="doc">"Return ghostel buffers belonging to the current project, sorted by name.
+Scoping is controlled by `</span><span class="m doc">ghostel-project-buffer-scope</span><span class="doc">'.  Signals
+`</span><span class="m doc">user-error</span><span class="doc">' if there is no current project.
+
+Buffers whose `</span><span class="m doc">default-directory</span><span class="doc">' is remote are skipped in the
+`</span><span class="m doc">default-directory</span><span class="doc">' scope branch — querying `</span><span class="m doc">project-current</span><span class="doc">'
+against a TRAMP path would walk the remote filesystem
+synchronously on every cycle."</span>
+  (<span class="k">let*</span> ((proj (project-current t))
+         (root (project-root proj))
+         (scope ghostel-project-buffer-scope)
+         (all (ghostel--all-buffers))
+         (by-dir
+          (<span class="k">and</span> (memq scope '(default-directory both))
+               (cl-remove-if-not
+                (<span class="k">lambda</span> (b)
+                  (<span class="k">let</span> ((bd (buffer-local-value 'default-directory b)))
+                    (<span class="k">and</span> bd
+                         (not (file-remote-p bd))
+                         (<span class="k">ignore-errors</span>
+                           (<span class="k">let</span> ((bp (project-current nil bd)))
+                             (<span class="k">and</span> bp (equal (project-root bp) root)))))))
+                all)))
+         (by-id
+          (<span class="k">and</span> (memq scope '(identity both))
+               (<span class="k">let</span> ((pattern `((kind . term)
+                                (project-root . ,(ghostel--normalize-root
+                                                  root)))))
+                 (cl-remove-if-not
+                  (<span class="k">lambda</span> (b)
+                    (ghostel-identity-match-p
+                     pattern (buffer-local-value 'ghostel-identity b)))
+                  all)))))
+    (sort (cl-delete-duplicates (append by-dir by-id) <span class="bi">:test</span> #'eq)
+          (<span class="k">lambda</span> (a b) (string&lt; (buffer-name a) (buffer-name b))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

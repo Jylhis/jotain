@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-highlight--update – Emacs Documentation Online</title>
+<meta name="description" content="gptel-highlight--update is a natively compiled function defined in
+gptel.el.
+JIT-lock function: mark gptel response/reasoning regions.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-highlight--update</code></h1><p><span class="m"><code>gptel-highlight--update</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-highlight--update <a href="#:~:text=regions.-,BEG"><span class="arg">BEG</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>JIT-lock function: mark gptel response/reasoning regions.
+<p><span class="arg">BEG</span> and <span class="arg">END</span> delimit the region to refresh.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel-highlight--update</span> (beg end)
+  <span class="doc">"JIT-lock function: mark gptel response/reasoning regions.
+
+BEG and END delimit the region to refresh."</span>
+  (<span class="k">save-excursion</span>                <span class="cd">;</span><span class="c">Scan across region for the gptel text property
+</span>    (<span class="k">let</span> ((prev-pt (goto-char end)))
+      (<span class="k">while</span> (<span class="k">and</span> (goto-char (previous-single-property-change
+                              (point) 'gptel nil beg))
+                  (/= (point) prev-pt))
+        (<span class="k">pcase</span> (get-char-property (point) 'gptel)
+          ((<span class="k">and</span> (<span class="k">or</span> 'response 'ignore `(tool . ,_)) val)
+           (<span class="k">if-let*</span> ((ov (<span class="k">or</span> (cdr-safe (get-char-property-and-overlay
+                                        (point) 'gptel-highlight))
+                             (cdr-safe (get-char-property-and-overlay
+                                        prev-pt 'gptel-highlight))))
+                     (from (overlay-start ov)) (to (overlay-end ov)))
+               (<span class="k">unless</span> (&lt;= from (point) prev-pt to)
+                 (move-overlay ov (min from (point)) (max to prev-pt)))
+             (gptel-highlight--decorate <span class="cd">;</span><span class="c">Or make new overlay covering just region
+</span>              (make-overlay (point) prev-pt nil t) val)))
+          ('nil                     <span class="cd">;</span><span class="c">If there's an overlay, we need to split it.
+</span>           (<span class="k">when-let*</span> ((ov (cdr-safe (get-char-property-and-overlay
+                                      (point) 'gptel-highlight)))
+                       (from (overlay-start ov)) (to (overlay-end ov)))
+             (move-overlay ov from (point)) <span class="cd">;</span><span class="c">Move overlay to left side
+</span>             (gptel-highlight--decorate     <span class="cd">;</span><span class="c">Make a new one on the right
+</span>              (make-overlay prev-pt to nil t)
+              (get-char-property prev-pt 'gptel)))))
+        (<span class="k">setq</span> prev-pt (point)))))
+  `(jit-lock-bounds ,beg . ,end))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

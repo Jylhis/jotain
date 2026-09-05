@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape-hover-function – Emacs Documentation Online</title>
+<meta name="description" content="dape-hover-function is a natively compiled function defined in
+dape.el.
+Hook function to produce doc strings for eldoc.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape-hover-function</code></h1><p><span class="m"><code>dape-hover-function</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape-hover-function <a href="#:~:text=calls-,CB"><span class="arg">CB</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Hook function to produce doc strings for <a href="../fun/eldoc.html"><code>eldoc</code></a>.
+<p>On success calls <span class="arg">CB</span> with the doc string.
+See <a href="../var/eldoc-documentation-functions.html"><code>eldoc-documentation-functions</code></a>, for more information.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+<span class="cd">;;; </span><span class="c">Hover
+</span>
+(<span class="k">defun</span> <span class="f">dape-hover-function</span> (cb)
+  <span class="doc">"Hook function to produce doc strings for `</span><span class="m doc">eldoc</span><span class="doc">'.
+On success calls CB with the doc string.
+See `</span><span class="m doc">eldoc-documentation-functions</span><span class="doc">', for more information."</span>
+  (<span class="k">when-let*</span> ((conn (dape--live-connection 'last t))
+              ((dape--capable-p conn <span class="bi">:supportsEvaluateForHovers</span>))
+              (symbol (thing-at-point 'symbol))
+              (name (substring-no-properties symbol))
+              (id (plist-get (dape--current-stack-frame conn) <span class="bi">:id</span>)))
+    (<span class="k">dape--with-request-bind</span>
+        (body error)
+        (dape--evaluate-expression conn id name <span class="s">"hover"</span>)
+      (<span class="k">unless</span> error
+        (<span class="k">dape--with-request</span>
+            (dape--variables-recursive conn `(<span class="bi">:variables</span> (,body)) '(hover)
+                                       #'dape--variable-expanded-p)
+          (<span class="k">let</span> ((table (make-gdb-table)))
+            (dape--info-scope-add-variable table (plist-put body <span class="bi">:name</span> name)
+                                           nil '(hover) #'dape--variable-expanded-p
+                                           'no-handles)
+            (funcall cb (gdb-table-string table <span class="s">" "</span>)))))))
+  t)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

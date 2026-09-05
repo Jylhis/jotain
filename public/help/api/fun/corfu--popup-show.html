@@ -1,0 +1,99 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: corfu--popup-show – Emacs Documentation Online</title>
+<meta name="description" content="corfu--popup-show is a byte-compiled function defined in corfu.el.
+Show LINES as popup at POS - OFF.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>corfu--popup-show</code></h1><p><span class="m"><code>corfu--popup-show</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in <span class="bt">corfu.el</span>.
+<h2>Signature</h2>
+<pre><code>(corfu--popup-show <a href="#:~:text=at-,POS"><span class="arg">POS</span></a> <a href="#:~:text=POS --,OFF"><span class="arg">OFF</span></a> <a href="#:~:text=OFF.-,WIDTH"><span class="arg">WIDTH</span></a> <a href="#:~:text=Show-,LINES"><span class="arg">LINES</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=candidate-,CURR"><span class="arg">CURR</span></a> <a href="#:~:text=from-,LO"><span class="arg">LO</span></a> <a href="#:~:text=LO+-,BAR"><span class="arg">BAR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Show <span class="arg">LINES</span> as popup at <span class="arg">POS</span> - <span class="arg">OFF</span>.
+<p><span class="arg">WIDTH</span> is the width of the popup.
+The current candidate <span class="arg">CURR</span> is highlighted.
+A scroll bar is displayed from <span class="arg">LO</span> to <span class="arg">LO</span>+<span class="arg">BAR</span>.
+<h2>Implementations</h2>
+<p>(corfu--popup-show POS OFF WIDTH LINES &amp;optional CURR LO BAR) in `<span class="bt">corfu.el</span>'.
+<p>Undocumented
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w8w9ybb6ad8ab6ghqfbq36v1kcp2igzi-emacs-packages-deps/share/emacs/site-lisp/elpa/corfu-20260828.932/corfu.el</span>
+(<span class="k">cl-defgeneric</span> <span class="f">corfu--popup-show</span> (pos off width lines <span class="ty">&amp;optional</span> curr lo bar)
+  <span class="doc">"Show LINES as popup at POS - OFF.
+WIDTH is the width of the popup.
+The current candidate CURR is highlighted.
+A scroll bar is displayed from LO to LO+BAR."</span>
+  (<span class="k">let</span> ((lh (max (default-line-height) (cdr (posn-object-width-height pos)))))
+    (<span class="k">with-current-buffer</span> (corfu--make-buffer <span class="s">" *corfu*"</span>)
+      (<span class="k">let*</span> ((ch (default-line-height))
+             (cw (default-font-width))
+             <span class="cd">;; </span><span class="c">bug#74214, bug#37755, bug#37689: Even for larger fringes, fringe
+</span>             <span class="cd">;; </span><span class="c">bitmaps can only have a width between 1 and 16. Therefore we
+</span>             <span class="cd">;; </span><span class="c">restrict the fringe width to 16 pixel. This restriction may
+</span>             <span class="cd">;; </span><span class="c">cause problem on HDPi systems.  Hopefully Emacs will adopt
+</span>             <span class="cd">;; </span><span class="c">larger fringe bitmaps in the future and lift the restriction.
+</span>             (ml (min 16 (ceiling (* cw corfu-left-margin-width))))
+             (mr (min 16 (ceiling (* cw corfu-right-margin-width))))
+             (bw (min mr (ceiling (* cw corfu-bar-width))))
+             (graphic (display-graphic-p))
+             (marginl (<span class="k">and</span> (not graphic) (propertize <span class="s">" "</span> 'display `(space <span class="bi">:width</span> (,ml)))))
+             (sbar (<span class="k">if</span> graphic
+                       #(<span class="s">" "</span> 0 1 (display (right-fringe corfu--bar corfu--bar)))
+                     (concat
+                      (propertize <span class="s">" "</span> 'display `(space <span class="bi">:align-to</span> (- right (,bw))))
+                      (propertize <span class="s">" "</span> 'face 'corfu-bar 'display `(space <span class="bi">:width</span> (,bw))))))
+             (cbar (<span class="k">if</span> graphic
+                       #(<span class="s">"  "</span> 0 1 (display (left-fringe corfu--nil corfu-current))
+                         1 2 (display (right-fringe corfu--bar corfu--cbar)))
+                     sbar))
+             (cmargin (<span class="k">and</span> graphic
+                           #(<span class="s">"  "</span> 0 1 (display (left-fringe corfu--nil corfu-current))
+                             1 2 (display (right-fringe corfu--nil corfu-current)))))
+             (pos (posn-x-y pos))
+             (width (+ (* width cw) (<span class="k">if</span> graphic 0 (+ ml mr))))
+             <span class="cd">;; </span><span class="c">HACK Minimum popup height must be at least 1 line of the parent
+</span>             <span class="cd">;; </span><span class="c">frame (gh:minad/corfu#261).
+</span>             (height (max lh (* (length lines) ch)))
+             (edge (window-inside-pixel-edges))
+             (border (<span class="k">if</span> graphic corfu-border-width 0))
+             (x (max 0 (min (+ (car edge) (- (<span class="k">or</span> (car pos) 0) ml (* cw off) border))
+                            (- (frame-pixel-width) width
+                               (<span class="k">if</span> graphic (+ ml mr (* 2 border)) 0)))))
+             (yb (+ (cadr edge) (<span class="k">or</span> (cdr pos) 0) lh
+                    (<span class="k">static-if</span> (&lt; emacs-major-version 31) (window-tab-line-height) 0)))
+             (y (<span class="k">if</span> (&gt; (+ yb (* corfu-count ch) lh lh) (frame-pixel-height))
+                    (- yb height lh border border)
+                  yb))
+             (bmp (logxor (1- (ash 1 mr)) (1- (ash 1 bw)))))
+        (<span class="k">setq</span> left-fringe-width (<span class="k">if</span> graphic ml 0) right-fringe-width (<span class="k">if</span> graphic mr 0))
+        <span class="cd">;; </span><span class="c">Define an inverted corfu--bar face
+</span>        (<span class="k">unless</span> (equal (<span class="k">and</span> (facep 'corfu--bar) (face-attribute 'corfu--bar <span class="bi">:foreground</span>))
+                       (face-attribute 'corfu-bar <span class="bi">:background</span>))
+          (set-face-attribute (make-face 'corfu--bar) nil
+                              <span class="bi">:foreground</span> (face-attribute 'corfu-bar <span class="bi">:background</span>)))
+        (<span class="k">unless</span> (<span class="k">or</span> (= right-fringe-width 0) (eq (get 'corfu--bar 'corfu--bmp) bmp))
+          (put 'corfu--bar 'corfu--bmp bmp)
+          (define-fringe-bitmap 'corfu--bar (vector (lognot bmp)) 1 mr '(top periodic))
+          (define-fringe-bitmap 'corfu--nil [0] 1 1)
+          <span class="cd">;; </span><span class="c">Fringe bitmaps require symbol face specification, define internal face.
+</span>          (set-face-attribute (make-face 'corfu--cbar) nil
+                              <span class="bi">:inherit</span> '(corfu--bar corfu-current)))
+        (<span class="k">with-silent-modifications</span>
+          (delete-region (point-min) (point-max))
+          (apply #'insert
+           (<span class="k">cl-loop</span> for row from 0 for line in lines collect
+                    (<span class="k">let</span> ((str (concat marginl line
+                                       (<span class="k">if</span> (<span class="k">and</span> lo (&lt;= lo row (+ lo bar)))
+                                           (<span class="k">if</span> (eq row curr) cbar sbar)
+                                         (<span class="k">and</span> (eq row curr) cmargin))
+                                       <span class="s">"\n"</span>)))
+                      (<span class="k">when</span> (eq row curr)
+                        (add-face-text-property
+                         0 (length str) 'corfu-current 'append str))
+                      str)))
+          (goto-char (point-min)))
+        (<span class="k">setq</span> corfu--frame (corfu--make-frame corfu--frame x y width height))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

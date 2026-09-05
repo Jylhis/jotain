@@ -1,0 +1,113 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb--request-spec-send – Emacs Documentation Online</title>
+<meta name="description" content="verb--request-spec-send is a byte-compiled function defined in
+verb.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb--request-spec-send</code></h1><p><span class="m"><code>verb--request-spec-send</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in
+<span class="bt">verb.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb--request-spec-send <span class="ty">&amp;rest</span> <span class="arg">ARGS</span>)
+</code></pre>
+<h2>Implementations</h2>
+<p>(verb--request-spec-send (RS verb-request-spec) WHERE) in `<span class="bt">verb.el</span>'.
+<p>Send the HTTP request described by RS.
+Show the results according to argument WHERE (see
+`verb-send-request-on-point').  Return the buffer the response will be
+loaded into.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb.el</span>
+(<span class="k">cl-defmethod</span> <span class="f">verb--request-spec-send</span> ((rs verb-request-spec) where)
+  <span class="doc">"Send the HTTP request described by RS.
+Show the results according to argument WHERE (see
+`</span><span class="m doc">verb-send-request-on-point</span><span class="doc">').  Return the buffer the response will be
+loaded into."</span>
+  <span class="cd">;; </span><span class="c">If auto kill buffers is enabled, kill all previous response
+</span>  <span class="cd">;; </span><span class="c">buffers now.
+</span>  (<span class="k">when</span> verb-auto-kill-response-buffers
+    (verb-kill-all-response-buffers t))
+
+  (<span class="k">let*</span> ((url (<span class="k">oref</span> rs url))
+         (url-string (verb-request-spec-url-to-string rs))
+         (url-request-method (verb--to-ascii (<span class="k">oref</span> rs method)))
+         (url-mime-accept-string (verb--get-accept-header (<span class="k">oref</span> rs headers)))
+         (url-request-extra-headers (verb--prepare-http-headers
+                                     (<span class="k">oref</span> rs headers)))
+         (content-type (verb--headers-content-type
+                        url-request-extra-headers))
+         (url-request-data (verb--encode-http-body (<span class="k">oref</span> rs body)
+                                                   (cdr content-type)))
+         (num (<span class="k">setq</span> verb--requests-count (1+ verb--requests-count)))
+         (start-time (time-to-seconds))
+         (response-buf (verb--generate-response-buffer num))
+         timeout-timer)
+    <span class="cd">;; </span><span class="c">Start the timeout warning timer.
+</span>    (<span class="k">when</span> verb-show-timeout-warning
+      (<span class="k">setq</span> timeout-timer (run-with-timer verb-show-timeout-warning nil
+                                          #'verb--timeout-warn
+                                          response-buf rs num)))
+
+    (verb--setup-request-environment rs)
+
+    <span class="cd">;; </span><span class="c">Look for headers that might get duplicated by url.el.
+</span>    (<span class="k">dolist</span> (h verb--url-pre-defined-headers)
+      (<span class="k">when</span> (assoc-string h url-request-extra-headers t)
+        (verb-util--log num 'W (concat <span class="s">"Header \"%s\" will appear duplicated "</span>
+                                       <span class="s">"in the request, as url.el adds its "</span>
+                                       <span class="s">"own version of it"</span>)
+                        h)))
+
+    <span class="cd">;; </span><span class="c">Maybe log a warning if body is present but method usually
+</span>    <span class="cd">;; </span><span class="c">doesn't take one (like GET).
+</span>    (<span class="k">when</span> (<span class="k">and</span> (member url-request-method verb--bodyless-http-methods)
+               url-request-data)
+      (verb-util--log num 'W <span class="s">"Body is present but request method is %s"</span>
+                      url-request-method))
+
+    <span class="cd">;; </span><span class="c">Send the request!
+</span>    (<span class="k">condition-case</span> err
+        (url-retrieve url
+                      #'verb--request-spec-callback
+                      (list rs
+                            response-buf
+                            start-time
+                            timeout-timer
+                            where
+                            num)
+                      t verb-inhibit-cookies)
+      (<span class="w">error</span> (<span class="k">progn</span>
+               <span class="cd">;; </span><span class="c">Cancel timer.
+</span>               (<span class="k">when</span> timeout-timer
+                 (cancel-timer timeout-timer)
+                 (<span class="k">setq</span> timeout-timer nil))
+               <span class="cd">;; </span><span class="c">Kill response buffer.
+</span>               (kill-buffer response-buf)
+
+               (verb--teardown-request-environment rs)
+
+               (<span class="k">let</span> ((msg (format <span class="s">"Error sending request: %s"</span> (cadr err))))
+                 <span class="cd">;; </span><span class="c">Log the error.
+</span>                 (verb-util--log num 'E msg)
+                 <span class="cd">;; </span><span class="c">Signal it.
+</span>                 (<span class="w">user-error</span> <span class="s">"%s"</span> msg)))))
+
+    <span class="cd">;; </span><span class="c">Show user some quick information.
+</span>    (message <span class="s">"%s request sent to %s"</span>
+             (<span class="k">oref</span> rs method)
+             url-string)
+
+    <span class="cd">;; </span><span class="c">Log the request.
+</span>    (verb-util--log num 'I <span class="s">"%s %s"</span> (<span class="k">oref</span> rs method) url-string)
+
+    (<span class="k">pcase</span> where
+      ('other-window (switch-to-buffer-other-window response-buf))
+      ('stay-window (<span class="k">save-selected-window</span>
+                      (switch-to-buffer-other-window response-buf)))
+      ('this-window (switch-to-buffer response-buf)))
+
+    <span class="cd">;; </span><span class="c">Return the response buffer.
+</span>    response-buf))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

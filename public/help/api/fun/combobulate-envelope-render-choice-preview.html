@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-envelope-render-choice-preview – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-envelope-render-choice-preview is a natively compiled
+function defined in combobulate-envelope.el.
+Render a preview of the envelope at INDEX.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-envelope-render-choice-preview</code></h1><p><span class="m"><code>combobulate-envelope-render-choice-preview</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">combobulate-envelope.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-envelope-render-choice-preview <a href="#:~:text="><span class="arg">ACTION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Render a preview of the envelope at INDEX.
+<p>Unlike most proffer preview functions, this one assumes that
+<span class="m"><code>accept-action</code></span> passed to <a href="../fun/combobulate-proffer-choices.html"><code>combobulate-proffer-choices</code></a> is
+<span class="m"><code>commit</code></span> and not its usual value of <span class="m"><code>rollback</code></span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-envelope.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-envelope-render-choice-preview</span> (action)
+  <span class="doc">"Render a preview of the envelope at INDEX.
+
+Unlike most proffer preview functions, this one assumes that
+`</span><span class="m doc">accept-action</span><span class="doc">' passed to `</span><span class="m doc">combobulate-proffer-choices</span><span class="doc">' is
+`</span><span class="m doc">commit</span><span class="doc">' and not its usual value of `</span><span class="m doc">rollback</span><span class="doc">'."</span>
+  (<span class="k">with-slots</span> (index current-node proxy-nodes refactor-id) action
+    (<span class="k">combobulate-refactor</span> (<span class="bi">:id</span> refactor-id)
+      (<span class="k">let</span> ((pt)
+            (combobulate-envelope-static t)
+            (combobulate-envelope--undo-on-quit nil))
+        (<span class="k">dolist</span> (node proxy-nodes)
+          (<span class="k">let</span> ((expand-envelope) (is-current-node))
+            (<span class="k">pcase-let</span> ((`(,missing .  ,rest-envelope) (combobulate-proxy-node-extra node)))
+              (combobulate-move-to-node node)
+              (<span class="k">cond</span> ((equal node current-node)
+                     (<span class="k">setq</span> expand-envelope rest-envelope
+                           is-current-node t
+                           pt (point)))
+                    (t (<span class="k">setq</span> expand-envelope missing)))
+              (<span class="k">pcase-let</span> (((cl-struct combobulate-envelope-context
+                                      (start start)
+                                      (end end)
+                                      (user-actions user-actions))
+                           (<span class="k">combobulate-refactor</span> (<span class="bi">:id</span> refactor-id)
+                             (combobulate-envelope-expand-instructions-1
+                              <span class="cd">;; </span><span class="c">Normally we'd just use `(b ...)' but we
+</span>                              <span class="cd">;; </span><span class="c">want the points calculated also, if
+</span>                              <span class="cd">;; </span><span class="c">there are any in the envelope, so we
+</span>                              <span class="cd">;; </span><span class="c">can pull out the `</span><span class="m c">selected-point</span><span class="c">' and
+</span>                              <span class="cd">;; </span><span class="c">use it to set `</span><span class="m c">pt</span><span class="c">' later.
+</span>                              `((b* (repeat choice prompt point) ,@expand-envelope))))))
+                (mark-range-deleted start end)
+                (<span class="k">when</span> is-current-node
+                  (<span class="k">pcase</span> user-actions
+                    (`((selected-point . ,selected-pt))
+                     (<span class="k">setq</span> pt selected-pt)))
+                  (mark-range-highlighted start end))))))
+        (<span class="k">when</span> pt (goto-char pt))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

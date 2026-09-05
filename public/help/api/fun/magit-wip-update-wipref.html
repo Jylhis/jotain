@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-wip-update-wipref – Emacs Documentation Online</title>
+<meta name="description" content="magit-wip-update-wipref is a natively compiled function defined in
+magit-wip.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-wip-update-wipref</code></h1><p><span class="m"><code>magit-wip-update-wipref</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-wip.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-wip-update-wipref <span class="arg">REF</span> <span class="arg">WIPREF</span> <span class="arg">TREE</span> <span class="arg">PARENT</span> <span class="arg">FILES</span> <span class="arg">MSG</span> <span class="arg">START-MSG</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-wip.el</span>
+(<span class="k">defun</span> <span class="f">magit-wip-update-wipref</span> (ref wipref tree parent files msg start-msg)
+  (<span class="k">cond</span>
+    ((<span class="k">and</span> (not (equal parent wipref))
+          (<span class="k">or</span> (not magit-wip-merge-branch)
+              (not (magit-rev-verify wipref))))
+     (<span class="k">setq</span> start-msg (concat <span class="s">"start autosaving "</span> start-msg))
+     (magit-wip--update-ref wipref start-msg
+                            (magit-git-string <span class="s">"commit-tree"</span> <span class="s">"--no-gpg-sign"</span>
+                                              <span class="s">"-p"</span> parent <span class="s">"-m"</span> start-msg
+                                              (concat parent <span class="s">"^{tree}"</span>)))
+     (<span class="k">setq</span> parent wipref))
+    ((<span class="k">and</span> magit-wip-merge-branch
+          (<span class="k">or</span> (not (magit-rev-ancestor-p ref wipref))
+              (not (magit-rev-ancestor-p
+                    (concat (magit-git-string <span class="s">"log"</span> <span class="s">"--format=%H"</span>
+                                              <span class="s">"-1"</span> <span class="s">"--merges"</span> wipref)
+                            <span class="s">"^2"</span>)
+                    ref))))
+     (<span class="k">setq</span> start-msg (format <span class="s">"merge %s into %s"</span> ref start-msg))
+     (magit-wip--update-ref wipref start-msg
+                            (magit-git-string <span class="s">"commit-tree"</span> <span class="s">"--no-gpg-sign"</span>
+                                              <span class="s">"-p"</span> wipref <span class="s">"-p"</span> ref
+                                              <span class="s">"-m"</span> start-msg
+                                              (concat ref <span class="s">"^{tree}"</span>)))
+     (<span class="k">setq</span> parent wipref)))
+  (<span class="k">when</span> (magit-git-failure <span class="s">"diff-tree"</span> <span class="s">"--quiet"</span> parent tree <span class="s">"--"</span> files)
+    (<span class="k">unless</span> (<span class="k">and</span> msg (not (= (aref msg 0) ?\s)))
+      (<span class="k">let</span> ((len (length files)))
+        (<span class="k">setq</span> msg (concat
+                   (<span class="k">cond</span> ((= len 0) <span class="s">"autosave tracked files"</span>)
+                         ((&gt; len 1) (format <span class="s">"autosave %s files"</span> len))
+                         ((concat <span class="s">"autosave "</span>
+                                  (file-relative-name (car files)
+                                                      (magit-toplevel)))))
+                   msg))))
+    (magit-wip--update-ref wipref msg
+                           (magit-git-string <span class="s">"commit-tree"</span> <span class="s">"--no-gpg-sign"</span>
+                                             <span class="s">"-p"</span> parent <span class="s">"-m"</span> msg tree))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

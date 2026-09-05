@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-checkout-stage – Emacs Documentation Online</title>
+<meta name="description" content="magit-checkout-stage is an interactive and natively compiled function
+defined in magit-merge.el.
+During a conflict checkout and stage side, or restore conflict.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-checkout-stage</code></h1><p><span class="m"><code>magit-checkout-stage</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-merge.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-checkout-stage <a href="#:~:text="><span class="arg">FILE</span></a> <a href="#:~:text="><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>During a conflict checkout and stage side, or restore conflict.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-merge.el</span>
+(<span class="k">defun</span> <span class="f">magit-checkout-stage</span> (file arg)
+  <span class="doc">"During a conflict checkout and stage side, or restore conflict."</span>
+  (<span class="k">interactive</span>
+    (<span class="k">let</span> ((file (magit-completing-read <span class="s">"Checkout file"</span>
+                                       (magit-tracked-files) nil 'any nil
+                                       'magit-read-file-hist
+                                       (magit-current-file))))
+      (<span class="k">cond</span> ((member file (magit-unmerged-files))
+             (list file (magit-checkout-read-stage file)))
+            ((yes-or-no-p (format <span class="s">"Restore conflicts in %s? "</span> file))
+             (list file <span class="s">"--merge"</span>))
+            ((<span class="w">user-error</span> <span class="s">"Quit"</span>)))))
+  (<span class="k">pcase</span> (cons arg (cddr (car (magit-file-status file))))
+    ((<span class="k">or</span> `(<span class="s">"--ours"</span>   ?D ,_)
+         '(<span class="s">"--ours"</span>   ?U ?A)
+         `(<span class="s">"--theirs"</span> ,_ ?D)
+         '(<span class="s">"--theirs"</span> ?A ?U))
+     (magit-run-git <span class="s">"rm"</span> <span class="s">"--"</span> file))
+    (_ (<span class="k">if</span> (equal arg <span class="s">"--merge"</span>)
+           <span class="cd">;; </span><span class="c">This fails if the file was deleted on one
+</span>           <span class="cd">;; </span><span class="c">side.  And we cannot do anything about it.
+</span>           (magit-run-git <span class="s">"checkout"</span> <span class="s">"--merge"</span> <span class="s">"--"</span> file)
+         (magit-call-git <span class="s">"checkout"</span> arg <span class="s">"--"</span> file)
+         (magit-run-git <span class="s">"add"</span> <span class="s">"-u"</span> <span class="s">"--"</span> file)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

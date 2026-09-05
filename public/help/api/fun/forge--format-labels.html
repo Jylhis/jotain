@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--format-labels – Emacs Documentation Online</title>
+<meta name="description" content="forge--format-labels is a natively compiled function defined in
+forge-topic.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--format-labels</code></h1><p><span class="m"><code>forge--format-labels</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">forge-topic.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--format-labels <span class="ty">&amp;optional</span> <span class="arg">ARG</span> <span class="arg">CONCAT</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-topic.el</span>
+(<span class="k">defun</span> <span class="f">forge--format-labels</span> (<span class="ty">&amp;optional</span> arg concat)
+  (<span class="k">and-let*</span>
+      ((local t)
+       (labels (<span class="k">cond</span>
+                 ((eieio-object-p arg)
+                  (<span class="k">oref</span> arg labels))
+                 ((forge-buffer-repository)
+                  (forge-sql-cdr `[<span class="bi">:select</span> label:* <span class="bi">:from</span> label <span class="bi">:where</span>
+                                   ,(<span class="k">if</span> arg
+                                        '(and (= repository $s1)
+                                              (in name $v2))
+                                      '(= repository $s1))
+                                   <span class="bi">:order-by</span> [(asc name)]]
+                                 forge-buffer-repository
+                                 (vconcat arg)))
+                 (t
+                  (<span class="k">setq</span> local nil)
+                  (forge-sql `[<span class="bi">:select</span> <span class="bi">:distinct</span> name <span class="bi">:from</span> label
+                               ,@(<span class="k">and</span> arg '(<span class="bi">:where</span> (in name $v1)))
+                               <span class="bi">:order-by</span> [(asc name)]]
+                             (vconcat arg)))))
+       (format (<span class="k">if</span> local
+                   (<span class="k">pcase-lambda</span> (`(,_id ,name ,color ,_description))
+                     (<span class="k">let*</span> ((background (forge--sanitize-color color))
+                            (foreground (readable-foreground-color background)))
+                       (magit--propertize-face
+                        name `(( <span class="bi">:background</span> ,background
+                                 <span class="bi">:foreground</span> ,foreground)
+                               forge-topic-label))))
+                 (<span class="k">pcase-lambda</span> (`(,name))
+                   (magit--propertize-face name 'forge-topic-label)))))
+    (<span class="k">if</span> concat
+        (mapconcat format labels (<span class="k">if</span> (stringp concat) concat <span class="s">" "</span>))
+      (mapcar format labels))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

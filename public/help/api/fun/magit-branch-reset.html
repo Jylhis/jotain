@@ -1,0 +1,67 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-branch-reset – Emacs Documentation Online</title>
+<meta name="description" content="magit-branch-reset is an interactive and natively compiled function
+defined in magit-branch.el.
+Reset a branch to the tip of another branch or any other commit.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-branch-reset</code></h1><p><span class="m"><code>magit-branch-reset</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-branch.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-branch-reset <a href="#:~:text="><span class="arg">BRANCH</span></a> <a href="#:~:text="><span class="arg">TO</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">SET-UPSTREAM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Reset a branch to the tip of another branch or any other commit.
+<p>When the branch being reset is the current branch, then do a
+hard reset.  If there are any uncommitted changes, then the user
+has to confirm the reset because those changes would be lost.
+<p>This is useful when you have started work on a feature branch but
+realize it's all crap and want to start over.
+<p>When resetting to another branch and a prefix argument is used,
+then also set the target branch as the upstream of the branch
+that is being reset.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-branch.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">magit-branch-reset</span> (branch to <span class="ty">&amp;optional</span> set-upstream)
+  <span class="doc">"Reset a branch to the tip of another branch or any other commit.
+
+When the branch being reset is the current branch, then do a
+hard reset.  If there are any uncommitted changes, then the user
+has to confirm the reset because those changes would be lost.
+
+This is useful when you have started work on a feature branch but
+realize it's all crap and want to start over.
+
+When resetting to another branch and a prefix argument is used,
+then also set the target branch as the upstream of the branch
+that is being reset."</span>
+  (<span class="k">interactive</span>
+    (<span class="k">let</span> ((branch (magit-read-local-branch <span class="s">"Reset branch"</span>
+                                           (magit-local-branch-at-point))))
+      (list branch
+            (magit-read-branch-or-commit (format <span class="s">"Reset %s to"</span> branch)
+                                         (magit-get-upstream-branch branch)
+                                         branch)
+            current-prefix-arg)))
+  (<span class="k">let</span> ((magit-inhibit-refresh t))
+    (<span class="k">if</span> (equal branch (magit-get-current-branch))
+        (<span class="k">if</span> (<span class="k">and</span> (magit-anything-modified-p)
+                 (not (yes-or-no-p
+                       <span class="s">"Uncommitted changes will be lost.  Proceed? "</span>)))
+            (<span class="w">user-error</span> <span class="s">"Abort"</span>)
+          (magit-reset-hard to))
+      (magit-call-git <span class="s">"update-ref"</span>
+                      <span class="s">"-m"</span> (format <span class="s">"reset: moving to %s"</span> to)
+                      (magit-ref-fullname branch)
+                      to))
+    (<span class="k">when</span> (<span class="k">and</span> set-upstream (magit-branch-p to))
+      (magit-set-upstream-branch branch to)
+      (magit-branch-maybe-adjust-upstream branch to)))
+  (magit-refresh))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

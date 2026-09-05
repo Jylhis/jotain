@@ -1,0 +1,43 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-stash-create – Emacs Documentation Online</title>
+<meta name="description" content="magit-stash-create is a natively compiled function defined in
+magit-stash.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-stash-create</code></h1><p><span class="m"><code>magit-stash-create</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-stash.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-stash-create <span class="arg">MESSAGE</span> <span class="arg">INDEX</span> <span class="arg">WORKTREE</span> <span class="arg">UNTRACKED</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-stash.el</span>
+(<span class="k">defun</span> <span class="f">magit-stash-create</span> (message index worktree untracked)
+  (<span class="k">unless</span> (magit-rev-parse <span class="s">"--verify"</span> <span class="s">"HEAD"</span>)
+    (<span class="w">error</span> <span class="s">"You do not have the initial commit yet"</span>))
+  (<span class="k">let</span> ((magit-git-global-arguments (nconc (list <span class="s">"-c"</span> <span class="s">"commit.gpgsign=false"</span>)
+                                           magit-git-global-arguments))
+        (default-directory (magit-toplevel))
+        (summary (magit-stash-summary))
+        (head <span class="s">"HEAD"</span>))
+    (<span class="k">when</span> (<span class="k">and</span> worktree (not index))
+      (<span class="k">setq</span> head (<span class="k">or</span> (magit-commit-tree <span class="s">"pre-stash index"</span> nil <span class="s">"HEAD"</span>)
+                     (<span class="w">error</span> <span class="s">"Cannot save the current index state"</span>))))
+    (<span class="k">or</span> (<span class="k">setq</span> index (magit-commit-tree (concat <span class="s">"index on "</span> summary) nil head))
+        (<span class="w">error</span> <span class="s">"Cannot save the current index state"</span>))
+    (<span class="k">and</span> untracked
+         (<span class="k">setq</span> untracked (magit-untracked-files (eq untracked 'all)))
+         (<span class="k">setq</span> untracked (<span class="k">magit-with-temp-index</span> nil nil
+                           (<span class="k">or</span> (<span class="k">and</span> (magit-update-files untracked)
+                                    (magit-commit-tree
+                                     (concat <span class="s">"untracked files on "</span> summary)))
+                               (<span class="w">error</span> <span class="s">"Cannot save the untracked files"</span>)))))
+    (<span class="k">magit-with-temp-index</span> index <span class="s">"-m"</span>
+      (<span class="k">when</span> worktree
+        (<span class="k">or</span> (magit-update-files (magit-git-items <span class="s">"diff"</span> <span class="s">"-z"</span> <span class="s">"--name-only"</span> head))
+            (<span class="w">error</span> <span class="s">"Cannot save the current worktree state"</span>)))
+      (<span class="k">or</span> (magit-commit-tree message nil head index untracked)
+          (<span class="w">error</span> <span class="s">"Cannot save the current worktree state"</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-conflict-parse-buffer – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-conflict-parse-buffer is a natively compiled function defined
+in majutsu-conflict.el.
+Parse all conflicts in current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-conflict-parse-buffer</code></h1><p><span class="m"><code>majutsu-conflict-parse-buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">majutsu-conflict.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-conflict-parse-buffer)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse all conflicts in current buffer.
+<p>Returns list of <span class="m"><code>majutsu-conflict</code></span> structs.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-conflict.el</span>
+<span class="cd">;;; </span><span class="c">Main Parser
+</span>
+(<span class="k">defun</span> <span class="f">majutsu-conflict-parse-buffer</span> ()
+  <span class="doc">"Parse all conflicts in current buffer.
+Returns list of `</span><span class="m doc">majutsu-conflict</span><span class="doc">' structs."</span>
+  (<span class="k">save-excursion</span>
+    (goto-char (point-min))
+    (<span class="k">let</span> (conflicts)
+      (<span class="k">while</span> (re-search-forward majutsu-conflict-begin-re nil t)
+        (<span class="k">let*</span> ((begin (match-beginning 0))
+               (marker-len (length (match-string 1)))
+               (end-re (format <span class="s">"^&gt;\\{%d,\\}</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s"> .*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?$"</span> marker-len)))
+          <span class="cd">;; </span><span class="c">Find matching end marker
+</span>          (<span class="k">when</span> (re-search-forward end-re nil t)
+            (<span class="k">let*</span> ((match-end (match-end 0))
+                   (marker-has-eol (<span class="k">and</span> (&lt; match-end (point-max))
+                                        (eq (char-after match-end) ?\n)))
+                   (end (<span class="k">if</span> marker-has-eol
+                            (1+ match-end)
+                          match-end))
+                   (style (majutsu-conflict--detect-style begin marker-len))
+                   (parsed (<span class="k">if</span> (eq style 'git)
+                               (majutsu-conflict--parse-git-hunk begin end marker-len)
+                             (majutsu-conflict--parse-jj-hunk begin end marker-len))))
+              (<span class="k">when</span> (<span class="k">and</span> parsed (not marker-has-eol))
+                <span class="cd">;; </span><span class="c">jj compensates missing trailing newlines by omitting EOL on the
+</span>                <span class="cd">;; </span><span class="c">end marker; strip one synthetic trailing EOL from each term.
+</span>                (<span class="k">setq</span> parsed (majutsu-conflict--drop-synthetic-ending-eol parsed)))
+              (<span class="k">when</span> parsed
+                (<span class="k">push</span> (majutsu-conflict--create
+                       <span class="bi">:begin-pos</span> begin
+                       <span class="bi">:end-pos</span> end
+                       <span class="bi">:marker-len</span> marker-len
+                       <span class="bi">:style</span> (car parsed)
+                       <span class="bi">:removes</span> (cadr parsed)
+                       <span class="bi">:adds</span> (caddr parsed)
+                       <span class="bi">:base</span> (cadddr parsed))
+                      conflicts))))))
+      (nreverse conflicts))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: keyfreq-json-encode – Emacs Documentation Online</title>
+<meta name="description" content="keyfreq-json-encode is a natively compiled function defined in
+keyfreq.el.
+Return a JSON representation of the table of frequencies.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>keyfreq-json-encode</code></h1><p><span class="m"><code>keyfreq-json-encode</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">keyfreq.el</span>.
+<h2>Signature</h2>
+<pre><code>(keyfreq-json-encode <a href="#:~:text="><span class="arg">TABLE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a JSON representation of the table of frequencies.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/nw5qmniwc6r7bs6r68drlfgkhdppv4z5-emacs-packages-deps/share/emacs/site-lisp/elpa/keyfreq-20231107.106/keyfreq.el</span>
+(<span class="k">defun</span> <span class="f">keyfreq-json-encode</span> (table)
+  <span class="doc">"Return a JSON representation of the table of frequencies."</span>
+  (<span class="k">require</span> '<span class="m">json</span>)
+  (<span class="k">let</span> ((commands-indexes (make-hash-table <span class="bi">:test</span> 'equal <span class="bi">:size</span> 128))
+	commands-list frequencies-matrix i)
+
+    <span class="cd">;; </span><span class="c">Build the "commands" property of the JSON object.
+</span>    (<span class="k">setq</span> i 0)
+    (maphash
+     (<span class="k">lambda</span> (command-symbol counter)
+       (add-to-list 'commands-list command-symbol t)
+       (puthash command-symbol i commands-indexes)
+       (<span class="k">setq</span> i (+ i 1))
+       )
+     (keyfreq-groups-major-modes table))
+
+    <span class="cd">;; </span><span class="c">Build the "frequencies" property.
+</span>    (mapc
+     (<span class="k">lambda</span> (major-mode-symbol)
+       (<span class="k">let</span> ((cmd-count-pairs '()))
+	 (keyfreq-format-list (keyfreq-list (keyfreq-filter-major-mode table major-mode-symbol))
+			      (<span class="k">lambda</span> (count perc command)
+				(add-to-list 'cmd-count-pairs (gethash command commands-indexes) t)
+				(add-to-list 'cmd-count-pairs count t)))
+	 (add-to-list 'frequencies-matrix major-mode-symbol t)
+	 (add-to-list 'frequencies-matrix (append cmd-count-pairs nil) t)))
+     (keyfreq-used-major-modes table))
+
+    (json-encode `((<span class="bi">:format</span> . 1)
+		   (<span class="bi">:commands</span> . ,commands-list)
+		   (<span class="bi">:frequencies</span> . ,frequencies-matrix)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-workspaces--render – Emacs Documentation Online</title>
+<meta name="description" content="eca-workspaces--render is a natively compiled function defined in
+eca-workspaces.el.
+Render the dashboard into the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-workspaces--render</code></h1><p><span class="m"><code>eca-workspaces--render</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-workspaces.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-workspaces--render)
+</code></pre>
+<h2>Documentation</h2>
+<p>Render the dashboard into the current buffer.
+<p>Preserves point, per-window points and fold state across renders.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-workspaces.el</span>
+(<span class="k">defun</span> <span class="f">eca-workspaces--render</span> ()
+  <span class="doc">"Render the dashboard into the current buffer.
+Preserves point, per-window points and fold state across renders."</span>
+  (<span class="k">let*</span> ((inhibit-read-only t)
+         (point-entity (eca-workspaces--entity-at (point)))
+         (point-column (current-column))
+         (window-states (-map #'eca-workspaces--window-state
+                              (get-buffer-window-list nil nil t))))
+    (erase-buffer)
+    (<span class="k">let</span> ((sessions (eca-workspaces--sorted-sessions)))
+      (<span class="k">if</span> (null sessions)
+          (insert (propertize <span class="s">"No ECA session running, start one with M-x eca"</span>
+                              'face 'eca-workspaces-tree-chat-details-face)
+                  <span class="s">"\n"</span>)
+        (<span class="k">dolist</span> (session sessions)
+          (insert (eca-workspaces--workspace-line session))
+          (<span class="k">unless</span> (memq (eca--session-id session)
+                        eca-workspaces--folded-sessions)
+            (<span class="k">dolist</span> (chat-buffer (eca-chat-buffers session))
+              (insert (eca-workspaces--chat-line session chat-buffer)))))))
+    (insert (eca-workspaces--footer))
+    (eca-workspaces--restore-point point-entity point-column)
+    (<span class="k">dolist</span> (state window-states)
+      (<span class="k">-let</span> [(window entity column) state]
+        (<span class="k">when-let*</span> ((position (eca-workspaces--find-entity entity)))
+          (set-window-point window
+                            (<span class="k">save-excursion</span>
+                              (goto-char position)
+                              (move-to-column (<span class="k">or</span> column 0))
+                              (point))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

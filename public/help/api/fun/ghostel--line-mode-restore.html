@@ -1,0 +1,82 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--line-mode-restore – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--line-mode-restore is a natively compiled function defined in
+ghostel-line-mode.el.
+Re-insert SNAPSHOT'd input after the new prompt and restore point/mark.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--line-mode-restore</code></h1><p><span class="m"><code>ghostel--line-mode-restore</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel-line-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--line-mode-restore <a href="#:~:text=insert-,SNAPSHOT"><span class="arg">SNAPSHOT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Re-insert <span class="arg">SNAPSHOT</span>'d input after the new prompt and restore point/mark.
+<p>Returns non-nil on success.  Returns nil when the prompt cannot be
+located (shell integration dropped out, or the prompt scrolled off
+because of async output during composition); callers fall back to
+forwarding the pending input raw.
+<p>Trims pure-whitespace tails past the input but preserves any
+non-blank content the renderer wrote past the prompt row (e.g. a
+status bar).  Point is restored from the snapshot's offset when it
+was inside the input region, and left untouched otherwise.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-line-mode.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--line-mode-restore</span> (snapshot)
+  <span class="doc">"Re-insert SNAPSHOT'd input after the new prompt and restore point/mark.
+Returns non-nil on success.  Returns nil when the prompt cannot be
+located (shell integration dropped out, or the prompt scrolled off
+because of async output during composition); callers fall back to
+forwarding the pending input raw.
+
+Trims pure-whitespace tails past the input but preserves any
+non-blank content the renderer wrote past the prompt row (e.g. a
+status bar).  Point is restored from the snapshot's offset when it
+was inside the input region, and left untouched otherwise."</span>
+  (<span class="k">when</span> snapshot
+    (<span class="k">let</span> ((prompt-end (ghostel-input-start-point)))
+      (<span class="k">when</span> prompt-end
+        <span class="cd">;; </span><span class="c">Keep the re-insert out of the undo list.
+</span>        (<span class="k">let</span> ((inhibit-read-only t)
+              (buffer-undo-list t)
+              (input (plist-get snapshot <span class="bi">:input</span>)))
+          (ghostel--line-mode-trim-trailing-blank prompt-end)
+          (<span class="k">when</span> (markerp ghostel--line-input-start)
+            (set-marker ghostel--line-input-start nil))
+          (<span class="k">when</span> (markerp ghostel--line-input-end)
+            (set-marker ghostel--line-input-end nil))
+          (<span class="k">setq</span> ghostel--line-input-start (copy-marker prompt-end nil))
+          (set-marker-insertion-type ghostel--line-input-start nil)
+          (<span class="k">setq</span> ghostel--line-input-end (copy-marker prompt-end t))
+          (set-marker-insertion-type ghostel--line-input-end t)
+          (<span class="k">when</span> (<span class="k">and</span> input (&gt; (length input) 0))
+            (<span class="k">save-excursion</span>
+              (goto-char (marker-position ghostel--line-input-start))
+              <span class="cd">;; </span><span class="c">Insertion advances `</span><span class="m c">ghostel--line-input-end</span><span class="c">' (insertion
+</span>              <span class="cd">;; </span><span class="c">type t) so end-marker tracks the tail of the input.
+</span>              (insert input)))
+          (<span class="k">let</span> ((start-pos (marker-position ghostel--line-input-start))
+                (end-pos (marker-position ghostel--line-input-end)))
+            (ghostel--line-mode-apply-readonly start-pos)
+            <span class="cd">;; </span><span class="c">Mark the line-mode input region with `</span><span class="m c">ghostel-input</span><span class="c">' so
+</span>            <span class="cd">;; </span><span class="c">`</span><span class="m c">ghostel--skip-match-p</span><span class="c">' skips it on the cursor's
+</span>            <span class="cd">;; </span><span class="c">line — without this, a path the user typed locally
+</span>            <span class="cd">;; </span><span class="c">(e.g. `cd src/main.rs') would get linkified and RET
+</span>            <span class="cd">;; </span><span class="c">would open the file instead of running
+</span>            <span class="cd">;; </span><span class="c">`</span><span class="m c">ghostel-line-mode-send</span><span class="c">'.
+</span>            (<span class="k">when</span> (&lt; start-pos end-pos)
+              (put-text-property start-pos end-pos 'ghostel-input t))
+            (<span class="k">let</span> ((po (plist-get snapshot <span class="bi">:point-offset</span>))
+                  (mo (plist-get snapshot <span class="bi">:mark-offset</span>)))
+              (<span class="k">when</span> po
+                (goto-char (+ start-pos po)))
+              (<span class="k">when</span> mo
+                (set-mark (+ start-pos mo))))))
+        <span class="cd">;; </span><span class="c">Re-arm an empty history at the input's new location; the old
+</span>        <span class="cd">;; </span><span class="c">positions are stale now the redraw has moved it.
+</span>        (<span class="k">setq</span> buffer-undo-list nil)
+        t))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

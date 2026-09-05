@@ -1,0 +1,72 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--spawn-via-emacs – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--spawn-via-emacs is a natively compiled function defined in
+ghostel.el.
+Spawn PROGRAM with PROGRAM-ARGS through Emacs process machinery.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--spawn-via-emacs</code></h1><p><span class="m"><code>ghostel--spawn-via-emacs</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--spawn-via-emacs <a href="#:~:text=Spawn-,PROGRAM"><span class="arg">PROGRAM</span></a> <a href="#:~:text=with-,PROGRAM-ARGS"><span class="arg">PROGRAM-ARGS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=rationale.-,REMOTE-P"><span class="arg">REMOTE-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Spawn <span class="arg">PROGRAM</span> with <span class="arg">PROGRAM-ARGS</span> through Emacs process machinery.
+<p><span class="arg">PROGRAM</span> is wrapped in <span class="m"><code>/bin/sh -c</code></span> so that <span class="m"><code>stty</code></span> (with
+<a href="../var/ghostel--default-stty.html"><code>ghostel--default-stty</code></a>) can configure the PTY line discipline before
+<span class="arg">PROGRAM</span> reads its terminal attributes; the screen is then cleared to
+hide the stty output and <span class="m"><code>exec</code></span> replaces the wrapper so only <span class="arg">PROGRAM</span>
+remains.  See <a href="../var/ghostel--default-stty.html"><code>ghostel--default-stty</code></a> for the default flag set and
+rationale.  <span class="arg">REMOTE-P</span> is passed as <span class="bi">:file-handler</span> so TRAMP can run
+remote commands, and selects an on-remote TERM probe preamble.  The
+returned process owns the PTY and receives <a href="../fun/ghostel--filter.html"><code>ghostel--filter</code></a> and
+<a href="../fun/ghostel--sentinel.html"><code>ghostel--sentinel</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--spawn-via-emacs</span> (program program-args <span class="ty">&amp;optional</span> remote-p)
+  <span class="doc">"Spawn PROGRAM with PROGRAM-ARGS through Emacs process machinery.
+PROGRAM is wrapped in `/bin/sh -c' so that `</span><span class="m doc">stty</span><span class="doc">' (with
+`</span><span class="m doc">ghostel--default-stty</span><span class="doc">') can configure the PTY line discipline before
+PROGRAM reads its terminal attributes; the screen is then cleared to
+hide the stty output and `</span><span class="m doc">exec</span><span class="doc">' replaces the wrapper so only PROGRAM
+remains.  See `</span><span class="m doc">ghostel--default-stty</span><span class="doc">' for the default flag set and
+rationale.  REMOTE-P is passed as `</span><span class="m doc">:file-handler</span><span class="doc">' so TRAMP can run
+remote commands, and selects an on-remote TERM probe preamble.  The
+returned process owns the PTY and receives `</span><span class="m doc">ghostel--filter</span><span class="doc">' and
+`</span><span class="m doc">ghostel--sentinel</span><span class="doc">'."</span>
+  (<span class="k">let*</span> ((shell-command
+          (list <span class="s">"/bin/sh"</span> <span class="s">"-c"</span>
+                (concat
+                 <span class="cd">;; </span><span class="c">Remote spawns: pick TERM via an on-remote probe
+</span>                 (<span class="k">and</span> remote-p (ghostel--remote-term-preamble))
+                 <span class="s">"stty "</span> ghostel--default-stty <span class="s">" 2&gt;/dev/null; "</span>
+                 <span class="s">"printf '\033[H\033[2J'; exec "</span>
+                 (shell-quote-argument program)
+                 (<span class="k">and</span> program-args
+                      (concat <span class="s">" "</span>
+                              (mapconcat #'shell-quote-argument
+                                         program-args <span class="s">" "</span>))))))
+         (proc (make-process
+                <span class="bi">:name</span> <span class="s">"ghostel"</span>
+                <span class="bi">:buffer</span> (current-buffer)
+                <span class="bi">:command</span> shell-command
+                <span class="bi">:connection-type</span> 'pty
+                <span class="bi">:file-handler</span> remote-p
+                <span class="bi">:filter</span> #'ghostel--filter
+                <span class="bi">:sentinel</span> #'ghostel--sentinel
+                <span class="bi">:noquery</span> t)))
+    (<span class="k">setq</span> ghostel--pid (process-id proc))
+    <span class="cd">;; </span><span class="c">Raw binary I/O — no encoding/decoding by Emacs
+</span>    (set-process-coding-system proc 'binary 'binary)
+    <span class="cd">;; </span><span class="c">Set the PTY's actual window size (ioctl TIOCSWINSZ) so that
+</span>    <span class="cd">;; </span><span class="c">the program's line editor (readline/ZLE) can render properly.
+</span>    (set-process-window-size proc ghostel--term-rows ghostel--term-cols)
+    <span class="cd">;; </span><span class="c">`</span><span class="m c">ghostel--adjust-size</span><span class="c">' owns sizing; `</span><span class="m c">ignore</span><span class="c">' (nil would fall
+</span>    <span class="cd">;; </span><span class="c">back to the default) opts out of core's all-frames
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">window--adjust-process-windows</span><span class="c">'.
+</span>    (process-put proc 'adjust-window-size-function #'ignore)
+    proc))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,170 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--create-connection – Emacs Documentation Online</title>
+<meta name="description" content="dape--create-connection is a natively compiled function defined in
+dape.el.
+Create symbol dape-connection instance from CONFIG.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--create-connection</code></h1><p><span class="m"><code>dape--create-connection</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--create-connection <a href="#:~:text=from-,CONFIG"><span class="arg">CONFIG</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=expects-,PARENT"><span class="arg">PARENT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create symbol <a class="v" href="../var/dape-connection.html"><code>dape-connection</code>(var)</a>/<a class="f" href="../fun/dape-connection.html"><code>dape-connection</code>(fun)</a> instance from <span class="arg">CONFIG</span>.
+<p>If started by an startDebugging request expects <span class="arg">PARENT</span> to
+symbol <a class="v" href="../var/dape-connection.html"><code>dape-connection</code>(var)</a>/<a class="f" href="../fun/dape-connection.html"><code>dape-connection</code>(fun)</a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--create-connection</span> (config <span class="ty">&amp;optional</span> parent)
+  <span class="doc">"Create symbol `</span><span class="m doc">dape-connection</span><span class="doc">' instance from CONFIG.
+If started by an startDebugging request expects PARENT to
+symbol `</span><span class="m doc">dape-connection</span><span class="doc">'."</span>
+  (<span class="k">unless</span> (plist-get config 'command-cwd)
+    (plist-put config 'command-cwd (dape--guess-root config)))
+  (<span class="k">let</span> ((default-directory (plist-get config 'command-cwd))
+        (process-environment (cl-copy-list process-environment))
+        (command (cons (plist-get config 'command)
+                       (cl-map 'list 'identity
+                               (plist-get config 'command-args))))
+        process server-process stderr-buffer)
+    <span class="cd">;; </span><span class="c">Initialize `</span><span class="m c">process-environment</span><span class="c">' from `</span><span class="m c">command-env</span><span class="c">'
+</span>    (<span class="k">cl-loop</span> for (key value) on (plist-get config 'command-env) by 'cddr do
+             (setenv (<span class="k">pcase</span> key
+                       ((pred keywordp) (substring (format <span class="s">"%s"</span> key) 1))
+                       ((<span class="k">or</span> (pred symbolp) (pred stringp)) (format <span class="s">"%s"</span> key))
+                       (_ (<span class="w">user-error</span> <span class="s">"Bad type for `</span><span class="m s">command-env</span><span class="s">' key %S"</span> key)))
+                     (format <span class="s">"%s"</span> value)))
+    (<span class="k">cond</span>
+     (<span class="cd">;; </span><span class="c">Socket connection
+</span>      (plist-get config 'port)
+      <span class="cd">;; </span><span class="c">1. Start server
+</span>      (<span class="k">when</span> (plist-get config 'command)
+        (<span class="k">setq</span> stderr-buffer
+              (<span class="k">with-current-buffer</span>
+                  (generate-new-buffer <span class="s">" *dape-adapter stderr*"</span>)
+                (<span class="k">when</span> (plist-get config 'command-insert-stderr)
+                  (add-hook 'after-change-functions
+                            (<span class="k">lambda</span> (beg end _pre-change-len)
+                              (dape--repl-insert-error
+                               (buffer-substring beg end)))
+                            nil t))
+                (current-buffer))
+              server-process
+              (make-process <span class="bi">:name</span> <span class="s">"dape adapter"</span>
+                            <span class="bi">:command</span> command
+                            <span class="bi">:filter</span> (<span class="k">lambda</span> (_process string)
+                                      (dape--repl-insert string))
+                            <span class="bi">:file-handler</span> t
+                            <span class="bi">:buffer</span> nil
+                            <span class="bi">:stderr</span> stderr-buffer))
+        (process-put server-process 'stderr-pipe stderr-buffer)
+        <span class="cd">;; </span><span class="c">XXX Tramp does not allow `</span><span class="m c">make-pipe-process</span><span class="c">' as :stderr,
+</span>        <span class="cd">;; </span><span class="c">`</span><span class="m c">make-process</span><span class="c">' creates one for us with an unwanted
+</span>        <span class="cd">;; </span><span class="c">sentinel (`</span><span class="m c">internal-default-process-sentinel</span><span class="c">').
+</span>        (<span class="k">when-let*</span> ((pipe-process (get-buffer-process stderr-buffer)))
+          (set-process-sentinel pipe-process #'ignore))
+        (<span class="k">when</span> dape-debug
+          (dape--message <span class="s">"Adapter server started with %S"</span>
+                         (mapconcat #'identity command <span class="s">" "</span>))))
+      <span class="cd">;; </span><span class="c">FIXME Why do I need this?
+</span>      (<span class="k">when</span> (file-remote-p default-directory)
+        (sleep-for 0.300))
+      <span class="cd">;; </span><span class="c">2. Connect to server
+</span>      (<span class="k">let</span> ((host (<span class="k">or</span> (plist-get config 'host) <span class="s">"localhost"</span>))
+            (retries 30))
+        (<span class="k">while</span> (<span class="k">and</span> (not process) (&gt; retries 0))
+          (<span class="k">ignore-errors</span>
+            (<span class="k">setq</span> process
+                  (make-network-process <span class="bi">:name</span>
+                                        (format <span class="s">"dape adapter%s connection"</span>
+                                                (<span class="k">if</span> parent <span class="s">" child"</span> <span class="s">""</span>))
+                                        <span class="bi">:host</span> host
+                                        <span class="bi">:coding</span> 'utf-8-emacs-unix
+                                        <span class="bi">:service</span> (plist-get config 'port)
+                                        <span class="bi">:noquery</span> t)))
+          (sleep-for 0.100)
+          (<span class="k">setq</span> retries (1- retries)))
+        (<span class="k">if</span> (zerop retries)
+            (<span class="k">progn</span>
+              (dape--warn <span class="s">"Unable to connect to dap server at %s:%d"</span>
+                          host (plist-get config 'port))
+              (dape--message <span class="s">"Connection is configurable by `</span><span class="m s">host</span><span class="s">' and `</span><span class="m s">port</span><span class="s">' keys"</span>)
+              <span class="cd">;; </span><span class="c">Barf server stderr
+</span>              (<span class="k">when-let*</span> (server-process
+                          (buffer (process-get server-process 'stderr-pipe))
+                          (content (<span class="k">with-current-buffer</span> buffer (buffer-string)))
+                          ((not (string-empty-p content))))
+                (dape--repl-insert-error (concat content <span class="s">"\n"</span>)))
+              (delete-process server-process)
+              (<span class="w">user-error</span> <span class="s">"Unable to connect to server"</span>))
+          (<span class="k">when</span> dape-debug
+            (dape--message <span class="s">"%s to adapter established at %s:%s"</span>
+                           (<span class="k">if</span> parent <span class="s">"Child connection"</span> <span class="s">"Connection"</span>)
+                           host (plist-get config 'port))))))
+     (<span class="cd">;; </span><span class="c">Pipe connection
+</span>      t
+      (<span class="k">let</span> ((command
+             (cons (plist-get config 'command)
+                   (cl-map 'list 'identity
+                           (plist-get config 'command-args)))))
+        (<span class="k">setq</span> process
+              (make-process <span class="bi">:name</span> <span class="s">"dape adapter"</span>
+                            <span class="bi">:command</span> command
+                            <span class="bi">:connection-type</span> 'pipe
+                            <span class="bi">:coding</span> 'utf-8-emacs-unix
+                            <span class="bi">:stderr</span>
+                            (<span class="k">setq</span> stderr-buffer
+                                  (generate-new-buffer <span class="s">"*dape-connection stderr*"</span>))
+                            <span class="bi">:file-handler</span> t))
+        (<span class="k">when</span> dape-debug
+          (dape--message <span class="s">"Adapter started with %S"</span>
+                         (mapconcat #'identity command <span class="s">" "</span>))))))
+    (dape-connection
+     <span class="bi">:name</span> (format <span class="s">"dape-%s&lt;%d&gt;"</span>
+                   (<span class="k">or</span> (<span class="k">and</span> (car command) command)
+                       (<span class="k">when-let*</span> ((port (plist-get config 'port)))
+                         (format <span class="s">"%s:%s"</span>
+                                 (<span class="k">or</span> (plist-get config 'host) <span class="s">"localhost"</span>)
+                                 port)))
+                   (<span class="k">cl-incf</span> dape--connection-counter))
+     <span class="bi">:config</span> config
+     <span class="bi">:parent</span> parent
+     <span class="bi">:server-process</span> server-process
+     <span class="bi">:events-buffer-config</span> `(<span class="bi">:size</span> ,(<span class="k">if</span> dape-debug nil 0) <span class="bi">:format</span> full)
+     <span class="bi">:on-shutdown</span>
+     (<span class="k">lambda</span> (conn)
+       (<span class="k">unless</span> (dape--initialized-p conn)
+         (dape--warn <span class="s">"Adapter %sconnection shutdown without successfully initializing"</span>
+                     (<span class="k">if</span> (dape--parent conn) <span class="s">"child "</span> <span class="s">""</span>)))
+       <span class="cd">;; </span><span class="c">Is this a complete shutdown?
+</span>       (<span class="k">unless</span> (dape--parent conn)
+         <span class="cd">;; </span><span class="c">Clean source buffer
+</span>         (dape--stack-frame-cleanup)
+         <span class="cd">;; </span><span class="c">Kill server process and its stderr buffer
+</span>         (<span class="k">when-let*</span> ((server-process (dape--server-process conn)))
+           (delete-process server-process)
+           (<span class="k">while</span> (process-live-p server-process)
+             (accept-process-output nil nil 0.1)))
+         (<span class="k">when-let*</span> ((buf (dape--stderr-buffer conn))
+                     ((buffer-live-p buf)))
+           (<span class="k">when-let*</span> ((pipe (get-buffer-process buf)))
+             (delete-process pipe))
+           (kill-buffer buf))
+         <span class="cd">;; </span><span class="c">Remove from session list and update selection
+</span>         (<span class="k">setq</span> dape--connections (delq conn dape--connections))
+         (<span class="k">when</span> (eq dape--connection-selected conn)
+           (<span class="k">when-let*</span> ((next (car (dape--live-connections-root))))
+             (dape-select-session next)))
+         <span class="cd">;; </span><span class="c">Run hooks and update mode line only when last session ends
+</span>         (<span class="k">unless</span> dape--connections
+           (dape-active-mode -1)
+           (force-mode-line-update t))))
+     <span class="bi">:request-dispatcher</span> #'dape-handle-request
+     <span class="bi">:notification-dispatcher</span> #'dape-handle-event
+     <span class="bi">:process</span> process
+     <span class="bi">:stderr-buffer</span> stderr-buffer)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

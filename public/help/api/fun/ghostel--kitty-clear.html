@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--kitty-clear – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--kitty-clear is a natively compiled function defined in
+ghostel-kitty.el.
+Remove kitty image overlays and per-line clamps from the viewport.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--kitty-clear</code></h1><p><span class="m"><code>ghostel--kitty-clear</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel-kitty.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--kitty-clear)
+</code></pre>
+<h2>Documentation</h2>
+<p>Remove kitty image overlays and per-line clamps from the viewport.
+<p>Both display paths tag the regions/overlays with the <span class="m"><code>ghostel-kitty</code></span>
+property so this strips only kitty-applied <span class="m"><code>display</code></span> and <span class="m"><code>line-height</code></span>,
+leaving other consumers of <span class="m"><code>display</code></span> (e.g. wide-char compensation)
+alone.
+<p>Only the viewport region is cleared — overlays on rows that have
+already been promoted to materialized scrollback are preserved so
+images stay visible after they scroll past the live viewport.
+libghostty stops reporting placements once they're fully out of the
+viewport (<span class="m"><code>viewport_visible</code></span> goes false), so wiping scrollback would
+leave nothing to re-emit and the image would vanish from history.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-kitty.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--kitty-clear</span> ()
+  <span class="doc">"Remove kitty image overlays and per-line clamps from the viewport.
+Both display paths tag the regions/overlays with the `</span><span class="m doc">ghostel-kitty</span><span class="doc">'
+property so this strips only kitty-applied `</span><span class="m doc">display</span><span class="doc">' and `</span><span class="m doc">line-height</span><span class="doc">',
+leaving other consumers of `</span><span class="m doc">display</span><span class="doc">' (e.g. wide-char compensation)
+alone.
+
+Only the viewport region is cleared — overlays on rows that have
+already been promoted to materialized scrollback are preserved so
+images stay visible after they scroll past the live viewport.
+libghostty stops reporting placements once they're fully out of the
+viewport (`</span><span class="m doc">viewport_visible</span><span class="doc">' goes false), so wiping scrollback would
+leave nothing to re-emit and the image would vanish from history."</span>
+  (<span class="k">when</span> ghostel--kitty-active
+    (<span class="k">let*</span> ((inhibit-read-only t)
+           (vp-start (<span class="k">or</span> (ghostel--viewport-start) (point-min)))
+           (end (point-max))
+           (pos vp-start))
+      (<span class="k">dolist</span> (ov (overlays-in pos end))
+        (<span class="k">when</span> (<span class="k">and</span> (overlay-get ov 'ghostel-kitty)
+                   (&gt;= (overlay-start ov) pos))
+          (delete-overlay ov)))
+      (<span class="k">while</span> (&lt; pos end)
+        (<span class="k">let</span> ((next (next-single-property-change pos 'ghostel-kitty nil end)))
+          (<span class="k">when</span> (get-text-property pos 'ghostel-kitty)
+            (remove-text-properties
+             pos next '(display nil line-height nil ghostel-kitty nil)))
+          (<span class="k">setq</span> pos next)))
+      <span class="cd">;; </span><span class="c">Drop any image fragment left over by scrollback eviction (see
+</span>      <span class="cd">;; </span><span class="c">`</span><span class="m c">ghostel--kitty-strip-orphan-top</span><span class="c">').
+</span>      (ghostel--kitty-strip-orphan-top)
+      <span class="cd">;; </span><span class="c">Sticky-flag hygiene: once we've stripped the viewport, anything
+</span>      <span class="cd">;; </span><span class="c">remaining must be in scrollback.  If there's nothing left at all,
+</span>      <span class="cd">;; </span><span class="c">clear the flag so future redraws skip the buffer scan entirely.
+</span>      (<span class="k">unless</span> (ghostel--kitty-any-remaining-p (point-min) vp-start)
+        (<span class="k">setq</span> ghostel--kitty-active nil)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

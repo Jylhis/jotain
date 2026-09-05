@@ -1,0 +1,93 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--save-state – Emacs Documentation Online</title>
+<meta name="description" content="gptel--save-state is a natively compiled function defined in gptel.el.
+Write the gptel state to the buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--save-state</code></h1><p><span class="m"><code>gptel--save-state</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--save-state)
+</code></pre>
+<h2>Documentation</h2>
+<p>Write the gptel state to the buffer.
+<p>This saves chat metadata when writing the buffer to disk.  To
+restore a chat session, turn on <a class="v" href="../var/gptel-mode.html"><code>gptel-mode</code>(var)</a>/<a class="f" href="../fun/gptel-mode.html"><code>gptel-mode</code>(fun)</a> after opening the
+file.
+<p>If a gptel preset has been applied in this buffer, a reference to it is
+saved.
+<p>Additional metadata is stored only if no preset was applied or if it
+differs from the preset specification.  This is limited to the active
+gptel model and backend names, the system message, active tools, the
+response temperature, max tokens and number of conversation turns to
+send in queries.  (See <a href="../var/gptel--num-messages-to-send.html"><code>gptel--num-messages-to-send</code></a> for the last one.)
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--save-state</span> ()
+  <span class="doc">"Write the gptel state to the buffer.
+
+This saves chat metadata when writing the buffer to disk.  To
+restore a chat session, turn on `</span><span class="m doc">gptel-mode</span><span class="doc">' after opening the
+file.
+
+If a gptel preset has been applied in this buffer, a reference to it is
+saved.
+
+Additional metadata is stored only if no preset was applied or if it
+differs from the preset specification.  This is limited to the active
+gptel model and backend names, the system message, active tools, the
+response temperature, max tokens and number of conversation turns to
+send in queries.  (See `</span><span class="m doc">gptel--num-messages-to-send</span><span class="doc">' for the last one.)"</span>
+  (run-hooks 'gptel-save-state-hook)
+  (<span class="k">if</span> (derived-mode-p 'org-mode)
+      (<span class="k">progn</span>
+        (<span class="k">require</span> '<span class="m">gptel-org</span>)
+        (gptel-org--save-state))
+    (<span class="k">let</span> ((print-escape-newlines t)
+          (preset-spec (<span class="k">and</span> gptel--preset
+                            (gptel-get-preset gptel--preset))))
+      (<span class="k">save-excursion</span>
+        (<span class="k">save-restriction</span>
+
+          (<span class="k">if</span> preset-spec
+              (add-file-local-variable 'gptel--preset gptel--preset)
+            (delete-file-local-variable 'gptel--preset))
+
+          <span class="cd">;; </span><span class="c">Model and backend
+</span>          (<span class="k">if</span> (gptel--preset-mismatch-value preset-spec <span class="bi">:model</span> gptel-model)
+              (add-file-local-variable 'gptel-model gptel-model))
+          (<span class="k">if</span> (gptel--preset-mismatch-value preset-spec <span class="bi">:backend</span> gptel-backend)
+              (add-file-local-variable 'gptel--backend-name
+                                       (gptel-backend-name gptel-backend)))
+          <span class="cd">;; </span><span class="c">System message compat
+</span>          <span class="cd">;; </span><span class="c">TODO(v1.0): Remove this fix for duplicate system prompts
+</span>          (delete-file-local-variable 'gptel--system-message)
+          <span class="cd">;; </span><span class="c">System message
+</span>          (<span class="k">let</span> ((parsed (car-safe (gptel--parse-directive gptel-system-prompt))))
+            (<span class="k">if</span> (gptel--preset-mismatch-value preset-spec <span class="bi">:system</span> parsed)
+                (add-file-local-variable 'gptel-system-prompt parsed)
+              (delete-file-local-variable 'gptel-system-prompt)))
+          <span class="cd">;; </span><span class="c">Tools
+</span>          (<span class="k">let</span> ((tool-names (mapcar #'gptel-tool-name gptel-tools)))
+            (<span class="k">if</span> (gptel--preset-mismatch-value preset-spec <span class="bi">:tools</span> tool-names)
+                (add-file-local-variable 'gptel--tool-names tool-names)
+              (delete-file-local-variable 'gptel--tool-names)))
+          <span class="cd">;; </span><span class="c">Temperature, max tokens and cutoff
+</span>          (<span class="k">if</span> (<span class="k">and</span> (gptel--preset-mismatch-value preset-spec <span class="bi">:temperature</span> gptel-temperature)
+                   (not (equal (default-value 'gptel-temperature) gptel-temperature)))
+              (add-file-local-variable 'gptel-temperature gptel-temperature)
+            (delete-file-local-variable 'gptel-temperature))
+          (<span class="k">if</span> (<span class="k">and</span> (gptel--preset-mismatch-value preset-spec <span class="bi">:max-tokens</span> gptel-max-tokens)
+                   gptel-max-tokens)
+              (add-file-local-variable 'gptel-max-tokens gptel-max-tokens)
+            (delete-file-local-variable 'gptel-max-tokens))
+          (<span class="k">if</span> (<span class="k">and</span> (gptel--preset-mismatch-value
+                    preset-spec <span class="bi">:num-messages-to-send</span> gptel--num-messages-to-send)
+                   (natnump gptel--num-messages-to-send))
+              (add-file-local-variable 'gptel--num-messages-to-send
+                                       gptel--num-messages-to-send)
+            (delete-file-local-variable 'gptel--num-messages-to-send))
+          (add-file-local-variable 'gptel--bounds (gptel--get-buffer-bounds)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

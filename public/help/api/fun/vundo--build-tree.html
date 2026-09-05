@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vundo--build-tree – Emacs Documentation Online</title>
+<meta name="description" content="vundo--build-tree is a natively compiled function defined in vundo.el.
+Connect equivalent modifications and build the tree in MOD-LIST.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vundo--build-tree</code></h1><p><span class="m"><code>vundo--build-tree</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">vundo.el</span>.
+<h2>Signature</h2>
+<pre><code>(vundo--build-tree <a href="#:~:text=in-,MOD-LIST"><span class="arg">MOD-LIST</span></a> <a href="#:~:text=LIST.-,MOD-HASH"><span class="arg">MOD-HASH</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,FROM"><span class="arg">FROM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Connect equivalent modifications and build the tree in <span class="arg">MOD-LIST</span>.
+<p><span class="arg">MOD-HASH</span> maps undo-lists to modifications.
+If <span class="arg">FROM</span> non-nil, build from FORM-th modification in <span class="arg">MOD-LIST</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/7c2696v2qdrdv2vf2im8alazibi7qq0z-emacs-packages-deps/share/emacs/site-lisp/elpa/vundo-2.4.0/vundo.el</span>
+(<span class="k">defun</span> <span class="f">vundo--build-tree</span> (mod-list mod-hash <span class="ty">&amp;optional</span> from)
+  <span class="doc">"Connect equivalent modifications and build the tree in MOD-LIST.
+MOD-HASH maps undo-lists to modifications.
+If FROM non-nil, build from FORM-th modification in MOD-LIST."</span>
+  (<span class="k">cl-loop</span>
+   for m from (<span class="k">or</span> from 0) to (1- (length mod-list))
+   for mod = (aref mod-list m)
+   <span class="cd">;; </span><span class="c">If MOD is an undo, the buffer state it represents is equivalent
+</span>   <span class="cd">;; </span><span class="c">to a previous one.
+</span>   do (<span class="k">let</span> ((prev-undo (undo--last-change-was-undo-p
+                        (vundo-m-undo-list mod))))
+        (<span class="k">pcase</span> prev-undo
+          <span class="cd">;; </span><span class="c">This is an undo. Merge it with its equivalent nodes.
+</span>          ((<span class="k">and</span> (pred consp)
+                <span class="cd">;; </span><span class="c">It is possible for us to not find the PREV-UNDO in
+</span>                <span class="cd">;; </span><span class="c">our mod-list: if Emacs garbage collected prev-m,
+</span>                <span class="cd">;; </span><span class="c">then it will not end up in mod-list. NOTE: Is it
+</span>                <span class="cd">;; </span><span class="c">also possible that unable to find PREV-M is an
+</span>                <span class="cd">;; </span><span class="c">error? Maybe, but I think that's highly unlikely.
+</span>                (guard (gethash prev-undo mod-hash)))
+           (<span class="k">let</span> ((prev-m (gethash prev-undo mod-hash)))
+             (vundo--eqv-merge-mod prev-m mod)))
+          <span class="cd">;; </span><span class="c">This undo undoes to root, merge with the root node.
+</span>          ('t (vundo--eqv-merge-mod (aref mod-list 0) mod))
+          <span class="cd">;; </span><span class="c">This modification either is a region-undo, nil undo, or
+</span>          <span class="cd">;; </span><span class="c">not an undo. We treat them the same.
+</span>          ((<span class="k">or</span> 'undo-in-region 'empty _)
+           <span class="cd">;; </span><span class="c">If MOD isn't an undo, it represents a new buffer state,
+</span>           <span class="cd">;; </span><span class="c">we connect M-1 with M, where M-1 is the parent and M is
+</span>           <span class="cd">;; </span><span class="c">the child.
+</span>           (<span class="k">unless</span> (eq m 0)
+             (<span class="k">let*</span> ((m-1 (aref mod-list (1- m)))
+                    (min-eqv-mod (vundo--master-eqv-mod-of m-1)))
+               (<span class="k">setf</span> (vundo-m-parent mod) min-eqv-mod)
+               (<span class="k">let</span> ((children (vundo-m-children min-eqv-mod)))
+                 <span class="cd">;; </span><span class="c">If everything goes right, we should never encounter
+</span>                 <span class="cd">;; </span><span class="c">this.
+</span>                 (<span class="w">cl-assert</span> (not (memq mod children)))
+                 (<span class="k">setf</span> (vundo-m-children min-eqv-mod)
+                       <span class="cd">;; </span><span class="c">We sort in reverse order, ie, later mod
+</span>                       <span class="cd">;; </span><span class="c">comes first. Later in `</span><span class="m c">vundo--build-tree</span><span class="c">' we
+</span>                       <span class="cd">;; </span><span class="c">draw the tree depth-first.
+</span>                       (vundo--sort-mod (cons mod children)
+                                        'reverse))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

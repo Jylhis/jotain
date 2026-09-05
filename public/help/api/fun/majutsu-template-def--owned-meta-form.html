@@ -1,0 +1,341 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-template-def--owned-meta-form – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-template-def--owned-meta-form is a function defined in
+majutsu-template.el.
+Return metadata-construction form for owner-bound callable NAME.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-template-def--owned-meta-form</code></h1><p><span class="m"><code>majutsu-template-def--owned-meta-form</code></span> is a function defined in
+<span class="bt">majutsu-template.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-template-def--owned-meta-form <a href="#:~:text=callable-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=NAME.-,OWNER"><span class="arg">OWNER</span></a> <a href="#:~:text=type,-,ARGS"><span class="arg">ARGS</span></a> <a href="#:~:text=and-,SIGNATURE"><span class="arg">SIGNATURE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">KEYWORD</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return metadata-construction form for owner-bound callable <span class="arg">NAME</span>.
+<p><span class="arg">OWNER</span> is the receiver type, <span class="arg">ARGS</span> are parameters after the implicit SELF, and
+<span class="arg">SIGNATURE</span> is the declaration plist accepted by <a href="../fun/majutsu-template-defun.html"><code>majutsu-template-defun</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-template.el</span>
+(<span class="k">eval-and-compile</span>
+  (<span class="k">defun</span> <span class="f">majutsu-template--normalize-arg-specialize</span> (fn-name arg-name arg-type specialize)
+    <span class="doc">"Validate SPECIALIZE metadata for FN-NAME ARG-NAME of ARG-TYPE."</span>
+    (<span class="k">when</span> specialize
+      (<span class="k">unless</span> (memq specialize '(<span class="bi">:element-lambda</span>))
+        (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: argument %s has unknown :specialize %S"</span>
+                    fn-name arg-name specialize))
+      (<span class="k">unless</span> (eq (majutsu-template--type-ref-base-type arg-type) 'Lambda)
+        (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: argument %s uses :specialize %S but is not Lambda"</span>
+                    fn-name arg-name specialize))))
+
+  (<span class="k">defun</span> <span class="f">majutsu-template--parse-arg-options</span> (name opts)
+    <span class="doc">"Internal helper to parse OPTS plist for argument NAME."</span>
+    (<span class="k">let</span> ((optional nil)
+          (rest nil)
+          (doc nil)
+          (specialize nil))
+      (<span class="k">while</span> opts
+        (<span class="k">let</span> ((key (<span class="k">pop</span> opts))
+              (val (<span class="k">pop</span> opts)))
+          (<span class="k">pcase</span> key
+            (<span class="bi">:optional</span> (<span class="k">setq</span> optional (not (null val))))
+            (<span class="bi">:rest</span> (<span class="k">setq</span> rest (not (null val))))
+            (<span class="bi">:doc</span> (<span class="k">setq</span> doc val))
+            (<span class="bi">:specialize</span> (<span class="k">setq</span> specialize val))
+            (_ (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: unknown option %S"</span> name key)))))
+      (list optional rest doc specialize)))
+
+  (<span class="k">defun</span> <span class="f">majutsu-template--parse-args</span> (fn-name arg-specs)
+    <span class="doc">"Parse ARG-SPECS for FN-NAME into `</span><span class="m doc">majutsu-template--arg</span><span class="doc">' structs.
+Also validates placement of optional/rest arguments."</span>
+    (<span class="k">let</span> ((parsed '())
+          (rest-seen nil))
+      (<span class="k">dolist</span> (spec arg-specs)
+        (<span class="k">unless</span> (<span class="k">and</span> (consp spec) (symbolp (car spec)) (&gt;= (length spec) 2))
+          (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: invalid parameter spec %S"</span> fn-name spec))
+        (<span class="k">let*</span> ((arg-name (car spec))
+               (type (cadr spec))
+               (opts (cddr spec))
+               (_ (<span class="k">unless</span> (<span class="k">or</span> (symbolp type)
+                              (keywordp type)
+                              (<span class="k">and</span> (consp type)
+                                   (memq (car type) '(<span class="bi">:list</span> <span class="bi">:option</span> <span class="bi">:lambda</span>))))
+                    (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: argument %s has invalid type %S"</span>
+                                fn-name arg-name type)))
+               (opt-data (majutsu-template--parse-arg-options arg-name opts))
+               (optional (nth 0 opt-data))
+               (rest (nth 1 opt-data))
+               (doc (nth 2 opt-data))
+               (specialize (nth 3 opt-data)))
+          (<span class="k">when</span> (<span class="k">and</span> rest (not (null (cdr (memq spec arg-specs)))))
+            (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: :rest parameter must be last"</span> fn-name))
+          (<span class="k">when</span> (<span class="k">and</span> rest rest-seen)
+            (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: only one :rest parameter allowed"</span> fn-name))
+          (<span class="k">when</span> (<span class="k">and</span> rest optional)
+            (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: parameter %s cannot be both optional and :rest"</span>
+                        fn-name arg-name))
+          (<span class="k">when</span> (<span class="k">and</span> optional rest-seen)
+            (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: optional parameters must precede :rest"</span> fn-name))
+          (majutsu-template--normalize-arg-specialize fn-name arg-name type specialize)
+          (<span class="k">when</span> rest (<span class="k">setq</span> rest-seen t))
+          (<span class="k">push</span> (majutsu-template--make-arg
+                 <span class="bi">:name</span> arg-name
+                 <span class="bi">:type</span> type
+                 <span class="bi">:optional</span> optional
+                 <span class="bi">:rest</span> rest
+                 <span class="bi">:doc</span> doc
+                 <span class="bi">:specialize</span> specialize)
+                parsed)))
+      (nreverse parsed)))
+
+  (<span class="k">defun</span> <span class="f">majutsu-template--build-lambda-list</span> (args)
+    <span class="doc">"Return lambda list corresponding to ARGS metadata."</span>
+    (<span class="k">let</span> ((required '())
+          (optional '())
+          (rest nil))
+      (<span class="k">dolist</span> (arg args)
+        (<span class="k">when</span> (majutsu-template--arg-rest arg)
+          (<span class="k">when</span> rest
+            (<span class="w">user-error</span> <span class="s">"majutsu-template: multiple :rest parameters not allowed"</span>))
+          (<span class="k">setq</span> rest (majutsu-template--arg-name arg)))
+        (<span class="k">cond</span>
+         ((majutsu-template--arg-rest arg))
+         ((majutsu-template--arg-optional arg)
+          (<span class="k">push</span> (majutsu-template--arg-name arg) optional))
+         (t
+          (<span class="k">push</span> (majutsu-template--arg-name arg) required))))
+      (<span class="k">setq</span> required (nreverse required)
+            optional (nreverse optional))
+      (append required
+              (<span class="k">when</span> optional (cons '<span class="ty">&amp;optional</span> optional))
+              (<span class="k">when</span> rest (list '<span class="ty">&amp;rest</span> rest)))))
+
+  (<span class="k">defun</span> <span class="f">majutsu-template--build-arg-normalizers</span> (args)
+    <span class="doc">"Return forms that normalize function parameters described by ARGS."</span>
+    (<span class="k">cl-loop</span> for arg in args
+             collect
+             (<span class="k">let</span> ((name (majutsu-template--arg-name arg)))
+               (<span class="k">cond</span>
+                ((majutsu-template--arg-rest arg)
+                 `(<span class="k">setq</span> ,name (mapcar #'majutsu-template--rewrite ,name)))
+                ((majutsu-template--arg-optional arg)
+                 `(<span class="k">when</span> ,name (<span class="k">setq</span> ,name (majutsu-template--rewrite ,name))))
+                (t
+                 `(<span class="k">setq</span> ,name (majutsu-template--rewrite ,name)))))))
+
+  (<span class="k">defun</span> <span class="f">majutsu-template--build-arg-type-checks</span> (fn-name args)
+    <span class="doc">"Return forms that validate normalized ARGS for helper FN-NAME."</span>
+    (<span class="k">cl-loop</span> for arg in args
+             collect
+             (<span class="k">let</span> ((name (majutsu-template--arg-name arg))
+                   (type (majutsu-template--arg-type arg)))
+               (<span class="k">cond</span>
+                ((majutsu-template--arg-rest arg)
+                 `(<span class="k">dolist</span> (majutsu-template--item ,name)
+                    (majutsu-template--assert-node-type ',fn-name ',name ',type
+                                                        majutsu-template--item)))
+                ((majutsu-template--arg-optional arg)
+                 `(<span class="k">when</span> ,name
+                    (majutsu-template--assert-node-type ',fn-name ',name ',type ,name)))
+                (t
+                 `(majutsu-template--assert-node-type ',fn-name ',name ',type ,name))))))
+
+  (<span class="k">defun</span> <span class="f">majutsu-template--lookup-arg</span> (args name)
+    <span class="doc">"Return argument metadata from ARGS matching NAME, or nil."</span>
+    (cl-find-if (<span class="k">lambda</span> (arg)
+                  (eq (majutsu-template--arg-name arg) name))
+                args))
+
+  (<span class="k">defun</span> <span class="f">majutsu-template--normalize-returns-via</span> (fn-name returns-via)
+    <span class="doc">"Validate RETURNS-VIA metadata for FN-NAME and return normalized value."</span>
+    (<span class="k">pcase</span> returns-via
+      ('nil nil)
+      (`(<span class="bi">:list-of-lambda-return</span> ,arg-name)
+       (<span class="k">unless</span> (symbolp arg-name)
+         (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: :returns-via expects a symbol argument name, got %S"</span>
+                     fn-name arg-name))
+       returns-via)
+      (_
+       (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: unsupported :returns-via %S"</span>
+                   fn-name returns-via))))
+
+  (<span class="k">defun</span> <span class="f">majutsu-template--validate-returns-via</span> (fn-name returns-via args)
+    <span class="doc">"Validate RETURNS-VIA for FN-NAME against ARGS and return normalized value."</span>
+    (<span class="k">setq</span> returns-via (majutsu-template--normalize-returns-via fn-name returns-via))
+    (<span class="k">pcase</span> returns-via
+      ('nil nil)
+      (`(<span class="bi">:list-of-lambda-return</span> ,arg-name)
+       (<span class="k">let</span> ((arg (majutsu-template--lookup-arg args arg-name)))
+         (<span class="k">unless</span> arg
+           (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: :returns-via refers to unknown argument %S"</span>
+                       fn-name arg-name))
+         (<span class="k">unless</span> (eq (majutsu-template--type-ref-base-type
+                      (majutsu-template--arg-type arg))
+                     'Lambda)
+           (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: :returns-via %S requires Lambda argument %S"</span>
+                       fn-name returns-via arg-name))
+         returns-via))))
+
+  (<span class="k">defun</span> <span class="f">majutsu-template--validate-bind-self</span> (fn-name bind-self args)
+    <span class="doc">"Validate BIND-SELF for FN-NAME against ARGS and return its arg metadata."</span>
+    (<span class="k">when</span> bind-self
+      (<span class="k">unless</span> (symbolp bind-self)
+        (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: :bind-self expects parameter name, got %S"</span>
+                    fn-name bind-self))
+      (<span class="k">let</span> ((arg (majutsu-template--lookup-arg args bind-self)))
+        (<span class="k">unless</span> arg
+          (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: :bind-self parameter %S is not declared"</span>
+                      fn-name bind-self))
+        (<span class="k">when</span> (majutsu-template--arg-rest arg)
+          (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: :bind-self parameter %S cannot be :rest"</span>
+                      fn-name bind-self))
+        arg)))
+
+  (<span class="k">defun</span> <span class="f">majutsu-template--parse-signature</span> (fn-name signature)
+    <span class="doc">"Parse SIGNATURE plist for FN-NAME, returning plist with metadata."</span>
+    (<span class="k">unless</span> (<span class="k">and</span> (consp signature) (eq (car signature) <span class="bi">:returns</span>) (cadr signature))
+      (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: signature must start with (:returns TYPE ...)"</span> fn-name))
+    (<span class="k">let</span> ((returns (cadr signature))
+          (rest (cddr signature))
+          (doc nil)
+          (owner nil)
+          (template-name nil)
+          (keyword nil)
+          (bind-self nil)
+          (returns-via nil))
+      (<span class="k">unless</span> (<span class="k">or</span> (symbolp returns)
+                  (keywordp returns)
+                  (<span class="k">and</span> (consp returns)
+                       (memq (car returns) '(<span class="bi">:list</span> <span class="bi">:option</span> <span class="bi">:lambda</span>))))
+        (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: invalid return type %S"</span> fn-name returns))
+      (<span class="k">while</span> rest
+        (<span class="k">let</span> ((key (<span class="k">pop</span> rest))
+              (value (<span class="k">pop</span> rest)))
+          (<span class="k">pcase</span> key
+            (<span class="bi">:doc</span> (<span class="k">setq</span> doc value))
+            (<span class="bi">:owner</span> (<span class="k">setq</span> owner value))
+            (<span class="bi">:template-name</span> (<span class="k">setq</span> template-name value))
+            (<span class="bi">:keyword</span> (<span class="k">setq</span> keyword value))
+            (<span class="bi">:bind-self</span> (<span class="k">setq</span> bind-self value))
+            (<span class="bi">:returns-via</span> (<span class="k">setq</span> returns-via value))
+            (_ (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: unknown signature key %S"</span> fn-name key)))))
+      (<span class="k">when</span> (<span class="k">and</span> owner
+                 (not (<span class="k">or</span> (symbolp owner)
+                          (keywordp owner)
+                          (<span class="k">and</span> (consp owner)
+                               (memq (car owner) '(<span class="bi">:list</span> <span class="bi">:option</span> <span class="bi">:lambda</span>))))))
+        (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: :owner expects a type ref, got %S"</span> fn-name owner))
+      (<span class="k">when</span> (<span class="k">and</span> template-name (not (stringp template-name)))
+        (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: :template-name expects string, got %S"</span>
+                    fn-name template-name))
+      (<span class="k">setq</span> keyword (<span class="k">and</span> keyword (not (null keyword))))
+      (<span class="k">when</span> (<span class="k">and</span> keyword (not owner))
+        (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: :keyword requires :owner to be specified"</span> fn-name))
+      (list <span class="bi">:returns</span> returns
+            <span class="bi">:doc</span> doc
+            <span class="bi">:owner</span> owner
+            <span class="bi">:template-name</span> template-name
+            <span class="bi">:keyword</span> keyword
+            <span class="bi">:bind-self</span> bind-self
+            <span class="bi">:returns-via</span> returns-via)))
+
+  (<span class="k">defun</span> <span class="f">majutsu-template--type-ref-string</span> (type)
+    <span class="doc">"Return readable string form for TYPE reference."</span>
+    (<span class="k">setq</span> type (majutsu-template--type-ref-normalize type))
+    (<span class="k">cond</span>
+     ((symbolp type) (symbol-name type))
+     ((<span class="k">and</span> (consp type) (eq (car type) <span class="bi">:list</span>))
+      (format <span class="s">"(:list %s)"</span>
+              (majutsu-template--type-ref-string (cadr type))))
+     ((<span class="k">and</span> (consp type) (eq (car type) <span class="bi">:option</span>))
+      (format <span class="s">"(:option %s)"</span>
+              (majutsu-template--type-ref-string (cadr type))))
+     ((<span class="k">and</span> (consp type) (eq (car type) <span class="bi">:lambda</span>))
+      (format <span class="s">"(:lambda (%s) %s)"</span>
+              (mapconcat #'majutsu-template--type-ref-string (cadr type) <span class="s">" "</span>)
+              (majutsu-template--type-ref-string (caddr type))))
+     (t (format <span class="s">"%S"</span> type))))
+
+  (<span class="k">defun</span> <span class="f">majutsu-template--compose-docstring</span> (name base-doc args)
+    <span class="doc">"Compose docstring for helper NAME using BASE-DOC and ARGS metadata."</span>
+    (<span class="k">let</span> ((header (<span class="k">or</span> base-doc (format <span class="s">"Template helper %s."</span> name)))
+          (param-lines
+           (<span class="k">when</span> args
+             (mapconcat
+              (<span class="k">lambda</span> (arg)
+                (<span class="k">let</span> ((arg-name (majutsu-template--arg-name arg))
+                      (type (majutsu-template--arg-type arg))
+                      (optional (majutsu-template--arg-optional arg))
+                      (rest (majutsu-template--arg-rest arg))
+                      (doc (majutsu-template--arg-doc arg)))
+                  (concat <span class="s">"  "</span> (symbol-name arg-name)
+                          <span class="s">" ("</span> (majutsu-template--type-ref-string type) <span class="s">")"</span>
+                          (<span class="k">cond</span>
+                           (rest <span class="s">" [rest]"</span>)
+                           (optional <span class="s">" [optional]"</span>)
+                           (t <span class="s">""</span>))
+                          (<span class="k">if</span> doc
+                              (format <span class="s">": %s"</span> doc)
+                            <span class="s">""</span>))))
+              args
+              <span class="s">"\n"</span>))))
+      (<span class="k">if</span> param-lines
+          (concat header <span class="s">"\n\nParameters:\n"</span> param-lines)
+        header)))
+
+  (<span class="k">defun</span> <span class="f">majutsu-template--ensure-owner-type</span> (owner fn-name)
+    <span class="doc">"Validate declared OWNER type for callable FN-NAME when provided."</span>
+    (<span class="k">when</span> owner
+      (<span class="k">setq</span> owner (majutsu-template--type-ref-normalize owner))
+      (<span class="k">unless</span> (majutsu-template--lookup-type
+               (majutsu-template--type-ref-base-type owner))
+        (message <span class="s">"majutsu-template: warning – declaring %s for unknown type %S"</span>
+                 fn-name owner)))
+    owner)
+
+  (<span class="k">defun</span> <span class="f">majutsu-template-def--inherit-signature</span> (signature owner <span class="ty">&amp;optional</span> keyword)
+    (append signature
+            (list <span class="bi">:owner</span> owner)
+            (<span class="k">when</span> keyword '(<span class="bi">:keyword</span> t))))
+
+  (<span class="k">defun</span> <span class="f">majutsu-template-def--owned-meta-form</span> (name owner args signature <span class="ty">&amp;optional</span> keyword)
+    <span class="doc">"Return metadata-construction form for owner-bound callable NAME.
+OWNER is the receiver type, ARGS are parameters after the implicit SELF, and
+SIGNATURE is the declaration plist accepted by `</span><span class="m doc">majutsu-template-defun</span><span class="doc">'."</span>
+    (<span class="k">let*</span> ((signature-info (majutsu-template--parse-signature
+                            name
+                            (majutsu-template-def--inherit-signature signature owner keyword)))
+           (bind-self (plist-get signature-info <span class="bi">:bind-self</span>)))
+      (<span class="k">when</span> bind-self
+        (<span class="w">user-error</span> <span class="s">"majutsu-template: owner-bound callables such as %s do not support :bind-self; use majutsu-template-defun instead"</span>
+                    name))
+      (<span class="k">let*</span> ((owner (majutsu-template--ensure-owner-type
+                     (plist-get signature-info <span class="bi">:owner</span>)
+                     name))
+             (template-name (<span class="k">or</span> (plist-get signature-info <span class="bi">:template-name</span>)
+                                (symbol-name name)))
+             (keyword-flag (plist-get signature-info <span class="bi">:keyword</span>))
+             (parsed-args (majutsu-template--parse-args
+                           name
+                           (cons `(self ,owner) args)))
+             (returns-via (majutsu-template--validate-returns-via
+                           name
+                           (plist-get signature-info <span class="bi">:returns-via</span>)
+                           parsed-args))
+             (return-type (plist-get signature-info <span class="bi">:returns</span>))
+             (docstring (majutsu-template--compose-docstring
+                         template-name
+                         (plist-get signature-info <span class="bi">:doc</span>)
+                         parsed-args)))
+        `(majutsu-template--make-fn
+          <span class="bi">:name</span> ,template-name
+          <span class="bi">:symbol</span> 'majutsu-template--method-stub
+          <span class="bi">:args</span> ',parsed-args
+          <span class="bi">:returns</span> ',return-type
+          <span class="bi">:returns-via</span> ',returns-via
+          <span class="bi">:doc</span> ,docstring
+          <span class="bi">:owner</span> ',owner
+          <span class="bi">:keyword</span> ',keyword-flag)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

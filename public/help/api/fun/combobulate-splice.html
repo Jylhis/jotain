@@ -1,0 +1,226 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-splice – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-splice is a natively compiled function defined in
+combobulate-manipulation.el.
+Splice POINT-NODE by PARTITIONS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-splice</code></h1><p><span class="m"><code>combobulate-splice</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">combobulate-manipulation.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-splice <a href="#:~:text=Splice-,POINT-NODE"><span class="arg">POINT-NODE</span></a> <a href="#:~:text=by-,PARTITIONS"><span class="arg">PARTITIONS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Splice <span class="arg">POINT-NODE</span> by <span class="arg">PARTITIONS</span>.
+<p>Each member of <span class="arg">PARTITIONS</span> must be one of:
+<p>&nbsp;<span class="m"><code>before</code></span>, to preserve things before the <span class="arg">POINT-NODE</span>;
+<br>&nbsp;<span class="m"><code>after</code></span>, to preserve things after the <span class="arg">POINT-NODE</span>;
+<br>&nbsp;<span class="m"><code>around</code></span> to preserve nodes larger than <span class="arg">POINT-NODE</span>;
+<br>&nbsp;<span class="m"><code>self</code></span> to preserve <span class="arg">POINT-NODE</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-manipulation.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-splice</span> (point-node partitions)
+  <span class="doc">"Splice POINT-NODE by PARTITIONS.
+
+Each member of PARTITIONS must be one of:
+
+ `</span><span class="m doc">before</span><span class="doc">', to preserve things before the POINT-NODE;
+ `</span><span class="m doc">after</span><span class="doc">', to preserve things after the POINT-NODE;
+ `</span><span class="m doc">around</span><span class="doc">' to preserve nodes larger than POINT-NODE;
+ `</span><span class="m doc">self</span><span class="doc">' to preserve POINT-NODE."</span>
+  <span class="cd">;; </span><span class="c">Most sibling procedures disallow anonymous modes as they are not
+</span>  <span class="cd">;; </span><span class="c">useful navigational targets. However, for splicing, it might be a
+</span>  <span class="cd">;; </span><span class="c">necessity to preserve them as they could prove integral to
+</span>  <span class="cd">;; </span><span class="c">maintaining the correct syntax.
+</span>  (<span class="k">let*</span> ((combobulate-procedure-include-anonymous-nodes t)
+         <span class="cd">;; </span><span class="c">Some nodes are discarded globally by default -- usually
+</span>         <span class="cd">;; </span><span class="c">`</span><span class="m c">comment</span><span class="c">', as line comments mess up the TS tree -- but
+</span>         <span class="cd">;; </span><span class="c">here we'd want to keep them also.
+</span>         <span class="cd">;;</span><span class="c">
+</span>         <span class="cd">;; </span><span class="c">FIXME: should use the shorthand version and shadow it, or
+</span>         <span class="cd">;; </span><span class="c">have another override flag.
+</span>         (combobulate-procedure-apply-shared-discard-rules nil)
+         <span class="cd">;; </span><span class="c">Begin the search at the point node.
+</span>         (procedure)
+         (legal-splices)
+         (action-node)
+         (pt-type)
+         (disable-check nil)
+         (matches)
+         (source-node)
+         (all-parents) (valid-parents))
+    <span class="cd">;; </span><span class="c">The action node is one of the activation nodes that yielded
+</span>    <span class="cd">;; </span><span class="c">what is hopefully a useful procedure result. To test that it is
+</span>    <span class="cd">;; </span><span class="c">indeed useful and not a node far away from where point is (the
+</span>    <span class="cd">;; </span><span class="c">nearest activation node could be in the parent somewhere) we
+</span>    <span class="cd">;; </span><span class="c">check that point is at the beginning of action node. If we're
+</span>    <span class="cd">;; </span><span class="c">*not* at the beginning, we instead create an ad hoc procedure
+</span>    <span class="cd">;; </span><span class="c">to try and ensnare as much of the node(s) around the beginning
+</span>    <span class="cd">;; </span><span class="c">of point.
+</span>    (<span class="k">setq</span> procedure (car-safe (combobulate-procedure-start point-node)))
+    (<span class="k">when</span> procedure
+      (<span class="k">setq</span> action-node (combobulate-procedure-result-action-node procedure)
+            matches (combobulate-procedure-result-selected-nodes procedure)))
+    (<span class="k">when</span> (<span class="k">or</span> (not procedure)
+              (not (combobulate-point-at-node-p action-node)))
+      (<span class="k">setq</span> procedure nil)
+      (<span class="k">let</span> ((largest-pt-node)
+            (possible-nodes (reverse (<span class="k">save-excursion</span>
+                                       <span class="cd">;; </span><span class="c">NOTE: Doing this seems to
+</span>                                       <span class="cd">;; </span><span class="c">cut down on the number of
+</span>                                       <span class="cd">;; </span><span class="c">useful choices we can splice
+</span>                                       <span class="cd">;; </span><span class="c">from.
+</span>                                       <span class="cd">;;</span><span class="c">
+</span>                                       <span class="cd">;; </span><span class="c">(combobulate-move-to-node
+</span>                                       <span class="cd">;; </span><span class="c">point-node)
+</span>                                       (combobulate-all-nodes-at-point)))))
+        <span class="cd">;; </span><span class="c">Starting from the largest node that starts at point,
+</span>        <span class="cd">;; </span><span class="c">repeatedly try to generate a procedure that yields a valid
+</span>        <span class="cd">;; </span><span class="c">result.
+</span>        (<span class="k">while</span> (<span class="k">and</span> possible-nodes (null procedure))
+          (<span class="k">setq</span> largest-pt-node (<span class="k">pop</span> possible-nodes))
+          (<span class="k">setq</span> procedure
+                (car-safe (combobulate-procedure-start
+                           point-node
+                           `((<span class="bi">:activation-nodes</span>
+                              ((<span class="bi">:nodes</span> (,(combobulate-node-type largest-pt-node))
+                                       <span class="bi">:position</span> at))
+                              <span class="bi">:selector</span> (<span class="bi">:choose</span> node <span class="bi">:match-siblings</span> t)))))))
+        (<span class="k">unless</span> procedure
+          (<span class="w">error</span> <span class="s">"Cannot splice from `</span><span class="m s">%s</span><span class="s">'"</span> (combobulate-pretty-print-node largest-pt-node)))
+        (<span class="k">setq</span> action-node (combobulate-procedure-result-action-node procedure)
+              disable-check t)
+        (<span class="k">setq</span> matches (combobulate-procedure-result-selected-nodes procedure)
+              point-node action-node)))
+    (<span class="k">setq</span> pt-type (combobulate-node-type action-node))
+    (<span class="k">setq</span> all-parents (combobulate-get-parents point-node))
+    (<span class="k">setq</span> valid-parents (seq-filter (<span class="k">lambda</span> (node)
+                                      (member pt-type
+                                              (combobulate-production-rules-get
+                                               (combobulate-node-type node))))
+                                    all-parents))
+    <span class="cd">;; </span><span class="c">Filter matches to just the ones we want to keep.
+</span>    (<span class="k">setq</span> matches (seq-keep
+                   <span class="cd">;; </span><span class="c">the only partitions we keep are the ones that are in
+</span>                   <span class="cd">;; </span><span class="c">PARTITIONS
+</span>                   (<span class="k">pcase-lambda</span> (`(,partition ., node))
+                     (<span class="k">and</span> (member partition partitions) node))
+                   (combobulate--partition-by-position
+                    action-node
+                    (seq-keep
+                     <span class="cd">;; </span><span class="c">Only match nodes that are named are kept.
+</span>                     (<span class="k">pcase-lambda</span> (`(,mark . ,node))
+                       (<span class="k">and</span> (eq mark '@match)
+                            (combobulate-node-named-p node)
+                            <span class="cd">;; </span><span class="c">return node if it's a match and named
+</span>                            node))
+                     matches))))
+    (<span class="k">unless</span> (<span class="k">and</span> matches valid-parents)
+      (<span class="w">error</span> <span class="s">"Cannot splice from `</span><span class="m s">%s</span><span class="s">'"</span> point-node))
+    (<span class="k">pcase-let</span> ((`(,start . ,end)
+                 <span class="cd">;; </span><span class="c">Get the node range extent of the filtered, partitioned
+</span>                 <span class="cd">;; </span><span class="c">nodes. This does mean that we cannot pick things that are
+</span>                 <span class="cd">;; </span><span class="c">disjoint, however.
+</span>                 (combobulate-node-range-extent matches)))
+      (<span class="k">setq</span> source-node (combobulate-proxy-node-make-from-range start end))
+      (<span class="k">setf</span> (combobulate-proxy-node-text source-node)
+            (combobulate-indent-string-first-line
+             (combobulate-node-text source-node)
+             (current-column)))
+      (<span class="k">setq</span> legal-splices
+            (seq-filter
+             <span class="cd">;; </span><span class="c">Validation checks are disengaged if we're free-form
+</span>             <span class="cd">;; </span><span class="c">searching because no applicable sibling procedure was
+</span>             <span class="cd">;; </span><span class="c">found.
+</span>             (<span class="k">lambda</span> (n) (<span class="k">or</span> disable-check
+                        (<span class="k">and</span> (combobulate-node-parent n)
+                             (<span class="k">or</span> (member (combobulate-node-parent n) valid-parents)
+                                 (member n valid-parents))
+                             (not (equal (combobulate-node-parent n) (car valid-parents)))
+                             (combobulate-node-before-node-p n source-node))))
+             all-parents))
+      (<span class="k">cl-flet</span> ((action-function (action)
+                  (<span class="k">with-slots</span> (current-node refactor-id index proxy-nodes) action
+                    (<span class="k">let</span> ((range-ov) (trailing-newline))
+                      (<span class="k">combobulate-refactor</span> (<span class="bi">:id</span> refactor-id)
+                        (combobulate-move-to-node current-node)
+                        (mark-node-deleted current-node)
+                        (<span class="k">when</span> (<span class="k">save-excursion</span>
+                                (combobulate-move-to-node current-node t)
+                                (looking-back <span class="s">"\n"</span> nil))
+                          (<span class="k">setq</span> trailing-newline t))
+                        (commit)
+                        <span class="cd">;; </span><span class="c">use an envelope to ensure indentation is handled
+</span>                        <span class="cd">;; </span><span class="c">properly. quicker and easier than reinventing it
+</span>                        <span class="cd">;; </span><span class="c">again here.
+</span>                        (<span class="k">pcase-let</span> ((`((,start . ,end) . ,_)
+                                     (combobulate-envelope-expand-instructions
+                                      '((r&gt; text)) `((text . ,(combobulate-proxy-node-text source-node))))))
+                          (goto-char start)
+                          <span class="cd">;; </span><span class="c">Use the range overlay as a crude way to
+</span>                          <span class="cd">;; </span><span class="c">keep tabs on the text as it shifts around
+</span>                          <span class="cd">;; </span><span class="c">when we delete horizontal space later.
+</span>                          (<span class="k">setq</span> range-ov (mark-range-highlighted start end)))
+                        <span class="cd">;; </span><span class="c">Test if there's an error node as a result of
+</span>                        <span class="cd">;; </span><span class="c">our changes.
+</span>                        (<span class="k">when-let</span> (err (seq-filter #'combobulate-point-in-node-range-p (combobulate-get-error-nodes)))
+                          (<span class="k">setf</span> (combobulate-proffer-action-display-indicator action)
+                                (combobulate-display-indicator
+                                 index (length proxy-nodes)
+                                 'combobulate-error-indicator-face nil <span class="s">"E"</span>)
+                                (combobulate-proffer-action-prompt-description action)
+                                (propertize <span class="s">"Invalid"</span> 'face 'combobulate-error-indicator-face)))
+                        <span class="cd">;; </span><span class="c">if we merge stuff into a line that is not blank,
+</span>                        <span class="cd">;; </span><span class="c">then elide all but one space and, if there weren't
+</span>                        <span class="cd">;; </span><span class="c">any, add one.
+</span>                        (<span class="k">when</span> trailing-newline
+                          (<span class="k">save-excursion</span>
+                            (goto-char (overlay-end range-ov))
+                            (<span class="k">unless</span> (<span class="k">or</span> (looking-at <span class="s">"\n"</span>) (looking-back <span class="s">"\n"</span> nil))
+                              (insert <span class="s">"\n"</span>))))
+                        (<span class="k">unless</span> (combobulate-before-point-blank-p (point))
+                          (<span class="k">if</span> (member
+                               <span class="cd">;; </span><span class="c">Hacky way of checking if there's an
+</span>                               <span class="cd">;; </span><span class="c">anonymous node before point, and if
+</span>                               <span class="cd">;; </span><span class="c">it's the type of anonymous node where
+</span>                               <span class="cd">;; </span><span class="c">you generally want to leave at least
+</span>                               <span class="cd">;; </span><span class="c">one space, or zero spaces.
+</span>                               (<span class="k">thread-first</span>
+                                 (combobulate-before-point-anonymous-node-p (point))
+                                 (combobulate-node-text))
+                               '(<span class="s">"("</span> <span class="s">"{"</span> <span class="s">"["</span> <span class="s">"&lt;"</span> <span class="s">"\""</span> <span class="s">"'"</span>))
+                              (delete-horizontal-space)
+                            (just-one-space)))
+
+                        (<span class="k">when</span> (<span class="k">combobulate-read</span> envelope-indent-region-function)
+                          (apply (<span class="k">combobulate-read</span> envelope-indent-region-function)
+                                 (combobulate-extend-region-to-whole-lines (overlay-start range-ov)
+                                                                           (overlay-end range-ov)))))))))
+        (<span class="k">let</span> ((proffer-action)
+              (proxy-matches (combobulate-proxy-node-make-from-nodes matches)))
+          (<span class="k">when-let</span> (target-node (combobulate-proffer-choices
+                                  legal-splices
+                                  (<span class="k">lambda</span> (action)
+                                    <span class="cd">;; </span><span class="c">hack: hold on to the action so
+</span>                                    <span class="cd">;; </span><span class="c">we can repeat it after
+</span>                                    (<span class="k">setq</span> proffer-action action)
+                                    (action-function action))
+                                  <span class="bi">:prompt-description</span> <span class="s">"Splice out"</span>
+                                  <span class="bi">:quiet</span> t))
+            (<span class="k">combobulate-refactor</span> (<span class="bi">:id</span> 'splice)
+              (<span class="k">setf</span> (combobulate-proffer-action-refactor-id proffer-action) 'splice)
+              (action-function proffer-action)
+              (rollback)
+              (combobulate-message
+               (format
+                <span class="s">"Spliced. Keep %s. Discard %s."</span>
+                (combobulate-tally-nodes proxy-matches t)
+                (combobulate-tally-nodes
+                 (cons target-node
+                       (seq-take (combobulate-proffer-action-proxy-nodes proffer-action)
+                                 (combobulate-proffer-action-index proffer-action)))
+                 t))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

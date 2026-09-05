@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--make-diagnostics – Emacs Documentation Online</title>
+<meta name="description" content="bazel--make-diagnostics is a natively compiled function defined in
+bazel.el.
+Return Flymake diagnostics for the Buildifier report in OUTPUT-BUFFER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--make-diagnostics</code></h1><p><span class="m"><code>bazel--make-diagnostics</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--make-diagnostics <a href="#:~:text=in-,OUTPUT-BUFFER"><span class="arg">OUTPUT-BUFFER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return Flymake diagnostics for the Buildifier report in <span class="arg">OUTPUT-BUFFER</span>.
+<p><span class="arg">OUTPUT-BUFFER</span> should contain a JSON report for the file visited
+by the current buffer as described in URL
+<br>‘https://github.com/bazelbuild/buildtools/blob/master/buildifier/README.md#file-diagnostics-in-json’.
+<br>All filenames in <span class="arg">OUTPUT-BUFFER</span> are ignored; all messages are
+attached to the current buffer.  Return a list of Flymake
+diagnostics; see Info node <a href="/info/Flymake/backend-functions.html">(Flymake) Backend functions</a> for
+details.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--make-diagnostics</span> (output-buffer)
+  <span class="doc">"Return Flymake diagnostics for the Buildifier report in OUTPUT-BUFFER.
+OUTPUT-BUFFER should contain a JSON report for the file visited
+by the current buffer as described in URL
+‘https://github.com/bazelbuild/buildtools/blob/master/buildifier/README.md#file-diagnostics-in-json’.
+All filenames in OUTPUT-BUFFER are ignored; all messages are
+attached to the current buffer.  Return a list of Flymake
+diagnostics; see Info node ‘(Flymake) Backend functions’ for
+details."</span>
+  (<span class="w">cl-check-type</span> output-buffer buffer)
+  (<span class="k">cl-loop</span> with report = (<span class="k">with-current-buffer</span> output-buffer
+                           (<span class="k">save-excursion</span>
+                             (<span class="k">without-restriction</span>
+                               (goto-char (point-min))
+                               <span class="cd">;; </span><span class="c">Skip over standard error messages if possible.
+</span>                               (<span class="k">let</span> ((case-fold-search nil)
+                                     (search-spaces-regexp nil))
+                                 (<span class="k">when</span> (re-search-forward (<span class="k">rx</span> bol ?{) nil t)
+                                   (backward-char)
+                                   (bazel--json-parse-buffer))))))
+           for file across (gethash <span class="s">"files"</span> report)
+           nconc (<span class="k">cl-loop</span> for warning across (gethash <span class="s">"warnings"</span> file)
+                          collect (bazel--diagnostic-for-warning warning))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-proxy-node-to-real-node – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-proxy-node-to-real-node is a natively compiled function
+defined in combobulate-interface.el.
+Attempt to find the real tree-sitter node PROXY-NODE points to.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-proxy-node-to-real-node</code></h1><p><span class="m"><code>combobulate-proxy-node-to-real-node</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">combobulate-interface.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-proxy-node-to-real-node <a href="#:~:text=node-,PROXY-NODE"><span class="arg">PROXY-NODE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Attempt to find the real tree-sitter node <span class="arg">PROXY-NODE</span> points to.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-interface.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-proxy-node-to-real-node</span> (proxy-node)
+  <span class="doc">"Attempt to find the real tree-sitter node PROXY-NODE points to."</span>
+  (<span class="k">when</span> proxy-node
+    <span class="cd">;; </span><span class="c">if we are holding on to a valid treesit node then just pass
+</span>    <span class="cd">;; </span><span class="c">that on provided it's still useful.
+</span>    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">todo: disabled until it is possible to detect if a node belongs to a deleted parser
+</span>     <span class="cd">;; </span><span class="c">(or (treesit-node-check (combobulate-proxy-node-node proxy-node) 'outdated)
+</span>     <span class="cd">;;     </span><span class="c">(treesit-node-check (combobulate-proxy-node-node proxy-node) 'missing))
+</span>     <span class="cd">;; </span><span class="c">check if proxy-node is even a proxy node
+</span>     ((not (combobulate-proxy-node-p proxy-node)) proxy-node)
+     (t (<span class="k">save-excursion</span>
+          (combobulate--goto-node proxy-node)
+          (car-safe (seq-filter (<span class="k">lambda</span> (pt-node)
+                                  (<span class="k">and</span>
+                                   (equal (cons (marker-position (car (combobulate-node-range proxy-node)))
+                                                (marker-position (cdr (combobulate-node-range proxy-node))))
+                                          (combobulate-node-range pt-node))
+                                   (equal (combobulate-node-type pt-node)
+                                          (combobulate-node-type proxy-node))
+                                   (<span class="k">or</span> (equal (combobulate-node-field-name pt-node)
+                                              (combobulate-node-field-name proxy-node))
+                                       t)))
+                                (combobulate-filter-nodes
+                                 (combobulate-all-nodes-at-point)
+                                 <span class="bi">:keep-types</span> (list (combobulate-node-type proxy-node))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

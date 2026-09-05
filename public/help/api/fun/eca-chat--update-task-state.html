@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--update-task-state – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--update-task-state is a natively compiled function defined in
+eca-chat.el.
+Extract task state from tool-call CONTENT details and update the task area.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--update-task-state</code></h1><p><span class="m"><code>eca-chat--update-task-state</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--update-task-state <a href="#:~:text=call-,CONTENT"><span class="arg">CONTENT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Extract task state from tool-call <span class="arg">CONTENT</span> details and update the task area.
+<p>Uses the expandable block system to render the task widget.
+The server sends a :details plist with :type "task", :activeSummary, :tasks,
+<br>:inProgressTaskIds, and :summary.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--update-task-state</span> (content)
+  <span class="doc">"Extract task state from tool-call CONTENT details and update the task area.
+Uses the expandable block system to render the task widget.
+The server sends a :details plist with :type \"task\", :activeSummary, :tasks,
+:inProgressTaskIds, and :summary."</span>
+  (<span class="k">when-let*</span> ((details (plist-get content <span class="bi">:details</span>)))
+    (<span class="k">setq-local</span> eca-chat--task-state details)
+    (<span class="k">let*</span> ((tasks (append (plist-get details <span class="bi">:tasks</span>) nil)))
+      (<span class="k">if</span> (null tasks)
+          <span class="cd">;; </span><span class="c">Task list was cleared — remove the expandable block
+</span>          (eca-chat--remove-expandable-content eca-chat--task-block-id)
+        (<span class="k">let*</span> ((active-summary (plist-get details <span class="bi">:activeSummary</span>))
+               (done-count (length (-filter (<span class="k">lambda</span> (task) (string= <span class="s">"done"</span> (plist-get task <span class="bi">:status</span>))) tasks)))
+               (total-count (length tasks))
+               (in-progress-task (-first (<span class="k">lambda</span> (task) (string= <span class="s">"in-progress"</span> (plist-get task <span class="bi">:status</span>))) tasks))
+               (label-text (<span class="k">or</span> active-summary
+                               (<span class="k">when</span> in-progress-task (plist-get in-progress-task <span class="bi">:subject</span>))
+                               <span class="s">""</span>))
+               (prefix-text (<span class="k">if</span> active-summary <span class="s">"Task: "</span> <span class="s">"Tasks "</span>))
+               (progress-text (format <span class="s">" (%d/%d)"</span> done-count total-count))
+               (label-face (<span class="k">if</span> in-progress-task 'eca-chat-task-label-in-progress-face 'eca-chat-task-label-face))
+               (label (concat
+                       (propertize prefix-text 'font-lock-face 'eca-chat-task-prefix-face)
+                       (propertize label-text 'font-lock-face label-face)
+                       (propertize progress-text 'font-lock-face 'eca-chat-task-progress-face)))
+               (body (eca-chat--task-build-content tasks)))
+          (<span class="k">if</span> (eca-chat--get-expandable-content eca-chat--task-block-id)
+              (eca-chat--update-expandable-content eca-chat--task-block-id label body)
+            (eca-chat--add-expandable-content eca-chat--task-block-id label body nil
+                                              (overlay-start (eca-chat--task-area-ov)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

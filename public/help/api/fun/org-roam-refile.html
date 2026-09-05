@@ -1,0 +1,81 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-refile – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-refile is an interactive and natively compiled function
+defined in org-roam-node.el.
+Refile node at point to an org-roam NODE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-refile</code></h1><p><span class="m"><code>org-roam-refile</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">org-roam-node.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-refile <a href="#:~:text=roam-,NODE"><span class="arg">NODE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Refile node at point to an org-roam <span class="arg">NODE</span>.
+<p>If region is active, then use it instead of the node at point.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-node.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">org-roam-refile</span> (node)
+  <span class="doc">"Refile node at point to an org-roam NODE.
+
+If region is active, then use it instead of the node at point."</span>
+  (<span class="k">interactive</span>
+   (list (org-roam-node-read nil nil nil 'require-match)))
+  (<span class="k">let*</span> ((regionp (org-region-active-p))
+         (region-start (<span class="k">and</span> regionp (region-beginning)))
+         (region-end (<span class="k">and</span> regionp (region-end)))
+         (file (org-roam-node-file node))
+         (nbuf (<span class="k">or</span> (find-buffer-visiting file)
+                   (find-file-noselect file)))
+         level reversed)
+    (<span class="k">if</span> (equal (org-roam-node-at-point) node)
+        (<span class="w">user-error</span> <span class="s">"Target is the same as current node"</span>)
+      (<span class="k">if</span> regionp
+          (<span class="k">progn</span>
+            (org-kill-new (buffer-substring region-start region-end))
+            (org-save-markers-in-region region-start region-end))
+        (<span class="k">progn</span>
+          (<span class="k">if</span> (org-before-first-heading-p)
+              (org-roam-demote-entire-buffer))
+          (org-copy-subtree 1 nil t)))
+      (<span class="k">with-current-buffer</span> nbuf
+        (<span class="k">org-with-wide-buffer</span>
+         (goto-char (org-roam-node-point node))
+         (<span class="k">setq</span> level (org-get-valid-level (funcall outline-level) 1)
+               reversed (org-notes-order-reversed-p))
+         (goto-char
+          (<span class="k">if</span> reversed
+              (<span class="k">or</span> (outline-next-heading) (point-max))
+            (<span class="k">or</span> (<span class="k">save-excursion</span> (org-get-next-sibling))
+                (org-end-of-subtree t t)
+                (point-max))))
+         (<span class="k">unless</span> (bolp) (newline))
+         (org-paste-subtree level nil nil t)
+         (<span class="k">and</span> org-auto-align-tags
+              (<span class="k">let</span> ((org-loop-over-headlines-in-active-region nil))
+                (org-align-tags)))
+         (<span class="k">when</span> (fboundp 'deactivate-mark) (deactivate-mark))))
+      (<span class="k">if</span> regionp
+          (delete-region (point) (+ (point) (- region-end region-start)))
+        (<span class="k">org-preserve-local-variables</span>
+         (delete-region
+          (<span class="k">and</span> (org-back-to-heading t) (point))
+          (min (1+ (buffer-size)) (org-end-of-subtree t t) (point)))))
+      <span class="cd">;; </span><span class="c">If the buffer end-up empty after the refile, kill it and delete its
+</span>      <span class="cd">;; </span><span class="c">associated file.
+</span>      (<span class="k">when</span> (eq (buffer-size) 0)
+        (<span class="k">if</span> (buffer-file-name)
+            (delete-file (buffer-file-name)))
+        (set-buffer-modified-p nil)
+        <span class="cd">;; </span><span class="c">If this was done during capture, abort the capture process.
+</span>        (<span class="k">when</span> (<span class="k">and</span> org-capture-mode
+                   (buffer-base-buffer (current-buffer)))
+          (org-capture-kill))
+        (kill-buffer (current-buffer))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

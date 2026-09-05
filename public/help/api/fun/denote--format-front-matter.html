@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: denote--format-front-matter – Emacs Documentation Online</title>
+<meta name="description" content="denote--format-front-matter is a natively compiled function defined in
+denote.el.
+Front matter for new notes.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>denote--format-front-matter</code></h1><p><span class="m"><code>denote--format-front-matter</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">denote.el</span>.
+<h2>Signature</h2>
+<pre><code>(denote--format-front-matter <a href="#:~:text=notes.-,TITLE"><span class="arg">TITLE</span></a> <a href="#:~:text=strings.-,DATE"><span class="arg">DATE</span></a> <a href="#:~:text=object.-,KEYWORDS"><span class="arg">KEYWORDS</span></a> <a href="#:~:text=and-,IDENTIFIER"><span class="arg">IDENTIFIER</span></a> <a href="#:~:text=TITLE,-,SIGNATURE"><span class="arg">SIGNATURE</span></a> <a href="#:~:text=strings.-,FILETYPE"><span class="arg">FILETYPE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Front matter for new notes.
+<p><span class="arg">TITLE</span>, <span class="arg">SIGNATURE</span>, and <span class="arg">IDENTIFIER</span> are strings.  <span class="arg">DATE</span> is a date object.  <span class="arg">KEYWORDS</span>
+is a list of strings.  <span class="arg">FILETYPE</span> is one of the values of variable
+<a class="v" href="../var/denote-file-type.html"><code>denote-file-type</code>(var)</a>/<a class="f" href="../fun/denote-file-type.html"><code>denote-file-type</code>(fun)</a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/5x9606vmybcj80x6qrajp43rma9pa1i7-emacs-packages-deps/share/emacs/site-lisp/elpa/denote-4.2.3/denote.el</span>
+(<span class="k">defun</span> <span class="f">denote--format-front-matter</span> (title date keywords identifier signature filetype)
+  <span class="doc">"Front matter for new notes.
+
+TITLE, SIGNATURE, and IDENTIFIER are strings.  DATE is a date object.  KEYWORDS
+is a list of strings.  FILETYPE is one of the values of variable
+`</span><span class="m doc">denote-file-type</span><span class="doc">'."</span>
+  (<span class="k">let*</span> ((fm (denote--front-matter filetype))
+         (title-value-function (denote--title-value-function filetype))
+         (keywords-value-function (denote--keywords-value-function filetype))
+         (identifier-value-function (denote--identifier-value-function filetype))
+         (signature-value-function (denote--signature-value-function filetype))
+         (title-string (<span class="k">if</span> title-value-function (funcall title-value-function title) <span class="s">""</span>))
+         (date-string (denote--format-front-matter-date date filetype))
+         (keywords-string (<span class="k">if</span> keywords-value-function (funcall keywords-value-function (denote-sluggify-keywords-and-apply-rules keywords)) <span class="s">""</span>))
+         (identifier-string (<span class="k">if</span> identifier-value-function (funcall identifier-value-function identifier) <span class="s">""</span>))
+         (signature-string (<span class="k">if</span> signature-value-function (funcall signature-value-function (denote-sluggify-and-apply-rules 'signature signature)) <span class="s">""</span>))
+         (new-front-matter (<span class="k">if</span> fm (format fm title-string date-string keywords-string identifier-string signature-string) <span class="s">""</span>)))
+    <span class="cd">;; </span><span class="c">Remove lines with empty values if the corresponding component
+</span>    <span class="cd">;; </span><span class="c">is not in `</span><span class="m c">denote-front-matter-components-present-even-if-empty-value</span><span class="c">'.
+</span>    (<span class="k">with-temp-buffer</span>
+      (insert new-front-matter)
+      (<span class="k">dolist</span> (component '(title date keywords signature identifier))
+        (<span class="k">let</span> ((value (<span class="k">pcase</span> component ('title title) ('keywords keywords) ('signature signature) ('date date) ('identifier identifier)))
+              (component-key-regexp-function (denote--get-component-key-regexp-function component)))
+          (goto-char (point-min))
+          (<span class="k">when</span> (<span class="k">and</span> (not (denote--component-has-value-p component value))
+                     (not (memq component denote-front-matter-components-present-even-if-empty-value))
+                     (re-search-forward (funcall component-key-regexp-function filetype) nil t 1))
+            (goto-char (line-beginning-position))
+            (delete-region (line-beginning-position) (line-beginning-position 2)))))
+      (buffer-string))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

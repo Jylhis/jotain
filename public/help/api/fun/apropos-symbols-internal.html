@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apropos-symbols-internal – Emacs Documentation Online</title>
+<meta name="description" content="apropos-symbols-internal is an autoloaded and natively compiled
+function defined in apropos.el.gz.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apropos-symbols-internal</code></h1><p><span class="m"><code>apropos-symbols-internal</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <a href="../src/apropos.el.html">apropos.el.gz</a>.
+<h2>Signature</h2>
+<pre><code>(apropos-symbols-internal <span class="arg">SYMBOLS</span> <span class="arg">KEYS</span> <span class="ty">&amp;optional</span> <span class="arg">TEXT</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><a href="../src/apropos.el.html">/usr/src/emacs/lisp/apropos.el.gz</a>
+(<span class="k">defun</span> <span class="f">apropos-symbols-internal</span> (symbols keys <span class="ty">&amp;optional</span> text)
+  <span class="cd">;; </span><span class="c">Filter out entries that are marked as apropos-inhibit.
+</span>  (<span class="k">let</span> ((all nil))
+    (<span class="k">dolist</span> (symbol symbols)
+      (<span class="k">unless</span> (get symbol 'apropos-inhibit)
+	(<span class="k">push</span> symbol all)))
+    (<span class="k">setq</span> symbols all))
+  (<span class="k">let</span> ((apropos-accumulator
+	 (mapcar
+	  (<span class="k">lambda</span> (symbol)
+	    (<span class="k">let</span> (doc properties)
+	      (list
+	       symbol
+	       (apropos-score-symbol symbol)
+	       (<span class="k">when</span> (fboundp symbol)
+		 (<span class="k">if</span> (<span class="k">setq</span> doc (<span class="k">condition-case</span> nil
+				   (documentation symbol t)
+				 (void-function
+				  <span class="s">"(alias for undefined function)"</span>)
+				 (<span class="w">error</span>
+				  <span class="s">"(can't retrieve function documentation)"</span>)))
+		     (substring doc 0 (string-search <span class="s">"\n"</span> doc))
+		   <span class="s">"(not documented)"</span>))
+	       (<span class="k">when</span> (boundp symbol)
+		 (apropos-documentation-property
+		  symbol 'variable-documentation t))
+	       (<span class="k">when</span> (<span class="k">setq</span> properties (symbol-plist symbol))
+		 (<span class="k">setq</span> doc (list (car properties)))
+		 (<span class="k">while</span> (<span class="k">setq</span> properties (cdr (cdr properties)))
+		   (<span class="k">setq</span> doc (cons (car properties) doc)))
+		 (mapconcat (<span class="k">lambda</span> (p) (format <span class="s">"%s"</span> p)) (nreverse doc) <span class="s">" "</span>))
+	       (<span class="k">when</span> (get symbol 'widget-type)
+		 (apropos-documentation-property
+		  symbol 'widget-documentation t))
+	       (<span class="k">when</span> (facep symbol)
+		 (<span class="k">let</span> ((alias (get symbol 'face-alias)))
+		   (<span class="k">if</span> alias
+		       (<span class="k">if</span> (facep alias)
+			   (format-message
+			    <span class="s">"%slias for the face `</span><span class="m s">%s</span><span class="s">'."</span>
+			    (<span class="k">if</span> (get symbol 'obsolete-face) <span class="s">"Obsolete a"</span> <span class="s">"A"</span>)
+			    alias)
+			 <span class="cd">;; </span><span class="c">Never happens in practice because fails
+</span>			 <span class="cd">;; </span><span class="c">(facep symbol) test.
+</span>			 <span class="s">"(alias for undefined face)"</span>)
+		     (apropos-documentation-property
+		      symbol 'face-documentation t))))
+	       (<span class="k">when</span> (get symbol 'custom-group)
+		 (apropos-documentation-property
+		  symbol 'group-documentation t)))))
+	  symbols)))
+    (apropos-print keys nil text)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

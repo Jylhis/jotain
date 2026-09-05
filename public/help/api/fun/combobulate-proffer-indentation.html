@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-proffer-indentation – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-proffer-indentation is an interactive and natively
+compiled function defined in combobulate-python.el.
+Intelligently indent the region or NODE at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-proffer-indentation</code></h1><p><span class="m"><code>combobulate-proffer-indentation</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <span class="bt">combobulate-python.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-proffer-indentation <a href="#:~:text=or-,NODE"><span class="arg">NODE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Intelligently indent the region or <span class="arg">NODE</span> at point.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-python.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-proffer-indentation</span> (node)
+  <span class="doc">"Intelligently indent the region or NODE at point."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let*</span> ((indentation (<span class="k">save-excursion</span>
+                        (combobulate--goto-node node)
+                        (python-indent-calculate-levels)))
+         (indent-nodes (mapcar
+                        (<span class="k">lambda</span> (level)
+                          (<span class="k">save-excursion</span>
+                            (<span class="k">let</span> ((proxy-node
+                                   <span class="cd">;; </span><span class="c">A region may, potentially, signify a valid
+</span>                                   <span class="cd">;; </span><span class="c">node range, but it is unlikely. When a user
+</span>                                   <span class="cd">;; </span><span class="c">wants to indent a region they want to --
+</span>                                   <span class="cd">;; </span><span class="c">presumably -- indent code that may not be
+</span>                                   <span class="cd">;; </span><span class="c">syntactically sound. For that we'll create a
+</span>                                   <span class="cd">;; </span><span class="c">special proxy node that will be used to
+</span>                                   <span class="cd">;; </span><span class="c">indent the region.
+</span>                                   (<span class="k">if</span> (use-region-p)
+                                       (combobulate-proxy-node-make-from-range (region-beginning) (region-end))
+                                     <span class="cd">;; </span><span class="c">if we're not dealing with a region, we
+</span>                                     <span class="cd">;; </span><span class="c">make a proxy node for the closest node.
+</span>                                     (combobulate-proxy-node-make-from-nodes node))))
+                              (<span class="k">setf</span> (combobulate-proxy-node-extra proxy-node)
+                                    (- (current-indentation) level))
+                              proxy-node)))
+                        (python-indent-calculate-levels)))
+         (current-position (1+ (<span class="k">or</span> (seq-position indentation (current-indentation)) 0)))
+         (number-of-levels (length (python-indent-calculate-levels)))
+         (at-last-level (= number-of-levels current-position)))
+    (<span class="k">when-let</span> (selected-node (combobulate-proffer-choices
+                              (<span class="k">if</span> at-last-level (reverse indent-nodes) indent-nodes)
+                              (<span class="k">lambda-slots</span> (refactor-id current-node)
+                                (<span class="k">combobulate-refactor</span> (<span class="bi">:id</span> refactor-id)
+                                  (mark-node-highlighted current-node)
+                                  (combobulate-proffer-indentation-1 current-node)))
+                              <span class="cd">;; </span><span class="c">Try to pick a sensible starting index
+</span>                              <span class="cd">;; </span><span class="c">based on whether we're at the end,
+</span>                              <span class="cd">;; </span><span class="c">taking into account of the fact that
+</span>                              <span class="cd">;; </span><span class="c">there might only be one node to
+</span>                              <span class="cd">;; </span><span class="c">choose from.
+</span>                              <span class="bi">:start-index</span> (<span class="k">if</span> at-last-level
+                                               (min (1- (length indent-nodes)) 1)
+                                             (mod current-position number-of-levels))
+                              <span class="bi">:flash-node</span> t
+                              <span class="cd">;; </span><span class="c">do not filter unique nodes. all our nodes are conceptually
+</span>                              <span class="cd">;; </span><span class="c">identical except for the `</span><span class="m c">extra</span><span class="c">' field.
+</span>                              <span class="bi">:allow-numeric-selection</span> t
+                              <span class="bi">:unique-only</span> nil))
+      (combobulate-proffer-indentation-1 selected-node))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

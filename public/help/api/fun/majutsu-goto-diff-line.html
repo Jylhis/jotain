@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-goto-diff-line – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-goto-diff-line is an interactive and natively compiled
+function defined in majutsu-diff.el.
+Jump to the line in the file corresponding to the diff line at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-goto-diff-line</code></h1><p><span class="m"><code>majutsu-goto-diff-line</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">majutsu-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-goto-diff-line)
+</code></pre>
+<h2>Documentation</h2>
+<p>Jump to the line in the file corresponding to the diff line at point.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-diff.el</span>
+<span class="cd">;;; </span><span class="c">Navigation
+</span>
+(<span class="k">defun</span> <span class="f">majutsu-goto-diff-line</span> ()
+  <span class="doc">"Jump to the line in the file corresponding to the diff line at point."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">when-let*</span> ((section (magit-current-section))
+              (_ (magit-section-match 'jj-hunk section))
+              (file (magit-section-parent-value section)))
+    (<span class="k">let*</span> ((to-range (<span class="k">oref</span> section to-range))
+           (start-line (<span class="k">and</span> to-range (car to-range))))
+      (<span class="k">unless</span> start-line
+        (<span class="k">let</span> ((header (<span class="k">save-excursion</span>
+                        (goto-char (<span class="k">oref</span> section start))
+                        (buffer-substring-no-properties
+                         (line-beginning-position)
+                         (line-end-position)))))
+          (<span class="k">when</span> (string-match <span class="s">"^@@.*\\+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">,</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?.*@@"</span> header)
+            (<span class="k">setq</span> start-line (string-to-number (match-string 1 header))))))
+      (<span class="k">when</span> start-line
+        (<span class="k">let*</span> ((start-line start-line)
+               <span class="cd">;; </span><span class="c">Calculate which line within the hunk we're on
+</span>               (hunk-start (<span class="k">oref</span> section start))
+               (current-pos (point))
+               (line-offset 0)
+               (full-file-path (expand-file-name file default-directory)))
+          <span class="cd">;; </span><span class="c">Count lines from hunk start to current position
+</span>          (<span class="k">save-excursion</span>
+            (goto-char hunk-start)
+            (forward-line 1) <span class="cd">; </span><span class="c">Skip hunk header
+</span>            (<span class="k">while</span> (&lt; (point) current-pos)
+              (<span class="k">let</span> ((line (buffer-substring-no-properties
+                           (line-beginning-position) (line-end-position))))
+                <span class="cd">;; </span><span class="c">Only count context and added lines for line numbering
+</span>                (<span class="k">unless</span> (string-prefix-p <span class="s">"-"</span> line)
+                  (<span class="k">setq</span> line-offset (1+ line-offset))))
+              (forward-line 1)))
+          <span class="cd">;; </span><span class="c">Open file and jump to calculated line
+</span>          (<span class="k">let</span> ((target-line (+ start-line line-offset -1))) <span class="cd">; </span><span class="c">-1 because we start counting from the header
+</span>            (find-file full-file-path)
+            (goto-char (point-min))
+            (forward-line (max 0 target-line))
+            (message <span class="s">"Jumped to line %d in %s"</span> (1+ target-line) file)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

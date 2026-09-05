@@ -1,0 +1,79 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel-input-start-point – Emacs Documentation Online</title>
+<meta name="description" content="ghostel-input-start-point is a natively compiled function defined in
+ghostel.el.
+Return the buffer position where the current input begins.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel-input-start-point</code></h1><p><span class="m"><code>ghostel-input-start-point</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel-input-start-point)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the buffer position where the current input begins.
+<p>The cursor's buffer position is the source of truth — whatever the
+terminal has written sits before it, and user input goes after.
+When <a href="../var/ghostel--cursor-char-pos.html"><code>ghostel--cursor-char-pos</code></a> is nil (no live terminal, or
+cursor not yet positioned), fall back to the rightmost
+<span class="m"><code>ghostel-prompt</code></span> text-property character.  When the cursor IS
+available and the cursor's row carries <span class="m"><code>ghostel-prompt</code></span> characters
+<br>(OSC 133 shell integration), return the position right after the
+<br>last contiguous <span class="m"><code>ghostel-prompt</code></span> char on that row.  Without the
+prop, consult <a href="../var/ghostel-prompt-regexp.html"><code>ghostel-prompt-regexp</code></a> as a fallback; if neither
+detects a prompt, return the cursor position itself.  Returns nil
+when nothing can locate a position (no cursor and no detection).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel-input-start-point</span> ()
+  <span class="doc">"Return the buffer position where the current input begins.
+The cursor's buffer position is the source of truth — whatever the
+terminal has written sits before it, and user input goes after.
+When `</span><span class="m doc">ghostel--cursor-char-pos</span><span class="doc">' is nil (no live terminal, or
+cursor not yet positioned), fall back to the rightmost
+`</span><span class="m doc">ghostel-prompt</span><span class="doc">' text-property character.  When the cursor IS
+available and the cursor's row carries `</span><span class="m doc">ghostel-prompt</span><span class="doc">' characters
+\(OSC 133 shell integration), return the position right after the
+last contiguous `</span><span class="m doc">ghostel-prompt</span><span class="doc">' char on that row.  Without the
+prop, consult `</span><span class="m doc">ghostel-prompt-regexp</span><span class="doc">' as a fallback; if neither
+detects a prompt, return the cursor position itself.  Returns nil
+when nothing can locate a position (no cursor and no detection)."</span>
+
+  (<span class="k">let</span> ((cursor-pos ghostel--cursor-char-pos))
+    (<span class="k">cond</span>
+     (cursor-pos
+      (<span class="k">let*</span> ((row-start (<span class="k">save-excursion</span>
+                          (goto-char cursor-pos)
+                          (line-beginning-position)))
+             (pos cursor-pos))
+        <span class="cd">;; </span><span class="c">Walk back from the cursor on its row, looking for the
+</span>        <span class="cd">;; </span><span class="c">rightmost `</span><span class="m c">ghostel-prompt</span><span class="c">' character.  The first prompt
+</span>        <span class="cd">;; </span><span class="c">char we hit (scanning right-to-left) is the end of the
+</span>        <span class="cd">;; </span><span class="c">prompt prefix - so its position+1, which is the current
+</span>        <span class="cd">;; </span><span class="c">`</span><span class="m c">pos</span><span class="c">' when we stop, is the input boundary.
+</span>        (<span class="k">while</span> (<span class="k">and</span> (&gt; pos row-start)
+                    (not (get-text-property (1- pos) 'ghostel-prompt)))
+          (<span class="k">setq</span> pos (1- pos)))
+        (<span class="k">cond</span>
+         ((<span class="k">and</span> (&gt; pos row-start)
+               (get-text-property (1- pos) 'ghostel-prompt))
+          pos)
+         <span class="cd">;; </span><span class="c">No OSC 133 prop - try the regex fallback.
+</span>         ((ghostel--regex-prompt-end cursor-pos))
+         <span class="cd">;; </span><span class="c">Neither prop nor regex - the cursor itself is the boundary
+</span>         (t cursor-pos))))
+     (t
+      <span class="cd">;; </span><span class="c">No live terminal - fall back to the OSC 133 walk-back so the helper
+</span>      <span class="cd">;; </span><span class="c">stays useful in unit tests that exercise prompt markers in isolation.
+</span>      (<span class="k">let</span> ((pos (point-max))
+            (pmin (point-min)))
+        (<span class="k">while</span> (<span class="k">and</span> (&gt; pos pmin)
+                    (not (get-text-property (1- pos) 'ghostel-prompt)))
+          (<span class="k">setq</span> pos (1- pos)))
+        (<span class="k">when</span> (<span class="k">and</span> (&gt; pos pmin)
+                   (get-text-property (1- pos) 'ghostel-prompt))
+          pos))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

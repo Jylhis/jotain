@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--enter-readonly – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--enter-readonly is a natively compiled function defined in
+ghostel.el.
+Enter or transition between read-only modes.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--enter-readonly</code></h1><p><span class="m"><code>ghostel--enter-readonly</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--enter-readonly <a href="#:~:text=modes.-,MODE"><span class="arg">MODE</span></a> <a href="#:~:text=emacs.-,FREEZE"><span class="arg">FREEZE</span></a> <a href="#:~:text=mode).-,LABEL"><span class="arg">LABEL</span></a> <a href="#:~:text=tag.-,ENTRY-MESSAGE"><span class="arg">ENTRY-MESSAGE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Enter or transition between read-only modes.
+<p><span class="arg">MODE</span> is <span class="m"><code>copy</code></span> or <span class="m"><code>emacs</code></span>.  <span class="arg">FREEZE</span> non-nil pauses live terminal
+output (copy mode); nil keeps it streaming (Emacs mode).  <span class="arg">LABEL</span> is
+the <a href="../var/mode-line-process.html"><code>mode-line-process</code></a> tag.  <span class="arg">ENTRY-MESSAGE</span> is shown on entry from
+a non-read-only mode.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--enter-readonly</span> (mode freeze label entry-message)
+  <span class="doc">"Enter or transition between read-only modes.
+MODE is `</span><span class="m doc">copy</span><span class="doc">' or `</span><span class="m doc">emacs</span><span class="doc">'.  FREEZE non-nil pauses live terminal
+output (copy mode); nil keeps it streaming (Emacs mode).  LABEL is
+the `</span><span class="m doc">mode-line-process</span><span class="doc">' tag.  ENTRY-MESSAGE is shown on entry from
+a non-read-only mode."</span>
+  <span class="cd">;; </span><span class="c">Manual mode switch — see `</span><span class="m c">ghostel-semi-char-mode</span><span class="c">' for why.
+</span>  (<span class="k">setq</span> ghostel--line-mode-paused nil)
+  (<span class="k">let</span> ((from ghostel--input-mode))
+    <span class="cd">;; </span><span class="c">Track the mode we just left so a later exit returns to it.
+</span>    <span class="cd">;; </span><span class="c">Line mode is stateful and not safely resumable — fall back
+</span>    <span class="cd">;; </span><span class="c">to semi-char when exiting copy or Emacs in that case.
+</span>    (<span class="k">setq</span> ghostel--pre-readonly-mode
+          (<span class="k">pcase</span> from
+            ('line 'semi-char)
+            (m m)))
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">Toggle between the two read-only modes — buffer is already
+</span>     <span class="cd">;; </span><span class="c">read-only, just adjust the freeze state, mode-line, and keymap.
+</span>     ((memq from '(copy emacs)) nil)
+     <span class="cd">;; </span><span class="c">First entry from a non-read-only mode.
+</span>     (t
+      (<span class="k">pcase</span> from
+        ('line (ghostel--line-mode-teardown)
+               (ghostel--enter-readonly-state))
+        (_     (ghostel--enter-readonly-state)))
+      (<span class="k">setq</span> ghostel--char-mode-override-active nil)
+      (message <span class="s">"%s"</span> entry-message)))
+    (<span class="k">if</span> freeze
+        (ghostel--freeze-terminal)
+      <span class="cd">;; </span><span class="c">Live mode: the redraw timer must be running so output keeps
+</span>      <span class="cd">;; </span><span class="c">flowing.  `</span><span class="m c">--invalidate</span><span class="c">' restarts it if a previous freeze
+</span>      <span class="cd">;; </span><span class="c">cancelled it.
+</span>      (<span class="k">when</span> ghostel--term
+        (ghostel--invalidate)))
+    (<span class="k">setq</span> ghostel--input-mode mode)
+    (ghostel--sync-read-only)
+    (use-local-map (ghostel--readonly-keymap))
+    (<span class="k">setq</span> ghostel--mode-line-tag (ghostel--mode-line-tag-make mode label))
+    (ghostel--mode-line-refresh)
+    (ghostel--fake-cursor-update)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

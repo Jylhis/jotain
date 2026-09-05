@@ -1,0 +1,92 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-indentation-read-next-token – Emacs Documentation Online</title>
+<meta name="description" content="haskell-indentation-read-next-token is a natively compiled function
+defined in haskell-indentation.el.
+Go to the next token and set current-token to the next token.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-indentation-read-next-token</code></h1><p><span class="m"><code>haskell-indentation-read-next-token</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">haskell-indentation.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-indentation-read-next-token)
+</code></pre>
+<h2>Documentation</h2>
+<p>Go to the next token and set current-token to the next token.
+<p>The following symbols are used as pseudo tokens:
+<p>'layout-item: A new item in a layout list.  The next token
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;will be the first token from the item.
+<p>'layout-end:  the end of a layout list.  Next token will be
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;the first token after the layout list.
+<p>'end-tokens:  back at point where we started, following-token
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;will be set to the next token.
+<p>Pseudo tokens are used only when implicit-layout-active is
+t. That is the case only after keywords "do", "where",
+<br>"let" and "of".
+<p>If we are at a new line, parse-line is increased, and
+current-indent and left-indent are set to the indentation of the
+line.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-indentation.el</span>
+(<span class="k">defun</span> <span class="f">haskell-indentation-read-next-token</span> ()
+  <span class="doc">"Go to the next token and set current-token to the next token.
+
+The following symbols are used as pseudo tokens:
+
+</span><span class="bi doc">\\=</span><span class="doc">'layout-item: A new item in a layout list.  The next token
+              will be the first token from the item.
+
+</span><span class="bi doc">\\=</span><span class="doc">'layout-end:  the end of a layout list.  Next token will be
+              the first token after the layout list.
+
+</span><span class="bi doc">\\=</span><span class="doc">'end-tokens:  back at point where we started, following-token
+              will be set to the next token.
+
+Pseudo tokens are used only when implicit-layout-active is
+t. That is the case only after keywords \"do\", \"where\",
+\"let\" and \"of\".
+
+If we are at a new line, parse-line is increased, and
+current-indent and left-indent are set to the indentation of the
+line."</span>
+  (<span class="k">cond</span> ((<span class="k">and</span> implicit-layout-active
+              (eq current-token 'end-tokens))
+         'end-tokens)
+        ((<span class="k">and</span> implicit-layout-active
+              (eq current-token 'layout-end))
+         (<span class="k">cond</span> ((&gt; layout-indent (current-column))
+                'layout-end)
+               ((= layout-indent (current-column))
+                (<span class="k">setq</span> current-token 'layout-item))
+               ((&lt; layout-indent (current-column))
+                (<span class="k">setq</span> current-token (haskell-indentation-peek-token)))))
+        ((<span class="k">and</span> implicit-layout-active
+              (eq current-token 'layout-item))
+         (<span class="k">setq</span> current-token (haskell-indentation-peek-token)))
+        ((<span class="k">and</span> implicit-layout-active
+              (&gt; layout-indent (current-column)))
+         (<span class="k">setq</span> current-token 'layout-end))
+        (t
+         (<span class="k">setq</span> previous-token (haskell-indentation-peek-token))
+         (haskell-indentation-skip-token)
+         (<span class="k">if</span> (&gt;= (point) indentation-point)
+             (<span class="k">progn</span>
+               (<span class="k">setq</span> following-token
+                     (<span class="k">if</span> (<span class="k">and</span> (not (eobp))
+                              (= (point) indentation-point))
+                         (haskell-indentation-peek-token)
+                       'no-following-token))
+               (<span class="k">setq</span> current-token 'end-tokens))
+           (<span class="k">when</span> (= (current-column) (haskell-indentation-current-indentation))
+             <span class="cd">;; </span><span class="c">on a new line
+</span>             (<span class="k">setq</span> current-indent (current-column)))
+           (<span class="k">cond</span> ((<span class="k">and</span> implicit-layout-active
+                       (&gt; layout-indent (current-column)))
+                  (<span class="k">setq</span> current-token 'layout-end))
+                 ((<span class="k">and</span> implicit-layout-active
+                       (= layout-indent (current-column)))
+                  (<span class="k">setq</span> current-token 'layout-item))
+                 (t (<span class="k">setq</span> current-token (haskell-indentation-peek-token))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

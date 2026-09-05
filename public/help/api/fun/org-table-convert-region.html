@@ -1,0 +1,122 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-table-convert-region – Emacs Documentation Online</title>
+<meta name="description" content="org-table-convert-region is an autoloaded, interactive and natively
+compiled function defined in org-table.el.gz.
+Convert region to a table.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-table-convert-region</code></h1><p><span class="m"><code>org-table-convert-region</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a>, <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <a href="../src/org/org-table.el.html">org-table.el.gz</a>.
+<h2>Signature</h2>
+<pre><code>(org-table-convert-region <a href="#:~:text=from-,BEG0"><span class="arg">BEG0</span></a> <a href="#:~:text=to-,END0"><span class="arg">END0</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=lines.-,SEPARATOR"><span class="arg">SEPARATOR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Convert region to a table.
+<p>The region goes from <span class="arg">BEG0</span> to <span class="arg">END0</span>, but these borders will be moved
+slightly, to make sure a beginning of line in the first line is
+included.
+<p>Throw an error when the region has more than
+<a href="../var/org-table-convert-region-max-lines.html"><code>org-table-convert-region-max-lines</code></a> lines.
+<p><span class="arg">SEPARATOR</span> specifies the field separator in the lines.  It can have the
+following values:
+<p>(4)     Use the comma as a field separator
+<br>(16)    Use a TAB as field separator
+<br>(64)    Prompt for a regular expression as field separator
+<br>integer  When a number, use that many spaces, or a TAB, as field separator
+<br>regexp   When a regular expression, use it to match the separator
+<br>nil      When nil, the command tries to be smart and figure out the
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;separator in the following way:
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- when each line contains a TAB, assume TAB-separated material
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- when each line contains a comma, assume CSV material
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- else, assume one or more SPACE characters as separator.
+<br><span class="m"><code>babel-auto</code></span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Use the same rules as nil, but do not try any separator when
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;the region contains a single line and has no commas or tabs.
+<h2>Key Bindings</h2>
+<p><span class="v">embark-region-map</span> <span class="key">o</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><a href="../src/org/org-table.el.html">/usr/src/emacs/lisp/org/org-table.el.gz</a>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">org-table-convert-region</span> (beg0 end0 <span class="ty">&amp;optional</span> separator)
+  <span class="doc">"Convert region to a table.
+
+The region goes from BEG0 to END0, but these borders will be moved
+slightly, to make sure a beginning of line in the first line is
+included.
+
+Throw an error when the region has more than
+`</span><span class="m doc">org-table-convert-region-max-lines</span><span class="doc">' lines.
+
+SEPARATOR specifies the field separator in the lines.  It can have the
+following values:
+
+(4)     Use the comma as a field separator
+(16)    Use a TAB as field separator
+(64)    Prompt for a regular expression as field separator
+integer  When a number, use that many spaces, or a TAB, as field separator
+regexp   When a regular expression, use it to match the separator
+nil      When nil, the command tries to be smart and figure out the
+         separator in the following way:
+         - when each line contains a TAB, assume TAB-separated material
+         - when each line contains a comma, assume CSV material
+         - else, assume one or more SPACE characters as separator.
+`</span><span class="m doc">babel-auto</span><span class="doc">'
+       Use the same rules as nil, but do not try any separator when
+       the region contains a single line and has no commas or tabs."</span>
+  (<span class="k">interactive</span> <span class="s">"r\nP"</span>)
+  (<span class="k">let*</span> ((beg (min beg0 end0))
+	 (end (max beg0 end0))
+	 re)
+    (<span class="k">when</span> (&gt; (count-lines beg end) org-table-convert-region-max-lines)
+      (<span class="w">user-error</span> <span class="s">"Region is longer than `</span><span class="m s">org-table-convert-region-max-lines</span><span class="s">' (%s) lines; not converting"</span>
+		  org-table-convert-region-max-lines))
+    (<span class="k">when</span> (equal separator '(64))
+      (<span class="k">setq</span> separator (read-regexp <span class="s">"Regexp for field separator"</span>)))
+    (goto-char beg)
+    (forward-line 0)
+    (<span class="k">setq</span> beg (point-marker))
+    (goto-char end)
+    (<span class="k">if</span> (bolp) (backward-char 1) (end-of-line 1))
+    (<span class="k">setq</span> end (point-marker))
+    <span class="cd">;; </span><span class="c">Get the right field separator
+</span>    (<span class="k">when</span> (<span class="k">or</span> (not separator) (eq separator 'babel-auto))
+      (goto-char beg)
+      (<span class="k">setq</span> separator
+	    (<span class="k">cond</span>
+	     ((not (<span class="k">save-excursion</span> (re-search-forward <span class="s">"^[</span><span class="neg s">^</span><span class="s">\n\t]+$"</span> end t))) '(16))
+	     ((not (<span class="k">save-excursion</span> (re-search-forward <span class="s">"^[</span><span class="neg s">^</span><span class="s">\n,]+$"</span> end t))) '(4))
+             ((<span class="k">and</span> (eq separator 'babel-auto)
+                   (= 1 (count-lines beg end)))
+              (<span class="k">rx</span> unmatchable))
+	     (t 1))))
+    (goto-char beg)
+    (<span class="k">if</span> (equal separator '(4))
+	(<span class="k">while</span> (&lt; (point) end)
+	  <span class="cd">;; </span><span class="c">parse the csv stuff
+</span>	  (<span class="k">cond</span>
+	   ((looking-at <span class="s">"^"</span>) (insert <span class="s">"| "</span>))
+	   ((looking-at <span class="s">"[ \t]*$"</span>) (replace-match <span class="s">" |"</span>) (forward-line 1))
+	   ((looking-at <span class="s">"[ \t]*\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s">\"]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\""</span>)
+	    (replace-match (replace-regexp-in-string <span class="s">"\n"</span> <span class="s">" "</span> (match-string 1)) t t)
+	    (<span class="k">if</span> (looking-at <span class="s">"\""</span>) (insert <span class="s">"\""</span>)))
+	   ((looking-at <span class="s">"[</span><span class="neg s">^</span><span class="s">,\n]+"</span>) (goto-char (match-end 0)))
+	   ((looking-at <span class="s">"[ \t]*,"</span>) (replace-match <span class="s">" | "</span>))
+	   (t (forward-line 1))))
+      (<span class="k">setq</span> re (<span class="k">cond</span>
+		((equal separator '(4)) <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\"?[ \t]*,[ \t]*\"?"</span>)
+		((equal separator '(16)) <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\t"</span>)
+		((integerp separator)
+		 (<span class="k">if</span> (&lt; separator 1)
+		     (<span class="w">user-error</span> <span class="s">"Number of spaces in separator must be &gt;= 1"</span>)
+		   (format <span class="s">"^ *</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s"> *\t *</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s"> \\{%d,\\}"</span> separator)))
+		((stringp separator)
+		 (format <span class="s">"^ *</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">%s"</span> separator))
+		(t (<span class="w">error</span> <span class="s">"This should not happen"</span>))))
+      (<span class="k">while</span> (re-search-forward re end t)
+	(replace-match <span class="s">"| "</span> t t)))
+    (goto-char beg)
+    (org-table-align)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

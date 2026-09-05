@@ -1,0 +1,96 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-file-revert-buffer – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-file-revert-buffer is a natively compiled function defined in
+majutsu-file.el.
+Revert the current blob buffer content.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-file-revert-buffer</code></h1><p><span class="m"><code>majutsu-file-revert-buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-file.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-file-revert-buffer <a href="#:~:text="><span class="arg">IGNORE-AUTO</span></a> <a href="#:~:text="><span class="arg">NOCONFIRM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Revert the current blob buffer content.
+<p>If revision metadata moved, preserve location heuristically:
+<br>- same change-id + same commit-id: keep current location
+<br>- same change-id + different commit-id: offset line across revisions
+<br>- different change-id: jump to beginning
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-file.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-file-revert-buffer</span> (_ignore-auto noconfirm)
+  <span class="doc">"Revert the current blob buffer content.
+If revision metadata moved, preserve location heuristically:
+- same change-id + same commit-id: keep current location
+- same change-id + different commit-id: offset line across revisions
+- different change-id: jump to beginning"</span>
+  (<span class="k">let*</span> ((local-drift (<span class="k">and</span> majutsu-buffer-blob-content-hash
+                           (not (equal majutsu-buffer-blob-content-hash
+                                       (majutsu-file--current-content-hash)))))
+         (modified (<span class="k">or</span> (buffer-modified-p) local-drift)))
+    (<span class="k">when</span> (<span class="k">or</span> noconfirm
+              (not modified)
+              (y-or-n-p <span class="s">"Revert blob buffer? "</span>))
+      (<span class="k">unless</span> majutsu-buffer-blob-root
+        (<span class="w">user-error</span> <span class="s">"Not in a blob buffer"</span>))
+      (<span class="k">when</span> majutsu-blob-edit-mode
+        (<span class="w">user-error</span> <span class="s">"Finish or abort blob edit mode before refresh"</span>))
+      (<span class="k">let*</span> ((inhibit-read-only t)
+             (default-directory majutsu-buffer-blob-root)
+             (path majutsu-buffer-blob-path)
+             (line (line-number-at-pos))
+             (col (current-column))
+             (old-change (<span class="k">or</span> majutsu-buffer-blob-change-id majutsu-buffer-blob-revision))
+             (old-commit majutsu-buffer-blob-commit-id)
+             (rev-info (<span class="k">or</span> (majutsu-file--resolve-single-rev-info majutsu-buffer-blob-revset)
+                           (<span class="w">user-error</span> <span class="s">"Revset no longer resolves to a single revision"</span>)))
+             (new-change (plist-get rev-info <span class="bi">:change-id</span>))
+             (new-commit (plist-get rev-info <span class="bi">:commit-id</span>))
+             (target-line line)
+             (target-col col)
+             (reload-needed t))
+        (<span class="k">cond</span>
+         ((<span class="k">and</span> (equal old-change new-change)
+               majutsu-buffer-blob-content-hash
+               (equal old-commit new-commit)
+               (not modified))
+          <span class="cd">;; </span><span class="c">Nothing changed remotely and nothing changed locally.
+</span>          (<span class="k">setq</span> reload-needed nil))
+         ((<span class="k">and</span> old-change old-commit
+               (equal old-change new-change)
+               new-commit)
+          (<span class="k">setq</span> target-line
+                (<span class="k">or</span> (<span class="k">condition-case</span> nil
+                        (majutsu-diff-visit--offset
+                         majutsu-buffer-blob-root path old-commit new-commit line)
+                      (<span class="w">error</span> line))
+                    line)))
+         ((not (equal old-change new-change))
+          (<span class="k">setq</span> target-line 1
+                target-col 0)))
+        (<span class="k">if</span> (not reload-needed)
+            nil
+          (erase-buffer)
+          (majutsu-jj-insert <span class="s">"file"</span> <span class="s">"show"</span> <span class="s">"-r"</span>
+                             (<span class="k">or</span> new-commit (majutsu-file--normalize-revset majutsu-buffer-blob-revset))
+                             (majutsu-jj-fileset-quote path))
+          (<span class="k">let</span> ((buffer-file-name (expand-file-name path default-directory))
+                (after-change-major-mode-hook
+                 (seq-difference after-change-major-mode-hook
+                                 '(global-diff-hl-mode-enable-in-buffer
+                                   global-diff-hl-mode-enable-in-buffers)
+                                 #'eq)))
+            (normal-mode (not enable-local-variables)))
+          (<span class="k">setq</span> majutsu-buffer-blob-revision new-change)
+          (<span class="k">setq</span> majutsu-buffer-blob-change-id new-change)
+          (<span class="k">setq</span> majutsu-buffer-blob-commit-id new-commit)
+          (majutsu-file--refresh-buffer-name)
+          (<span class="k">setq</span> buffer-read-only t)
+          (set-buffer-modified-p nil)
+          (<span class="k">setq-local</span> majutsu-buffer-blob-content-hash (majutsu-file--current-content-hash))
+          (majutsu-blob-mode 1)
+          (majutsu-file--goto-line-col (<span class="k">or</span> target-line 1) (<span class="k">or</span> target-col 0)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

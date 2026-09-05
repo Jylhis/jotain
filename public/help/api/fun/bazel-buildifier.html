@@ -1,0 +1,70 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel-buildifier – Emacs Documentation Online</title>
+<meta name="description" content="bazel-buildifier is an interactive and natively compiled function
+defined in bazel.el.
+Format current buffer using Buildifier.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel-buildifier</code></h1><p><span class="m"><code>bazel-buildifier</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel-buildifier <span class="ty">&amp;optional</span> <a href="#:~:text=If-,TYPE"><span class="arg">TYPE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Format current buffer using Buildifier.
+<p>If <span class="arg">TYPE</span> is nil, detect the file type from the current major mode
+and visited filename, if available.  Otherwise, <span class="arg">TYPE</span> must be one
+of the symbols ‘build’, ‘bzl’, ‘workspace’, ‘module’, or
+<br>‘default’, corresponding to the file types documented at URL
+<br>‘https://github.com/bazelbuild/buildtools/tree/master/buildifier#usage’.
+<h2>Key Bindings</h2>
+<p><span class="v">bazel-mode-map</span> <span class="key">C-c C-f</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel-buildifier</span> (<span class="ty">&amp;optional</span> type)
+  <span class="doc">"Format current buffer using Buildifier.
+If TYPE is nil, detect the file type from the current major mode
+and visited filename, if available.  Otherwise, TYPE must be one
+of the symbols ‘</span><span class="m doc">build</span><span class="doc">’, ‘</span><span class="m doc">bzl</span><span class="doc">’, ‘</span><span class="m doc">workspace</span><span class="doc">’, ‘</span><span class="m doc">module</span><span class="doc">’, or
+‘</span><span class="m doc">default</span><span class="doc">’, corresponding to the file types documented at URL
+‘https://github.com/bazelbuild/buildtools/tree/master/buildifier#usage’."</span>
+  (<span class="k">interactive</span> <span class="s">"*"</span> bazel-mode)
+  (<span class="w">cl-check-type</span> type (member nil build bzl workspace module default))
+  (<span class="k">let</span> ((directory default-directory)
+        (input-file buffer-file-name)
+        (temp-buffer (temp-buffer-window-setup <span class="s">"*buildifier*"</span>))
+        (type (<span class="k">or</span> type bazel--buildifier-type)))
+    <span class="cd">;; </span><span class="c">Run Buildifier on a file to support remote BUILD files.
+</span>    (<span class="k">bazel--with-temp-file</span> temp-file
+        (make-nearby-temp-file <span class="s">"buildifier-input-"</span>)
+      (write-region (point-min) (point-max) temp-file nil <span class="bi">:silent</span>)
+      (<span class="k">let*</span> ((default-directory directory)
+             (inhibit-read-only t)
+             (process-file-side-effects t)
+             (return-code
+              (apply #'process-file bazel-buildifier-command nil temp-buffer nil
+                     `(,@(bazel--buildifier-file-flags type input-file)
+                       <span class="s">"--"</span> ,(file-name-unquote (file-local-name temp-file))))))
+        (<span class="k">if</span> (eq return-code 0)
+            (<span class="k">progn</span>
+              (insert-file-contents temp-file nil nil nil <span class="bi">:replace</span>)
+              (kill-buffer temp-buffer))
+          (<span class="k">with-current-buffer</span> temp-buffer
+            (<span class="k">when-let*</span> ((root (bazel--repository-root (<span class="k">or</span> input-file directory))))
+              <span class="cd">;; </span><span class="c">Files in Buildifier error messages are local to the repository
+</span>              <span class="cd">;; </span><span class="c">root.  Make sure that ‘</span><span class="m c">next-error</span><span class="c">’ finds them.
+</span>              (<span class="k">setq-local</span> default-directory root))
+            (goto-char (point-max))
+            (insert ?\n <span class="s">"Process buildifier "</span>
+                    (<span class="k">if</span> (stringp return-code)
+                        (downcase return-code)  <span class="cd">; </span><span class="c">signal name
+</span>                      (format <span class="s">"exited abnormally with code %d"</span> return-code))
+                    ?\n)
+            (goto-char (point-min))
+            (compilation-minor-mode))
+          (temp-buffer-window-show temp-buffer)))))
+  nil)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat-eldoc-function – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat-eldoc-function is a natively compiled function defined in
+eca-chat-context.el.
+Eldoc function to show details of context and prompt in eldoc.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat-eldoc-function</code></h1><p><span class="m"><code>eca-chat-eldoc-function</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-chat-context.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat-eldoc-function <a href="#:~:text=Calls-,CB"><span class="arg">CB</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text="><span class="arg">IGNORED</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Eldoc function to show details of context and prompt in eldoc.
+<p>Calls <span class="arg">CB</span> with the resulting message.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-context.el</span>
+<span class="cd">;;;; </span><span class="c">Eldoc function
+</span>
+(<span class="k">defun</span> <span class="f">eca-chat-eldoc-function</span> (cb <span class="ty">&amp;rest</span> _ignored)
+  <span class="doc">"Eldoc function to show details of context and prompt in eldoc.
+Calls CB with the resulting message."</span>
+  (<span class="k">cond</span>
+   <span class="cd">;; </span><span class="c">Task eldoc: show description and blocked-by
+</span>   ((<span class="k">when-let*</span> ((task (get-text-property (point) 'eca-chat-task)))
+      (<span class="k">let*</span> ((subject (plist-get task <span class="bi">:subject</span>))
+             (description (plist-get task <span class="bi">:description</span>))
+             (blocked-by (append (plist-get task <span class="bi">:blockedBy</span>) nil))
+             (blocked-subjects
+              (<span class="k">when</span> blocked-by
+                (mapcar (<span class="k">lambda</span> (id)
+                          (<span class="k">if-let*</span> ((tk (eca-chat--task-find-by-id id)))
+                              (plist-get tk <span class="bi">:subject</span>)
+                            (format <span class="s">"#%s"</span> id)))
+                        blocked-by)))
+             (doc (concat
+                   (propertize subject 'face 'bold)
+                   (<span class="k">when</span> description
+                     (concat <span class="s">"\n"</span> description))
+                   (<span class="k">when</span> blocked-subjects
+                     (concat <span class="s">"\n"</span>
+                             (propertize <span class="s">"Blocked by: "</span> 'face 'font-lock-keyword-face)
+                             (string-join blocked-subjects <span class="s">", "</span>))))))
+        (funcall cb doc)
+        t)))
+   <span class="cd">;; </span><span class="c">Context/filepath eldoc
+</span>   ((<span class="k">when-let</span> ((item-type (get-text-property (point) 'eca-chat-item-type)))
+      (<span class="k">when-let</span> ((item-str (get-text-property (point) 'eca-chat-expanded-item-str)))
+        (<span class="k">when-let</span> ((face (get-text-property (point) 'font-lock-face)))
+          (funcall cb (format <span class="s">"%s: %s"</span>
+                              (<span class="k">pcase</span> item-type
+                                ('context <span class="s">"Context"</span>)
+                                ('filepath <span class="s">"Filepath"</span>))
+                              (propertize item-str 'face face)))
+          t))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

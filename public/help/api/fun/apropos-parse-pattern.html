@@ -1,0 +1,70 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apropos-parse-pattern – Emacs Documentation Online</title>
+<meta name="description" content="apropos-parse-pattern is an autoloaded and natively compiled function
+defined in apropos.el.gz.
+Rewrite a list of words to a regexp matching all permutations.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apropos-parse-pattern</code></h1><p><span class="m"><code>apropos-parse-pattern</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <a href="../src/apropos.el.html">apropos.el.gz</a>.
+<h2>Signature</h2>
+<pre><code>(apropos-parse-pattern <a href="#:~:text=If-,PATTERN"><span class="arg">PATTERN</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=regexp.-,MULTILINE-P"><span class="arg">MULTILINE-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Rewrite a list of words to a regexp matching all permutations.
+<p>If <span class="arg">PATTERN</span> is a string, that means it is already a regexp.
+<span class="arg">MULTILINE-P</span>, if non-nil, means produce a regexp that will match
+the words even if separated by newlines.
+This updates variables <a href="../var/apropos-pattern.html"><code>apropos-pattern</code></a>, <a href="../var/apropos-pattern-quoted.html"><code>apropos-pattern-quoted</code></a>,
+<a href="../var/apropos-regexp.html"><code>apropos-regexp</code></a>, <a href="../var/apropos-words.html"><code>apropos-words</code></a>, and <a href="../var/apropos-all-words-regexp.html"><code>apropos-all-words-regexp</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><a href="../src/apropos.el.html">/usr/src/emacs/lisp/apropos.el.gz</a>
+(<span class="k">defun</span> <span class="f">apropos-parse-pattern</span> (pattern <span class="ty">&amp;optional</span> multiline-p)
+  <span class="doc">"Rewrite a list of words to a regexp matching all permutations.
+If PATTERN is a string, that means it is already a regexp.
+MULTILINE-P, if non-nil, means produce a regexp that will match
+the words even if separated by newlines.
+This updates variables `</span><span class="m doc">apropos-pattern</span><span class="doc">', `</span><span class="m doc">apropos-pattern-quoted</span><span class="doc">',
+`</span><span class="m doc">apropos-regexp</span><span class="doc">', `</span><span class="m doc">apropos-words</span><span class="doc">', and `</span><span class="m doc">apropos-all-words-regexp</span><span class="doc">'."</span>
+  (<span class="k">setq</span> apropos-words nil
+	apropos-all-words nil)
+  (<span class="k">if</span> (consp pattern)
+      <span class="cd">;; </span><span class="c">We don't actually make a regexp matching all permutations.
+</span>      <span class="cd">;; </span><span class="c">Instead, for e.g. "a b c", we make a regexp matching
+</span>      <span class="cd">;; </span><span class="c">any combination of two or more words like this:
+</span>      <span class="cd">;; </span><span class="c">(a|b|c).*(a|b|c) which may give some false matches,
+</span>      <span class="cd">;; </span><span class="c">but as long as it also gives the right ones, that's ok.
+</span>      <span class="cd">;; </span><span class="c">(Actually, when MULTILINE-P is non-nil, instead of '</span><span class="m c">.</span><span class="c">' we
+</span>      <span class="cd">;; </span><span class="c">use a trick that would find a match even if the words are
+</span>      <span class="cd">;; </span><span class="c">on different lines.
+</span>      (<span class="k">let</span> ((words pattern))
+	(<span class="k">setq</span> apropos-pattern (mapconcat #'identity pattern <span class="s">" "</span>)
+	      apropos-pattern-quoted (regexp-quote apropos-pattern))
+	(<span class="k">dolist</span> (word words)
+	  (<span class="k">let</span> ((syn apropos-synonyms) (s word) (a word))
+	    (<span class="k">while</span> syn
+	      (<span class="k">if</span> (member word (car syn))
+		  (<span class="k">progn</span>
+		    (<span class="k">setq</span> a (mapconcat #'identity (car syn) <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">"</span>))
+		    (<span class="k">if</span> (member word (cdr (car syn)))
+			(<span class="k">setq</span> s a))
+		    (<span class="k">setq</span> syn nil))
+		(<span class="k">setq</span> syn (cdr syn))))
+	    (<span class="k">setq</span> apropos-words (cons s apropos-words)
+		  apropos-all-words (cons a apropos-all-words))))
+	(<span class="k">setq</span> apropos-all-words-regexp
+	      (apropos-words-to-regexp apropos-all-words
+                                       <span class="cd">;; </span><span class="c">The [</span><span class="neg c">^</span><span class="c">b-a] trick matches any
+</span>                                       <span class="cd">;; </span><span class="c">character including a newline.
+</span>                                       (<span class="k">if</span> multiline-p <span class="s">"[</span><span class="neg s">^</span><span class="s">b-a]+?"</span> <span class="s">".+"</span>)))
+	(<span class="k">setq</span> apropos-regexp
+	      (apropos-words-to-regexp apropos-words
+                                       (<span class="k">if</span> multiline-p <span class="s">"[</span><span class="neg s">^</span><span class="s">b-a]*?"</span> <span class="s">".*?"</span>))))
+    (<span class="k">setq</span> apropos-pattern-quoted (regexp-quote pattern)
+	  apropos-all-words-regexp pattern
+	  apropos-pattern pattern
+	  apropos-regexp pattern)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

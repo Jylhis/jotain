@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- Jotain - a GNU Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer.
+
+Copyright © Markus Jylhänkangas. -->
+<title>Setting Variables (Jotain Emacs Configuration)</title>
+
+<meta name="description" content="Setting Variables (Jotain Emacs Configuration)">
+<meta name="keywords" content="Setting Variables (Jotain Emacs Configuration)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Ergonomics.html" rel="next" title="Ergonomics">
+<link href="Keybindings.html" rel="prev" title="Keybindings">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+span:hover a.copiable-link {visibility: visible}
+ul.mark-bullet {list-style-type: disc}
+</style>
+<link rel="stylesheet" type="text/css" href="manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Setting-Variables">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Ergonomics.html" rel="next">Ergonomics</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Keybindings.html" rel="prev">Keybindings</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+<h2 class="chapter" id="Setting-Variables-1"><span>18 Setting Variables<a class="copiable-link" href="#Setting-Variables-1"> &para;</a></span></h2>
+
+<ul class="mini-toc">
+<li><a href="#Use-setopt-for-user-options-_0028defcustom_0029">Use <code class="code">setopt</code> for user options (defcustom)</a></li>
+<li><a href="#Use-setq-for-regular-variables">Use <code class="code">setq</code> for regular variables</a></li>
+<li><a href="#Use-setq_002ddefault-for-buffer_002dlocal-defaults">Use <code class="code">setq-default</code> for buffer-local defaults</a></li>
+<li><a href="#Use-setq_002dlocal-for-buffer_002dlocal-values">Use <code class="code">setq-local</code> for buffer-local values</a></li>
+<li><a href="#Use-set-when-the-variable-name-is-computed">Use <code class="code">set</code> when the variable name is computed</a></li>
+<li><a href="#Quick-decision-table">Quick decision table</a></li>
+<li><a href="#Sources">Sources</a></li>
+</ul>
+<div class="section-level-extent" id="Use-setopt-for-user-options-_0028defcustom_0029">
+<h3 class="section"><span>18.1 Use <code class="code">setopt</code> for user options (defcustom)<a class="copiable-link" href="#Use-setopt-for-user-options-_0028defcustom_0029"> &para;</a></span></h3>
+<p>Introduced in <strong class="strong">Emacs 29</strong>. Preferred for all <code class="code">defcustom</code> variables in your init file.
+</p>
+<pre class="verbatim">(setopt display-line-numbers-type 'relative)
+(setopt copilot-idle-delay 0.5)
+</pre>
+<p><strong class="strong">Why:</strong> <code class="code">setopt</code> runs the <code class="code">:set</code> callback defined by <code class="code">defcustom</code> and validates the value against its <code class="code">:type</code>. Using <code class="code">setq</code> on a <code class="code">defcustom</code> variable bypasses both, which can silently break packages that depend on the setter to update internal state.
+</p>
+<p><strong class="strong">Caveat:</strong> slower than <code class="code">setq</code> because it goes through the Customize machinery. Don&rsquo;t use it for regular variables in hot paths.
+</p>
+<p><strong class="strong">Works in early-init.el:</strong> <code class="code">setopt</code> is autoloaded (via <code class="code">loaddefs.el</code>, which is part of the Emacs dump), so it is available during <code class="code">early-init.el</code>. The first use triggers loading <code class="code">cus-edit.el</code> slightly earlier than normal &mdash; negligible overhead for a few variables.
+</p>
+</div>
+<div class="section-level-extent" id="Use-setq-for-regular-variables">
+<h3 class="section"><span>18.2 Use <code class="code">setq</code> for regular variables<a class="copiable-link" href="#Use-setq-for-regular-variables"> &para;</a></span></h3>
+<p>The standard way to set any variable. Use for internal/non-customizable variables.
+</p>
+<pre class="verbatim">(setq gc-cons-threshold (* 50 1000 1000))
+(setq x 1
+      y 2)
+</pre>
+<p><strong class="strong">Note:</strong> <code class="code">setq</code> sets the current binding (lexical or dynamic). Inside a <code class="code">let</code>, it modifies the local binding, not the global one.
+</p>
+</div>
+<div class="section-level-extent" id="Use-setq_002ddefault-for-buffer_002dlocal-defaults">
+<h3 class="section"><span>18.3 Use <code class="code">setq-default</code> for buffer-local defaults<a class="copiable-link" href="#Use-setq_002ddefault-for-buffer_002dlocal-defaults"> &para;</a></span></h3>
+<p>Sets the default value for buffer-local variables. The value applies to buffers that haven&rsquo;t set their own local value.
+</p>
+<pre class="verbatim">(setq-default indent-tabs-mode nil)
+(setq-default fill-column 80)
+</pre>
+</div>
+<div class="section-level-extent" id="Use-setq_002dlocal-for-buffer_002dlocal-values">
+<h3 class="section"><span>18.4 Use <code class="code">setq-local</code> for buffer-local values<a class="copiable-link" href="#Use-setq_002dlocal-for-buffer_002dlocal-values"> &para;</a></span></h3>
+<p>Sets a variable&rsquo;s value in the current buffer only.
+</p>
+<pre class="verbatim">(add-hook 'org-mode-hook
+  (lambda () (setq-local fill-column 100)))
+</pre>
+</div>
+<div class="section-level-extent" id="Use-set-when-the-variable-name-is-computed">
+<h3 class="section"><span>18.5 Use <code class="code">set</code> when the variable name is computed<a class="copiable-link" href="#Use-set-when-the-variable-name-is-computed"> &para;</a></span></h3>
+<p>A function (not a special form) &ndash; evaluates its first argument to get the symbol to set.
+</p>
+<pre class="verbatim">(set 'my-var 42)          ; equivalent to (setq my-var 42)
+(set (intern name) value)  ; dynamic symbol lookup
+</pre>
+<p>Rarely needed in init files.
+</p>
+</div>
+<div class="section-level-extent" id="Quick-decision-table">
+<h3 class="section"><span>18.6 Quick decision table<a class="copiable-link" href="#Quick-decision-table"> &para;</a></span></h3>
+<table class="multitable">
+<thead><tr><th>Variable kind</th><th>Use</th></tr></thead>
+<tbody><tr><td><code class="code">defcustom</code> user option</td><td><code class="code">setopt</code></td></tr>
+<tr><td>Regular variable</td><td><code class="code">setq</code></td></tr>
+<tr><td>Buffer-local default</td><td><code class="code">setq-default</code></td></tr>
+<tr><td>Buffer-local (this buffer)</td><td><code class="code">setq-local</code></td></tr>
+<tr><td>Dynamic symbol name</td><td><code class="code">set</code></td></tr>
+</tbody>
+</table>
+
+</div>
+<div class="section-level-extent" id="Sources">
+<h3 class="section"><span>18.7 Sources<a class="copiable-link" href="#Sources"> &para;</a></span></h3>
+<ul class="itemize mark-bullet">
+<li><a class="uref" href="https://www.gnu.org/software/emacs/manual/html_node/elisp/Setting-Variables.html">GNU Elisp Manual &ndash; Setting Variables</a>
+</li><li><a class="uref" href="https://emacsredux.com/blog/2025/04/06/goodbye-setq-hello-setopt/">Emacs Redux &ndash; Goodbye setq Hello setopt</a>
+</li></ul>
+
+</div>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Ergonomics.html" rel="next">Ergonomics</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Keybindings.html" rel="prev">Keybindings</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+
+
+
+</body>
+</html>

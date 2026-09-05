@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sqlind-maybe-$$-statement – Emacs Documentation Online</title>
+<meta name="description" content="sqlind-maybe-$$-statement is a natively compiled function defined in
+sql-indent.el.
+If (point) is on a PostgreSQL $$ quote, report its syntax.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sqlind-maybe-$$-statement</code></h1><p><span class="m"><code>sqlind-maybe-$$-statement</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">sql-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(sqlind-maybe-$$-statement)
+</code></pre>
+<h2>Documentation</h2>
+<p>If (point) is on a PostgreSQL $$ quote, report its syntax.
+<p>PostgreSQL uses $$ to delimit SQL blocks in create statements,
+this function tries to determine if the $$ block is a begin or an
+end block and creates the appropiate syntactic context.
+<p>See also <a href="../fun/sqlind-beginning-of-block.html"><code>sqlind-beginning-of-block</code></a>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vgm6xb2iy00bs19rdw9z3nfi5nf8g873-emacs-packages-deps/share/emacs/site-lisp/elpa/sql-indent-1.7/sql-indent.el</span>
+(<span class="k">defun</span> <span class="f">sqlind-maybe-$$-statement</span> ()
+  <span class="doc">"If (point) is on a PostgreSQL $$ quote, report its syntax.
+
+PostgreSQL uses $$ to delimit SQL blocks in create statements,
+this function tries to determine if the $$ block is a begin or an
+end block and creates the appropiate syntactic context.
+
+See also `</span><span class="m doc">sqlind-beginning-of-block</span><span class="doc">'"</span>
+  (<span class="k">when</span> (looking-at <span class="s">"\\$\\$"</span>)
+    (<span class="k">prog1</span> t
+      (<span class="k">let*</span> ((saved-pos (point)))
+        (<span class="k">ignore-errors</span> (forward-char -1))
+        (sqlind-backward-syntactic-ws)
+        (<span class="k">cond</span> ((looking-at <span class="s">";"</span>)
+               <span class="cd">;; </span><span class="c">Assume the $$ is ending a statement (previous line is a ';'
+</span>               <span class="cd">;; </span><span class="c">which ends another statement)
+</span>               (<span class="k">push</span> (list saved-pos '$$ <span class="s">""</span>) sqlind-end-stmt-stack)
+               (goto-char saved-pos))
+              ((<span class="k">progn</span> (forward-word -1)
+                      (looking-at <span class="s">"end"</span>))
+               <span class="cd">;; </span><span class="c">Assume the $$ is ending a statement (previous line contains
+</span>               <span class="cd">;; </span><span class="c">an "end" keyword)
+</span>               (<span class="k">push</span> (list saved-pos '$$ <span class="s">""</span>) sqlind-end-stmt-stack)
+               (goto-char saved-pos))
+              ((null sqlind-end-stmt-stack)
+               (sqlind-beginning-of-statement)
+               (<span class="k">let</span> ((syntax (<span class="k">catch</span> '<span class="m">finished</span>
+                               (sqlind-maybe-create-statement)
+                               (sqlind-maybe-defun-statement)
+                               'toplevel)))
+                 (<span class="k">if</span> (<span class="k">and</span> (listp syntax) (eq (nth 0 syntax) 'defun-start))
+                     (<span class="k">throw</span> '<span class="m">finished</span> (list 'in-begin-block 'defun (nth 1 syntax)))
+                   (<span class="k">throw</span> '<span class="m">finished</span> (list 'in-begin-block syntax nil)))))
+              (t
+               (sqlind-beginning-of-statement)
+               (<span class="k">cl-destructuring-bind</span> (pos kind _label) (<span class="k">pop</span> sqlind-end-stmt-stack)
+                 (<span class="k">unless</span> (eq kind '$$)
+                   (<span class="k">throw</span> '<span class="m">finished</span>
+                     (list 'syntax-error <span class="s">"bad closing for $$ begin block"</span> (point) pos))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

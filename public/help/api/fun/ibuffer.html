@@ -1,0 +1,103 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ibuffer – Emacs Documentation Online</title>
+<meta name="description" content="ibuffer is an autoloaded, interactive and natively compiled function
+defined in ibuffer.el.gz.
+Begin using Ibuffer to edit a list of buffers.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ibuffer</code></h1><p><span class="m"><code>ibuffer</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a>, <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <a href="../src/ibuffer.el.html">ibuffer.el.gz</a>.
+<h2>Signature</h2>
+<pre><code>(ibuffer <span class="ty">&amp;optional</span> <a href="#:~:text=optional.-,OTHER-WINDOW-P"><span class="arg">OTHER-WINDOW-P</span></a> <a href="#:~:text=window.-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=Ibuffer*&quot;).-,QUALIFIERS"><span class="arg">QUALIFIERS</span></a> <a href="#:~:text=br&gt;-,NOSELECT"><span class="arg">NOSELECT</span></a> <a href="#:~:text=buffer.-,SHRINK"><span class="arg">SHRINK</span></a> <a href="#:~:text=br&gt;-,FILTER-GROUPS"><span class="arg">FILTER-GROUPS</span></a> <a href="#:~:text=br&gt;-,FORMATS"><span class="arg">FORMATS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Begin using Ibuffer to edit a list of buffers.
+<p>Type <kbd>C-h m</kbd> (<a href="../fun/describe-mode.html"><code>describe-mode</code></a>) after entering ibuffer for more information.
+<p>All arguments are optional.
+<span class="arg">OTHER-WINDOW-P</span> says to use another window.
+<span class="arg">NAME</span> specifies the name of the buffer (defaults to "*Ibuffer*").
+<span class="arg">QUALIFIERS</span> is an initial set of filtering qualifiers to use;
+<br>&nbsp;&nbsp;see <span class="m"><code>ibuffer-filtering-qualifiers</code></span>.
+<br><span class="arg">NOSELECT</span> means don't select the Ibuffer buffer.
+<span class="arg">SHRINK</span> means shrink the buffer to minimal size.  The special
+<br>&nbsp;&nbsp;value <span class="m"><code>onewindow</code></span> means always use another window.
+<br><span class="arg">FILTER-GROUPS</span> is an initial set of filtering groups to use;
+<br>&nbsp;&nbsp;see <span class="m"><code>ibuffer-filter-groups</code></span>.
+<br><span class="arg">FORMATS</span> is the value to use for <a href="../var/ibuffer-formats.html"><code>ibuffer-formats</code></a>.
+<br>&nbsp;&nbsp;If specified, then the variable <a href="../var/ibuffer-formats.html"><code>ibuffer-formats</code></a> will have
+<br>&nbsp;&nbsp;that value locally in this buffer.
+<p><a href="/info/emacs/buffer-menus.html#index-ibuffer">View in manual</a>
+<p>Probably introduced at or before Emacs version <a href="../etc/NEWS.22.html">22.1</a>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><a href="../src/ibuffer.el.html">/usr/src/emacs/lisp/ibuffer.el.gz</a>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">ibuffer</span> (<span class="ty">&amp;optional</span> other-window-p name qualifiers noselect
+			  shrink filter-groups formats)
+  <span class="doc">"Begin using Ibuffer to edit a list of buffers.
+Type \\&lt;</span><span class="v doc">ibuffer-mode-map</span><span class="doc">&gt;\\[</span><span class="m doc">describe-mode</span><span class="doc">] after entering ibuffer for more information.
+
+All arguments are optional.
+OTHER-WINDOW-P says to use another window.
+NAME specifies the name of the buffer (defaults to \"*Ibuffer*\").
+QUALIFIERS is an initial set of filtering qualifiers to use;
+  see `</span><span class="m doc">ibuffer-filtering-qualifiers</span><span class="doc">'.
+NOSELECT means don't select the Ibuffer buffer.
+SHRINK means shrink the buffer to minimal size.  The special
+  value `</span><span class="m doc">onewindow</span><span class="doc">' means always use another window.
+FILTER-GROUPS is an initial set of filtering groups to use;
+  see `</span><span class="m doc">ibuffer-filter-groups</span><span class="doc">'.
+FORMATS is the value to use for `</span><span class="m doc">ibuffer-formats</span><span class="doc">'.
+  If specified, then the variable `</span><span class="m doc">ibuffer-formats</span><span class="doc">' will have
+  that value locally in this buffer."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">when</span> ibuffer-use-other-window
+    (<span class="k">setq</span> other-window-p t))
+  (<span class="k">let</span> ((buf (get-buffer-create (<span class="k">or</span> name <span class="s">"*Ibuffer*"</span>))))
+    (<span class="k">if</span> other-window-p
+	(<span class="k">or</span> (<span class="k">and</span> noselect (display-buffer buf t))
+	    (pop-to-buffer buf t))
+      (funcall (<span class="k">if</span> noselect #'display-buffer #'switch-to-buffer) buf))
+    (<span class="k">with-current-buffer</span> buf
+      (<span class="k">save-selected-window</span>
+	<span class="cd">;; </span><span class="c">We switch to the buffer's window in order to be able
+</span>	<span class="cd">;; </span><span class="c">to modify the value of point
+</span>	(select-window (get-buffer-window buf 0))
+	(<span class="k">or</span> (derived-mode-p 'ibuffer-mode)
+	    (ibuffer-mode))
+        (<span class="k">when</span> shrink
+	  (<span class="k">setq</span> ibuffer-shrink-to-minimum-size shrink))
+	(<span class="k">when</span> qualifiers
+	  (<span class="k">require</span> '<span class="m">ibuf-ext</span>)
+	  (<span class="k">setq</span> ibuffer-filtering-qualifiers qualifiers))
+	(<span class="k">when</span> filter-groups
+	  (<span class="k">require</span> '<span class="m">ibuf-ext</span>)
+	  (<span class="k">setq</span> ibuffer-filter-groups filter-groups))
+	(<span class="k">when</span> formats
+	  (<span class="k">setq-local</span> ibuffer-formats formats))
+	(ibuffer-update nil)
+	<span class="cd">;; </span><span class="c">Skip the group name by default.
+</span>	(ibuffer-forward-line 0 t)
+	(<span class="k">unwind-protect</span>
+	    (<span class="k">progn</span>
+	      (<span class="k">setq</span> buffer-read-only nil)
+	      (run-hooks 'ibuffer-hook))
+	  (<span class="k">setq</span> buffer-read-only t))
+	(<span class="k">unless</span> ibuffer-expert
+          (message (substitute-command-keys
+                    (concat <span class="s">"Commands: \\[</span><span class="m s">ibuffer-mark-forward</span><span class="s">], "</span>
+                            <span class="s">"\\[</span><span class="m s">ibuffer-unmark-forward</span><span class="s">], "</span>
+                            <span class="s">"\\[</span><span class="m s">ibuffer-toggle-marks</span><span class="s">], "</span>
+                            <span class="s">"\\[</span><span class="m s">ibuffer-visit-buffer</span><span class="s">], "</span>
+                            <span class="s">"\\[</span><span class="m s">ibuffer-update</span><span class="s">], "</span>
+                            <span class="s">"\\[</span><span class="m s">ibuffer-do-kill-lines</span><span class="s">], "</span>
+                            <span class="s">"\\[</span><span class="m s">ibuffer-do-save</span><span class="s">], "</span>
+                            <span class="s">"\\[</span><span class="m s">ibuffer-do-delete</span><span class="s">], "</span>
+                            <span class="s">"\\[</span><span class="m s">ibuffer-do-query-replace</span><span class="s">]; "</span>
+                            <span class="s">"\\[</span><span class="m s">quit-window</span><span class="s">] to quit; "</span>
+                            <span class="s">"\\[</span><span class="m s">describe-mode</span><span class="s">] for help"</span>))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

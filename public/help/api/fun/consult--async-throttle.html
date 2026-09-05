@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--async-throttle – Emacs Documentation Online</title>
+<meta name="description" content="consult--async-throttle is a natively compiled function defined in
+consult.el.
+Async function which throttles input.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--async-throttle</code></h1><p><span class="m"><code>consult--async-throttle</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--async-throttle <span class="ty">&amp;optional</span> <a href="#:~:text=The-,THROTTLE"><span class="arg">THROTTLE</span></a> <a href="#:~:text=The-,DEBOUNCE"><span class="arg">DEBOUNCE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Async function which throttles input.
+<p>The <span class="arg">THROTTLE</span> delay defaults to <a href="../var/consult-async-input-throttle.html"><code>consult-async-input-throttle</code></a>.
+The <span class="arg">DEBOUNCE</span> delay defaults to <a href="../var/consult-async-input-debounce.html"><code>consult-async-input-debounce</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--async-throttle</span> (<span class="ty">&amp;optional</span> throttle debounce)
+  <span class="doc">"Async function which throttles input.
+The THROTTLE delay defaults to `</span><span class="m doc">consult-async-input-throttle</span><span class="doc">'.
+The DEBOUNCE delay defaults to `</span><span class="m doc">consult-async-input-debounce</span><span class="doc">'."</span>
+  (<span class="k">setq</span> throttle (<span class="k">or</span> throttle consult-async-input-throttle)
+        debounce (<span class="k">or</span> debounce consult-async-input-debounce))
+  (<span class="k">lambda</span> (sink)
+    (<span class="k">let</span> ((timer (timer-create)) (last 0) initial-p input)
+      (<span class="k">lambda</span> (action)
+        (<span class="k">pcase</span> action
+          ((pred stringp)
+           (<span class="k">unless</span> (equal action input)
+             (cancel-timer timer)
+             (funcall sink 'cancel)
+             (timer-set-function timer (<span class="k">lambda</span> ()
+                                         (<span class="k">setq</span> last (float-time))
+                                         (funcall sink action)))
+             (timer-set-time
+              timer
+              (timer-relative-time
+               <span class="cd">;; </span><span class="c">Debounce only if the user entered new input.  Start
+</span>               <span class="cd">;; </span><span class="c">immediately if the minibuffer contains initial input.
+</span>               nil (max (<span class="k">if</span> (funcall initial-p) 0 debounce)
+                        (- (+ last throttle) (float-time)))))
+             (<span class="k">setq</span> input action)
+             (timer-activate timer))
+           nil)
+          ('setup
+           (<span class="k">setq</span> initial-p
+                 (consult--in-buffer
+                  (<span class="k">let</span> ((initial (minibuffer-contents-no-properties)))
+                    (<span class="k">lambda</span> ()
+                      (equal initial (minibuffer-contents-no-properties))))))
+           (funcall sink action))
+          ((<span class="k">or</span> 'cancel 'destroy)
+           (cancel-timer timer)
+           (funcall sink action))
+          (_ (funcall sink action)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

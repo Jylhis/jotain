@@ -1,0 +1,73 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-procedure-start – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-procedure-start is a natively compiled function defined in
+combobulate-procedure.el.
+Attempt to find a procedure at PT-OR-NODE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-procedure-start</code></h1><p><span class="m"><code>combobulate-procedure-start</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">combobulate-procedure.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-procedure-start <a href="#:~:text=at-,PT-OR-NODE"><span class="arg">PT-OR-NODE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,PROCEDURES"><span class="arg">PROCEDURES</span></a> <a href="#:~:text=If-,EXHAUSTIVE"><span class="arg">EXHAUSTIVE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Attempt to find a procedure at <span class="arg">PT-OR-NODE</span>.
+<p>If <span class="arg">PROCEDURES</span> is not given, use <a href="../var/combobulate-default-procedures.html"><code>combobulate-default-procedures</code></a>.
+If <span class="arg">EXHAUSTIVE</span> is non-nil, then collect all possible procedures
+that may apply.
+<p>This function returns a list of <span class="m"><code>combobulate-procedure-result</code></span>
+objects.
+<p>See <a href="../fun/combobulate-procedure-apply.html"><code>combobulate-procedure-apply</code></a> for instructions on how to write
+<span class="arg">PROCEDURES</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-procedure.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-procedure-start</span> (pt-or-node <span class="ty">&amp;optional</span> procedures exhaustive)
+  <span class="doc">"Attempt to find a procedure at PT-OR-NODE.
+
+If PROCEDURES is not given, use `</span><span class="m doc">combobulate-default-procedures</span><span class="doc">'.
+If EXHAUSTIVE is non-nil, then collect all possible procedures
+that may apply.
+
+This function returns a list of `</span><span class="m doc">combobulate-procedure-result</span><span class="doc">'
+objects.
+
+See `</span><span class="m doc">combobulate-procedure-apply</span><span class="doc">' for instructions on how to write
+PROCEDURES."</span>
+  (<span class="k">let</span> ((matches)
+        (nodes
+         (seq-uniq
+          (append
+           <span class="cd">;; </span><span class="c">start by getting all the nodes *at* point:
+</span>           <span class="cd">;; </span><span class="c">meaning, nodes beginning at point. They should
+</span>           <span class="cd">;; </span><span class="c">be our first port of call in terms of matching,
+</span>           <span class="cd">;; </span><span class="c">as they are the most specific.
+</span>           (<span class="k">save-excursion</span>
+             (goto-char (<span class="k">if</span> (numberp pt-or-node)
+                            pt-or-node
+                          (combobulate-node-start pt-or-node)))
+             (cons (<span class="k">if</span> (combobulate-node-p pt-or-node)
+                       pt-or-node
+                     (combobulate-node-at-point))
+                   (combobulate-all-nodes-at-point)))
+           <span class="cd">;; </span><span class="c">then, get all the nodes point is at.
+</span>           (combobulate-get-parents (combobulate-node-at-point))))))
+    (<span class="k">catch</span> '<span class="m">done</span>
+      (<span class="k">dolist</span> (procedure
+               (<span class="k">or</span> procedures
+                   <span class="cd">;; </span><span class="c">if we haven't been given any procedures, use the default
+</span>                   <span class="cd">;; </span><span class="c">procedures.
+</span>                   combobulate-default-procedures
+                   (<span class="w">error</span> <span class="s">"No procedures given and no default procedures found"</span>)))
+        (<span class="k">dolist</span> (node nodes)
+          (<span class="k">when-let</span> (procedure-result
+                     (combobulate-procedure-try
+                      procedure
+                      node))
+            (<span class="k">push</span> procedure-result matches)
+            (<span class="k">unless</span> exhaustive (<span class="k">throw</span> '<span class="m">done</span> procedure-result))))))
+    (<span class="k">when</span> combobulate-debug (message <span class="s">"Matches: %s"</span> matches))
+    matches))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

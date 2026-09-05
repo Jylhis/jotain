@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge-insert-post-heading – Emacs Documentation Online</title>
+<meta name="description" content="forge-insert-post-heading is a natively compiled function defined in
+forge-topic.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge-insert-post-heading</code></h1><p><span class="m"><code>forge-insert-post-heading</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">forge-topic.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge-insert-post-heading <span class="arg">POST</span> <span class="arg">TOPIC</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-topic.el</span>
+(<span class="k">defun</span> <span class="f">forge-insert-post-heading</span> (post topic)
+  (<span class="k">oset</span> magit-insert-section--current
+        heading-highlight-face
+        'magit-diff-hunk-heading-highlight)
+  (<span class="k">let*</span> ((author  (<span class="k">oref</span> post author))
+         (created (<span class="k">oref</span> post created))
+         (heading
+          (format-spec
+           forge-post-heading-format
+           `((?a . ,(propertize (concat (forge--format-avatar author)
+                                        (<span class="k">or</span> author <span class="s">"(ghost)"</span>))
+                                'font-lock-face 'forge-post-author))
+             (?c . ,(propertize created 'font-lock-face 'forge-post-date))
+             (?C . ,(propertize (apply #'format <span class="s">"%s %s ago"</span>
+                                       (magit--age
+                                        (float-time
+                                         (date-to-time created))))
+                                'font-lock-face 'forge-post-date))))))
+    (<span class="k">when</span> (forge-discussion-reply-p post)
+      (<span class="k">setq</span> heading (concat <span class="s">"    "</span> heading)))
+    (font-lock-append-text-property
+     0 (length heading)
+     'font-lock-face (<span class="k">cond-let*</span>
+                       ([_(forge-discussion-p topic)]
+                        [answer (<span class="k">oref</span> topic answer)]
+                        [_(equal (<span class="k">oref</span> post their-id)
+                                 (forge--their-id answer))]
+                        'forge-discussion-answer-heading)
+                       ((forge-discussion-reply-p post)
+                        '(magit-dimmed magit-diff-hunk-heading))
+                       ('magit-diff-hunk-heading))
+     heading)
+    (<span class="k">magit-insert-heading</span> heading)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

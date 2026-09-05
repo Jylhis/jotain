@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- Jotain - a GNU Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer.
+
+Copyright © Markus Jylhänkangas. -->
+<title>Installation (Jotain Emacs Configuration)</title>
+
+<meta name="description" content="Installation (Jotain Emacs Configuration)">
+<meta name="keywords" content="Installation (Jotain Emacs Configuration)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Quickstart.html" rel="next" title="Quickstart">
+<link href="Introduction.html" rel="prev" title="Introduction">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+span:hover a.copiable-link {visibility: visible}
+ul.mark-bullet {list-style-type: disc}
+</style>
+<link rel="stylesheet" type="text/css" href="manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Installation">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Quickstart.html" rel="next">Quickstart</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Introduction.html" rel="prev">Introduction</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+<h2 class="chapter" id="Installation-1"><span>2 Installation<a class="copiable-link" href="#Installation-1"> &para;</a></span></h2>
+
+<p>Jotain uses <a class="uref" href="https://nixos.org/">Nix</a> to build Emacs from source, driven by a <code class="code">Justfile</code> task runner. Development assumes a <a class="uref" href="https://devenv.sh">devenv</a> shell &mdash; enter it with <code class="code">devenv shell</code> (no <code class="code">.envrc</code> is tracked; direnv users can create their own).
+</p>
+<ul class="mini-toc">
+<li><a href="#Prerequisites">Prerequisites</a></li>
+<li><a href="#Building-Emacs">Building Emacs</a></li>
+<li><a href="#Installing-from-a-Consumer-Flake">Installing from a Consumer Flake</a></li>
+<li><a href="#Running">Running</a></li>
+</ul>
+<div class="section-level-extent" id="Prerequisites">
+<h3 class="section"><span>2.1 Prerequisites<a class="copiable-link" href="#Prerequisites"> &para;</a></span></h3>
+<ul class="itemize mark-bullet">
+<li><a class="uref" href="https://nixos.org/download">Nix package manager</a> with <code class="code">nix-build</code> available
+</li><li><a class="uref" href="https://github.com/casey/just">just</a> task runner (provided by the devenv shell)
+</li><li><a class="uref" href="https://devenv.sh">devenv</a> (optional but recommended for development)
+</li></ul>
+
+<p>All <code class="code">just</code> recipes assume the devenv shell is active. If you do not use direnv, prefix any command with <code class="code">devenv shell --</code>, e.g. <code class="code">devenv shell -- just check</code>.
+</p>
+</div>
+<div class="section-level-extent" id="Building-Emacs">
+<h3 class="section"><span>2.2 Building Emacs<a class="copiable-link" href="#Building-Emacs"> &para;</a></span></h3>
+<p>The default build targets the current system and includes every tree-sitter grammar from nixpkgs:
+</p>
+<pre class="verbatim">just build
+</pre>
+<p>This runs plain <code class="code">nix-build</code>, which evaluates <code class="code">default.nix</code> &mdash; a thin flake-compat wrapper around <code class="code">flake.nix</code> &mdash; and builds <code class="code">packages.&lt;system&gt;.default</code>: the full <code class="code">jotainEmacsPackages</code> distribution (Emacs + use-package-scanned packages + tree-sitter grammars + the Info manual) assembled by <code class="code">nix/mk-overlay.nix</code>. The distribution&rsquo;s Emacs is the emacs-overlay <code class="code">unstable</code> variant (the Emacs 31 release branch); thanks to the cache-parity invariant in <code class="code">emacs.nix</code> its store path matches <a class="uref" href="https://github.com/nix-community/emacs-overlay"><code class="code">nix-community/emacs-overlay</code></a>&rsquo;s prebuilt <code class="code">emacs-unstable</code>, so the base Emacs is a binary-cache hit from <code class="code">nix-community.cachix.org</code> (and the <code class="code">mainline</code> variant from Hydra) &mdash; nothing recompiles from source.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Build-Matrix">Build Matrix</a></li>
+</ul>
+<div class="subsection-level-extent" id="Build-Matrix">
+<h4 class="subsection"><span>2.2.1 Build Matrix<a class="copiable-link" href="#Build-Matrix"> &para;</a></span></h4>
+<p>Jotain ships exactly four builds &mdash; {x86_64, aarch64} × {Linux, Darwin}: on Linux a pgtk/Wayland GUI and a terminal-only build; on Darwin a patched NS/Cocoa GUI (nix-giant system-appearance and round-undecorated-frame patches applied by default &mdash; always built from source) and a terminal-only build. X11/Lucid/GTK3-x11/Motif/Athena and the macport fork are not supported; <code class="code">emacs.nix</code> asserts those configurations away.
+</p>
+<pre class="verbatim">just build           # full distribution: Emacs 31 (unstable) + every grammar (default)
+just build-nox-full  # full terminal-only distribution (same attr the nix-on-droid module ships)
+just build-bare      # bare Emacs from emacs.nix — the platform's matrix GUI
+just build-nox       # --without-x --without-ns (terminal only, bare)
+just build-git       # bleeding-edge master from git.savannah.gnu.org
+just build-igc       # feature/igc3 MPS incremental GC branch
+just build-igc-ccache # igc via ccacheStdenv (for from-source platforms; see emacs.nix)
+just build-android   # bare aarch64-linux nox — kept for cache-parity testing
+</pre>
+<p>Or call <code class="code">nix-build</code> directly &mdash; <code class="code">default.nix</code> exposes the flake packages, and the bare-Emacs builds target <code class="code">emacs.nix</code> with any argument the file accepts:
+</p>
+<pre class="verbatim">nix-build                                                # full distribution
+nix-build -A emacs                                       # bare Emacs only
+nix-build emacs.nix  --arg withNativeCompilation false   # no native-comp
+nix-build emacs.nix  --arg variant '&quot;git&quot;'               # master
+nix-build emacs.nix  --arg variant '&quot;igc&quot;'               # MPS GC branch
+</pre>
+<blockquote class="quotation">
+<p><code class="code">git</code>/<code class="code">unstable</code>/<code class="code">igc</code> build the revision pinned by emacs-overlay and are binary-cache hits on Linux and for the terminal-only Darwin build. The Darwin GUI is patched by default and therefore always compiles from source. Only when pinning a custom commit via <code class="code">--argstr rev &quot;...&quot;</code> does the first build fail and report the expected hash to pass back via <code class="code">--argstr hash &quot;sha256-...&quot;</code>.
+</p></blockquote>
+
+</div>
+</div>
+<div class="section-level-extent" id="Installing-from-a-Consumer-Flake">
+<h3 class="section"><span>2.3 Installing from a Consumer Flake<a class="copiable-link" href="#Installing-from-a-Consumer-Flake"> &para;</a></span></h3>
+<p>Jotain exposes Home Manager, NixOS, and nix-darwin modules. They all install the cache-friendly <code class="code">emacs.nix</code> build by default:
+</p>
+<pre class="verbatim">{
+  imports = [ inputs.jotain.homeManagerModules.default ];
+
+  services.jotain.enable = true;
+}
+</pre>
+<p><code class="code">services.jotain.package</code> swaps in any other Jotain-shaped distribution &mdash; for example the terminal-only build:
+</p>
+<pre class="verbatim">{
+  imports = [ inputs.jotain.homeManagerModules.default ];
+
+  services.jotain = {
+    enable = true;
+    package = inputs.jotain.packages.${system}.emacs-nox;
+  };
+}
+</pre>
+
+<ul class="mini-toc">
+<li><a href="#nix_002don_002ddroid-_0028Android_0029">nix-on-droid (Android)</a></li>
+<li><a href="#Overriding-nixpkgs">Overriding nixpkgs</a></li>
+</ul>
+<div class="subsection-level-extent" id="nix_002don_002ddroid-_0028Android_0029">
+<h4 class="subsection"><span>2.3.1 nix-on-droid (Android)<a class="copiable-link" href="#nix_002don_002ddroid-_0028Android_0029"> &para;</a></span></h4>
+<p>Jotain also ships a <a class="uref" href="https://github.com/nix-community/nix-on-droid">nix-on-droid</a> module for running Emacs on Android (Termux/proot). Android is headless under proot, so the module installs a <strong class="strong">terminal-only</strong> (<code class="code">-nw</code>) Emacs into <code class="code">environment.packages</code> and wires <code class="code">EDITOR</code>/<code class="code">VISUAL</code> to an <code class="code">emacsclient</code> wrapper &mdash; there is no systemd daemon, launchd agent, or GUI frame.
+</p>
+<pre class="verbatim">{
+  imports = [ jotain.nixOnDroidModules.default ];
+
+  services.jotain.enable = true;
+}
+</pre>
+<p>Switch it in with <code class="code">nix-on-droid switch --flake .#default</code>. See <code class="code">nixOnDroidConfigurations.default</code> in Jotain&rsquo;s <code class="code">flake.nix</code> for a complete example wiring.
+</p>
+<blockquote class="quotation">
+<p>Like the NixOS / nix-darwin module (<code class="code">module-system.nix</code>), this module installs the <strong class="strong">curated Jotain Emacs package</strong> &mdash; Jotain&rsquo;s Emacs packages, tree-sitter grammars, themes, and Info manual are on the <code class="code">load-path</code> &mdash; but it does not install Jotain&rsquo;s own <code class="code">early-init.el</code> / <code class="code">init.el</code> / <code class="code">lisp/</code>. To have Emacs boot the full Jotain configuration, point it at the config with <code class="code">--init-directory</code> (the way <code class="code">just run-built</code> does) or layer the Home Manager module through nix-on-droid&rsquo;s <code class="code">home-manager.config</code>, which installs the config into a writable <code class="code">~/.config/emacs</code>. A bare <code class="code">--init-directory</code> into the read-only Nix store will not work, because Jotain writes <code class="code">var/</code>, <code class="code">elpa/</code>, and <code class="code">eln-cache/</code> under <code class="code">user-emacs-directory</code>.
+</p></blockquote>
+
+</div>
+<div class="subsection-level-extent" id="Overriding-nixpkgs">
+<h4 class="subsection"><span>2.3.2 Overriding nixpkgs<a class="copiable-link" href="#Overriding-nixpkgs"> &para;</a></span></h4>
+<p>Downstream flakes may pin a different nixpkgs (release branches <strong class="strong">24.05+</strong> through unstable) by following the input:
+</p>
+<pre class="verbatim">inputs.jotain.inputs.nixpkgs.follows = &quot;nixpkgs&quot;;
+</pre>
+<p><code class="code">emacs.nix</code> gates the Emacs build flags that newer <code class="code">make-emacs.nix</code> versions introduced, so the modules still evaluate and build on older releases. Note that on 24.05 <code class="code">pkgs.emacs</code> is Emacs 29 while Jotain&rsquo;s Elisp targets Emacs 30/31 &mdash; the build succeeds, but full runtime behaviour is only guaranteed on the pinned unstable.
+</p>
+</div>
+</div>
+<div class="section-level-extent" id="Running">
+<h3 class="section"><span>2.4 Running<a class="copiable-link" href="#Running"> &para;</a></span></h3>
+<p>Jotain is designed to be launched out of its own checkout via <code class="code">--init-directory</code>, so it never touches <code class="code">~/.emacs.d</code>.
+</p>
+<pre class="verbatim">just run-built          # build for this platform, then launch result/bin/emacs
+just run-built-debug    # same, with --debug-init and debug-on-error
+</pre>
+<p>The devenv shell provides tooling only &mdash; Emacs itself is <strong class="strong">not</strong> in the shell, and the direct-launch recipes (<code class="code">just run</code>, <code class="code">just debug</code>, <code class="code">just tty</code>, &hellip;) are disabled stubs. See the current-state note in <a class="uref" href="/usage/launching">Launching Emacs</a> for details and the daemon + client pattern.
+</p>
+</div>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Quickstart.html" rel="next">Quickstart</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Introduction.html" rel="prev">Introduction</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+
+
+
+</body>
+</html>

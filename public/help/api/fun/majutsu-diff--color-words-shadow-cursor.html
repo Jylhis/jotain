@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-diff--color-words-shadow-cursor – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-diff--color-words-shadow-cursor is a natively compiled
+function defined in majutsu-diff.el.
+Shadow cursor callback for color-words diffs.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-diff--color-words-shadow-cursor</code></h1><p><span class="m"><code>majutsu-diff--color-words-shadow-cursor</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">majutsu-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-diff--color-words-shadow-cursor <a href="#:~:text="><span class="arg">WINDOW</span></a> <a href="#:~:text="><span class="arg">OLDPOS</span></a> <a href="#:~:text="><span class="arg">DIR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Shadow cursor callback for color-words diffs.
+<p>Unlike <a href="../fun/smerge--refine-shadow-cursor.html"><code>smerge--refine-shadow-cursor</code></a>, this maps through inline pairs
+and falls back to region mapping for shared context.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-diff.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-diff--color-words-shadow-cursor</span> (window _oldpos dir)
+  <span class="doc">"Shadow cursor callback for color-words diffs.
+Unlike `</span><span class="m doc">smerge--refine-shadow-cursor</span><span class="doc">', this maps through inline pairs
+and falls back to region mapping for shared context."</span>
+  (<span class="k">let</span> ((ol (window-parameter window 'smerge--refine-shadow-cursor)))
+    (<span class="k">if</span> (not (<span class="k">and</span> (<span class="k">bound-and-true-p</span> smerge-refine-shadow-cursor)
+                  (memq dir '(entered moved))))
+        (<span class="k">when</span> ol (delete-overlay ol))
+      (<span class="k">with-current-buffer</span> (window-buffer window)
+        (<span class="k">let</span> ((other-beg (<span class="k">ignore-errors</span>
+                           (majutsu-diff--color-words-shadow-pos
+                            (window-point window)))))
+          (<span class="k">if</span> (not other-beg)
+              (<span class="k">when</span> ol (delete-overlay ol))
+            (<span class="k">let</span> ((other-end (min (point-max) (1+ other-beg))))
+              <span class="cd">;; </span><span class="c">Handle wide chars (TAB/LF) — show as pseudo-space.
+</span>              (<span class="k">when</span> (memq (char-after other-beg) '(?\n ?\t))
+                (<span class="k">setq</span> other-end other-beg))
+              (<span class="k">if</span> ol (move-overlay ol other-beg other-end)
+                (<span class="k">setq</span> ol (make-overlay other-beg other-end nil t nil))
+                (<span class="k">setf</span> (window-parameter window 'smerge--refine-shadow-cursor)
+                      ol)
+                (overlay-put ol 'window window)
+                (overlay-put ol 'face 'smerge-refine-shadow-cursor))
+              (overlay-put ol 'before-string
+                           (<span class="k">when</span> (= other-beg other-end)
+                             (propertize
+                              <span class="s">" "</span> 'face 'smerge-refine-shadow-cursor))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

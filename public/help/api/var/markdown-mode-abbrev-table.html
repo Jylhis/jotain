@@ -1,0 +1,179 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: markdown-mode-abbrev-table – Emacs Documentation Online</title>
+<meta name="description" content="markdown-mode-abbrev-table is a variable defined in markdown-mode.el.
+Abbrev table for markdown-mode.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>markdown-mode-abbrev-table</code></h1><p><span class="m"><code>markdown-mode-abbrev-table</code></span> is a variable defined in <span class="bt">markdown-mode.el</span>.
+<h2>Value</h2>
+<pre><code>#&lt;obarray n=1&gt;
+</code></pre>
+<h2>Documentation</h2>
+<p>Abbrev table for <a href="../fun/markdown-mode.html"><code>markdown-mode</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">define-derived-mode</span> <span class="f">markdown-mode</span> text-mode <span class="s">"Markdown"</span>
+  <span class="doc">"Major mode for editing Markdown files."</span>
+  (<span class="k">when</span> buffer-read-only
+    (<span class="k">when</span> (<span class="k">or</span> (not (buffer-file-name)) (file-writable-p (buffer-file-name)))
+      (<span class="k">setq-local</span> buffer-read-only nil)))
+  <span class="cd">;; </span><span class="c">Natural Markdown tab width
+</span>  (<span class="k">setq</span> tab-width 4)
+  <span class="cd">;; </span><span class="c">Comments
+</span>  (<span class="k">setq-local</span> comment-start <span class="s">"&lt;!-- "</span>)
+  (<span class="k">setq-local</span> comment-end <span class="s">" --&gt;"</span>)
+  (<span class="k">setq-local</span> comment-start-skip <span class="s">"&lt;!--[ \t]*"</span>)
+  (<span class="k">setq-local</span> comment-column 0)
+  (<span class="k">setq-local</span> comment-auto-fill-only-comments nil)
+  (<span class="k">setq-local</span> comment-use-syntax t)
+  <span class="cd">;; </span><span class="c">Sentence
+</span>  (<span class="k">setq-local</span> sentence-end-base <span class="s">"[.?!…‽][]\"'”’)}»›*_`~]*"</span>)
+  <span class="cd">;; </span><span class="c">Syntax
+</span>  (add-hook 'syntax-propertize-extend-region-functions
+            #'markdown-syntax-propertize-extend-region nil t)
+  (add-hook 'jit-lock-after-change-extend-region-functions
+            #'markdown-font-lock-extend-region-function t t)
+  (add-hook 'font-lock-extend-region-functions
+            #'markdown-font-lock-extend-region t t)
+  (<span class="k">setq-local</span> syntax-propertize-function #'markdown-syntax-propertize)
+  (syntax-propertize (point-max)) <span class="cd">;; </span><span class="c">Propertize before hooks run, etc.
+</span>  <span class="cd">;; </span><span class="c">Font lock.
+</span>  (<span class="k">setq</span> font-lock-defaults
+        '(markdown-mode-font-lock-keywords
+          nil nil nil nil
+          (font-lock-multiline . t)
+          (font-lock-syntactic-face-function . markdown-syntactic-face)
+          (font-lock-extra-managed-props
+           . (composition display invisible rear-nonsticky
+                          keymap help-echo mouse-face))))
+  (<span class="k">if</span> markdown-hide-markup
+      (add-to-invisibility-spec 'markdown-markup)
+    (remove-from-invisibility-spec 'markdown-markup))
+  <span class="cd">;; </span><span class="c">Math mode
+</span>  (<span class="k">when</span> markdown-enable-math (markdown-toggle-math t))
+  <span class="cd">;; </span><span class="c">Add a buffer-local hook to reload after file-local variables are read
+</span>  (add-hook 'hack-local-variables-hook #'markdown-handle-local-variables nil t)
+  <span class="cd">;; </span><span class="c">For imenu support
+</span>  (<span class="k">setq-local</span> imenu-create-index-function (<span class="k">if</span> markdown-nested-imenu-heading-index
+                                              #'markdown-imenu-create-nested-index
+                                            #'markdown-imenu-create-flat-index)
+              imenu-submenus-on-top nil)
+
+  <span class="cd">;; </span><span class="c">Defun movement
+</span>  (<span class="k">setq-local</span> beginning-of-defun-function #'markdown-beginning-of-defun)
+  (<span class="k">setq-local</span> end-of-defun-function #'markdown-end-of-defun)
+  <span class="cd">;; </span><span class="c">Paragraph filling
+</span>  (<span class="k">setq-local</span> fill-paragraph-function #'markdown-fill-paragraph)
+  (<span class="k">setq-local</span> paragraph-start
+              <span class="cd">;; </span><span class="c">Should match start of lines that start or separate paragraphs
+</span>              (mapconcat #'identity
+                         '(
+                           <span class="s">"\f"</span> <span class="cd">; </span><span class="c">starts with a literal line-feed
+</span>                           <span class="s">"[ \t\f]*$"</span> <span class="cd">; </span><span class="c">space-only line
+</span>                           <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[ \t]*&gt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">+[ \t\f]*$"</span><span class="cd">; </span><span class="c">empty line in blockquote
+</span>                           <span class="s">"[ \t]*[*+-][ \t]+"</span> <span class="cd">; </span><span class="c">unordered list item
+</span>                           <span class="s">"[ \t]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">#</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\.[ \t]+"</span> <span class="cd">; </span><span class="c">ordered list item
+</span>                           <span class="s">"[ \t]*\\[\\S-*\\]:[ \t]+"</span> <span class="cd">; </span><span class="c">link ref def
+</span>                           <span class="s">"[ \t]*:[ \t]+"</span> <span class="cd">; </span><span class="c">definition
+</span>                           <span class="s">"^|"</span> <span class="cd">; </span><span class="c">table or Pandoc line block
+</span>                           )
+                         <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">"</span>))
+  (<span class="k">setq-local</span> paragraph-separate
+              <span class="cd">;; </span><span class="c">Should match lines that separate paragraphs without being
+</span>              <span class="cd">;; </span><span class="c">part of any paragraph:
+</span>              (mapconcat #'identity
+                         '(<span class="s">"[ \t\f]*$"</span> <span class="cd">; </span><span class="c">space-only line
+</span>                           <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[ \t]*&gt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">+[ \t\f]*$"</span><span class="cd">; </span><span class="c">empty line in blockquote
+</span>                           <span class="cd">;; </span><span class="c">The following is not ideal, but the Fill customization
+</span>                           <span class="cd">;; </span><span class="c">options really only handle paragraph-starting prefixes,
+</span>                           <span class="cd">;; </span><span class="c">not paragraph-ending suffixes:
+</span>                           <span class="s">".*  $"</span> <span class="cd">; </span><span class="c">line ending in two spaces
+</span>                           <span class="s">"^#+"</span>
+                           <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">   </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?[-=]+[ \t]*$"</span> <span class="cd">;; </span><span class="c">setext
+</span>                           <span class="s">"[ \t]*\\[\\^\\S-*\\]:[ \t]*$"</span>) <span class="cd">; </span><span class="c">just the start of a footnote def
+</span>                         <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">"</span>))
+  (<span class="k">setq-local</span> adaptive-fill-first-line-regexp <span class="s">"\\`[ \t]*[A-Z]?&gt;[ \t]*?\\'"</span>)
+  (<span class="k">setq-local</span> adaptive-fill-regexp <span class="s">"\\s-*"</span>)
+  (<span class="k">setq-local</span> adaptive-fill-function #'markdown-adaptive-fill-function)
+  (<span class="k">setq-local</span> fill-forward-paragraph-function #'markdown-fill-forward-paragraph)
+  <span class="cd">;; </span><span class="c">Outline mode
+</span>  (<span class="k">setq-local</span> outline-regexp markdown-regex-header)
+  (<span class="k">setq-local</span> outline-level #'markdown-outline-level)
+  <span class="cd">;; </span><span class="c">Cause use of ellipses for invisible text.
+</span>  (add-to-invisibility-spec '(outline . t))
+  <span class="cd">;; </span><span class="c">ElDoc support
+</span>  (<span class="k">if</span> (boundp 'eldoc-documentation-functions)
+      (add-hook 'eldoc-documentation-functions #'markdown-eldoc-function nil t)
+    (<span class="k">add-function</span> <span class="bi">:before-until</span> (local 'eldoc-documentation-function)
+                  #'markdown-eldoc-function))
+  <span class="cd">;; </span><span class="c">Inhibiting line-breaking:
+</span>  <span class="cd">;; </span><span class="c">Separating out each condition into a separate function so that users can
+</span>  <span class="cd">;; </span><span class="c">override if desired (with remove-hook)
+</span>  (add-hook 'fill-nobreak-predicate
+            #'markdown-line-is-reference-definition-p nil t)
+  (add-hook 'fill-nobreak-predicate
+            #'markdown-pipe-at-bol-p nil t)
+
+  <span class="cd">;; </span><span class="c">Indentation
+</span>  (<span class="k">setq-local</span> indent-line-function markdown-indent-function)
+  (<span class="k">setq-local</span> indent-region-function #'markdown--indent-region)
+
+  <span class="cd">;; </span><span class="c">Flyspell
+</span>  (<span class="k">setq-local</span> flyspell-generic-check-word-predicate
+              #'markdown-flyspell-check-word-p)
+
+  <span class="cd">;; </span><span class="c">Electric quoting
+</span>  (add-hook 'electric-quote-inhibit-functions
+            #'markdown--inhibit-electric-quote nil <span class="bi">:local</span>)
+
+  <span class="cd">;; </span><span class="c">drag and drop handler
+</span>  (<span class="k">let</span> ((dnd-handler (<span class="k">if</span> (&gt;= emacs-major-version 30)
+                         #'markdown--dnd-multi-local-file-handler
+                       #'markdown--dnd-local-file-handler)))
+    (<span class="k">setq-local</span> dnd-protocol-alist (append
+                                    (list (cons <span class="s">"^file:///"</span> dnd-handler)
+                                          (cons <span class="s">"^file:/[</span><span class="neg s">^</span><span class="s">/]"</span> dnd-handler)
+                                          (cons <span class="s">"^file:[</span><span class="neg s">^</span><span class="s">/]"</span> dnd-handler))
+                                    dnd-protocol-alist)))
+
+  <span class="cd">;; </span><span class="c">media handler
+</span>  (<span class="k">when</span> (version&lt; <span class="s">"29"</span> emacs-version)
+    (yank-media-handler <span class="s">"image/.*"</span> #'markdown--image-media-handler)
+    <span class="cd">;; </span><span class="c">TODO support other than GNOME, like KDE etc
+</span>    (yank-media-handler <span class="s">"x-special/gnome-copied-files"</span> #'markdown--file-media-handler))
+
+  <span class="cd">;; </span><span class="c">Make checkboxes buttons
+</span>  (<span class="k">when</span> markdown-make-gfm-checkboxes-buttons
+    (markdown-make-gfm-checkboxes-buttons (point-min) (point-max))
+    (add-hook 'after-change-functions #'markdown-gfm-checkbox-after-change-function t t)
+    (add-hook 'change-major-mode-hook #'markdown-remove-gfm-checkbox-overlays t t))
+
+  <span class="cd">;; </span><span class="c">edit-indirect
+</span>  (add-hook 'edit-indirect-after-commit-functions
+            #'markdown--edit-indirect-after-commit-function
+            nil 'local)
+
+  <span class="cd">;; </span><span class="c">Marginalized headings
+</span>  (<span class="k">when</span> markdown-marginalize-headers
+    (add-hook 'window-configuration-change-hook
+              #'markdown-marginalize-update-current nil t))
+
+  <span class="cd">;; </span><span class="c">add live preview export hook
+</span>  (add-hook 'after-save-hook #'markdown-live-preview-if-markdown t t)
+  (add-hook 'kill-buffer-hook #'markdown-live-preview-remove-on-kill t t)
+
+  <span class="cd">;; </span><span class="c">Add a custom keymap for `</span><span class="m c">visual-line-mode</span><span class="c">' so that activating
+</span>  <span class="cd">;; </span><span class="c">this minor mode does not override markdown-mode's keybindings.
+</span>  <span class="cd">;; </span><span class="c">FIXME: Probably `</span><span class="m c">visual-line-mode</span><span class="c">' should take care of this.
+</span>  (<span class="k">let</span> ((oldmap (cdr (assoc 'visual-line-mode minor-mode-map-alist)))
+        (newmap (make-sparse-keymap)))
+    (set-keymap-parent newmap oldmap)
+    (define-key newmap [remap move-beginning-of-line] nil)
+    (define-key newmap [remap move-end-of-line] nil)
+    (make-local-variable 'minor-mode-overriding-map-alist)
+    (<span class="k">push</span> `(visual-line-mode . ,newmap) minor-mode-overriding-map-alist)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

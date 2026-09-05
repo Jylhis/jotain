@@ -1,0 +1,67 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: helpful--syntax-highlight – Emacs Documentation Online</title>
+<meta name="description" content="helpful--syntax-highlight is a natively compiled function defined in
+helpful.el.
+Return a propertized version of SOURCE in MODE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>helpful--syntax-highlight</code></h1><p><span class="m"><code>helpful--syntax-highlight</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">helpful.el</span>.
+<h2>Signature</h2>
+<pre><code>(helpful--syntax-highlight <a href="#:~:text=of-,SOURCE"><span class="arg">SOURCE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=in-,MODE"><span class="arg">MODE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a propertized version of <span class="arg">SOURCE</span> in <span class="arg">MODE</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/al1y9rq93c50r6aqa0749m04ilfnar06-emacs-packages-deps/share/emacs/site-lisp/elpa/helpful-20250408.334/helpful.el</span>
+<span class="cd">;; </span><span class="c">TODO: crashes on `</span><span class="m c">backtrace-frame</span><span class="c">' on a recent checkout.
+</span>
+(<span class="k">defun</span> <span class="f">helpful--syntax-highlight</span> (source <span class="ty">&amp;optional</span> mode)
+  <span class="doc">"Return a propertized version of SOURCE in MODE."</span>
+  (<span class="k">unless</span> mode
+    (<span class="k">setq</span> mode #'emacs-lisp-mode))
+  (<span class="k">if</span> (<span class="k">or</span>
+       (&lt; (length source) helpful-max-highlight)
+       (eq mode 'emacs-lisp-mode))
+      (<span class="k">with-temp-buffer</span>
+        (insert source)
+
+        <span class="cd">;; </span><span class="c">Switch to major-mode MODE, but don't run any hooks.
+</span>        (<span class="k">delay-mode-hooks</span> (funcall mode))
+
+        <span class="cd">;; </span><span class="c">`</span><span class="m c">delayed-mode-hooks</span><span class="c">' contains mode hooks like
+</span>        <span class="cd">;; </span><span class="c">`</span><span class="m c">emacs-lisp-mode-hook</span><span class="c">'. Build a list of functions that are run
+</span>        <span class="cd">;; </span><span class="c">when the mode hooks run.
+</span>        (<span class="k">let</span> (hook-funcs)
+          (<span class="k">dolist</span> (hook delayed-mode-hooks)
+            (<span class="k">let</span> ((funcs (symbol-value hook)))
+              (<span class="k">setq</span> hook-funcs (append hook-funcs funcs))))
+
+          <span class="cd">;; </span><span class="c">Filter hooks to those that relate to highlighting, and run them.
+</span>          (<span class="k">setq</span> hook-funcs (-intersection hook-funcs helpful--highlighting-funcs))
+          (-map #'funcall hook-funcs))
+
+        (<span class="k">if</span> (fboundp 'font-lock-ensure)
+            (font-lock-ensure)
+          (with-no-warnings
+            (font-lock-fontify-buffer)))
+        (buffer-string))
+    <span class="cd">;; </span><span class="c">SOURCE was too long to highlight in a reasonable amount of
+</span>    <span class="cd">;; </span><span class="c">time.
+</span>    (concat
+     (propertize
+      <span class="s">"// Skipping highlighting due to "</span>
+      'face 'font-lock-comment-face)
+     (helpful--button
+      <span class="s">"helpful-max-highlight"</span>
+      'helpful-describe-exactly-button
+      'symbol 'helpful-max-highlight
+      'callable-p nil)
+     (propertize
+      <span class="s">".\n"</span>
+      'face 'font-lock-comment-face)
+     source)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

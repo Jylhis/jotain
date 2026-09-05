@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-util-convert--create-commands – Emacs Documentation Online</title>
+<meta name="description" content="pdf-util-convert--create-commands is a natively compiled function
+defined in pdf-util.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-util-convert--create-commands</code></h1><p><span class="m"><code>pdf-util-convert--create-commands</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">pdf-util.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-util-convert--create-commands <span class="arg">SPEC</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-util.el</span>
+(<span class="k">defun</span> <span class="f">pdf-util-convert--create-commands</span> (spec)
+  (<span class="k">let</span> ((fg <span class="s">"red"</span>)
+        (bg <span class="s">"red"</span>)
+        formats result cmds s)
+    (<span class="k">while</span> (<span class="k">setq</span> s (<span class="k">pop</span> spec))
+      (<span class="k">unless</span> spec
+        (<span class="w">error</span> <span class="s">"Missing value in convert spec:%s"</span> (cons s spec)))
+      (<span class="k">cl-case</span> s
+        (<span class="bi">:foreground</span>
+         (<span class="k">setq</span> fg (<span class="k">pop</span> spec)))
+        (<span class="bi">:background</span>
+         (<span class="k">setq</span> bg (<span class="k">pop</span> spec)))
+        (<span class="bi">:commands</span>
+         (<span class="k">setq</span> cmds (<span class="k">pop</span> spec)))
+        (<span class="bi">:formats</span>
+         (<span class="k">setq</span> formats (append formats (<span class="k">pop</span> spec) nil)))
+        (<span class="bi">:apply</span>
+         (<span class="k">dolist</span> (m (<span class="k">pop</span> spec))
+           (<span class="k">pdf-util-with-edges</span> (m)
+             (<span class="k">let</span> ((alist (append
+                           (mapcar (<span class="k">lambda</span> (f)
+                                     (cons (car f)
+                                           (<span class="k">if</span> (stringp (cdr f))
+                                               (cdr f)
+                                             (funcall (cdr f) m))))
+                                   formats)
+                           `((?g . ,(format <span class="s">"%dx%d+%d+%d"</span>
+                                            m-width m-height
+                                            m-left m-top))
+                             (?x . ,m-left)
+                             (?X . ,m-right)
+                             (?y . ,m-top)
+                             (?Y . ,m-bot)
+                             (?w . ,(- m-right m-left))
+                             (?h . ,(- m-bot m-top))
+                             (?f . ,fg)
+                             (?b . ,bg)))))
+               (<span class="k">dolist</span> (fmt cmds)
+                 (<span class="k">push</span> (format-spec fmt alist) result))))))))
+    (nreverse result)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

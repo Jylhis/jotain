@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: denote-org-capture – Emacs Documentation Online</title>
+<meta name="description" content="denote-org-capture is a natively compiled function defined in
+denote.el.
+Create new note through org-capture-templates.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>denote-org-capture</code></h1><p><span class="m"><code>denote-org-capture</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">denote.el</span>.
+<h2>Signature</h2>
+<pre><code>(denote-org-capture)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create new note through <span class="m"><code>org-capture-templates</code></span>.
+<p>Use this as a function that returns the path to the new file.
+The file is populated with Denote's front matter.  It can then be
+expanded with the usual specifiers or strings that
+<span class="m"><code>org-capture-templates</code></span> supports.
+<p>This function obeys <a href="../var/denote-prompts.html"><code>denote-prompts</code></a>, but it ignores <span class="m"><code>file-type</code></span>,
+if present: it always sets the Org file extension for the created
+note to ensure that the capture process works as intended,
+especially for the desired output of the
+<a href="../var/denote-org-capture-specifiers.html"><code>denote-org-capture-specifiers</code></a> (which can include arbitrary
+text).
+<p>Consult the manual for template samples.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/5x9606vmybcj80x6qrajp43rma9pa1i7-emacs-packages-deps/share/emacs/site-lisp/elpa/denote-4.2.3/denote.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">denote-org-capture</span> ()
+  <span class="doc">"Create new note through `</span><span class="m doc">org-capture-templates</span><span class="doc">'.
+Use this as a function that returns the path to the new file.
+The file is populated with Denote's front matter.  It can then be
+expanded with the usual specifiers or strings that
+`</span><span class="m doc">org-capture-templates</span><span class="doc">' supports.
+
+This function obeys `</span><span class="m doc">denote-prompts</span><span class="doc">', but it ignores `</span><span class="m doc">file-type</span><span class="doc">',
+if present: it always sets the Org file extension for the created
+note to ensure that the capture process works as intended,
+especially for the desired output of the
+`</span><span class="m doc">denote-org-capture-specifiers</span><span class="doc">' (which can include arbitrary
+text).
+
+Consult the manual for template samples."</span>
+  (<span class="k">pcase-let*</span> ((denote-prompts (remove 'file-type denote-prompts)) <span class="cd">; </span><span class="c">Do not prompt for file-type. We use org.
+</span>               (`(,title ,keywords _ ,directory ,date ,identifier ,template ,signature)
+                (denote--creation-get-note-data-from-prompts))
+               (`(,title ,keywords _ ,directory ,date ,identifier ,template ,signature)
+                (denote--creation-prepare-note-data title keywords 'org directory date identifier template signature))
+               (front-matter (denote--format-front-matter title date keywords identifier signature 'org))
+               (template-string (<span class="k">cond</span> ((stringp template) template)
+                                      ((functionp template) (funcall template))
+                                      (t (<span class="w">user-error</span> <span class="s">"Invalid template"</span>)))))
+    (<span class="k">setq</span> denote-last-path
+          (denote-format-file-name directory identifier keywords title <span class="s">".org"</span> signature))
+    (<span class="k">when</span> (file-regular-p denote-last-path)
+      (<span class="w">user-error</span> <span class="s">"A file named `</span><span class="m s">%s</span><span class="s">' already exists"</span> denote-last-path))
+    (denote--keywords-add-to-history keywords)
+    (concat front-matter template-string denote-org-capture-specifiers)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

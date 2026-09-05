@@ -1,0 +1,81 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: trashed-read-trashinfo – Emacs Documentation Online</title>
+<meta name="description" content="trashed-read-trashinfo is a natively compiled function defined in
+trashed.el.
+Return a list of original file information from TRASHINFO-FILE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>trashed-read-trashinfo</code></h1><p><span class="m"><code>trashed-read-trashinfo</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">trashed.el</span>.
+<h2>Signature</h2>
+<pre><code>(trashed-read-trashinfo <a href="#:~:text=from-,TRASHINFO-FILE"><span class="arg">TRASHINFO-FILE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a list of original file information from <span class="arg">TRASHINFO-FILE</span>.
+<p>The information is original file's size, deletion date and path.
+Currently, MS Windows Vista/7/8/8.1/10 Recycle Bin and freedesktop trash can
+are supported.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/67wpnzky78h8kvn6agwgwdwx4z4cwf68-emacs-packages-deps/share/emacs/site-lisp/elpa/trashed-20230811.157/trashed.el</span>
+(<span class="k">defun</span> <span class="f">trashed-read-trashinfo</span> (trashinfo-file)
+  <span class="doc">"Return a list of original file information from TRASHINFO-FILE.
+The information is original file's size, deletion date and path.
+Currently, MS Windows Vista/7/8/8.1/10 Recycle Bin and freedesktop trash can
+are supported."</span>
+  (<span class="k">ignore-errors</span>
+    (<span class="k">with-temp-buffer</span>
+      (set-buffer-multibyte nil)
+      (insert-file-contents-literally trashinfo-file)
+      (<span class="k">let</span> (sizenum datenum pathstr)
+        (<span class="k">if</span> (eq system-type 'windows-nt) <span class="cd">;; </span><span class="c">Windows Recycle Bin
+</span>            (<span class="k">let</span> ((header (trashed-buffer-get-integer 0 8))
+                  (datewin (trashed-buffer-get-integer 16 8))
+                  pathpos pathlen)
+              (<span class="k">pcase</span> header
+                (1 <span class="cd">;; </span><span class="c">Windows Vista/7/8/8.1
+</span>                 (<span class="k">setq</span> pathpos 24
+                       pathlen (<span class="k">let</span> ((i pathpos) found) <span class="cd">;; </span><span class="c">search NUL char
+</span>                                 (<span class="k">while</span> (<span class="k">and</span> (&lt; i (point-max)) (not found))
+                                   (<span class="k">setq</span> found (<span class="k">and</span>
+                                                (= (char-after i) 0)
+                                                (= (char-after (1+ i)) 0))
+                                         i (+ i 2)))
+                                 (/ (- i pathpos 2) 2))))
+                (2 <span class="cd">;; </span><span class="c">Windows 10
+</span>                 (<span class="k">setq</span> pathpos 28
+                       pathlen (1- (trashed-buffer-get-integer 24 4)))))
+              (<span class="k">setq</span> sizenum (trashed-buffer-get-integer 8 8)
+                    <span class="cd">;; </span><span class="c">Win to Unix time format conversion
+</span>                    <span class="cd">;;  </span><span class="c">(100nsecs from 1/1/1601 to secs from 1/1/1970)
+</span>                    datenum (floor (/ (- datewin 116444736000000000)
+                                      10000000))
+                    <span class="cd">;; </span><span class="c">Conversion to (HIGH . LOW) format
+</span>                    datenum (list (lsh datenum -16)
+                                  (logand datenum (1- (lsh 1 16))))
+                    pathstr (replace-regexp-in-string
+                             <span class="s">"\\\\"</span> <span class="s">"/"</span> (decode-coding-string
+                                         (buffer-substring (+ 1 pathpos)
+                                                           (+ 1 pathpos
+                                                              (* pathlen 2)))
+                                         'utf-16-le))))
+          <span class="cd">;; </span><span class="c">freedesktop trash can
+</span>          (<span class="k">setq</span> pathstr (decode-coding-string
+                         (url-unhex-string
+                          (<span class="k">when</span> (re-search-forward
+                                 (<span class="k">rx</span> bol <span class="s">"Path"</span> (0+ blank) <span class="s">"="</span>
+                                     (0+ blank) (group (1+ nonl)))
+                                 nil t)
+                            (match-string 1)))
+                         'utf-8)
+                datenum (<span class="k">progn</span>
+                          (goto-char (point-min))
+                          (<span class="k">when</span> (re-search-forward
+                                 (<span class="k">rx</span> bol <span class="s">"DeletionDate"</span> (0+ blank) <span class="s">"="</span>
+                                     (0+ blank) (group (1+ nonl)))
+                                 nil t)
+                            (parse-iso8601-time-string (match-string 1))))))
+        (list sizenum datenum pathstr)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

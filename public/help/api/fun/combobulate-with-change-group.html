@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-with-change-group – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-with-change-group is a macro defined in
+combobulate-interface.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-with-change-group</code></h1><p><span class="m"><code>combobulate-with-change-group</code></span> is a macro defined in
+<span class="bt">combobulate-interface.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">combobulate-with-change-group</span> <span class="ty">&amp;rest</span> <span class="arg">BODY</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-interface.el</span>
+(<span class="k">defmacro</span> <span class="f">combobulate-with-change-group</span> (<span class="ty">&amp;rest</span> body)
+  (<span class="k">declare</span> (indent 0) (debug t))
+  (<span class="k">let</span> ((handle (gensym <span class="s">"--change-group-handle--"</span>))
+	(success (gensym <span class="s">"--change-group-success--"</span>))
+        (explicitly-cancelled (gensym <span class="s">"--change-group-explicitly-cancelled--"</span>)))
+    `(<span class="k">let</span> ((,handle (prepare-change-group))
+           (,explicitly-cancelled nil)
+	   <span class="cd">;; </span><span class="c">Don't truncate any undo data in the middle of this.
+</span>	   (undo-outer-limit nil)
+	   (undo-limit most-positive-fixnum)
+	   (undo-strong-limit most-positive-fixnum)
+	   (,success nil))
+       (<span class="k">cl-flet</span>
+           ((accept-changes () (accept-change-group ,handle))
+            (cancel-changes ()
+              (cancel-change-group ,handle)
+              (<span class="k">setq</span> ,explicitly-cancelled t)))
+         (<span class="k">unwind-protect</span>
+	     (<span class="k">progn</span>
+	       <span class="cd">;; </span><span class="c">This is inside the unwind-protect because
+</span>	       <span class="cd">;; </span><span class="c">it enables undo if that was disabled; we need
+</span>	       <span class="cd">;; </span><span class="c">to make sure that it gets disabled again.
+</span>	       (activate-change-group ,handle)
+	       (<span class="k">prog1</span> ,(macroexp-progn body)
+                 (<span class="k">setq</span> ,success t)))
+	   <span class="cd">;; </span><span class="c">Either of these functions will disable undo
+</span>	   <span class="cd">;; </span><span class="c">if it was disabled before.
+</span>	   (<span class="k">cond</span>
+            <span class="cd">;; </span><span class="c">If we explicitly cancelled, do not cancel or accept the
+</span>            <span class="cd">;; </span><span class="c">changes.
+</span>            (,explicitly-cancelled nil)
+            (,success (accept-changes))
+	    (t (cancel-changes))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

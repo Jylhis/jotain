@@ -1,0 +1,88 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--directory-prompt – Emacs Documentation Online</title>
+<meta name="description" content="consult--directory-prompt is a natively compiled function defined in
+consult.el.
+Return prompt, paths and default directory.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--directory-prompt</code></h1><p><span class="m"><code>consult--directory-prompt</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--directory-prompt <a href="#:~:text=directory.-,PROMPT"><span class="arg">PROMPT</span></a> <a href="#:~:text=If-,DIR"><span class="arg">DIR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return prompt, paths and default directory.
+<p><span class="arg">PROMPT</span> is the prompt prefix.  The directory is appended to the
+prompt prefix.  For projects only the project name is shown.  The
+<a href="../var/default-directory.html"><code>default-directory</code></a> is not shown.  Other directories are
+abbreviated and only the last two path components are shown.
+<p>If <span class="arg">DIR</span> is a string, it is returned as default directory.  If <span class="arg">DIR</span>
+is a list of strings, the list is returned as search paths.  If
+<span class="arg">DIR</span> is nil the <a href="../var/consult-project-function.html"><code>consult-project-function</code></a> is tried to retrieve
+the default directory.  If no project is found the
+<a href="../var/default-directory.html"><code>default-directory</code></a> is returned as is.  Otherwise the user is
+asked for the directories or files to search via
+<a href="../fun/completing-read-multiple.html"><code>completing-read-multiple</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--directory-prompt</span> (prompt dir)
+  <span class="doc">"Return prompt, paths and default directory.
+
+PROMPT is the prompt prefix.  The directory is appended to the
+prompt prefix.  For projects only the project name is shown.  The
+`</span><span class="m doc">default-directory</span><span class="doc">' is not shown.  Other directories are
+abbreviated and only the last two path components are shown.
+
+If DIR is a string, it is returned as default directory.  If DIR
+is a list of strings, the list is returned as search paths.  If
+DIR is nil the `</span><span class="m doc">consult-project-function</span><span class="doc">' is tried to retrieve
+the default directory.  If no project is found the
+`</span><span class="m doc">default-directory</span><span class="doc">' is returned as is.  Otherwise the user is
+asked for the directories or files to search via
+`</span><span class="m doc">completing-read-multiple</span><span class="doc">'."</span>
+  (<span class="k">let*</span> ((paths nil)
+         (dir
+          (<span class="k">pcase</span> dir
+            ((pred stringp) dir)
+            ((<span class="k">or</span> 'nil '(16)) (<span class="k">or</span> (consult--project-root dir) default-directory))
+            (_
+             (<span class="k">pcase</span> (<span class="k">if</span> (stringp (car-safe dir))
+                        dir
+                      <span class="cd">;; </span><span class="c">Preserve this-command across `</span><span class="m c">completing-read-multiple</span><span class="c">' call,
+</span>                      <span class="cd">;; </span><span class="c">such that `</span><span class="m c">consult-customize</span><span class="c">' continues to work.
+</span>                      (<span class="k">let</span> ((this-command this-command)
+                            (def (abbreviate-file-name default-directory))
+                            <span class="cd">;; </span><span class="c">bug#75910: category instead of `</span><span class="m c">minibuffer-completing-file-name</span><span class="c">'
+</span>                            (minibuffer-completing-file-name t)
+                            (ignore-case read-file-name-completion-ignore-case))
+                        (<span class="k">minibuffer-with-setup-hook</span>
+                            (<span class="k">lambda</span> ()
+                              (<span class="k">setq-local</span> completion-ignore-case ignore-case)
+                              (set-syntax-table minibuffer-local-filename-syntax))
+                          (completing-read-multiple <span class="s">"Dirs or files: "</span>
+                                                    #'completion-file-name-table
+                                                    nil t def 'consult--path-history def))))
+               ((<span class="k">and</span> `(,p) (guard (file-directory-p p))) p)
+               (ps (<span class="k">setq</span> paths (mapcar (<span class="k">lambda</span> (p)
+                                         (file-relative-name (expand-file-name p)))
+                                       ps))
+                   default-directory)))))
+         (edir (file-name-as-directory (expand-file-name dir)))
+         (pdir (<span class="k">let</span> ((default-directory edir))
+                 <span class="cd">;; </span><span class="c">Bind default-directory in order to find the project
+</span>                 (consult--project-root))))
+    (list
+     (format <span class="s">"%s (%s): "</span> prompt
+             (<span class="k">pcase</span> paths
+               ((guard (&lt;= 1 (length paths) 2))
+                (string-join (mapcar #'consult--left-truncate-file paths) <span class="s">", "</span>))
+               (`(,p . ,_)
+                (format <span class="s">"%d paths, %s, …"</span> (length paths) (consult--left-truncate-file p)))
+               ((guard (equal edir pdir)) (concat <span class="s">"Project "</span> (consult--project-name pdir)))
+               (_ (consult--left-truncate-file edir))))
+     (<span class="k">or</span> paths '(<span class="s">"."</span>))
+     edir)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

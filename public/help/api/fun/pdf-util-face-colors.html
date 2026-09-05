@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-util-face-colors – Emacs Documentation Online</title>
+<meta name="description" content="pdf-util-face-colors is a natively compiled function defined in
+pdf-util.el.
+Return both colors of FACE as a cons.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-util-face-colors</code></h1><p><span class="m"><code>pdf-util-face-colors</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">pdf-util.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-util-face-colors <a href="#:~:text=of-,FACE"><span class="arg">FACE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,DARK-P"><span class="arg">DARK-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return both colors of <span class="arg">FACE</span> as a cons.
+<p>Look also in inherited faces.  If <span class="arg">DARK-P</span> is non-nil, return dark
+colors, otherwise light.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-util.el</span>
+(<span class="k">defun</span> <span class="f">pdf-util-face-colors</span> (face <span class="ty">&amp;optional</span> dark-p)
+  <span class="doc">"Return both colors of FACE as a cons.
+
+Look also in inherited faces.  If DARK-P is non-nil, return dark
+colors, otherwise light."</span>
+  (<span class="k">let*</span> ((bg (<span class="k">if</span> dark-p 'dark 'light))
+         (spec (list (get face 'face-defface-spec)
+                     (get face 'theme-face)
+                     (get face 'customized-face)))
+         (cached (gethash face pdf-util--face-colors-cache)))
+    (<span class="k">cl-destructuring-bind</span> (<span class="ty">&amp;optional</span> cspec color-alist)
+        cached
+      (<span class="k">or</span> (<span class="k">and</span> color-alist
+               (equal cspec spec)
+               (cdr (assq bg color-alist)))
+          (<span class="k">let*</span> ((this-bg (frame-parameter nil 'background-mode))
+                 (frame-background-mode bg)
+                 (f (<span class="k">and</span> (not (eq bg this-bg))
+                         (x-create-frame-with-faces '((visibility . nil))))))
+            (<span class="k">with-selected-frame</span> (<span class="k">or</span> f (selected-frame))
+              (<span class="k">unwind-protect</span>
+                  (<span class="k">let</span> ((colors
+                         (cons (face-attribute face <span class="bi">:foreground</span> nil 'default)
+                               (face-attribute face <span class="bi">:background</span> nil 'default))))
+                    (puthash face `(,(mapcar #'copy-sequence spec)
+                                    ((,bg . ,colors) ,@color-alist))
+                             pdf-util--face-colors-cache)
+                    colors)
+                (<span class="k">when</span> (<span class="k">and</span> f (frame-live-p f))
+                  (delete-frame f)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,38 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit--cherry-pick – Emacs Documentation Online</title>
+<meta name="description" content="magit--cherry-pick is a natively compiled function defined in
+magit-sequence.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit--cherry-pick</code></h1><p><span class="m"><code>magit--cherry-pick</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-sequence.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit--cherry-pick <span class="arg">COMMITS</span> <span class="arg">ARGS</span> <span class="ty">&amp;optional</span> <span class="arg">REVERT</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-sequence.el</span>
+(<span class="k">defun</span> <span class="f">magit--cherry-pick</span> (commits args <span class="ty">&amp;optional</span> revert)
+  (<span class="k">let</span> ((command (<span class="k">if</span> revert <span class="s">"revert"</span> <span class="s">"cherry-pick"</span>)))
+    (<span class="k">when</span> (stringp commits)
+      (<span class="k">setq</span> commits (<span class="k">if</span> (string-search <span class="s">".."</span> commits)
+                        (split-string commits <span class="s">"\\.\\."</span>)
+                      (list commits))))
+    (magit-run-git-sequencer
+     (<span class="k">if</span> revert <span class="s">"revert"</span> <span class="s">"cherry-pick"</span>)
+     (<span class="k">let</span> ((merges (seq-filter #'magit-merge-commit-p commits)))
+       (<span class="k">cond</span>
+         ((not merges)
+          (seq-remove (##string-prefix-p <span class="s">"--mainline="</span> %) args))
+         ((cl-set-difference commits merges <span class="bi">:test</span> #'equal)
+          (<span class="w">user-error</span> <span class="s">"Cannot %s merge and non-merge commits at once"</span>
+                      command))
+         ((seq-find (##string-prefix-p <span class="s">"--mainline="</span> %) args)
+          args)
+         ((cons (format <span class="s">"--mainline=%s"</span>
+                        (read-number <span class="s">"Replay merges relative to parent: "</span>))
+                args))))
+     commits)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,72 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sqlind-beginning-of-block – Emacs Documentation Online</title>
+<meta name="description" content="sqlind-beginning-of-block is an interactive and natively compiled
+function defined in sql-indent.el.
+Find the start of the current block and return its syntax.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sqlind-beginning-of-block</code></h1><p><span class="m"><code>sqlind-beginning-of-block</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">sql-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(sqlind-beginning-of-block <span class="ty">&amp;optional</span> <a href="#:~:text=syntax.-,END-STATEMENT-STACK"><span class="arg">END-STATEMENT-STACK</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find the start of the current block and return its syntax.
+<p><span class="arg">END-STATEMENT-STACK</span> contains a list of "end" syntaxes in
+reverse order (a stack) and is used to skip over nested blocks.
+<h2>Key Bindings</h2>
+<p><span class="v">sqlind-minor-mode-map</span> <span class="key">C-M-&lt;home&gt;</span>
+<span class="v">sqlind-minor-mode-map</span> <span class="key">C-M-a</span>
+<span class="v">sqlind-minor-mode-map</span> <span class="key">ESC C-&lt;home&gt;</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vgm6xb2iy00bs19rdw9z3nfi5nf8g873-emacs-packages-deps/share/emacs/site-lisp/elpa/sql-indent-1.7/sql-indent.el</span>
+(<span class="k">defun</span> <span class="f">sqlind-beginning-of-block</span> (<span class="ty">&amp;optional</span> end-statement-stack)
+  <span class="doc">"Find the start of the current block and return its syntax.
+
+END-STATEMENT-STACK contains a list of \"end\" syntaxes in
+reverse order (a stack) and is used to skip over nested blocks."</span>
+  (<span class="k">interactive</span>)
+  <span class="cd">;; </span><span class="c">This function works as follows: `sqlind-start-block-regexp` defines the
+</span>  <span class="cd">;; </span><span class="c">keywords where it stops to inspect the code.  Each time it stops at one
+</span>  <span class="cd">;; </span><span class="c">of these keywords, it checks to see if the keyword is inside a comment or
+</span>  <span class="cd">;; </span><span class="c">string.  If the keyworkd is not inside a comment or string, the
+</span>  <span class="cd">;; </span><span class="c">`sqlind-maybe-*` functions are called to check if the keyword is valid.
+</span>  <span class="cd">;; </span><span class="c">Each of these functions will do one of the following:
+</span>  <span class="cd">;;</span><span class="c">
+</span>  <span class="cd">;; </span><span class="c">* throw a syntax object with a 'finished tag, if they decide that the
+</span>  <span class="cd">;;   </span><span class="c">keyword is valid
+</span>  <span class="cd">;;</span><span class="c">
+</span>  <span class="cd">;; </span><span class="c">* return t to indicate that they decided that the keyword is not valid
+</span>  <span class="cd">;;   </span><span class="c">and `sqlind-beginning-of-block` should search for the next keyword
+</span>  <span class="cd">;;</span><span class="c">
+</span>  <span class="cd">;; </span><span class="c">* return nil to indicate that they don't recognize the keyword and
+</span>  <span class="cd">;;   </span><span class="c">another `sqlind-maybe-*` function should be called
+</span>  <span class="cd">;;</span><span class="c">
+</span>  <span class="cd">;; </span><span class="c">Some of these `sqlind-maybe-*` functions are specific to the
+</span>  <span class="cd">;; </span><span class="c">`sql-product` and are only invoked for the speficied SQL dialect.
+</span>
+  (<span class="k">catch</span> '<span class="m">finished</span>
+    (<span class="k">let</span> ((sqlind-end-stmt-stack end-statement-stack))
+      (<span class="k">while</span> (re-search-backward sqlind-start-block-regexp sqlind-search-limit 'noerror)
+        (<span class="k">or</span> (sqlind-in-comment-or-string (point))
+            (<span class="k">when</span> (looking-at <span class="s">")"</span>) (forward-char 1) (forward-sexp -1) t)
+            (sqlind-maybe-end-statement)
+            (sqlind-maybe-if-statement)
+            (sqlind-maybe-case-statement)
+            (sqlind-maybe-then-statement)
+            (sqlind-maybe-exception-statement)
+            (sqlind-maybe-else-statement)
+            (sqlind-maybe-loop-statement)
+            (sqlind-maybe-begin-statement)
+            (<span class="k">when</span> (memq sql-product '(oracle postgres))
+              <span class="cd">;; </span><span class="c">declare statements only start blocks in PL/SQL and PostgresSQL
+</span>              (sqlind-maybe-declare-statement))
+            (<span class="k">when</span> (eq sql-product 'postgres)
+              (sqlind-maybe-$$-statement))
+            (sqlind-maybe-create-statement)
+            (sqlind-maybe-defun-statement))))
+    'toplevel))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

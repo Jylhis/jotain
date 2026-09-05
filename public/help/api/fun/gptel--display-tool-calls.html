@@ -1,0 +1,139 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--display-tool-calls – Emacs Documentation Online</title>
+<meta name="description" content="gptel--display-tool-calls is a natively compiled function defined in
+gptel.el.
+Handle tool call confirmation.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--display-tool-calls</code></h1><p><span class="m"><code>gptel--display-tool-calls</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--display-tool-calls <a href="#:~:text=confirmation.-,TOOL-CALLS"><span class="arg">TOOL-CALLS</span></a> <a href="#:~:text=confirmed.-,INFO"><span class="arg">INFO</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=if-,USE-MINIBUFFER"><span class="arg">USE-MINIBUFFER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle tool call confirmation.
+<p><span class="arg">TOOL-CALLS</span> should be a list of tool call specifications or results,
+structured as:
+<p>&nbsp;((tool args callback) ...)
+<p>for tool call specifications to be confirmed.  <span class="arg">INFO</span> contains the
+state of the request.  To prompt for tool call confirmation, use
+either an overlay in the request buffer or the minibuffer (if
+<span class="arg">USE-MINIBUFFER</span> is non-nil).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--display-tool-calls</span> (tool-calls info <span class="ty">&amp;optional</span> use-minibuffer)
+  <span class="doc">"Handle tool call confirmation.
+
+TOOL-CALLS should be a list of tool call specifications or results,
+structured as:
+
+ ((tool args callback) ...)
+
+for tool call specifications to be confirmed.  INFO contains the
+state of the request.  To prompt for tool call confirmation, use
+either an overlay in the request buffer or the minibuffer (if
+USE-MINIBUFFER is non-nil)."</span>
+  (<span class="k">let*</span> ((start-marker (plist-get info <span class="bi">:position</span>))
+         (tracking-marker (plist-get info <span class="bi">:tracking-marker</span>)))
+    <span class="cd">;; </span><span class="c">pending tool calls look like ((tool callback args) ...)
+</span>    (<span class="k">with-current-buffer</span> (marker-buffer start-marker)
+      (<span class="k">if</span> (<span class="k">or</span> use-minibuffer   <span class="cd">;</span><span class="c">prompt for confirmation from the minibuffer
+</span>              buffer-read-only <span class="cd">;</span><span class="c">TEMP(tool-preview) Handle read-only buffers better
+</span>              (get-char-property
+               (max (point-min) (1- (<span class="k">or</span> tracking-marker start-marker)))
+               'read-only))
+          (<span class="k">let*</span> ((minibuffer-allow-text-properties t)
+                 (backend-name (gptel-backend-name (plist-get info <span class="bi">:backend</span>)))
+                 (tool-call-names
+                  (mapconcat (<span class="k">lambda</span> (c) (propertize (gptel-tool-name (car c))
+                                                'face 'font-lock-keyword-face))
+                             tool-calls <span class="s">", "</span>))
+                 (len (length tool-calls))
+                 (prompt (format <span class="s">"%s wants to run %s tool %s (%s). "</span>
+                                 backend-name len (<span class="k">if</span> (&gt; len 1) <span class="s">"calls"</span> <span class="s">"call"</span>)
+                                 tool-call-names))
+                 (choices '((?y <span class="s">"Run tools"</span>) (?n <span class="s">"Cancel (resumable)"</span>)
+                            (?i <span class="s">"Inspect or edit"</span>)))
+                 (choice (read-multiple-choice prompt choices)))
+            (<span class="k">pcase</span> (car choice)
+              (?y (gptel--accept-tool-calls tool-calls))
+              (?n (gptel--reject-tool-calls))
+              (?i (gptel--inspect-tool-calls tool-calls info))))
+        <span class="cd">;; </span><span class="c">Prompt for confirmation from the response buffer
+</span>        (<span class="k">let*</span> ((backend-name (gptel-backend-name (plist-get info <span class="bi">:backend</span>)))
+               (actions-string
+                (concat (propertize <span class="s">"Run tools: "</span> 'face 'font-lock-string-face)
+                        (propertize <span class="s">"C-c C-c"</span> 'face 'help-key-binding)
+                        (propertize <span class="s">", Cancel request: "</span> 'face 'font-lock-string-face)
+                        (propertize <span class="s">"C-c C-k"</span> 'face 'help-key-binding)
+                        (propertize <span class="s">", Inspect or Edit: "</span> 'face 'font-lock-string-face)
+                        (propertize <span class="s">"C-c C-i"</span> 'face 'help-key-binding)))
+               (confirm-strings)
+               <span class="cd">;; </span><span class="c">FIXME(tool) use a wrapper instead of a manual text-property search,
+</span>               <span class="cd">;; </span><span class="c">this is fragile
+</span>               (ov-start (<span class="k">save-excursion</span>
+                           (goto-char start-marker)
+                           (text-property-search-backward 'gptel 'response)
+                           (point)))
+               (preview-handlers)
+               (ov (<span class="k">or</span> (cdr-safe (get-char-property-and-overlay
+                                  start-marker 'gptel-tool))
+                       (make-overlay ov-start (<span class="k">or</span> tracking-marker start-marker)
+                                     nil nil nil)))
+               (arg-values)
+               (prompt-ov))
+          <span class="cd">;; </span><span class="c">If the cursor is at the overlay-end, it ends up outside, so move it back
+</span>          (<span class="k">unless</span> tracking-marker
+            (<span class="k">when</span> (= (point) start-marker) (<span class="k">ignore-errors</span> (backward-char))))
+          (<span class="k">save-excursion</span>
+            (goto-char (overlay-end ov))
+            (<span class="k">pcase-dolist</span> (`(,tool-spec ,arg-plist _) tool-calls)
+              <span class="cd">;; </span><span class="c">Call tool-specific confirmation prompt
+</span>              (<span class="k">setq</span> arg-values (gptel--map-tool-args tool-spec arg-plist))
+              (<span class="k">if-let*</span> ((funcs (cdr (assoc (gptel-tool-name tool-spec)
+                                           gptel--tool-preview-alist)))
+                        ((functionp (car-safe funcs))))
+                  <span class="cd">;;</span><span class="c">preview-teardown func   preview-handle overlay/buffer
+</span>                  (<span class="k">push</span> (list (cadr funcs) (funcall (car funcs) arg-values info))
+                        preview-handlers)
+                (<span class="k">push</span> (gptel--format-tool-call (gptel-tool-name tool-spec) arg-values)
+                      confirm-strings)))
+            (<span class="k">and</span> confirm-strings (apply #'insert (nreverse confirm-strings)))
+            (add-text-properties (overlay-end ov) (1- (point))
+                                 '(read-only t font-lock-fontified t))
+            (<span class="k">setq</span> prompt-ov (make-overlay (overlay-end ov) (point) nil t))
+            (overlay-put
+             prompt-ov 'before-string
+             (concat
+              <span class="s">"\n"</span>
+              (propertize <span class="s">" "</span> 'display `(space <span class="bi">:align-to</span> (- right ,(length actions-string) 2))
+                          'face '(<span class="bi">:inherit</span> font-lock-string-face <span class="bi">:underline</span> t <span class="bi">:extend</span> t))
+              actions-string
+              (format (propertize <span class="s">"\n%s wants to run:\n\n"</span>
+                                  'face 'font-lock-string-face)
+                      backend-name)))
+            (overlay-put
+             prompt-ov 'after-string
+             (concat (propertize <span class="s">"\n"</span> 'face
+                                 '(<span class="bi">:inherit</span> font-lock-string-face <span class="bi">:underline</span> t <span class="bi">:extend</span> t))))
+            (overlay-put prompt-ov 'evaporate t)
+            (overlay-put ov 'prompt (cons prompt-ov (overlay-get ov 'prompt)))
+            (move-overlay ov ov-start (point)))
+          <span class="cd">;; </span><span class="c">Add confirmation prompt to the overlay
+</span>          (<span class="k">when</span> preview-handlers
+            (overlay-put ov 'previews
+                         (nconc (overlay-get ov 'previews) preview-handlers)))
+          <span class="cd">;; </span><span class="c">Including INFO is required for tool call inspection (state
+</span>          <span class="cd">;; </span><span class="c">management and updates)
+</span>          (overlay-put ov 'info info)
+          (overlay-put ov 'mouse-face 'highlight)
+          (overlay-put ov 'gptel-tool
+                       (nconc (overlay-get ov 'gptel-tool) tool-calls))
+          (overlay-put ov 'help-echo
+                       (concat <span class="s">"Tool call(s) requested: "</span> actions-string))
+          (overlay-put ov 'keymap gptel-tool-call-actions-map)
+          prompt-ov)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

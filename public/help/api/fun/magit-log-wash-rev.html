@@ -1,0 +1,168 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-log-wash-rev – Emacs Documentation Online</title>
+<meta name="description" content="magit-log-wash-rev is a natively compiled function defined in
+magit-log.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-log-wash-rev</code></h1><p><span class="m"><code>magit-log-wash-rev</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-log.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-log-wash-rev <span class="arg">STYLE</span> <span class="arg">ABBREV</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-log.el</span>
+(<span class="k">cl-defun</span> <span class="f">magit-log-wash-rev</span> (style abbrev)
+  (<span class="k">when</span> (derived-mode-p 'magit-log-mode 'magit-reflog-mode)
+    (<span class="k">incf</span> magit-log-count))
+  (looking-at (<span class="k">pcase</span> style
+                ('log        magit-log-heading-re)
+                ('cherry     magit-log-cherry-re)
+                ('module     magit-log-module-re)
+                ('reflog     magit-log-reflog-re)
+                ('stash      magit-log-stash-re)
+                ('bisect-vis magit-log-bisect-vis-re)
+                ('bisect-log magit-log-bisect-log-re)))
+  (<span class="k">let*</span> ((hash     (match-str 1))
+         (msg      (match-str 2))
+         (refs     (match-str 3))
+         (refs     (<span class="k">and</span> refs (magit-format-ref-labels refs)))
+         (graph    (match-string 4))
+         (author   (match-str 5))
+         (date     (match-str 6))
+         (gpg      (match-str 7))
+         (cherry   (match-str 8))
+         (refsub   (match-str 10))
+         (side     (match-str 11))
+         (trailers (match-str 12))
+         (trailers (<span class="k">and</span> trailers
+                        (funcall (car magit-log-trailer-labels)
+                                 (mapcar (##split-string % <span class="s">"&#31;"</span>)
+                                         (split-string trailers <span class="s">"&#30;"</span>)))))
+         (align    (<span class="k">or</span> (eq style 'cherry)
+                       (not (member <span class="s">"--stat"</span> magit-buffer-log-args))))
+         (non-graph-re (<span class="k">if</span> (eq style 'bisect-vis)
+                           magit-log-bisect-vis-re
+                         magit-log-heading-re)))
+    (magit-delete-line)
+    <span class="cd">;; </span><span class="c">If the reflog entries have been pruned, the output of `git
+</span>    <span class="cd">;; </span><span class="c">reflog show' includes a partial line that refers to the hash
+</span>    <span class="cd">;; </span><span class="c">of the youngest expired reflog entry.
+</span>    (<span class="k">when</span> (<span class="k">and</span> (eq style 'reflog) (not date))
+      (<span class="k">cl-return-from</span> magit-log-wash-rev t))
+    (<span class="k">magit-insert-section</span>
+        ((eval (<span class="k">pcase</span> style
+                 ('stash  'stash)
+                 ('module 'module-commit)
+                 (_       'commit)))
+         hash)
+      (<span class="k">setq</span> hash (propertize (<span class="k">if</span> (eq style 'bisect-log)
+                                 (magit-rev-parse <span class="s">"--short"</span> hash)
+                               hash)
+                             'font-lock-face
+                             (<span class="k">pcase</span> (<span class="k">and</span> gpg (aref gpg 0))
+                               (?G 'magit-signature-good)
+                               (?B 'magit-signature-bad)
+                               (?U 'magit-signature-untrusted)
+                               (?X 'magit-signature-expired)
+                               (?Y 'magit-signature-expired-key)
+                               (?R 'magit-signature-revoked)
+                               (?E 'magit-signature-error)
+                               (?N 'magit-hash)
+                               (_  'magit-hash))))
+      (<span class="k">when</span> cherry
+        (<span class="k">when</span> (<span class="k">and</span> (derived-mode-p 'magit-refs-mode)
+                   magit-refs-show-commit-count)
+          (insert (make-string (1- magit-refs-focus-column-width) ?\s)))
+        (insert (propertize cherry 'font-lock-face
+                            (<span class="k">if</span> (string= cherry <span class="s">"-"</span>)
+                                'magit-cherry-equivalent
+                              'magit-cherry-unmatched)))
+        (insert ?\s))
+      (<span class="k">when</span> side
+        (insert (propertize side 'font-lock-face
+                            (<span class="k">if</span> (string= side <span class="s">"&lt;"</span>)
+                                'magit-cherry-equivalent
+                              'magit-cherry-unmatched)))
+        (insert ?\s))
+      (<span class="k">when</span> align
+        (insert hash ?\s))
+      (<span class="k">when</span> graph
+        (insert graph))
+      (<span class="k">unless</span> align
+        (insert hash ?\s))
+      (<span class="k">unless</span> magit-log-show-refname-after-summary
+        (<span class="k">when</span> refs
+          (insert refs ?\s))
+        (<span class="k">when</span> trailers
+          (insert trailers ?\s)))
+      (<span class="k">when</span> (eq style 'reflog)
+        (insert (format <span class="s">"%-2s "</span> (1- magit-log-count)))
+        (<span class="k">when</span> refsub
+          (insert (magit-reflog-format-subject
+                   (substring refsub 0
+                              (<span class="k">if</span> (string-search <span class="s">":"</span> refsub) -2 -1))))))
+      (insert (magit-log--wash-summary msg))
+      (<span class="k">when</span> magit-log-show-refname-after-summary
+        (<span class="k">when</span> refs
+          (insert ?\s refs))
+        (<span class="k">when</span> trailers
+          (insert ?\s trailers)))
+      (insert ?\n)
+      (<span class="k">when</span> (memq style '(log reflog stash))
+        (goto-char (line-beginning-position))
+        (<span class="k">when</span> (<span class="k">and</span> refsub
+                   (string-match <span class="s">"\\`</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s"> ]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> \\+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">..</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">..</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> date))
+          (<span class="k">setq</span> date (+ (string-to-number (match-str 1 date))
+                        (* (string-to-number (match-str 2 date)) 60 60)
+                        (* (string-to-number (match-str 3 date)) 60))))
+        (magit-log-format-margin hash author date))
+      (<span class="k">when</span> (<span class="k">and</span> (eq style 'cherry)
+                 (magit--right-margin-active))
+        (apply #'magit-log-format-margin hash
+               (split-string (magit-rev-format <span class="s">"%aN%x00%ct"</span> hash) <span class="s">"\0"</span>)))
+      (<span class="k">when</span> (<span class="k">and</span> graph
+                 (not (eobp))
+                 (not (looking-at non-graph-re)))
+        (<span class="k">when</span> (looking-at <span class="s">"&#30;"</span>)
+          (<span class="k">magit-insert-heading</span>)
+          (delete-char 1)
+          (<span class="k">magit-insert-section</span> (commit-header)
+            (forward-line)
+            (<span class="k">magit-insert-heading</span>)
+            (re-search-forward <span class="s">"&#30;"</span>)
+            (delete-char -1)
+            (forward-char)
+            (insert ?\n))
+          (delete-char 1))
+        (<span class="k">if</span> (looking-at <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">---</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\n\s</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\ndiff</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+            (<span class="k">let</span> ((limit (<span class="k">save-excursion</span>
+                           (<span class="k">and</span> (re-search-forward non-graph-re nil t)
+                                (match-beginning 0)))))
+              (<span class="k">unless</span> (<span class="k">oref</span> magit-insert-section--current content)
+                (<span class="k">magit-insert-heading</span>))
+              (delete-char (<span class="k">if</span> (looking-at <span class="s">"\n"</span>) 1 4))
+              (magit-diff-wash-diffs (list <span class="s">"--stat"</span>) limit))
+          (<span class="k">when</span> align
+            (<span class="k">setq</span> align (make-string (1+ abbrev) ?\s)))
+          (<span class="k">when</span> (<span class="k">and</span> (not (eobp)) (not (looking-at non-graph-re)))
+            (<span class="k">when</span> align
+              (<span class="k">setq</span> align (make-string (1+ abbrev) ?\s)))
+            (<span class="k">while</span> (<span class="k">and</span> (not (eobp)) (not (looking-at non-graph-re)))
+              (<span class="k">when</span> align
+                (<span class="k">save-excursion</span> (insert align)))
+              (forward-line)
+              (magit-make-margin-overlay))
+            <span class="cd">;; </span><span class="c">When "--format" is used and its value isn't one of the
+</span>            <span class="cd">;; </span><span class="c">predefined formats, then "git log" does not insert a
+</span>            <span class="cd">;; </span><span class="c">separator line.
+</span>            (<span class="k">save-excursion</span>
+              (forward-line -1)
+              (looking-at <span class="s">"[-_/|\\*o&lt;&gt;. ]*"</span>))
+            (<span class="k">setq</span> graph (match-string 0))
+            (<span class="k">unless</span> (string-match-p <span class="s">"[/\\.]"</span> graph)
+              (insert graph ?\n)))))))
+  t)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

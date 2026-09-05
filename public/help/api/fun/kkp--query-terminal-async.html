@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: kkp--query-terminal-async – Emacs Documentation Online</title>
+<meta name="description" content="kkp--query-terminal-async is a natively compiled function defined in
+kkp.el.
+Send QUERY string to TERMINAL and register HANDLERS for a response.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>kkp--query-terminal-async</code></h1><p><span class="m"><code>kkp--query-terminal-async</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">kkp.el</span>.
+<h2>Signature</h2>
+<pre><code>(kkp--query-terminal-async <a href="#:~:text=Send-,QUERY"><span class="arg">QUERY</span></a> <a href="#:~:text=register-,HANDLERS"><span class="arg">HANDLERS</span></a> <a href="#:~:text=to-,TERMINAL"><span class="arg">TERMINAL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Send <span class="arg">QUERY</span> string to <span class="arg">TERMINAL</span> and register <span class="arg">HANDLERS</span> for a response.
+<p><span class="arg">HANDLERS</span> is an alist with elements of the form (STRING . FUNCTION).
+We run the first FUNCTION whose STRING matches the input events.
+This function code is copied from <a href="../fun/xterm--query.html"><code>xterm--query</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/m2b3xmgxg24a6yvrhn2hs2kx62d820n5-emacs-packages-deps/share/emacs/site-lisp/elpa/kkp-20260706.858/kkp.el</span>
+(<span class="k">defun</span> <span class="f">kkp--query-terminal-async</span> (query handlers terminal)
+  <span class="doc">"Send QUERY string to TERMINAL and register HANDLERS for a response.
+HANDLERS is an alist with elements of the form (STRING . FUNCTION).
+We run the first FUNCTION whose STRING matches the input events.
+This function code is copied from `</span><span class="m doc">xterm--query</span><span class="doc">'."</span>
+  (<span class="k">with-selected-frame</span> (car (frames-on-display-list terminal))
+    (<span class="k">let</span> ((register
+           (<span class="k">lambda</span> (handlers)
+             (<span class="k">dolist</span> (handler handlers)
+               (define-key input-decode-map (car handler)
+                           (<span class="k">lambda</span> (<span class="ty">&amp;optional</span> _prompt)
+                             <span class="cd">;; </span><span class="c">Unregister the handler, since we don't expect
+</span>                             <span class="cd">;; </span><span class="c">further answers.
+</span>                             (<span class="k">dolist</span> (handler handlers)
+                               (define-key input-decode-map (car handler) nil))
+                             (funcall (cdr handler))
+                             []))))))
+
+      (funcall register handlers)
+      <span class="cd">;; </span><span class="c">A `</span><span class="m c">read-key-sequence</span><span class="c">' already in progress snapshotted `</span><span class="m c">input-decode-map</span><span class="c">'
+</span>      <span class="cd">;; </span><span class="c">before we registered our handler, so it would read the reply with the
+</span>      <span class="cd">;; </span><span class="c">stale map and let `CSI ?' leak into a buffer as keys (issue #21/#32).
+</span>      <span class="cd">;; </span><span class="c">Injecting a `</span><span class="m c">switch-frame</span><span class="c">' event forces that read to restart
+</span>      <span class="cd">;; </span><span class="c">(`</span><span class="m c">replay_entire_sequence</span><span class="c">' in the C reader), re-reading `</span><span class="m c">input-decode-map</span><span class="c">'
+</span>      <span class="cd">;; </span><span class="c">-- now with our handler -- before it reads the reply.
+</span>      (<span class="k">push</span> (list 'switch-frame (selected-frame)) unread-command-events)
+      (kkp--verbose <span class="s">"query (async): sending CSI %S to terminal"</span> query)
+      (send-string-to-terminal (kkp--csi-escape query) terminal)
+      (<span class="k">kkp--flush-standard-output</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--grep-format – Emacs Documentation Online</title>
+<meta name="description" content="consult--grep-format is a natively compiled function defined in
+consult.el.
+Async function highlighting grep match results.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--grep-format</code></h1><p><span class="m"><code>consult--grep-format</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--grep-format <a href="#:~:text=results.-,BUILDER"><span class="arg">BUILDER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Async function highlighting grep match results.
+<p><span class="arg">BUILDER</span> is the command line builder function.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+<span class="cd">;;;;; </span><span class="c">Command: consult-grep
+</span>
+(<span class="k">defun</span> <span class="f">consult--grep-format</span> (builder)
+  <span class="doc">"Async function highlighting grep match results.
+BUILDER is the command line builder function."</span>
+  (consult--async-transform-by-input
+   (<span class="k">lambda</span> (input)
+     (<span class="k">let</span> ((highlight (cdr (funcall builder input))))
+       (<span class="k">lambda</span> (cands)
+         (<span class="k">let</span> ((file <span class="s">""</span>) (file-len 0) result)
+           (<span class="k">save-match-data</span>
+             (<span class="k">dolist</span> (str cands (nreverse result))
+               (<span class="k">when</span> (string-match consult--grep-match-regexp str)
+                 <span class="cd">;; </span><span class="c">We share the file name across candidates to reduce
+</span>                 <span class="cd">;; </span><span class="c">the amount of allocated memory.
+</span>                 (<span class="k">unless</span> (<span class="k">and</span> (= file-len (- (match-end 1) (match-beginning 1)))
+                              (eq t (compare-strings
+                                     file 0 file-len
+                                     str (match-beginning 1) (match-end 1) nil)))
+                   (<span class="k">setq</span> file (match-string 1 str)
+                         file-len (length file)))
+                 (<span class="k">let*</span> ((line (match-string 2 str))
+                        (ctx (= (aref str (match-beginning 3)) ?-))
+                        (sep (<span class="k">if</span> ctx <span class="s">"-"</span> <span class="s">":"</span>))
+                        (content (substring str (match-end 0)))
+                        (line-len (length line)))
+                   (<span class="k">when</span> (<span class="k">and</span> consult-grep-max-columns
+                              (length&gt; content consult-grep-max-columns))
+                     (<span class="k">setq</span> content (substring content 0 consult-grep-max-columns)))
+                   (<span class="k">when</span> highlight
+                     (funcall highlight content))
+                   (<span class="k">setq</span> str (concat file sep line sep content))
+                   <span class="cd">;; </span><span class="c">Store file name in order to avoid allocations in `</span><span class="m c">consult--prefix-group</span><span class="c">'
+</span>                   (add-text-properties 0 file-len `(face consult-file consult--prefix-group ,file) str)
+                   (put-text-property (1+ file-len) (+ 1 file-len line-len) 'face 'consult-line-number str)
+                   (<span class="k">when</span> ctx
+                     (add-face-text-property (+ 2 file-len line-len) (length str) 'consult-grep-context 'append str))
+                   (<span class="k">push</span> str result)))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-api-request-sync – Emacs Documentation Online</title>
+<meta name="description" content="eca-api-request-sync is a natively compiled function defined in
+eca-api.el.
+Request sync the ECA server SESSION passing METHOD and PARAMS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-api-request-sync</code></h1><p><span class="m"><code>eca-api-request-sync</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-api.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-api-request-sync <a href="#:~:text=server-,SESSION"><span class="arg">SESSION</span></a> <span class="ty">&amp;key</span> <a href="#:~:text=passing-,METHOD"><span class="arg">METHOD</span></a> <a href="#:~:text=and-,PARAMS"><span class="arg">PARAMS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Request sync the ECA server <span class="arg">SESSION</span> passing <span class="arg">METHOD</span> and <span class="arg">PARAMS</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-api.el</span>
+(<span class="k">cl-defun</span> <span class="f">eca-api-request-sync</span> (session <span class="ty">&amp;key</span> method params)
+  <span class="doc">"Request sync the ECA server SESSION passing METHOD and PARAMS."</span>
+  (<span class="k">let*</span> ((send-time (float-time))
+         (expected-time (<span class="k">and</span> eca-api-response-timeout
+                             (+ send-time eca-api-response-timeout)))
+         resp-result resp-error)
+    (eca-api-request-async
+     session
+     <span class="bi">:method</span> method
+     <span class="bi">:params</span> params
+     <span class="bi">:success-callback</span> (<span class="k">lambda</span> (res) (<span class="k">setf</span> resp-result (<span class="k">or</span> res <span class="bi">:finished</span>)) (<span class="k">throw</span> '<span class="m">eca-done</span> '_))
+     <span class="bi">:error-callback</span> (<span class="k">lambda</span> (err) (<span class="k">setf</span> resp-error err) (<span class="k">throw</span> '<span class="m">eca-done</span> '_)))
+    (<span class="k">let</span> ((req-id eca--last-id))
+      (<span class="k">unwind-protect</span>
+          (<span class="k">progn</span>
+            (<span class="k">while</span> (not (<span class="k">or</span> resp-error resp-result))
+              (<span class="k">if</span> (functionp 'json-rpc-connection)
+                  (<span class="k">catch</span> '<span class="m">eca-done</span> (sit-for 0.01))
+                (<span class="k">catch</span> '<span class="m">eca-done</span>
+                  (accept-process-output
+                   (eca--session-process session)
+                   (<span class="k">if</span> expected-time (- expected-time send-time) 1))))
+              (<span class="k">setq</span> send-time (float-time))
+              (<span class="k">when</span> (<span class="k">and</span> expected-time (&lt; expected-time send-time))
+                (<span class="w">error</span> <span class="s">"Timeout while waiting for response.  Method: %s"</span> method)))
+            (<span class="k">cond</span>
+             ((eq resp-result <span class="bi">:finished</span>) nil)
+             (resp-result resp-result)
+             (resp-error (<span class="w">error</span> <span class="s">"%s"</span> resp-error))))
+        <span class="cd">;; </span><span class="c">Cleanup: remove stale handler on non-local exit (timeout, C-g, etc.)
+</span>        (<span class="k">unless</span> (<span class="k">or</span> resp-result resp-error)
+          (<span class="k">setf</span> (eca--session-response-handlers session)
+                (plist-put (eca--session-response-handlers session) req-id nil)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

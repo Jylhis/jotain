@@ -1,0 +1,88 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown – Emacs Documentation Online</title>
+<meta name="description" content="markdown is an interactive and natively compiled function defined in
+markdown-mode.el.
+Run markdown-command on buffer, sending output to OUTPUT-BUFFER-NAME.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown</code></h1><p><span class="m"><code>markdown</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown <span class="ty">&amp;optional</span> <a href="#:~:text=to-,OUTPUT-BUFFER-NAME"><span class="arg">OUTPUT-BUFFER-NAME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run <a href="../var/markdown-command.html"><code>markdown-command</code></a> on buffer, sending output to <span class="arg">OUTPUT-BUFFER-NAME</span>.
+<p>The output buffer name defaults to <a href="../var/markdown-output-buffer-name.html"><code>markdown-output-buffer-name</code></a>.
+Return the name of the output buffer used.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+<span class="cd">;;; </span><span class="c">Commands ==================================================================
+</span>
+(<span class="k">defun</span> <span class="f">markdown</span> (<span class="ty">&amp;optional</span> output-buffer-name)
+  <span class="doc">"Run `</span><span class="m doc">markdown-command</span><span class="doc">' on buffer, sending output to OUTPUT-BUFFER-NAME.
+The output buffer name defaults to `</span><span class="m doc">markdown-output-buffer-name</span><span class="doc">'.
+Return the name of the output buffer used."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">save-window-excursion</span>
+    (<span class="k">let*</span> ((commands (<span class="k">cond</span> ((stringp markdown-command) (split-string markdown-command))
+                           ((listp markdown-command) markdown-command)))
+           (command (car-safe commands))
+           (command-args (cdr-safe commands))
+           begin-region end-region)
+      (<span class="k">if</span> (use-region-p)
+          (<span class="k">setq</span> begin-region (region-beginning)
+                end-region (region-end))
+        (<span class="k">setq</span> begin-region (point-min)
+              end-region (point-max)))
+
+      (<span class="k">unless</span> output-buffer-name
+        (<span class="k">setq</span> output-buffer-name markdown-output-buffer-name))
+      (<span class="k">when</span> (<span class="k">and</span> (stringp command) (not (executable-find command)))
+        (<span class="w">user-error</span> <span class="s">"Markdown command %s is not found"</span> command))
+      (<span class="k">let</span> ((exit-code
+             (<span class="k">cond</span>
+              <span class="cd">;; </span><span class="c">Handle case when `</span><span class="m c">markdown-command</span><span class="c">' does not read from stdin
+</span>              ((<span class="k">and</span> (stringp command) markdown-command-needs-filename)
+               (<span class="k">if</span> (not buffer-file-name)
+                   (<span class="w">user-error</span> <span class="s">"Must be visiting a file"</span>)
+                 <span class="cd">;; </span><span class="c">Don’t use ‘</span><span class="m c">shell-command</span><span class="c">’ because it’s not guaranteed to
+</span>                 <span class="cd">;; </span><span class="c">return the exit code of the process.
+</span>                 (<span class="k">let</span> ((command (<span class="k">if</span> (listp markdown-command)
+                                    (string-join markdown-command <span class="s">" "</span>)
+                                  markdown-command)))
+                   (shell-command-on-region
+                    <span class="cd">;; </span><span class="c">Pass an empty region so that stdin is empty.
+</span>                    (point) (point)
+                    (concat command <span class="s">" "</span>
+                            (shell-quote-argument buffer-file-name))
+                    output-buffer-name))))
+              <span class="cd">;; </span><span class="c">Pass region to `</span><span class="m c">markdown-command</span><span class="c">' via stdin
+</span>              (t
+               (<span class="k">let</span> ((buf (get-buffer-create output-buffer-name)))
+                 (<span class="k">with-current-buffer</span> buf
+                   (<span class="k">setq</span> buffer-read-only nil)
+                   (erase-buffer))
+                 (<span class="k">if</span> (stringp command)
+                     (<span class="k">if</span> (not (null command-args))
+                         (apply #'call-process-region begin-region end-region command nil (list buf nil) nil command-args)
+                       (call-process-region begin-region end-region command nil (list buf nil)))
+                   (<span class="k">if</span> markdown-command-needs-filename
+                       (<span class="k">if</span> (not buffer-file-name)
+                           (<span class="w">user-error</span> <span class="s">"Must be visiting a file"</span>)
+                         (funcall markdown-command begin-region end-region buf buffer-file-name))
+                     (funcall markdown-command begin-region end-region buf))
+                   <span class="cd">;; </span><span class="c">If the ‘</span><span class="m c">markdown-command</span><span class="c">’ function didn’t signal an
+</span>                   <span class="cd">;; </span><span class="c">error, assume it succeeded by binding ‘</span><span class="m c">exit-code</span><span class="c">’ to 0.
+</span>                   0))))))
+        <span class="cd">;; </span><span class="c">The exit code can be a signal description string, so don’t use ‘</span><span class="m c">=</span><span class="c">’
+</span>        <span class="cd">;; </span><span class="c">or ‘</span><span class="m c">zerop</span><span class="c">’.
+</span>        (<span class="k">unless</span> (eq exit-code 0)
+          (<span class="w">user-error</span> <span class="s">"%s failed with exit code %s"</span>
+                      markdown-command exit-code))))
+    output-buffer-name))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

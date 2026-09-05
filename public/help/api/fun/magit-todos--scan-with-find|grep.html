@@ -1,0 +1,97 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-todos--scan-with-find|grep – Emacs Documentation Online</title>
+<meta name="description" content="magit-todos--scan-with-find|grep is a natively compiled function
+defined in magit-todos.el.
+Scan for to-dos with find|grep.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-todos--scan-with-find|grep</code></h1><p><span class="m"><code>magit-todos--scan-with-find|grep</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-todos.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-todos--scan-with-find|grep <span class="ty">&amp;key</span> <a href="#:~:text=CALLBACK.-,MAGIT-STATUS-BUFFER"><span class="arg">MAGIT-STATUS-BUFFER</span></a> <a href="#:~:text=says.-,DIRECTORY"><span class="arg">DIRECTORY</span></a> <a href="#:~:text=scan.-,DEPTH"><span class="arg">DEPTH</span></a> <a href="#:~:text=depth.-,HEADING"><span class="arg">HEADING</span></a> <a href="#:~:text=When-,SYNC"><span class="arg">SYNC</span></a> <a href="#:~:text=calls-,CALLBACK"><span class="arg">CALLBACK</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Scan for to-dos with find|grep.
+<p>Then calls <span class="arg">CALLBACK</span>.  <span class="arg">MAGIT-STATUS-BUFFER</span> is what it says.  <span class="arg">DIRECTORY</span>
+is the directory in which to run the scan.  <span class="arg">DEPTH</span> should be an
+integer, typically the value of <a href="../var/magit-todos-depth.html"><code>magit-todos-depth</code></a>.  <span class="arg">HEADING</span> is
+passed to <span class="arg">CALLBACK</span>.
+<p>When <span class="arg">SYNC</span> is nil, the scanner process is returned, and <span class="arg">CALLBACK</span>
+is a function which is called by the process sentinel with one
+argument, a list of match items.
+<p>When <span class="arg">SYNC</span> is non-nil, match items are returned.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/na5pd87dpfy16i19v2xzgb9ry6gjpyvw-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-todos-20250928.1611/magit-todos.el</span>
+(<span class="k">magit-todos-defscanner</span> <span class="s">"find|grep"</span>
+  <span class="cd">;; </span><span class="c">NOTE: The filenames output by find|grep have a leading "./".  I don't expect this scanner to be
+</span>  <span class="cd">;; </span><span class="c">used much, if at all, so I'm not going to go to the trouble to fix this now.
+</span>  <span class="bi">:availablep</span> (<span class="k">lambda</span> ()
+                (string-match <span class="s">"--perl-regexp"</span> (shell-command-to-string <span class="s">"grep --help"</span>)))
+  <span class="bi">:allow-exit-codes</span> (0 1)
+  <span class="bi">:command</span> (<span class="k">let*</span> ((grep-find-template (<span class="k">progn</span>
+                                        (<span class="k">unless</span> grep-find-template
+                                          (grep-compute-defaults))
+                                        (<span class="k">-&gt;&gt;</span> grep-find-template
+                                             (s-replace <span class="s">" grep "</span> <span class="s">" grep -b -E "</span>)
+                                             (s-replace <span class="s">" -nH "</span> <span class="s">" -H "</span>))))
+                  (_ (<span class="k">when</span> depth
+                       (<span class="k">setq</span> grep-find-template
+                             (s-replace <span class="s">" &lt;D&gt; "</span> (concat <span class="s">" &lt;D&gt; -maxdepth "</span> (1+ depth) <span class="s">" "</span>)
+                                        grep-find-template)))))
+             <span class="cd">;; </span><span class="c">Modified from `</span><span class="m c">rgrep-default-command</span><span class="c">'
+</span>             (list <span class="s">"find"</span> directory
+                   (list (<span class="k">when</span> grep-find-ignored-directories
+                           (list <span class="s">"-type"</span> <span class="s">"d"</span>
+                                 <span class="s">"("</span> <span class="s">"-path"</span>
+                                 (-interpose (list <span class="s">"-o"</span> <span class="s">"-path"</span>)
+                                             (-non-nil (<span class="k">--map</span> (<span class="k">cond</span> ((stringp it)
+                                                                     (concat <span class="s">"*/"</span> it))
+                                                                    ((consp it)
+                                                                     (<span class="k">and</span> (funcall (car it) it)
+                                                                          (concat <span class="s">"*/"</span> (cdr it)))))
+                                                              grep-find-ignored-directories)))
+                                 <span class="s">")"</span> <span class="s">"-prune"</span>))
+                         (<span class="k">when</span> grep-find-ignored-files
+                           (list <span class="s">"-o"</span> <span class="s">"-type"</span> <span class="s">"f"</span>
+                                 <span class="s">"("</span> <span class="s">"-name"</span>
+                                 (-interpose (list <span class="s">"-o"</span> <span class="s">"-name"</span>)
+                                             (<span class="k">--map</span> (<span class="k">cond</span> ((stringp it) it)
+                                                          ((consp it) (<span class="k">and</span> (funcall (car it) it)
+                                                                           (cdr it))))
+                                                    grep-find-ignored-files))
+                                 <span class="s">")"</span> <span class="s">"-prune"</span>))
+                         (<span class="k">when</span> magit-todos-exclude-globs
+                           (list <span class="s">"-o"</span> <span class="s">"("</span>
+                                 (-interpose (list <span class="s">"-o"</span>)
+                                             (<span class="k">--map</span> (list <span class="s">"-iname"</span>
+                                                          <span class="cd">;; </span><span class="c">Arguments to "-iname" must not end in "/".
+</span>                                                          (replace-regexp-in-string (<span class="k">rx</span> <span class="s">"/"</span> eos) <span class="s">""</span> it))
+                                                    magit-todos-exclude-globs))
+                                 <span class="s">")"</span> <span class="s">"-prune"</span>))
+                         (<span class="k">unless</span> magit-todos-submodule-list
+                           (<span class="k">when</span> (magit-list-module-paths)
+                             (list <span class="s">"-o"</span> <span class="s">"("</span>
+                                   (<span class="k">--map</span> (list <span class="s">"-ipath"</span> it)
+                                          (magit-list-module-paths))
+                                   <span class="s">")"</span> <span class="s">"-prune"</span>))))
+                   (list <span class="s">"-o"</span> <span class="s">"-type"</span> <span class="s">"f"</span>)
+                   <span class="cd">;; </span><span class="c">NOTE: This uses "grep -P", i.e. "Interpret the pattern as a
+</span>                   <span class="cd">;; </span><span class="c">Perl-compatible regular expression (PCRE).  This is highly
+</span>                   <span class="cd">;; </span><span class="c">experimental and grep -P may warn of unimplemented features."  But it
+</span>                   <span class="cd">;; </span><span class="c">does seem to work properly, at least on GNU grep.  Using "grep -E"
+</span>                   <span class="cd">;; </span><span class="c">with this PCRE regexp doesn't work quite right, as it doesn't match
+</span>                   <span class="cd">;; </span><span class="c">all the keywords, but pcre2el doesn't convert to "extended regular
+</span>                   <span class="cd">;; </span><span class="c">expressions", so this will have to do.  Maybe we should test whether
+</span>                   <span class="cd">;; </span><span class="c">the version of grep installed supports "-P".
+</span>                   <span class="cd">;; </span><span class="c">NOTE: For some reason, when "-execdir" is used, the callback function is never
+</span>                   <span class="cd">;; </span><span class="c">called, even though the process terminates and its buffer has the correct
+</span>                   <span class="cd">;; </span><span class="c">output.  It works correctly when "-exec" is used, so we use that.
+</span>                   (list <span class="s">"-exec"</span> <span class="s">"grep"</span> <span class="s">"-bPH"</span>
+                         (<span class="k">when</span> magit-todos-ignore-case
+                           <span class="s">"--ignore-case"</span>)
+                         extra-args
+                         search-regexp-pcre <span class="s">"{}"</span> <span class="s">"+"</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

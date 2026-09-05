@@ -1,0 +1,112 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--async-process – Emacs Documentation Online</title>
+<meta name="description" content="consult--async-process is a natively compiled function defined in
+consult.el.
+Async process function.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--async-process</code></h1><p><span class="m"><code>consult--async-process</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--async-process <a href="#:~:text=function.-,BUILDER"><span class="arg">BUILDER</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=function.-,PROPS"><span class="arg">PROPS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Async process function.
+<p><span class="arg">BUILDER</span> is the command line builder function.
+<span class="arg">PROPS</span> are optional properties passed to <a href="../fun/make-process.html"><code>make-process</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--async-process</span> (builder <span class="ty">&amp;rest</span> props)
+  <span class="doc">"Async process function.
+BUILDER is the command line builder function.
+PROPS are optional properties passed to `</span><span class="m doc">make-process</span><span class="doc">'."</span>
+  (<span class="k">lambda</span> (sink)
+    (<span class="k">let</span> (proc proc-buf last-args count)
+      (<span class="k">lambda</span> (action)
+        (<span class="k">pcase</span> action
+          ((pred stringp)
+           (funcall sink action)
+           (<span class="k">let</span> ((args (funcall builder action)))
+             (<span class="k">unless</span> (stringp (car args))
+               (<span class="k">setq</span> args (car args)))
+             (<span class="k">unless</span> (equal args last-args)
+               (<span class="k">setq</span> last-args args)
+               (<span class="k">when</span> proc
+                 (delete-process proc)
+                 (kill-buffer proc-buf)
+                 (<span class="k">setq</span> proc nil proc-buf nil))
+               (<span class="k">when</span> args
+                 (<span class="k">let*</span> ((flush t)
+                        (rest <span class="s">""</span>)
+                        (proc-filter
+                         (<span class="k">lambda</span> (_ out)
+                           (<span class="k">when</span> flush
+                             (<span class="k">setq</span> flush nil)
+                             (funcall sink 'flush))
+                           (<span class="k">let</span> ((lines (split-string out <span class="s">"[\r\n]+"</span>)))
+                             (<span class="k">if</span> (not (cdr lines))
+                                 (<span class="k">setq</span> rest (concat rest (car lines)))
+                               (setcar lines (concat rest (car lines)))
+                               (<span class="k">let*</span> ((len (length lines))
+                                      (last (nthcdr (- len 2) lines)))
+                                 (<span class="k">setq</span> rest (cadr last)
+                                       count (+ count len -1))
+                                 (setcdr last nil)
+                                 (funcall sink lines))))))
+                        (proc-sentinel
+                         (<span class="k">lambda</span> (_ event)
+                           (<span class="k">cond</span>
+                            (flush
+                             (<span class="k">setq</span> flush nil)
+                             (funcall sink 'flush))
+                            ((<span class="k">and</span> (string-prefix-p <span class="s">"finished"</span> event) (not (equal rest <span class="s">""</span>)))
+                             (<span class="k">incf</span> count)
+                             (funcall sink (list rest))))
+                           (funcall sink `[indicator
+                                           ,(<span class="k">cond</span>
+                                             ((string-prefix-p <span class="s">"killed"</span> event)   'killed)
+                                             ((string-prefix-p <span class="s">"finished"</span> event) 'finished)
+                                             (t 'failed))])
+                           (consult--async-log
+                            <span class="s">"consult--async-process sentinel: event=%s lines=%d\n"</span>
+                            (string-trim event) count)
+                           (<span class="k">when</span> (&gt; (buffer-size proc-buf) 0)
+                             (<span class="k">with-current-buffer</span> (get-buffer-create consult--async-log)
+                               (goto-char (point-max))
+                               (insert <span class="s">"&gt;&gt;&gt;&gt;&gt; stderr &gt;&gt;&gt;&gt;&gt;\n"</span>)
+                               (<span class="k">let</span> ((beg (point)))
+                                 (insert-buffer-substring proc-buf)
+                                 (<span class="k">save-excursion</span>
+                                   (goto-char beg)
+                                   (message #(<span class="s">"%s"</span> 0 2 (face error))
+                                            (buffer-substring-no-properties (pos-bol) (pos-eol)))))
+                               (insert <span class="s">"&lt;&lt;&lt;&lt;&lt; stderr &lt;&lt;&lt;&lt;&lt;\n"</span>)))))
+                        (process-adaptive-read-buffering nil))
+                   (funcall sink [indicator running])
+                   (consult--async-log <span class="s">"consult--async-process started: args=%S default-directory=%S\n"</span>
+                                       args default-directory)
+                   (<span class="k">setq</span> count 0
+                         proc-buf (generate-new-buffer <span class="s">" *consult-async-stderr*"</span>)
+                         proc (apply #'make-process
+                                     `(,@props
+                                       <span class="bi">:connection-type</span> pipe
+                                       <span class="bi">:name</span> ,(car args)
+                                       <span class="cd">;;; </span><span class="c">XXX tramp bug, the stderr buffer must be empty
+</span>                                       <span class="bi">:stderr</span> ,proc-buf
+                                       <span class="bi">:noquery</span> t
+                                       <span class="bi">:command</span> ,args
+                                       <span class="bi">:filter</span> ,proc-filter
+                                       <span class="bi">:sentinel</span> ,proc-sentinel)))))))
+           nil)
+          ((<span class="k">or</span> 'cancel 'destroy)
+           (<span class="k">when</span> proc
+             (delete-process proc)
+             (kill-buffer proc-buf)
+             (<span class="k">setq</span> proc nil proc-buf nil))
+           (<span class="k">setq</span> last-args nil)
+           (funcall sink action))
+          (_ (funcall sink action)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

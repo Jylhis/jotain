@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-rebase-interactive-1 – Emacs Documentation Online</title>
+<meta name="description" content="magit-rebase-interactive-1 is a natively compiled function defined in
+magit-sequence.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-rebase-interactive-1</code></h1><p><span class="m"><code>magit-rebase-interactive-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-sequence.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-rebase-interactive-1 <span class="arg">COMMIT</span> <span class="arg">ARGS</span> <span class="arg">MESSAGE</span> <span class="ty">&amp;optional</span> <span class="arg">EDITOR</span> <span class="arg">DELAY-EDIT-CONFIRM</span> <span class="arg">NOASSERT</span> <span class="arg">CONFIRM</span> <span class="arg">EXACT</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-sequence.el</span>
+(<span class="k">defun</span> <span class="f">magit-rebase-interactive-1</span>
+    ( commit args message
+      <span class="ty">&amp;optional</span> editor delay-edit-confirm noassert confirm exact)
+  (<span class="k">declare</span> (indent 2))
+  (<span class="k">cond</span> ((not commit))
+        ((not (magit-rev-ancestor-p commit <span class="s">"HEAD"</span>))
+         (<span class="w">user-error</span> <span class="s">"%s isn't an ancestor of HEAD"</span> commit))
+        ((not (magit-commit-parents commit))
+         (<span class="k">setq</span> args (cons <span class="s">"--root"</span> args)))
+        ((not exact)
+         (<span class="k">setq</span> commit (concat commit <span class="s">"^"</span>))))
+  (<span class="k">when</span> (<span class="k">and</span> commit (not noassert))
+    (<span class="k">setq</span> commit (magit-rebase-interactive-assert
+                  commit delay-edit-confirm
+                  (seq-some (##string-prefix-p <span class="s">"--rebase-merges"</span> %) args))))
+  (<span class="k">if</span> (<span class="k">and</span> commit (not confirm))
+      (<span class="k">let</span> ((process-environment process-environment))
+        (<span class="k">when</span> editor
+          (<span class="k">push</span> (concat <span class="s">"GIT_SEQUENCE_EDITOR="</span>
+                        (<span class="k">if</span> (functionp editor)
+                            (funcall editor commit)
+                          editor))
+                process-environment))
+        (magit-run-git-sequencer <span class="s">"rebase"</span> <span class="s">"-i"</span> args
+                                 (<span class="k">and</span> (not (member <span class="s">"--root"</span> args)) commit)))
+    (magit-log-select
+      `(<span class="k">lambda</span> (commit)
+         <span class="cd">;; </span><span class="c">In some cases (currently just magit-rebase-remove-commit), "-c
+</span>         <span class="cd">;; </span><span class="c">commentChar=#" is added to the global arguments for git.  Ensure
+</span>         <span class="cd">;; </span><span class="c">that the same happens when we chose the commit via
+</span>         <span class="cd">;; </span><span class="c">magit-log-select, below.
+</span>         (<span class="k">let</span> ((magit-git-global-arguments (list ,@magit-git-global-arguments)))
+           (magit-rebase-interactive-1 commit (list ,@args)
+             ,message ,editor ,delay-edit-confirm ,noassert)))
+      message)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

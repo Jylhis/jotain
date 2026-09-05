@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--url-parse-response – Emacs Documentation Online</title>
+<meta name="description" content="gptel--url-parse-response is a natively compiled function defined in
+gptel-request.el.
+Parse response from BACKEND with PROC-INFO.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--url-parse-response</code></h1><p><span class="m"><code>gptel--url-parse-response</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--url-parse-response <a href="#:~:text=from-,BACKEND"><span class="arg">BACKEND</span></a> <a href="#:~:text=with-,PROC-INFO"><span class="arg">PROC-INFO</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse response from <span class="arg">BACKEND</span> with <span class="arg">PROC-INFO</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+(<span class="k">defun</span> <span class="f">gptel--url-parse-response</span> (backend proc-info)
+  <span class="doc">"Parse response from BACKEND with PROC-INFO."</span>
+  (<span class="k">when</span> gptel-log-level                 <span class="cd">;</span><span class="c">logging
+</span>    (<span class="k">save-excursion</span>
+      (goto-char url-http-end-of-headers)
+      (<span class="k">when</span> (eq gptel-log-level 'debug)
+        (gptel--log (<span class="k">gptel--json-encode</span> (buffer-substring-no-properties (point-min) (point)))
+                    <span class="s">"response headers"</span>))
+      (gptel--log (buffer-substring-no-properties (point) (point-max))
+                  <span class="s">"response body"</span>)))
+  (<span class="k">if-let*</span> ((http-msg (string-trim (buffer-substring (line-beginning-position)
+                                                     (line-end-position))))
+            (http-status
+             (<span class="k">save-match-data</span>
+               (<span class="k">and</span> (string-match <span class="s">"HTTP/[.0-9]+ +</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> http-msg)
+                    (match-string 1 http-msg))))
+            (response (<span class="k">progn</span> (goto-char url-http-end-of-headers)
+                             (<span class="k">condition-case</span> nil
+                                 (<span class="k">gptel--json-read</span>)
+                               (<span class="w">error</span> 'json-read-error)))))
+      (<span class="k">cond</span>
+       <span class="cd">;; </span><span class="c">FIXME Handle the case where HTTP 100 is followed by HTTP (not 200) BUG #194
+</span>       ((<span class="k">or</span> (memq url-http-response-status '(200 100))
+            (string-match-p <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">1</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">2</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">00 OK"</span> http-msg))
+        (list (<span class="k">and-let*</span> ((resp (gptel--parse-response backend response proc-info))
+                         ((not (string-blank-p resp))))
+                (string-trim resp))
+              http-status http-msg))
+       ((<span class="k">and-let*</span> ((error-data (gptel--parse-response-error response)))
+          (list nil http-status http-msg error-data)))
+       ((eq response 'json-read-error)
+        (list nil http-status (concat <span class="s">"("</span> http-msg <span class="s">") Malformed JSON in response."</span>) <span class="s">"json-read-error"</span>))
+       (t (list nil http-status (concat <span class="s">"("</span> http-msg <span class="s">") Could not parse HTTP response."</span>)
+                <span class="s">"Could not parse HTTP response."</span>)))
+    (list nil (concat <span class="s">"("</span> http-msg <span class="s">") Could not parse HTTP response."</span>)
+          <span class="s">"Could not parse HTTP response."</span>)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,73 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-rebase – Emacs Documentation Online</title>
+<meta name="description" content="magit-rebase is an interactive and natively compiled function defined
+in magit-sequence.el.
+Transplant commits and/or modify existing commits.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-rebase</code></h1><p><span class="m"><code>magit-rebase</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">magit-sequence.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-rebase)
+</code></pre>
+<h2>Documentation</h2>
+<p>Transplant commits and/or modify existing commits.
+<h2>Key Bindings</h2>
+<p><span class="v">magit-mode-map</span> <span class="key">r</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-sequence.el</span>
+<span class="cd">;;; </span><span class="c">Rebase
+</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">(autoload 'magit-rebase "magit-sequence" nil t)
+</span>(<span class="k">transient-define-prefix</span> <span class="f">magit-rebase</span> ()
+  <span class="doc">"Transplant commits and/or modify existing commits."</span>
+  <span class="bi">:man-page</span> <span class="s">"git-rebase"</span>
+  <span class="bi">:value</span> '(<span class="s">"--autostash"</span>)
+  [<span class="s">"Arguments"</span>
+   <span class="bi">:if-not</span> magit-rebase-in-progress-p
+   (<span class="s">"-k"</span> <span class="s">"Keep empty commits"</span>       <span class="s">"--keep-empty"</span>)
+   (<span class="s">"-p"</span> <span class="s">"Preserve merges"</span>          (<span class="s">"-p"</span> <span class="s">"--preserve-merges"</span>)
+    <span class="bi">:if</span> (##magit-git-version&lt; <span class="s">"2.33.0"</span>))
+   (<span class="s">"-r"</span> <span class="s">"Rebase merges"</span>            (<span class="s">"-r"</span> <span class="s">"--rebase-merges="</span>)
+    magit-rebase-merges-select-mode)
+   (<span class="s">"-u"</span> <span class="s">"Update branches"</span>          <span class="s">"--update-refs"</span>
+    <span class="bi">:if</span> (##magit-git-version&gt;= <span class="s">"2.38.0"</span>))
+   (7 magit-merge:--strategy)
+   (7 magit-merge:--strategy-option)
+   (7 <span class="s">"=X"</span> magit-diff:--diff-algorithm <span class="bi">:argument</span> <span class="s">"-Xdiff-algorithm="</span>)
+   (7 <span class="s">"-f"</span> <span class="s">"Force rebase"</span>           (<span class="s">"-f"</span> <span class="s">"--force-rebase"</span>))
+   (<span class="s">"-d"</span> <span class="s">"Use author date as committer date"</span> <span class="s">"--committer-date-is-author-date"</span>)
+   (<span class="s">"-t"</span> <span class="s">"Use current time as author date"</span>   <span class="s">"--ignore-date"</span>)
+   (<span class="s">"-a"</span> <span class="s">"Autosquash"</span>               <span class="s">"--autosquash"</span>)
+   (<span class="s">"-A"</span> <span class="s">"Autostash"</span>                <span class="s">"--autostash"</span>)
+   (<span class="s">"-i"</span> <span class="s">"Interactive"</span>              (<span class="s">"-i"</span> <span class="s">"--interactive"</span>))
+   (<span class="s">"-h"</span> <span class="s">"Disable hooks"</span>            <span class="s">"--no-verify"</span>)
+   (7 magit-rebase:--exec)
+   (magit:--gpg-sign)
+   (magit:--signoff)]
+  [<span class="bi">:if-not</span> magit-rebase-in-progress-p
+   <span class="bi">:description</span> (##format (propertize <span class="s">"Rebase %s onto"</span> 'face 'transient-heading)
+                          (propertize (<span class="k">or</span> (magit-get-current-branch) <span class="s">"HEAD"</span>)
+                                      'face 'magit-branch-local))
+   (<span class="s">"p"</span> magit-rebase-onto-pushremote)
+   (<span class="s">"u"</span> magit-rebase-onto-upstream)
+   (<span class="s">"e"</span> <span class="s">"elsewhere"</span> magit-rebase-branch)]
+  [<span class="s">"Rebase"</span>
+   <span class="bi">:if-not</span> magit-rebase-in-progress-p
+   [(<span class="s">"i"</span> <span class="s">"interactively"</span>      magit-rebase-interactive)
+    (<span class="s">"s"</span> <span class="s">"a subset"</span>           magit-rebase-subset)]
+   [(<span class="s">"m"</span> <span class="s">"to modify a commit"</span> magit-rebase-edit-commit)
+    (<span class="s">"w"</span> <span class="s">"to reword a commit"</span> magit-rebase-reword-commit)
+    (<span class="s">"k"</span> <span class="s">"to remove a commit"</span> magit-rebase-remove-commit)]
+   [(<span class="s">"f"</span> <span class="s">"to autosquash"</span>      magit-rebase-autosquash)
+    (6 <span class="s">"t"</span> <span class="s">"to change dates"</span>  magit-reshelve-since)]]
+  [<span class="s">"Actions"</span>
+   <span class="bi">:if</span> magit-rebase-in-progress-p
+   (<span class="s">"r"</span> <span class="s">"Continue"</span> magit-rebase-continue)
+   (<span class="s">"s"</span> <span class="s">"Skip"</span>     magit-rebase-skip)
+   (<span class="s">"e"</span> <span class="s">"Edit"</span>     magit-rebase-edit)
+   (<span class="s">"a"</span> <span class="s">"Abort"</span>    magit-rebase-abort)])</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

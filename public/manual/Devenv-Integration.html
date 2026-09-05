@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- Jotain - a GNU Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer.
+
+Copyright © Markus Jylhänkangas. -->
+<title>Devenv Integration (Jotain Emacs Configuration)</title>
+
+<meta name="description" content="Devenv Integration (Jotain Emacs Configuration)">
+<meta name="keywords" content="Devenv Integration (Jotain Emacs Configuration)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Notebooks.html" rel="next" title="Notebooks">
+<link href="Launching-Emacs.html" rel="prev" title="Launching Emacs">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+span:hover a.copiable-link {visibility: visible}
+ul.mark-bullet {list-style-type: disc}
+</style>
+<link rel="stylesheet" type="text/css" href="manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Devenv-Integration">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Notebooks.html" rel="next">Notebooks</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Launching-Emacs.html" rel="prev">Launching Emacs</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+<h2 class="chapter" id="Devenv-Integration-1"><span>12 Devenv Integration<a class="copiable-link" href="#Devenv-Integration-1"> &para;</a></span></h2>
+
+<p>Jotain ships a native integration with <a class="uref" href="https://devenv.sh">devenv</a>, the Nix-based developer environment tool. The library lives in <code class="code">lisp/devenv.el</code> (standalone and reusable &mdash; no Jotain dependencies) and is wired in by <code class="code">init-devenv.el</code>. Everything is driven through the <code class="code">devenv</code> CLI and degrades to a clean error when the binary is not on <code class="code">PATH</code>. devenv 2.1+ is recommended; every invocation sets <code class="code">AI_AGENT=1</code> so devenv&rsquo;s TUI stays out of the machine-readable output.
+</p>
+<ul class="mini-toc">
+<li><a href="#Entry-point_003a-C_002dc-v">Entry point: <code class="code">C-c v</code></a></li>
+<li><a href="#Process-dashboard">Process dashboard</a></li>
+<li><a href="#Environment-loading-and-reload">Environment loading and reload</a></li>
+<li><a href="#Auto_002dactivation-trust-_0028devenv-allow-_002f-revoke_0029">Auto-activation trust (<code class="code">devenv allow</code> / <code class="code">revoke</code>)</a></li>
+<li><a href="#Mode_002dline-status">Mode-line status</a></li>
+<li><a href="#LSP-for-devenv_002enix">LSP for devenv.nix</a></li>
+<li><a href="#MCP-server-for-the-AI-stack">MCP server for the AI stack</a></li>
+<li><a href="#Customization">Customization</a></li>
+</ul>
+<div class="section-level-extent" id="Entry-point_003a-C_002dc-v">
+<h3 class="section"><span>12.1 Entry point: <code class="code">C-c v</code><a class="copiable-link" href="#Entry-point_003a-C_002dc-v"> &para;</a></span></h3>
+<p><code class="code">C-c v</code> (or <code class="code">M-x devenv</code>) opens a transient covering the whole surface:
+</p>
+<table class="multitable">
+<thead><tr><th>Key</th><th>Command</th><th>What it does</th></tr></thead>
+<tbody><tr><td><code class="code">t</code></td><td><code class="code">devenv-task-run</code></td><td>Pick a task (annotated from <code class="code">devenv tasks list --json</code>) and run it; prefix arg selects the dependency mode (<code class="code">before</code>/<code class="code">single</code>/<code class="code">after</code>/<code class="code">all</code>)</td></tr>
+<tr><td><code class="code">s</code></td><td><code class="code">devenv-script-run</code></td><td>Pick a script defined in <code class="code">devenv.nix</code> (annotated with its description) and run it</td></tr>
+<tr><td><code class="code">T</code></td><td><code class="code">devenv-test</code></td><td><code class="code">devenv test</code> (enterTest, with processes started/stopped around it)</td></tr>
+<tr><td><code class="code">b</code></td><td><code class="code">devenv-build</code></td><td><code class="code">devenv build</code>, optionally for specific attributes</td></tr>
+<tr><td><code class="code">u</code> / <code class="code">d</code></td><td><code class="code">devenv-up</code> / <code class="code">devenv-down</code></td><td>Start/stop the project&rsquo;s processes; <code class="code">up</code> streams into a live buffer (or detaches, see <code class="code">devenv-up-detached</code>); prefix arg picks a subset</td></tr>
+<tr><td><code class="code">p</code></td><td><code class="code">devenv-processes</code></td><td>Process dashboard (below)</td></tr>
+<tr><td><code class="code">l</code></td><td><code class="code">devenv-processes-logs</code></td><td>Tail one process&rsquo;s logs</td></tr>
+<tr><td><code class="code">i</code> / <code class="code">/</code> / <code class="code">:</code></td><td><code class="code">devenv-info</code> / <code class="code">devenv-search</code> / <code class="code">devenv-eval</code></td><td>Introspection: environment summary, package/option search, evaluate any config attribute to pretty-printed JSON</td></tr>
+<tr><td><code class="code">r</code></td><td><code class="code">devenv-reload</code></td><td>Refresh the environment (below)</td></tr>
+<tr><td><code class="code">e</code></td><td><code class="code">devenv-env-global-mode</code></td><td>Toggle the native environment loader (below)</td></tr>
+<tr><td><code class="code">m</code></td><td><code class="code">devenv-modeline-mode</code></td><td>Toggle the mode-line status segment (below)</td></tr>
+<tr><td><code class="code">a</code> / <code class="code">x</code></td><td><code class="code">devenv-allow</code> / <code class="code">devenv-revoke</code></td><td>Trust / untrust the project for auto-activation (below)</td></tr>
+<tr><td><code class="code">M</code></td><td><code class="code">devenv-mcp-setup</code></td><td>Register the project&rsquo;s MCP server with mcp.el</td></tr>
+<tr><td><code class="code">U</code> / <code class="code">G</code></td><td><code class="code">devenv-update</code> / <code class="code">devenv-gc</code></td><td>Update <code class="code">devenv.lock</code> inputs / garbage-collect old generations</td></tr>
+<tr><td><code class="code">$</code></td><td><code class="code">devenv-show-log</code></td><td>Every CLI invocation is recorded in <code class="code">*devenv log*</code></td></tr>
+</tbody>
+</table>
+
+<p>The <code class="code">-c</code> (<code class="code">--clean</code>) and <code class="code">-r</code> (<code class="code">--refresh-eval-cache</code>) infixes apply to <code class="code">devenv-test</code> and <code class="code">devenv-build</code>.
+</p>
+<p>Long-running commands (test, build, tasks, update, gc) run in compilation buffers with Nix trace matching, so <code class="code">M-g M-n</code> jumps to the <code class="code">file.nix:LINE:COL</code> locations in evaluation errors.
+</p>
+</div>
+<div class="section-level-extent" id="Process-dashboard">
+<h3 class="section"><span>12.2 Process dashboard<a class="copiable-link" href="#Process-dashboard"> &para;</a></span></h3>
+<p><code class="code">devenv-processes</code> opens a tabulated view of the devenv process manager. Keys: <code class="code">s</code> start, <code class="code">k</code> stop, <code class="code">r</code> restart, <code class="code">l</code>/<code class="code">RET</code> logs, <code class="code">u</code> up, <code class="code">d</code> down, <code class="code">g</code> refresh. Data comes from <code class="code">devenv processes list</code> (JSON when available, plain table on older devenv), fetched asynchronously so the UI never blocks.
+</p>
+</div>
+<div class="section-level-extent" id="Environment-loading-and-reload">
+<h3 class="section"><span>12.3 Environment loading and reload<a class="copiable-link" href="#Environment-loading-and-reload"> &para;</a></span></h3>
+<p>Environment loading is done by the library&rsquo;s <strong class="strong">native loader</strong> (<code class="code">devenv-env-global-mode</code>, enabled by <code class="code">init-devenv</code>; direnv/envrc is disabled in <code class="code">init-prog</code>). Every buffer inside a trusted devenv project carries the project environment buffer-locally, so eglot servers, apheleia formatters, <code class="code">M-x compile</code>, and the ghostel terminal all see devenv-provided tools with no extra configuration.
+</p>
+<p>The goal is parity with a terminal <code class="code">devenv shell</code>, which takes more than reading <code class="code">devenv print-dev-env</code>:
+</p>
+<ul class="itemize mark-bullet">
+<li><strong class="strong"><code class="code">devenv-env-loader</code> = <code class="code">shell</code> (default)</strong> sources the printed dev-env script in bash, shellHook included, and diffs the resulting environment against Emacs&rsquo;s own. Hook-only values therefore reach Emacs too: <code class="code">LOCALE_ARCHIVE</code>, <code class="code">MANPATH</code>, <code class="code">CARGO_INSTALL_ROOT</code>, <code class="code">$CARGO_HOME/bin</code> on <code class="code">PATH</code>, and anything <code class="code">enterShell</code> exports. Because sourcing runs project code it is limited to projects trusted with <code class="code">devenv allow</code> (see below).
+</li><li><strong class="strong"><code class="code">devenv-env-loader</code> = <code class="code">json</code></strong> parses <code class="code">devenv print-dev-env --json</code> instead. No project code runs, but the shellHook&rsquo;s effects are missing. This is also the automatic fallback when sourcing is unavailable or fails.
+</li><li><strong class="strong"><code class="code">PATH</code> and <code class="code">XDG_DATA_DIRS</code> are layered</strong>, not replaced (<code class="code">devenv-env-layered-variables</code>), matching the <code class="code">nix_saved_PATH</code> restore in devenv&rsquo;s own script. Without this, everything outside the project profile disappears from <code class="code">exec-path</code> &mdash; the <code class="code">devenv</code> CLI included, which then breaks <code class="code">C-c v</code> inside the very projects it manages.
+</li><li><strong class="strong">Derivation-only variables are dropped</strong> (<code class="code">devenv-env-never-applied-variables</code>): nix&rsquo;s own <code class="code">ignoreVars</code> plus the stdenv build variables devenv&rsquo;s shellHook unsets. The JSON form is the raw <em class="emph">build</em> environment, so applying it verbatim sets <code class="code">TMPDIR</code>/<code class="code">NIX_BUILD_TOP</code> to the build sandbox&rsquo;s <code class="code">/build</code>, which does not exist on the host. That breaks every tool needing a temp directory: rust-analyzer&rsquo;s proc-macro server dies with <code class="code">proc-macro server did not respond with data</code>, and cargo build scripts fail.
+</li></ul>
+
+<p>While a fetch is in flight, <code class="code">eglot-ensure</code> is deferred and replayed once the environment lands, so language servers never start with the wrong <code class="code">PATH</code>. If the fetch fails, the deferred buffers are released without connecting (starting a server with the login environment would be the wrong toolchain) and the message says how many are without an LSP; <code class="code">M-x eglot</code> or <code class="code">C-c v r</code> retries.
+</p>
+<p>After changing <code class="code">devenv.nix</code>, run <code class="code">devenv-reload</code> (<code class="code">C-c v r</code>). It invalidates the library&rsquo;s caches, re-fetches the environment, and &mdash; because eglot snapshots the environment when a server starts &mdash; offers to <code class="code">eglot-reconnect</code> every server serving the project so language servers pick up new <code class="code">PATH</code> entries. Where direnv is in charge instead, <code class="code">envrc</code> + <code class="code">use devenv</code> is an equally good substrate: set <code class="code">devenv-env-defer-to-direnv</code> back to <code class="code">t</code> and the native loader stays out of any project with a <code class="code">.envrc</code>, delegating reload to <code class="code">envrc-reload-all</code>.
+</p>
+</div>
+<div class="section-level-extent" id="Auto_002dactivation-trust-_0028devenv-allow-_002f-revoke_0029">
+<h3 class="section"><span>12.4 Auto-activation trust (<code class="code">devenv allow</code> / <code class="code">revoke</code>)<a class="copiable-link" href="#Auto_002dactivation-trust-_0028devenv-allow-_002f-revoke_0029"> &para;</a></span></h3>
+<p>devenv 2.1+ gates shell auto-activation behind a per-project trust database (<code class="code">~/.local/share/devenv/allowed</code>), managed with <code class="code">devenv allow</code> and <code class="code">devenv revoke</code>. The integration honours the same contract: the native loader (<code class="code">devenv-env-global-mode</code>) consults the internal <code class="code">devenv hook-should-activate</code> check and <strong class="strong">never evaluates an untrusted devenv.nix automatically</strong> &mdash; exactly like the zsh/fish/nu shell hooks. The same gate decides whether the environment may be obtained by sourcing (which runs the project&rsquo;s shellHook); an untrusted or unverifiable project falls back to the JSON loader. <code class="code">devenv-allow</code> (<code class="code">C-c v a</code>) trusts the project and immediately activates the loader in its buffers; <code class="code">devenv-revoke</code> (<code class="code">C-c v x</code>) untrusts it and drops the native environment. On devenv versions without the trust model (&lt; 2.1) the loader behaves as before. Note that the direnv/envrc path has its own consent gate (<code class="code">envrc-allow</code> → <code class="code">direnv allow</code>), independent of devenv&rsquo;s database.
+</p>
+</div>
+<div class="section-level-extent" id="Mode_002dline-status">
+<h3 class="section"><span>12.5 Mode-line status<a class="copiable-link" href="#Mode_002dline-status"> &para;</a></span></h3>
+<p><code class="code">devenv-modeline-mode</code> (global, enabled by <code class="code">init-devenv</code> at startup) adds a status segment to the mode line for buffers inside a devenv project:
+</p>
+<ul class="itemize mark-bullet">
+<li><strong class="strong"><code class="code">devenv[on]</code></strong> &mdash; the buffer&rsquo;s environment carries the devenv shell (loaded by envrc/direnv or the native loader; detected via <code class="code">DEVENV_PROFILE</code>).
+</li><li><strong class="strong"><code class="code">devenv[off]</code></strong> &mdash; devenv project, environment not loaded.
+</li><li><strong class="strong"><code class="code">devenv[!]</code></strong> &mdash; auto-activation trust denied; run <code class="code">devenv-allow</code>.
+</li></ul>
+
+<p>Outside devenv projects the segment is empty. <code class="code">mouse-1</code> on the segment opens the <code class="code">devenv</code> transient. The redisplay path is subprocess-free: trust is probed once per project in the background from <code class="code">find-file-hook</code> and cached.
+</p>
+</div>
+<div class="section-level-extent" id="LSP-for-devenv_002enix">
+<h3 class="section"><span>12.6 LSP for devenv.nix<a class="copiable-link" href="#LSP-for-devenv_002enix"> &para;</a></span></h3>
+<p>devenv 2.0+ ships <code class="code">devenv lsp</code>, a bundled nixd preconfigured with the project&rsquo;s devenv module options (completion, hover docs for <code class="code">devenv.nix</code> options). <code class="code">init-devenv</code> routes <code class="code">devenv.nix</code> and <code class="code">devenv.local.nix</code> buffers to it while <code class="code">nil</code> keeps serving every other Nix file &mdash; the routing entry delegates non-devenv buffers to whatever contact was registered before it.
+</p>
+</div>
+<div class="section-level-extent" id="MCP-server-for-the-AI-stack">
+<h3 class="section"><span>12.7 MCP server for the AI stack<a class="copiable-link" href="#MCP-server-for-the-AI-stack"> &para;</a></span></h3>
+<p>devenv 2.0+ ships <code class="code">devenv mcp</code>, a stdio MCP server exposing nixpkgs package search, devenv option search, and process control (list/status/logs/start/stop/restart). <code class="code">devenv-mcp-setup</code> (<code class="code">C-c v M</code>) registers it with <a class="uref" href="https://github.com/lizqwerscott/mcp.el">mcpel</a> under a per-project name (<code class="code">devenv-&lt;project&gt;</code>); start it from <code class="code">M-x mcp-hub</code> and run <code class="code">M-x gptel-mcp-connect</code> to hand its tools to gptel. <code class="code">devenv-mcp-remove</code> unregisters it.
+</p>
+</div>
+<div class="section-level-extent" id="Customization">
+<h3 class="section"><span>12.8 Customization<a class="copiable-link" href="#Customization"> &para;</a></span></h3>
+<p>The <code class="code">devenv</code> customization group covers the executable name (<code class="code">devenv-executable</code>), the quiet-mode environment (<code class="code">devenv-extra-env</code>), global CLI flags (<code class="code">devenv-global-arguments</code>), cache TTL and command timeout, detached <code class="code">up</code> (<code class="code">devenv-up-detached</code>), and the dashboard&rsquo;s log line count (<code class="code">devenv-processes-log-lines</code>).
+</p>
+<p>The native loader adds: how the environment is obtained (<code class="code">devenv-env-loader</code>), whether direnv keeps ownership (<code class="code">devenv-env-defer-to-direnv</code>), extra variables to drop (<code class="code">devenv-env-ignored-variables</code>, filtered on top of the built-in <code class="code">devenv-env-never-applied-variables</code>), which variables extend rather than replace the global value (<code class="code">devenv-env-layered-variables</code>), and the shell bookkeeping ignored when diffing a sourced environment (<code class="code">devenv-env-shell-ignored-variables</code>).
+</p>
+</div>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Notebooks.html" rel="next">Notebooks</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Launching-Emacs.html" rel="prev">Launching Emacs</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+
+
+
+</body>
+</html>

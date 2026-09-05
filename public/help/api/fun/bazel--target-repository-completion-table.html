@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--target-repository-completion-table – Emacs Documentation Online</title>
+<meta name="description" content="bazel--target-repository-completion-table is a natively compiled
+function defined in bazel.el.
+Return a target completion table for external repository names.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--target-repository-completion-table</code></h1><p><span class="m"><code>bazel--target-repository-completion-table</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--target-repository-completion-table <a href="#:~:text=names.-,ROOT"><span class="arg">ROOT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a target completion table for external repository names.
+<p><span class="arg">ROOT</span> is the parent directory of the external repositories as
+returned by ‘bazel--external-repository-dir’.  This is a helper
+function for ‘bazel--target-completion-table’.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--target-repository-completion-table</span> (root)
+  <span class="doc">"Return a target completion table for external repository names.
+ROOT is the parent directory of the external repositories as
+returned by ‘</span><span class="m doc">bazel--external-repository-dir</span><span class="doc">’.  This is a helper
+function for ‘</span><span class="m doc">bazel--target-completion-table</span><span class="doc">’."</span>
+  (<span class="w">cl-check-type</span> root string)
+  (<span class="k">lambda</span> (string predicate action)
+    (<span class="w">cl-check-type</span> string string)
+    (<span class="w">cl-check-type</span> predicate (<span class="k">or</span> null function))
+    <span class="cd">;; </span><span class="c">Restrict completions to valid repository names.
+</span>    (<span class="k">let</span> ((completion-regexp-list
+           (cons (<span class="k">rx</span> bos (+ (any <span class="s">"A-Z"</span> <span class="s">"a-z"</span> <span class="s">"0-9"</span> ?_ ?- ?.)) eos)
+                 completion-regexp-list)))
+      (<span class="k">bazel--make-conjunction</span> predicate candidate
+        (bazel--target-completion-directory-p candidate))
+      <span class="cd">;; </span><span class="c">The file name completion functions return directory names for
+</span>      <span class="cd">;; </span><span class="c">directories, so we turn them back into directory filenames, otherwise
+</span>      <span class="cd">;; </span><span class="c">the target syntax ‘</span><span class="m c">@foo</span><span class="c">’ wouldn’t work.
+</span>      (<span class="k">ignore-error</span> file-error
+        (<span class="k">pcase</span> action
+          ('nil
+           (<span class="k">when-let*</span> ((name (file-name-completion string root predicate)))
+             (<span class="k">let</span> ((result (directory-file-name name)))
+               <span class="cd">;; </span><span class="c">Fulfill the contract of ‘</span><span class="m c">try-completion</span><span class="c">’.
+</span>               (<span class="k">if</span> (string-equal result string) t result))))
+          ('t
+           (<span class="k">pcase</span> (<span class="k">cl-loop</span> for cand in (file-name-all-completions string root)
+                           if (funcall predicate cand)
+                           collect (directory-file-name cand))
+             (`(,(<span class="k">and</span> candidate (pred (string-equal string))))
+              <span class="cd">;; </span><span class="c">A single exact match; offer root package as well.
+</span>              (list candidate (concat candidate <span class="s">"//"</span>)))
+             (candidates candidates)))
+          ('lambda
+            <span class="cd">;; </span><span class="c">The target ‘</span><span class="m c">@foo</span><span class="c">’ is a shorthand for ‘</span><span class="m c">@foo//:foo</span><span class="c">’.  We don’t
+</span>            <span class="cd">;; </span><span class="c">check for the existence of the ‘</span><span class="m c">foo</span><span class="c">’ target here.
+</span>            (<span class="k">and</span> (not (string-empty-p string))
+                 (not (directory-name-p string))
+                 (file-accessible-directory-p
+                  (expand-file-name string root))
+                 (funcall predicate (file-name-as-directory string))))
+          (`(boundaries . ,suffix)
+           `(boundaries 0 . ,(string-match-p (<span class="k">rx</span> (any ?/ ?:)) suffix))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

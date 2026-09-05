@@ -1,0 +1,79 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape-repl-mode – Emacs Documentation Online</title>
+<meta name="description" content="dape-repl-mode is a natively compiled function defined in dape.el.
+Major mode for interacting with Dape and the debugger.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape-repl-mode</code></h1><p><span class="m"><code>dape-repl-mode</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape-repl-mode)
+</code></pre>
+<h2>Documentation</h2>
+<p>Major mode for interacting with Dape and the debugger.
+<p>Uses the interface provided by <a href="../fun/comint-mode.html"><code>comint-mode</code></a>.
+<p>In addition to any hooks its parent mode might have run, this mode
+runs the hook <a href="../var/dape-repl-mode-hook.html"><code>dape-repl-mode-hook</code></a>, as the final or penultimate step
+during initialization.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">define-derived-mode</span> <span class="f">dape-repl-mode</span> comint-mode <span class="s">"REPL"</span>
+  <span class="doc">"Major mode for interacting with Dape and the debugger.
+Uses the interface provided by `</span><span class="m doc">comint-mode</span><span class="doc">'."</span>
+  <span class="bi">:group</span> 'dape
+  <span class="bi">:interactive</span> nil
+  (<span class="k">setq-local</span> revert-buffer-function #'dape--repl-revert-region
+              dape--repl-marker (make-marker)
+              comint-prompt-read-only t
+              comint-scroll-to-bottom-on-input t
+              <span class="cd">;; </span><span class="c">Always keep prompt at the bottom of the window
+</span>              scroll-conservatively 101
+              comint-input-sender 'dape--repl-input-sender
+              comint-prompt-regexp (concat <span class="s">"^"</span> (regexp-quote dape--repl-prompt))
+              comint-process-echoes nil)
+  (add-to-list 'overlay-arrow-variable-list 'dape--repl-marker)
+  (add-hook 'completion-at-point-functions
+            #'dape--repl-completion-at-point nil t)
+  <span class="cd">;; </span><span class="c">Stolen from ielm
+</span>  <span class="cd">;; </span><span class="c">Start a dummy process just to please comint
+</span>  (<span class="k">unless</span> (comint-check-proc (current-buffer))
+    (<span class="k">let</span> ((process (start-process <span class="s">"dape repl"</span> (current-buffer) nil)))
+      (add-hook 'kill-buffer-hook (<span class="k">lambda</span> () (delete-process process)) nil t))
+    (set-process-query-on-exit-flag (get-buffer-process (current-buffer))
+                                    nil)
+    (set-process-filter (get-buffer-process (current-buffer))
+                        #'comint-output-filter)
+    (insert
+     (format
+      <span class="s">"* Welcome to the Dape REPL *
+
+Available Dape commands:
+%s
+
+Any other input or input starting with a space is sent directly to the
+debugger.  An empty line will repeat the last command.\n\n"</span>
+      (<span class="k">with-temp-buffer</span>
+        (insert  <span class="s">"  "</span>
+                 (mapconcat (<span class="k">pcase-lambda</span> (`(,str . ,command))
+                              (<span class="k">setq</span> str (concat str))
+                              (<span class="k">when</span> dape-repl-use-shorthand
+                                (set-text-properties
+                                 0 (<span class="k">thread-last</span> (dape--repl-shorthand-alist)
+                                                (rassoc command)
+                                                (car)
+                                                (length))
+                                 '(font-lock-face help-key-binding)
+                                 str))
+                              str)
+                            dape-repl-commands
+                            <span class="s">", "</span>))
+        (<span class="k">let</span> ((fill-column 72)
+              (adaptive-fill-mode t))
+          (fill-region (point-min) (point-max)))
+        (buffer-string))))
+    (set-marker (process-mark (get-buffer-process (current-buffer))) (point))
+    (comint-output-filter (get-buffer-process (current-buffer))
+                          dape--repl-prompt)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

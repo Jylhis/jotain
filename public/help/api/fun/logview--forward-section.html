@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: logview--forward-section – Emacs Documentation Online</title>
+<meta name="description" content="logview--forward-section is a natively compiled function defined in
+logview.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>logview--forward-section</code></h1><p><span class="m"><code>logview--forward-section</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">logview.el</span>.
+<h2>Signature</h2>
+<pre><code>(logview--forward-section <span class="arg">N</span> <span class="ty">&amp;optional</span> <span class="arg">GO-TO-END</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qid656ql5mh048bd0k84vvsbc2517lh9-emacs-packages-deps/share/emacs/site-lisp/elpa/logview-20260218.2013/logview.el</span>
+(<span class="k">defun</span> <span class="f">logview--forward-section</span> (n <span class="ty">&amp;optional</span> go-to-end)
+  (<span class="k">logview--locate-current-entry</span> last-valid-entry last-valid-start
+    <span class="cd">;; </span><span class="c">The logic of this code is pretty much impossible to follow.  Just trust it as long
+</span>    <span class="cd">;; </span><span class="c">as it passes the tests.
+</span>    (<span class="k">let*</span> ((forward         (<span class="k">or</span> (&gt; n 0) (<span class="k">and</span> (= n 0) go-to-end)))
+           (limit           (<span class="k">if</span> forward (logview--point-max) (logview--point-min)))
+           (section-thread  (<span class="k">when</span> (logview-sections-thread-bound-p)
+                              (logview--entry-group last-valid-entry last-valid-start logview--thread-group)))
+           (header-filter   (cdr logview--section-header-filter))
+           <span class="cd">;; </span><span class="c">Current section is always visible.
+</span>           (visible-section t)
+           (callback        (<span class="k">lambda</span> (entry start)
+                              <span class="cd">;; </span><span class="c">See comment above iterating calls.
+</span>                              (<span class="k">and</span> (<span class="k">if</span> forward (&lt;= start limit) (&gt; (logview--entry-end entry start) limit))
+                                   <span class="cd">;; </span><span class="c">Ignore entries belonging to a "wrong" thread and continue.
+</span>                                   (<span class="k">or</span> (<span class="k">and</span> section-thread (not (string= (logview--entry-group entry start logview--thread-group) section-thread)))
+                                       (<span class="k">let</span> ((header (funcall header-filter entry start)))
+                                         (<span class="k">if</span> (<span class="k">and</span> (= n 0) forward go-to-end header)
+                                             nil
+                                           (<span class="k">let</span> ((invisible (invisible-p start)))
+                                             (<span class="k">when</span> header
+                                               (<span class="k">unless</span> (<span class="k">or</span> invisible forward)
+                                                 (<span class="k">setf</span> visible-section t))
+                                               (<span class="k">when</span> visible-section
+                                                 (<span class="k">setf</span> n (<span class="k">if</span> forward (1- n) (1+ n))))
+                                               (<span class="k">when</span> forward
+                                                 (<span class="k">setf</span> visible-section nil)))
+                                             (<span class="k">or</span> invisible
+                                                 (<span class="k">progn</span>
+                                                   (<span class="k">setf</span> last-valid-entry entry
+                                                         last-valid-start start)
+                                                   (<span class="k">when</span> (<span class="k">or</span> forward (not header))
+                                                     (<span class="k">setf</span> visible-section t))
+                                                   (<span class="k">or</span> (<span class="k">if</span> forward
+                                                           (<span class="k">or</span> (&gt; n 0) go-to-end)
+                                                         (<span class="k">when</span> (<span class="k">if</span> go-to-end
+                                                                   (<span class="k">or</span> (&lt; n 0) header)
+                                                                 (<span class="k">or</span> (&lt;= n 0) (not header)))
+                                                           (<span class="k">when</span> header
+                                                             (<span class="k">setf</span> visible-section nil))
+                                                           t))
+                                                       (<span class="k">progn</span> (<span class="k">setf</span> n 0) nil))))))))))))
+      <span class="cd">;; </span><span class="c">We don't skip invisible entries, since we need to detect section bounds even if
+</span>      <span class="cd">;; </span><span class="c">the headers are filtered out.  Therefore, the callback needs to take narrowing
+</span>      <span class="cd">;; </span><span class="c">into account explicitly.
+</span>      (<span class="k">if</span> forward
+          (logview--iterate-entries-forward last-valid-start callback nil nil t)
+        (logview--iterate-entries-backward  last-valid-start callback))
+      (goto-char (logview--entry-message-start last-valid-entry last-valid-start))
+      (<span class="k">unless</span> visible-section
+        (<span class="k">setf</span> n (<span class="k">if</span> forward (1+ n) (1- n))))
+      n)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

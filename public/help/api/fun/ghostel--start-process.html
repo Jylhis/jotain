@@ -1,0 +1,129 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--start-process – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--start-process is a natively compiled function defined in
+ghostel.el.
+Start the configured shell with a PTY.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--start-process</code></h1><p><span class="m"><code>ghostel--start-process</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--start-process)
+</code></pre>
+<h2>Documentation</h2>
+<p>Start the configured shell with a PTY.
+<p>Local buffers use the native PTY path when <a href="../var/ghostel-use-native-pty.html"><code>ghostel-use-native-pty</code></a>
+is non-nil.  Remote TRAMP buffers spawn through Emacs so TRAMP can
+run the shell on the remote host.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--start-process</span> ()
+  <span class="doc">"Start the configured shell with a PTY.
+Local buffers use the native PTY path when `</span><span class="m doc">ghostel-use-native-pty</span><span class="doc">'
+is non-nil.  Remote TRAMP buffers spawn through Emacs so TRAMP can
+run the shell on the remote host."</span>
+  (<span class="k">let*</span> ((remote-p (file-remote-p default-directory))
+         (shell-spec (ghostel--resolve-shell-spec))
+         (shell (car shell-spec))
+         (extra-shell-args (cdr shell-spec))
+         (ghostel-dir (ghostel--resource-root))
+         <span class="cd">;; </span><span class="c">Detect shell type when integration is enabled.
+</span>         <span class="cd">;; </span><span class="c">For remote, also check ghostel-tramp-shell-integration.
+</span>         (shell-type (<span class="k">and</span> ghostel-shell-integration
+                          (<span class="k">or</span> (not remote-p)
+                              (<span class="k">let</span> ((st (ghostel--detect-shell shell)))
+                                (<span class="k">and</span> st
+                                     (<span class="k">or</span> (eq ghostel-tramp-shell-integration t)
+                                         (<span class="k">and</span> (listp ghostel-tramp-shell-integration)
+                                              (memq st ghostel-tramp-shell-integration)))
+                                     st)))
+                          (ghostel--detect-shell shell)))
+         <span class="cd">;; </span><span class="c">For remote sessions, set up integration via temp files.
+</span>         (remote-integration
+          (<span class="k">when</span> (<span class="k">and</span> remote-p shell-type)
+            (ghostel--setup-remote-integration shell-type)))
+         (integration-env
+          (<span class="k">if</span> remote-integration
+              (plist-get remote-integration <span class="bi">:env</span>)
+            (<span class="k">and</span> (not remote-p)
+                 (<span class="k">pcase</span> shell-type
+                   ('bash
+                    (<span class="k">let</span> ((inject-script (expand-file-name
+                                          <span class="s">"etc/shell/bootstrap/bash/inject.bash"</span>
+                                          ghostel-dir))
+                          (env (list <span class="s">"GHOSTEL_BASH_INJECT=1"</span>)))
+                      (<span class="k">when</span> (file-readable-p inject-script)
+                        (<span class="k">let</span> ((old-env (getenv <span class="s">"ENV"</span>)))
+                          (<span class="k">when</span> old-env
+                            (<span class="k">push</span> (format <span class="s">"GHOSTEL_BASH_ENV=%s"</span> old-env) env)))
+                        (<span class="k">push</span> (format <span class="s">"ENV=%s"</span> inject-script) env)
+                        (<span class="k">unless</span> (getenv <span class="s">"HISTFILE"</span>)
+                          (<span class="k">push</span> (format <span class="s">"HISTFILE=%s/.bash_history"</span>
+                                        (expand-file-name <span class="s">"~"</span>))
+                                env)
+                          (<span class="k">push</span> <span class="s">"GHOSTEL_BASH_UNEXPORT_HISTFILE=1"</span> env))
+                        env)))
+                   ('zsh
+                    (<span class="k">let</span> ((zsh-dir (expand-file-name
+                                    <span class="s">"etc/shell/bootstrap/zsh"</span> ghostel-dir)))
+                      (<span class="k">when</span> (file-directory-p zsh-dir)
+                        (<span class="k">let</span> ((env nil)
+                              (old-zdotdir (getenv <span class="s">"ZDOTDIR"</span>)))
+                          (<span class="k">when</span> old-zdotdir
+                            (<span class="k">push</span> (format <span class="s">"GHOSTEL_ZSH_ZDOTDIR=%s"</span> old-zdotdir) env))
+                          (<span class="k">push</span> (format <span class="s">"ZDOTDIR=%s"</span> zsh-dir) env)
+                          env))))
+                   <span class="cd">;; </span><span class="c">Fish and nushell both auto-load from XDG_DATA_DIRS
+</span>                   ((<span class="k">or</span> 'fish 'nu)
+                    (<span class="k">let</span> ((integ-dir (expand-file-name
+                                      <span class="s">"etc/shell/bootstrap"</span> ghostel-dir)))
+                      (<span class="k">when</span> (file-directory-p integ-dir)
+                        (<span class="k">let</span> ((xdg (<span class="k">or</span> (getenv <span class="s">"XDG_DATA_DIRS"</span>)
+                                       <span class="s">"/usr/local/share:/usr/share"</span>)))
+                          (list
+                           (format <span class="s">"XDG_DATA_DIRS=%s:%s"</span> integ-dir xdg)
+                           (format <span class="s">"GHOSTEL_SHELL_INTEGRATION_XDG_DIR=%s"</span>
+                                   integ-dir))))))))))
+         (integration-args (<span class="k">cond</span>
+                            (remote-integration
+                             (plist-get remote-integration <span class="bi">:args</span>))
+                            ((<span class="k">and</span> (eq shell-type 'bash) integration-env)
+                             (list <span class="s">"--posix"</span>))
+                            (t nil)))
+         <span class="cd">;; </span><span class="c">Start recognized remote shells login+interactive so they (and the
+</span>         <span class="cd">;; </span><span class="c">user's rc/profile) load.  When integration is active the default
+</span>         <span class="cd">;; </span><span class="c">adapts per shell (bash drops `</span><span class="m c">-l</span><span class="c">' to keep `</span><span class="m c">--rcfile</span><span class="c">').  Explicit
+</span>         <span class="cd">;; </span><span class="c">per-method args from `</span><span class="m c">ghostel-tramp-shells</span><span class="c">' override the default.
+</span>         (shell-args (append
+                      integration-args
+                      (<span class="k">or</span> extra-shell-args
+                          (<span class="k">and</span> remote-p
+                               (ghostel--default-remote-shell-args
+                                shell remote-integration)))))
+         (extra-env (append
+                     (<span class="k">unless</span> remote-p
+                       (list (format <span class="s">"EMACS_GHOSTEL_PATH=%s"</span> ghostel-dir)))
+                     integration-env))
+         <span class="cd">;; </span><span class="c">On macOS, wrap with `</span><span class="m c">/usr/bin/login</span><span class="c">' so the shell starts as a login shell.
+</span>         <span class="cd">;; </span><span class="c">See `</span><span class="m c">ghostel-macos-login-shell</span><span class="c">' for the rationale.
+</span>         <span class="cd">;; </span><span class="c">Skipped for remote spawns - login(1) is a local-session concept.
+</span>         (spawn-spec (<span class="k">if</span> (<span class="k">and</span> ghostel-macos-login-shell
+                              (not remote-p)
+                              (eq system-type 'darwin))
+                         (ghostel--macos-login-wrap shell shell-args)
+                       (cons shell shell-args)))
+         (spawn-program (car spawn-spec))
+         (spawn-args (cdr spawn-spec))
+         (proc (ghostel--spawn-pty spawn-program spawn-args
+                                   extra-env remote-p)))
+    (<span class="k">when</span> remote-integration
+      (<span class="k">let</span> ((files (plist-get remote-integration <span class="bi">:temp-files</span>))
+            (dirs (plist-get remote-integration <span class="bi">:temp-dirs</span>)))
+        (add-hook 'kill-buffer-hook
+                  (<span class="k">lambda</span> () (ghostel--cleanup-temp-paths files dirs))
+                  nil t)))
+    proc))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-syntax-propertize-comments – Emacs Documentation Online</title>
+<meta name="description" content="markdown-syntax-propertize-comments is a natively compiled function
+defined in markdown-mode.el.
+Match HTML comments from the START to END.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-syntax-propertize-comments</code></h1><p><span class="m"><code>markdown-syntax-propertize-comments</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-syntax-propertize-comments <a href="#:~:text=the-,START"><span class="arg">START</span></a> <a href="#:~:text=to-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Match HTML comments from the <span class="arg">START</span> to <span class="arg">END</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-syntax-propertize-comments</span> (start end)
+  <span class="doc">"Match HTML comments from the START to END."</span>
+  <span class="cd">;; </span><span class="c">Implement by loop instead of recursive call for avoiding
+</span>  <span class="cd">;; </span><span class="c">exceed max-lisp-eval-depth issue
+</span>  <span class="cd">;; </span><span class="c">https://github.com/jrblevin/markdown-mode/issues/536
+</span>  (<span class="k">let</span> (finish)
+    (goto-char start)
+    (<span class="k">while</span> (not finish)
+      (<span class="k">let*</span> ((in-comment (nth 4 (syntax-ppss)))
+             (comment-begin (nth 8 (syntax-ppss))))
+        (<span class="k">cond</span>
+         <span class="cd">;; </span><span class="c">Comment start
+</span>         ((<span class="k">and</span> (not in-comment)
+               (re-search-forward markdown-regex-comment-start end t)
+               (not (markdown-inline-code-at-point-p))
+               (not (markdown-code-block-at-point-p)))
+          (<span class="k">let</span> ((open-beg (match-beginning 0)))
+            (put-text-property open-beg (1+ open-beg)
+                               'syntax-table (string-to-syntax <span class="s">"&lt;"</span>))
+            (goto-char (min (1+ (match-end 0)) end (point-max)))))
+         <span class="cd">;; </span><span class="c">Comment end
+</span>         ((<span class="k">and</span> in-comment comment-begin
+               (re-search-forward markdown-regex-comment-end end t))
+          (<span class="k">let</span> ((comment-end (match-end 0)))
+            (put-text-property (1- comment-end) comment-end
+                               'syntax-table (string-to-syntax <span class="s">"&gt;"</span>))
+            <span class="cd">;; </span><span class="c">Remove any other text properties inside the comment
+</span>            (remove-text-properties comment-begin comment-end
+                                    markdown--syntax-properties)
+            (put-text-property comment-begin comment-end
+                               'markdown-comment (list comment-begin comment-end))
+            (goto-char (min comment-end end (point-max)))))
+         <span class="cd">;; </span><span class="c">Nothing found
+</span>         (t (<span class="k">setq</span> finish t)))))
+    nil))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

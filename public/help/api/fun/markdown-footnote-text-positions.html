@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-footnote-text-positions – Emacs Documentation Online</title>
+<meta name="description" content="markdown-footnote-text-positions is a natively compiled function
+defined in markdown-mode.el.
+Return the start and end positions of the footnote text point is in.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-footnote-text-positions</code></h1><p><span class="m"><code>markdown-footnote-text-positions</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-footnote-text-positions)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the start and end positions of the footnote text point is in.
+<p>The exact return value is a list of three elements: (ID START END).
+The start position is the position of the opening bracket
+of the footnote id.  The end position is directly after the
+newline that ends the footnote.  If point is not in a footnote,
+NIL is returned instead.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-footnote-text-positions</span> ()
+  <span class="doc">"Return the start and end positions of the footnote text point is in.
+The exact return value is a list of three elements: (ID START END).
+The start position is the position of the opening bracket
+of the footnote id.  The end position is directly after the
+newline that ends the footnote.  If point is not in a footnote,
+NIL is returned instead."</span>
+  (<span class="k">save-excursion</span>
+    (<span class="k">let</span> (result)
+      (move-beginning-of-line 1)
+      <span class="cd">;; </span><span class="c">Try to find the label. If we haven't found the label and we're at a blank
+</span>      <span class="cd">;; </span><span class="c">or indented line, back up if possible.
+</span>      (<span class="k">while</span> (<span class="k">and</span>
+              (not (<span class="k">and</span> (looking-at markdown-regex-footnote-definition)
+                        (<span class="k">setq</span> result (list (match-string 1) (point)))))
+              (<span class="k">and</span> (not (bobp))
+                   (<span class="k">or</span> (markdown-cur-line-blank-p)
+                       (&gt;= (current-indentation) 4))))
+        (forward-line -1))
+      (<span class="k">when</span> result
+        <span class="cd">;; </span><span class="c">Advance if there is a next line that is either blank or indented.
+</span>        <span class="cd">;; </span><span class="c">(Need to check if we're on the last line, because
+</span>        <span class="cd">;; </span><span class="c">markdown-next-line-blank-p returns true for last line in buffer.)
+</span>        (<span class="k">while</span> (<span class="k">and</span> (/= (line-end-position) (point-max))
+                    (<span class="k">or</span> (markdown-next-line-blank-p)
+                        (&gt;= (markdown-next-line-indent) 4)))
+          (forward-line))
+        <span class="cd">;; </span><span class="c">Move back while the current line is blank.
+</span>        (<span class="k">while</span> (markdown-cur-line-blank-p)
+          (forward-line -1))
+        <span class="cd">;; </span><span class="c">Advance to capture this line and a single trailing newline (if there
+</span>        <span class="cd">;; </span><span class="c">is one).
+</span>        (forward-line)
+        (append result (list (point)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,194 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge-get-repository – Emacs Documentation Online</title>
+<meta name="description" content="forge-get-repository is a byte-compiled function defined in
+forge-core.el.
+Return a forge repository object or nil, or signal an error.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge-get-repository</code></h1><p><span class="m"><code>forge-get-repository</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in
+<span class="bt">forge-core.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge-get-repository <a href="#:~:text=The-,DEMAND"><span class="arg">DEMAND</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a forge repository object or nil, or signal an error.
+<p>A forge repository is a repository hosted on a forge.  The local clone
+is also a "repository", but it is a "Git" repository, not a "Forge"
+repository.  (Forge repositories are also Git repositories, but not the
+other way around.)
+<p>A <span class="bi">:known</span> repository has an entry in the local database.  All other
+repositories are unknown.  <span class="bi">:known</span> repositories are divided into two
+subgroups: <span class="bi">:tracked</span> and "untracked" repositories.
+<p>A <span class="bi">:tracked</span> repository was previously explicitly added to the database
+by the user.
+<p>When Forge encounters a repository, without being instructed by the user
+to track it, it may nevertheless add limited information about it to the
+database.  Such a repository is <span class="bi">:known</span> but it is not <span class="bi">:tracked</span>.
+<p>Other repositories are "unknown".  Most commands can only deal with
+repositories that are stored in the database.  Of these, some can deal
+with any <span class="bi">:known</span> repositories, others require that they are <span class="bi">:tracked</span>.
+<p>Some other commands exist — such as the browse commands — that have no
+such requirement.  While such commands also require a repository object,
+they do not care whether that is stored in the database.  Instead they
+are happy to use a <span class="bi">:stub</span> repository; a repository that is not stored
+in the database.
+<p>The <span class="arg">DEMAND</span> argument specifies what kind of repository object the caller
+requires, at least.  <span class="bi">:tracked</span> is greater than <span class="bi">:known</span>, which is
+greater than <span class="bi">:stub</span>.  For example, if the caller requests a <span class="bi">:known</span>
+repository, a <span class="bi">:tracked</span> repository will do, while a <span class="bi">:stub</span> repository
+will not.
+<p>The valid values for <span class="arg">DEMAND</span> are:
+<p>- <span class="bi">:tracked</span> and <span class="bi">:tracked?</span> request a repository that the user added
+<br>&nbsp;&nbsp;to the database.  If there is no such repository, the former causes
+<br>&nbsp;&nbsp;an error to be signaled, while for the latter nil is returned.
+<p>- <span class="bi">:known?</span> and <span class="bi">:insert!</span> request a repository from the database.
+<br>&nbsp;&nbsp;Whether the user explicitly added it does not matter.  If there is no
+<br>&nbsp;&nbsp;such repository, nil is returned for the former, while for the latter
+<br>&nbsp;&nbsp;a new repository is inserted into the repository and then returned.
+<p>- <span class="bi">:stub</span> and <span class="bi">:stub?</span> request the Forge repository corresponding to
+<br>&nbsp;&nbsp;the current Git repository.  It does not matter whether it is known.
+<br>&nbsp;&nbsp;This fails if <a href="../var/default-directory.html"><code>default-directory</code></a> is not inside a Git repository, if
+<br>&nbsp;&nbsp;there is no matching entry in <a href="../var/forge-alist.html"><code>forge-alist</code></a>, or if it is unclear which
+<br>&nbsp;&nbsp;remote to use.  If the repository cannot be determined, the former
+<br>&nbsp;&nbsp;causes an error to be signaled, while for the latter nil is returned.
+<p>&nbsp;&nbsp;Stub repository objects are created without making an API request, so
+<br>&nbsp;&nbsp;we lack access to the upstream ID, which the IDs used in out database,
+<br>&nbsp;&nbsp;derive from.  Stub repositories are "unknown" in the sense that their
+<br>&nbsp;&nbsp;IDs are not <span class="bi">:known</span>.  This is done to allow offline operations.
+<p>- <span class="bi">:valid?</span> requests the Forge repository corresponding to the current
+<br>&nbsp;&nbsp;Git repository.  It does not matter whether it is known.  If it is
+<br>&nbsp;&nbsp;unknown, an API request is made to verify that the repository exists
+<br>&nbsp;&nbsp;on the forge.  If it does, an object with a valid upstream ID is
+<br>&nbsp;&nbsp;returned, but that isn't inserted into the database.  If not, nil is
+<br>&nbsp;&nbsp;returned.
+<p>Given a repository object, you can query its <span class="m"><code>condition</code></span> slot to learn
+whether it is <span class="bi">:tracked</span>, <span class="bi">:known</span> (i.e., has a valid ID and is stored
+in the database), or merely a <span class="bi">:stub</span>.
+<p>You can also use (forge-get repository OBJECT nil <span class="arg">DEMAND</span>) to check the
+condition of a repository object, or even to ensure a repository object
+has a valid upstream ID (using <span class="bi">:valid?</span>), or that it is tracked in the
+database (using <span class="bi">:insert!</span>).
+<p>Use <a href="../fun/forge-repository-equal.html"><code>forge-repository-equal</code></a> to check if two objects refer to the same
+repository.
+<p>Also see info node <span class="bt">(forge) Repository Detection</span>.
+<h2>Implementations</h2>
+<p>(forge-get-repository (NOTIFY forge-notification)) in `<span class="bt">forge-notify.el</span>'.
+<p>Return the object for the repository that NOTIFY belongs to.
+<p>(forge-get-repository (POST forge-pullreq-post)) in `<span class="bt">forge-pullreq.el</span>'.
+<p>Undocumented
+<p>(forge-get-repository (POST forge-issue-post)) in `<span class="bt">forge-issue.el</span>'.
+<p>Undocumented
+<p>(forge-get-repository (POST forge-discussion-reply)) in `<span class="bt">forge-discussion.el</span>'.
+<p>Undocumented
+<p>(forge-get-repository (POST forge-discussion-post)) in `<span class="bt">forge-discussion.el</span>'.
+<p>Undocumented
+<p>(forge-get-repository (TOPIC forge-topic)) in `<span class="bt">forge-topic.el</span>'.
+<p>Undocumented
+<p>(forge-get-repository (POST forge-post)) in `<span class="bt">forge-post.el</span>'.
+<p>Undocumented
+<p>(forge-get-repository (_ null) &amp;optional NOERROR DEMAND) in `<span class="bt">forge-repo.el</span>'.
+<p>Undocumented
+<p>(forge-get-repository (REPO forge-repository) &amp;optional NOERROR DEMAND) in `<span class="bt">forge-repo.el</span>'.
+<p>Undocumented
+<p>(forge-get-repository (ARG0 list) &amp;rest REST) in `<span class="bt">forge-repo.el</span>'.
+<p>((HOST OWNER NAME) &amp;optional REMOTE DEMAND)
+<p>Return the repository identified by HOST, OWNER and NAME.
+See `forge-alist' for valid Git hosts.
+<p>(forge-get-repository (URL string) &amp;optional REMOTE DEMAND) in `<span class="bt">forge-repo.el</span>'.
+<p>Return the repository at URL.
+<p>(forge-get-repository (DEMAND symbol) &amp;optional REMOTE NOTATPT) in `<span class="bt">forge-repo.el</span>'.
+<p>Return the current forge repository.
+<p>First check if `forge-buffer-repository', or if that is nil, then
+the repository for `forge-buffer-topic', satisfies DEMAND.  If so,
+then return that repository.
+<p>Otherwise return the repository for `default-directory', if that
+exists and satisfies DEMAND.  If that fails too, then return nil
+or signal an error, depending on DEMAND.
+<p>(forge-get-repository (_ (eql :dir)) DIR) in `<span class="bt">forge-repo.el</span>'.
+<p>Undocumented
+<p>(forge-get-repository (_ (eql :id)) ID) in `<span class="bt">forge-repo.el</span>'.
+<p>Undocumented
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-core.el</span>
+(<span class="k">cl-defgeneric</span> <span class="f">forge-get-repository</span> (demand)
+  <span class="doc">"Return a forge repository object or nil, or signal an error.
+
+A forge repository is a repository hosted on a forge.  The local clone
+is also a \"repository\", but it is a \"Git\" repository, not a \"Forge\"
+repository.  (Forge repositories are also Git repositories, but not the
+other way around.)
+
+A `</span><span class="m doc">:known</span><span class="doc">' repository has an entry in the local database.  All other
+repositories are unknown.  `</span><span class="m doc">:known</span><span class="doc">' repositories are divided into two
+subgroups: `</span><span class="m doc">:tracked</span><span class="doc">' and \"untracked\" repositories.
+
+A `</span><span class="m doc">:tracked</span><span class="doc">' repository was previously explicitly added to the database
+by the user.
+
+When Forge encounters a repository, without being instructed by the user
+to track it, it may nevertheless add limited information about it to the
+database.  Such a repository is `</span><span class="m doc">:known</span><span class="doc">' but it is not `</span><span class="m doc">:tracked</span><span class="doc">'.
+
+Other repositories are \"unknown\".  Most commands can only deal with
+repositories that are stored in the database.  Of these, some can deal
+with any `</span><span class="m doc">:known</span><span class="doc">' repositories, others require that they are `</span><span class="m doc">:tracked</span><span class="doc">'.
+
+Some other commands exist — such as the browse commands — that have no
+such requirement.  While such commands also require a repository object,
+they do not care whether that is stored in the database.  Instead they
+are happy to use a `</span><span class="m doc">:stub</span><span class="doc">' repository; a repository that is not stored
+in the database.
+
+The DEMAND argument specifies what kind of repository object the caller
+requires, at least.  `</span><span class="m doc">:tracked</span><span class="doc">' is greater than `</span><span class="m doc">:known</span><span class="doc">', which is
+greater than `</span><span class="m doc">:stub</span><span class="doc">'.  For example, if the caller requests a `</span><span class="m doc">:known</span><span class="doc">'
+repository, a `</span><span class="m doc">:tracked</span><span class="doc">' repository will do, while a `</span><span class="m doc">:stub</span><span class="doc">' repository
+will not.
+
+The valid values for DEMAND are:
+
+- `</span><span class="m doc">:tracked</span><span class="doc">' and `</span><span class="m doc">:tracked?</span><span class="doc">' request a repository that the user added
+  to the database.  If there is no such repository, the former causes
+  an error to be signaled, while for the latter nil is returned.
+
+- `</span><span class="m doc">:known?</span><span class="doc">' and `</span><span class="m doc">:insert!</span><span class="doc">' request a repository from the database.
+  Whether the user explicitly added it does not matter.  If there is no
+  such repository, nil is returned for the former, while for the latter
+  a new repository is inserted into the repository and then returned.
+
+- `</span><span class="m doc">:stub</span><span class="doc">' and `</span><span class="m doc">:stub?</span><span class="doc">' request the Forge repository corresponding to
+  the current Git repository.  It does not matter whether it is known.
+  This fails if `</span><span class="m doc">default-directory</span><span class="doc">' is not inside a Git repository, if
+  there is no matching entry in `</span><span class="m doc">forge-alist</span><span class="doc">', or if it is unclear which
+  remote to use.  If the repository cannot be determined, the former
+  causes an error to be signaled, while for the latter nil is returned.
+
+  Stub repository objects are created without making an API request, so
+  we lack access to the upstream ID, which the IDs used in out database,
+  derive from.  Stub repositories are \"unknown\" in the sense that their
+  IDs are not `</span><span class="m doc">:known</span><span class="doc">'.  This is done to allow offline operations.
+
+- `</span><span class="m doc">:valid?</span><span class="doc">' requests the Forge repository corresponding to the current
+  Git repository.  It does not matter whether it is known.  If it is
+  unknown, an API request is made to verify that the repository exists
+  on the forge.  If it does, an object with a valid upstream ID is
+  returned, but that isn't inserted into the database.  If not, nil is
+  returned.
+
+Given a repository object, you can query its `</span><span class="m doc">condition</span><span class="doc">' slot to learn
+whether it is `</span><span class="m doc">:tracked</span><span class="doc">', `</span><span class="m doc">:known</span><span class="doc">' (i.e., has a valid ID and is stored
+in the database), or merely a `</span><span class="m doc">:stub</span><span class="doc">'.
+
+You can also use (forge-get repository OBJECT nil DEMAND) to check the
+condition of a repository object, or even to ensure a repository object
+has a valid upstream ID (using `</span><span class="m doc">:valid?</span><span class="doc">'), or that it is tracked in the
+database (using `</span><span class="m doc">:insert!</span><span class="doc">').
+
+Use `</span><span class="m doc">forge-repository-equal</span><span class="doc">' to check if two objects refer to the same
+repository.
+
+Also see info node `(forge) Repository Detection'."</span>)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: terraform--get-resource-provider-source – Emacs Documentation Online</title>
+<meta name="description" content="terraform--get-resource-provider-source is a natively compiled
+function defined in terraform-mode.el.
+Return Terraform provider source for PROVIDER located in DIR.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>terraform--get-resource-provider-source</code></h1><p><span class="m"><code>terraform--get-resource-provider-source</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">terraform-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(terraform--get-resource-provider-source <a href="#:~:text=for-,PROVIDER"><span class="arg">PROVIDER</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=in-,DIR"><span class="arg">DIR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return Terraform provider source for <span class="arg">PROVIDER</span> located in <span class="arg">DIR</span>.
+<p>Terraform provider source is searched in <span class="m"><code>required_provider</code></span> declaration
+in current buffer or in other Terraform files located in the same directory
+of the file of current buffer.  If still not found, the provider source is
+searched by running command <span class="m"><code>terraform providers</code></span>.
+The <span class="arg">DIR</span> parameter is optional and used only for tests.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4nxqp4jvms3n4azp2x2snypnn6xcgq9g-emacs-packages-deps/share/emacs/site-lisp/elpa/terraform-mode-20251115.2210/terraform-mode.el</span>
+(<span class="k">defun</span> <span class="f">terraform--get-resource-provider-source</span> (provider <span class="ty">&amp;optional</span> dir)
+  <span class="doc">"Return Terraform provider source for PROVIDER located in DIR.
+Terraform provider source is searched in `</span><span class="m doc">required_provider</span><span class="doc">' declaration
+in current buffer or in other Terraform files located in the same directory
+of the file of current buffer.  If still not found, the provider source is
+searched by running command `terraform providers'.
+The DIR parameter is optional and used only for tests."</span>
+  (goto-char (point-min))
+  <span class="cd">;; </span><span class="c">find current directory if it's not specified in arguments
+</span>  (<span class="k">if</span> (<span class="k">and</span> (not dir) buffer-file-name) (<span class="k">setq</span> dir (file-name-directory buffer-file-name)))
+  (<span class="k">let</span> (tf-files
+        <span class="cd">;; </span><span class="c">try to find provider source in current buffer
+</span>        (provider-source (terraform--get-resource-provider-source-in-buffer provider)))
+    <span class="cd">;; </span><span class="c">check if terraform provider-source was found
+</span>    (<span class="k">when</span> (<span class="k">and</span> (= (length provider-source) 0) dir)
+      <span class="cd">;; </span><span class="c">find all terraform files of this project. One of them
+</span>      <span class="cd">;; </span><span class="c">should contain required_provider declaration
+</span>      (<span class="k">setq</span> tf-files (directory-files dir nil <span class="s">"^[[:alnum:][:blank:]_.-]+\\.tf$"</span>)))
+    <span class="cd">;; </span><span class="c">iterate on terraform files until a provider source is found
+</span>    (<span class="k">while</span> (<span class="k">and</span> (= (length provider-source) 0) tf-files)
+      (<span class="k">with-temp-buffer</span>
+        (<span class="k">let*</span> ((file (<span class="k">pop</span> tf-files))
+               (file-path (<span class="k">if</span> dir (concat dir <span class="s">"/"</span> file) file)))
+          (insert-file-contents file-path)
+          <span class="cd">;; </span><span class="c">look for provider source in a terraform file
+</span>          (<span class="k">setq</span> provider-source (terraform--get-resource-provider-source-in-buffer provider)))))
+    provider-source))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

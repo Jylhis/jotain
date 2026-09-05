@@ -1,0 +1,68 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp--find-free-port – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp--find-free-port is a natively compiled function
+defined in claude-code-ide-mcp.el.
+Find a free port in the configured range.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp--find-free-port</code></h1><p><span class="m"><code>claude-code-ide-mcp--find-free-port</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide-mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp--find-free-port)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find a free port in the configured range.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp.el</span>
+<span class="cd">;;; </span><span class="c">WebSocket Server
+</span>
+
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp--find-free-port</span> ()
+  <span class="doc">"Find a free port in the configured range."</span>
+  (<span class="k">let</span> ((min-port (car claude-code-ide-mcp-port-range))
+        (max-port (cdr claude-code-ide-mcp-port-range))
+        (max-attempts claude-code-ide-mcp-max-port-attempts)
+        (attempts 0)
+        (found-port nil))
+    (<span class="k">claude-code-ide-debug</span> <span class="s">"Starting port search in range %d-%d"</span> min-port max-port)
+    (<span class="k">while</span> (<span class="k">and</span> (&lt; attempts max-attempts) (not found-port))
+      (<span class="k">let*</span> ((port (+ min-port (random (- max-port min-port))))
+             (server (<span class="k">condition-case</span> err
+                         (<span class="k">progn</span>
+                           (<span class="k">claude-code-ide-debug</span> <span class="s">"Trying to bind to port %d"</span> port)
+                           (<span class="k">let</span> ((ws-server (websocket-server
+                                             port
+                                             <span class="bi">:host</span> <span class="s">"127.0.0.1"</span>
+                                             <span class="bi">:on-open</span> #'claude-code-ide-mcp--on-open
+                                             <span class="bi">:on-message</span> #'claude-code-ide-mcp--on-message
+                                             <span class="bi">:on-error</span> #'claude-code-ide-mcp--on-error
+                                             <span class="bi">:on-close</span> #'claude-code-ide-mcp--on-close
+                                             <span class="bi">:on-ping</span> #'claude-code-ide-mcp--on-ping
+                                             <span class="bi">:protocol</span> '(<span class="s">"mcp"</span>))))
+                             <span class="cd">;; </span><span class="c">Add debug filter to see raw data (only if debugging)
+</span>                             (<span class="k">when</span> (<span class="k">and</span> ws-server claude-code-ide-debug)
+                               (set-process-filter ws-server
+                                                   (<span class="k">lambda</span> (proc string)
+                                                     <span class="cd">;; </span><span class="c">Only log if it looks like text (not binary WebSocket frames)
+</span>                                                     (<span class="k">if</span> (string-match-p <span class="s">"^[[:print:][:space:]]+$"</span> string)
+                                                         (<span class="k">claude-code-ide-debug</span> <span class="s">"Server received text data: %S"</span> string)
+                                                       (<span class="k">claude-code-ide-debug</span> <span class="s">"Server received binary frame (%d bytes)"</span> (length string)))
+                                                     (websocket-server-filter proc string))))
+                             ws-server))
+                       (<span class="w">error</span>
+                        (<span class="k">claude-code-ide-debug</span> <span class="s">"Failed to bind to port %d: %s"</span> port err)
+                        (<span class="k">claude-code-ide-debug</span> <span class="s">"Failed to start server on port %d: %s"</span> port err)
+                        nil))))
+        (<span class="k">if</span> server
+            (<span class="k">progn</span>
+              (<span class="k">setq</span> found-port (cons server port))
+              (<span class="k">claude-code-ide-debug</span> <span class="s">"Successfully bound to port %d"</span> port)
+              (<span class="k">claude-code-ide-debug</span> <span class="s">"Server object: %S"</span> server)
+              (<span class="k">claude-code-ide-debug</span> <span class="s">"WebSocket server started on port %d"</span> port))
+          (<span class="k">cl-incf</span> attempts))))
+    (<span class="k">or</span> found-port
+        (<span class="w">error</span> <span class="s">"Could not find free port in range %d-%d"</span> min-port max-port))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

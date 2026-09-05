@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: logview-choose-submode – Emacs Documentation Online</title>
+<meta name="description" content="logview-choose-submode is an interactive and natively compiled
+function defined in logview.el.
+Manually choose submode for the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>logview-choose-submode</code></h1><p><span class="m"><code>logview-choose-submode</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">logview.el</span>.
+<h2>Signature</h2>
+<pre><code>(logview-choose-submode <a href="#:~:text=buffer.-,SUBMODE"><span class="arg">SUBMODE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">TIMESTAMP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Manually choose submode for the current buffer.
+<p><span class="arg">SUBMODE</span> must be a name or an alias a supported submode from
+<a href="../var/logview-additional-submodes.html"><code>logview-additional-submodes</code></a> or <a href="../var/logview-std-submodes.html"><code>logview-std-submodes</code></a> (aliases
+are understood too).  Timestamp may be either such a name or
+alias from <a href="../var/logview-additional-timestamp-formats.html"><code>logview-additional-timestamp-formats</code></a> or
+<a href="../var/logview-std-timestamp-formats.html"><code>logview-std-timestamp-formats</code></a>, or just a raw Java pattern.  If
+submode doesn't use timestamps, this parameter is ignored.
+<p>When called interactively, both parameters are read in the
+minibuffer.
+<h2>Key Bindings</h2>
+<p><span class="v">logview-mode-inactive-map</span> <span class="key">C-c C-c</span>
+<span class="v">logview-mode-map</span> <span class="key">C-c C-c</span>
+<span class="v">logview-mode-map</span> <span class="key">o s</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qid656ql5mh048bd0k84vvsbc2517lh9-emacs-packages-deps/share/emacs/site-lisp/elpa/logview-20260218.2013/logview.el</span>
+(<span class="k">defun</span> <span class="f">logview-choose-submode</span> (submode <span class="ty">&amp;optional</span> timestamp)
+  <span class="doc">"Manually choose submode for the current buffer.
+SUBMODE must be a name or an alias a supported submode from
+`</span><span class="m doc">logview-additional-submodes</span><span class="doc">' or `</span><span class="m doc">logview-std-submodes</span><span class="doc">' (aliases
+are understood too).  Timestamp may be either such a name or
+alias from `</span><span class="m doc">logview-additional-timestamp-formats</span><span class="doc">' or
+`</span><span class="m doc">logview-std-timestamp-formats</span><span class="doc">', or just a raw Java pattern.  If
+submode doesn't use timestamps, this parameter is ignored.
+
+When called interactively, both parameters are read in the
+minibuffer."</span>
+  (<span class="k">interactive</span> (list (<span class="k">let</span> (submodes)
+                       (logview--iterate-split-alists (<span class="k">lambda</span> (name definition)
+                                                        (<span class="k">push</span> name submodes)
+                                                        (<span class="k">setq</span> submodes (append (cdr (assq 'aliases definition)) submodes)))
+                                                      logview-additional-submodes logview-std-submodes)
+                       (logview--completing-read <span class="s">"Submode name: "</span> submodes nil t nil 'logview--submode-name-history))))
+  (<span class="k">let</span> ((submode-definition (logview--get-split-alists submode <span class="s">"submode"</span> logview-additional-submodes logview-std-submodes))
+        timestamp-definition)
+    (<span class="k">when</span> (string-match-p logview--timestamp-entry-part-regexp (cdr (assq 'format submode-definition)))
+      (<span class="k">unless</span> timestamp
+        (<span class="k">unless</span> (called-interactively-p 'interactive)
+          (<span class="w">error</span> <span class="s">"Must specify a timestamp format for submode `</span><span class="m s">%s</span><span class="s">'"</span> submode))
+        (<span class="k">setq</span> timestamp (<span class="k">let</span> (timestamps)
+                          (logview--iterate-split-alists (<span class="k">lambda</span> (name definition)
+                                                           (<span class="k">push</span> name timestamps)
+                                                           (<span class="k">setq</span> timestamps (append (cdr (assq 'aliases definition)) timestamps)))
+                                                         logview-additional-timestamp-formats logview-std-timestamp-formats)
+                          (<span class="k">dolist</span> (format (logview--all-timestamp-formats))
+                            (<span class="k">unless</span> (datetime-pattern-locale-dependent-p 'java (car format))
+                              (<span class="k">push</span> (car format) timestamps)))
+                          (logview--completing-read <span class="s">"Timestamp format: "</span> timestamps nil nil nil 'logview--timestamp-format-history))))
+      (<span class="k">setq</span> timestamp-definition (<span class="k">or</span> (logview--get-split-alists timestamp nil logview-additional-timestamp-formats logview-std-timestamp-formats)
+                                     <span class="cd">;; </span><span class="c">Unlike with submodes, allow unrecognized timestamps.
+</span>                                     `(,timestamp (java-pattern . ,timestamp)))))
+    (<span class="k">catch</span> '<span class="m">success</span>
+      (logview--initialize-submode submode submode-definition (list timestamp-definition))
+      <span class="cd">;; </span><span class="c">This must not happen.
+</span>      (<span class="w">error</span> <span class="s">"Internal error initializing submode `</span><span class="m s">%s</span><span class="s">'"</span> submode))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

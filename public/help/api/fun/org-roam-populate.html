@@ -1,0 +1,70 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-populate – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-populate is a byte-compiled function defined in
+org-roam-node.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-populate</code></h1><p><span class="m"><code>org-roam-populate</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in
+<span class="bt">org-roam-node.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-populate <span class="ty">&amp;rest</span> <span class="arg">ARGS</span>)
+</code></pre>
+<h2>Implementations</h2>
+<p>(org-roam-populate (REFLINK org-roam-reflink)) in `<span class="bt">org-roam-mode.el</span>'.
+<p>Populate REFLINK from database.
+<p>(org-roam-populate (BACKLINK org-roam-backlink)) in `<span class="bt">org-roam-mode.el</span>'.
+<p>Populate BACKLINK from database.
+<p>(org-roam-populate (NODE org-roam-node)) in `<span class="bt">org-roam-node.el</span>'.
+<p>Populate NODE from database.
+Uses the ID, and fetches remaining details from the database.
+This can be quite costly: avoid, unless dealing with very few
+nodes.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-node.el</span>
+(<span class="k">cl-defmethod</span> <span class="f">org-roam-populate</span> ((node org-roam-node))
+  <span class="doc">"Populate NODE from database.
+Uses the ID, and fetches remaining details from the database.
+This can be quite costly: avoid, unless dealing with very few
+nodes."</span>
+  (<span class="k">when-let*</span> ((node-info (car (org-roam-db-query [<span class="bi">:select</span> [
+                                                           file level pos todo priority
+                                                           scheduled deadline title properties olp]
+                                                  <span class="bi">:from</span> nodes
+                                                  <span class="bi">:where</span> (= id $s1)
+                                                  <span class="bi">:limit</span> 1]
+                                                 (org-roam-node-id node)))))
+    (<span class="k">pcase-let*</span> ((`(,file ,level ,pos ,todo ,priority ,scheduled ,deadline ,title ,properties ,olp) node-info)
+                 (`(,atime ,mtime ,file-title) (car (org-roam-db-query [<span class="bi">:select</span> [atime mtime title]
+                                                                        <span class="bi">:from</span> files
+                                                                        <span class="bi">:where</span> (= file $s1)]
+                                                                       file)))
+                 (tag-info (mapcar #'car (org-roam-db-query [<span class="bi">:select</span> [tag] <span class="bi">:from</span> tags
+                                                             <span class="bi">:where</span> (= node-id $s1)]
+                                                            (org-roam-node-id node))))
+                 (alias-info (mapcar #'car (org-roam-db-query [<span class="bi">:select</span> [alias] <span class="bi">:from</span> aliases
+                                                               <span class="bi">:where</span> (= node-id $s1)]
+                                                              (org-roam-node-id node))))
+                 (refs-info (mapcar #'car (org-roam-db-query [<span class="bi">:select</span> [ref] <span class="bi">:from</span> refs
+                                                              <span class="bi">:where</span> (= node-id $s1)]
+                                                             (org-roam-node-id node)))))
+      (<span class="k">setf</span> (org-roam-node-file node) file
+            (org-roam-node-file-title node) file-title
+            (org-roam-node-file-atime node) atime
+            (org-roam-node-file-mtime node) mtime
+            (org-roam-node-level node) level
+            (org-roam-node-point node) pos
+            (org-roam-node-todo node) todo
+            (org-roam-node-priority node) priority
+            (org-roam-node-scheduled node) scheduled
+            (org-roam-node-deadline node) deadline
+            (org-roam-node-title node) title
+            (org-roam-node-properties node) properties
+            (org-roam-node-olp node) olp
+            (org-roam-node-tags node) tag-info
+            (org-roam-node-refs node) refs-info
+            (org-roam-node-aliases node) alias-info)))
+  node)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

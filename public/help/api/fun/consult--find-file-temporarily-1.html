@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--find-file-temporarily-1 – Emacs Documentation Online</title>
+<meta name="description" content="consult--find-file-temporarily-1 is a natively compiled function
+defined in consult.el.
+Open file NAME, helper function for consult--find-file-temporarily.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--find-file-temporarily-1</code></h1><p><span class="m"><code>consult--find-file-temporarily-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--find-file-temporarily-1 <a href="#:~:text=file-,NAME"><span class="arg">NAME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Open file <span class="arg">NAME</span>, helper function for <a href="../fun/consult--find-file-temporarily.html"><code>consult--find-file-temporarily</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--find-file-temporarily-1</span> (name)
+  <span class="doc">"Open file NAME, helper function for `</span><span class="m doc">consult--find-file-temporarily</span><span class="doc">'."</span>
+  <span class="cd">;; </span><span class="c">file-attributes may throw permission denied error
+</span>  (<span class="k">when-let*</span> ((attrs (<span class="k">ignore-errors</span> (file-attributes name)))
+              (size (file-attribute-size attrs)))
+    (<span class="k">let*</span> ((partial (&gt;= size consult-preview-partial-size))
+           (buffer (<span class="k">if</span> partial
+                       (generate-new-buffer (format <span class="s">"consult-partial-preview-%s"</span> name))
+                     (find-file-noselect name 'nowarn)))
+           (success nil))
+      (<span class="k">unwind-protect</span>
+          (<span class="k">with-current-buffer</span> buffer
+            (<span class="k">if</span> (not partial)
+                (<span class="k">when</span> (<span class="k">or</span> (eq major-mode 'hexl-mode)
+                          (<span class="k">and</span> (eq major-mode 'fundamental-mode)
+                               (<span class="k">save-excursion</span> (search-forward <span class="s">"\0"</span> nil 'noerror))))
+                  (<span class="w">error</span> <span class="s">"No preview of binary file"</span>))
+              (<span class="k">with-silent-modifications</span>
+                (<span class="k">setq</span> buffer-read-only t)
+                (insert-file-contents name nil 0 consult-preview-partial-chunk)
+                (goto-char (point-max))
+                (insert <span class="s">"\nFile truncated. End of partial preview.\n"</span>)
+                (goto-char (point-min)))
+              (<span class="k">when</span> (<span class="k">save-excursion</span> (search-forward <span class="s">"\0"</span> nil 'noerror))
+                (<span class="w">error</span> <span class="s">"No partial preview of binary file"</span>))
+              <span class="cd">;; </span><span class="c">Auto detect major mode and hope for the best, given that the
+</span>              <span class="cd">;; </span><span class="c">file is only previewed partially.  If an error is thrown the
+</span>              <span class="cd">;; </span><span class="c">buffer will be killed and preview is aborted.
+</span>              (set-auto-mode)
+              (font-lock-mode 1))
+            (<span class="k">when</span> (<span class="k">bound-and-true-p</span> so-long-detected-p)
+              (<span class="w">error</span> <span class="s">"No preview of file with long lines"</span>))
+            <span class="cd">;; </span><span class="c">Run delayed hooks listed in `</span><span class="m c">consult-preview-allowed-hooks</span><span class="c">'.
+</span>            (<span class="k">dolist</span> (hook (reverse (cons 'after-change-major-mode-hook delayed-mode-hooks)))
+              (run-hook-wrapped hook (<span class="k">lambda</span> (fun)
+                                       (<span class="k">when</span> (consult--preview-allowed-p fun)
+                                         (funcall fun))
+                                       nil)))
+            (<span class="k">setq</span> success (current-buffer)))
+        (<span class="k">unless</span> success
+          (kill-buffer buffer))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

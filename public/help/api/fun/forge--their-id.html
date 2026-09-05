@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--their-id – Emacs Documentation Online</title>
+<meta name="description" content="forge--their-id is a natively compiled function defined in
+forge-core.el.
+Return the forge's ID for ARG.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--their-id</code></h1><p><span class="m"><code>forge--their-id</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">forge-core.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--their-id <a href="#:~:text=for-,ARG"><span class="arg">ARG</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">TYPE</span></a> <a href="#:~:text="><span class="arg">REPO</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the forge's ID for <span class="arg">ARG</span>.
+<p>This deals with technical debt related to our handling of IDs.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-core.el</span>
+(<span class="k">defun</span> <span class="f">forge--their-id</span> (arg <span class="ty">&amp;optional</span> type repo)
+  <span class="doc">"Return the forge's ID for ARG.
+This deals with technical debt related to our handling of IDs."</span>
+  (<span class="k">cond</span>
+    (type
+     (<span class="k">pcase</span> type
+       ('assignee
+        (forge-sql1 [<span class="bi">:select</span> [forge-id]
+                     <span class="bi">:from</span> assignee
+                     <span class="bi">:where</span> (<span class="k">and</span> (= repository $s1)
+                                 (= login $s2))]
+                    (<span class="k">oref</span> repo id) arg))
+       ('assignees
+        (forge-sql-car [<span class="bi">:select</span> [forge-id]
+                        <span class="bi">:from</span> assignee
+                        <span class="bi">:where</span> (<span class="k">and</span> (= repository $s1)
+                                    (in login $v2))]
+                       (<span class="k">oref</span> repo id)
+                       (vconcat arg)))
+       ('category
+        (forge-sql1 [<span class="bi">:select</span> [their-id]
+                     <span class="bi">:from</span> discussion-category
+                     <span class="bi">:where</span> (<span class="k">and</span> (= repository $s1)
+                                 (= name $s2))]
+                    (<span class="k">oref</span> repo id) arg))
+       ('label
+        (forge--their-id
+         (forge-sql1 [<span class="bi">:select</span> [id]
+                      <span class="bi">:from</span> label
+                      <span class="bi">:where</span> (<span class="k">and</span> (= repository $s1)
+                                  (= name $s2))]
+                     (<span class="k">oref</span> repo id) arg)))
+       ('labels
+        (mapcar (##forge--their-id % 'label repo) arg))
+       ('milestone
+        (forge--their-id
+         (forge-sql1 [<span class="bi">:select</span> [id] <span class="bi">:from</span> milestone <span class="bi">:where</span> (= title $s1)] arg)))))
+    ((stringp arg)
+     (car (last (split-string (base64-decode-string arg) <span class="s">":"</span>))))
+    ((slot-exists-p arg 'their-id)
+     (<span class="k">oref</span> arg their-id))
+    ((slot-exists-p arg 'forge-id)
+     (<span class="k">oref</span> arg forge-id))
+    ((forge--their-id (<span class="k">oref</span> arg id)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

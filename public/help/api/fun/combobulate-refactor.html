@@ -1,0 +1,91 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-refactor – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-refactor is a macro defined in
+combobulate-manipulation.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-refactor</code></h1><p><span class="m"><code>combobulate-refactor</code></span> is a macro defined in
+<span class="bt">combobulate-manipulation.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">combobulate-refactor</span> (<span class="ty">&amp;key</span> (<span class="arg">ID</span> <span class="arg">nil</span>)) <span class="ty">&amp;rest</span> <span class="arg">BODY</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-manipulation.el</span>
+(<span class="k">cl-defmacro</span> <span class="f">combobulate-refactor</span> ((<span class="ty">&amp;key</span> (id nil)) <span class="ty">&amp;rest</span> body)
+  (<span class="k">declare</span> (indent defun) (debug (sexp body)))
+  (<span class="k">let</span> ((--session (gensym))
+        <span class="cd">;; </span><span class="c">non-nil if we're entering a session that already exists.
+</span>        (--pre-existing-session (gensym)))
+    `(<span class="k">let</span> ((,--pre-existing-session (combobulate-refactor--get-active-session ,id))
+           (,--session (combobulate-refactor-setup ,id)))
+       (<span class="k">cl-flet*</span> ((add-marker (ov)
+                    (overlay-put ov 'combobulate-refactor-session-id ,--session)
+                    (<span class="k">push</span> ov (alist-get ,--session combobulate-refactor--active-sessions))
+                    ov)
+                  (mark-range-move (beg end position)
+                    (add-marker (combobulate--refactor-mark-move beg end position)))
+                  (mark-range-deleted (beg end)
+                    (add-marker (combobulate--refactor-mark-deleted beg end)))
+                  (mark-range-highlighted (beg end <span class="ty">&amp;optional</span> face advance)
+                    (add-marker (combobulate--refactor-mark-highlighted beg end face advance)))
+                  (mark-copy (start end)
+                    (add-marker (combobulate--refactor-mark-copy start end 'combobulate-refactor--copied-values)))
+                  (mark-node-copy (n)
+                    (mark-copy (combobulate-node-start n) (combobulate-node-end n)))
+                  (mark-range-indent (beg end target-pt baseline-column)
+                    (add-marker (combobulate--refactor-mark-indent beg end target-pt baseline-column)))
+                  (mark-node-deleted (n)
+                    (add-marker (combobulate--refactor-mark-deleted (combobulate-node-start n)
+                                                                    (combobulate-node-end n))))
+                  (mark-range-label (beg end label <span class="ty">&amp;optional</span> face before)
+                    (add-marker (combobulate--refactor-mark-label beg end label face before)))
+                  (mark-node-highlighted (n <span class="ty">&amp;optional</span> face advance)
+                    (mark-range-highlighted (combobulate-node-start n)
+                                            (combobulate-node-end n)
+                                            face
+                                            advance))
+                  (mark-cursor (pt)
+                    (add-marker (combobulate--refactor-mark-cursor pt)))
+                  (mark-node-cursor (n)
+                    (mark-cursor (combobulate-node-start n)))
+                  (mark-field (pt tag <span class="ty">&amp;optional</span> text transformer-fn)
+                    (add-marker (combobulate--refactor-mark-field
+                                 pt tag (<span class="k">or</span> text (symbol-name tag))
+                                 transformer-fn)))
+                  (toggle-field (pt tag)
+                    (combobulate--refactor-toggle-field pt tag))
+                  (update-field (tag text)
+                    (seq-filter
+                     (<span class="k">lambda</span> (ov) (<span class="k">let</span> ((actions (overlay-get ov 'combobulate-refactor-action)))
+                               (combobulate--refactor-update-field ov tag text)))
+                     (alist-get ,--session combobulate-refactor--active-sessions)))
+                  (mark-point (<span class="ty">&amp;optional</span> pt)
+                    (add-marker (combobulate--refactor-mark-position (<span class="k">or</span> pt (point)))))
+                  (rollback ()
+                    (combobulate-refactor-delete-session ,--session))
+                  (commit ()
+                    (<span class="k">setq</span> combobulate-refactor--copied-values nil)
+                    (mapc (<span class="k">lambda</span> (ov) (combobulate--refactor-commit ov t))
+                          (seq-sort (<span class="k">lambda</span> (a b)
+                                      (<span class="k">and</span> a b
+                                           (overlayp a)
+                                           (overlayp b)
+                                           (&gt; (<span class="k">or</span> (overlay-start a) 0)
+                                              (<span class="k">or</span> (overlay-end b) 0))))
+                                    (alist-get ,--session combobulate-refactor--active-sessions)))
+                    <span class="cd">;; </span><span class="c">clean up.
+</span>                    (rollback)))
+         (<span class="k">condition-case</span> err
+             (<span class="k">prog1</span> (<span class="k">combobulate-atomic-change-group</span>
+                      ,@body)
+               (<span class="k">when</span> (<span class="k">and</span> (alist-get ,--session combobulate-refactor--active-sessions)
+                          (not ,--pre-existing-session))
+                 (<span class="k">prog1</span>
+                     (<span class="w">signal</span> 'combobulate-refactor-uncommitted-changes
+                             (format <span class="s">"Uncommitted changes in session `</span><span class="m s">%s</span><span class="s">'"</span> ,--session))
+                   (combobulate-refactor-delete-session ,--session))))
+           (t (rollback) (<span class="w">signal</span> (car err) (cdr err))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

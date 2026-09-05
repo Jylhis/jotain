@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-table--parse-row – Emacs Documentation Online</title>
+<meta name="description" content="eca-table--parse-row is a natively compiled function defined in
+eca-table.el.
+Parse LINE into a list of cell contents.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-table--parse-row</code></h1><p><span class="m"><code>eca-table--parse-row</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-table.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-table--parse-row <a href="#:~:text=Parse-,LINE"><span class="arg">LINE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse <span class="arg">LINE</span> into a list of cell contents.
+<p>Handles escaped pipes and code spans correctly.
+Supports rows with or without leading/trailing pipes.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-table.el</span>
+<span class="cd">;; </span><span class="c">Table parsing and alignment -------------------------------------------
+</span>
+(<span class="k">defun</span> <span class="f">eca-table--parse-row</span> (line)
+  <span class="doc">"Parse LINE into a list of cell contents.
+Handles escaped pipes and code spans correctly.
+Supports rows with or without leading/trailing pipes."</span>
+  (<span class="k">with-temp-buffer</span>
+    (insert line)
+    (goto-char (point-min))
+    (<span class="k">let</span> ((cells '())
+          (in-code nil)
+          (cell-start nil))
+      <span class="cd">;; </span><span class="c">Skip leading whitespace and optional first pipe
+</span>      (<span class="k">if</span> (looking-at <span class="s">"[ \t]*|"</span>)
+          (<span class="k">progn</span>
+            (goto-char (match-end 0))
+            (<span class="k">setq</span> cell-start (point)))
+        (skip-chars-forward <span class="s">" \t"</span>)
+        (<span class="k">setq</span> cell-start (point)))
+      (<span class="k">while</span> (&lt; (point) (point-max))
+        (<span class="k">cond</span>
+         <span class="cd">;; </span><span class="c">Toggle code span state on backtick
+</span>         ((eq (char-after) ?\`)
+          (<span class="k">setq</span> in-code (not in-code))
+          (forward-char 1))
+         <span class="cd">;; </span><span class="c">Escaped character - skip next char (guard end of buffer)
+</span>         ((eq (char-after) ?\\)
+          (forward-char (min 2 (- (point-max) (point)))))
+         <span class="cd">;; </span><span class="c">Pipe outside code span - end of cell
+</span>         ((<span class="k">and</span> (eq (char-after) ?|) (not in-code))
+          (<span class="k">push</span> (string-trim (buffer-substring-no-properties
+                              cell-start (point)))
+                cells)
+          (forward-char 1)
+          (<span class="k">setq</span> cell-start (point)))
+         (t (forward-char 1))))
+      <span class="cd">;; </span><span class="c">Push trailing content if row lacks a trailing pipe
+</span>      (<span class="k">when</span> (<span class="k">and</span> cell-start (&lt; cell-start (point-max)))
+        (<span class="k">let</span> ((trailing (string-trim
+                         (buffer-substring-no-properties
+                          cell-start (point-max)))))
+          (<span class="k">unless</span> (string-empty-p trailing)
+            (<span class="k">push</span> trailing cells))))
+      (nreverse cells))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

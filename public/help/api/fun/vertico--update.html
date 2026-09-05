@@ -1,0 +1,45 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vertico--update – Emacs Documentation Online</title>
+<meta name="description" content="vertico--update is a natively compiled function defined in vertico.el.
+Update state, optionally INTERRUPTIBLE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vertico--update</code></h1><p><span class="m"><code>vertico--update</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">vertico.el</span>.
+<h2>Signature</h2>
+<pre><code>(vertico--update <span class="ty">&amp;optional</span> <a href="#:~:text=optionally-,INTERRUPTIBLE"><span class="arg">INTERRUPTIBLE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update state, optionally <span class="arg">INTERRUPTIBLE</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kd234agnx8fzj5nnpaamc1pjsnz14kxs-emacs-packages-deps/share/emacs/site-lisp/elpa/vertico-20260830.123/vertico.el</span>
+(<span class="k">defun</span> <span class="f">vertico--update</span> (<span class="ty">&amp;optional</span> interruptible)
+  <span class="doc">"Update state, optionally INTERRUPTIBLE."</span>
+  (<span class="k">let*</span> ((pt (max 0 (- (point) (minibuffer-prompt-end))))
+         (str (minibuffer-contents-no-properties))
+         (input (cons str pt)))
+    (<span class="k">unless</span> (<span class="k">or</span> (<span class="k">and</span> interruptible (input-pending-p)) (equal vertico--input input))
+      <span class="cd">;; </span><span class="c">Redisplay to make input immediately visible before expensive candidate
+</span>      <span class="cd">;; </span><span class="c">recomputation (gh:minad/vertico#89).  No redisplay during init because
+</span>      <span class="cd">;; </span><span class="c">of flicker.
+</span>      (<span class="k">when</span> (<span class="k">and</span> interruptible (consp vertico--input))
+        <span class="cd">;; </span><span class="c">Prevent recursive exhibit from timer (`</span><span class="m c">consult-vertico--refresh</span><span class="c">').
+</span>        (<span class="k">cl-letf</span> (((symbol-function #'vertico--exhibit) #'ignore)) (redisplay)))
+      (<span class="k">pcase</span> (<span class="k">let</span> ((vertico--metadata (completion-metadata (substring str 0 pt)
+                                                           minibuffer-completion-table
+                                                           minibuffer-completion-predicate)))
+               <span class="cd">;; </span><span class="c">If Tramp is used, do not compute the candidates in an
+</span>               <span class="cd">;; </span><span class="c">interruptible fashion, since this will break the Tramp
+</span>               <span class="cd">;; </span><span class="c">password and user name prompts (See gh:minad/vertico#23).
+</span>               (<span class="k">if</span> (<span class="k">or</span> (not interruptible)
+                       (<span class="k">and</span> (eq 'file (vertico--metadata-get 'category))
+                            (<span class="k">or</span> (vertico--remote-p str) (vertico--remote-p default-directory))))
+                   (vertico--compute input)
+                 (<span class="k">let</span> ((non-essential t))
+                   (<span class="k">while-no-input</span> (vertico--compute input)))))
+        ('nil (abort-recursive-edit))
+        ((<span class="k">and</span> state (pred consp))
+         (<span class="k">dolist</span> (s state) (set (car s) (cdr s))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

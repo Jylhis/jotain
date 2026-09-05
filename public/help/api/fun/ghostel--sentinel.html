@@ -1,0 +1,44 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--sentinel – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--sentinel is a natively compiled function defined in
+ghostel.el.
+Clean up after the terminal process or event pipe changes state.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--sentinel</code></h1><p><span class="m"><code>ghostel--sentinel</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--sentinel <a href="#:~:text=state.-,PROCESS"><span class="arg">PROCESS</span></a> <a href="#:~:text=sentinel.-,EVENT"><span class="arg">EVENT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Clean up after the terminal process or event pipe changes state.
+<p><span class="arg">PROCESS</span> is the Emacs process object that triggered the sentinel.
+<span class="arg">EVENT</span> is the state-change description passed by Emacs.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--sentinel</span> (process event)
+  <span class="doc">"Clean up after the terminal process or event pipe changes state.
+PROCESS is the Emacs process object that triggered the sentinel.
+EVENT is the state-change description passed by Emacs."</span>
+  (<span class="k">let</span> ((buf (process-buffer process)))
+    (<span class="k">when</span> (buffer-live-p buf)
+      (<span class="k">with-current-buffer</span> buf
+        (ghostel--cancel-password-confirm-timer)
+        (ghostel--spinner-stop)
+        (remove-hook 'pre-redisplay-functions #'ghostel--fake-cursor-update t)
+        (ghostel--fake-cursor-clear)
+        (run-hook-with-args 'ghostel-exit-functions buf event)
+        <span class="cd">;; </span><span class="c">Dead terminal: restore the plain read-only barrier.
+</span>        (ghostel--sync-read-only)
+        <span class="cd">;; </span><span class="c">Only a live shell restores usefully.
+</span>        <span class="cd">;; </span><span class="c">Drop the buffer from future desktop saves.
+</span>        (<span class="k">setq</span> desktop-save-buffer nil)
+        (<span class="k">if</span> ghostel-kill-buffer-on-exit
+            (kill-buffer buf)
+          (<span class="k">let</span> ((inhibit-read-only t))
+            (goto-char (point-max))
+            (insert <span class="s">"\n[Process exited]\n"</span>)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape-request – Emacs Documentation Online</title>
+<meta name="description" content="dape-request is a natively compiled function defined in dape.el.
+Send request with COMMAND and ARGUMENTS to adapter CONN.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape-request</code></h1><p><span class="m"><code>dape-request</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape-request <a href="#:~:text=adapter-,CONN"><span class="arg">CONN</span></a> <a href="#:~:text=with-,COMMAND"><span class="arg">COMMAND</span></a> <a href="#:~:text=and-,ARGUMENTS"><span class="arg">ARGUMENTS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=function-,CB"><span class="arg">CB</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Send request with <span class="arg">COMMAND</span> and <span class="arg">ARGUMENTS</span> to adapter <span class="arg">CONN</span>.
+<p>If callback function <span class="arg">CB</span> is supplied, it's called on timeout
+and success.
+<p><span class="arg">CB</span> will be called with PLIST and ERROR.
+On success, ERROR will be nil.
+On failure, ERROR will be an string.
+<p>If <a href="../var/dape--request-blocking.html"><code>dape--request-blocking</code></a> is non-nil do blocking request.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape-request</span> (conn command arguments <span class="ty">&amp;optional</span> cb)
+  <span class="doc">"Send request with COMMAND and ARGUMENTS to adapter CONN.
+If callback function CB is supplied, it's called on timeout
+and success.
+
+CB will be called with PLIST and ERROR.
+On success, ERROR will be nil.
+On failure, ERROR will be an string.
+
+If `</span><span class="m doc">dape--request-blocking</span><span class="doc">' is non-nil do blocking request."</span>
+  (<span class="k">cl-flet</span> ((success-fn (result)
+              (funcall cb (plist-get result <span class="bi">:body</span>)
+                       (<span class="k">unless</span> (eq (plist-get result <span class="bi">:success</span>) t)
+                         (<span class="k">or</span> (plist-get result <span class="bi">:message</span>)
+                             (plist-get (plist-get (plist-get result <span class="bi">:body</span>)
+                                                   <span class="bi">:error</span>)
+                                        <span class="bi">:format</span>)
+                             <span class="s">""</span>))))
+            (timeout-fn ()
+              (dape--warn
+               <span class="s">"Command %S timed out after %d seconds (see \
+`</span><span class="m s">dape-request-timeout</span><span class="s">')"</span>
+               command
+               dape-request-timeout)
+              (funcall cb nil dape--timeout-error)))
+    (<span class="k">if</span> dape--request-blocking
+        (<span class="k">let</span> ((result (jsonrpc-request conn command arguments)))
+          (<span class="k">when</span> cb (success-fn result)))
+      (jsonrpc-async-request conn command arguments
+                             <span class="bi">:success-fn</span> (<span class="k">when</span> cb #'success-fn)
+                             <span class="bi">:error-fn</span> #'ignore <span class="cd">; </span><span class="c">will never be called
+</span>                             <span class="bi">:timeout-fn</span> (<span class="k">when</span> cb #'timeout-fn)
+                             <span class="bi">:timeout</span> dape-request-timeout))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

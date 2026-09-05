@@ -1,0 +1,95 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-end-of-line – Emacs Documentation Online</title>
+<meta name="description" content="markdown-end-of-line is an interactive and natively compiled function
+defined in markdown-mode.el.
+Go to the end of the line, but before ellipsis, if any.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-end-of-line</code></h1><p><span class="m"><code>markdown-end-of-line</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-end-of-line <span class="ty">&amp;optional</span> <a href="#:~:text=argument-,N"><span class="arg">N</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Go to the end of the line, but before ellipsis, if any.
+<p>If this is a headline, and <a href="../var/markdown-special-ctrl-a_002fe.html"><code>markdown-special-ctrl-a/e</code></a> is not nil
+or symbol <span class="m"><code>reversed</code></span>, ignore closing tags on the first attempt,
+and only move to after the closing tags when the cursor is
+already beyond the end of the headline.
+<p>If <a href="../var/markdown-special-ctrl-a_002fe.html"><code>markdown-special-ctrl-a/e</code></a> is symbol <span class="m"><code>reversed</code></span> then ignore
+closing tags on the second attempt.
+<p>With argument <span class="arg">N</span> not nil or 1, move forward <span class="arg">N</span> - 1 lines first.
+<h2>Key Bindings</h2>
+<p><span class="v">gfm-mode-map</span> <span class="key">&lt;end&gt;</span>
+<span class="v">gfm-mode-map</span> <span class="key">C-e</span>
+<span class="v">markdown-mode-map</span> <span class="key">&lt;end&gt;</span>
+<span class="v">markdown-mode-map</span> <span class="key">C-e</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+<span class="cd">;; </span><span class="c">This function was originally derived from `</span><span class="m c">org-end-of-line</span><span class="c">' from org.el.
+</span>(<span class="k">defun</span> <span class="f">markdown-end-of-line</span> (<span class="ty">&amp;optional</span> n)
+  <span class="doc">"Go to the end of the line, but before ellipsis, if any.
+
+If this is a headline, and `</span><span class="m doc">markdown-special-ctrl-a/e</span><span class="doc">' is not nil
+or symbol `</span><span class="m doc">reversed</span><span class="doc">', ignore closing tags on the first attempt,
+and only move to after the closing tags when the cursor is
+already beyond the end of the headline.
+
+If `</span><span class="m doc">markdown-special-ctrl-a/e</span><span class="doc">' is symbol `</span><span class="m doc">reversed</span><span class="doc">' then ignore
+closing tags on the second attempt.
+
+With argument N not nil or 1, move forward N - 1 lines first."</span>
+  (<span class="k">interactive</span> <span class="s">"^p"</span>)
+  (<span class="k">let</span> ((origin (point))
+        (special (<span class="k">pcase</span> markdown-special-ctrl-a/e
+                   (`(,_ . ,C-e) C-e) (_ markdown-special-ctrl-a/e)))
+        deactivate-mark)
+    <span class="cd">;; </span><span class="c">First move to a visible line.
+</span>    (<span class="k">if</span> visual-line-mode
+        (beginning-of-visual-line n)
+      (move-beginning-of-line n))
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">At a headline, with closing tags.
+</span>     ((<span class="k">save-excursion</span>
+        (forward-line 0)
+        (<span class="k">and</span> (looking-at markdown-regex-header-atx) (match-end 3)))
+      (<span class="k">let</span> ((refpos (match-end 2))
+            (visual-end (<span class="k">and</span> visual-line-mode
+                             (<span class="k">save-excursion</span>
+                               (end-of-visual-line)
+                               (point)))))
+        <span class="cd">;; </span><span class="c">If `</span><span class="m c">end-of-visual-line</span><span class="c">' brings us before end of line or even closing
+</span>        <span class="cd">;; </span><span class="c">tags, i.e., the headline spans over multiple visual lines, move
+</span>        <span class="cd">;; </span><span class="c">there.
+</span>        (<span class="k">cond</span> ((<span class="k">and</span> visual-end
+                    (&lt; visual-end refpos)
+                    (&lt;= origin visual-end))
+               (goto-char visual-end))
+              ((not special) (end-of-line))
+              ((eq special 'reversed)
+               (<span class="k">if</span> (<span class="k">and</span> (= origin (line-end-position))
+                        (eq this-command last-command))
+                   (goto-char refpos)
+                 (end-of-line)))
+              (t
+               (<span class="k">if</span> (<span class="k">or</span> (&lt; origin refpos) (&gt;= origin (line-end-position)))
+                   (goto-char refpos)
+                 (end-of-line))))
+        <span class="cd">;; </span><span class="c">Prevent automatic cursor movement caused by the command loop.
+</span>        <span class="cd">;; </span><span class="c">Enable disable-point-adjustment to avoid unintended cursor repositioning.
+</span>        (<span class="k">when</span> (<span class="k">and</span> markdown-hide-markup
+                   (equal (get-char-property (point) 'display) <span class="s">""</span>))
+          (<span class="k">setq</span> disable-point-adjustment t))))
+     (visual-line-mode
+      (<span class="k">let</span> ((bol (line-beginning-position)))
+        (end-of-visual-line)
+        <span class="cd">;; </span><span class="c">If `</span><span class="m c">end-of-visual-line</span><span class="c">' gets us past the ellipsis at the
+</span>        <span class="cd">;; </span><span class="c">end of a line, backtrack and use `</span><span class="m c">end-of-line</span><span class="c">' instead.
+</span>        (<span class="k">when</span> (/= bol (line-beginning-position))
+          (goto-char bol)
+          (end-of-line))))
+     (t (end-of-line)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

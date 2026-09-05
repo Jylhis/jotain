@@ -1,0 +1,122 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: csv-interactive-args – Emacs Documentation Online</title>
+<meta name="description" content="csv-interactive-args is a natively compiled function defined in
+csv-mode.el.
+Get arg or field(s) and region interactively, offering sensible defaults.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>csv-interactive-args</code></h1><p><span class="m"><code>csv-interactive-args</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">csv-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(csv-interactive-args <span class="ty">&amp;optional</span> <a href="#:~:text=If-,TYPE"><span class="arg">TYPE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Get arg or field(s) and region interactively, offering sensible defaults.
+<p>Signal an error if the buffer is read-only.
+If <span class="arg">TYPE</span> is noarg then return a list (beg end).
+Otherwise, return a list (arg beg end), where arg is:
+<br>&nbsp;&nbsp;the raw prefix argument by default;
+<br>&nbsp;&nbsp;a single field index if <span class="arg">TYPE</span> is single;
+<br>&nbsp;&nbsp;a list of field indices or index ranges if <span class="arg">TYPE</span> is multiple.
+<br>Field defaults to the current prefix arg; if not set, prompt user.
+<p>A field index list consists of positive or negative integers or ranges,
+separated by any non-integer characters.  A range has the form m-n,
+where m and n are positive or negative integers, m &lt; n, and n defaults
+to the last field index if omitted.
+<p>In transient mark mode, if the mark is not active then automatically
+select and highlight CSV records around point, and query user.
+The default field when read interactively is the current field.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mrygxsladaca2yfyr2cy0am5zm9lzddg-emacs-packages-deps/share/emacs/site-lisp/elpa/csv-mode-1.27/csv-mode.el</span>
+(<span class="k">defun</span> <span class="f">csv-interactive-args</span> (<span class="ty">&amp;optional</span> type)
+  <span class="doc">"Get arg or field(s) and region interactively, offering sensible defaults.
+Signal an error if the buffer is read-only.
+If TYPE is noarg then return a list (beg end).
+Otherwise, return a list (arg beg end), where arg is:
+  the raw prefix argument by default;
+  a single field index if TYPE is single;
+  a list of field indices or index ranges if TYPE is multiple.
+Field defaults to the current prefix arg; if not set, prompt user.
+
+A field index list consists of positive or negative integers or ranges,
+separated by any non-integer characters.  A range has the form m-n,
+where m and n are positive or negative integers, m &lt; n, and n defaults
+to the last field index if omitted.
+
+In transient mark mode, if the mark is not active then automatically
+select and highlight CSV records around point, and query user.
+The default field when read interactively is the current field."</span>
+  <span class="cd">;; </span><span class="c">Must be run interactively to activate mark!
+</span>  (<span class="k">let*</span> ((arg current-prefix-arg) (default-field 1)
+	 (region
+	  (<span class="k">if</span> (not (use-region-p))
+	      <span class="cd">;; </span><span class="c">Set region automatically:
+</span>	      (<span class="k">save-excursion</span>
+                (<span class="k">if</span> arg
+                    (beginning-of-line)
+                  (<span class="k">let</span> ((lbp (line-beginning-position)))
+                    (<span class="k">while</span> (re-search-backward csv-separator-regexp lbp 1)
+                      <span class="cd">;; </span><span class="c">Move as far as possible, i.e. to beginning of line.
+</span>                      (<span class="k">setq</span> default-field (1+ default-field)))))
+                (<span class="k">if</span> (csv-not-looking-at-record)
+                    (<span class="w">error</span> <span class="s">"Point must be within CSV records"</span>))
+		(<span class="k">let</span> ((startline (point)))
+		  <span class="cd">;; </span><span class="c">Set mark at beginning of region:
+</span>		  (<span class="k">while</span> (not (<span class="k">or</span> (bobp) (csv-not-looking-at-record)))
+		    (forward-line -1))
+		  (<span class="k">if</span> (csv-not-looking-at-record) (forward-line 1))
+		  <span class="cd">;; </span><span class="c">Skip header lines:
+</span>		  (forward-line csv-header-lines)
+		  (set-mark (point))	<span class="cd">; </span><span class="c">OK since in save-excursion
+</span>		  <span class="cd">;; </span><span class="c">Move point to end of region:
+</span>		  (goto-char startline)
+		  (beginning-of-line)
+		  (<span class="k">while</span> (not (<span class="k">or</span> (eobp) (csv-not-looking-at-record)))
+		    (forward-line 1))
+		  <span class="cd">;; </span><span class="c">Show mark briefly if necessary:
+</span>		  (<span class="k">unless</span> (<span class="k">and</span> (pos-visible-in-window-p)
+			       (pos-visible-in-window-p (mark)))
+		    (exchange-point-and-mark)
+		    (sit-for 1)
+		    (exchange-point-and-mark))
+                  (<span class="k">when</span> csv-confirm-region
+                    (<span class="k">or</span> (y-or-n-p <span class="s">"Region OK? "</span>)
+                        (<span class="w">error</span> <span class="s">"Action aborted by user"</span>))
+                    (message nil))      <span class="cd">; </span><span class="c">clear y-or-n-p message
+</span>		  (list (region-beginning) (region-end))))
+	    <span class="cd">;; </span><span class="c">Use region set by user:
+</span>	    (list (region-beginning) (region-end)))))
+    (<span class="k">setq</span> default-field (number-to-string default-field))
+    (<span class="k">cond</span>
+     ((eq type 'multiple)
+      (<span class="k">if</span> arg
+	  <span class="cd">;; </span><span class="c">Ensure that field is a list:
+</span>	  (<span class="k">or</span> (consp arg)
+	      (<span class="k">setq</span> arg (list (prefix-numeric-value arg))))
+	<span class="cd">;; </span><span class="c">Read field interactively, ignoring non-integers:
+</span>	(<span class="k">setq</span> arg
+	      (mapcar
+	       (<span class="k">lambda</span> (x)
+		 (<span class="k">if</span> (string-match <span class="s">"-"</span> x 1) <span class="cd">; </span><span class="c">not first character
+</span>		     <span class="cd">;; </span><span class="c">Return a range as a pair - the cdr may be nil:
+</span>		     (<span class="k">let</span> ((m (substring x 0 (match-beginning 0)))
+			   (n (substring x (match-end 0))))
+		       (cons (car (read-from-string m))
+			     (<span class="k">and</span> (not (string= n <span class="s">""</span>))
+				  (car (read-from-string n)))))
+		   <span class="cd">;; </span><span class="c">Return a number as a number:
+</span>		   (car (read-from-string x))))
+	       (split-string
+		(read-string
+		 <span class="s">"Fields (sequence of integers or ranges): "</span> default-field)
+		<span class="s">"[</span><span class="neg s">^</span><span class="s">-+0-9]+"</span>)))))
+     ((eq type 'single)
+      (<span class="k">if</span> arg
+	  (<span class="k">setq</span> arg (prefix-numeric-value arg))
+	(<span class="k">while</span> (not (integerp arg))
+	  (<span class="k">setq</span> arg (eval-minibuffer <span class="s">"Field (integer): "</span> default-field))))))
+    (<span class="k">if</span> (eq type 'noarg) region (cons arg region))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

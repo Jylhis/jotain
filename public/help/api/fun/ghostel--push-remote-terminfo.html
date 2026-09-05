@@ -1,0 +1,67 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--push-remote-terminfo – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--push-remote-terminfo is a natively compiled function defined
+in ghostel.el.
+Push bundled compiled terminfo into a temp dir on the remote host.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--push-remote-terminfo</code></h1><p><span class="m"><code>ghostel--push-remote-terminfo</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--push-remote-terminfo <a href="#:~:text=host.-,REMOTE-PREFIX"><span class="arg">REMOTE-PREFIX</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Push bundled compiled terminfo into a temp dir on the remote host.
+<p><span class="arg">REMOTE-PREFIX</span> is the TRAMP prefix (e.g. "/ssh:host:").  Writes
+both the Linux (x/) and macOS (78/) layouts so the remote ncurses
+or BSD libcurses finds it regardless of OS.  Returns a plist
+<br>(:env (...) :temp-dirs (...)) suitable for merging into the
+<br>remote-integration plist, or nil if the local terminfo isn't
+available or the push fails.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--push-remote-terminfo</span> (remote-prefix)
+  <span class="doc">"Push bundled compiled terminfo into a temp dir on the remote host.
+
+REMOTE-PREFIX is the TRAMP prefix (e.g. \"/ssh:host:\").  Writes
+both the Linux (x/) and macOS (78/) layouts so the remote ncurses
+or BSD libcurses finds it regardless of OS.  Returns a plist
+\(:env (...) :temp-dirs (...)) suitable for merging into the
+remote-integration plist, or nil if the local terminfo isn't
+available or the push fails."</span>
+  (<span class="k">let</span> ((local-dir (ghostel--terminfo-directory)))
+    (<span class="k">when</span> local-dir
+      (<span class="k">condition-case</span> err
+          (<span class="k">let*</span> ((temp-dir (make-temp-file
+                            (concat remote-prefix <span class="s">"ghostel-tinfo-"</span>) t))
+                 (remote-dir (file-remote-p temp-dir 'localname))
+                 (coding-system-for-write 'binary)
+                 (coding-system-for-read 'binary))
+            (<span class="k">dolist</span> (sub '(<span class="s">"x"</span> <span class="s">"g"</span> <span class="s">"78"</span> <span class="s">"67"</span>))
+              (<span class="k">let</span> ((src (expand-file-name
+                          (<span class="k">pcase</span> sub
+                            ((<span class="k">or</span> <span class="s">"x"</span> <span class="s">"78"</span>) <span class="s">"xterm-ghostty"</span>)
+                            ((<span class="k">or</span> <span class="s">"g"</span> <span class="s">"67"</span>) <span class="s">"ghostty"</span>))
+                          (expand-file-name sub local-dir))))
+                (<span class="k">when</span> (file-readable-p src)
+                  (<span class="k">let</span> ((bytes (<span class="k">with-temp-buffer</span>
+                                 (set-buffer-multibyte nil)
+                                 (insert-file-contents-literally src)
+                                 (buffer-string)))
+                        (dest (concat (file-name-as-directory temp-dir)
+                                      sub <span class="s">"/"</span>
+                                      (<span class="k">if</span> (member sub '(<span class="s">"x"</span> <span class="s">"78"</span>))
+                                          <span class="s">"xterm-ghostty"</span>
+                                        <span class="s">"ghostty"</span>))))
+                    (make-directory (file-name-directory dest) t)
+                    (ghostel--write-remote-file dest bytes)))))
+            (list <span class="bi">:env</span> (list (format <span class="s">"TERMINFO=%s"</span> remote-dir))
+                  <span class="bi">:temp-dirs</span> (list temp-dir)))
+        (<span class="w">error</span>
+         (message <span class="s">"ghostel: remote terminfo push failed: %s"</span>
+                  (error-message-string err))
+         nil)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

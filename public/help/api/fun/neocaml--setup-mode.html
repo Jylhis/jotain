@@ -1,0 +1,86 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: neocaml--setup-mode – Emacs Documentation Online</title>
+<meta name="description" content="neocaml--setup-mode is a natively compiled function defined in
+neocaml.el.
+Set up tree-sitter font-lock, indentation, and navigation for LANGUAGE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>neocaml--setup-mode</code></h1><p><span class="m"><code>neocaml--setup-mode</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">neocaml.el</span>.
+<h2>Signature</h2>
+<pre><code>(neocaml--setup-mode <a href="#:~:text=for-,LANGUAGE"><span class="arg">LANGUAGE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Set up tree-sitter font-lock, indentation, and navigation for <span class="arg">LANGUAGE</span>.
+<p>Called from <a href="../fun/neocaml-mode.html"><code>neocaml-mode</code></a> and <a href="../fun/neocaml-interface-mode.html"><code>neocaml-interface-mode</code></a> to configure
+the language-specific parts of the mode.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/6yvzbjq5ljnchx97n8s5w91crk1nh47b-emacs-packages-deps/share/emacs/site-lisp/elpa/neocaml-20260710.532/neocaml.el</span>
+(<span class="k">defun</span> <span class="f">neocaml--setup-mode</span> (language)
+  <span class="doc">"Set up tree-sitter font-lock, indentation, and navigation for LANGUAGE.
+Called from `</span><span class="m doc">neocaml-mode</span><span class="doc">' and `</span><span class="m doc">neocaml-interface-mode</span><span class="doc">' to configure
+the language-specific parts of the mode."</span>
+  <span class="cd">;; </span><span class="c">Offer to install missing grammars
+</span>  (<span class="k">when-let*</span> ((missing (seq-filter (<span class="k">lambda</span> (r) (not (treesit-language-available-p (car r))))
+                                   neocaml-grammar-recipes)))
+    (<span class="k">when</span> (y-or-n-p <span class="s">"OCaml tree-sitter grammars are not installed.  Install them now?"</span>)
+      (neocaml-install-grammars)))
+
+  <span class="cd">;; </span><span class="c">Warn if installed grammars are outdated
+</span>  (neocaml--check-grammar-compatibility)
+
+  (<span class="k">when</span> (treesit-ready-p language)
+    <span class="cd">;; </span><span class="c">Emacs 31+ uses treesit-primary-parser to identify the main parser
+</span>    <span class="cd">;; </span><span class="c">when multiple parsers are active.
+</span>    (<span class="k">let</span> ((parser (treesit-parser-create language)))
+      (<span class="k">when</span> (boundp 'treesit-primary-parser)
+        (<span class="k">setq-local</span> treesit-primary-parser parser)))
+
+    (<span class="k">when</span> neocaml--debug
+      (<span class="k">setq-local</span> treesit--indent-verbose t)
+
+      (<span class="k">when</span> (eq neocaml--debug 'font-lock)
+        (<span class="k">setq-local</span> treesit--font-lock-verbose t))
+
+      <span class="cd">;; </span><span class="c">show the node at point in the minibuffer
+</span>      (treesit-inspect-mode))
+
+    <span class="cd">;; </span><span class="c">font-lock settings
+</span>    (<span class="k">setq-local</span> treesit-font-lock-settings
+                (neocaml-mode--font-lock-settings language))
+
+    <span class="cd">;; </span><span class="c">indentation
+</span>    (<span class="k">setq-local</span> treesit-simple-indent-rules (neocaml--indent-rules language))
+
+    <span class="cd">;; </span><span class="c">Navigation
+</span>    (<span class="k">when</span> (boundp 'treesit-thing-settings)
+      (<span class="k">setq-local</span> treesit-thing-settings
+                  (neocaml--thing-settings language)))
+
+    (treesit-major-mode-setup)
+
+    <span class="cd">;; </span><span class="c">Emacs 31's treesit-forward-comment has an off-by-one bug that
+</span>    <span class="cd">;; </span><span class="c">breaks uncomment-region on multi-line regions.  Override with
+</span>    <span class="cd">;; </span><span class="c">the corrected version.
+</span>    (<span class="k">when</span> (<span class="k">and</span> (&gt;= emacs-major-version 31)
+               (boundp 'forward-comment-function))
+      (<span class="k">setq-local</span> forward-comment-function #'neocaml--forward-comment))
+
+    <span class="cd">;; </span><span class="c">On Emacs 30, treesit-major-mode-setup sets forward-sexp-function
+</span>    <span class="cd">;; </span><span class="c">to treesit-forward-sexp, which doesn't fall back to scan-sexps
+</span>    <span class="cd">;; </span><span class="c">for delimiter characters.  This breaks commands like delete-pair.
+</span>    <span class="cd">;; </span><span class="c">Use a hybrid function that delegates to scan-sexps on delimiters.
+</span>    <span class="cd">;; </span><span class="c">Emacs 31+ handles this natively via the `</span><span class="m c">list</span><span class="c">' thing.
+</span>    (<span class="k">unless</span> (fboundp 'treesit-forward-sexp-list)
+      (<span class="k">setq-local</span> forward-sexp-function #'neocaml--forward-sexp-hybrid))
+
+    <span class="cd">;; </span><span class="c">Workaround for treesit-transpose-sexps being broken on Emacs 30
+</span>    <span class="cd">;; </span><span class="c">(bug#60655).  Emacs 31 rewrites the function to work correctly.
+</span>    (<span class="k">when</span> (<span class="k">and</span> (fboundp 'transpose-sexps-default-function)
+               (&lt; emacs-major-version 31))
+      (<span class="k">setq-local</span> transpose-sexps-function
+                  #'transpose-sexps-default-function))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

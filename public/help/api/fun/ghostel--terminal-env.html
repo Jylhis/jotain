@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--terminal-env – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--terminal-env is a natively compiled function defined in
+ghostel.el.
+Return list of TERM-related env-var strings for ghostel processes.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--terminal-env</code></h1><p><span class="m"><code>ghostel--terminal-env</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--terminal-env)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return list of TERM-related env-var strings for ghostel processes.
+<p>Honors <a href="../var/ghostel-term.html"><code>ghostel-term</code></a> and <a href="../var/ghostel-ssh-install-terminfo.html"><code>ghostel-ssh-install-terminfo</code></a>.  When
+<br>"xterm-ghostty" is requested but the bundled terminfo isn't readable,
+<br>falls back to xterm-256color and warns once per session.  The SSH
+install env var is only exported when the resolved TERM is actually
+xterm-ghostty — falling back to xterm-256color must not advertise a
+wrapper that would re-claim ghostty over ssh.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--terminal-env</span> ()
+  <span class="doc">"Return list of TERM-related env-var strings for ghostel processes.
+Honors `</span><span class="m doc">ghostel-term</span><span class="doc">' and `</span><span class="m doc">ghostel-ssh-install-terminfo</span><span class="doc">'.  When
+\"xterm-ghostty\" is requested but the bundled terminfo isn't readable,
+falls back to xterm-256color and warns once per session.  The SSH
+install env var is only exported when the resolved TERM is actually
+xterm-ghostty — falling back to xterm-256color must not advertise a
+wrapper that would re-claim ghostty over ssh."</span>
+  (<span class="k">let*</span> ((env (<span class="k">cond</span>
+               ((not (equal ghostel-term <span class="s">"xterm-ghostty"</span>))
+                (list (concat <span class="s">"TERM="</span> ghostel-term) <span class="s">"COLORTERM=truecolor"</span>))
+               (t
+                (<span class="k">let</span> ((tinfo (ghostel--terminfo-directory)))
+                  (<span class="k">cond</span>
+                   (tinfo
+                    (list <span class="s">"TERM=xterm-ghostty"</span>
+                          (concat <span class="s">"TERMINFO="</span> tinfo)
+                          <span class="s">"TERM_PROGRAM=ghostty"</span>
+                          <span class="s">"TERM_PROGRAM_VERSION=1.3.2"</span>
+                          <span class="s">"COLORTERM=truecolor"</span>))
+                   (t
+                    (<span class="k">unless</span> ghostel--terminfo-warned
+                      (<span class="k">setq</span> ghostel--terminfo-warned t)
+                      (display-warning
+                       'ghostel
+                       (format
+                        <span class="s">"Bundled terminfo not found in %s; falling back to TERM=xterm-256color.  \
+Apps like Claude Code may exhibit choppy redraws.  Reinstall ghostel \
+to restore the terminfo/ directory, or customize `</span><span class="m s">ghostel-term</span><span class="s">' to silence."</span>
+                        (<span class="k">or</span> (ghostel--package-directory) <span class="s">"&lt;unknown&gt;"</span>))
+                       <span class="bi">:warning</span>))
+                    (list <span class="s">"TERM=xterm-256color"</span> <span class="s">"COLORTERM=truecolor"</span>))))))))
+    (<span class="k">if</span> (<span class="k">and</span> (member <span class="s">"TERM=xterm-ghostty"</span> env)
+             (ghostel--ssh-install-enabled-p))
+        (append env (list <span class="s">"GHOSTEL_SSH_INSTALL_TERMINFO=1"</span>))
+      env)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark--run-after-command – Emacs Documentation Online</title>
+<meta name="description" content="embark--run-after-command is a natively compiled function defined in
+embark.el.
+Call FN with ARGS after the current commands finishes.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark--run-after-command</code></h1><p><span class="m"><code>embark--run-after-command</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark--run-after-command <a href="#:~:text=Call-,FN"><span class="arg">FN</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=with-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Call <span class="arg">FN</span> with <span class="arg">ARGS</span> after the current commands finishes.
+<p>If multiple functions are queued with this function during the
+same command, they will be called in the order from the one
+queued most recently to the one queued least recently.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+(<span class="k">defun</span> <span class="f">embark--run-after-command</span> (fn <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Call FN with ARGS after the current commands finishes.
+If multiple functions are queued with this function during the
+same command, they will be called in the order from the one
+queued most recently to the one queued least recently."</span>
+  <span class="cd">;; </span><span class="c">We don't simply add FN to `</span><span class="m c">post-command-hook</span><span class="c">' because FN may recursively
+</span>  <span class="cd">;; </span><span class="c">call this function.  In that case, FN would modify `</span><span class="m c">post-command-hook</span><span class="c">'
+</span>  <span class="cd">;; </span><span class="c">from within post-command-hook, which doesn't behave properly in our case.
+</span>  <span class="cd">;; </span><span class="c">We use our own abnormal hook and run it from PCH in a way that it is OK to
+</span>  <span class="cd">;; </span><span class="c">modify it from within its own functions.
+</span>  (<span class="k">unless</span> embark--run-after-command-functions
+    (<span class="k">let</span> (pch timer has-run)
+      (<span class="k">setq</span> pch
+            (<span class="k">lambda</span> ()
+              (remove-hook 'post-command-hook pch)
+              (cancel-timer timer)
+              (<span class="k">unless</span> has-run
+                (<span class="k">setq</span> has-run t)
+                (<span class="k">while</span> embark--run-after-command-functions
+                  <span class="cd">;; </span><span class="c">The following funcall may recursively call
+</span>                  <span class="cd">;; </span><span class="c">`</span><span class="m c">embark--run-after-command</span><span class="c">', modifying
+</span>                  <span class="cd">;; </span><span class="c">`</span><span class="m c">embark--run-after-command-functions</span><span class="c">'.  This is why this
+</span>                  <span class="cd">;; </span><span class="c">loop has to be implemented carefully.  We have to pop the
+</span>                  <span class="cd">;; </span><span class="c">function off the hook before calling it.  Using `</span><span class="m c">dolist</span><span class="c">'
+</span>                  <span class="cd">;; </span><span class="c">on the hook would also be incorrect, because it wouldn't
+</span>                  <span class="cd">;; </span><span class="c">take modifications of this hook into account.
+</span>                  (<span class="k">with-demoted-errors</span> <span class="s">"embark PCH: %S"</span>
+                    (<span class="k">condition-case</span> nil
+                        (funcall (<span class="k">pop</span> embark--run-after-command-functions))
+                      (quit (message <span class="s">"Quit"</span>))))))))
+      (add-hook 'post-command-hook pch 'append)
+      <span class="cd">;; </span><span class="c">Generally we prefer `</span><span class="m c">post-command-hook</span><span class="c">' because it plays well with
+</span>      <span class="cd">;; </span><span class="c">keyboard macros.  In some cases, `</span><span class="m c">post-command-hook</span><span class="c">' isn't run after
+</span>      <span class="cd">;; </span><span class="c">exiting a recursive edit, so set up the following timer as a backup.
+</span>      (<span class="k">setq</span> timer (run-at-time 0 nil pch))))
+
+  <span class="cd">;; </span><span class="c">Keep the default-directory alive, since this is often overwritten,
+</span>  <span class="cd">;; </span><span class="c">for example by Consult commands.
+</span>  <span class="cd">;; </span><span class="c">TODO it might be necessary to add more dynamically bound variables
+</span>  <span class="cd">;; </span><span class="c">here. What we actually want are functions `</span><span class="m c">capture-dynamic-scope</span><span class="c">'
+</span>  <span class="cd">;; </span><span class="c">and `</span><span class="m c">eval-in-dynamic-scope</span><span class="c">', but this does not exist?
+</span>  (<span class="k">let</span> ((dir default-directory))
+    (<span class="k">push</span> (<span class="k">lambda</span> ()
+            (<span class="k">let</span> ((default-directory dir))
+              (apply fn args)))
+          embark--run-after-command-functions)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

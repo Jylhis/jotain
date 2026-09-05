@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--insert-expandable-block – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--insert-expandable-block is a natively compiled function
+defined in eca-chat-expandable.el.
+Insert an expandable block with ID, LABEL, CONTENT, icons and indent.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--insert-expandable-block</code></h1><p><span class="m"><code>eca-chat--insert-expandable-block</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-chat-expandable.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--insert-expandable-block <a href="#:~:text=with-,ID"><span class="arg">ID</span></a> <a href="#:~:text=ID,-,LABEL"><span class="arg">LABEL</span></a> <a href="#:~:text=LABEL,-,CONTENT"><span class="arg">CONTENT</span></a> <a href="#:~:text=indent.-,OPEN-ICON"><span class="arg">OPEN-ICON</span></a> <a href="#:~:text=and-,CLOSE-ICON"><span class="arg">CLOSE-ICON</span></a> <a href="#:~:text=icons.-,CONTENT-INDENT"><span class="arg">CONTENT-INDENT</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=content.-,NESTED-PROPS"><span class="arg">NESTED-PROPS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert an expandable block with <span class="arg">ID</span>, <span class="arg">LABEL</span>, <span class="arg">CONTENT</span>, icons and indent.
+<p><span class="arg">OPEN-ICON</span> and <span class="arg">CLOSE-ICON</span> are the toggle icons.
+<span class="arg">CONTENT-INDENT</span> is the `line-prefix` for content.
+<span class="arg">NESTED-PROPS</span> is a plist with :parent-id and :label-indent for nested blocks.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-expandable.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--insert-expandable-block</span> (id label content open-icon close-icon content-indent <span class="ty">&amp;optional</span> nested-props)
+  <span class="doc">"Insert an expandable block with ID, LABEL, CONTENT, icons and indent.
+OPEN-ICON and CLOSE-ICON are the toggle icons.
+CONTENT-INDENT is the `line-prefix` for content.
+NESTED-PROPS is a plist with :parent-id and :label-indent for nested blocks."</span>
+  (<span class="k">let</span> ((ov-label (make-overlay (point) (point) (current-buffer)))
+        (label-indent (plist-get nested-props <span class="bi">:label-indent</span>)))
+    (overlay-put ov-label 'eca-chat--expandable-content-id id)
+    (puthash id ov-label eca-chat-expandable--id-&gt;ov)
+    (overlay-put ov-label 'eca-chat--expandable-content-open-icon open-icon)
+    (overlay-put ov-label 'eca-chat--expandable-content-close-icon close-icon)
+    (overlay-put ov-label 'eca-chat--expandable-content-toggle nil)
+    (<span class="k">when</span> nested-props
+      (overlay-put ov-label 'eca-chat--expandable-content-nested t)
+      (overlay-put ov-label 'eca-chat--expandable-content-parent-id (plist-get nested-props <span class="bi">:parent-id</span>)))
+    (<span class="k">unless</span> nested-props
+      (overlay-put ov-label 'eca-chat--expandable-content-segments nil))
+    (eca-chat--insert (propertize (eca-chat--propertize-only-first-word label
+                                                                        'line-prefix (<span class="k">cond</span>
+                                                                                      ((not (string-empty-p content)) open-icon)
+                                                                                      (label-indent (concat label-indent
+                                                                                                            (make-string (length eca-chat-expandable-block-open-symbol) ?\s)))))
+                                  'keymap (<span class="k">let</span> ((km (make-sparse-keymap)))
+                                            (define-key km (kbd <span class="s">"&lt;mouse-1&gt;"</span>) (<span class="k">lambda</span> () (<span class="k">interactive</span>) (eca-chat--expandable-content-toggle id)))
+                                            (define-key km (kbd <span class="s">"TAB"</span>) (<span class="k">lambda</span> () (<span class="k">interactive</span>) (eca-chat--expandable-content-toggle id)))
+                                            (define-key km (kbd <span class="s">"RET"</span>) (<span class="k">lambda</span> () (<span class="k">interactive</span>) (eca-chat--expandable-content-toggle id)))
+                                            km)
+                                  'help-echo <span class="s">"mouse-1 / tab / RET: expand/collapse"</span>))
+    (eca-chat--insert <span class="s">"\n"</span>)
+    (<span class="k">let*</span> ((start-point (point))
+           (_ (eca-chat--insert <span class="s">"\n"</span>))
+           (ov-content (make-overlay start-point start-point (current-buffer) nil t))
+           (nested? (plist-get nested-props <span class="bi">:parent-id</span>)))
+      (overlay-put ov-content 'eca-chat--expandable-content-content (propertize content 'line-prefix content-indent))
+      (overlay-put ov-content 'eca-chat--expandable-block-nested nested?)
+      (overlay-put ov-content 'priority (<span class="k">if</span> nested? 1 0))
+      (overlay-put ov-label 'eca-chat--expandable-content-ov-content ov-content))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

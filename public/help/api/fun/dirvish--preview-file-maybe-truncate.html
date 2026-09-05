@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dirvish--preview-file-maybe-truncate – Emacs Documentation Online</title>
+<meta name="description" content="dirvish--preview-file-maybe-truncate is a natively compiled function
+defined in dirvish.el.
+Return preview buffer of FILE with SIZE in DV.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dirvish--preview-file-maybe-truncate</code></h1><p><span class="m"><code>dirvish--preview-file-maybe-truncate</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">dirvish.el</span>.
+<h2>Signature</h2>
+<pre><code>(dirvish--preview-file-maybe-truncate <a href="#:~:text=in-,DV"><span class="arg">DV</span></a> <a href="#:~:text=of-,FILE"><span class="arg">FILE</span></a> <a href="#:~:text=with-,SIZE"><span class="arg">SIZE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return preview buffer of <span class="arg">FILE</span> with <span class="arg">SIZE</span> in <span class="arg">DV</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a7h73ip6x5m1pxn38j7f0al6n93w904q-emacs-packages-deps/share/emacs/site-lisp/elpa/dirvish-20260725.1520/dirvish.el</span>
+(<span class="k">defun</span> <span class="f">dirvish--preview-file-maybe-truncate</span> (dv file size)
+  <span class="doc">"Return preview buffer of FILE with SIZE in DV."</span>
+  (<span class="k">when</span> (&gt;= (length (dv-preview-buffers dv)) dirvish-preview-buffers-max-count)
+    (dirvish--kill-buffer (frame-parameter nil 'dv-preview-last)))
+  (<span class="k">with-current-buffer</span> (get-buffer-create <span class="s">"*preview-temp*"</span>)
+    (<span class="k">let</span> ((text (gethash file (dv-preview-hash dv))) info jka-compr-verbose)
+      (<span class="k">with-silent-modifications</span>
+        (<span class="k">setq</span> buffer-read-only t)
+        (<span class="k">if</span> text (insert text)
+          (insert-file-contents
+           file nil 0 dirvish-preview-large-file-threshold)
+          (<span class="k">when</span> (&gt;= size dirvish-preview-large-file-threshold)
+            (goto-char (point-max))
+            (insert <span class="s">"\n\nFile truncated. End of partial preview.\n"</span>)))
+        (<span class="k">setq</span> buffer-file-name file)
+        (goto-char (point-min))
+        (rename-buffer (format <span class="s">"PREVIEW :: %s :: %s"</span>
+                               (dv-timestamp dv) (file-name-nondirectory file))))
+      (<span class="k">condition-case</span> err
+          (eval `(<span class="k">let</span> ,(mapcar (lambda (env) `(,(car env) ,(cdr env)))
+                               (remove '(delay-mode-hooks . t)
+                                       dirvish-preview-environment))
+                   (<span class="k">setq-local</span> delay-mode-hooks t)
+                   (set-auto-mode) (font-lock-mode 1)
+                   (<span class="k">and</span> (<span class="k">bound-and-true-p</span> so-long-detected-p)
+                        (<span class="w">error</span> <span class="s">"No preview of file with long lines"</span>))))
+        (<span class="w">error</span> (<span class="k">setq</span> info (error-message-string err))))
+      (<span class="k">if</span> info (<span class="k">prog1</span> `(info . ,info) (dirvish--kill-buffer (current-buffer)))
+        (set-frame-parameter nil 'dv-preview-last (current-buffer))
+        (run-hooks 'dirvish-preview-setup-hook)
+        (<span class="k">unless</span> text (puthash file (buffer-string) (dv-preview-hash dv)))
+        `(buffer . ,(current-buffer))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,78 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel-mode – Emacs Documentation Online</title>
+<meta name="description" content="bazel-mode is an interactive and natively compiled function defined in
+bazel.el.
+Major mode for editing Bazel files with Starlark-like syntax.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel-mode</code></h1><p><span class="m"><code>bazel-mode</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel-mode)
+</code></pre>
+<h2>Documentation</h2>
+<p>Major mode for editing Bazel files with Starlark-like syntax.
+<p>This is the parent mode for the more specific modes
+<br>‘bazel-build-mode’, ‘bazel-workspace-mode’, ‘bazel-module-mode’,
+<br>‘bazel-repo-mode’, ‘bazel-vendor-mode’, and ‘bazel-starlark-mode’.
+<p>In addition to any hooks its parent mode <a href="../fun/prog-mode.html"><code>prog-mode</code></a> might have run,
+this mode runs the hook <a href="../var/bazel-mode-hook.html"><code>bazel-mode-hook</code></a>, as the final or penultimate
+step during initialization.
+<p>C-c C-b  <a href="../fun/bazel-build.html"><code>bazel-build</code></a>
+<br>C-c C-c  <a href="../fun/bazel-coverage.html"><code>bazel-coverage</code></a>
+<br>C-c C-f  <a href="../fun/bazel-buildifier.html"><code>bazel-buildifier</code></a>
+<br>C-c C-r  <a href="../fun/bazel-run.html"><code>bazel-run</code></a>
+<br>C-c C-t  <a href="../fun/bazel-test.html"><code>bazel-test</code></a>
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">define-derived-mode</span> <span class="f">bazel-mode</span> prog-mode <span class="s">"Bazel"</span>
+  <span class="doc">"Major mode for editing Bazel files with Starlark-like syntax.
+This is the parent mode for the more specific modes
+‘</span><span class="m doc">bazel-build-mode</span><span class="doc">’, ‘</span><span class="m doc">bazel-workspace-mode</span><span class="doc">’, ‘</span><span class="m doc">bazel-module-mode</span><span class="doc">’,
+‘</span><span class="m doc">bazel-repo-mode</span><span class="doc">’, ‘</span><span class="m doc">bazel-vendor-mode</span><span class="doc">’, and ‘</span><span class="m doc">bazel-starlark-mode</span><span class="doc">’."</span>
+  <span class="cd">;; </span><span class="c">Almost all Starlark code in existence uses 4 spaces for indentation.
+</span>  <span class="cd">;; </span><span class="c">Buildifier also enforces this style.
+</span>  (<span class="k">setq-local</span> tab-width 4)
+  (<span class="k">setq-local</span> python-indent-offset 4)
+  (<span class="k">setq-local</span> python-indent-guess-indent-offset nil)
+  (<span class="k">setq-local</span> indent-tabs-mode nil)
+  <span class="cd">;; </span><span class="c">Take over some syntactic constructs from ‘</span><span class="m c">python-mode</span><span class="c">’.
+</span>  (<span class="k">setq-local</span> comment-start <span class="s">"# "</span>)
+  (<span class="k">setq-local</span> comment-start-skip (<span class="k">rx</span> (+ ?#) (* (syntax whitespace))))
+  (<span class="k">setq-local</span> comment-end <span class="s">""</span>)
+  (<span class="k">setq-local</span> comment-use-syntax t)
+  (<span class="k">setq-local</span> parse-sexp-ignore-comments t)
+  (<span class="k">setq-local</span> forward-sexp-function #'python-nav-forward-sexp)
+  (<span class="k">setq-local</span> font-lock-defaults '((bazel-font-lock-keywords
+                                    bazel-font-lock-keywords-1
+                                    bazel-font-lock-keywords-2
+                                    bazel-font-lock-keywords-3)))
+  (<span class="k">setq-local</span> syntax-propertize-function python-syntax-propertize-function)
+  (<span class="k">setq-local</span> indent-line-function #'python-indent-line-function)
+  (<span class="k">setq-local</span> indent-region-function #'python-indent-region)
+  (<span class="k">setq-local</span> electric-indent-inhibit t)
+  (<span class="k">setq-local</span> prettify-symbols-alist python-prettify-symbols-alist)
+  <span class="cd">;; </span><span class="c">Adapt some Python indentation style variables for Bazel.
+</span>  (<span class="k">setq-local</span> python-indent-def-block-scale 1)
+  <span class="cd">;; </span><span class="c">Treat magic comments as being separate paragraphs for filling.
+</span>  (<span class="k">setq-local</span> paragraph-start
+              (<span class="k">rx</span> (<span class="k">or</span> (seq (* (syntax whitespace)) (regexp comment-start-skip)
+                           (regexp bazel--magic-comment-regexp))
+                      (regexp paragraph-start))))
+  (<span class="k">setq-local</span> fill-paragraph-function #'python-fill-paragraph)
+  (<span class="k">setq-local</span> normal-auto-fill-function #'python-do-auto-fill)
+  (add-hook 'before-save-hook #'bazel--buildifier-before-save-hook nil <span class="bi">:local</span>)
+  (add-hook 'flymake-diagnostic-functions #'bazel-mode-flymake nil <span class="bi">:local</span>)
+  (add-hook 'xref-backend-functions #'bazel-mode-xref-backend nil <span class="bi">:local</span>)
+  (add-hook 'completion-at-point-functions #'bazel-completion-at-point
+            nil <span class="bi">:local</span>)
+  (<span class="k">when-let*</span> ((filename buffer-file-name))
+    <span class="cd">;; </span><span class="c">Initialize filename cache.
+</span>    (bazel--repository-relative-name filename))
+  nil)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

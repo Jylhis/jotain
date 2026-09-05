@@ -1,0 +1,72 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gnuplot-send-string-to-gnuplot – Emacs Documentation Online</title>
+<meta name="description" content="gnuplot-send-string-to-gnuplot is a natively compiled function defined
+in gnuplot.el.
+Sends STRING to the gnuplot program.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gnuplot-send-string-to-gnuplot</code></h1><p><span class="m"><code>gnuplot-send-string-to-gnuplot</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">gnuplot.el</span>.
+<h2>Signature</h2>
+<pre><code>(gnuplot-send-string-to-gnuplot <a href="#:~:text=Sends-,STRING"><span class="arg">STRING</span></a> <a href="#:~:text=created.-,TEXT"><span class="arg">TEXT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Sends <span class="arg">STRING</span> to the gnuplot program.
+<p>If no gnuplot process exists, a new one is created.  <span class="arg">TEXT</span> indicates
+the type of text being sent to gnuplot and is typically one of
+nil, <span class="m"><code>line</code></span>, <span class="m"><code>region</code></span>, <span class="m"><code>buffer</code></span>, or <span class="m"><code>file</code></span>.  <span class="arg">TEXT</span> may be useful for
+functions in <a href="../var/gnuplot-after-plot-hook.html"><code>gnuplot-after-plot-hook</code></a>.  <a href="../var/gnuplot-after-plot-hook.html"><code>gnuplot-after-plot-hook</code></a> is
+called by this function after all of <span class="arg">STRING</span> is sent to gnuplot.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/2zm7pyv0fhyszazmqzf4kn1y6kaaizg4-emacs-packages-deps/share/emacs/site-lisp/elpa/gnuplot-20260623.1111/gnuplot.el</span>
+<span class="cd">;; </span><span class="c">-- the calls to `</span><span class="m c">sleep-for</span><span class="c">' are to allow enough time for gnuplot
+</span><span class="cd">;;    </span><span class="c">to write to the buffer before the next line is inserted
+</span><span class="cd">;; </span><span class="c">-- note that the input string is split into lines and each line is
+</span><span class="cd">;;    </span><span class="c">sent to gnuplot individually.  this is a bit slow, but it puts
+</span><span class="cd">;;    </span><span class="c">each line on the comint history.
+</span>(<span class="k">defun</span> <span class="f">gnuplot-send-string-to-gnuplot</span> (string text)
+  <span class="doc">"Sends STRING to the gnuplot program.
+If no gnuplot process exists, a new one is created.  TEXT indicates
+the type of text being sent to gnuplot and is typically one of
+nil, `</span><span class="m doc">line</span><span class="doc">', `</span><span class="m doc">region</span><span class="doc">', `</span><span class="m doc">buffer</span><span class="doc">', or `</span><span class="m doc">file</span><span class="doc">'.  TEXT may be useful for
+functions in `</span><span class="m doc">gnuplot-after-plot-hook</span><span class="doc">'.  `</span><span class="m doc">gnuplot-after-plot-hook</span><span class="doc">' is
+called by this function after all of STRING is sent to gnuplot."</span>
+  (gnuplot--make-comint-buffer)         <span class="cd">; </span><span class="c">make sure a gnuplot buffer exists
+</span>  (<span class="k">setq</span> gnuplot--comint-recent-buffer (current-buffer))
+
+  <span class="cd">;; </span><span class="c">Create a gnuplot frame if needed
+</span>  (<span class="k">when</span> (<span class="k">and</span> (equal gnuplot-display-process 'frame)
+             (not (frame-live-p gnuplot--process-frame)))
+    (<span class="k">let</span> ((frame (selected-frame)))
+      (<span class="k">setq</span> gnuplot--process-frame (make-frame))
+      (select-frame gnuplot--process-frame)
+      (switch-to-buffer gnuplot-buffer)
+      (delete-other-windows)
+      (select-frame frame)))
+
+  (<span class="k">let</span> ((list (gnuplot--split-string string)))
+    (<span class="k">with-current-buffer</span> (get-buffer gnuplot-buffer)
+      (goto-char (point-max))
+      <span class="cd">;; </span><span class="c">bruce asks: what is this next line for?
+</span>      (set-marker (process-mark gnuplot-process) (point-marker))
+      (sleep-for (* 10 gnuplot-delay))
+      (<span class="k">while</span> list
+        (insert (car list))
+        (comint-send-input)
+        (sleep-for gnuplot-delay)
+        (<span class="k">setq</span> list (cdr list))
+        (goto-char (point-max))))
+
+    (<span class="k">cond</span> ((equal gnuplot-display-process 'window)
+           (gnuplot--display-and-recenter-comint-buffer))
+          ((equal gnuplot-display-process 'frame)
+           <span class="cd">;;</span><span class="c">(raise-frame gnuplot--process-frame)
+</span>           (<span class="k">with-selected-frame</span> gnuplot--process-frame
+             (gnuplot--display-and-recenter-comint-buffer))))
+
+    (<span class="k">setq</span> gnuplot-recently-sent text)
+    (run-hooks 'gnuplot-after-plot-hook)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

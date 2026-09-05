@@ -1,0 +1,36 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--local-let – Emacs Documentation Online</title>
+<meta name="description" content="consult--local-let is a macro defined in consult.el.
+Buffer local let BINDS of dynamic variables in BODY.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--local-let</code></h1><p><span class="m"><code>consult--local-let</code></span> is a macro defined in <span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">consult--local-let</span> <a href="#:~:text=let-,BINDS"><span class="arg">BINDS</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=in-,BODY"><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Buffer local let <span class="arg">BINDS</span> of dynamic variables in <span class="arg">BODY</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defmacro</span> <span class="f">consult--local-let</span> (binds <span class="ty">&amp;rest</span> body)
+  <span class="doc">"Buffer local let BINDS of dynamic variables in BODY."</span>
+  (<span class="k">declare</span> (indent 1) (debug let))
+  (<span class="k">let</span> ((buffer (gensym <span class="s">"buffer"</span>))
+        (local (mapcar (<span class="k">lambda</span> (x) (cons (gensym <span class="s">"local"</span>) (car x))) binds)))
+    `(<span class="k">let</span> ((,buffer (current-buffer))
+           ,@(mapcar (<span class="k">lambda</span> (x) `(,(car x) (local-variable-p ',(cdr x)))) local))
+       (<span class="k">unwind-protect</span>
+           (<span class="k">progn</span>
+             ,@(mapcar (<span class="k">lambda</span> (x) `(make-local-variable ',(car x))) binds)
+             (<span class="k">let</span> (,@binds)
+               ,@body))
+         (<span class="k">when</span> (buffer-live-p ,buffer)
+           (<span class="k">with-current-buffer</span> ,buffer
+             ,@(mapcar (<span class="k">lambda</span> (x)
+                         `(<span class="k">unless</span> ,(car x)
+                            (kill-local-variable ',(cdr x))))
+                       local)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

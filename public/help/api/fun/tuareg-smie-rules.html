@@ -1,0 +1,192 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg-smie-rules – Emacs Documentation Online</title>
+<meta name="description" content="tuareg-smie-rules is a natively compiled function defined in
+tuareg.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg-smie-rules</code></h1><p><span class="m"><code>tuareg-smie-rules</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg-smie-rules <span class="arg">KIND</span> <span class="arg">TOKEN</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg-smie-rules</span> (kind token)
+  <span class="cd">;; </span><span class="c">FIXME: Handling of "= |", "with |", "function |", and "[ |" is
+</span>  <span class="cd">;; </span><span class="c">problematic.
+</span>  <span class="cd">;; </span><span class="c">FIXME: Start with (pcase (cons kind token) ...) so Edebug jumps
+</span>  <span class="cd">;; </span><span class="c">straight to the appropriate branch!
+</span>  (<span class="k">cond</span>
+   <span class="cd">;; </span><span class="c">Special indentation for module fields.
+</span>   ((<span class="k">and</span> (eq kind <span class="bi">:after</span>) (member token '(<span class="s">"."</span> <span class="s">";"</span>))
+         (smie-rule-parent-p <span class="s">"with"</span>)
+         (tuareg-smie--with-module-fields-rule)))
+   ((<span class="k">and</span> (eq kind <span class="bi">:after</span>) (equal token <span class="s">";;"</span>))
+    0)
+   <span class="cd">;; </span><span class="c">Special indentation for monadic &gt;&gt;&gt;, &gt;&gt;|, &gt;&gt;=, and &gt;|= operators.
+</span>   ((<span class="k">and</span> (eq kind <span class="bi">:before</span>) (tuareg-smie--monadic-rule token)))
+   ((<span class="k">and</span> (equal token <span class="s">"and"</span>) (smie-rule-parent-p <span class="s">"type"</span>))
+    0)
+   ((member token '(<span class="s">";"</span> <span class="s">"|"</span> <span class="s">","</span> <span class="s">"and"</span> <span class="s">"m-and"</span>))
+    (<span class="k">cond</span>
+     ((<span class="k">and</span> (eq kind <span class="bi">:before</span>) (member token '(<span class="s">"|"</span> <span class="s">";"</span>))
+           (smie-rule-parent-p <span class="s">"then"</span>)
+           <span class="cd">;; </span><span class="c">We have misparsed the code: TOKEN is not a child of `</span><span class="m c">then</span><span class="c">' but
+</span>           <span class="cd">;; </span><span class="c">should have closed the "if E1 then E2" instead!
+</span>           (tuareg-smie--if-then-hack token)))
+     <span class="cd">;; </span><span class="c">FIXME: smie-rule-separator doesn't behave correctly when the separator
+</span>     <span class="cd">;; </span><span class="c">is right after the parent (on another line).
+</span>     ((<span class="k">and</span> (smie-rule-bolp) (smie-rule-prev-p <span class="s">"d="</span> <span class="s">"with"</span> <span class="s">"["</span> <span class="s">"function"</span>))
+      (<span class="k">if</span> (<span class="k">and</span> (eq kind <span class="bi">:before</span>) (smie-rule-bolp)
+               (smie-rule-prev-p <span class="s">"["</span> <span class="s">"d="</span> <span class="s">"function"</span>))
+          0 tuareg-with-indent))
+     ((<span class="k">and</span> (equal token <span class="s">"|"</span>) (smie-rule-bolp) (not (smie-rule-prev-p <span class="s">"d="</span>))
+           (smie-rule-parent-p <span class="s">"d="</span>))
+      <span class="cd">;; </span><span class="c">FIXME: Need a comment explaining what this tries to do.
+</span>      <span class="cd">;; </span><span class="c">FIXME: Should this only apply when (eq kind :before)?
+</span>      <span class="cd">;; </span><span class="c">FIXME: Don't use smie--parent.
+</span>      (<span class="k">when</span> (<span class="k">bound-and-true-p</span> smie--parent)
+        (goto-char (cadr smie--parent))
+        (smie-indent-forward-token)
+        (tuareg-skip-blank-and-comments)
+        `(column . ,(- (current-column) 2))))
+     (t (smie-rule-separator kind))))
+   (t
+    (<span class="k">pcase</span> kind
+      (`<span class="bi">:elem</span> (<span class="k">cond</span>
+               ((eq token 'basic) tuareg-default-indent)
+               <span class="cd">;; </span><span class="c">The default tends to indent much too deep.
+</span>               ((eq token 'empty-line-token) <span class="s">";;"</span>)))
+      (`<span class="bi">:list-intro</span> (member token '(<span class="s">"fun"</span>)))
+      (`<span class="bi">:close-all</span> t)
+      (`<span class="bi">:before</span>
+       (<span class="k">cond</span>
+        ((equal token <span class="s">"d="</span>) (smie-rule-parent 2))
+        ((member token '(<span class="s">"fun"</span> <span class="s">"match"</span>))
+         (<span class="k">and</span> (not (smie-rule-bolp))
+              (<span class="k">cond</span> ((smie-rule-prev-p <span class="s">"d="</span>)
+                     (smie-rule-parent tuareg-default-indent))
+                    ((smie-rule-prev-p <span class="s">"begin"</span>) (smie-rule-parent)))))
+        ((equal token <span class="s">"then"</span>) (smie-rule-parent))
+        ((equal token <span class="s">"if"</span>) (<span class="k">if</span> (<span class="k">and</span> (not (smie-rule-bolp))
+                                     (smie-rule-prev-p <span class="s">"else"</span>))
+                                (smie-rule-parent)))
+        ((<span class="k">and</span> (equal token <span class="s">"with"</span>) (smie-rule-parent-p <span class="s">"{"</span>))
+         (smie-rule-parent))
+        ((<span class="k">and</span> (equal token <span class="s">"with"</span>) (smie-rule-parent-p <span class="s">"d="</span>))
+         (<span class="k">let</span> ((td (smie-backward-sexp <span class="s">"with"</span>)))
+           (<span class="w">cl-assert</span> (equal (nth 2 td) <span class="s">"d="</span>))
+           (goto-char (nth 1 td))
+           (<span class="k">setq</span> td (smie-backward-sexp <span class="s">"d="</span>))
+           <span class="cd">;; </span><span class="c">Presumably (equal (nth 1 td) "type").
+</span>           (goto-char (nth 1 td))
+           `(column . ,(smie-indent-virtual))))
+        <span class="cd">;; </span><span class="c">Align the "with" of "module type A = B \n with ..." w.r.t "module".
+</span>        ((<span class="k">and</span> (equal token <span class="s">"m-with"</span>) (smie-rule-parent-p <span class="s">"d="</span>))
+         (<span class="k">save-excursion</span>
+           (smie-backward-sexp token)
+           (goto-char (nth 1 (smie-backward-sexp 'halfsexp)))
+           (cons 'column (+ 2 (current-column)))))
+        <span class="cd">;; </span><span class="c">Treat purely syntactic block-constructs as being part of their
+</span>        <span class="cd">;; </span><span class="c">parent, when the opening statement is hanging.
+</span>        ((member token '(<span class="s">"let"</span> <span class="s">"("</span> <span class="s">"["</span> <span class="s">"{"</span> <span class="s">"sig"</span> <span class="s">"struct"</span> <span class="s">"begin"</span>))
+         (<span class="k">when</span> (<span class="k">and</span> (smie-rule-hanging-p)
+                    (apply #'smie-rule-prev-p
+                           tuareg-smie--exp-operator-leader))
+           (<span class="k">if</span> (<span class="k">let</span> ((openers '(<span class="s">"{"</span> <span class="s">"("</span> <span class="s">"{&lt;"</span> <span class="s">"["</span> <span class="s">"[|"</span>)))
+                 (<span class="k">or</span> (apply #'smie-rule-prev-p openers)
+                     (not (apply #'smie-rule-parent-p openers))))
+               (<span class="k">let</span> ((offset (<span class="k">if</span> (<span class="k">and</span> (member token '(<span class="s">"("</span> <span class="s">"struct"</span> <span class="s">"sig"</span>))
+                                      (not (smie-rule-parent-p <span class="s">"let"</span> <span class="s">"d-let"</span>)))
+                                 0
+                               tuareg-default-indent)))
+                 (smie-rule-parent offset))
+             <span class="cd">;; </span><span class="c">In "{ a = (", "{" and "a =" are not part of the same
+</span>             <span class="cd">;; </span><span class="c">syntax rule, so "(" is part of "a =" but not of the
+</span>             <span class="cd">;; </span><span class="c">surrounding "{".
+</span>             (<span class="k">save-excursion</span>
+               (smie-backward-sexp 'halfsexp)
+               (cons 'column (smie-indent-virtual))))))
+        ((<span class="k">and</span> tuareg-match-patterns-aligned
+              (equal token <span class="s">"|-or"</span>) (smie-rule-parent-p <span class="s">"|"</span>))
+         (smie-rule-parent))
+        <span class="cd">;; </span><span class="c">If we're looking at the first class-field-spec
+</span>        <span class="cd">;; </span><span class="c">in a "object(type)...end", don't rely on the default behavior which
+</span>        <span class="cd">;; </span><span class="c">will treat (type) as a previous element with which to align.
+</span>        ((tuareg-smie--object-hanging-rule token))
+        <span class="cd">;; </span><span class="c">Apparently, people like their `| pattern when test -&gt; body' to have
+</span>        <span class="cd">;;  </span><span class="c">the `</span><span class="m c">when</span><span class="c">' indented deeper than the body.
+</span>        ((equal token <span class="s">"when"</span>) (smie-rule-parent tuareg-match-when-indent))))
+      (`<span class="bi">:after</span>
+       (<span class="k">cond</span>
+        ((equal token <span class="s">"d="</span>)
+         (<span class="k">and</span> (smie-rule-parent-p <span class="s">"type"</span>)
+              (not (smie-rule-next-p <span class="s">"["</span>))
+              0))
+        ((equal token <span class="s">"-&gt;"</span>)
+         (<span class="k">cond</span>
+          ((smie-rule-parent-p <span class="s">"with"</span>)
+           <span class="cd">;; </span><span class="c">Align with "with" but only if it's the only branch (often
+</span>           <span class="cd">;; </span><span class="c">the case in try..with), since otherwise subsequent
+</span>           <span class="cd">;; </span><span class="c">branches can't be both indented well and aligned.
+</span>           (<span class="k">if</span> (<span class="k">save-excursion</span>
+                 (<span class="k">and</span> (not (equal <span class="s">"|"</span> (nth 2 (smie-forward-sexp <span class="s">"|"</span>))))
+                      <span class="cd">;; </span><span class="c">Since we may misparse "if..then.." we need to
+</span>                      <span class="cd">;; </span><span class="c">double check that smie-forward-sexp indeed got us
+</span>                      <span class="cd">;; </span><span class="c">to the right place.
+</span>                      (equal (nth 2 (smie-backward-sexp <span class="s">"|"</span>)) <span class="s">"with"</span>)))
+               (smie-rule-parent 2)
+             <span class="cd">;; </span><span class="c">Align with other clauses, even with no preceding "|"
+</span>             tuareg-match-clause-indent))
+          ((smie-rule-parent-p <span class="s">"function"</span>)
+           <span class="cd">;; </span><span class="c">Similar to the previous rule but for "function"
+</span>           (<span class="k">if</span> (<span class="k">save-excursion</span>
+                 (<span class="k">and</span> (not (equal <span class="s">"|"</span> (nth 2 (smie-forward-sexp <span class="s">"|"</span>))))
+                      (equal (nth 2 (smie-backward-sexp <span class="s">"|"</span>)) <span class="s">"function"</span>)))
+               (smie-rule-parent tuareg-default-indent)
+             tuareg-match-clause-indent))
+          ((smie-rule-parent-p <span class="s">"|"</span>) tuareg-match-clause-indent)
+          <span class="cd">;; </span><span class="c">Special case for "CPS style" code.
+</span>          <span class="cd">;; </span><span class="c">https://github.com/ocaml/tuareg/issues/5.
+</span>          ((smie-rule-parent-p <span class="s">"fun"</span>)
+           (<span class="k">save-excursion</span>
+             (smie-backward-sexp <span class="s">"-&gt;"</span>)
+             (<span class="k">if</span> (eq ?\( (char-before))
+                 (cons 'column
+                       (+ tuareg-default-indent
+                          (<span class="k">progn</span>
+                            (backward-char 1)
+                            (smie-indent-virtual))))
+               0)))
+          (t 0)))
+        ((equal token <span class="s">":"</span>)
+         (<span class="k">cond</span>
+          ((smie-rule-parent-p <span class="s">"val"</span> <span class="s">"external"</span>) (smie-rule-parent 2))
+          ((smie-rule-parent-p <span class="s">"module"</span>) (smie-rule-parent))
+          (t 2)))
+        ((equal token <span class="s">"in"</span>) tuareg-in-indent) <span class="cd">;;</span><span class="c">(if (smie-rule-hanging-p)
+</span>        ((equal token <span class="s">"with"</span>)
+         (<span class="k">cond</span>
+          <span class="cd">;; </span><span class="c">((smie-rule-next-p "|") 2)
+</span>          ((smie-rule-parent-p <span class="s">"{"</span>) nil)
+          (t (+ 2 tuareg-with-indent))))
+        ((<span class="k">or</span> (member token '(<span class="s">"."</span> <span class="s">"t-&gt;"</span> <span class="s">"]"</span>))
+             (consp (nth 2 (assoc token tuareg-smie-grammar)))) <span class="cd">;; </span><span class="c">Closer.
+</span>         nil)
+        ((member token '(<span class="s">"{"</span> <span class="s">"("</span>))
+         <span class="cd">;; </span><span class="c">The virtual indent after ( can be higher than the actual one
+</span>         <span class="cd">;; </span><span class="c">because it might be "column + tuareg-default-indent", whereas
+</span>         <span class="cd">;; </span><span class="c">the token only occupies a single column.  So make sure we don't
+</span>         <span class="cd">;; </span><span class="c">get caught in this trap.
+</span>         (<span class="k">let</span> ((vi (smie-indent-virtual)))
+           (forward-char 1)             <span class="cd">;</span><span class="c">Skip paren.
+</span>           (skip-chars-forward <span class="s">" \t"</span>)
+           (<span class="k">unless</span> (eolp)
+             `(column
+               . ,(min (current-column)
+                       (+ tuareg-default-indent vi))))))
+        (t tuareg-default-indent)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

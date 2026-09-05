@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.1.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Macros (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Macros (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Macros (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Customization.html#Customization" rel="next" title="Customization">
+<link href="Functions.html#Functions" rel="prev" title="Functions">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+dt.def-line {font-size: 1rem}
+kbd.kbd {font-style: oblique}
+kbd.key {font-style: normal}
+span.r {font-family: initial; font-weight: normal; font-style: normal}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold}
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Macros">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Customization.html#Customization" rel="next">Customization Settings</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Functions.html#Functions" rel="prev">Functions</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Emacs Lisp</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h2 class="chapter" id="Macros-1"><span>14 Macros<a class="copiable-link" href="#Macros-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-macros"></a>
+
+<p><em class="dfn">Macros</em> enable you to define new control constructs and other
+language features.  A macro is defined much like a function, but instead
+of telling how to compute a value, it tells how to compute another Lisp
+expression which will in turn compute the value.  We call this
+expression the <em class="dfn">expansion</em> of the macro.
+</p>
+<p>Macros can do this because they operate on the unevaluated expressions
+for the arguments, not on the argument values as functions do.  They can
+therefore construct an expansion containing these argument expressions
+or parts of them.
+</p>
+<p>If you are using a macro to do something an ordinary function could
+do, just for the sake of speed, consider using an inline function
+instead.  See <a class="xref" href="Functions.html#Inline-Functions">Inline Functions</a>.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Simple-Macro">A Simple Example of a Macro</a></li>
+<li><a href="#Expansion">Expansion of a Macro Call</a></li>
+<li><a href="#Compiling-Macros">Macros and Byte Compilation</a></li>
+<li><a href="#Defining-Macros">Defining Macros</a></li>
+<li><a href="#Problems-with-Macros">Common Problems Using Macros</a></li>
+<li><a href="#Indenting-Macros">Indenting Macros</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Simple-Macro">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Expansion" rel="next">Expansion of a Macro Call</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Macros" rel="up">Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="A-Simple-Example-of-a-Macro"><span>14.1 A Simple Example of a Macro<a class="copiable-link" href="#A-Simple-Example-of-a-Macro"> &para;</a></span></h3>
+
+<p>Suppose we would like to define a Lisp construct to increment a
+variable value, much like the <code class="code">++</code> operator in C.  We would like to
+write <code class="code">(inc x)</code> and have the effect of <code class="code">(setq x (1+ x))</code>.
+Here&rsquo;s a macro definition that does the job:
+</p>
+<a class="index-entry-id" id="index-inc"></a>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(defmacro inc (var)
+   (list 'setq var (list '1+ var)))
+</pre></div></div>
+
+<p>When this is called with <code class="code">(inc x)</code>, the argument <var class="var">var</var> is the
+symbol <code class="code">x</code>&mdash;<em class="emph">not</em> the <em class="emph">value</em> of <code class="code">x</code>, as it would
+be in a function.  The body of the macro uses this to construct the
+expansion, which is <code class="code">(setq x (1+ x))</code>.  Once the macro definition
+returns this expansion, Lisp proceeds to evaluate it, thus incrementing
+<code class="code">x</code>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-macrop"><span class="category-def">Function: </span><span><strong class="def-name">macrop</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-macrop"> &para;</a></span></dt>
+<dd><p>This predicate tests whether its argument is a macro, and returns
+<code class="code">t</code> if so, <code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Expansion">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Compiling-Macros" rel="next">Macros and Byte Compilation</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Simple-Macro" rel="prev">A Simple Example of a Macro</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Macros" rel="up">Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Expansion-of-a-Macro-Call"><span>14.2 Expansion of a Macro Call<a class="copiable-link" href="#Expansion-of-a-Macro-Call"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-expansion-of-macros"></a>
+<a class="index-entry-id" id="index-macro-call"></a>
+
+<p>A macro call looks just like a function call in that it is a list which
+starts with the name of the macro.  The rest of the elements of the list
+are the arguments of the macro.
+</p>
+<p>Evaluation of the macro call begins like evaluation of a function call
+except for one crucial difference: the macro arguments are the actual
+expressions appearing in the macro call.  They are not evaluated before
+they are given to the macro definition.  By contrast, the arguments of a
+function are results of evaluating the elements of the function call
+list.
+</p>
+<p>Having obtained the arguments, Lisp invokes the macro definition just
+as a function is invoked.  The argument variables of the macro are bound
+to the argument values from the macro call, or to a list of them in the
+case of a <code class="code">&amp;rest</code> argument.  And the macro body executes and
+returns its value just as a function body does.
+</p>
+<p>The second crucial difference between macros and functions is that
+the value returned by the macro body is an alternate Lisp expression,
+also known as the <em class="dfn">expansion</em> of the macro.  The Lisp interpreter
+proceeds to evaluate the expansion as soon as it comes back from the
+macro.
+</p>
+<p>Since the expansion is evaluated in the normal manner, it may contain
+calls to other macros.  It may even be a call to the same macro, though
+this is unusual.
+</p>
+<p>Note that Emacs tries to expand macros when loading an uncompiled
+Lisp file.  This is not always possible, but if it is, it speeds up
+subsequent execution.  See <a class="xref" href="Loading.html#How-Programs-Do-Loading">How Programs Do Loading</a>.
+</p>
+<p>You can see the expansion of a given macro call by calling
+<code class="code">macroexpand</code>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-macroexpand"><span class="category-def">Function: </span><span><strong class="def-name">macroexpand</strong> <var class="def-var-arguments">form &amp;optional environment</var><a class="copiable-link" href="#index-macroexpand"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-macro-expansion"></a>
+<p>This function expands <var class="var">form</var>, if it is a macro call.  If the result
+is another macro call, it is expanded in turn, until something which is
+not a macro call results.  That is the value returned by
+<code class="code">macroexpand</code>.  If <var class="var">form</var> is not a macro call to begin with, it
+is returned as given.
+</p>
+<p>Note that <code class="code">macroexpand</code> does not look at the subexpressions of
+<var class="var">form</var> (although some macro definitions may do so).  Even if they
+are macro calls themselves, <code class="code">macroexpand</code> does not expand them.
+</p>
+<p>The function <code class="code">macroexpand</code> does not expand calls to inline functions.
+Normally there is no need for that, since a call to an inline function is
+no harder to understand than a call to an ordinary function.
+</p>
+<p>If <var class="var">environment</var> is provided, it specifies an alist of macro
+definitions that shadow the currently defined macros.  Byte compilation
+uses this feature.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(defmacro inc (var)
+    (list 'setq var (list '1+ var)))
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(macroexpand '(inc r))
+     &rArr; (setq r (1+ r))
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(defmacro inc2 (var1 var2)
+    (list 'progn (list 'inc var1) (list 'inc var2)))
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(macroexpand '(inc2 r s))
+     &rArr; (progn (inc r) (inc s))  ; <span class="r"><code class="code">inc</code> not expanded here.</span>
+</pre></div></div>
+</dd></dl>
+
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-macroexpand_002dall"><span class="category-def">Function: </span><span><strong class="def-name">macroexpand-all</strong> <var class="def-var-arguments">form &amp;optional environment</var><a class="copiable-link" href="#index-macroexpand_002dall"> &para;</a></span></dt>
+<dd><p><code class="code">macroexpand-all</code> expands macros like <code class="code">macroexpand</code>, but
+will look for and expand all macros in <var class="var">form</var>, not just at the
+top-level.  If no macros are expanded, the return value is <code class="code">eq</code>
+to <var class="var">form</var>.
+</p>
+<p>Repeating the example used for <code class="code">macroexpand</code> above with
+<code class="code">macroexpand-all</code>, we see that <code class="code">macroexpand-all</code> <em class="emph">does</em>
+expand the embedded calls to <code class="code">inc</code>:
+</p>
+<div class="example">
+<pre class="example-preformatted">(macroexpand-all '(inc2 r s))
+     &rArr; (progn (setq r (1+ r)) (setq s (1+ s)))
+</pre></div>
+
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-macroexpand_002d1"><span class="category-def">Function: </span><span><strong class="def-name">macroexpand-1</strong> <var class="def-var-arguments">form &amp;optional environment</var><a class="copiable-link" href="#index-macroexpand_002d1"> &para;</a></span></dt>
+<dd><p>This function expands macros like <code class="code">macroexpand</code>, but it only
+performs one step of the expansion: if the result is another macro
+call, <code class="code">macroexpand-1</code> will not expand it.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Compiling-Macros">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Defining-Macros" rel="next">Defining Macros</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Expansion" rel="prev">Expansion of a Macro Call</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Macros" rel="up">Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Macros-and-Byte-Compilation"><span>14.3 Macros and Byte Compilation<a class="copiable-link" href="#Macros-and-Byte-Compilation"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-byte_002dcompiling-macros"></a>
+
+<p>You might ask why we take the trouble to compute an expansion for a
+macro and then evaluate the expansion.  Why not have the macro body
+produce the desired results directly?  The reason has to do with
+compilation.
+</p>
+<p>When a macro call appears in a Lisp program being compiled, the Lisp
+compiler calls the macro definition just as the interpreter would, and
+receives an expansion.  But instead of evaluating this expansion, it
+compiles the expansion as if it had appeared directly in the program.
+As a result, the compiled code produces the value and side effects
+intended for the macro, but executes at full compiled speed.  This would
+not work if the macro body computed the value and side effects
+itself&mdash;they would be computed at compile time, which is not useful.
+</p>
+<p>In order for compilation of macro calls to work, the macros must
+already be defined in Lisp when the calls to them are compiled.  The
+compiler has a special feature to help you do this: if a file being
+compiled contains a <code class="code">defmacro</code> form, the macro is defined
+temporarily for the rest of the compilation of that file.
+</p>
+<p>Byte-compiling a file also executes any <code class="code">require</code> calls at
+top-level in the file, so you can ensure that necessary macro
+definitions are available during compilation by requiring the files
+that define them (see <a class="pxref" href="Loading.html#Named-Features">Features</a>).  To avoid loading the macro
+definition files when someone <em class="emph">runs</em> the compiled program, write
+<code class="code">eval-when-compile</code> around the <code class="code">require</code> calls (see <a class="pxref" href="Byte-Compilation.html#Eval-During-Compile">Evaluation During Compilation</a>).
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Defining-Macros">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Problems-with-Macros" rel="next">Common Problems Using Macros</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Compiling-Macros" rel="prev">Macros and Byte Compilation</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Macros" rel="up">Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Defining-Macros-1"><span>14.4 Defining Macros<a class="copiable-link" href="#Defining-Macros-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-defining-macros"></a>
+<a class="index-entry-id" id="index-macro_002c-how-to-define"></a>
+
+<p>A Lisp macro object is a list whose <small class="sc">CAR</small> is <code class="code">macro</code>, and
+whose <small class="sc">CDR</small> is a function.  Expansion of the macro works
+by applying the function (with <code class="code">apply</code>) to the list of
+<em class="emph">unevaluated</em> arguments from the macro call.
+</p>
+<p>It is possible to use an anonymous Lisp macro just like an anonymous
+function, but this is never done, because it does not make sense to
+pass an anonymous macro to functionals such as <code class="code">mapcar</code>.  In
+practice, all Lisp macros have names, and they are almost always
+defined with the <code class="code">defmacro</code> macro.
+</p>
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-defmacro"><span class="category-def">Macro: </span><span><strong class="def-name">defmacro</strong> <var class="def-var-arguments">name args [doc] [declare] body&hellip;</var><a class="copiable-link" href="#index-defmacro"> &para;</a></span></dt>
+<dd><p><code class="code">defmacro</code> defines the symbol <var class="var">name</var> (which should not be
+quoted) as a macro that looks like this:
+</p>
+<div class="example">
+<pre class="example-preformatted">(macro lambda <var class="var">args</var> . <var class="var">body</var>)
+</pre></div>
+
+<p>(Note that the <small class="sc">CDR</small> of this list is a lambda expression.)  This
+macro object is stored in the function cell of <var class="var">name</var>.  The
+meaning of <var class="var">args</var> is the same as in a function, and the keywords
+<code class="code">&amp;rest</code> and <code class="code">&amp;optional</code> may be used (see <a class="pxref" href="Functions.html#Argument-List">Features of Argument Lists</a>).
+Neither <var class="var">name</var> nor <var class="var">args</var> should be quoted.  The return value
+of <code class="code">defmacro</code> is undefined.
+</p>
+<p><var class="var">doc</var>, if present, should be a string specifying the macro&rsquo;s
+documentation string.  <var class="var">declare</var>, if present, should be a
+<code class="code">declare</code> form specifying metadata for the macro (see <a class="pxref" href="Functions.html#Declare-Form">The <code class="code">declare</code> Form</a>).  Note that macros cannot have interactive declarations, since
+they cannot be called interactively.
+</p></dd></dl>
+
+<p>Macros often need to construct large list structures from a mixture
+of constants and nonconstant parts.  To make this easier, use the
+&lsquo;<samp class="samp">`</samp>&rsquo; syntax (see <a class="pxref" href="Evaluation.html#Backquote">Backquote</a>).  For example:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(defmacro t-becomes-nil (variable)
+  `(if (eq ,variable t)
+       (setq ,variable nil)))
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(t-becomes-nil foo)
+     &equiv; (if (eq foo t) (setq foo nil))
+</pre></div></div>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Problems-with-Macros">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Indenting-Macros" rel="next">Indenting Macros</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Defining-Macros" rel="prev">Defining Macros</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Macros" rel="up">Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Common-Problems-Using-Macros"><span>14.5 Common Problems Using Macros<a class="copiable-link" href="#Common-Problems-Using-Macros"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-macro-caveats"></a>
+
+<p>Macro expansion can have counterintuitive consequences.  This
+section describes some important consequences that can lead to
+trouble, and rules to follow to avoid trouble.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Wrong-Time">Wrong Time</a></li>
+<li><a href="#Argument-Evaluation">Evaluating Macro Arguments Repeatedly</a></li>
+<li><a href="#Surprising-Local-Vars">Local Variables in Macro Expansions</a></li>
+<li><a href="#Eval-During-Expansion">Evaluating Macro Arguments in Expansion</a></li>
+<li><a href="#Repeated-Expansion">How Many Times is the Macro Expanded?</a></li>
+</ul>
+<hr>
+<div class="subsection-level-extent" id="Wrong-Time">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Argument-Evaluation" rel="next">Evaluating Macro Arguments Repeatedly</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Problems-with-Macros" rel="up">Common Problems Using Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Wrong-Time-1"><span>14.5.1 Wrong Time<a class="copiable-link" href="#Wrong-Time-1"> &para;</a></span></h4>
+
+<p>The most common problem in writing macros is doing some of the
+real work prematurely&mdash;while expanding the macro, rather than in the
+expansion itself.  For instance, one real package had this macro
+definition:
+</p>
+<div class="example">
+<pre class="example-preformatted">(defmacro my-set-buffer-multibyte (arg)
+  (if (fboundp 'set-buffer-multibyte)
+      (set-buffer-multibyte arg)))
+</pre></div>
+
+<p>With this erroneous macro definition, the program worked fine when
+interpreted but failed when compiled.  This macro definition called
+<code class="code">set-buffer-multibyte</code> during compilation, which was wrong, and
+then did nothing when the compiled package was run.  The definition
+that the programmer really wanted was this:
+</p>
+<div class="example">
+<pre class="example-preformatted">(defmacro my-set-buffer-multibyte (arg)
+  (if (fboundp 'set-buffer-multibyte)
+      `(set-buffer-multibyte ,arg)))
+</pre></div>
+
+<p>This macro expands, if appropriate, into a call to
+<code class="code">set-buffer-multibyte</code> that will be executed when the compiled
+program is actually run.
+</p>
+<hr>
+</div>
+<div class="subsection-level-extent" id="Argument-Evaluation">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Surprising-Local-Vars" rel="next">Local Variables in Macro Expansions</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Wrong-Time" rel="prev">Wrong Time</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Problems-with-Macros" rel="up">Common Problems Using Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Evaluating-Macro-Arguments-Repeatedly"><span>14.5.2 Evaluating Macro Arguments Repeatedly<a class="copiable-link" href="#Evaluating-Macro-Arguments-Repeatedly"> &para;</a></span></h4>
+
+<p>When defining a macro you must pay attention to the number of times
+the arguments will be evaluated when the expansion is executed.  The
+following macro (used to facilitate iteration) illustrates the
+problem.  This macro allows us to write a for-loop construct.
+</p>
+<a class="index-entry-id" id="index-for"></a>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(defmacro for (var from init to final do &amp;rest body)
+  &quot;Execute a simple \&quot;for\&quot; loop.
+For example, (for i from 1 to 10 do (print i)).&quot;
+  (list 'let (list (list var init))
+        (cons 'while
+              (cons (list '&lt;= var final)
+                    (append body (list (list 'inc var)))))))
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(for i from 1 to 3 do
+   (setq square (* i i))
+   (princ (format &quot;\n%d %d&quot; i square)))
+&rarr;
+</pre></div><div class="group"><pre class="example-preformatted">(let ((i 1))
+  (while (&lt;= i 3)
+    (setq square (* i i))
+    (princ (format &quot;\n%d %d&quot; i square))
+    (inc i)))
+</pre></div><div class="group"><pre class="example-preformatted">
+
+     &#8867;1       1
+     &#8867;2       4
+     &#8867;3       9
+&rArr; nil
+</pre></div></div>
+
+<p>The arguments <code class="code">from</code>, <code class="code">to</code>, and <code class="code">do</code> in this macro are
+syntactic sugar; they are entirely ignored.  The idea is that you
+will write noise words (such as <code class="code">from</code>, <code class="code">to</code>, and <code class="code">do</code>)
+in those positions in the macro call.
+</p>
+<p>Here&rsquo;s an equivalent definition simplified through use of backquote:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(defmacro for (var from init to final do &amp;rest body)
+  &quot;Execute a simple \&quot;for\&quot; loop.
+For example, (for i from 1 to 10 do (print i)).&quot;
+  `(let ((,var ,init))
+     (while (&lt;= ,var ,final)
+       ,@body
+       (inc ,var))))
+</pre></div></div>
+
+<p>Both forms of this definition (with backquote and without) suffer from
+the defect that <var class="var">final</var> is evaluated on every iteration.  If
+<var class="var">final</var> is a constant, this is not a problem.  If it is a more
+complex form, say <code class="code">(long-complex-calculation x)</code>, this can slow
+down the execution significantly.  If <var class="var">final</var> has side effects,
+executing it more than once is probably incorrect.
+</p>
+<a class="index-entry-id" id="index-macro-argument-evaluation"></a>
+<p>A well-designed macro definition takes steps to avoid this problem by
+producing an expansion that evaluates the argument expressions exactly
+once unless repeated evaluation is part of the intended purpose of the
+macro.  Here is a correct expansion for the <code class="code">for</code> macro:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(let ((i 1)
+      (max 3))
+  (while (&lt;= i max)
+    (setq square (* i i))
+    (princ (format &quot;%d      %d&quot; i square))
+    (inc i)))
+</pre></div></div>
+
+<p>Here is a macro definition that creates this expansion:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(defmacro for (var from init to final do &amp;rest body)
+  &quot;Execute a simple for loop: (for i from 1 to 10 do (print i)).&quot;
+  `(let ((,var ,init)
+         (max ,final))
+     (while (&lt;= ,var max)
+       ,@body
+       (inc ,var))))
+</pre></div></div>
+
+<p>Unfortunately, this fix introduces another problem,
+described in the following section.
+</p>
+<hr>
+</div>
+<div class="subsection-level-extent" id="Surprising-Local-Vars">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Eval-During-Expansion" rel="next">Evaluating Macro Arguments in Expansion</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Argument-Evaluation" rel="prev">Evaluating Macro Arguments Repeatedly</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Problems-with-Macros" rel="up">Common Problems Using Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Local-Variables-in-Macro-Expansions"><span>14.5.3 Local Variables in Macro Expansions<a class="copiable-link" href="#Local-Variables-in-Macro-Expansions"> &para;</a></span></h4>
+
+<p>In the previous section, the definition of <code class="code">for</code> was fixed as
+follows to make the expansion evaluate the macro arguments the proper
+number of times:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(defmacro for (var from init to final do &amp;rest body)
+  &quot;Execute a simple for loop: (for i from 1 to 10 do (print i)).&quot;
+</pre></div><div class="group"><pre class="example-preformatted">  `(let ((,var ,init)
+         (max ,final))
+     (while (&lt;= ,var max)
+       ,@body
+       (inc ,var))))
+</pre></div></div>
+
+<p>The new definition of <code class="code">for</code> has a new problem: it introduces a
+local variable named <code class="code">max</code> which the user does not expect.  This
+causes trouble in examples such as the following:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(let ((max 0))
+  (for x from 0 to 10 do
+    (let ((this (frob x)))
+      (if (&lt; max this)
+          (setq max this)))))
+</pre></div></div>
+
+<p>The references to <code class="code">max</code> inside the body of the <code class="code">for</code>, which
+are supposed to refer to the user&rsquo;s binding of <code class="code">max</code>, really access
+the binding made by <code class="code">for</code>.
+</p>
+<p>The way to correct this is to use an uninterned symbol instead of
+<code class="code">max</code> (see <a class="pxref" href="Symbols.html#Creating-Symbols">Creating and Interning Symbols</a>).  The uninterned symbol can be
+bound and referred to just like any other symbol, but since it is
+created by <code class="code">for</code>, we know that it cannot already appear in the
+user&rsquo;s program.  Since it is not interned, there is no way the user can
+put it into the program later.  It will never appear anywhere except
+where put by <code class="code">for</code>.  Here is a definition of <code class="code">for</code> that works
+this way:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(defmacro for (var from init to final do &amp;rest body)
+  &quot;Execute a simple for loop: (for i from 1 to 10 do (print i)).&quot;
+  (let ((tempvar (make-symbol &quot;max&quot;)))
+    `(let ((,var ,init)
+           (,tempvar ,final))
+       (while (&lt;= ,var ,tempvar)
+         ,@body
+         (inc ,var)))))
+</pre></div></div>
+
+<p>This creates an uninterned symbol named <code class="code">max</code> and puts it in the
+expansion instead of the usual interned symbol <code class="code">max</code> that appears
+in expressions ordinarily.
+</p>
+<hr>
+</div>
+<div class="subsection-level-extent" id="Eval-During-Expansion">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Repeated-Expansion" rel="next">How Many Times is the Macro Expanded?</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Surprising-Local-Vars" rel="prev">Local Variables in Macro Expansions</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Problems-with-Macros" rel="up">Common Problems Using Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Evaluating-Macro-Arguments-in-Expansion"><span>14.5.4 Evaluating Macro Arguments in Expansion<a class="copiable-link" href="#Evaluating-Macro-Arguments-in-Expansion"> &para;</a></span></h4>
+
+<p>Another problem can happen if the macro definition itself
+evaluates any of the macro argument expressions, such as by calling
+<code class="code">eval</code> (see <a class="pxref" href="Evaluation.html#Eval">Eval</a>).  You have to take into account that macro
+expansion may take place long before the code is executed, when the
+context of the caller (where the macro expansion will be evaluated) is
+not yet accessible.
+</p>
+<p>Also, if your macro definition does not use <code class="code">lexical-binding</code>, its
+formal arguments may hide the user&rsquo;s variables of the same name.  Inside
+the macro body, the macro argument binding is the most local binding of
+such variable, so any references inside the form being evaluated do refer
+to it.  Here is an example:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(defmacro foo (a)
+  (list 'setq (eval a) t))
+</pre></div><div class="group"><pre class="example-preformatted">(setq x 'b)
+(foo x) &rarr; (setq b t)
+     &rArr; t                  ; <span class="r">and <code class="code">b</code> has been set.</span>
+;; <span class="r">but</span>
+(setq a 'c)
+(foo a) &rarr; (setq a t)
+     &rArr; t                  ; <span class="r">but this set <code class="code">a</code>, not <code class="code">c</code>.</span>
+
+</pre></div></div>
+
+<p>It makes a difference whether the user&rsquo;s variable is named <code class="code">a</code> or
+<code class="code">x</code>, because <code class="code">a</code> conflicts with the macro argument variable
+<code class="code">a</code>.
+</p>
+<p>Also, the expansion of <code class="code">(foo x)</code> above will return something
+different or signal an error when the code is compiled, since in that case
+<code class="code">(foo x)</code> is expanded during compilation, whereas the execution of
+<code class="code">(setq x 'b)</code> will only take place later when the code is executed.
+</p>
+<p>To avoid these problems, <strong class="strong">don&rsquo;t evaluate an argument expression
+while computing the macro expansion</strong>.  Instead, substitute the
+expression into the macro expansion, so that its value will be computed
+as part of executing the expansion.  This is how the other examples in
+this chapter work.
+</p>
+<hr>
+</div>
+<div class="subsection-level-extent" id="Repeated-Expansion">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Eval-During-Expansion" rel="prev">Evaluating Macro Arguments in Expansion</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Problems-with-Macros" rel="up">Common Problems Using Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="How-Many-Times-is-the-Macro-Expanded_003f"><span>14.5.5 How Many Times is the Macro Expanded?<a class="copiable-link" href="#How-Many-Times-is-the-Macro-Expanded_003f"> &para;</a></span></h4>
+
+<p>Occasionally problems result from the fact that a macro call is
+expanded each time it is evaluated in an interpreted function, but is
+expanded only once (during compilation) for a compiled function.  If the
+macro definition has side effects, they will work differently depending
+on how many times the macro is expanded.
+</p>
+<p>Therefore, you should avoid side effects in computation of the
+macro expansion, unless you really know what you are doing.
+</p>
+<p>One special kind of side effect can&rsquo;t be avoided: constructing Lisp
+objects.  Almost all macro expansions include constructed lists; that is
+the whole point of most macros.  This is usually safe; there is just one
+case where you must be careful: when the object you construct is part of a
+quoted constant in the macro expansion.
+</p>
+<p>If the macro is expanded just once, in compilation, then the object is
+constructed just once, during compilation.  But in interpreted
+execution, the macro is expanded each time the macro call runs, and this
+means a new object is constructed each time.
+</p>
+<p>In most clean Lisp code, this difference won&rsquo;t matter.  It can matter
+only if you perform side-effects on the objects constructed by the macro
+definition.  Thus, to avoid trouble, <strong class="strong">avoid side effects on
+objects constructed by macro definitions</strong>.  Here is an example of how
+such side effects can get you into trouble:
+</p>
+<div class="example lisp">
+<div class="group"><pre class="lisp-preformatted">(defmacro empty-object ()
+  (list 'quote (cons nil nil)))
+</pre></div><pre class="lisp-preformatted">
+
+</pre><div class="group"><pre class="lisp-preformatted">(defun initialize (condition)
+  (let ((object (empty-object)))
+    (if condition
+        (setcar object condition))
+    object))
+</pre></div></div>
+
+<p>If <code class="code">initialize</code> is interpreted, a new list <code class="code">(nil)</code> is
+constructed each time <code class="code">initialize</code> is called.  Thus, no side effect
+survives between calls.  If <code class="code">initialize</code> is compiled, then the
+macro <code class="code">empty-object</code> is expanded during compilation, producing a
+single constant <code class="code">(nil)</code> that is reused and altered each time
+<code class="code">initialize</code> is called.
+</p>
+<p>One way to avoid pathological cases like this is to think of
+<code class="code">empty-object</code> as a funny kind of constant, not as a memory
+allocation construct.  You wouldn&rsquo;t use <code class="code">setcar</code> on a constant such
+as <code class="code">'(nil)</code>, so naturally you won&rsquo;t use it on <code class="code">(empty-object)</code>
+either.
+</p>
+<hr>
+</div>
+</div>
+<div class="section-level-extent" id="Indenting-Macros">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Problems-with-Macros" rel="prev">Common Problems Using Macros</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Macros" rel="up">Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Indenting-Macros-1"><span>14.6 Indenting Macros<a class="copiable-link" href="#Indenting-Macros-1"> &para;</a></span></h3>
+
+<p>Within a macro definition, you can use the <code class="code">declare</code> form
+(see <a class="pxref" href="#Defining-Macros">Defining Macros</a>) to specify how <kbd class="key">TAB</kbd> should indent
+calls to the macro.  An indentation specification is written like this:
+</p>
+<div class="example">
+<pre class="example-preformatted">(declare (indent <var class="var">indent-spec</var>))
+</pre></div>
+
+<a class="index-entry-id" id="index-lisp_002dindent_002dfunction-property"></a>
+<p>This results in the <code class="code">lisp-indent-function</code> property being set on
+the macro name.
+</p>
+<p>Here are the possibilities for <var class="var">indent-spec</var>:
+</p>
+<dl class="table">
+<dt><code class="code">nil</code></dt>
+<dd><p>This is the same as no property&mdash;use the standard indentation pattern.
+</p></dd>
+<dt><code class="code">defun</code></dt>
+<dd><p>Handle this function like a &lsquo;<samp class="samp">def</samp>&rsquo; construct: treat the second
+line as the start of a <em class="dfn">body</em>.
+</p></dd>
+<dt>an integer, <var class="var">number</var></dt>
+<dd><p>The first <var class="var">number</var> arguments of the function are
+<em class="dfn">distinguished</em> arguments; the rest are considered the body
+of the expression.  A line in the expression is indented according to
+whether the first argument on it is distinguished or not.  If the
+argument is part of the body, the line is indented <code class="code">lisp-body-indent</code>
+more columns than the open-parenthesis starting the containing
+expression.  If the argument is distinguished and is either the first
+or second argument, it is indented <em class="emph">twice</em> that many extra columns.
+If the argument is distinguished and not the first or second argument,
+the line uses the standard pattern.
+</p></dd>
+<dt>a symbol, <var class="var">symbol</var></dt>
+<dd><p><var class="var">symbol</var> should be a function name; that function is called to
+calculate the indentation of a line within this expression.  The
+function receives two arguments:
+</p>
+<dl class="table">
+<dt><var class="var">pos</var></dt>
+<dd><p>The position at which the line being indented begins.
+</p></dd>
+<dt><var class="var">state</var></dt>
+<dd><p>The value returned by <code class="code">parse-partial-sexp</code> (a Lisp primitive for
+indentation and nesting computation) when it parses up to the
+beginning of this line.
+</p></dd>
+</dl>
+
+<p>It should return either a number, which is the number of columns of
+indentation for that line, or a list whose car is such a number.  The
+difference between returning a number and returning a list is that a
+number says that all following lines at the same nesting level should
+be indented just like this one; a list says that following lines might
+call for different indentations.  This makes a difference when the
+indentation is being computed by <kbd class="kbd">C-M-q</kbd>; if the value is a
+number, <kbd class="kbd">C-M-q</kbd> need not recalculate indentation for the following
+lines until the end of the list.
+</p></dd>
+</dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-lisp_002dindent_002dlocal_002doverrides"><span class="category-def">Variable: </span><span><strong class="def-name">lisp-indent-local-overrides</strong><a class="copiable-link" href="#index-lisp_002dindent_002dlocal_002doverrides"> &para;</a></span></dt>
+<dd><p>This variable can be used to override the indentation specification used
+for certain symbol, as specified using their <code class="code">lisp-indent-function</code>
+symbol property (see <a class="pxref" href="Symbols.html#Symbol-Properties">Symbol Properties</a>).  It is intended to be used
+as a file-local or directory-local variable; See <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/File-Variables.html#File-Variables">Local Variables in Files</a> in <cite class="cite">The GNU Emacs Manual</cite>.
+</p>
+<p>Each key is a symbol and each value is an indent specification, which
+overrides the value of the symbol&rsquo;s <code class="code">lisp-indent-function</code>
+property.  The value can take the same forms as the value of the symbol
+property, documented above.  Note that using a function is not safe and
+should be avoided, else all users, who visit the file, would have to
+explicitly approve or decline their use.
+</p>
+<p>This variable is used by the functions <code class="code">lisp-indent-function</code>
+and <code class="code">common-lisp-indent-function</code>.  In case of the latter, the
+symbol properties <code class="code">common-lisp-indent-function-for-elisp</code> and
+<code class="code">common-lisp-indent-function</code> take precedence not only over the
+<code class="code">lisp-indent-function</code> property but also over this variable.
+</p>
+</dd></dl>
+
+</div>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Customization.html#Customization" rel="next">Customization Settings</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Functions.html#Functions" rel="prev">Functions</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Emacs Lisp</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+
+
+
+</body>
+</html>

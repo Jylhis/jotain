@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-log--insert-entry – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-log--insert-entry is a natively compiled function defined in
+majutsu-log.el.
+Insert parsed ENTRY as a jj-commit section using COMPILED.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-log--insert-entry</code></h1><p><span class="m"><code>majutsu-log--insert-entry</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-log.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-log--insert-entry <a href="#:~:text=parsed-,ENTRY"><span class="arg">ENTRY</span></a> <a href="#:~:text=using-,COMPILED"><span class="arg">COMPILED</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert parsed <span class="arg">ENTRY</span> as a <span class="m"><code>jj-commit</code></span> section using <span class="arg">COMPILED</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-log.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-log--insert-entry</span> (entry compiled)
+  <span class="doc">"Insert parsed ENTRY as a `</span><span class="m doc">jj-commit</span><span class="doc">' section using COMPILED."</span>
+  (<span class="k">setq-local</span> majutsu-log--buffer-compiled compiled)
+  (<span class="k">let*</span> ((id (majutsu-log--entry-id entry))
+         (indent (<span class="k">or</span> (plist-get entry <span class="bi">:indent</span>) 0))
+         (prefixes (<span class="k">or</span> (plist-get entry <span class="bi">:heading-prefixes</span>) (list <span class="s">""</span>)))
+         (last-prefix (<span class="k">or</span> (car (last prefixes)) <span class="s">""</span>))
+         (content-lines (majutsu-log--render-heading-content-lines entry compiled t))
+         (count (max (length content-lines) (length prefixes)))
+         (heading-lines nil)
+         (tail (majutsu-log--render-tail entry compiled t))
+         (suffix-lines (plist-get entry <span class="bi">:suffix-lines</span>))
+         (body (majutsu-log--render-body entry compiled t))
+         (has-body (<span class="k">and</span> (stringp body)
+                        (not (string-empty-p (string-trim body))))))
+    (<span class="k">cl-loop</span> for idx below count
+             do (<span class="k">let</span> ((prefix (majutsu-log--propertize-decoration
+                               (<span class="k">or</span> (nth idx prefixes) last-prefix)
+                               id 'heading
+                               (<span class="k">if</span> (= idx 0) 'graph-prefix 'graph-carry)))
+                      (line (<span class="k">or</span> (nth idx content-lines) <span class="s">""</span>)))
+                  (<span class="k">push</span> (cons prefix line) heading-lines)))
+    (<span class="k">setq</span> heading-lines (nreverse heading-lines))
+    (<span class="k">magit-insert-section</span> (jj-commit id t)
+      (<span class="k">when</span> heading-lines
+        (majutsu-log--insert-heading-anchor-line (cdar heading-lines)
+                                                 tail
+                                                 id
+                                                 (caar heading-lines)))
+      (<span class="k">dolist</span> (line (cdr heading-lines))
+        (majutsu-log--insert-prefixed-line (cdr line) (car line)))
+      (<span class="k">dolist</span> (suffix-line suffix-lines)
+        (<span class="k">pcase-let*</span> ((`(,prefix . ,content)
+                      (majutsu-log--split-prefix-line suffix-line indent))
+                     (decorated-prefix
+                      (majutsu-log--propertize-decoration prefix id 'heading 'graph-carry))
+                     (decorated-content
+                      (majutsu-log--propertize-content content id 'heading)))
+          (majutsu-log--insert-prefixed-line decorated-content decorated-prefix)))
+      (<span class="k">when</span> has-body
+        (magit-insert-heading)
+        (<span class="k">let</span> ((body-prefix (majutsu-log--propertize-decoration
+                            (make-string indent ?\s)
+                            id 'body 'body-prefix)))
+          (<span class="k">magit-insert-section-body</span>
+            (<span class="k">let</span> ((start (point)))
+              (insert body)
+              (insert <span class="s">"\n"</span>)
+              (majutsu-log--apply-line-prefix-span start (point) body-prefix))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

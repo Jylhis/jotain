@@ -1,0 +1,43 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-conflict--find-conflict – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-conflict--find-conflict is a natively compiled function
+defined in majutsu-conflict.el.
+Find and match a JJ-style conflict region.  Intended as a font-lock MATCHER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-conflict--find-conflict</code></h1><p><span class="m"><code>majutsu-conflict--find-conflict</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-conflict.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-conflict--find-conflict <span class="ty">&amp;optional</span> <a href="#:~:text=and-,LIMIT"><span class="arg">LIMIT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find and match a JJ-style conflict region.  Intended as a font-lock MATCHER.
+<p>Skips git-style conflicts (left to <a class="v" href="../var/smerge-mode.html"><code>smerge-mode</code>(var)</a>/<a class="f" href="../fun/smerge-mode.html"><code>smerge-mode</code>(fun)</a>).
+Returns non-nil if a match is found between point and <span class="arg">LIMIT</span>.
+Sets match-data with group 0 = entire conflict.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-conflict.el</span>
+<span class="cd">;;; </span><span class="c">Font-Lock Support
+</span>
+(<span class="k">defun</span> <span class="f">majutsu-conflict--find-conflict</span> (<span class="ty">&amp;optional</span> limit)
+  <span class="doc">"Find and match a JJ-style conflict region.  Intended as a font-lock MATCHER.
+Skips git-style conflicts (left to `</span><span class="m doc">smerge-mode</span><span class="doc">').
+Returns non-nil if a match is found between point and LIMIT.
+Sets match-data with group 0 = entire conflict."</span>
+  (<span class="k">let</span> ((found nil))
+    (<span class="k">while</span> (<span class="k">and</span> (not found) (re-search-forward majutsu-conflict-begin-re limit t))
+      (<span class="k">let*</span> ((begin (match-beginning 0))
+             (marker-len (length (match-string 1)))
+             (end-re (format <span class="s">"^&gt;\\{%d,\\}</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s"> .*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?$"</span> marker-len))
+             (style (majutsu-conflict--detect-style begin marker-len)))
+        (<span class="k">when</span> (<span class="k">and</span> (memq style '(jj-diff jj-snapshot))
+                   (re-search-forward end-re limit t))
+          (set-match-data (list begin (match-end 0)))
+          (<span class="k">with-silent-modifications</span>
+            (put-text-property begin (match-end 0) 'font-lock-multiline t))
+          (<span class="k">setq</span> found t))))
+    found))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

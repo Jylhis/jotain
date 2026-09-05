@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--handle-error – Emacs Documentation Online</title>
+<meta name="description" content="gptel--handle-error is a natively compiled function defined in
+gptel.el.
+Check for errors in request state FSM.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--handle-error</code></h1><p><span class="m"><code>gptel--handle-error</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--handle-error <a href="#:~:text=state-,FSM"><span class="arg">FSM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Check for errors in request state <span class="arg">FSM</span>.
+<p>Perform UI updates and run post-response hooks.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--handle-error</span> (fsm)
+  <span class="doc">"Check for errors in request state FSM.
+
+Perform UI updates and run post-response hooks."</span>
+  (<span class="k">when-let*</span> ((info (gptel-fsm-info fsm))
+              (error-data (plist-get info <span class="bi">:error</span>)))
+    (<span class="k">let*</span> ((status (plist-get info <span class="bi">:status</span>))
+           (gptel-buffer (plist-get info <span class="bi">:buffer</span>))
+           (start-marker (plist-get info <span class="bi">:position</span>))
+           (tracking-marker (<span class="k">or</span> (plist-get info <span class="bi">:tracking-marker</span>)
+                                start-marker))
+           (backend-name
+            (gptel-backend-name
+             (buffer-local-value 'gptel-backend gptel-buffer))))
+      (<span class="k">if</span> (stringp error-data)
+          (message <span class="s">"%s error: (%s) %s"</span> backend-name status (string-trim error-data))
+        (<span class="k">when-let*</span> ((error-type (plist-get error-data <span class="bi">:type</span>)))
+          (<span class="k">setq</span> status (concat <span class="s">"("</span>  status <span class="s">") "</span>
+                               (string-trim (gptel--to-string error-type)))))
+        (<span class="k">when-let*</span> ((error-msg (plist-get error-data <span class="bi">:message</span>)))
+          (message <span class="s">"%s error: (%s) %s"</span> backend-name status
+                   (string-trim (gptel--to-string error-msg)))))
+      (<span class="k">if-let*</span> ((gptel-window (get-buffer-window gptel-buffer 'visible)))
+          (<span class="k">with-selected-window</span> gptel-window
+            (mapc (<span class="k">lambda</span> (f) (funcall f info)) (plist-get info <span class="bi">:post</span>))
+            (run-hook-with-args
+             'gptel-post-response-functions
+             (marker-position start-marker) (marker-position tracking-marker)))
+        (<span class="k">with-current-buffer</span> gptel-buffer
+          (mapc (<span class="k">lambda</span> (f) (funcall f info)) (plist-get info <span class="bi">:post</span>))
+          (run-hook-with-args
+           'gptel-post-response-functions
+           (marker-position start-marker) (marker-position tracking-marker))))
+      (<span class="k">with-current-buffer</span> gptel-buffer
+        (<span class="k">when</span> gptel-mode
+          (gptel--update-status (format <span class="s">" Error: %s"</span> status) 'error)
+          (gptel--update-token-usage (plist-get info <span class="bi">:tokens</span>)
+                                     (plist-get info <span class="bi">:tokens-full</span>)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

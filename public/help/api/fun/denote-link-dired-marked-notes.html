@@ -1,0 +1,82 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: denote-link-dired-marked-notes – Emacs Documentation Online</title>
+<meta name="description" content="denote-link-dired-marked-notes is an interactive and natively compiled
+function defined in denote.el.
+Insert Dired marked FILES as links in BUFFER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>denote-link-dired-marked-notes</code></h1><p><span class="m"><code>denote-link-dired-marked-notes</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">denote.el</span>.
+<h2>Signature</h2>
+<pre><code>(denote-link-dired-marked-notes <a href="#:~:text=marked-,FILES"><span class="arg">FILES</span></a> <a href="#:~:text=in-,BUFFER"><span class="arg">BUFFER</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=optional-,ID-ONLY"><span class="arg">ID-ONLY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert Dired marked <span class="arg">FILES</span> as links in <span class="arg">BUFFER</span>.
+<p><span class="arg">FILES</span> conform with the Denote file-naming scheme, such that they can be
+linked to using the <span class="m"><code>denote:</code></span> link type.
+<p>The <span class="arg">BUFFER</span> is one which visits a Denote note file.  If there are
+multiple <span class="arg">BUFFER</span> candidates in buffers, prompt with completion for
+one among them.  If there is none, throw an error.
+<p>With optional <span class="arg">ID-ONLY</span> as a prefix argument, insert links with
+just the identifier (same principle as with <a href="../fun/denote-link.html"><code>denote-link</code></a>).
+<p>This command is meant to be used from a Dired buffer.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Aliases</h2>
+<p><a href="../fun/denote-dired-link-marked-notes.html"><code>denote-dired-link-marked-notes</code></a>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/5x9606vmybcj80x6qrajp43rma9pa1i7-emacs-packages-deps/share/emacs/site-lisp/elpa/denote-4.2.3/denote.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">denote-link-dired-marked-notes</span> (files buffer <span class="ty">&amp;optional</span> id-only)
+  <span class="doc">"Insert Dired marked FILES as links in BUFFER.
+
+FILES conform with the Denote file-naming scheme, such that they can be
+linked to using the `</span><span class="m doc">denote:</span><span class="doc">' link type.
+
+The BUFFER is one which visits a Denote note file.  If there are
+multiple BUFFER candidates in buffers, prompt with completion for
+one among them.  If there is none, throw an error.
+
+With optional ID-ONLY as a prefix argument, insert links with
+just the identifier (same principle as with `</span><span class="m doc">denote-link</span><span class="doc">').
+
+This command is meant to be used from a Dired buffer."</span>
+  (<span class="k">interactive</span>
+   (<span class="k">if</span> (derived-mode-p 'dired-mode)
+       (list
+        (denote-link--map-over-notes)
+        (<span class="k">let</span> ((file-names (denote--buffer-file-names)))
+          (find-buffer-visiting
+           (<span class="k">cond</span>
+            ((null file-names)
+             (<span class="w">user-error</span> <span class="s">"No buffers visiting Denote notes"</span>))
+            ((eq (length file-names) 1)
+             (car file-names))
+            (t
+             (denote-link--buffer-file-prompt file-names)))))
+        current-prefix-arg)
+     (<span class="w">user-error</span> <span class="s">"This command only works inside a Dired buffer"</span>))
+   dired-mode)
+  (<span class="k">when</span> (null files)
+    (<span class="w">user-error</span> <span class="s">"No note files to link to"</span>))
+  (<span class="k">unless</span> (buffer-live-p buffer)
+    (<span class="w">error</span> <span class="s">"The buffer `</span><span class="m s">%s</span><span class="s">' is not live"</span> buffer))
+  (<span class="k">let</span> ((body (<span class="k">lambda</span> ()
+                (<span class="k">unless</span> (<span class="k">or</span> (denote--file-type-org-extra-p)
+                            (<span class="k">and</span> buffer-file-name (denote-file-has-supported-extension-p buffer-file-name)))
+                  (<span class="w">user-error</span> <span class="s">"The target file's type is not recognized by Denote"</span>))
+                (<span class="k">when</span> (y-or-n-p (format <span class="s">"Create links at point in `</span><span class="m s">%s</span><span class="s">'?"</span> buffer))
+                  (denote-link--insert-links files (denote-filetype-heuristics buffer-file-name) id-only)
+                  (message <span class="s">"Added links to `</span><span class="m s">%s</span><span class="s">'; displaying it now"</span>
+                           <span class="cd">;; </span><span class="c">TODO 2024-12-26: Do we need our face here?  I think
+</span>                           <span class="cd">;; </span><span class="c">not, but let me keep a note of it.
+</span>                           (propertize (format <span class="s">"%s"</span> buffer) 'face 'success))))))
+    (<span class="k">if-let*</span> ((window (get-buffer-window buffer))
+              ((window-live-p window)))
+        (<span class="k">with-selected-window</span> window (funcall body))
+      (<span class="k">with-current-buffer</span> buffer (funcall body))
+      (display-buffer-below-selected buffer nil))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

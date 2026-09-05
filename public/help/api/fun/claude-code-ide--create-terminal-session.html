@@ -1,0 +1,108 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide--create-terminal-session – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide--create-terminal-session is a natively compiled
+function defined in claude-code-ide.el.
+Create a new terminal session for Claude Code.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide--create-terminal-session</code></h1><p><span class="m"><code>claude-code-ide--create-terminal-session</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">claude-code-ide.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide--create-terminal-session <a href="#:~:text=Code.-,BUFFER-NAME"><span class="arg">BUFFER-NAME</span></a> <a href="#:~:text=buffer.-,WORKING-DIR"><span class="arg">WORKING-DIR</span></a> <a href="#:~:text=directory.-,PORT"><span class="arg">PORT</span></a> <a href="#:~:text=port.-,CONTINUE"><span class="arg">CONTINUE</span></a> <a href="#:~:text=conversation.-,RESUME"><span class="arg">RESUME</span></a> <a href="#:~:text=conversation.-,SESSION-ID"><span class="arg">SESSION-ID</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create a new terminal session for Claude Code.
+<p><span class="arg">BUFFER-NAME</span> is the name for the terminal buffer.
+<span class="arg">WORKING-DIR</span> is the working directory.
+<span class="arg">PORT</span> is the MCP server port.
+<span class="arg">CONTINUE</span> is whether to continue the most recent conversation.
+<span class="arg">RESUME</span> is whether to resume a previous conversation.
+<span class="arg">SESSION-ID</span> is the unique identifier for this session.
+<p>Returns a cons cell of (buffer . process) on success.
+Signals an error if terminal fails to initialize.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide--create-terminal-session</span> (buffer-name working-dir port continue resume session-id)
+  <span class="doc">"Create a new terminal session for Claude Code.
+BUFFER-NAME is the name for the terminal buffer.
+WORKING-DIR is the working directory.
+PORT is the MCP server port.
+CONTINUE is whether to continue the most recent conversation.
+RESUME is whether to resume a previous conversation.
+SESSION-ID is the unique identifier for this session.
+
+Returns a cons cell of (buffer . process) on success.
+Signals an error if terminal fails to initialize."</span>
+  <span class="cd">;; </span><span class="c">Ensure terminal backend is available before proceeding
+</span>  (claude-code-ide--terminal-ensure-backend)
+  (<span class="k">let*</span> ((claude-cmd (claude-code-ide--build-claude-command continue resume session-id))
+         (default-directory working-dir)
+         (env-vars (list (format <span class="s">"CLAUDE_CODE_SSE_PORT=%d"</span> port)
+                         <span class="s">"ENABLE_IDE_INTEGRATION=true"</span>
+                         <span class="s">"TERM_PROGRAM=emacs"</span>
+                         <span class="s">"FORCE_CODE_TERMINAL=true"</span>)))
+    <span class="cd">;; </span><span class="c">Log the command for debugging
+</span>    (<span class="k">claude-code-ide-debug</span> <span class="s">"Starting Claude with command: %s"</span> claude-cmd)
+    (<span class="k">claude-code-ide-debug</span> <span class="s">"Working directory: %s"</span> working-dir)
+    (<span class="k">claude-code-ide-debug</span> <span class="s">"Environment: CLAUDE_CODE_SSE_PORT=%d"</span> port)
+    (<span class="k">claude-code-ide-debug</span> <span class="s">"Session ID: %s"</span> session-id)
+    (<span class="k">claude-code-ide-debug</span> <span class="s">"Terminal backend: %s"</span> claude-code-ide-terminal-backend)
+
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">vterm backend
+</span>     ((eq claude-code-ide-terminal-backend 'vterm)
+      (<span class="k">let*</span> ((vterm-buffer-name buffer-name)
+             <span class="cd">;; </span><span class="c">Set vterm-shell to run Claude directly
+</span>             (vterm-shell claude-cmd)
+             <span class="cd">;; </span><span class="c">vterm uses vterm-environment for passing env vars
+</span>             (vterm-environment (append env-vars vterm-environment)))
+        <span class="cd">;; </span><span class="c">Create vterm buffer without switching to it
+</span>        (<span class="k">let</span> ((buffer (<span class="k">save-window-excursion</span>
+                        (vterm vterm-buffer-name))))
+          <span class="cd">;; </span><span class="c">Check if vterm successfully created a buffer
+</span>          (<span class="k">unless</span> buffer
+            (<span class="w">error</span> <span class="s">"Failed to create vterm buffer.  Please ensure vterm is properly installed and compiled"</span>))
+          <span class="cd">;; </span><span class="c">Configure vterm buffer for optimal performance
+</span>          (<span class="k">with-current-buffer</span> buffer
+            (claude-code-ide--configure-vterm-buffer))
+          <span class="cd">;; </span><span class="c">Get the process that vterm created
+</span>          (<span class="k">let</span> ((process (get-buffer-process buffer)))
+            (<span class="k">unless</span> process
+              (<span class="w">error</span> <span class="s">"Failed to get vterm process.  The vterm module may not be compiled correctly"</span>))
+            <span class="cd">;; </span><span class="c">Check if buffer is still alive
+</span>            (<span class="k">unless</span> (buffer-live-p buffer)
+              (<span class="w">error</span> <span class="s">"Vterm buffer was killed during initialization"</span>))
+            (cons buffer process)))))
+
+     <span class="cd">;; </span><span class="c">eat backend
+</span>     ((eq claude-code-ide-terminal-backend 'eat)
+      (<span class="k">let*</span> ((buffer (get-buffer-create buffer-name))
+             (eat-term-name <span class="s">"xterm-256color"</span>)
+             <span class="cd">;; </span><span class="c">Parse command string into program and args
+</span>             (cmd-parts (claude-code-ide--parse-command-string claude-cmd))
+             (program (car cmd-parts))
+             (args (cdr cmd-parts)))
+        (<span class="k">with-current-buffer</span> buffer
+          <span class="cd">;; </span><span class="c">Set up eat mode
+</span>          (<span class="k">unless</span> (eq major-mode 'eat-mode)
+            (eat-mode))
+          <span class="cd">;; </span><span class="c">Configure position preservation if enabled
+</span>          (<span class="k">when</span> claude-code-ide-eat-preserve-position
+            (<span class="k">setq-local</span> eat--synchronize-scroll-function
+                        #'claude-code-ide--terminal-position-keeper))
+          <span class="cd">;; </span><span class="c">Prepend our env vars to the buffer-local process-environment
+</span>          (<span class="k">setq-local</span> process-environment
+                      (append env-vars process-environment))
+          (eat-exec buffer buffer-name program nil args)
+          <span class="cd">;; </span><span class="c">Get the process
+</span>          (<span class="k">let</span> ((process (get-buffer-process buffer)))
+            (<span class="k">unless</span> process
+              (<span class="w">error</span> <span class="s">"Failed to create eat process.  Please ensure eat is properly installed"</span>))
+            (cons buffer process)))))
+
+     (t
+      (<span class="w">error</span> <span class="s">"Unknown terminal backend: %s"</span> claude-code-ide-terminal-backend)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

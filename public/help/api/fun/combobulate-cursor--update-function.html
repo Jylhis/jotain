@@ -1,0 +1,142 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-cursor--update-function – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-cursor--update-function is a natively compiled function
+defined in combobulate-cursor.el.
+Return a function that updates the overlays in BUF with TAG.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-cursor--update-function</code></h1><p><span class="m"><code>combobulate-cursor--update-function</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">combobulate-cursor.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-cursor--update-function <a href="#:~:text=in-,BUF"><span class="arg">BUF</span></a> <a href="#:~:text=with-,TAG"><span class="arg">TAG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a function that updates the overlays in <span class="arg">BUF</span> with <span class="arg">TAG</span>.
+<p>This function is intended to be used in <a href="../var/post-command-hook.html"><code>post-command-hook</code></a> to
+update the overlays in <span class="arg">BUF</span> with <span class="arg">TAG</span>. It is returned as a closure
+that captures the minibuffer text at the time of its creation.
+<p>Overlays must be valid <a href="../fun/combobulate-refactor.html"><code>combobulate-refactor</code></a> field overlays.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-cursor.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-cursor--update-function</span> (buf tag)
+  <span class="doc">"Return a function that updates the overlays in BUF with TAG.
+
+This function is intended to be used in `</span><span class="m doc">post-command-hook</span><span class="doc">' to
+update the overlays in BUF with TAG. It is returned as a closure
+that captures the minibuffer text at the time of its creation.
+
+Overlays must be valid `</span><span class="m doc">combobulate-refactor</span><span class="doc">' field overlays."</span>
+  (<span class="k">lambda</span> ()
+    (<span class="k">let</span> ((idx 0)
+          <span class="cd">;; </span><span class="c">nab the minibuffer text here (before we change the
+</span>          <span class="cd">;; </span><span class="c">current buffer) as we return a closure that runs in
+</span>          <span class="cd">;; </span><span class="c">`</span><span class="m c">post-command-hook</span><span class="c">' inside the minibuffer prompt
+</span>          <span class="cd">;; </span><span class="c">machinery, and the minibuffer contents function will,
+</span>          <span class="cd">;; </span><span class="c">despite its name, happily return the contents of
+</span>          <span class="cd">;; </span><span class="c">*whatever* buffer is the current buffer, whether it is
+</span>          <span class="cd">;; </span><span class="c">actually a minibuffer or not.
+</span>          (minibuffer-text (minibuffer-contents)))
+      (<span class="k">with-current-buffer</span> buf
+        (<span class="k">let</span> ((ovs (combobulate--refactor-get-overlays combobulate-cursor--refactor-id)))
+          (mapc (<span class="k">lambda</span> (ov)
+                  (<span class="k">when</span> (overlay-get ov 'combobulate-refactor-field-enabled)
+                    <span class="cd">;; </span><span class="c">Essential. There's a million things in here
+</span>                    <span class="cd">;; </span><span class="c">that throw errors left and right that'll cause
+</span>                    <span class="cd">;; </span><span class="c">`</span><span class="m c">post-command-hook</span><span class="c">' to eject us from future
+</span>                    <span class="cd">;; </span><span class="c">updates if it gets a signal.
+</span>                    (<span class="k">ignore-errors</span>
+                      (combobulate--refactor-update-field
+                       ov tag
+                       (<span class="k">let*</span> ((to (query-replace-compile-replacement minibuffer-text t))
+                              <span class="cd">;; </span><span class="c">`</span><span class="m c">replace-eval-replacement</span><span class="c">' and
+</span>                              <span class="cd">;; </span><span class="c">`</span><span class="m c">query-replace-compile-replacement</span><span class="c">'
+</span>                              <span class="cd">;; </span><span class="c">rewrites `\,(...)'  elisp forms and
+</span>                              <span class="cd">;; </span><span class="c">detects regexp backslash groups such
+</span>                              <span class="cd">;; </span><span class="c">as `</span><span class="m c">\N</span><span class="c">' and rewrites them as
+</span>                              <span class="cd">;; </span><span class="c">`(match-string N)' ---
+</span>                              <span class="cd">;; </span><span class="c">great. However, we cannot use this
+</span>                              <span class="cd">;; </span><span class="c">feature as it assumes match data is
+</span>                              <span class="cd">;; </span><span class="c">set (as it ordinarily would be in a
+</span>                              <span class="cd">;; </span><span class="c">normal search&amp;replace loop) and the
+</span>                              <span class="cd">;; </span><span class="c">coterie of functions that depend on
+</span>                              <span class="cd">;; </span><span class="c">it.
+</span>                              <span class="cd">;;</span><span class="c">
+</span>                              <span class="cd">;; </span><span class="c">As we're effectively hacking up the
+</span>                              <span class="cd">;; </span><span class="c">replace machinery to work with
+</span>                              <span class="cd">;; </span><span class="c">Combobulate's refactoring system, we
+</span>                              <span class="cd">;; </span><span class="c">either need to rewrite uses of
+</span>                              <span class="cd">;; </span><span class="c">`</span><span class="m c">match-string</span><span class="c">' to a custom function
+</span>                              <span class="cd">;; </span><span class="c">of our own choosing; ensure match
+</span>                              <span class="cd">;; </span><span class="c">data is set so it matches the field
+</span>                              <span class="cd">;; </span><span class="c">overlays in the buffer, which is
+</span>                              <span class="cd">;; </span><span class="c">complex; or just `</span><span class="m c">cl-letf</span><span class="c">' it here
+</span>                              <span class="cd">;; </span><span class="c">temporarily.
+</span>                              (replacement-text
+                               (<span class="k">cl-letf</span>  (((symbol-function 'match-string)
+                                           (<span class="k">lambda</span> (n <span class="ty">&amp;optional</span> _string)
+                                             (overlay-get
+                                              (nth
+                                               <span class="cd">;; </span><span class="c">Asking for the 0th
+</span>                                               <span class="cd">;; </span><span class="c">match means we want
+</span>                                               <span class="cd">;; </span><span class="c">the current
+</span>                                               <span class="cd">;; </span><span class="c">overlay's text.
+</span>                                               (<span class="k">if</span> (= n 0)
+                                                   idx
+                                                 <span class="cd">;; </span><span class="c">Subtract 1 because 0
+</span>                                                 <span class="cd">;; </span><span class="c">refers to the whole
+</span>                                                 <span class="cd">;; </span><span class="c">match
+</span>                                                 (1- n))
+                                               ovs)
+                                              'combobulate-refactor-field-original-text))))
+                                 (<span class="k">or</span> (replace-eval-replacement
+                                      (<span class="k">cond</span>
+                                       ((null to) <span class="s">""</span>)
+                                       ((stringp to)
+                                        (list 'concat to))
+                                       (t (cdr to)))
+                                      idx)
+                                     <span class="s">""</span>))))
+                         (replace-regexp-in-string
+                          combobulate-cursor-substitute-match
+                          (<span class="k">lambda</span> (sub)
+                            <span class="cd">;; </span><span class="c">Avoid using any sort of matching
+</span>                            <span class="cd">;; </span><span class="c">functions here that touches match
+</span>                            <span class="cd">;; </span><span class="c">data. It does not work well due to
+</span>                            <span class="cd">;; </span><span class="c">`</span><span class="m c">replace-regexp-in-string</span><span class="c">' doing its own
+</span>                            <span class="cd">;; </span><span class="c">thing with the data.
+</span>                            <span class="cd">;;</span><span class="c">
+</span>                            <span class="cd">;; </span><span class="c">Thankfully,
+</span>                            <span class="cd">;; </span><span class="c">`</span><span class="m c">combobulate-cursor-substitute-match</span><span class="c">'
+</span>                            <span class="cd">;; </span><span class="c">is set to match backslash groups and
+</span>                            <span class="cd">;; </span><span class="c">they are syntactically simple: the
+</span>                            <span class="cd">;; </span><span class="c">first character is a backslash and the
+</span>                            <span class="cd">;; </span><span class="c">rest is a number. Extracting the number
+</span>                            <span class="cd">;; </span><span class="c">is as simple as the substring without
+</span>                            <span class="cd">;; </span><span class="c">the backslash.
+</span>                            (<span class="k">if-let</span> (matched-ov
+                                     (<span class="k">let</span> ((num (string-to-number (substring sub 1))))
+                                       <span class="cd">;; </span><span class="c">The number 0 is special. In
+</span>                                       <span class="cd">;; </span><span class="c">an ordinary search&amp;replace
+</span>                                       <span class="cd">;; </span><span class="c">loop it refers to the whole
+</span>                                       <span class="cd">;; </span><span class="c">match. Here we repurpose it
+</span>                                       <span class="cd">;; </span><span class="c">to mean the original text of
+</span>                                       <span class="cd">;; </span><span class="c">the CURRENT field.  Also,
+</span>                                       <span class="cd">;; </span><span class="c">subtract 1 to account for
+</span>                                       <span class="cd">;; </span><span class="c">the 0-based whole match
+</span>                                       <span class="cd">;; </span><span class="c">index.
+</span>                                       (<span class="k">if</span> (= num 0) (nth idx ovs) (nth (1- num) ovs))))
+                                (overlay-get matched-ov 'combobulate-refactor-field-original-text)
+                              <span class="cd">;; </span><span class="c">No match, return the default text in the minibuffer.
+</span>                              minibuffer-text))
+                          replacement-text))
+                       <span class="cd">;; </span><span class="c">required, as we need to ensure `</span><span class="m c">default-text</span><span class="c">' is
+</span>                       <span class="cd">;; </span><span class="c">set to a default value that won't cause issues
+</span>                       <span class="cd">;; </span><span class="c">down the road if the eval replacement call does
+</span>                       <span class="cd">;; </span><span class="c">not yield anything.
+</span>                       <span class="s">""</span>))
+                    (<span class="k">cl-incf</span> idx)))
+                ovs))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

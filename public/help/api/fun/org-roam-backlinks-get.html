@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-backlinks-get – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-backlinks-get is a natively compiled function defined in
+org-roam-mode.el.
+Return the backlinks for NODE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-backlinks-get</code></h1><p><span class="m"><code>org-roam-backlinks-get</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">org-roam-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-backlinks-get <a href="#:~:text=for-,NODE"><span class="arg">NODE</span></a> <span class="ty">&amp;key</span> <a href="#:~:text=When-,UNIQUE"><span class="arg">UNIQUE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the backlinks for <span class="arg">NODE</span>.
+<p>&nbsp;When <span class="arg">UNIQUE</span> is nil, show all positions where references are found.
+<br>&nbsp;When <span class="arg">UNIQUE</span> is t, limit to unique sources.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-mode.el</span>
+(<span class="k">cl-defun</span> <span class="f">org-roam-backlinks-get</span> (node <span class="ty">&amp;key</span> unique)
+  <span class="doc">"Return the backlinks for NODE.
+
+ When UNIQUE is nil, show all positions where references are found.
+ When UNIQUE is t, limit to unique sources."</span>
+  (<span class="k">let*</span> ((sql (<span class="k">if</span> unique
+                  [<span class="bi">:select</span> <span class="bi">:distinct</span> [source dest pos properties]
+                   <span class="bi">:from</span> links
+                   <span class="bi">:where</span> (= dest $s1)
+                   <span class="bi">:and</span> (= type <span class="s">"id"</span>)
+                   <span class="bi">:group</span> <span class="bi">:by</span> source
+                   <span class="bi">:having</span> (funcall min pos)]
+                [<span class="bi">:select</span> [source dest pos properties]
+                 <span class="bi">:from</span> links
+                 <span class="bi">:where</span> (= dest $s1)
+                 <span class="bi">:and</span> (= type <span class="s">"id"</span>)]))
+         (backlinks (org-roam-db-query sql (org-roam-node-id node))))
+    (<span class="k">cl-loop</span> for backlink in backlinks
+             collect (<span class="k">pcase-let</span> ((`(,source-id ,dest-id ,pos ,properties) backlink))
+                       (org-roam-populate
+                        (org-roam-backlink-create
+                         <span class="bi">:source-node</span> (org-roam-node-create <span class="bi">:id</span> source-id)
+                         <span class="bi">:target-node</span> (org-roam-node-create <span class="bi">:id</span> dest-id)
+                         <span class="bi">:point</span> pos
+                         <span class="bi">:properties</span> properties))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,84 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-fold-or-unfold – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-fold-or-unfold is an interactive and natively compiled
+function defined in web-mode.el.
+Toggle folding on an html element or a control block.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-fold-or-unfold</code></h1><p><span class="m"><code>web-mode-fold-or-unfold</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-fold-or-unfold <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">POS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Toggle folding on an html element or a control block.
+<h2>Key Bindings</h2>
+<p><span class="v">web-mode-map</span> <span class="key">C-c C-f</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-fold-or-unfold</span> (<span class="ty">&amp;optional</span> pos)
+  <span class="doc">"Toggle folding on an html element or a control block."</span>
+  (<span class="k">interactive</span>)
+  (web-mode-scan)
+  (<span class="k">with-silent-modifications</span>
+   (<span class="k">save-excursion</span>
+     (<span class="k">if</span> pos (goto-char pos))
+     (<span class="k">let</span> (beg-inside beg-outside end-inside end-outside overlay overlays)
+       (<span class="k">when</span> (looking-back <span class="s">"^[\t ]*"</span> (point-min))
+         (back-to-indentation))
+       (<span class="k">setq</span> overlays (overlays-at (point)))
+       (<span class="k">dolist</span> (elt overlays)
+         (<span class="k">when</span> (<span class="k">and</span> (not overlay)
+                    (eq (overlay-get elt 'font-lock-face) 'web-mode-folded-face))
+           (<span class="k">setq</span> overlay elt)))
+       (<span class="k">cond</span>
+         <span class="cd">;; </span><span class="c">*** unfolding
+</span>         (overlay
+          (<span class="k">setq</span> beg-inside (overlay-start overlay)
+                end-inside (overlay-end overlay))
+          (remove-overlays beg-inside end-inside)
+          (put-text-property beg-inside end-inside 'invisible nil)
+          )
+         <span class="cd">;; </span><span class="c">*** block folding
+</span>         ((<span class="k">and</span> (get-text-property (point) 'block-side)
+               (cdr (web-mode-block-is-control (point))))
+          (<span class="k">setq</span> beg-outside (web-mode-block-beginning-position (point)))
+          (<span class="k">setq</span> beg-inside (1+ (web-mode-block-end-position (point))))
+          (<span class="k">when</span> (web-mode-block-match)
+            (<span class="k">setq</span> end-inside (point))
+            (<span class="k">setq</span> end-outside (1+ (web-mode-block-end-position (point)))))
+          )
+         <span class="cd">;; </span><span class="c">*** html comment folding
+</span>         ((eq (get-text-property (point) 'tag-type) 'comment)
+          (<span class="k">setq</span> beg-outside (web-mode-tag-beginning-position))
+          (<span class="k">setq</span> beg-inside (+ beg-outside 4))
+          (<span class="k">setq</span> end-outside (web-mode-tag-end-position))
+          (<span class="k">setq</span> end-inside (- end-outside 3))
+          )
+         <span class="cd">;; </span><span class="c">*** tag folding
+</span>         ((<span class="k">or</span> (member (get-text-property (point) 'tag-type) '(start end))
+              (web-mode-element-parent))
+          (<span class="k">when</span> (not (web-mode-element-is-collapsed (point)))
+            (web-mode-tag-beginning)
+            (<span class="k">when</span> (eq (get-text-property (point) 'tag-type) 'end)
+              (web-mode-tag-match))
+            (<span class="k">setq</span> beg-outside (point))
+            (web-mode-tag-end)
+            (<span class="k">setq</span> beg-inside (point))
+            (goto-char beg-outside)
+            (<span class="k">when</span> (web-mode-tag-match)
+              (<span class="k">setq</span> end-inside (point))
+              (web-mode-tag-end)
+              (<span class="k">setq</span> end-outside (point)))
+            )
+          )
+         ) <span class="cd">;</span><span class="c">cond
+</span>       (<span class="k">when</span> (<span class="k">and</span> beg-inside beg-outside end-inside end-outside)
+         (<span class="k">setq</span> overlay (make-overlay beg-outside end-outside))
+         (overlay-put overlay 'font-lock-face 'web-mode-folded-face)
+         (put-text-property beg-inside end-inside 'invisible t))
+       ))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,87 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: indent-bars--alt-custom – Emacs Documentation Online</title>
+<meta name="description" content="indent-bars--alt-custom is a macro defined in indent-bars.el.
+Define a custom ALT variable for option OPT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>indent-bars--alt-custom</code></h1><p><span class="m"><code>indent-bars--alt-custom</code></span> is a macro defined in <span class="bt">indent-bars.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">indent-bars--alt-custom</span> <a href="#:~:text=custom-,ALT"><span class="arg">ALT</span></a> <a href="#:~:text=option-,OPT"><span class="arg">OPT</span></a> <a href="#:~:text=variable).-,ALT-DESCRIPTION"><span class="arg">ALT-DESCRIPTION</span></a> <a href="#:~:text=to-,STD-VAL"><span class="arg">STD-VAL</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,ADD-INHERIT"><span class="arg">ADD-INHERIT</span></a> <a href="#:~:text=of-,NO-INHERIT"><span class="arg">NO-INHERIT</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=DESC-,R"><span class="arg">R</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Define a custom <span class="arg">ALT</span> variable for option <span class="arg">OPT</span>.
+<p>The new custom options default value is set to <span class="arg">STD-VAL</span>.  This
+creates a new variable indent-bars-alt-opt, based on
+indent-bars-opt (referred to as the parent variable).
+<span class="arg">ALT-DESCRIPTION</span> will be used to identify the alternate variable
+in the customize interface.
+<p>If <span class="arg">ADD-INHERIT</span> is non-nil, expand the type to a cons:
+<p>&nbsp;&nbsp;(inherit . type)
+<p>where INHERIT is either <span class="m"><code>inherit</code></span> or <span class="m"><code>no-inherit</code></span>, depending
+on the value of <span class="arg">NO-INHERIT</span>.
+<p>Additional `defcustom` keyword arguments can be given as <span class="arg">R</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kmdsnipwffgk5c0fs4785bhqa9fl17c5-emacs-packages-deps/share/emacs/site-lisp/elpa/indent-bars-1.0.1/indent-bars.el</span>
+<span class="cd">;;;;; </span><span class="c">Alternate Style Support
+</span>(<span class="k">defmacro</span> <span class="f">indent-bars--alt-custom</span>
+    (alt opt alt-description std-val <span class="ty">&amp;optional</span> add-inherit no-inherit <span class="ty">&amp;rest</span> r)
+  <span class="doc">"Define a custom ALT variable for option OPT.
+The new custom options default value is set to STD-VAL.  This
+creates a new variable indent-bars-alt-opt, based on
+indent-bars-opt (referred to as the parent variable).
+ALT-DESCRIPTION will be used to identify the alternate variable
+in the customize interface.
+
+If ADD-INHERIT is non-nil, expand the type to a cons:
+
+  (inherit . type)
+
+where INHERIT is either `</span><span class="m doc">inherit</span><span class="doc">' or `</span><span class="m doc">no-inherit</span><span class="doc">', depending
+on the value of NO-INHERIT.
+
+Additional `defcustom` keyword arguments can be given as R."</span>
+  (<span class="k">require</span> '<span class="m">cus-edit</span>)
+  (<span class="k">let*</span> ((optname (symbol-name opt))
+	 (indent-bars--custom-set-inhibit t)
+	 (group (intern (concat <span class="s">"indent-bars-"</span> alt <span class="s">"-style"</span>)))
+	 (symname (concat <span class="s">"indent-bars-"</span> optname))
+	 (sym (intern (concat <span class="s">"indent-bars-"</span> optname)))
+	 (tsym (intern (concat <span class="s">"indent-bars-"</span> alt <span class="s">"-"</span> optname)))
+	 (type (custom-variable-type sym))
+	 (choice (<span class="k">cond</span> ((eq (car type) 'choice) type)
+		       ((eq (car type) 'list)
+			(seq-find
+			 (<span class="k">lambda</span> (el) (<span class="k">and</span> (consp el) (eq (car el) 'choice)))
+			 type))
+		       (t (<span class="k">setq</span> type `(choice ,type))))))
+    <span class="cd">;; </span><span class="c">Add an unspecified choice
+</span>    (<span class="k">when-let*</span> ((tag-pos (member <span class="bi">:tag</span> choice)))
+      (<span class="k">setq</span> choice (cdr tag-pos)))	<span class="cd">;</span><span class="c">after tag
+</span>    (setcdr choice
+	    (<span class="k">push</span>
+	     `(const <span class="bi">:tag</span> ,(concat <span class="s">"No-value (use parent "</span> optname <span class="s">")"</span>) unspecified)
+	     (cdr choice)))
+
+    <span class="cd">;; </span><span class="c">Add leading inherit flag, if needed
+</span>    (<span class="k">when</span> (<span class="k">or</span> no-inherit add-inherit)
+      (<span class="k">setq</span> type
+	    `(cons <span class="bi">:tag</span> ,(concat alt-description <span class="s">" Style"</span>)
+		   (choice <span class="bi">:tag</span>
+			   ,(concat <span class="s">"Inherit missing data from `indent-bars-"</span>
+				    optname <span class="s">"'"</span>)
+			   (const <span class="bi">:tag</span> <span class="s">"Do not inherit"</span> no-inherit)
+			   (const <span class="bi">:tag</span> <span class="s">"Inherit"</span> inherit))
+		   ,type)
+	    std-val `( ,(<span class="k">if</span> no-inherit 'no-inherit 'inherit) . ,std-val )))
+    `(<span class="k">defcustom</span> ,tsym ',std-val
+       ,(concat <span class="s">"Alternate "</span> alt-description <span class="s">" version of `"</span> symname <span class="s">"'."</span>)
+       <span class="bi">:type</span> ',type
+       <span class="bi">:link</span> '(variable-link ,sym)
+       <span class="bi">:set</span> #'indent-bars--custom-set
+       <span class="bi">:initialize</span> #'custom-initialize-default
+       <span class="bi">:group</span> ',group
+       ,@r)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

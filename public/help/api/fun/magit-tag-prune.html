@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-tag-prune – Emacs Documentation Online</title>
+<meta name="description" content="magit-tag-prune is an interactive and natively compiled function
+defined in magit-tag.el.
+Offer to delete tags missing locally from REMOTE, and vice versa.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-tag-prune</code></h1><p><span class="m"><code>magit-tag-prune</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-tag.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-tag-prune <a href="#:~:text="><span class="arg">TAGS</span></a> <a href="#:~:text="><span class="arg">REMOTE-TAGS</span></a> <a href="#:~:text=from-,REMOTE"><span class="arg">REMOTE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Offer to delete tags missing locally from <span class="arg">REMOTE</span>, and vice versa.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-tag.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">magit-tag-prune</span> (tags remote-tags remote)
+  <span class="doc">"Offer to delete tags missing locally from REMOTE, and vice versa."</span>
+  (<span class="k">interactive</span>
+    (<span class="k">let*</span> ((remote (magit-read-remote <span class="s">"Prune tags using remote"</span>))
+           (tags   (magit-list-tags))
+           (rtags  (<span class="k">prog2</span> (message <span class="s">"Determining remote tags..."</span>)
+                       (magit-remote-list-tags remote)
+                     (message <span class="s">"Determining remote tags...done"</span>)))
+           (ltags  (cl-set-difference tags rtags <span class="bi">:test</span> #'equal))
+           (rtags  (cl-set-difference rtags tags <span class="bi">:test</span> #'equal)))
+      (<span class="k">unless</span> (<span class="k">or</span> ltags rtags)
+        (message <span class="s">"Same tags exist locally and remotely"</span>))
+      (<span class="k">unless</span> (magit-confirm t
+                <span class="s">"Delete %s locally"</span>
+                <span class="s">"Delete %d tags locally"</span>
+                'noabort ltags)
+        (<span class="k">setq</span> ltags nil))
+      (<span class="k">unless</span> (magit-confirm t
+                <span class="s">"Delete %s from remote"</span>
+                <span class="s">"Delete %d tags from remote"</span>
+                'noabort rtags)
+        (<span class="k">setq</span> rtags nil))
+      (list ltags rtags remote)))
+  (<span class="k">when</span> tags
+    (magit-call-git <span class="s">"tag"</span> <span class="s">"-d"</span> tags))
+  (<span class="k">when</span> remote-tags
+    (magit-run-git-async <span class="s">"push"</span> remote (mapcar (##concat <span class="s">":"</span> %) remote-tags))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

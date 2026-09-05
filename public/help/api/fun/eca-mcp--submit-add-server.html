@@ -1,0 +1,73 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-mcp--submit-add-server – Emacs Documentation Online</title>
+<meta name="description" content="eca-mcp--submit-add-server is a natively compiled function defined in
+eca-mcp.el.
+Validate current form state and send mcp/addServer to the server.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-mcp--submit-add-server</code></h1><p><span class="m"><code>eca-mcp--submit-add-server</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-mcp--submit-add-server <a href="#:~:text="><span class="arg">SESSION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Validate current form state and send <span class="m"><code>mcp/addServer</code></span> to the server.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-mcp.el</span>
+(<span class="k">defun</span> <span class="f">eca-mcp--submit-add-server</span> (session)
+  <span class="doc">"Validate current form state and send `</span><span class="m doc">mcp/addServer</span><span class="doc">' to the server."</span>
+  (<span class="k">let*</span> ((st eca-mcp--add-form-state)
+         (name (string-trim (<span class="k">or</span> (plist-get st <span class="bi">:name</span>) <span class="s">""</span>)))
+         (transport (plist-get st <span class="bi">:transport</span>))
+         (scope (plist-get st <span class="bi">:scope</span>)))
+    (<span class="k">cond</span>
+     ((string-empty-p name)
+      (eca-error <span class="s">"MCP server name is required"</span>))
+     ((<span class="k">and</span> (string= transport <span class="s">"stdio"</span>)
+           (string-empty-p (string-trim (<span class="k">or</span> (plist-get st <span class="bi">:command</span>) <span class="s">""</span>))))
+      (eca-error <span class="s">"Command is required for stdio transport"</span>))
+     ((<span class="k">and</span> (string= transport <span class="s">"remote"</span>)
+           (string-empty-p (string-trim (<span class="k">or</span> (plist-get st <span class="bi">:url</span>) <span class="s">""</span>))))
+      (eca-error <span class="s">"URL is required for remote transport"</span>))
+     ((<span class="k">and</span> (string= scope <span class="s">"workspace"</span>)
+           (null (eca--session-workspace-folders session)))
+      (eca-error <span class="s">"No workspace folder available for workspace scope"</span>))
+     (t
+      (<span class="k">let</span> ((params (list <span class="bi">:name</span> name <span class="bi">:scope</span> scope))
+            (buf (current-buffer)))
+        (<span class="k">if</span> (string= transport <span class="s">"stdio"</span>)
+            (<span class="k">let</span> ((cmd (string-trim (plist-get st <span class="bi">:command</span>)))
+                  (args (eca-mcp--parse-args-string (plist-get st <span class="bi">:args</span>)))
+                  (env (eca-mcp--parse-env-lines (plist-get st <span class="bi">:env</span>))))
+              (<span class="k">setq</span> params (plist-put params <span class="bi">:command</span> cmd))
+              (<span class="k">when</span> args (<span class="k">setq</span> params (plist-put params <span class="bi">:args</span> (vconcat args))))
+              (<span class="k">when</span> env (<span class="k">setq</span> params (plist-put params <span class="bi">:env</span> env))))
+          (<span class="k">let</span> ((url (string-trim (plist-get st <span class="bi">:url</span>)))
+                (headers (eca-mcp--parse-header-lines (plist-get st <span class="bi">:headers</span>))))
+            (<span class="k">setq</span> params (plist-put params <span class="bi">:url</span> url))
+            (<span class="k">when</span> headers (<span class="k">setq</span> params (plist-put params <span class="bi">:headers</span> headers)))))
+        (<span class="k">when</span> (string= scope <span class="s">"workspace"</span>)
+          (<span class="k">when-let</span> ((folder (car (eca--session-workspace-folders session))))
+            (<span class="k">setq</span> params (plist-put params <span class="bi">:workspaceUri</span> (eca--path-to-uri folder)))))
+        (eca-api-request-async
+         session
+         <span class="bi">:method</span> <span class="s">"mcp/addServer"</span>
+         <span class="bi">:params</span> params
+         <span class="bi">:success-callback</span>
+         (<span class="k">lambda</span> (resp)
+           (<span class="k">let</span> ((err (plist-get resp <span class="bi">:error</span>)))
+             (<span class="k">if</span> err
+                 (eca-error <span class="s">"Add MCP failed: %s"</span>
+                            (<span class="k">or</span> (plist-get err <span class="bi">:message</span>) (format <span class="s">"%S"</span> err)))
+               (<span class="k">when</span> (buffer-live-p buf)
+                 (<span class="k">with-current-buffer</span> buf
+                   (<span class="k">setq</span> eca-mcp--add-form-state nil)))
+               (eca-settings-refresh-tab <span class="s">"mcps"</span> session))))
+         <span class="bi">:error-callback</span>
+         (<span class="k">lambda</span> (err)
+           (eca-error <span class="s">"Add MCP failed: %s"</span>
+                      (<span class="k">or</span> (plist-get err <span class="bi">:message</span>) (format <span class="s">"%S"</span> err))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

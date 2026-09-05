@@ -1,0 +1,122 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--dispatch-schema-type – Emacs Documentation Online</title>
+<meta name="description" content="gptel--dispatch-schema-type is a natively compiled function defined in
+gptel-request.el.
+Convert SCHEMA to a valid elisp representation.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--dispatch-schema-type</code></h1><p><span class="m"><code>gptel--dispatch-schema-type</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--dispatch-schema-type <a href="#:~:text=Convert-,SCHEMA"><span class="arg">SCHEMA</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Convert <span class="arg">SCHEMA</span> to a valid elisp representation.
+<p><span class="arg">SCHEMA</span> can be specified in several ways:
+<br>- As a plist readable by <a href="../fun/gptel--json-encode.html"><code>gptel--json-encode</code></a>
+<br>&nbsp;&nbsp;Ex: (:type object :properties (:key1 (:type number :description "...")
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:key2 (:type string)))
+<p>- As a serialized JSON string, which will be passed as-is.
+<p>- In shorthand form #1, a single-line comma-separated string with object
+<br>&nbsp;&nbsp;keys and (optionally) types:
+<br>&nbsp;&nbsp;Ex: "key1, key2 number"
+<br>&nbsp;&nbsp;Ex: "key1 string, key2 int"
+<br>&nbsp;&nbsp;The default type is string, and types can be shortened (integer -&gt; int) as
+<br>&nbsp;&nbsp;long as they match a JSON schema type uniquely.
+<p>- In shorthand form #2, a multi-line string with keys, (optionally) types and
+<br>&nbsp;&nbsp;(optionally) descriptions
+<br>&nbsp;&nbsp;Ex: <span class="s">"key1: description 1 here
+</span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="s">key2 integer: description 2 here"</span>
+<p>- Shorthand forms can be placed inside [ and ] to specify an array of
+<br>&nbsp;&nbsp;objects:
+<br>&nbsp;&nbsp;Ex: "[key1, key2 number]"
+<br>&nbsp;&nbsp;Ex: "[key1: description 1 here
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;key2 int: description 2 here]"
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+(<span class="k">defun</span> <span class="f">gptel--dispatch-schema-type</span> (schema)
+  <span class="doc">"Convert SCHEMA to a valid elisp representation.
+
+SCHEMA can be specified in several ways:
+- As a plist readable by `</span><span class="m doc">gptel--json-encode</span><span class="doc">'
+  Ex: (:type object :properties (:key1 (:type number :description \"...\")
+                                 :key2 (:type string)))
+
+- As a serialized JSON string, which will be passed as-is.
+
+- In shorthand form #1, a single-line comma-separated string with object
+  keys and (optionally) types:
+  Ex: \"key1, key2 number\"
+  Ex: \"key1 string, key2 int\"
+  The default type is string, and types can be shortened (integer -&gt; int) as
+  long as they match a JSON schema type uniquely.
+
+- In shorthand form #2, a multi-line string with keys, (optionally) types and
+  (optionally) descriptions
+  Ex: \"key1: description 1 here
+       key2 integer: description 2 here\"
+
+- Shorthand forms can be placed inside [ and ] to specify an array of
+  objects:
+  Ex: \"[key1, key2 number]\"
+  Ex: \"[key1: description 1 here
+        key2 int: description 2 here]\""</span>
+  (<span class="k">when</span> (stringp schema)  <span class="cd">;</span><span class="c">Two possibilities: serialized JSON, or shorthand form
+</span>    (<span class="k">let</span> (wrap-in-array)  <span class="cd">;</span><span class="c">Flag to wrap the object type in an array
+</span>      (<span class="k">with-temp-buffer</span>   <span class="cd">;</span><span class="c">Parser for (possibly) shorthand forms
+</span>        (insert schema)
+        (goto-char (point-min)) (skip-chars-forward <span class="s">" \n\r\t"</span>)
+        (<span class="k">if</span> (= (char-after) ?{)
+            (<span class="k">setq</span> schema (<span class="k">gptel--json-read</span>)) <span class="cd">;</span><span class="c">Assume serialized JSON schema, we're done
+</span>          (<span class="k">when</span> (= (char-after) ?\[)    <span class="cd">;</span><span class="c">Shorthand: assume array top-level type
+</span>            (<span class="k">save-excursion</span>
+              (goto-char (point-max)) (skip-chars-backward <span class="s">" \n\r\t"</span>) (delete-char -1))
+            (delete-char 1)             <span class="cd">;</span><span class="c">Delete array markers [ and ]
+</span>            (<span class="k">setq</span> wrap-in-array t))
+          (<span class="k">let</span> ( props types descriptions <span class="cd">;</span><span class="c">Nested object and array types are disallowed in shorthand
+</span>                 (all-types '(<span class="s">"number"</span> <span class="s">"string"</span> <span class="s">"integer"</span> <span class="s">"boolean"</span> <span class="s">"null"</span>)))
+            (<span class="k">if</span> (= (point-max) (line-end-position)) <span class="cd">; </span><span class="c">Single or multi-line?
+</span>                <span class="cd">;; </span><span class="c">Single line format (type optional): "key1 type, key2, ..."
+</span>                (<span class="k">while</span> (re-search-forward <span class="s">",?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s"> ,]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> *</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s"> ,]*\\]?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> nil t)
+                  (<span class="k">push</span> (match-string 1) props)
+                  (<span class="k">push</span> (<span class="k">if</span> (string-empty-p (match-string 2))
+                            <span class="s">"string"</span> (car (all-completions (match-string 2) all-types)))
+                        types)
+                  (<span class="k">push</span> nil descriptions))
+              <span class="cd">;; </span><span class="c">Multi-line format (type, description optional):
+</span>              <span class="cd">;; </span><span class="c">"key1 type: description1 \n key2: description2..."
+</span>              (<span class="k">while</span> (re-search-forward <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s"> :]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> *</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s"> :]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">:?"</span>
+                                        (line-end-position) t)
+                (<span class="k">push</span> (match-string 1) props)
+                (<span class="k">push</span> (<span class="k">if</span> (string-empty-p (match-string 2))
+                          <span class="s">"string"</span> (car (all-completions (match-string 2) all-types)))
+                      types)
+                (skip-chars-forward <span class="s">" \t"</span>)
+                (<span class="k">push</span> (<span class="k">if</span> (eolp) nil (buffer-substring-no-properties
+                                      (point) (line-end-position)))
+                      descriptions)
+                (forward-line 1)))
+            (<span class="k">let</span> ((object
+                   (list <span class="bi">:type</span> <span class="s">"object"</span>
+                         <span class="bi">:properties</span>
+                         (cl-mapcan
+                          (<span class="k">lambda</span> (prop type desc)
+                            `(,(intern (concat <span class="s">":"</span> prop))
+                              (<span class="bi">:type</span> ,type ,@(<span class="k">when</span> desc
+                                               (list <span class="bi">:description</span> (string-trim desc))))))
+                          (nreverse props) (nreverse types) (nreverse descriptions)))))
+              (<span class="k">setq</span> schema
+                    (<span class="k">if</span> wrap-in-array (list <span class="bi">:type</span> <span class="s">"array"</span> <span class="bi">:items</span> object) object))))))))
+  <span class="cd">;; </span><span class="c">The OpenAI and Anthropic APIs don't allow arrays at the root of the schema.
+</span>  <span class="cd">;; </span><span class="c">Work around this by wrapping it in an object with the field "items".
+</span>  <span class="cd">;; </span><span class="c">TODO(schema): Find some way to strip this extra layer from the response.
+</span>  (<span class="k">if</span> (member (plist-get schema <span class="bi">:type</span>) '(<span class="s">"array"</span> array))
+      (list <span class="bi">:type</span> <span class="s">"object"</span>
+            <span class="bi">:properties</span> (list <span class="bi">:items</span> schema)
+            <span class="bi">:required</span> [<span class="s">"items"</span>]
+            <span class="bi">:additionalProperties</span> <span class="bi">:json-false</span>)
+    schema))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

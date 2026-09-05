@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: logview--find-region-entries – Emacs Documentation Online</title>
+<meta name="description" content="logview--find-region-entries is a natively compiled function defined
+in logview.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>logview--find-region-entries</code></h1><p><span class="m"><code>logview--find-region-entries</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">logview.el</span>.
+<h2>Signature</h2>
+<pre><code>(logview--find-region-entries <span class="arg">REGION-START</span> <span class="arg">REGION-END</span> <span class="ty">&amp;optional</span> <span class="arg">DONT-STOP-EARLY</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qid656ql5mh048bd0k84vvsbc2517lh9-emacs-packages-deps/share/emacs/site-lisp/elpa/logview-20260218.2013/logview.el</span>
+(<span class="k">defun</span> <span class="f">logview--find-region-entries</span> (region-start region-end <span class="ty">&amp;optional</span> dont-stop-early)
+  (<span class="k">logview--std-altering</span>
+    (<span class="k">save-excursion</span>
+      (<span class="k">save-match-data</span>
+        (<span class="k">let</span> ((case-fold-search         nil)
+              (buffer-invisibility-spec nil))
+          (goto-char region-start)
+          (forward-line 0)
+          (<span class="k">when</span> (<span class="k">or</span> (looking-at logview--entry-regexp)
+                    (re-search-backward logview--entry-regexp nil t)
+                    (re-search-forward  logview--entry-regexp nil t))
+            (<span class="k">setq</span> region-end (min region-end (point-max)))
+            (<span class="k">let*</span> ((match-data  (match-data t))
+                   <span class="cd">;; </span><span class="c">The following depends on exact submode format, i.e. on how many
+</span>                   <span class="cd">;; </span><span class="c">groups there are in `</span><span class="m c">logview--entry-regexp</span><span class="c">'.
+</span>                   (num-points  (- (length match-data) 2))
+                   (entry-start (car match-data))
+                   (have-level  (memq 'level logview--submode-features)))
+              (<span class="k">while</span> (<span class="k">and</span> (<span class="k">or</span> dont-stop-early (null (get-text-property entry-start 'logview-entry)))
+                          (<span class="k">let*</span> ((details-start   (<span class="k">progn</span> (forward-line 1) (point)))
+                                 (have-next-entry (re-search-forward logview--entry-regexp nil t))
+                                 (entry-end       (<span class="k">if</span> have-next-entry (match-beginning 0) (point-max)))
+                                 <span class="cd">;; </span><span class="c">See description of `</span><span class="m c">logview-entry</span><span class="c">' above.
+</span>                                 (logview-entry   (make-vector 13 nil)))
+                            (aset logview-entry 0 (- entry-end entry-start))
+                            (<span class="k">let</span> ((points (cdr match-data)))
+                              (<span class="k">dotimes</span> (k num-points)
+                                (<span class="k">let</span> ((point (<span class="k">pop</span> points)))
+                                  (aset logview-entry (1+ k) (<span class="k">when</span> point (- point entry-start))))))
+                            (<span class="k">when</span> (&lt; details-start entry-end)
+                              (aset logview-entry 10 (- details-start entry-start)))
+                            (<span class="k">when</span> have-level
+                              (aset logview-entry 11 (cadr (assoc (logview--entry-group logview-entry entry-start logview--level-group)
+                                                                  logview--submode-level-data))))
+                            (<span class="k">setf</span> match-data (match-data t match-data))
+                            (put-text-property entry-start entry-end 'logview-entry logview-entry)
+                            (<span class="k">setq</span> entry-start entry-end)
+                            (&lt; entry-start region-end)))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

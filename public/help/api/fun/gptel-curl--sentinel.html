@@ -1,0 +1,67 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-curl--sentinel – Emacs Documentation Online</title>
+<meta name="description" content="gptel-curl--sentinel is a natively compiled function defined in
+gptel-request.el.
+Process sentinel for gptel curl requests.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-curl--sentinel</code></h1><p><span class="m"><code>gptel-curl--sentinel</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-curl--sentinel <a href="#:~:text=requests.-,PROCESS"><span class="arg">PROCESS</span></a> <a href="#:~:text=and _-,STATUS"><span class="arg">STATUS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Process sentinel for gptel curl requests.
+<p><span class="arg">PROCESS</span> and _<span class="arg">STATUS</span> are process parameters.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+(<span class="k">defun</span> <span class="f">gptel-curl--sentinel</span> (process _status)
+  <span class="doc">"Process sentinel for gptel curl requests.
+
+PROCESS and _STATUS are process parameters."</span>
+  (<span class="k">let</span> ((proc-buf (process-buffer process)))
+    (<span class="k">when-let*</span> (((eq (process-status process) 'exit))
+                (fsm (car (alist-get process gptel--request-alist)))
+                (proc-info (gptel-fsm-info fsm))
+                (proc-callback (plist-get proc-info <span class="bi">:callback</span>)))
+      (<span class="k">when</span> gptel-log-level (gptel-curl--log-response proc-buf proc-info)) <span class="cd">;</span><span class="c">logging
+</span>      (<span class="k">let</span> ((exit-status (process-exit-status process)))
+        (<span class="k">if</span> (zerop exit-status)
+            (<span class="k">pcase-let</span> ((`(,response ,http-status ,http-msg ,error)
+                         (<span class="k">with-current-buffer</span> proc-buf
+                           (gptel-curl--parse-response proc-info))))
+              (plist-put proc-info <span class="bi">:http-status</span> http-status)
+              (plist-put proc-info <span class="bi">:status</span> http-msg)
+              (gptel--fsm-transition fsm) <span class="cd">;</span><span class="c">WAIT -&gt; TYPE
+</span>              (<span class="k">when</span> error (plist-put proc-info <span class="bi">:error</span> error))
+              <span class="cd">;; </span><span class="c">Look for a reasoning block
+</span>              (<span class="k">if</span> (<span class="k">and</span> (stringp response) (string-match-p <span class="s">"^\\s-*&lt;think&gt;"</span> response))
+                  (<span class="k">when-let*</span> ((idx (string-search <span class="s">"&lt;/think&gt;"</span> response)))
+                    (<span class="k">with-demoted-errors</span> <span class="s">"gptel callback error: %S"</span>
+                      (funcall proc-callback
+                               (cons 'reasoning (substring response nil (+ idx 8)))
+                               proc-info))
+                    (<span class="k">setq</span> response
+                          (string-trim-left (substring response (+ idx 8)))))
+                (<span class="k">when-let*</span> ((reasoning (plist-get proc-info <span class="bi">:reasoning</span>))
+                            ((stringp reasoning)))
+                  (funcall proc-callback (cons 'reasoning reasoning) proc-info)))
+              <span class="cd">;; </span><span class="c">Call callback with response text
+</span>              (<span class="k">when</span> (<span class="k">or</span> response (not (member http-status '(<span class="s">"200"</span> <span class="s">"100"</span>))))
+                (<span class="k">with-demoted-errors</span> <span class="s">"gptel callback error: %S"</span>
+                  (funcall proc-callback response proc-info))))
+          <span class="cd">;; </span><span class="c">Curl exited with a non-zero status: connection-level failure
+</span>          (plist-put proc-info <span class="bi">:error</span>
+                     (format <span class="s">"Curl failed with exit code %d. See Curl manpage for details."</span>
+                             exit-status))
+          (plist-put proc-info <span class="bi">:status</span> <span class="s">"Curl failure"</span>)
+          (gptel--fsm-transition fsm)   <span class="cd">;</span><span class="c">WAIT -&gt; TYPE
+</span>          (<span class="k">with-demoted-errors</span> <span class="s">"gptel callback error: %S"</span>
+            (funcall proc-callback nil proc-info))))
+      (gptel--fsm-transition fsm))      <span class="cd">;</span><span class="c">TYPE -&gt; next
+</span>    (<span class="k">setf</span> (alist-get process gptel--request-alist nil 'remove) nil)
+    (kill-buffer proc-buf)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

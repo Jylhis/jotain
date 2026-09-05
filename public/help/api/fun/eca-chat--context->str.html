@@ -1,0 +1,86 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--context-&gt;str – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--context-&gt;str is a natively compiled function defined in
+eca-chat-context.el.
+Convert CONTEXT to a presentable str in buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--context-&gt;str</code></h1><p><span class="m"><code>eca-chat--context-&gt;str</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-chat-context.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--context-&gt;str <a href="#:~:text=Convert-,CONTEXT"><span class="arg">CONTEXT</span></a> <span class="ty">&amp;optional</span> STATIC?)
+</code></pre>
+<h2>Documentation</h2>
+<p>Convert <span class="arg">CONTEXT</span> to a presentable str in buffer.
+<p>If STATIC? return strs with no dynamic values.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-context.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--context-&gt;str</span> (context <span class="ty">&amp;optional</span> static?)
+  <span class="doc">"Convert CONTEXT to a presentable str in buffer.
+If STATIC? return strs with no dynamic values."</span>
+  (<span class="k">-let*</span> (((<span class="ty">&amp;plist</span> <span class="bi">:type</span> type) context)
+          (context-str
+           (<span class="k">pcase</span> type
+             (<span class="s">"file"</span> (<span class="k">let</span> ((path (plist-get context <span class="bi">:path</span>))
+                           (lines-range (plist-get context <span class="bi">:linesRange</span>)))
+                       (propertize (concat eca-chat-context-prefix
+                                           (eca-chat--context-presentable-path path)
+                                           (<span class="k">-when-let</span> ((<span class="ty">&amp;plist</span> <span class="bi">:start</span> start <span class="bi">:end</span> end) lines-range)
+                                             (format <span class="s">"(%d-%d)"</span> start end)))
+                                   'eca-chat-expanded-item-str (concat eca-chat-context-prefix path
+                                                                       (<span class="k">-when-let</span> ((<span class="ty">&amp;plist</span> <span class="bi">:start</span> start <span class="bi">:end</span> end) lines-range)
+                                                                         (format <span class="s">":L%d-L%d"</span> start end)))
+                                   'font-lock-face 'eca-chat-context-file-face)))
+             (<span class="s">"directory"</span> (propertize (concat eca-chat-context-prefix (eca-chat--context-presentable-path (plist-get context <span class="bi">:path</span>)))
+                                      'eca-chat-expanded-item-str (concat eca-chat-context-prefix (plist-get context <span class="bi">:path</span>))
+                                      'font-lock-face 'eca-chat-context-file-face))
+             (<span class="s">"repoMap"</span> (propertize (concat eca-chat-context-prefix <span class="s">"repoMap"</span>)
+                                    'eca-chat-expanded-item-str (concat eca-chat-context-prefix <span class="s">"repoMap"</span>)
+                                    'font-lock-face 'eca-chat-context-repo-map-face))
+             (<span class="s">"mcpResource"</span> (propertize (concat eca-chat-context-prefix (plist-get context <span class="bi">:server</span>) <span class="s">":"</span> (plist-get context <span class="bi">:name</span>))
+                                        'eca-chat-expanded-item-str (concat eca-chat-context-prefix (plist-get context <span class="bi">:server</span>) <span class="s">":"</span> (plist-get context <span class="bi">:name</span>))
+                                        'font-lock-face 'eca-chat-context-mcp-resource-face))
+             (<span class="s">"cursor"</span> (propertize (<span class="k">cond</span>
+                                    (static? (concat eca-chat-context-prefix <span class="s">"cursor"</span>))
+                                    ((not eca-chat--cursor-context)
+                                     (concat eca-chat-context-prefix <span class="s">"cursor"</span> <span class="s">"(no file)"</span>))
+                                    (t (concat eca-chat-context-prefix <span class="s">"cursor"</span>
+                                               <span class="s">"("</span>
+                                               (<span class="k">-some-&gt;</span> (plist-get eca-chat--cursor-context <span class="bi">:path</span>)
+                                                 (f-filename))
+                                               <span class="s">" "</span>
+                                               (<span class="k">-some-&gt;&gt;</span>
+                                                   (<span class="k">-&gt;</span> eca-chat--cursor-context
+                                                       (plist-get <span class="bi">:position</span>)
+                                                       (plist-get <span class="bi">:start</span>)
+                                                       (plist-get <span class="bi">:line</span>))
+                                                 (funcall #'number-to-string))
+                                               <span class="s">":"</span>
+                                               (<span class="k">-some-&gt;&gt;</span>
+                                                   (<span class="k">-&gt;</span> eca-chat--cursor-context
+                                                       (plist-get <span class="bi">:position</span>)
+                                                       (plist-get <span class="bi">:start</span>)
+                                                       (plist-get <span class="bi">:character</span>))
+                                                 (funcall #'number-to-string))
+                                               <span class="s">")"</span>)))
+                                   'eca-chat-expanded-item-str (concat eca-chat-context-prefix <span class="s">"cursor"</span>)
+                                   'font-lock-face 'eca-chat-context-cursor-face))
+             (<span class="s">"text"</span> (<span class="k">let</span> ((label (plist-get context <span class="bi">:label</span>))
+                           (lines-range (plist-get context <span class="bi">:linesRange</span>)))
+                       (propertize (concat eca-chat-context-prefix
+                                           label
+                                           (<span class="k">-when-let</span> ((<span class="ty">&amp;plist</span> <span class="bi">:start</span> start <span class="bi">:end</span> end) lines-range)
+                                             (format <span class="s">"(%d-%d)"</span> start end)))
+                                   'eca-chat-expanded-item-str (concat eca-chat-context-prefix label
+                                                                       (<span class="k">-when-let</span> ((<span class="ty">&amp;plist</span> <span class="bi">:start</span> start <span class="bi">:end</span> end) lines-range)
+                                                                         (format <span class="s">":L%d-L%d"</span> start end)))
+                                   'font-lock-face 'eca-chat-context-buffer-face)))
+             (_ (concat eca-chat-context-prefix <span class="s">"unknown:"</span> type)))))
+    (propertize context-str
+                'eca-chat-item-type 'context
+                'eca-chat-item-str-length (length context-str)
+                'eca-chat-context-item context)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

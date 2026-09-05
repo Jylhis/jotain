@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-info-setoptions – Emacs Documentation Online</title>
+<meta name="description" content="pdf-info-setoptions is a natively compiled function defined in
+pdf-info.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-info-setoptions</code></h1><p><span class="m"><code>pdf-info-setoptions</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">pdf-info.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-info-setoptions <span class="ty">&amp;optional</span> <span class="arg">FILE-OR-BUFFER</span> <span class="ty">&amp;rest</span> <span class="arg">OPTIONS</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-info.el</span>
+(<span class="k">defun</span> <span class="f">pdf-info-setoptions</span> (<span class="ty">&amp;optional</span> file-or-buffer <span class="ty">&amp;rest</span> options)
+  (<span class="k">when</span> (symbolp file-or-buffer)
+    (<span class="k">push</span> file-or-buffer options)
+    (<span class="k">setq</span> file-or-buffer nil))
+  (<span class="k">unless</span> (= (% (length options) 2) 0)
+    (<span class="w">error</span> <span class="s">"Missing a option value"</span>))
+  (apply #'pdf-info-query
+    'setoptions
+    (pdf-info--normalize-file-or-buffer file-or-buffer)
+    (<span class="k">let</span> (soptions)
+      (<span class="k">while</span> options
+        (<span class="k">let</span> ((key (<span class="k">pop</span> options))
+              (value (<span class="k">pop</span> options)))
+          (<span class="k">unless</span> (<span class="k">and</span> (keywordp key)
+                       (not (eq key :)))
+            (<span class="w">error</span> <span class="s">"Keyword expected: %s"</span> key))
+          (<span class="k">cl-case</span> key
+            ((<span class="bi">:render/foreground</span> <span class="bi">:render/background</span>)
+             (<span class="k">push</span> (pdf-util-hexcolor value)
+                   soptions))
+            ((<span class="bi">:render/printed</span>)
+             (<span class="k">push</span> (<span class="k">if</span> value 1 0) soptions))
+            ((<span class="bi">:render/gammabeforeinvert</span>)
+             (<span class="k">push</span> (<span class="k">if</span> value 1 0) soptions))
+            ((<span class="bi">:render/usecolors</span>)
+             <span class="cd">;; </span><span class="c">0 -&gt; original color
+</span>             <span class="cd">;; </span><span class="c">1 -&gt; recolor document to grayscale mapping black to
+</span>             <span class="cd">;;      </span><span class="c">:render/foreground and white to :render/background
+</span>             <span class="cd">;; </span><span class="c">2 -&gt; recolor document by inverting the perceived lightness
+</span>             <span class="cd">;;      </span><span class="c">preserving hue
+</span>             (<span class="k">push</span> (<span class="k">if</span> (<span class="k">and</span> (integerp value) (&gt; 3 value 0)) value 0)
+                   soptions))
+            (t (<span class="k">push</span> value soptions)))
+          (<span class="k">push</span> key soptions)))
+      soptions)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

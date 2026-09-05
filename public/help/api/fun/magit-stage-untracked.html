@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-stage-untracked – Emacs Documentation Online</title>
+<meta name="description" content="magit-stage-untracked is a natively compiled function defined in
+magit-apply.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-stage-untracked</code></h1><p><span class="m"><code>magit-stage-untracked</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-apply.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-stage-untracked <span class="ty">&amp;optional</span> <span class="arg">INTENT</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-apply.el</span>
+(<span class="k">defun</span> <span class="f">magit-stage-untracked</span> (<span class="ty">&amp;optional</span> intent)
+  (<span class="k">let*</span> ((section (magit-current-section))
+         (files (<span class="k">pcase</span> (magit-diff-scope)
+                  ('file  (list (<span class="k">oref</span> section value)))
+                  ('files (magit-region-values nil t))
+                  ('list  (magit-untracked-files))))
+         plain repos)
+    (<span class="k">dolist</span> (file files)
+      (<span class="k">if</span> (<span class="k">and</span> (not (file-symlink-p file))
+               (magit-git-repo-p file t))
+          (<span class="k">push</span> file repos)
+        (<span class="k">push</span> file plain)))
+    (magit-run-before-change-functions files <span class="s">"stage"</span>)
+    (<span class="k">when</span> plain
+      (magit-run-git <span class="s">"add"</span> (<span class="k">and</span> intent <span class="s">"--intent-to-add"</span>)
+                     <span class="s">"--"</span> plain)
+      (<span class="k">when</span> magit-auto-revert-mode
+        (mapc #'magit-turn-on-auto-revert-mode-if-desired plain)))
+    (<span class="k">dolist</span> (repo repos)
+      (<span class="k">save-excursion</span>
+        (<span class="k">when-let</span> ((section (magit-get-section
+                             `((file . ,repo) (untracked) (status)))))
+          (goto-char (<span class="k">oref</span> section start))
+          (<span class="k">let*</span> ((topdir (magit-toplevel))
+                 (url (<span class="k">let</span> ((default-directory
+                             (file-name-as-directory (expand-file-name repo))))
+                        (<span class="k">or</span> (magit-get <span class="s">"remote"</span> (magit-get-some-remote) <span class="s">"url"</span>)
+                            (file-name-concat <span class="s">"."</span> repo))))
+                 (package
+                  (<span class="k">and</span> (equal borg-user-emacs-directory topdir)
+                       (file-name-nondirectory (directory-file-name repo)))))
+            (<span class="k">if</span> (<span class="k">and</span> package
+                     (fboundp 'borg-assimilate)
+                     (y-or-n-p (format <span class="s">"Also assimilate `</span><span class="m s">%s</span><span class="s">' drone?"</span> package)))
+                (borg-assimilate package url)
+              (magit-submodule-add-1
+               url repo (magit-submodule-read-name-for-path repo package))
+              (<span class="k">when</span> (<span class="k">and</span> package
+                         (fboundp 'borg--sort-submodule-sections)
+                         (fboundp 'borg--maybe-absorb-gitdir))
+                (borg--sort-submodule-sections
+                 (expand-file-name <span class="s">".gitmodules"</span> topdir))
+                (<span class="k">let</span> ((default-directory borg-user-emacs-directory))
+                  (borg--maybe-absorb-gitdir package))))))))
+    (magit-run-after-apply-functions files <span class="s">"stage"</span>)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

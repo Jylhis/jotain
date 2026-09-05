@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp--send-selection-for-project – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp--send-selection-for-project is a natively compiled
+function defined in claude-code-ide-mcp.el.
+Send current selection to Claude for PROJECT-DIR.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp--send-selection-for-project</code></h1><p><span class="m"><code>claude-code-ide-mcp--send-selection-for-project</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">claude-code-ide-mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp--send-selection-for-project <a href="#:~:text=for-,PROJECT-DIR"><span class="arg">PROJECT-DIR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Send current selection to Claude for <span class="arg">PROJECT-DIR</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp--send-selection-for-project</span> (project-dir)
+  <span class="doc">"Send current selection to Claude for PROJECT-DIR."</span>
+  (<span class="k">when-let</span> ((session (claude-code-ide-mcp--get-session-for-project project-dir)))
+    <span class="cd">;; </span><span class="c">Clear the timer in the session
+</span>    (<span class="k">setf</span> (claude-code-ide-mcp-session-selection-timer session) nil)
+
+    (<span class="k">let</span> ((file-path (buffer-file-name)))
+      <span class="cd">;; </span><span class="c">Only process if we have a client and a file-backed buffer
+</span>      (<span class="k">when</span> (<span class="k">and</span> (claude-code-ide-mcp-session-client session)
+                 file-path)
+        <span class="cd">;; </span><span class="c">Check if file is within project
+</span>        (<span class="k">let</span> ((file-in-project (string-prefix-p (expand-file-name project-dir)
+                                                (expand-file-name file-path))))
+          (<span class="k">if</span> file-in-project
+              <span class="cd">;; </span><span class="c">File is in project - check cursor/selection changes
+</span>              (<span class="k">let*</span> ((cursor-pos (point))
+                     (current-state (<span class="k">if</span> (use-region-p)
+                                        (list cursor-pos (region-beginning) (region-end))
+                                      (list cursor-pos cursor-pos cursor-pos)))
+                     (last-state (claude-code-ide-mcp-session-last-selection session))
+                     (state-changed (not (equal current-state last-state))))
+                <span class="cd">;; </span><span class="c">Send notification if cursor or selection changed
+</span>                (<span class="k">when</span> state-changed
+                  (<span class="k">setf</span> (claude-code-ide-mcp-session-last-selection session) current-state)
+                  (<span class="k">let</span> ((selection (claude-code-ide-mcp-handle-get-current-selection nil)))
+                    (claude-code-ide-mcp--send-notification <span class="s">"selection_changed"</span> selection))))
+            <span class="cd">;; </span><span class="c">File outside project - reset selection state
+</span>            (<span class="k">setf</span> (claude-code-ide-mcp-session-last-selection session) nil))))
+      <span class="cd">;; </span><span class="c">Reset selection state for non-file buffers
+</span>      (<span class="k">unless</span> file-path
+        (<span class="k">setf</span> (claude-code-ide-mcp-session-last-selection session) nil)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

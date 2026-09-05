@@ -1,0 +1,75 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-cabal--compose-hasktags-command – Emacs Documentation Online</title>
+<meta name="description" content="haskell-cabal--compose-hasktags-command is a natively compiled
+function defined in haskell-cabal.el.
+Prepare command to execute `hasktags` command in DIR folder.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-cabal--compose-hasktags-command</code></h1><p><span class="m"><code>haskell-cabal--compose-hasktags-command</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">haskell-cabal.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-cabal--compose-hasktags-command <a href="#:~:text=in-,DIR"><span class="arg">DIR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Prepare command to execute `hasktags` command in <span class="arg">DIR</span> folder.
+<p>To customise the command executed, see <a href="../var/haskell-hasktags-path.html"><code>haskell-hasktags-path</code></a>
+and <a href="../var/haskell-hasktags-arguments.html"><code>haskell-hasktags-arguments</code></a>.
+<p>This function takes into account the user's operating system: in case
+of Windows it generates a simple command, relying on Hasktags
+itself to find source files:
+<p>hasktags --output=DIRTAGS -x -e <span class="arg">DIR</span>
+<p>In other cases it uses `find` command to find all source files
+recursively avoiding visiting unnecessary heavy directories like
+<br>.git, .svn, _darcs and build directories created by
+<br>cabal-install, stack, etc and passes list of found files to Hasktags.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-cabal.el</span>
+(<span class="k">defun</span> <span class="f">haskell-cabal--compose-hasktags-command</span> (dir)
+  <span class="doc">"Prepare command to execute `hasktags` command in DIR folder.
+
+To customise the command executed, see `</span><span class="m doc">haskell-hasktags-path</span><span class="doc">'
+and `</span><span class="m doc">haskell-hasktags-arguments</span><span class="doc">'.
+
+This function takes into account the user's operating system: in case
+of Windows it generates a simple command, relying on Hasktags
+itself to find source files:
+
+hasktags --output=DIR</span><span class="w doc">\</span><span class="doc">TAGS -x -e DIR
+
+In other cases it uses `find` command to find all source files
+recursively avoiding visiting unnecessary heavy directories like
+.git, .svn, _darcs and build directories created by
+cabal-install, stack, etc and passes list of found files to Hasktags."</span>
+  (<span class="k">if</span> (eq system-type 'windows-nt)
+      (format <span class="s">"%s --output=%s %s %s"</span>
+              haskell-hasktags-path
+              (shell-quote-argument (expand-file-name <span class="s">"TAGS"</span> dir))
+              (mapconcat #'identity haskell-hasktags-arguments <span class="s">" "</span>)
+              (shell-quote-argument dir))
+    (format <span class="s">"cd %s &amp;&amp; %s | %s"</span>
+            (shell-quote-argument dir)
+            (concat <span class="s">"find . "</span>
+                    <span class="s">"-type d </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s"> "</span>
+                    <span class="s">"-name .git "</span>
+                    <span class="s">"-o -name .svn "</span>
+                    <span class="s">"-o -name _darcs "</span>
+                    <span class="s">"-o -name .stack-work "</span>
+                    <span class="s">"-o -name dist "</span>
+                    <span class="s">"-o -name dist-newstyle "</span>
+                    <span class="s">"-o -name .cabal-sandbox "</span>
+                    <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> -prune "</span>
+                    <span class="s">"-o -type f </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s"> "</span>
+                    <span class="s">"-name '</span><span class="m s">*.hs</span><span class="s">' "</span>
+                    <span class="s">"-or -name '</span><span class="m s">*.lhs</span><span class="s">' "</span>
+                    <span class="s">"-or -name '</span><span class="m s">*.hsc</span><span class="s">' "</span>
+                    <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> -not </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s"> "</span>
+                    <span class="s">"-name '#*' "</span>
+                    <span class="s">"-or -name '</span><span class="m s">.*</span><span class="s">' "</span>
+                    <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> -print0"</span>)
+            (format <span class="s">"xargs -0 %s %s"</span>
+                    (shell-quote-argument haskell-hasktags-path)
+                    (mapconcat #'identity haskell-hasktags-arguments <span class="s">" "</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

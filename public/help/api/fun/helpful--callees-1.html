@@ -1,0 +1,108 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: helpful--callees-1 – Emacs Documentation Online</title>
+<meta name="description" content="helpful--callees-1 is a natively compiled function defined in
+helpful.el.
+Return a list of all the functions called in FORM.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>helpful--callees-1</code></h1><p><span class="m"><code>helpful--callees-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">helpful.el</span>.
+<h2>Signature</h2>
+<pre><code>(helpful--callees-1 <a href="#:~:text=in-,FORM"><span class="arg">FORM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a list of all the functions called in <span class="arg">FORM</span>.
+<p>Assumes <span class="arg">FORM</span> has been macro expanded. The returned list
+may contain duplicates.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/al1y9rq93c50r6aqa0749m04ilfnar06-emacs-packages-deps/share/emacs/site-lisp/elpa/helpful-20250408.334/helpful.el</span>
+(<span class="k">defun</span> <span class="f">helpful--callees-1</span> (form)
+  <span class="doc">"Return a list of all the functions called in FORM.
+Assumes FORM has been macro expanded. The returned list
+may contain duplicates."</span>
+  (<span class="k">cond</span>
+   ((not (consp form))
+    nil)
+   <span class="cd">;; </span><span class="c">See `(elisp)Special Forms'. For these special forms, we recurse
+</span>   <span class="cd">;; </span><span class="c">just like functions but ignore the car.
+</span>   ((memq (car form) '(and catch defconst defvar if interactive
+                           or prog1 prog2 progn save-current-buffer
+                           save-restriction setq setq-default
+                           track-mouse unwind-protect while))
+    (-flatten
+     (-map #'helpful--callees-1 (cdr form))))
+
+   ((eq (car form) 'cond)
+    (<span class="k">let*</span> ((clauses (cdr form))
+           (clause-fns
+            <span class="cd">;; </span><span class="c">Each clause is a list of forms.
+</span>            (<span class="k">--map</span>
+             (-map #'helpful--callees-1 it) clauses)))
+      (-flatten clause-fns)))
+
+   ((eq (car form) 'condition-case)
+    (<span class="k">let*</span> ((protected-form (nth 2 form))
+           (protected-form-fns (helpful--callees-1 protected-form))
+           (handlers (-drop 3 form))
+           (handler-bodies (-map #'cdr handlers))
+           (handler-fns
+            (<span class="k">--map</span>
+             (-map #'helpful--callees-1 it) handler-bodies)))
+      (append
+       protected-form-fns
+       (-flatten handler-fns))))
+
+   <span class="cd">;; </span><span class="c">Calling a function with a well known higher order function, for
+</span>   <span class="cd">;; </span><span class="c">example (funcall 'foo 1 2).
+</span>   ((<span class="k">and</span>
+     (memq (car form) '(funcall apply call-interactively
+                                mapcar mapc mapconcat -map))
+     (eq (car-safe (nth 1 form)) 'quote))
+    (cons
+     (cadr (nth 1 form))
+     (-flatten
+      (-map #'helpful--callees-1 (cdr form)))))
+
+   ((eq (car form) 'function)
+    (<span class="k">let</span> ((arg (nth 1 form)))
+      (<span class="k">if</span> (symbolp arg)
+          <span class="cd">;; </span><span class="c">#'foo, which is the same as (function foo), is a function
+</span>          <span class="cd">;; </span><span class="c">reference.
+</span>          (list arg)
+        <span class="cd">;; </span><span class="c">Handle (function (lambda ...)).
+</span>        (helpful--callees-1 arg))))
+
+   ((eq (car form) 'lambda)
+    <span class="cd">;; </span><span class="c">Only consider the body, not the param list.
+</span>    (-flatten (-map #'helpful--callees-1 (-drop 2 form))))
+
+   ((eq (car form) 'closure)
+    <span class="cd">;; </span><span class="c">Same as lambda, but has an additional argument of the
+</span>    <span class="cd">;; </span><span class="c">closed-over variables.
+</span>    (-flatten (-map #'helpful--callees-1 (-drop 3 form))))
+
+   ((memq (car form) '(let let*))
+    <span class="cd">;; </span><span class="c">Extract function calls used to set the let-bound variables.
+</span>    (<span class="k">let*</span> ((var-vals (-second-item form))
+           (var-val-callees
+            (<span class="k">--map</span>
+             (<span class="k">if</span> (consp it)
+                 (-map #'helpful--callees-1 it)
+               nil)
+             var-vals)))
+      (append
+       (-flatten var-val-callees)
+       <span class="cd">;; </span><span class="c">Function calls in the let body.
+</span>       (-map #'helpful--callees-1 (-drop 2 form)))))
+
+   ((eq (car form) 'quote)
+    nil)
+   (t
+    (cons
+     (car form)
+     (-flatten
+      (-map #'helpful--callees-1 (cdr form)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

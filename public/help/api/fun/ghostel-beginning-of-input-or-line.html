@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel-beginning-of-input-or-line – Emacs Documentation Online</title>
+<meta name="description" content="ghostel-beginning-of-input-or-line is an interactive and natively
+compiled function defined in ghostel.el.
+Move point to the start of input on a prompt row, else beginning-of-line.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel-beginning-of-input-or-line</code></h1><p><span class="m"><code>ghostel-beginning-of-input-or-line</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel-beginning-of-input-or-line)
+</code></pre>
+<h2>Documentation</h2>
+<p>Move point to the start of input on a prompt row, else <a href="../fun/beginning-of-line.html"><code>beginning-of-line</code></a>.
+<p>On prompt rows, point moves to the first input character after the
+prompt prefix.  On other rows, point moves to the line beginning.
+<h2>Key Bindings</h2>
+<p><span class="v">ghostel-line-mode-map</span> <span class="key">C-a</span>
+<span class="v">ghostel-readonly-mode-map</span> <span class="key">C-a</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel-beginning-of-input-or-line</span> ()
+  <span class="doc">"Move point to the start of input on a prompt row, else `</span><span class="m doc">beginning-of-line</span><span class="doc">'.
+On prompt rows, point moves to the first input character after the
+prompt prefix.  On other rows, point moves to the line beginning."</span>
+  (<span class="k">interactive</span> <span class="s">"^"</span>)
+  (<span class="k">let*</span> ((bol (line-beginning-position))
+         (eol (line-end-position))
+         <span class="cd">;; </span><span class="c">Line-mode marker target — only meaningful when the
+</span>         <span class="cd">;; </span><span class="c">marker is on the current line.
+</span>         (line-mode-target
+          (<span class="k">and</span> (eq ghostel--input-mode 'line)
+               (markerp ghostel--line-input-start)
+               (<span class="k">let</span> ((m (marker-position ghostel--line-input-start)))
+                 (<span class="k">and</span> m (&gt;= m bol) (&lt;= m eol) m))))
+         <span class="cd">;; </span><span class="c">Text-property fallback: walk forward from BOL while
+</span>         <span class="cd">;; </span><span class="c">chars carry `</span><span class="m c">ghostel-prompt</span><span class="c">'.  Only treat as input-start
+</span>         <span class="cd">;; </span><span class="c">when there is real content past the prefix; an
+</span>         <span class="cd">;; </span><span class="c">all-prompt line (multi-line prompt continuation) goes to
+</span>         <span class="cd">;; </span><span class="c">BOL instead of jumping to EOL.
+</span>         (prop-target
+          (<span class="k">unless</span> line-mode-target
+            (<span class="k">save-excursion</span>
+              (goto-char bol)
+              (<span class="k">let</span> ((pos bol))
+                (<span class="k">while</span> (<span class="k">and</span> (&lt; pos eol)
+                            (get-text-property pos 'ghostel-prompt))
+                  (<span class="k">setq</span> pos (1+ pos)))
+                (<span class="k">and</span> (&gt; pos bol) (&lt; pos eol) pos)))))
+         <span class="cd">;; </span><span class="c">Regex fallback for shells/REPLs without OSC 133.  Suppressed
+</span>         <span class="cd">;; </span><span class="c">when OSC 133 is active and a real prompt sits below point:
+</span>         <span class="cd">;; </span><span class="c">this property-less line is then command output, not a prompt, so
+</span>         <span class="cd">;; </span><span class="c">prefer BOL over a stray mid-line %/&gt;/#.  During a live REPL/tmux
+</span>         <span class="cd">;; </span><span class="c">session, the bottom line has no prompt and the regex still fires.
+</span>         (regex-target
+          (<span class="k">unless</span> (<span class="k">or</span> line-mode-target prop-target
+                      (<span class="k">and</span> ghostel--prompt-positions
+                           (text-property-not-all (point) (point-max)
+                                                  'ghostel-prompt nil)))
+            (ghostel--regex-prompt-end bol))))
+    (<span class="k">cond</span>
+     (line-mode-target (goto-char line-mode-target))
+     (prop-target      (goto-char prop-target))
+     (regex-target     (goto-char regex-target))
+     (t                (move-beginning-of-line 1)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

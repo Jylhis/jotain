@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge-pullreq-state-set-merged – Emacs Documentation Online</title>
+<meta name="description" content="forge-pullreq-state-set-merged is an interactive and natively compiled
+function defined in forge-topic.el.
+Merge the current pull-request into its target.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge-pullreq-state-set-merged</code></h1><p><span class="m"><code>forge-pullreq-state-set-merged</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">forge-topic.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge-pullreq-state-set-merged)
+</code></pre>
+<h2>Documentation</h2>
+<p>Merge the current pull-request into its target.
+<p>Prompt the user to either use the API to perform the merge or use Git.
+I recommend you only use the API if your organization enforces that
+inferior process.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-topic.el</span>
+(<span class="k">transient-define-suffix</span> <span class="f">forge-pullreq-state-set-merged</span> ()
+  <span class="doc">"Merge the current pull-request into its target.
+Prompt the user to either use the API to perform the merge or use Git.
+I recommend you only use the API if your organization enforces that
+inferior process."</span>
+  <span class="bi">:class</span> 'forge--topic-set-state-command
+  <span class="bi">:state</span> 'merged
+  <span class="bi">:getter</span> #'forge-current-pullreq
+  <span class="bi">:if</span> #'forge-current-pullreq
+  <span class="bi">:transient</span> nil
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((pullreq (forge-current-pullreq)))
+    (<span class="k">if</span> (<span class="k">magit-read-char-case</span> (format <span class="s">"Merge #%s "</span> (<span class="k">oref</span> pullreq number)) t
+          (?g <span class="s">"using [g]it (recommended)"</span> t)
+          (?a <span class="s">"using [a]pi"</span> nil))
+        (<span class="k">let</span> ((branch (<span class="k">or</span> (forge--pullreq-branch-active pullreq)
+                          (forge--branch-pullreq pullreq))))
+          (<span class="k">if-let</span> ((upstream (magit-get-local-upstream-branch branch)))
+              (<span class="k">if</span> (zerop (magit-call-git <span class="s">"checkout"</span> upstream))
+                  (magit--merge-absorb
+                   branch (magit-merge-arguments)
+                   <span class="cd">;; </span><span class="c">Users might be surprised that we
+</span>                   <span class="cd">;; </span><span class="c">aren't done yet, so drop a hint.
+</span>                   <span class="s">"Inspect the result, and if satisfied push"</span>)
+                (<span class="w">user-error</span> <span class="s">"Could not checkout %S"</span> upstream))
+            (<span class="w">user-error</span> <span class="s">"No upstream configured for %S"</span> branch)))
+      (forge-merge pullreq (forge-select-merge-method)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

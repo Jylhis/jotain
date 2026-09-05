@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-interactive-toggle-file – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-interactive-toggle-file is an interactive and natively
+compiled function defined in majutsu-interactive.el.
+Toggle selection of all hunks in the file at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-interactive-toggle-file</code></h1><p><span class="m"><code>majutsu-interactive-toggle-file</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <span class="bt">majutsu-interactive.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-interactive-toggle-file)
+</code></pre>
+<h2>Documentation</h2>
+<p>Toggle selection of all hunks in the file at point.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-interactive.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-interactive-toggle-file</span> ()
+  <span class="doc">"Toggle selection of all hunks in the file at point."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> (file-section)
+    (<span class="k">magit-section-case</span>
+      (jj-hunk (<span class="k">setq</span> file-section (<span class="k">oref</span> it parent)))
+      (jj-file (<span class="k">setq</span> file-section it)))
+    (<span class="k">let</span> ((file (<span class="k">and</span> file-section (<span class="k">oref</span> file-section value))))
+      (<span class="k">when</span> (<span class="k">and</span> file-section (magit-section-match 'jj-file file-section))
+        (<span class="k">unless</span> (seq-some (<span class="k">lambda</span> (child) (magit-section-match 'jj-hunk child))
+                          (<span class="k">oref</span> file-section children))
+          (<span class="k">setq</span> file-section (majutsu-interactive--file-section-with-hunks file)))
+        (<span class="k">unless</span> file-section
+          (<span class="w">user-error</span> <span class="s">"No hunks for file at point"</span>))
+        (<span class="k">let*</span> ((hunks (<span class="k">oref</span> file-section children))
+               (all-selected (cl-every
+                              (<span class="k">lambda</span> (h)
+                                (majutsu-interactive--get-selection
+                                 (majutsu-interactive--hunk-id h)))
+                              hunks)))
+          (<span class="k">dolist</span> (hunk hunks)
+            (<span class="k">when</span> (magit-section-match 'jj-hunk hunk)
+              (majutsu-interactive--set-selection
+               (majutsu-interactive--hunk-id hunk)
+               (<span class="k">unless</span> all-selected <span class="bi">:all</span>))))
+          (majutsu-interactive--render-overlays)
+          (message <span class="s">"%s all hunks in file"</span>
+                   (<span class="k">if</span> all-selected <span class="s">"Deselected"</span> <span class="s">"Selected"</span>)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

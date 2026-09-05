@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape-until – Emacs Documentation Online</title>
+<meta name="description" content="dape-until is an interactive and natively compiled function defined in
+dape.el.
+Run until point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape-until</code></h1><p><span class="m"><code>dape-until</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape-until <a href="#:~:text=point.-,CONN"><span class="arg">CONN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run until point.
+<p><span class="arg">CONN</span> is inferred for interactive invocations.
+<h2>Key Bindings</h2>
+<p><span class="v">ctl-x-map</span> <span class="key">C-a u</span>
+<span class="v">dape-global-map</span> <span class="key">u</span>
+<span class="v">global-map</span> <span class="key">C-x C-a u</span>
+<span class="v">help-quick-use-map</span> <span class="key">C-x C-a u</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+<span class="cd">;;; </span><span class="c">Run until point
+</span>
+(<span class="k">defun</span> <span class="f">dape-until</span> (conn)
+  <span class="doc">"Run until point.
+CONN is inferred for interactive invocations."</span>
+  (<span class="k">interactive</span> (list (<span class="k">or</span> (dape--live-connection 'stopped t)
+                         (dape--live-connection 'parent))))
+  <span class="cd">;; </span><span class="c">Ensure that `</span><span class="m c">dape-until</span><span class="c">' state is reset
+</span>  (add-hook 'dape-active-mode-hook #'dape--until-reset)
+  (add-hook 'dape-stopped-hook #'dape--until-reset)
+  (<span class="k">if</span> (cl-member 'until (dape--breakpoints-at-point)
+                 <span class="bi">:key</span> #'dape--source-breakpoint-type)
+      (dape-breakpoint-remove-at-point)
+    (<span class="k">let</span> (<span class="cd">;; </span><span class="c">Block to ensure breakpoints changes before continue
+</span>          (dape--request-blocking t))
+      <span class="cd">;; </span><span class="c">Disable all non disabled breakpoints temporarily
+</span>      (<span class="k">cl-loop</span> for breakpoint in dape--breakpoints
+               unless (<span class="k">or</span> (not (dape--source-breakpoint-p breakpoint))
+                          (dape--breakpoint-disabled breakpoint)
+                          (eq (dape--source-breakpoint-type breakpoint) 'until))
+               do (dape--breakpoint-disable breakpoint 'until)
+               finally do (dape--breakpoint-notify-all))
+      (dape--breakpoint-place 'until)
+      (<span class="k">when</span> (dape--stopped-threads conn)
+        (dape-continue conn)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

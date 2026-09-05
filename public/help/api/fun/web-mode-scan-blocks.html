@@ -1,0 +1,814 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-scan-blocks – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-scan-blocks is a natively compiled function defined in
+web-mode.el.
+Identifies blocks (with block-side, block-beg, block-end text properties).">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-scan-blocks</code></h1><p><span class="m"><code>web-mode-scan-blocks</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-scan-blocks <a href="#:~:text="><span class="arg">REG-BEG</span></a> <a href="#:~:text="><span class="arg">REG-END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Identifies blocks (with block-side, block-beg, block-end text properties).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+<span class="cd">;;</span><span class="c">---- LEXER BLOCKS ------------------------------------------------------------
+</span>
+(<span class="k">defun</span> <span class="f">web-mode-scan-blocks</span> (reg-beg reg-end)
+  <span class="doc">"Identifies blocks (with block-side, block-beg, block-end text properties)."</span>
+  (<span class="k">save-excursion</span>
+
+    (<span class="k">let</span> ((i 0) open close closing-string sub1 sub2 pos tagopen tmp delim-open delim-close part-beg part-end tagclose)
+
+      (goto-char reg-beg)
+
+      <span class="cd">;;</span><span class="c">(message "%S: %Sx%S" (point) reg-beg reg-end)
+</span>      <span class="cd">;;</span><span class="c">(message "regexp=%S" web-mode-block-regexp)
+</span>      (<span class="k">while</span> (<span class="k">and</span> (&lt; i 2000)
+                  (&gt; reg-end (point))
+                  web-mode-block-regexp
+                  (re-search-forward web-mode-block-regexp reg-end t)
+                  (not (eobp)))
+
+        (<span class="k">setq</span> i (1+ i)
+              closing-string nil
+              close nil
+              tagopen (match-string 0)
+              open (match-beginning 0)
+              delim-open nil
+              delim-close nil
+              pos nil)
+
+        (<span class="k">let</span> ((l (length tagopen)))
+          (<span class="k">when</span> (member (string-to-char tagopen) '(?\s ?\t))
+            (<span class="k">setq</span> tagopen (replace-regexp-in-string <span class="s">"\\`[ \t]*"</span> <span class="s">""</span> tagopen))
+            (<span class="k">setq</span> open (+ open (- l (length tagopen))))
+            (<span class="k">setq</span> l (length tagopen))
+            )
+          (<span class="k">setq</span> sub1 (substring tagopen 0 1)
+                sub2 (substring tagopen 0 (<span class="k">if</span> (&gt;= l 2) 2 1)))
+          )
+        <span class="cd">;;</span><span class="c">(message " found block #(%S) at pos=(%S), part-type=(%S)" i open (get-text-property open 'part-side))
+</span>        (<span class="k">cond</span>
+
+          ((string= web-mode-engine <span class="s">"php"</span>)
+           (<span class="k">unless</span> (member (char-after) '(?x ?X))
+             (<span class="k">setq</span> closing-string '(<span class="s">"&lt;\\?"</span>. <span class="s">"\\?&gt;"</span>)))
+           (<span class="k">cond</span>
+             ((looking-at-p <span class="s">"&lt;?php"</span>)
+              (<span class="k">setq</span> delim-open <span class="s">"&lt;?php"</span>)
+              (<span class="k">setq</span> delim-close <span class="s">"?&gt;"</span>))
+             ((eq (char-after) ?\=)
+              (<span class="k">setq</span> delim-open <span class="s">"&lt;?="</span>)
+              (<span class="k">setq</span> delim-close <span class="s">"?&gt;"</span>))
+             (t
+              (<span class="k">setq</span> delim-open <span class="s">"&lt;?"</span>)
+              (<span class="k">setq</span> delim-close <span class="s">"?&gt;"</span>))
+             ) <span class="cd">;</span><span class="c">cond
+</span>           ) <span class="cd">;</span><span class="c">php
+</span>
+          ((string= web-mode-engine <span class="s">"erb"</span>)
+           (<span class="k">cond</span>
+             ((string= sub2 <span class="s">"&lt;%"</span>)
+              (<span class="k">setq</span> closing-string '(<span class="s">"&lt;%"</span>. <span class="s">"%&gt;"</span>)
+                    delim-open <span class="s">"&lt;%</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">==</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[=-]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?"</span>
+                    delim-close <span class="s">"[-]?%&gt;"</span>))
+             (t
+              (<span class="k">setq</span> closing-string <span class="s">"EOL"</span>
+                    delim-open <span class="s">"%"</span>))
+             )
+           ) <span class="cd">;</span><span class="c">erb
+</span>
+          ((string= web-mode-engine <span class="s">"django"</span>)
+           (<span class="k">cond</span>
+             ((string= sub2 <span class="s">"{{"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"EODQ"</span>
+                    <span class="cd">;;</span><span class="c">(setq closing-string '("{{" . "}}")
+</span>                    delim-open <span class="s">"{{"</span>
+                    delim-close <span class="s">"}}"</span>))
+             ((string= sub2 <span class="s">"{%"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"%}"</span>
+                    delim-open <span class="s">"{%[+-]?"</span>
+                    delim-close <span class="s">"[-]?%}"</span>))
+             ((string= sub2 <span class="s">"{#"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"#}"</span>))
+             (t
+              (<span class="k">setq</span> closing-string <span class="s">"EOL"</span>
+                    delim-open <span class="s">"#[#]?"</span>))
+             )
+           ) <span class="cd">;</span><span class="c">django
+</span>
+          ((string= web-mode-engine <span class="s">"anki"</span>)
+           (<span class="k">setq</span> closing-string <span class="s">"}}"</span>
+                 delim-open <span class="s">"{{[#/^]?"</span>
+                 delim-close <span class="s">"}}"</span>)
+           ) <span class="cd">;</span><span class="c">anki
+</span>
+          ((string= web-mode-engine <span class="s">"ejs"</span>)
+           (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>
+                 delim-open <span class="s">"&lt;%[=-]?"</span>
+                 delim-close <span class="s">"[-]?%&gt;"</span>)
+           ) <span class="cd">;</span><span class="c">ejs
+</span>
+          ((string= web-mode-engine <span class="s">"lsp"</span>)
+           (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>
+                 delim-open <span class="s">"&lt;%[%#]?"</span>
+                 delim-close <span class="s">"%&gt;"</span>)
+           ) <span class="cd">;</span><span class="c">lsp
+</span>
+          ((string= web-mode-engine <span class="s">"mako"</span>)
+           (<span class="k">cond</span>
+             ((<span class="k">and</span> (string= tagopen <span class="s">"&lt;%"</span>)
+                   (member (char-after) '(?\s ?\n ?\!)))
+              (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>
+                    delim-open <span class="s">"&lt;%[!]?"</span>
+                    delim-close <span class="s">"%&gt;"</span>))
+             ((member sub2 '(<span class="s">"&lt;%"</span> <span class="s">"&lt;/"</span>))
+              (<span class="k">setq</span> closing-string <span class="s">"&gt;"</span>
+                    delim-open <span class="s">"&lt;/?%"</span>
+                    delim-close <span class="s">"/?&gt;"</span>))
+             ((string= sub2 <span class="s">"${"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"}"</span>
+                    delim-open <span class="s">"${"</span>
+                    delim-close <span class="s">"}"</span>))
+             (t
+              (<span class="k">setq</span> closing-string <span class="s">"EOL"</span>
+                    delim-open <span class="s">"%"</span>))
+             )
+           ) <span class="cd">;</span><span class="c">mako
+</span>
+          ((string= web-mode-engine <span class="s">"cl-emb"</span>)
+           (<span class="k">cond</span>
+             ((string= tagopen <span class="s">"&lt;%#"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"#%&gt;"</span>))
+             ((string= sub2 <span class="s">"&lt;%"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>
+                    delim-open <span class="s">"&lt;%[=%]?"</span>
+                    delim-close <span class="s">"%&gt;"</span>))
+             )
+           ) <span class="cd">;</span><span class="c">cl-emb
+</span>
+          ((string= web-mode-engine <span class="s">"artanis"</span>)
+           (<span class="k">cond</span>
+             ((string= tagopen <span class="s">"&lt;%;"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>))
+             ((string= tagopen <span class="s">"&lt;%#|"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"|#%&gt;"</span>))
+             ((string= sub2 <span class="s">"&lt;@"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>
+                    delim-open <span class="s">"&lt;@</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">css</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">icon</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">include</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">js</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>
+                    delim-close <span class="s">"%&gt;"</span>))
+             ((string= sub2 <span class="s">"&lt;%"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>
+                    delim-open <span class="s">"&lt;%[=]?"</span>
+                    delim-close <span class="s">"%&gt;"</span>))
+             )
+           ) <span class="cd">;</span><span class="c">artanis
+</span>
+          ((string= web-mode-engine <span class="s">"elixir"</span>)
+           (<span class="k">cond</span>
+             ((member (char-after) '(?\#))
+              (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>))
+             (t
+              (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>
+                    delim-open <span class="s">"&lt;%[=%]?"</span>
+                    delim-close <span class="s">"%&gt;"</span>))
+             )
+           ) <span class="cd">;</span><span class="c">elixir
+</span>
+          ((string= web-mode-engine <span class="s">"mojolicious"</span>)
+           (<span class="k">cond</span>
+             ((string= tagopen <span class="s">"&lt;%#"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>))
+             ((string= sub2 <span class="s">"&lt;%"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>
+                    delim-open <span class="s">"&lt;%</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">==</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[=%]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?"</span>
+                    delim-close <span class="s">"%&gt;"</span>))
+             ((string= sub2 <span class="s">"%#"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"EOL"</span>))
+             (t
+              (<span class="k">setq</span> closing-string <span class="s">"EOL"</span>
+                    delim-open <span class="s">"%</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">==</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[=%]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?"</span>))
+             )
+           ) <span class="cd">;</span><span class="c">mojolicious
+</span>
+          ((string= web-mode-engine <span class="s">"ctemplate"</span>)
+           (<span class="k">cond</span>
+             ((member tagopen '(<span class="s">"{{{"</span> <span class="s">"{{~"</span>))
+              (<span class="k">setq</span> closing-string <span class="s">"}~?}}"</span>
+                    delim-open <span class="s">"{{~?{"</span>
+                    delim-close <span class="s">"}~?}}"</span>)
+              )
+             ((string= tagopen <span class="s">"{~{"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"}~?}"</span>
+                    delim-open <span class="s">"{~{"</span>
+                    delim-close <span class="s">"}~?}"</span>)
+              )
+             ((string= tagopen <span class="s">"{{!"</span>)
+              (<span class="k">setq</span> closing-string (<span class="k">if</span> (looking-at-p <span class="s">"--"</span>) <span class="s">"--}}"</span> <span class="s">"}}"</span>))
+              )
+             ((string= sub2 <span class="s">"{{"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"}~?}"</span>
+                    delim-open <span class="s">"{{[&gt;#/%^&amp;]?"</span>
+                    delim-close <span class="s">"}~?}"</span>))
+             (t
+              (<span class="k">setq</span> closing-string <span class="s">"}}"</span>
+                    delim-open <span class="s">"${{"</span>
+                    delim-close <span class="s">"}}"</span>))
+             )
+           ) <span class="cd">;</span><span class="c">ctemplate
+</span>
+          ((string= web-mode-engine <span class="s">"antlers"</span>)
+           (<span class="k">cond</span>
+             ((string= tagopen <span class="s">"{{$"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"$}}"</span>
+                    delim-open <span class="s">"{{$"</span>
+                    delim-close <span class="s">"$}}"</span>)
+              )
+             ((string= tagopen <span class="s">"{{?"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"?}}"</span>
+                    delim-open <span class="s">"{{?"</span>
+                    delim-close <span class="s">"?}}"</span>)
+              )
+             ((string= tagopen <span class="s">"{{$"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"$}}"</span>
+                    delim-open <span class="s">"{{$"</span>
+                    delim-close <span class="s">"$}}"</span>)
+              )
+             ((string= sub2 <span class="s">"{{"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"}}"</span>
+                    delim-open <span class="s">"{{"</span>
+                    delim-close <span class="s">"}}"</span>))
+             )
+           ) <span class="cd">;</span><span class="c">antlers
+</span>
+          ((string= web-mode-engine <span class="s">"astro"</span>)
+           (<span class="k">cond</span>
+             ((string= tagopen <span class="s">"---"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"---"</span>
+                    delim-open <span class="s">"---"</span>
+                    delim-close <span class="s">"---"</span>)
+              )
+             )
+           ) <span class="cd">;</span><span class="c">astro
+</span>
+          ((string= web-mode-engine <span class="s">"aspx"</span>)
+           (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>
+                 delim-open <span class="s">"&lt;%[:=#@$]?"</span>
+                 delim-close <span class="s">"%&gt;"</span>)
+           ) <span class="cd">;</span><span class="c">aspx
+</span>
+          ((string= web-mode-engine <span class="s">"asp"</span>)
+           (<span class="k">cond</span>
+             ((string= sub2 <span class="s">"&lt;%"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>
+                    delim-open <span class="s">"&lt;%[:=#@$]?"</span>
+                    delim-close <span class="s">"%&gt;"</span>))
+             (t
+              (<span class="k">setq</span> closing-string <span class="s">"&gt;"</span>
+                    delim-open <span class="s">"&lt;/?"</span>
+                    delim-close <span class="s">"/?&gt;"</span>))
+             )
+           ) <span class="cd">;</span><span class="c">asp
+</span>
+          ((string= web-mode-engine <span class="s">"jsp"</span>)
+           (<span class="k">cond</span>
+             ((looking-at-p <span class="s">"--"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"--%&gt;"</span>))
+             ((string= sub2 <span class="s">"&lt;%"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>
+                    delim-open <span class="s">"&lt;%</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[!=@]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">#=</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?"</span>
+                    delim-close <span class="s">"[-]?%&gt;"</span>))
+             ((string= sub2 <span class="s">"${"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"}"</span>
+                    delim-open <span class="s">"${"</span>
+                    delim-close <span class="s">"}"</span>))
+             )
+           ) <span class="cd">;</span><span class="c">jsp
+</span>
+          ((string= web-mode-engine <span class="s">"clip"</span>)
+           (<span class="k">setq</span> closing-string <span class="s">"&gt;"</span>
+                 delim-open <span class="s">"&lt;/?"</span>
+                 delim-close <span class="s">"/?&gt;"</span>)
+           ) <span class="cd">;</span><span class="c">clip
+</span>
+          ((string= web-mode-engine <span class="s">"perl"</span>)
+           (<span class="k">setq</span> closing-string <span class="s">"&gt;"</span>
+                 delim-open <span class="s">"&lt;/?"</span>
+                 delim-close <span class="s">"/?&gt;"</span>)
+           ) <span class="cd">;</span><span class="c">perl
+</span>
+          ((string= web-mode-engine <span class="s">"blade"</span>)
+           (<span class="k">cond</span>
+             ((string= tagopen <span class="s">"{{-"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"--}}"</span>))
+             ((string= tagopen <span class="s">"{!!"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"!!}"</span>
+                    delim-open <span class="s">"{!!"</span>
+                    delim-close <span class="s">"!!}"</span>))
+             ((string= tagopen <span class="s">"@{{"</span>)
+              (<span class="k">setq</span> closing-string nil))
+             ((string= tagopen <span class="s">"{{{"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"}}}"</span>
+                    delim-open <span class="s">"{{{"</span>
+                    delim-close <span class="s">"}}}"</span>))
+             ((string= sub2 <span class="s">"{{"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"}}"</span>
+                    delim-open <span class="s">"{{"</span>
+                    delim-close <span class="s">"}}"</span>))
+             ((looking-at-p <span class="s">"[[:alnum:]]+\\.[[:alpha:]]+"</span>)
+              )
+             ((string= sub1 <span class="s">"@"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"EOB"</span>
+                    delim-open <span class="s">"@"</span>))
+             ((looking-at-p <span class="s">"[[:alnum:]]+("</span>)
+              (<span class="k">setq</span> closing-string <span class="s">")"</span>
+                    delim-open <span class="s">"@"</span>))
+             )
+           <span class="cd">;;</span><span class="c">(message "closing-string=%S delim-open=%S delim-close=%S" closing-string delim-open delim-close)
+</span>           ) <span class="cd">;</span><span class="c">blade
+</span>
+          ((string= web-mode-engine <span class="s">"smarty"</span>)
+           (<span class="k">cond</span>
+             ((string= tagopen <span class="s">"{*"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"*}"</span>)
+              )
+             ((string= tagopen <span class="s">"{#"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"#}"</span>
+                    delim-open <span class="s">"{#"</span>
+                    delim-close <span class="s">"#}"</span>)
+              )
+             (t
+              (<span class="k">setq</span> closing-string (cons <span class="s">"{"</span> <span class="s">"}"</span>)
+                    delim-open <span class="s">"{/?"</span>
+                    delim-close <span class="s">"}"</span>)
+              ) <span class="cd">;</span><span class="c">t
+</span>             ) <span class="cd">;</span><span class="c">cond
+</span>           ) <span class="cd">;</span><span class="c">smarty
+</span>
+          ((string= web-mode-engine <span class="s">"hero"</span>)
+           (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>
+                 delim-open <span class="s">"&lt;%==?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[biufsv]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">bs</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">&lt;%[:~@+!]?"</span>
+                 delim-close <span class="s">"%&gt;"</span>)
+           ) <span class="cd">;</span><span class="c">hero
+</span>
+          ((string= web-mode-engine <span class="s">"xoops"</span>)
+           (<span class="k">cond</span>
+             ((string= tagopen <span class="s">"&lt;{*"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"*}&gt;"</span>)
+              )
+             ((string= tagopen <span class="s">"&lt;{#"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"#}&gt;"</span>
+                    delim-open <span class="s">"&lt;{#"</span>
+                    delim-close <span class="s">"#}&gt;"</span>)
+              )
+             (t
+              (<span class="k">setq</span> closing-string (cons <span class="s">"&lt;{"</span> <span class="s">"}&gt;"</span>)
+                    delim-open <span class="s">"&lt;{/?"</span>
+                    delim-close <span class="s">"}&gt;"</span>)
+              ) <span class="cd">;</span><span class="c">t
+</span>             ) <span class="cd">;</span><span class="c">cond
+</span>           ) <span class="cd">;</span><span class="c">xoops
+</span>
+          ((string= web-mode-engine <span class="s">"web2py"</span>)
+           (<span class="k">setq</span> closing-string <span class="s">"}}"</span>
+                 delim-open <span class="s">"{{[=]?"</span>
+                 delim-close <span class="s">"}}"</span>)
+           ) <span class="cd">;</span><span class="c">web2py
+</span>
+          ((string= web-mode-engine <span class="s">"expressionengine"</span>)
+           (<span class="k">cond</span>
+             ((string= sub2 <span class="s">"{!--"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"--}"</span>))
+             (t
+              (<span class="k">setq</span> closing-string '(<span class="s">"{"</span>. <span class="s">"}"</span>)
+                    delim-open <span class="s">"{/?"</span>
+                    delim-close <span class="s">"}"</span>)
+              )
+             )
+           ) <span class="cd">;</span><span class="c">expressionengine
+</span>
+          ((string= web-mode-engine <span class="s">"dust"</span>)
+           (<span class="k">cond</span>
+             ((string= sub2 <span class="s">"{!"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"!}"</span>))
+             (t
+              (<span class="k">setq</span> closing-string '(<span class="s">"{"</span>. <span class="s">"}"</span>)
+                    delim-open <span class="s">"{[#/:?@&gt;&lt;+^]?"</span>
+                    delim-close <span class="s">"/?}"</span>)
+              )
+             )
+           ) <span class="cd">;</span><span class="c">dust
+</span>
+          ((string= web-mode-engine <span class="s">"svelte"</span>)
+           (<span class="k">cond</span>
+             ((string= sub2 <span class="s">"{!"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"!}"</span>))
+             ((string= sub2 <span class="s">"{}"</span>)
+              (<span class="k">setq</span> closing-string nil
+                    delim-open nil
+                    delim-close nil))
+             (t
+              (<span class="k">setq</span> closing-string '(<span class="s">"{"</span>. <span class="s">"}"</span>)
+                    delim-open <span class="s">"{[#/:?@&gt;&lt;+^]?"</span>
+                    delim-close <span class="s">"/?}"</span>)
+              )
+             )
+           ) <span class="cd">;</span><span class="c">svelte
+</span>
+          ((string= web-mode-engine <span class="s">"closure"</span>)
+           (<span class="k">cond</span>
+             ((string= sub2 <span class="s">"//"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"EOL"</span>)
+              )
+             ((string= sub2 <span class="s">"/*"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"*/"</span>)
+              )
+             (t
+              (<span class="k">setq</span> closing-string <span class="s">"}"</span>
+                    delim-open <span class="s">"{/?"</span>
+                    delim-close <span class="s">"/?}"</span>)
+              )
+             )
+           ) <span class="cd">;</span><span class="c">closure
+</span>
+          ((string= web-mode-engine <span class="s">"go"</span>)
+           (<span class="k">setq</span> closing-string <span class="s">"}}"</span>
+                 delim-open <span class="s">"{{-?"</span>
+                 delim-close <span class="s">"-?}}"</span>)
+           ) <span class="cd">;</span><span class="c">go
+</span>
+          ((string= web-mode-engine <span class="s">"angular"</span>)
+           (<span class="k">setq</span> closing-string <span class="s">"}}"</span>
+                 delim-open <span class="s">"{{"</span>
+                 delim-close <span class="s">"}}"</span>)
+           ) <span class="cd">;</span><span class="c">angular
+</span>
+          ((string= web-mode-engine <span class="s">"vue"</span>)
+           (<span class="k">cond</span>
+             ((string-match-p <span class="s">"[:@][-[:alpha:].]+=\""</span> tagopen)
+              (<span class="k">setq</span> closing-string <span class="s">"\""</span>
+                    delim-open tagopen
+                    delim-close <span class="s">"\""</span>))
+             ((string= tagopen <span class="s">"{{"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"}}"</span>
+                    delim-open <span class="s">"{{"</span>
+                    delim-close <span class="s">"}}"</span>)))
+           ) <span class="cd">;</span><span class="c">vue
+</span>
+          ((string= web-mode-engine <span class="s">"mason"</span>)
+           (<span class="k">cond</span>
+             ((<span class="k">and</span> (member sub2 '(<span class="s">"&lt;%"</span> <span class="s">"&lt;/"</span>))
+                   (looking-at <span class="s">"[[:alpha:]]+"</span>))
+              (<span class="k">if</span> (member (match-string-no-properties 0) '(<span class="s">"after"</span> <span class="s">"around"</span> <span class="s">"augment"</span> <span class="s">"before"</span> <span class="s">"def"</span> <span class="s">"filter"</span> <span class="s">"method"</span> <span class="s">"override"</span>))
+                  (<span class="k">setq</span> closing-string <span class="s">"&gt;"</span>
+                        delim-open <span class="s">"&lt;[/]?%"</span>
+                        delim-close <span class="s">"&gt;"</span>)
+                  (<span class="k">setq</span> closing-string (concat <span class="s">"&lt;/%"</span> (match-string-no-properties 0) <span class="s">"&gt;"</span>)
+                        delim-open <span class="s">"&lt;[</span><span class="neg s">^</span><span class="s">&gt;]+&gt;"</span>
+                        delim-close <span class="s">"&lt;[</span><span class="neg s">^</span><span class="s">&gt;]+&gt;"</span>)
+                  ) <span class="cd">;</span><span class="c">if
+</span>              )
+             ((<span class="k">and</span> (string= sub2 <span class="s">"&lt;%"</span>)
+                   (eq (char-after) ?\s))
+              (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>
+                    delim-open <span class="s">"&lt;%"</span>
+                    delim-close <span class="s">"%&gt;"</span>))
+             ((string= tagopen <span class="s">"&lt;/&amp;"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"&gt;"</span>
+                    delim-open <span class="s">"&lt;/&amp;"</span>
+                    delim-close <span class="s">"&gt;"</span>)
+              )
+             ((string= sub2 <span class="s">"&lt;&amp;"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"&amp;&gt;"</span>
+                    delim-open <span class="s">"&lt;&amp;[|]?"</span>
+                    delim-close <span class="s">"&amp;&gt;"</span>))
+             (t
+              (<span class="k">setq</span> closing-string <span class="s">"EOL"</span>
+                    delim-open <span class="s">"%"</span>))
+             )
+           ) <span class="cd">;</span><span class="c">mason
+</span>
+          ((string= web-mode-engine <span class="s">"underscore"</span>)
+           (<span class="k">setq</span> closing-string <span class="s">"%&gt;"</span>
+                 delim-open <span class="s">"&lt;%"</span>
+                 delim-close <span class="s">"%&gt;"</span>)
+           ) <span class="cd">;</span><span class="c">underscore
+</span>
+          ((string= web-mode-engine <span class="s">"template-toolkit"</span>)
+           (<span class="k">cond</span>
+             ((string= tagopen <span class="s">"%%#"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"EOL"</span>))
+             ((string= tagopen <span class="s">"[%#"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"%]"</span>))
+             (t
+              (<span class="k">setq</span> closing-string <span class="s">"%]"</span>
+                    delim-open <span class="s">"\\[%[-+]?"</span>
+                    delim-close <span class="s">"[-=+]?%\\]"</span>))
+             )
+           ) <span class="cd">;</span><span class="c">template-toolkit
+</span>
+          ((string= web-mode-engine <span class="s">"freemarker"</span>)
+           (<span class="k">cond</span>
+             ((<span class="k">and</span> (string= sub2 <span class="s">"&lt;#"</span>) (eq (char-after) ?\-))
+              (<span class="k">setq</span> closing-string <span class="s">"--&gt;"</span>))
+             ((string= sub1 <span class="s">"&lt;"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"&gt;"</span>
+                    delim-open <span class="s">"&lt;/?[#@]"</span>
+                    delim-close <span class="s">"/?&gt;"</span>))
+             ((string= sub1 <span class="s">"["</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"]"</span>
+                    delim-open <span class="s">"\\[/?[#@]"</span>
+                    delim-close <span class="s">"/?\\]"</span>))
+             (t
+              (<span class="k">setq</span> closing-string <span class="s">"}"</span>
+                    delim-open <span class="s">"${"</span>
+                    delim-close <span class="s">"}"</span>))
+             )
+           ) <span class="cd">;</span><span class="c">freemarker
+</span>
+          ((string= web-mode-engine <span class="s">"velocity"</span>)
+           (<span class="k">cond</span>
+             ((string= sub2 <span class="s">"##"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"EOL"</span>))
+             ((string= sub2 <span class="s">"#*"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"*#"</span>))
+             (t
+              (<span class="k">setq</span> closing-string <span class="s">"EOV"</span>
+                    delim-open <span class="s">"#"</span>))
+             )
+           ) <span class="cd">;</span><span class="c">velocity
+</span>
+          ((string= web-mode-engine <span class="s">"razor"</span>)
+           (<span class="k">cond</span>
+             ((string= sub2 <span class="s">"@@"</span>)
+              (forward-char 2)
+              (<span class="k">setq</span> closing-string nil))
+             ((string= sub2 <span class="s">"@*"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"*@"</span>))
+             ((string= sub1 <span class="s">"@"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">"EOR"</span>
+                    delim-open <span class="s">"@"</span>))
+             ((<span class="k">and</span> (string= sub1 <span class="s">"}"</span>)
+                   (looking-at-p <span class="s">"[ ]*\n"</span>))
+              <span class="cd">;;</span><span class="c">(setq closing-string "EOC")
+</span>              (<span class="k">save-excursion</span>
+                (<span class="k">let</span> (paren-pos)
+                  (<span class="k">setq</span> paren-pos (web-mode-part-opening-paren-position (1- (point))))
+                  (<span class="k">if</span> (<span class="k">and</span> paren-pos (get-text-property paren-pos 'block-side))
+                      (<span class="k">setq</span> closing-string <span class="s">"EOC"</span>)
+                      (<span class="k">setq</span> closing-string nil)
+                      ) <span class="cd">;</span><span class="c">if
+</span>                  ) <span class="cd">;</span><span class="c">let
+</span>                ) <span class="cd">;</span><span class="c">save-excursion
+</span>              <span class="cd">;;</span><span class="c">(message "%s %S %S" sub2 (point) (get-text-property (point) 'part-side))
+</span>              )
+             ((string= sub1 <span class="s">"}"</span>)
+              <span class="cd">;;</span><span class="c">(message "%s: %s" (point) sub1)
+</span>              (<span class="k">save-excursion</span>
+                (<span class="k">let</span> (paren-pos)
+                  (<span class="k">setq</span> paren-pos (web-mode-part-opening-paren-position (1- (point))))
+                  (<span class="k">if</span> (<span class="k">and</span> paren-pos (get-text-property paren-pos 'block-side))
+                      (<span class="k">setq</span> closing-string <span class="s">"EOR"</span>)
+                      (<span class="k">setq</span> closing-string nil)
+                      ) <span class="cd">;</span><span class="c">if
+</span>                  ) <span class="cd">;</span><span class="c">let
+</span>                ) <span class="cd">;</span><span class="c">save-excursion
+</span>              ) <span class="cd">;</span><span class="c">case }
+</span>             ) <span class="cd">;</span><span class="c">cond
+</span>           ) <span class="cd">;</span><span class="c">razor
+</span>
+          ((<span class="k">and</span> (string= web-mode-engine <span class="s">"riot"</span>)
+                (not (get-text-property open 'part-side)))
+           (<span class="k">setq</span> closing-string (<span class="k">if</span> (string= tagopen <span class="s">"{"</span>) <span class="s">"}"</span> <span class="s">"/// end script"</span>)
+                 delim-open <span class="s">"{"</span>
+                 delim-close <span class="s">"}"</span>)
+           ) <span class="cd">;</span><span class="c">riot
+</span>
+          ((string= web-mode-engine <span class="s">"spip"</span>)
+           (<span class="k">cond</span>
+             ((<span class="k">and</span> (string= sub1 <span class="s">"#"</span>)
+                   (looking-at <span class="s">"[A-Z0-9_]+"</span>))
+              (<span class="k">setq</span> closing-string (match-string-no-properties 0)))
+             ((string= sub1 <span class="s">"("</span>)
+              (<span class="k">setq</span> closing-string '(<span class="s">"("</span> . <span class="s">")"</span>)))
+             ((string= sub1 <span class="s">"{"</span>)
+              (<span class="k">setq</span> closing-string '(<span class="s">"{"</span> . <span class="s">"}"</span>)))
+             ((string= sub2 <span class="s">"&lt;:"</span>)
+              (<span class="k">setq</span> closing-string <span class="s">":&gt;"</span>))
+             (t
+              (<span class="k">setq</span> closing-string <span class="s">"]"</span>))
+             ))
+
+          ((string= web-mode-engine <span class="s">"marko"</span>)
+           (<span class="k">setq</span> closing-string <span class="s">"}"</span>
+                 delim-open <span class="s">"${"</span>
+                 delim-close <span class="s">"}"</span>)
+           ) <span class="cd">;</span><span class="c">marko
+</span>
+          ) <span class="cd">;</span><span class="c">cond
+</span>
+        (<span class="k">when</span> closing-string
+          (<span class="k">cond</span>
+
+            ((listp closing-string)
+             (<span class="k">cond</span>
+               ((web-mode-rsf-balanced (car closing-string) (cdr closing-string) reg-end t)
+                (<span class="k">setq</span> close (match-end 0)
+                      pos (point))
+                )
+               ((<span class="k">and</span> (string= web-mode-engine <span class="s">"php"</span>)
+                     (string= <span class="s">"&lt;?"</span> sub2))
+
+                (<span class="k">if</span> (<span class="k">or</span> (text-property-not-all (1+ open) (point-max) 'tag-beg nil)
+                        (text-property-not-all (1+ open) (point-max) 'block-beg nil)
+                        (looking-at-p <span class="s">"[ \t\n]*&lt;"</span>))
+                    (<span class="k">setq</span> close nil
+                          delim-close nil
+                          pos (point))
+                    (<span class="k">setq</span> close (point-max)
+                          delim-close nil
+                          pos (point-max))
+                    ) <span class="cd">;</span><span class="c">if
+</span>                ) <span class="cd">;</span><span class="c">case
+</span>               ) <span class="cd">;</span><span class="c">cond
+</span>             ) <span class="cd">;</span><span class="c">case listp
+</span>
+            ((<span class="k">and</span> (string= web-mode-engine <span class="s">"smarty"</span>)
+                  (string= closing-string <span class="s">"}"</span>))
+             (goto-char open)
+             (<span class="k">setq</span> tmp (web-mode-closing-delimiter-position
+                        <span class="s">"}"</span>
+                        (point)
+                        (line-end-position)))
+             (<span class="k">if</span> tmp
+                 (<span class="k">setq</span> tmp (1+ tmp))
+                 (<span class="k">setq</span> tmp (line-end-position)))
+             (goto-char tmp)
+             (<span class="k">setq</span> close (point)
+                   pos (point))
+             )
+
+            ((<span class="k">and</span> (member web-mode-engine '(<span class="s">"closure"</span>))
+                  (string= closing-string <span class="s">"}"</span>))
+             (<span class="k">when</span> (web-mode-closure-skip reg-beg reg-end)
+               (<span class="k">setq</span> close (point)
+                     pos (point))
+               <span class="cd">;;</span><span class="c">(message "close=%S pos=%S" close pos)
+</span>               ) <span class="cd">;</span><span class="c">when
+</span>             )
+
+            ((string= closing-string <span class="s">"EOB"</span>)
+             (web-mode-blade-skip open)
+             (<span class="k">setq</span> close (point)
+                   pos (point)))
+
+            ((string= closing-string <span class="s">"EOL"</span>)
+             (end-of-line)
+             (<span class="k">setq</span> close (point)
+                   pos (point)))
+
+            ((string= closing-string <span class="s">"EOC"</span>)
+             (<span class="k">setq</span> close (point)
+                   pos (point)))
+
+            ((string= closing-string <span class="s">"EODQ"</span>)
+             (<span class="k">when</span> (web-mode-django-skip reg-beg reg-end)
+               (<span class="k">setq</span> close (point)
+                     pos (point))
+               ))
+
+            ((string= closing-string <span class="s">"EOR"</span>)
+             (web-mode-razor-skip open)
+             (<span class="k">setq</span> close (<span class="k">if</span> (&gt; (point) reg-end) reg-end (point))
+                   pos (<span class="k">if</span> (&gt; (point) reg-end) reg-end (point)))
+             (goto-char pos))
+
+            ((string= closing-string <span class="s">"EOV"</span>)
+             (web-mode-velocity-skip open)
+             (<span class="k">setq</span> close (point)
+                   pos (point)))
+
+            ((<span class="k">and</span> (member web-mode-engine '(<span class="s">"ctemplate"</span>))
+                  (re-search-forward closing-string reg-end t))
+             (<span class="k">setq</span> close (match-end 0)
+                   pos (point)))
+
+            ((<span class="k">and</span> (member web-mode-engine '(<span class="s">"antlers"</span>))
+                  (re-search-forward closing-string reg-end t))
+             (<span class="k">setq</span> close (match-end 0)
+                   pos (point)))
+
+            ((<span class="k">and</span> (member web-mode-engine '(<span class="s">"astro"</span>))
+                  (re-search-forward closing-string reg-end t))
+             (<span class="k">setq</span> close (match-end 0)
+                   pos (point)))
+
+            ((search-forward closing-string reg-end t)
+             (<span class="k">setq</span> close (match-end 0)
+                   pos (point)))
+            ) <span class="cd">;</span><span class="c">cond
+</span>
+          (<span class="k">when</span> (<span class="k">and</span> close (&gt;= reg-end pos))
+            <span class="cd">;;</span><span class="c">(message "pos(%S) : open(%S) close(%S)" pos open close)
+</span>            (put-text-property open (1+ open) 'block-beg 0)
+            (put-text-property open (1+ open) 'block-controls 0)
+            (put-text-property open close 'block-side t)
+            (put-text-property (1- close) close 'block-end t)
+            (<span class="k">when</span> delim-open
+              (web-mode-block-delimiters-set open close delim-open delim-close))
+            (web-mode-block-scan open close)
+            (<span class="k">cond</span>
+              ((<span class="k">and</span> (string= web-mode-engine <span class="s">"erb"</span>)
+                    (looking-at-p <span class="s">"&lt;%= javascript_tag do %&gt;"</span>))
+               (<span class="k">setq</span> tagopen <span class="s">"&lt;%= javascript_tag do %&gt;"</span>))
+              ((<span class="k">and</span> (string= web-mode-engine <span class="s">"mojolicious"</span>)
+                    (looking-at-p <span class="s">"%= javascript begin"</span>))
+               (<span class="k">setq</span> tagopen <span class="s">"%= javascript begin"</span>))
+              ((<span class="k">and</span> (string= web-mode-engine <span class="s">"mako"</span>)
+                    (looking-at-p <span class="s">"&lt;%block filter=\"collect_js\"&gt;"</span>))
+               (<span class="k">setq</span> tagopen <span class="s">"&lt;%block filter=\"collect_js\"&gt;"</span>))
+              ((<span class="k">and</span> (string= web-mode-engine <span class="s">"mako"</span>)
+                    (looking-at-p <span class="s">"&lt;%block filter=\"collect_css\"&gt;"</span>))
+               (<span class="k">setq</span> tagopen <span class="s">"&lt;%block filter=\"collect_css\"&gt;"</span>))
+              ((<span class="k">and</span> (string= web-mode-engine <span class="s">"django"</span>)
+                    (looking-at-p <span class="s">"{% javascript %}"</span>))
+               (<span class="k">setq</span> tagopen <span class="s">"{% javascript %}"</span>))
+              ((<span class="k">and</span> (string= web-mode-engine <span class="s">"django"</span>)
+                    (looking-at-p <span class="s">"{% schema %}"</span>))
+               (<span class="k">setq</span> tagopen <span class="s">"{% schema %}"</span>))
+              ((<span class="k">and</span> (string= web-mode-engine <span class="s">"django"</span>)
+                    (looking-at-p <span class="s">"{% stylesheet %}"</span>))
+               (<span class="k">setq</span> tagopen <span class="s">"{% stylesheet %}"</span>))
+              )
+            <span class="cd">;;</span><span class="c">(message "%S %s" (point) tagopen)
+</span>            (<span class="k">when</span> (<span class="k">and</span> (member tagopen '(<span class="s">"&lt;r:script"</span> <span class="s">"&lt;r:style"</span>
+                                         <span class="s">"&lt;c:js"</span> <span class="s">"&lt;c:css"</span>
+                                         <span class="s">"&lt;%= javascript_tag do %&gt;"</span>
+                                         <span class="s">"&lt;%block filter=\"collect_js\"&gt;"</span>
+                                         <span class="s">"&lt;%block filter=\"collect_css\"&gt;"</span>
+                                         <span class="s">"{% javascript %}"</span>
+                                         <span class="s">"{% schema %}"</span>
+                                         <span class="s">"{% stylesheet %}"</span>
+                                         <span class="s">"%= javascript begin"</span>
+                                         <span class="s">"---"</span>))
+                       (<span class="k">setq</span> part-beg close)
+                       (<span class="k">setq</span> tagclose
+                             (<span class="k">cond</span>
+                               ((string= tagopen <span class="s">"&lt;r:script"</span>) <span class="s">"&lt;/r:script"</span>)
+                               ((string= tagopen <span class="s">"&lt;r:style"</span>) <span class="s">"&lt;/r:style"</span>)
+                               ((string= tagopen <span class="s">"&lt;c:js"</span>) <span class="s">"&lt;/c:js"</span>)
+                               ((string= tagopen <span class="s">"&lt;c:css"</span>) <span class="s">"&lt;/c:css"</span>)
+                               ((string= tagopen <span class="s">"{% javascript %}"</span>) <span class="s">"{% endjavascript %}"</span>)
+                               ((string= tagopen <span class="s">"{% schema %}"</span>) <span class="s">"{% endschema %}"</span>)
+                               ((string= tagopen <span class="s">"{% stylesheet %}"</span>) <span class="s">"{% endstylesheet %}"</span>)
+                               ((string= tagopen <span class="s">"%= javascript begin"</span>) <span class="s">"% end"</span>)
+                               ((string= tagopen <span class="s">"---"</span>) <span class="s">"---"</span>)
+                               ((string= tagopen <span class="s">"&lt;%= javascript_tag do %&gt;"</span>) <span class="s">"&lt;% end %&gt;"</span>)
+                               ((member tagopen '(<span class="s">"&lt;%block filter=\"collect_js\"&gt;"</span>
+                                                  <span class="s">"&lt;%block filter=\"collect_css\"&gt;"</span>)) <span class="w s">"&lt;/%block"</span><span class="w">)</span>
+                               ))
+                       (web-mode-sf tagclose)
+                       (<span class="k">setq</span> part-end (match-beginning 0))
+                       (&gt; part-end part-beg))
+              <span class="cd">;;</span><span class="c">(message "tagopen=%S tagclose=%S end=%S" tagopen tagclose (point))
+</span>              (put-text-property part-beg part-end
+                                 'part-side
+                                 (<span class="k">cond</span>
+                                   ((member tagopen '(<span class="s">"&lt;r:style"</span> <span class="s">"&lt;c:css"</span> <span class="s">"&lt;%block filter=\"collect_css\"&gt;"</span> <span class="s">"{% stylesheet %}"</span>)) 'css)
+                                   (t 'javascript)))
+              (<span class="k">setq</span> pos part-beg
+                    part-beg nil
+                    part-end nil)
+              ) <span class="cd">;</span><span class="c">when
+</span>            ) <span class="cd">;</span><span class="c">when close
+</span>
+          (<span class="k">if</span> pos (goto-char pos))
+
+          ) <span class="cd">;</span><span class="c">when closing-string
+</span>
+        ) <span class="cd">;</span><span class="c">while
+</span>
+      (<span class="k">cond</span>
+        ((&gt;= i 2000)
+         (message <span class="s">"scan-blocks ** warning (%S) **"</span> i))
+        ((string= web-mode-engine <span class="s">"razor"</span>)
+         (web-mode-block-foreach reg-beg reg-end 'web-mode-block-scan))
+        ((string= web-mode-engine <span class="s">"django"</span>)
+         (web-mode-scan-engine-comments reg-beg reg-end
+                                        <span class="s">"{% comment %}"</span> <span class="s">"{% endcomment %}"</span>))
+        ((string= web-mode-engine <span class="s">"mako"</span>)
+         (web-mode-scan-engine-comments reg-beg reg-end
+                                        <span class="s">"&lt;%doc&gt;"</span> <span class="s">"&lt;/%doc&gt;"</span>))
+        ((string= web-mode-engine <span class="s">"mason"</span>)
+         (web-mode-scan-engine-comments reg-beg reg-end
+                                        <span class="s">"&lt;%doc&gt;"</span> <span class="s">"&lt;/%doc&gt;"</span>))
+        ) <span class="cd">;</span><span class="c">cond
+</span>
+      )))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,897 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: dape-configs – Emacs Documentation Online</title>
+<meta name="description" content="dape-configs is a customizable variable defined in dape.el.
+This variable holds the dape configurations as an alist.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>dape-configs</code></h1><p><span class="m"><code>dape-configs</code></span> is a <a href="/info/elisp/variable-definitions.html">customizable</a> variable defined in <span class="bt">dape.el</span>.
+<h2>Value</h2>
+<details><summary>Large value</summary><pre><code>((attach modes nil ensure
+	 (lambda (config)
+	   (unless (plist-get config 'port)
+	     (user-error "Missing `port' property")))
+	 host "localhost" :request "attach")
+ (launch modes nil command-cwd dape-command-cwd ensure
+	 (lambda (config)
+	   (unless (plist-get config 'command)
+	     (user-error "Missing `command' property")))
+	 :request "launch")
+ (bash-debug modes (sh-mode bash-ts-mode) ensure
+	     (lambda (config) (dape-ensure-command config)
+	       (let
+		   ((dap-debug-server-path
+		     (car (plist-get config 'command-args))))
+		 (unless (file-exists-p dap-debug-server-path)
+		   (user-error "File %S does not exist"
+			       dap-debug-server-path))))
+	     command "node" command-args
+	     ("/build/tmp.Etn7qZcQIx/.emacs.d/debug-adapters/bash-debug/extension/out/bashDebug.js")
+	     fn
+	     (lambda (config)
+	       (thread-first
+		 config
+		 (plist-put :pathBashdbLib
+			    "/build/tmp.Etn7qZcQIx/.emacs.d/debug-adapters/bash-debug/extension/bashdb_dir")
+		 (plist-put :pathBashdb
+			    (file-name-concat
+			     "/build/tmp.Etn7qZcQIx/.emacs.d/debug-adapters/bash-debug/extension/bashdb_dir"
+			     "bashdb"))
+		 (plist-put :env
+			    `(:BASHDB_HOME
+			      ,"/build/tmp.Etn7qZcQIx/.emacs.d/debug-adapters/bash-debug/extension/bashdb_dir"
+			      \, (plist-get config :env)))))
+	     :type "bashdb" :cwd dape-cwd :program dape-buffer-default
+	     :args [] :pathBash "bash" :pathCat "cat" :pathMkfifo
+	     "mkfifo" :pathPkill "pkill")
+ (cpptools modes (c-mode c-ts-mode c++-mode c++-ts-mode) ensure
+	   dape-ensure-command command-cwd dape-command-cwd command
+	   "~/.emacs.d/debug-adapters/cpptools/extension/debugAdapters/bin/OpenDebugAD7"
+	   fn
+	   (lambda (config)
+	     (let ((program (plist-get config :program)))
+	       (if (file-name-absolute-p program) config
+		 (thread-last
+		   (tramp-file-local-name (dape--guess-root config))
+		   (expand-file-name program)
+		   (plist-put config :program)))))
+	   :type "cppdbg" :request "launch" :cwd "." :program "a.out"
+	   :MIMode nil)
+ (debugpy modes (python-mode python-ts-mode) ensure
+	  (lambda (config) (dape-ensure-command config)
+	    (let ((python (dape-config-get config 'command)))
+	      (unless
+		  (zerop
+		   (process-file-shell-command
+		    (format "%s -c \"import debugpy.adapter\"" python)))
+		(user-error "%s module debugpy is not installed"
+			    python))))
+	  command "python" command-args
+	  ("-m" "debugpy.adapter" "--host" "0.0.0.0" "--port"
+	   :autoport)
+	  port :autoport :request "launch" :type "python" :cwd
+	  dape-cwd :program dape-buffer-default :args [] :justMyCode
+	  nil :console "integratedTerminal" :showReturnValue t
+	  :stopOnEntry nil)
+ (debugpy-module modes (python-mode python-ts-mode) ensure
+		 (lambda (config) (dape-ensure-command config)
+		   (let ((python (dape-config-get config 'command)))
+		     (unless
+			 (zerop
+			  (process-file-shell-command
+			   (format "%s -c \"import debugpy.adapter\""
+				   python)))
+		       (user-error
+			"%s module debugpy is not installed" python))))
+		 command "python" command-args
+		 ("-m" "debugpy.adapter" "--host" "0.0.0.0" "--port"
+		  :autoport)
+		 port :autoport :request "launch" :type "python" :cwd
+		 dape-cwd :module
+		 (car
+		  (last
+		   (file-name-split
+		    (directory-file-name default-directory))))
+		 :args [] :justMyCode nil :console
+		 "integratedTerminal" :showReturnValue t :stopOnEntry
+		 nil)
+ (dlv modes (go-mode go-ts-mode) ensure dape-ensure-command command
+      "dlv" command-args ("dap" "--listen" "127.0.0.1::autoport")
+      command-cwd dape-command-cwd command-insert-stderr t port
+      :autoport :request "launch" :type "go" :cwd "." :program ".")
+ (flutter ensure dape-ensure-command modes (dart-mode) command
+	  "flutter" command-args ("debug_adapter") command-cwd
+	  dape-command-cwd :type "dart" :cwd "." :program
+	  "lib/main.dart" :toolArgs ["-d" "all"])
+ (gdb ensure
+      (lambda (config) (dape-ensure-command config)
+	(let*
+	    ((default-directory
+	      (or (dape-config-get config 'command-cwd)
+		  default-directory))
+	     (command (dape-config-get config 'command))
+	     (output
+	      (shell-command-to-string (format "%s --version" command)))
+	     (version
+	      (save-match-data
+		(when
+		    (string-match
+		     "GNU gdb \\(?:(.*) \\)?\\([0-9.]+\\)" output)
+		  (string-to-number (match-string 1 output))))))
+	  (unless (&gt;= version 14.1)
+	    (user-error "Requires gdb version &gt;= 14.1"))))
+      modes
+      (c-mode c-ts-mode c++-mode c++-ts-mode hare-mode hare-ts-mode)
+      command-cwd dape-command-cwd command "gdb" command-args
+      ("--interpreter=dap") :request "launch" :program "a.out" :args
+      [] :stopAtBeginningOfMainSubprogram nil)
+ (gdb-go-test ensure
+	      (lambda (config) (dape-ensure-command config)
+		(let*
+		    ((default-directory
+		      (or (dape-config-get config 'command-cwd)
+			  default-directory))
+		     (command (dape-config-get config 'command))
+		     (output
+		      (shell-command-to-string
+		       (format "%s --version" command)))
+		     (version
+		      (save-match-data
+			(when
+			    (string-match
+			     "GNU gdb \\(?:(.*) \\)?\\([0-9.]+\\)"
+			     output)
+			  (string-to-number (match-string 1 output))))))
+		  (unless (&gt;= version 14.1)
+		    (user-error "Requires gdb version &gt;= 14.1"))))
+	      command "gdb" command-args ("--interpreter=dap")
+	      :request "launch" :stopAtBeginningOfMainSubprogram nil
+	      modes (go-mode go-ts-mode) command-cwd
+	      (file-name-directory (buffer-file-name)) compile
+	      (format "go test -c -o %s -gcflags='all=-N -l'"
+		      (expand-file-name "__test.bin"
+					temporary-file-directory))
+	      :program
+	      (expand-file-name "__test.bin" temporary-file-directory)
+	      :args [])
+ (gdb-go ensure
+	 (lambda (config) (dape-ensure-command config)
+	   (let*
+	       ((default-directory
+		 (or (dape-config-get config 'command-cwd)
+		     default-directory))
+		(command (dape-config-get config 'command))
+		(output
+		 (shell-command-to-string
+		  (format "%s --version" command)))
+		(version
+		 (save-match-data
+		   (when
+		       (string-match
+			"GNU gdb \\(?:(.*) \\)?\\([0-9.]+\\)" output)
+		     (string-to-number (match-string 1 output))))))
+	     (unless (&gt;= version 14.1)
+	       (user-error "Requires gdb version &gt;= 14.1"))))
+	 command "gdb" command-args ("--interpreter=dap") :request
+	 "launch" :stopAtBeginningOfMainSubprogram nil modes
+	 (go-mode go-ts-mode) command-cwd
+	 (file-name-directory (buffer-file-name)) compile
+	 (format "go build -o %s -gcflags='all=-N -l'"
+		 (expand-file-name "__binary.bin"
+				   temporary-file-directory))
+	 :request "launch" :program
+	 (expand-file-name "__binary.bin" temporary-file-directory)
+	 :args [])
+ (godot modes (gdscript-mode) port 6006 :request "launch" :type
+	"server")
+ (js-debug-node modes (js-mode js-ts-mode) ensure
+		#[257
+		  "\300&#1;!\210\301&#1;\302\"\211\203&#16;&#0;\303&#1;!\210\210\304&#1;\305\"@\306&#1;!?\205!&#0;\307\310&#2;\"\207"
+		  [dape-ensure-command dape-config-get
+				       :runtimeExecutable
+				       dape--ensure-executable
+				       plist-get command-args
+				       file-exists-p user-error
+				       "File %S does not exist"]
+		  5 "\n\n(fn CONFIG)"]
+		command "node" command-args
+		("/build/tmp.Etn7qZcQIx/.emacs.d/debug-adapters/js-debug/src/dapDebugServer.js"
+		 :autoport)
+		port :autoport :type "pwa-node" :cwd dape-cwd :program
+		dape-buffer-default :console "internalConsole")
+ (js-debug-ts-node modes (typescript-mode typescript-ts-mode) ensure
+		   #[257
+		     "\300&#1;!\210\301&#1;\302\"\211\203&#16;&#0;\303&#1;!\210\210\304&#1;\305\"@\306&#1;!?\205!&#0;\307\310&#2;\"\207"
+		     [dape-ensure-command dape-config-get
+					  :runtimeExecutable
+					  dape--ensure-executable
+					  plist-get command-args
+					  file-exists-p user-error
+					  "File %S does not exist"]
+		     5 "\n\n(fn CONFIG)"]
+		   command "node" command-args
+		   ("/build/tmp.Etn7qZcQIx/.emacs.d/debug-adapters/js-debug/src/dapDebugServer.js"
+		    :autoport)
+		   port :autoport :type "pwa-node" :runtimeExecutable
+		   "ts-node" :cwd dape-cwd :program
+		   dape-buffer-default :console "internalConsole")
+ (js-debug-tsx modes (typescript-mode typescript-ts-mode) ensure
+	       #[257
+		 "\300&#1;!\210\301&#1;\302\"\211\203&#16;&#0;\303&#1;!\210\210\304&#1;\305\"@\306&#1;!?\205!&#0;\307\310&#2;\"\207"
+		 [dape-ensure-command dape-config-get
+				      :runtimeExecutable
+				      dape--ensure-executable
+				      plist-get command-args
+				      file-exists-p user-error
+				      "File %S does not exist"]
+		 5 "\n\n(fn CONFIG)"]
+	       command "node" command-args
+	       ("/build/tmp.Etn7qZcQIx/.emacs.d/debug-adapters/js-debug/src/dapDebugServer.js"
+		:autoport)
+	       port :autoport :type "pwa-node" :runtimeExecutable
+	       "tsx" :cwd dape-cwd :program dape-buffer-default
+	       :console "internalConsole")
+ (js-debug-node-attach modes
+		       (js-mode js-ts-mode typescript-mode
+				typescript-ts-mode)
+		       ensure
+		       #[257
+			 "\300&#1;!\210\301&#1;\302\"\211\203&#16;&#0;\303&#1;!\210\210\304&#1;\305\"@\306&#1;!?\205!&#0;\307\310&#2;\"\207"
+			 [dape-ensure-command dape-config-get
+					      :runtimeExecutable
+					      dape--ensure-executable
+					      plist-get command-args
+					      file-exists-p user-error
+					      "File %S does not exist"]
+			 5 "\n\n(fn CONFIG)"]
+		       command "node" command-args
+		       ("/build/tmp.Etn7qZcQIx/.emacs.d/debug-adapters/js-debug/src/dapDebugServer.js"
+			:autoport)
+		       port :autoport :type "pwa-node" :request
+		       "attach" :port 9229)
+ (js-debug-chrome modes
+		  (js-mode js-ts-mode typescript-mode
+			   typescript-ts-mode)
+		  ensure
+		  #[257
+		    "\300&#1;!\210\301&#1;\302\"\211\203&#16;&#0;\303&#1;!\210\210\304&#1;\305\"@\306&#1;!?\205!&#0;\307\310&#2;\"\207"
+		    [dape-ensure-command dape-config-get
+					 :runtimeExecutable
+					 dape--ensure-executable
+					 plist-get command-args
+					 file-exists-p user-error
+					 "File %S does not exist"]
+		    5 "\n\n(fn CONFIG)"]
+		  command "node" command-args
+		  ("/build/tmp.Etn7qZcQIx/.emacs.d/debug-adapters/js-debug/src/dapDebugServer.js"
+		   :autoport)
+		  port :autoport :type "pwa-chrome" :url
+		  "http://localhost:3000" :webRoot dape-cwd)
+ (lldb-vscode command "lldb-vscode" :type "lldb-vscode" modes
+	      (c-mode c-ts-mode c++-mode c++-ts-mode rust-mode
+		      rust-ts-mode rustic-mode)
+	      ensure dape-ensure-command command-cwd dape-command-cwd
+	      :cwd "." :program "a.out")
+ (lldb-dap command "lldb-dap" :type "lldb-dap" modes
+	   (c-mode c-ts-mode c++-mode c++-ts-mode rust-mode
+		   rust-ts-mode rustic-mode)
+	   ensure dape-ensure-command command-cwd dape-command-cwd
+	   :cwd "." :program "a.out")
+ (netcoredbg modes (csharp-mode csharp-ts-mode) ensure
+	     dape-ensure-command command "netcoredbg" command-args
+	     ["--interpreter=vscode"] :request "launch" :cwd dape-cwd
+	     :program
+	     (if-let*
+		 ((dlls
+		   (file-expand-wildcards
+		    (file-name-concat "bin" "Debug" "*" "*.dll"))))
+		 (file-relative-name (file-relative-name (car dlls)))
+	       ".dll")
+	     :stopAtEntry nil)
+ (ocamlearlybird ensure dape-ensure-command modes
+		 (tuareg-mode caml-mode) command "ocamlearlybird"
+		 command-args ("debug") :type "ocaml" :program
+		 (file-name-concat (dape-cwd) "_build" "default" "bin"
+				   (concat
+				    (file-name-base
+				     (dape-buffer-default))
+				    ".bc"))
+		 :console "internalConsole" :stopOnEntry nil
+		 :arguments [])
+ (rdbg modes (ruby-mode ruby-ts-mode) ensure dape-ensure-command
+       command "rdbg" command-args
+       ("-O" "--host" "0.0.0.0" "--port" :autoport "-c" "--" :-c) fn
+       (lambda (config)
+	 (plist-put config 'command-args
+		    (mapcar
+		     (lambda (arg)
+		       (if (eq arg :-c) (plist-get config '-c) arg))
+		     (plist-get config 'command-args))))
+       port :autoport command-cwd dape-command-cwd :type "Ruby" -c
+       (concat "ruby " (dape-buffer-default)))
+ (jdtls modes (java-mode java-ts-mode) ensure
+	(lambda (config)
+	  (let ((file (dape-config-get config :filePath)))
+	    (unless (and (stringp file) (file-exists-p file))
+	      (user-error "Unable to locate :filePath `%s'" file))
+	    (with-current-buffer (find-file-noselect file)
+	      (unless (and (featurep 'eglot) (eglot-current-server))
+		(user-error "No eglot instance active in buffer %s"
+			    (current-buffer)))
+	      (unless
+		  (seq-contains-p
+		   (eglot--server-capable :executeCommandProvider
+					  :commands)
+		   "vscode.java.resolveClasspath")
+		(user-error
+		 "Jdtls instance does not bundle java-debug-server, please install")))))
+	fn
+	(lambda (config)
+	  (with-current-buffer
+	      (find-file-noselect (dape-config-get config :filePath))
+	    (if-let* ((server (eglot-current-server)))
+		(pcase-let
+		    ((`[,module-paths ,class-paths]
+		      (eglot-execute-command server
+					     "vscode.java.resolveClasspath"
+					     (vector
+					      (plist-get config
+							 :mainClass)
+					      (plist-get config
+							 :projectName))))
+		     (port
+		      (eglot-execute-command server
+					     "vscode.java.startDebugSession"
+					     nil)))
+		  (thread-first
+		    config (plist-put 'port port)
+		    (plist-put :modulePaths module-paths)
+		    (plist-put :classPaths class-paths)))
+	      server)))
+	:filePath
+	#[0 "\300\301!\206\f&#0;\302\303 \304 \"\207"
+	    [#[257
+	       "\3001!&#0;\301\302 \303\304\305\306 !!#\307\310&#2;\"\206&#25;&#0;\211\311H\312&#1;&#4;\"\266\2020\207\313\207"
+	       [(error) eglot-execute-command eglot-current-server
+		"vscode.java.resolveMainClass" file-name-nondirectory
+		directory-file-name dape-cwd seq-find
+		#[257 "\300&#1;\301\"\302 \232\207"
+		      [plist-get :filePath buffer-file-name] 4
+		      "\n\n(fn VAL)"]
+		0 plist-get nil]
+	       8 "\n\n(fn KEY)"]
+	     :filePath expand-file-name dape-buffer-default dape-cwd]
+	    3]
+	:mainClass
+	#[0 "\300\301!\207"
+	    [#[257
+	       "\3001!&#0;\301\302 \303\304\305\306 !!#\307\310&#2;\"\206&#25;&#0;\211\311H\312&#1;&#4;\"\266\2020\207\313\207"
+	       [(error) eglot-execute-command eglot-current-server
+		"vscode.java.resolveMainClass" file-name-nondirectory
+		directory-file-name dape-cwd seq-find
+		#[257 "\300&#1;\301\"\302 \232\207"
+		      [plist-get :filePath buffer-file-name] 4
+		      "\n\n(fn VAL)"]
+		0 plist-get nil]
+	       8 "\n\n(fn KEY)"]
+	     :mainClass]
+	    2]
+	:projectName
+	#[0 "\300\301!\207"
+	    [#[257
+	       "\3001!&#0;\301\302 \303\304\305\306 !!#\307\310&#2;\"\206&#25;&#0;\211\311H\312&#1;&#4;\"\266\2020\207\313\207"
+	       [(error) eglot-execute-command eglot-current-server
+		"vscode.java.resolveMainClass" file-name-nondirectory
+		directory-file-name dape-cwd seq-find
+		#[257 "\300&#1;\301\"\302 \232\207"
+		      [plist-get :filePath buffer-file-name] 4
+		      "\n\n(fn VAL)"]
+		0 plist-get nil]
+	       8 "\n\n(fn KEY)"]
+	     :projectName]
+	    2]
+	:args "" :stopOnEntry nil :type "java" :request "launch"
+	:vmArgs " -XX:+ShowCodeDetailsInExceptionMessages" :console
+	"integratedConsole" :internalConsoleOptions "neverOpen")
+ (xdebug modes (php-mode php-ts-mode) ensure
+	 (lambda (config) (dape-ensure-command config)
+	   (let
+	       ((dap-debug-server-path
+		 (car (plist-get config 'command-args))))
+	     (unless (file-exists-p dap-debug-server-path)
+	       (user-error "File %S does not exist"
+			   dap-debug-server-path))))
+	 command "node" command-args
+	 ("/build/tmp.Etn7qZcQIx/.emacs.d/debug-adapters/php-debug/extension/out/phpDebug.js")
+	 :type "php" :port 9003))
+</code></pre>
+</details>
+<h2>Documentation</h2>
+<p>This variable holds the dape configurations as an alist.
+<p>In this alist, the car element serves as a symbol identifying each
+configuration.  Each configuration, in turn, is a property list (plist)
+where keys can be symbols or keywords.
+<p>Symbol keys (Used by dape):
+<br>- fn: Function or list of functions, takes config and returns config.
+<br>&nbsp;&nbsp;If list functions are applied in order.
+<br>&nbsp;&nbsp;See <a href="../var/dape-default-config-functions.html"><code>dape-default-config-functions</code></a>.
+<br>- ensure: Function to ensure that adapter is available.
+<br>- command: Shell command to initiate the debug adapter.
+<br>- command-args: List of string arguments for the command.
+<br>- command-cwd: Working directory for the command, if not supplied
+<br>&nbsp;&nbsp;<a href="../var/default-directory.html"><code>default-directory</code></a> will be used.
+<br>- command-env: Property list (plist) of environment variables to
+<br>&nbsp;&nbsp;set when running the command.  Keys can be strings, symbols or
+<br>&nbsp;&nbsp;keywords.
+<br>- command-insert-stderr: If non-nil treat stderr from adapter as
+<br>&nbsp;&nbsp;stderr output from debugged program.
+<br>- prefix-local: Path prefix for Emacs file access.
+<br>- prefix-remote: Path prefix for debugger file access.
+<br>- host: Host of the debug adapter.
+<br>- port: Port of the debug adapter.
+<br>- modes: List of modes where the configuration is active in <a href="../fun/dape.html"><code>dape</code></a>
+<br>&nbsp;&nbsp;completions.
+<br>- compile: Executes a shell command with <a href="../var/dape-compile-function.html"><code>dape-compile-function</code></a>.
+<br>- defer-launch-attach: If launch/attach request should be sent
+<br>&nbsp;&nbsp;after initialize or configurationDone.  If nil launch/attach are
+<br>&nbsp;&nbsp;sent after initialize request else it's sent after
+<br>&nbsp;&nbsp;configurationDone.  This key exist to accommodate the two different
+<br>&nbsp;&nbsp;interpretations of the DAP specification.
+<br>&nbsp;&nbsp;See: GDB bug 32090.
+<p>Note: The char - carries special meaning when reading options in
+<a href="../fun/dape.html"><code>dape</code></a> and therefore should not be used be used as an key.
+See <a href="../var/dape-history-add.html"><code>dape-history-add</code></a>.
+<p>Connection to Debug Adapter:
+<br>- If command is specified and not port, dape communicates with the
+<br>&nbsp;&nbsp;debug adapter through stdin/stdout.
+<br>- If host and port are specified, dape connects to the debug adapter.
+<br>&nbsp;&nbsp;If command is specified, dape waits until the command initializes
+<br>&nbsp;&nbsp;before connecting to host and port.
+<p>Keywords in configuration:
+<br>&nbsp;&nbsp;Keywords (symbols starting with colon) are transmitted to the
+<br>&nbsp;&nbsp;adapter during the initialize and launch/attach requests.  Refer to
+<br>&nbsp;&nbsp;<a href="../fun/json-serialize.html"><code>json-serialize</code></a> for detailed information on how dape serializes
+<br>&nbsp;&nbsp;these keyword elements.  Dape uses nil as false.
+<p>Functions and symbols:
+<br>&nbsp;&nbsp;- If a value is a function, its return value replaces the key's
+<br>&nbsp;&nbsp;&nbsp;&nbsp;value before execution.  The function is called with no arguments.
+<br>&nbsp;&nbsp;- If a value is a symbol, it resolves recursively before execution.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defcustom</span> <span class="v">dape-configs</span>
+  `((attach
+     modes nil
+     ensure (<span class="k">lambda</span> (config)
+              (<span class="k">unless</span> (plist-get config 'port)
+                (<span class="w">user-error</span> <span class="s">"Missing `</span><span class="m s">port</span><span class="s">' property"</span>)))
+     host <span class="s">"localhost"</span>
+     <span class="bi">:request</span> <span class="s">"attach"</span>)
+    (launch
+     modes nil
+     command-cwd dape-command-cwd
+     ensure (<span class="k">lambda</span> (config)
+              (<span class="k">unless</span> (plist-get config 'command)
+                (<span class="w">user-error</span> <span class="s">"Missing `</span><span class="m s">command</span><span class="s">' property"</span>)))
+     <span class="bi">:request</span> <span class="s">"launch"</span>)
+    ,(<span class="k">let*</span> ((extension-directory
+             (expand-file-name
+              (file-name-concat dape-adapter-dir <span class="s">"bash-debug"</span> <span class="s">"extension"</span>)))
+            (bashdb-dir (file-name-concat extension-directory <span class="s">"bashdb_dir"</span>)))
+       `(bash-debug
+         modes (sh-mode bash-ts-mode)
+         ensure (<span class="k">lambda</span> (config)
+                  (dape-ensure-command config)
+                  (<span class="k">let</span> ((dap-debug-server-path
+                         (car (plist-get config 'command-args))))
+                    (<span class="k">unless</span> (file-exists-p dap-debug-server-path)
+                      (<span class="w">user-error</span> <span class="s">"File %S does not exist"</span> dap-debug-server-path))))
+         command <span class="s">"node"</span>
+         command-args (,(file-name-concat extension-directory <span class="s">"out"</span> <span class="s">"bashDebug.js"</span>))
+         fn (<span class="k">lambda</span> (config)
+              (<span class="k">thread-first</span> config
+                            (plist-put <span class="bi">:pathBashdbLib</span> ,bashdb-dir)
+                            (plist-put <span class="bi">:pathBashdb</span> (file-name-concat ,bashdb-dir <span class="s">"bashdb"</span>))
+                            (plist-put <span class="bi">:env</span> `(<span class="bi">:BASHDB_HOME</span> ,,bashdb-dir . ,(plist-get config <span class="bi">:env</span>)))))
+         <span class="bi">:type</span> <span class="s">"bashdb"</span>
+         <span class="bi">:cwd</span> dape-cwd
+         <span class="bi">:program</span> dape-buffer-default
+         <span class="bi">:args</span> []
+         <span class="bi">:pathBash</span> <span class="s">"bash"</span>
+         <span class="bi">:pathCat</span> <span class="s">"cat"</span>
+         <span class="bi">:pathMkfifo</span> <span class="s">"mkfifo"</span>
+         <span class="bi">:pathPkill</span> <span class="s">"pkill"</span>))
+    (cpptools
+     modes (c-mode c-ts-mode c++-mode c++-ts-mode)
+     ensure dape-ensure-command
+     command-cwd dape-command-cwd
+     command ,(file-name-concat dape-adapter-dir
+                                <span class="s">"cpptools"</span>
+                                <span class="s">"extension"</span>
+                                <span class="s">"debugAdapters"</span>
+                                <span class="s">"bin"</span>
+                                <span class="s">"OpenDebugAD7"</span>)
+     fn (<span class="k">lambda</span> (config)
+          <span class="cd">;; </span><span class="c">For MI=GDB the :program path need to be absolute
+</span>          (<span class="k">let</span> ((program (plist-get config <span class="bi">:program</span>)))
+            (<span class="k">if</span> (file-name-absolute-p program)
+                config
+              (<span class="k">thread-last</span> (tramp-file-local-name (dape--guess-root config))
+                           (expand-file-name program)
+                           (plist-put config <span class="bi">:program</span>)))))
+     <span class="bi">:type</span> <span class="s">"cppdbg"</span>
+     <span class="bi">:request</span> <span class="s">"launch"</span>
+     <span class="bi">:cwd</span> <span class="s">"."</span>
+     <span class="bi">:program</span> <span class="s">"a.out"</span>
+     <span class="bi">:MIMode</span> ,(seq-find 'executable-find '(<span class="s">"lldb"</span> <span class="s">"gdb"</span>)))
+    ,@(<span class="k">let</span> ((debugpy
+             `( modes (python-mode python-ts-mode)
+                ensure (<span class="k">lambda</span> (config)
+                         (dape-ensure-command config)
+                         (<span class="k">let</span> ((python (dape-config-get config 'command)))
+                           (<span class="k">unless</span> (zerop (process-file-shell-command
+                                           (format <span class="s">"%s -c \"import debugpy.adapter\""</span> python)))
+                             (<span class="w">user-error</span> <span class="s">"%s module debugpy is not installed"</span> python))))
+                command <span class="s">"python"</span>
+                command-args (<span class="s">"-m"</span> <span class="s">"debugpy.adapter"</span> <span class="s">"--host"</span> <span class="s">"0.0.0.0"</span> <span class="s">"--port"</span> <span class="bi">:autoport</span>)
+                port <span class="bi">:autoport</span>
+                <span class="bi">:request</span> <span class="s">"launch"</span>
+                <span class="bi">:type</span> <span class="s">"python"</span>
+                <span class="bi">:cwd</span> dape-cwd))
+            (common
+             `( <span class="bi">:args</span> []
+                <span class="bi">:justMyCode</span> nil
+                <span class="bi">:console</span> <span class="s">"integratedTerminal"</span>
+                <span class="bi">:showReturnValue</span> t
+                <span class="bi">:stopOnEntry</span> nil)))
+        `((debugpy ,@debugpy
+                   <span class="bi">:program</span> dape-buffer-default
+                   ,@common)
+          (debugpy-module ,@debugpy
+                          <span class="bi">:module</span> (car (last (file-name-split
+                                              (directory-file-name default-directory))))
+                          ,@common)))
+    (dlv
+     modes (go-mode go-ts-mode)
+     ensure dape-ensure-command
+     command <span class="s">"dlv"</span>
+     command-args (<span class="s">"dap"</span> <span class="s">"--listen"</span> <span class="s">"127.0.0.1::autoport"</span>)
+     command-cwd dape-command-cwd
+     command-insert-stderr t
+     port <span class="bi">:autoport</span>
+     <span class="bi">:request</span> <span class="s">"launch"</span>
+     <span class="bi">:type</span> <span class="s">"go"</span>
+     <span class="bi">:cwd</span> <span class="s">"."</span>
+     <span class="bi">:program</span> <span class="s">"."</span>)
+    (flutter
+     ensure dape-ensure-command
+     modes (dart-mode)
+     command <span class="s">"flutter"</span>
+     command-args (<span class="s">"debug_adapter"</span>)
+     command-cwd dape-command-cwd
+     <span class="bi">:type</span> <span class="s">"dart"</span>
+     <span class="bi">:cwd</span> <span class="s">"."</span>
+     <span class="bi">:program</span> <span class="s">"lib/main.dart"</span>
+     <span class="bi">:toolArgs</span> [<span class="s">"-d"</span> <span class="s">"all"</span>])
+    (gdb
+     ensure (<span class="k">lambda</span> (config)
+              (dape-ensure-command config)
+              (<span class="k">let*</span> ((default-directory
+                      (<span class="k">or</span> (dape-config-get config 'command-cwd)
+                          default-directory))
+                     (command (dape-config-get config 'command))
+                     (output (shell-command-to-string (format <span class="s">"%s --version"</span> command)))
+                     (version (<span class="k">save-match-data</span>
+                                (<span class="k">when</span> (string-match <span class="s">"GNU gdb </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">(.*) </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9.]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> output)
+                                  (string-to-number (match-string 1 output))))))
+                (<span class="k">unless</span> (&gt;= version 14.1)
+                  (<span class="w">user-error</span> <span class="s">"Requires gdb version &gt;= 14.1"</span>))))
+     modes (c-mode c-ts-mode c++-mode c++-ts-mode hare-mode hare-ts-mode)
+     command-cwd dape-command-cwd
+     command <span class="s">"gdb"</span>
+     command-args (<span class="s">"--interpreter=dap"</span>)
+     <span class="bi">:request</span> <span class="s">"launch"</span>
+     <span class="bi">:program</span> <span class="s">"a.out"</span>
+     <span class="bi">:args</span> []
+     <span class="bi">:stopAtBeginningOfMainSubprogram</span> nil)
+    ,@(<span class="k">let</span> ((gdb-common
+	     `( ensure (<span class="k">lambda</span> (config)
+			 (dape-ensure-command config)
+			 (<span class="k">let*</span> ((default-directory
+				 (<span class="k">or</span> (dape-config-get config 'command-cwd)
+				     default-directory))
+				(command (dape-config-get config 'command))
+				(output (shell-command-to-string (format <span class="s">"%s --version"</span> command)))
+				(version (<span class="k">save-match-data</span>
+					   (<span class="k">when</span> (string-match <span class="s">"GNU gdb </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">(.*) </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9.]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> output)
+					     (string-to-number (match-string 1 output))))))
+			   (<span class="k">unless</span> (&gt;= version 14.1)
+			     (<span class="w">user-error</span> <span class="s">"Requires gdb version &gt;= 14.1"</span>))))
+		command <span class="s">"gdb"</span>
+		command-args (<span class="s">"--interpreter=dap"</span>)
+		<span class="bi">:request</span> <span class="s">"launch"</span>
+		<span class="bi">:stopAtBeginningOfMainSubprogram</span> nil)))
+	`((gdb-go-test ,@gdb-common
+		       modes (go-mode go-ts-mode)
+		       command-cwd (file-name-directory (buffer-file-name))
+		       compile (format <span class="s">"go test -c -o %s -gcflags='all=-N -l'"</span>
+				       (expand-file-name <span class="s">"__test.bin"</span> temporary-file-directory)) <span class="cd">;; </span><span class="c">compile without optimizations
+</span>		       <span class="bi">:program</span> (expand-file-name <span class="s">"__test.bin"</span> temporary-file-directory)
+		       <span class="bi">:args</span> [])
+	  (gdb-go ,@gdb-common
+		  modes (go-mode go-ts-mode)
+		  command-cwd (file-name-directory (buffer-file-name))
+		  compile (format <span class="s">"go build -o %s -gcflags='all=-N -l'"</span>
+				  (expand-file-name <span class="s">"__binary.bin"</span> temporary-file-directory)) <span class="cd">;; </span><span class="c">compile without optimizations
+</span>		  <span class="bi">:request</span> <span class="s">"launch"</span>
+		  <span class="bi">:program</span> (expand-file-name <span class="s">"__binary.bin"</span> temporary-file-directory)
+		  <span class="bi">:args</span> [])))
+    (godot
+     modes (gdscript-mode)
+     port 6006
+     <span class="bi">:request</span> <span class="s">"launch"</span>
+     <span class="bi">:type</span> <span class="s">"server"</span>)
+    ,@(<span class="k">let</span> ((js-debug
+             `( ensure ,(<span class="k">lambda</span> (config)
+                          (dape-ensure-command config)
+                          (<span class="k">when-let*</span> ((runtime-executable
+                                       (dape-config-get config <span class="bi">:runtimeExecutable</span>)))
+                            (dape--ensure-executable runtime-executable))
+                          (<span class="k">let</span> ((dap-debug-server-path
+                                 (car (plist-get config 'command-args))))
+                            (<span class="k">unless</span> (file-exists-p dap-debug-server-path)
+                              (<span class="w">user-error</span> <span class="s">"File %S does not exist"</span> dap-debug-server-path))))
+                command <span class="s">"node"</span>
+                command-args (,(expand-file-name
+                                (file-name-concat dape-adapter-dir
+                                                  <span class="s">"js-debug"</span>
+                                                  <span class="s">"src"</span>
+                                                  <span class="s">"dapDebugServer.js"</span>))
+                              <span class="bi">:autoport</span>)
+                port <span class="bi">:autoport</span>)))
+        `((js-debug-node
+           modes (js-mode js-ts-mode)
+           ,@js-debug
+           <span class="bi">:type</span> <span class="s">"pwa-node"</span>
+           <span class="bi">:cwd</span> dape-cwd
+           <span class="bi">:program</span> dape-buffer-default
+           <span class="bi">:console</span> <span class="s">"internalConsole"</span>)
+          (js-debug-ts-node
+           modes (typescript-mode typescript-ts-mode)
+           ,@js-debug
+           <span class="bi">:type</span> <span class="s">"pwa-node"</span>
+           <span class="bi">:runtimeExecutable</span> <span class="s">"ts-node"</span>
+           <span class="bi">:cwd</span> dape-cwd
+           <span class="bi">:program</span> dape-buffer-default
+           <span class="bi">:console</span> <span class="s">"internalConsole"</span>)
+          (js-debug-tsx
+           modes (typescript-mode typescript-ts-mode)
+           ,@js-debug
+           <span class="bi">:type</span> <span class="s">"pwa-node"</span>
+           <span class="bi">:runtimeExecutable</span> <span class="s">"tsx"</span>
+           <span class="bi">:cwd</span> dape-cwd
+           <span class="bi">:program</span> dape-buffer-default
+           <span class="bi">:console</span> <span class="s">"internalConsole"</span>)
+	  (js-debug-node-attach
+           modes (js-mode js-ts-mode typescript-mode typescript-ts-mode)
+           ,@js-debug
+           <span class="bi">:type</span> <span class="s">"pwa-node"</span>
+	   <span class="bi">:request</span> <span class="s">"attach"</span>
+	   <span class="bi">:port</span> 9229)
+          (js-debug-chrome
+           modes (js-mode js-ts-mode typescript-mode typescript-ts-mode)
+           ,@js-debug
+           <span class="bi">:type</span> <span class="s">"pwa-chrome"</span>
+           <span class="bi">:url</span> <span class="s">"http://localhost:3000"</span>
+           <span class="bi">:webRoot</span> dape-cwd)))
+    ,@(<span class="k">let</span> ((lldb-common
+             `( modes ( c-mode c-ts-mode
+                        c++-mode c++-ts-mode
+                        rust-mode rust-ts-mode rustic-mode)
+                ensure dape-ensure-command
+                command-cwd dape-command-cwd
+                <span class="bi">:cwd</span> <span class="s">"."</span>
+                <span class="bi">:program</span> <span class="s">"a.out"</span>)))
+        `((lldb-vscode
+           command <span class="s">"lldb-vscode"</span>
+           <span class="bi">:type</span> <span class="s">"lldb-vscode"</span>
+           ,@lldb-common)
+          (lldb-dap
+           command <span class="s">"lldb-dap"</span>
+           <span class="bi">:type</span> <span class="s">"lldb-dap"</span>
+           ,@lldb-common)))
+    (netcoredbg
+     modes (csharp-mode csharp-ts-mode)
+     ensure dape-ensure-command
+     command <span class="s">"netcoredbg"</span>
+     command-args [<span class="s">"--interpreter=vscode"</span>]
+     <span class="bi">:request</span> <span class="s">"launch"</span>
+     <span class="bi">:cwd</span> dape-cwd
+     <span class="bi">:program</span> (<span class="k">if-let*</span> ((dlls
+                         (file-expand-wildcards
+                          (file-name-concat <span class="s">"bin"</span> <span class="s">"Debug"</span> <span class="s">"*"</span> <span class="s">"*.dll"</span>))))
+                  (file-relative-name (file-relative-name (car dlls)))
+                <span class="s">".dll"</span>)
+     <span class="bi">:stopAtEntry</span> nil)
+    (ocamlearlybird
+     ensure dape-ensure-command
+     modes (tuareg-mode caml-mode)
+     command <span class="s">"ocamlearlybird"</span>
+     command-args (<span class="s">"debug"</span>)
+     <span class="bi">:type</span> <span class="s">"ocaml"</span>
+     <span class="bi">:program</span> (file-name-concat (dape-cwd) <span class="s">"_build"</span> <span class="s">"default"</span> <span class="s">"bin"</span>
+                                (concat (file-name-base (dape-buffer-default)) <span class="s">".bc"</span>))
+     <span class="bi">:console</span> <span class="s">"internalConsole"</span>
+     <span class="bi">:stopOnEntry</span> nil
+     <span class="bi">:arguments</span> [])
+    (rdbg
+     modes (ruby-mode ruby-ts-mode)
+     ensure dape-ensure-command
+     command <span class="s">"rdbg"</span>
+     command-args (<span class="s">"-O"</span> <span class="s">"--host"</span> <span class="s">"0.0.0.0"</span> <span class="s">"--port"</span> <span class="bi">:autoport</span> <span class="s">"-c"</span> <span class="s">"--"</span> <span class="bi">:-c</span>)
+     fn (<span class="k">lambda</span> (config)
+          (plist-put config 'command-args
+                     (mapcar (<span class="k">lambda</span> (arg)
+                               (<span class="k">if</span> (eq arg <span class="bi">:-c</span>) (plist-get config '-c) arg))
+                             (plist-get config 'command-args))))
+     port <span class="bi">:autoport</span>
+     command-cwd dape-command-cwd
+     <span class="bi">:type</span> <span class="s">"Ruby"</span>
+     <span class="cd">;; </span><span class="c">-- examples:
+</span>     <span class="cd">;; </span><span class="c">rails server
+</span>     <span class="cd">;; </span><span class="c">bundle exec ruby foo.rb
+</span>     <span class="cd">;; </span><span class="c">bundle exec rake test
+</span>     -c (concat <span class="s">"ruby "</span> (dape-buffer-default)))
+    (jdtls
+     modes (java-mode java-ts-mode)
+     ensure (<span class="k">lambda</span> (config)
+              (<span class="k">let</span> ((file (dape-config-get config <span class="bi">:filePath</span>)))
+                (<span class="k">unless</span> (<span class="k">and</span> (stringp file) (file-exists-p file))
+                  (<span class="w">user-error</span> <span class="s">"Unable to locate :filePath `</span><span class="m s">%s</span><span class="s">'"</span> file))
+                (<span class="k">with-current-buffer</span> (find-file-noselect file)
+                  (<span class="k">unless</span> (<span class="k">and</span> (<span class="k">featurep</span> '<span class="m">eglot</span>) (eglot-current-server))
+                    (<span class="w">user-error</span> <span class="s">"No eglot instance active in buffer %s"</span> (current-buffer)))
+                  (<span class="k">unless</span> (seq-contains-p (eglot--server-capable <span class="bi">:executeCommandProvider</span> <span class="bi">:commands</span>)
+                                          <span class="s">"vscode.java.resolveClasspath"</span>)
+                    (<span class="w">user-error</span> <span class="s">"Jdtls instance does not bundle java-debug-server, please install"</span>)))))
+     fn (<span class="k">lambda</span> (config)
+          (<span class="k">with-current-buffer</span>
+              (find-file-noselect (dape-config-get config <span class="bi">:filePath</span>))
+            (<span class="k">if-let*</span> ((server (eglot-current-server)))
+                (<span class="k">pcase-let</span> ((`[,module-paths ,class-paths]
+			     (eglot-execute-command server
+                                                    <span class="s">"vscode.java.resolveClasspath"</span>
+                                                    (vector (plist-get config <span class="bi">:mainClass</span>)
+                                                            (plist-get config <span class="bi">:projectName</span>))))
+                            (port (eglot-execute-command server
+                                                         <span class="s">"vscode.java.startDebugSession"</span> nil)))
+                  (<span class="k">thread-first</span> config
+                                (plist-put 'port port)
+                                (plist-put <span class="bi">:modulePaths</span> module-paths)
+                                (plist-put <span class="bi">:classPaths</span> class-paths)))
+              server)))
+     ,@(<span class="k">cl-flet</span> ((resolve-main-class (key)
+                   (<span class="k">ignore-errors</span>
+                     (<span class="k">let*</span> ((main-classes
+                             (with-no-warnings
+                               (eglot-execute-command
+                                (eglot-current-server)
+                                <span class="s">"vscode.java.resolveMainClass"</span>
+                                (file-name-nondirectory
+                                 (directory-file-name (dape-cwd))))))
+                            (main-class
+                             (<span class="k">or</span> (seq-find (<span class="k">lambda</span>(val)
+                                             (equal (plist-get val <span class="bi">:filePath</span>)
+                                                    (buffer-file-name)))
+                                           main-classes)
+                                 (aref main-classes 0))))
+                       (plist-get main-class key)))))
+         `(<span class="bi">:filePath</span>
+           ,(<span class="k">lambda</span> ()
+              (<span class="k">or</span> (resolve-main-class <span class="bi">:filePath</span>)
+                  (expand-file-name (dape-buffer-default) (dape-cwd))))
+           <span class="bi">:mainClass</span>
+           ,(<span class="k">lambda</span> () (resolve-main-class <span class="bi">:mainClass</span>))
+           <span class="bi">:projectName</span>
+           ,(<span class="k">lambda</span> () (resolve-main-class <span class="bi">:projectName</span>))))
+     <span class="bi">:args</span> <span class="s">""</span>
+     <span class="bi">:stopOnEntry</span> nil
+     <span class="bi">:type</span> <span class="s">"java"</span>
+     <span class="bi">:request</span> <span class="s">"launch"</span>
+     <span class="bi">:vmArgs</span> <span class="s">" -XX:+ShowCodeDetailsInExceptionMessages"</span>
+     <span class="bi">:console</span> <span class="s">"integratedConsole"</span>
+     <span class="bi">:internalConsoleOptions</span> <span class="s">"neverOpen"</span>)
+    (xdebug
+     modes (php-mode php-ts-mode)
+     ensure (<span class="k">lambda</span> (config)
+              (dape-ensure-command config)
+              (<span class="k">let</span> ((dap-debug-server-path
+                     (car (plist-get config 'command-args))))
+                (<span class="k">unless</span> (file-exists-p dap-debug-server-path)
+                  (<span class="w">user-error</span> <span class="s">"File %S does not exist"</span> dap-debug-server-path))))
+     command <span class="s">"node"</span>
+     command-args (,(expand-file-name
+                     (file-name-concat dape-adapter-dir
+                                       <span class="s">"php-debug"</span>
+                                       <span class="s">"extension"</span>
+                                       <span class="s">"out"</span>
+                                       <span class="s">"phpDebug.js"</span>)))
+     <span class="bi">:type</span> <span class="s">"php"</span>
+     <span class="bi">:port</span> 9003))
+  <span class="doc">"This variable holds the dape configurations as an alist.
+In this alist, the car element serves as a symbol identifying each
+configuration.  Each configuration, in turn, is a property list (plist)
+where keys can be symbols or keywords.
+
+Symbol keys (Used by dape):
+- fn: Function or list of functions, takes config and returns config.
+  If list functions are applied in order.
+  See `</span><span class="m doc">dape-default-config-functions</span><span class="doc">'.
+- ensure: Function to ensure that adapter is available.
+- command: Shell command to initiate the debug adapter.
+- command-args: List of string arguments for the command.
+- command-cwd: Working directory for the command, if not supplied
+  `</span><span class="m doc">default-directory</span><span class="doc">' will be used.
+- command-env: Property list (plist) of environment variables to
+  set when running the command.  Keys can be strings, symbols or
+  keywords.
+- command-insert-stderr: If non-nil treat stderr from adapter as
+  stderr output from debugged program.
+- prefix-local: Path prefix for Emacs file access.
+- prefix-remote: Path prefix for debugger file access.
+- host: Host of the debug adapter.
+- port: Port of the debug adapter.
+- modes: List of modes where the configuration is active in `</span><span class="m doc">dape</span><span class="doc">'
+  completions.
+- compile: Executes a shell command with `</span><span class="m doc">dape-compile-function</span><span class="doc">'.
+- defer-launch-attach: If launch/attach request should be sent
+  after initialize or configurationDone.  If nil launch/attach are
+  sent after initialize request else it's sent after
+  configurationDone.  This key exist to accommodate the two different
+  interpretations of the DAP specification.
+  See: GDB bug 32090.
+
+Note: The char - carries special meaning when reading options in
+`</span><span class="m doc">dape</span><span class="doc">' and therefore should not be used be used as an key.
+See `</span><span class="m doc">dape-history-add</span><span class="doc">'.
+
+Connection to Debug Adapter:
+- If command is specified and not port, dape communicates with the
+  debug adapter through stdin/stdout.
+- If host and port are specified, dape connects to the debug adapter.
+  If command is specified, dape waits until the command initializes
+  before connecting to host and port.
+
+Keywords in configuration:
+  Keywords (symbols starting with colon) are transmitted to the
+  adapter during the initialize and launch/attach requests.  Refer to
+  `</span><span class="m doc">json-serialize</span><span class="doc">' for detailed information on how dape serializes
+  these keyword elements.  Dape uses nil as false.
+
+Functions and symbols:
+  - If a value is a function, its return value replaces the key's
+    value before execution.  The function is called with no arguments.
+  - If a value is a symbol, it resolves recursively before execution."</span>
+  <span class="bi">:type</span> '(alist <span class="bi">:key-type</span> (symbol <span class="bi">:tag</span> <span class="s">"Name"</span>)
+                <span class="bi">:value-type</span>
+                (plist <span class="bi">:options</span>
+                       (((const <span class="bi">:tag</span> <span class="s">"List of modes where config is active in `</span><span class="m s">dape</span><span class="s">' completions"</span> modes) (repeat function))
+                        ((const <span class="bi">:tag</span> <span class="s">"Ensures adapter availability"</span> ensure) function)
+                        ((const <span class="bi">:tag</span> <span class="s">"Transforms configuration at runtime"</span> fn) (choice function (repeat function)))
+                        ((const <span class="bi">:tag</span> <span class="s">"Shell command to initiate the debug adapter"</span> command) (choice string symbol))
+                        ((const <span class="bi">:tag</span> <span class="s">"List of string arguments for command"</span> command-args) (repeat string))
+                        ((const <span class="bi">:tag</span> <span class="s">"List of environment variables to set when running the command"</span> command-env)
+                         (plist <span class="bi">:key-type</span> (restricted-sexp <span class="bi">:match-alternatives</span> (stringp symbolp keywordp) <span class="bi">:tag</span> <span class="s">"Variable"</span>)
+                                <span class="bi">:value-type</span> (string <span class="bi">:tag</span> <span class="s">"Value"</span>)))
+                        ((const <span class="bi">:tag</span> <span class="s">"Treat stderr from adapter as program output"</span> command-insert-stderr) boolean)
+                        ((const <span class="bi">:tag</span> <span class="s">"Working directory for command"</span> command-cwd) (choice string symbol))
+                        ((const <span class="bi">:tag</span> <span class="s">"Path prefix for Emacs file access"</span> prefix-local) string)
+                        ((const <span class="bi">:tag</span> <span class="s">"Path prefix for debugger file access"</span> prefix-remote) string)
+                        ((const <span class="bi">:tag</span> <span class="s">"Host of debug adapter"</span> host) string)
+                        ((const <span class="bi">:tag</span> <span class="s">"Port of debug adapter"</span> port) natnum)
+                        ((const <span class="bi">:tag</span> <span class="s">"Compile cmd"</span> compile) string)
+                        ((const <span class="bi">:tag</span> <span class="s">"Use configurationDone as trigger for launch/attach"</span> defer-launch-attach) boolean)
+                        ((const <span class="bi">:tag</span> <span class="s">"Adapter type"</span> <span class="bi">:type</span>) string)
+                        ((const <span class="bi">:tag</span> <span class="s">"Request type launch/attach"</span> <span class="bi">:request</span>) string)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

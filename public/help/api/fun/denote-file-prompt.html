@@ -1,0 +1,85 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: denote-file-prompt – Emacs Documentation Online</title>
+<meta name="description" content="denote-file-prompt is a natively compiled function defined in
+denote.el.
+Prompt for file in variable denote-directory.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>denote-file-prompt</code></h1><p><span class="m"><code>denote-file-prompt</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">denote.el</span>.
+<h2>Signature</h2>
+<pre><code>(denote-file-prompt <span class="ty">&amp;optional</span> <a href="#:~:text=optional-,FILES-MATCHING-REGEXP"><span class="arg">FILES-MATCHING-REGEXP</span></a> <a href="#:~:text=optional-,PROMPT-TEXT"><span class="arg">PROMPT-TEXT</span></a> <a href="#:~:text=optional-,NO-REQUIRE-MATCH"><span class="arg">NO-REQUIRE-MATCH</span></a> <a href="#:~:text=optional-,HAS-IDENTIFIER"><span class="arg">HAS-IDENTIFIER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Prompt for file in variable <a class="v" href="../var/denote-directory.html"><code>denote-directory</code>(var)</a>/<a class="f" href="../fun/denote-directory.html"><code>denote-directory</code>(fun)</a>.
+<p>Files that match <a href="../var/denote-excluded-files-regexp.html"><code>denote-excluded-files-regexp</code></a> are excluded from the
+list.
+<p>With optional <span class="arg">FILES-MATCHING-REGEXP</span>, filter the candidates per
+the given regular expression.
+<p>With optional <span class="arg">PROMPT-TEXT</span>, use it instead of the default call to
+select a file.
+<p>With optional <span class="arg">NO-REQUIRE-MATCH</span>, accept the given input as-is.
+<p>With optional <span class="arg">HAS-IDENTIFIER</span>, only show candidates that have an
+identifier.
+<p>Return the absolute path to the matching file.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/5x9606vmybcj80x6qrajp43rma9pa1i7-emacs-packages-deps/share/emacs/site-lisp/elpa/denote-4.2.3/denote.el</span>
+(<span class="k">defun</span> <span class="f">denote-file-prompt</span> (<span class="ty">&amp;optional</span> files-matching-regexp prompt-text no-require-match has-identifier)
+  <span class="doc">"Prompt for file in variable `</span><span class="m doc">denote-directory</span><span class="doc">'.
+Files that match `</span><span class="m doc">denote-excluded-files-regexp</span><span class="doc">' are excluded from the
+list.
+
+With optional FILES-MATCHING-REGEXP, filter the candidates per
+the given regular expression.
+
+With optional PROMPT-TEXT, use it instead of the default call to
+select a file.
+
+With optional NO-REQUIRE-MATCH, accept the given input as-is.
+
+With optional HAS-IDENTIFIER, only show candidates that have an
+identifier.
+
+Return the absolute path to the matching file."</span>
+  (<span class="k">let*</span> ((roots (denote-directories))
+         (single-dir-p (null (cdr roots)))
+         <span class="cd">;; </span><span class="c">Some external program may use `</span><span class="m c">default-directory</span><span class="c">' with the
+</span>         <span class="cd">;; </span><span class="c">relative file paths of the completion candidates.
+</span>         (default-directory (<span class="k">if</span> single-dir-p
+                                (car roots)
+                              (denote-directories-get-common-root)))
+         (files (denote-directory-files
+                 (<span class="k">or</span> denote-file-prompt-use-files-matching-regexp files-matching-regexp)
+                 <span class="bi">:omit-current</span> nil nil has-identifier))
+         (relative-files (<span class="k">if</span> single-dir-p
+                             (mapcar
+                              (<span class="k">lambda</span> (file)
+                                (denote--get-file-name-relative-to-directories file roots))
+                              files)
+                           files))
+         (prompt (<span class="k">if</span> single-dir-p
+                     (format <span class="s">"%s: "</span> (<span class="k">or</span> prompt-text <span class="s">"Select FILE"</span>))
+                   (format <span class="s">"%s in %s: "</span>
+                           (<span class="k">or</span> prompt-text <span class="s">"Select FILE"</span>)
+                           (propertize default-directory 'face 'denote-faces-prompt-current-name))))
+         (input (completing-read
+                 prompt
+                 (apply 'denote-get-completion-table relative-files denote-file-prompt-extra-metadata)
+                 nil (<span class="k">unless</span> no-require-match t)
+                 nil 'denote-file-history))
+         (absolute-file (<span class="k">if</span> single-dir-p
+                            (expand-file-name input default-directory)
+                          input)))
+    <span class="cd">;; </span><span class="c">NOTE: This block is executed when no-require-match is t. It is useful
+</span>    <span class="cd">;; </span><span class="c">for commands such as `</span><span class="m c">denote-open-or-create</span><span class="c">' or similar.
+</span>    (<span class="k">unless</span> (file-exists-p absolute-file)
+      (<span class="k">setq</span> denote-file-prompt-latest-input input)
+      (<span class="k">setq</span> denote-file-history (delete input denote-file-history)))
+    <span class="cd">;; </span><span class="c">NOTE: We must always return an absolute path, even if it does not
+</span>    <span class="cd">;; </span><span class="c">exist, because callers expect one.  They handle a non-existent file
+</span>    <span class="cd">;; </span><span class="c">appropriately.
+</span>    absolute-file))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

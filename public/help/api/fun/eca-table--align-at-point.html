@@ -1,0 +1,92 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-table--align-at-point – Emacs Documentation Online</title>
+<meta name="description" content="eca-table--align-at-point is a natively compiled function defined in
+eca-table.el.
+Align markdown table at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-table--align-at-point</code></h1><p><span class="m"><code>eca-table--align-at-point</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-table.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-table--align-at-point)
+</code></pre>
+<h2>Documentation</h2>
+<p>Align markdown table at point.
+<p>Uses display-width-aware calculation, preserves separator
+alignment markers, and pads content cells accordingly.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-table.el</span>
+(<span class="k">defun</span> <span class="f">eca-table--align-at-point</span> ()
+  <span class="doc">"Align markdown table at point.
+Uses display-width-aware calculation, preserves separator
+alignment markers, and pads content cells accordingly."</span>
+  (<span class="k">let*</span> ((tbl-beg (markdown-table-begin))
+         (tbl-end (markdown-table-end))
+         (indent (<span class="k">save-excursion</span>
+                   (goto-char tbl-beg)
+                   (<span class="k">if</span> (looking-at <span class="s">"[ \t]*"</span>) (match-string 0) <span class="s">""</span>)))
+         (lines (split-string (buffer-substring-no-properties tbl-beg tbl-end)
+                              <span class="s">"\n"</span> t))
+         (parsed-rows '())
+         (separator-indices '())
+         (separator-alignments '())
+         (row-idx 0)
+         (max-cols 0)
+         (col-max-display '()))
+    <span class="cd">;; </span><span class="c">Parse all rows and track separator rows
+</span>    (<span class="k">dolist</span> (line lines)
+      (<span class="k">if</span> (eca-table--separator-row-p line)
+          (<span class="k">progn</span>
+            (<span class="k">push</span> row-idx separator-indices)
+            (<span class="k">push</span> (eca-table--parse-separator-alignments line)
+                  separator-alignments)
+            (<span class="k">push</span> nil parsed-rows))
+        (<span class="k">let</span> ((cells (eca-table--parse-row line)))
+          (<span class="k">push</span> cells parsed-rows)
+          (<span class="k">setq</span> max-cols (max max-cols (length cells)))))
+      (<span class="k">setq</span> row-idx (1+ row-idx)))
+    (<span class="k">setq</span> parsed-rows (nreverse parsed-rows))
+    (<span class="k">setq</span> separator-indices (nreverse separator-indices))
+    (<span class="k">setq</span> separator-alignments (nreverse separator-alignments))
+    <span class="cd">;; </span><span class="c">Use first separator row for column alignments
+</span>    (<span class="k">let</span> ((col-aligns (car separator-alignments)))
+      <span class="cd">;; </span><span class="c">Calculate max display width for each column
+</span>      (<span class="k">dotimes</span> (col max-cols)
+        (<span class="k">let</span> ((max-disp 1))
+          (<span class="k">dolist</span> (row parsed-rows)
+            (<span class="k">when</span> row
+              (<span class="k">let*</span> ((cell (<span class="k">or</span> (nth col row) <span class="s">""</span>))
+                     (disp-w (eca-table--display-width cell)))
+                (<span class="k">setq</span> max-disp (max max-disp disp-w)))))
+          (<span class="k">push</span> max-disp col-max-display)))
+      (<span class="k">setq</span> col-max-display (nreverse col-max-display))
+      <span class="cd">;; </span><span class="c">Rebuild the table
+</span>      (delete-region tbl-beg tbl-end)
+      (goto-char tbl-beg)
+      (<span class="k">let</span> ((row-idx 0)
+            (sep-idx 0))
+        (<span class="k">dolist</span> (row parsed-rows)
+          (insert indent <span class="s">"|"</span>)
+          (<span class="k">if</span> (member row-idx separator-indices)
+              <span class="cd">;; </span><span class="c">Separator row: preserve alignment markers
+</span>              (<span class="k">let</span> ((aligns (nth sep-idx separator-alignments)))
+                (<span class="k">dotimes</span> (col max-cols)
+                  (<span class="k">let</span> ((align (nth col aligns)))
+                    (insert (eca-table--make-separator-cell
+                             (nth col col-max-display) align)
+                            <span class="s">"|"</span>)))
+                (<span class="k">setq</span> sep-idx (1+ sep-idx)))
+            <span class="cd">;; </span><span class="c">Content row: pad using column alignment
+</span>            (<span class="k">dotimes</span> (col max-cols)
+              (<span class="k">let*</span> ((cell (<span class="k">or</span> (nth col row) <span class="s">""</span>))
+                     (disp-w (eca-table--display-width cell))
+                     (target-disp (nth col col-max-display))
+                     (padding (- target-disp disp-w))
+                     (align (nth col col-aligns)))
+                (eca-table--insert-cell cell padding align))))
+          (insert <span class="s">"\n"</span>)
+          (<span class="k">setq</span> row-idx (1+ row-idx)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

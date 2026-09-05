@@ -1,0 +1,74 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--render-image-content – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--render-image-content is a natively compiled function defined
+in eca-chat-image.el.
+Render IMAGE-CONTENT into the current chat buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--render-image-content</code></h1><p><span class="m"><code>eca-chat--render-image-content</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-chat-image.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--render-image-content <a href="#:~:text=Render-,IMAGE-CONTENT"><span class="arg">IMAGE-CONTENT</span></a> <a href="#:~:text=When-,PARENT-TOOL-CALL-ID"><span class="arg">PARENT-TOOL-CALL-ID</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Render <span class="arg">IMAGE-CONTENT</span> into the current chat buffer.
+<p>On a graphical frame with a supported media type the image is
+inserted via an overlay so that <a href="../fun/font-lock-ensure.html"><code>font-lock-ensure</code></a> (which manages
+the <span class="m"><code>display</code></span> text-property in <a href="../fun/markdown-mode.html"><code>markdown-mode</code></a>/<a href="../fun/gfm-mode.html"><code>gfm-mode</code></a>) cannot
+strip it.  Otherwise a textual placeholder is shown.
+<p>When <span class="arg">PARENT-TOOL-CALL-ID</span> is non-nil the content is appended into
+that expandable tool-call block; expandable content stores its body
+as a plain string, so overlays would not survive — for that path we
+always use the textual fallback.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-image.el</span>
+<span class="cd">;;;; </span><span class="c">Render entry point (called by eca-chat--render-content)
+</span>
+(<span class="k">defun</span> <span class="f">eca-chat--render-image-content</span> (image-content parent-tool-call-id)
+  <span class="doc">"Render IMAGE-CONTENT into the current chat buffer.
+On a graphical frame with a supported media type the image is
+inserted via an overlay so that `</span><span class="m doc">font-lock-ensure</span><span class="doc">' (which manages
+the `</span><span class="m doc">display</span><span class="doc">' text-property in `</span><span class="m doc">markdown-mode</span><span class="doc">'/`</span><span class="m doc">gfm-mode</span><span class="doc">') cannot
+strip it.  Otherwise a textual placeholder is shown.
+
+When PARENT-TOOL-CALL-ID is non-nil the content is appended into
+that expandable tool-call block; expandable content stores its body
+as a plain string, so overlays would not survive — for that path we
+always use the textual fallback."</span>
+  (<span class="k">let</span> ((image (<span class="k">and</span> (not parent-tool-call-id)
+                    (eca-chat--build-inline-image image-content))))
+    (<span class="k">cond</span>
+     (image
+      (<span class="k">save-excursion</span>
+        (goto-char (eca-chat--content-insertion-point))
+        (<span class="k">let</span> ((start (point)))
+          (eca-chat--insert <span class="s">"\n \n"</span>)
+          (<span class="k">let</span> ((ov (make-overlay (1+ start) (+ 2 start) (current-buffer))))
+            (overlay-put ov 'display image)
+            (overlay-put ov 'eca-chat-image t)
+            (overlay-put ov 'eca-chat-image-media-type
+                         (plist-get image-content <span class="bi">:mediaType</span>))
+            (overlay-put ov 'mouse-face 'highlight)
+            (overlay-put
+             ov 'help-echo
+             (format <span class="s">"Image (%s, %d bytes) — RET or mouse-2 to save"</span>
+                     (<span class="k">or</span> (plist-get image-content <span class="bi">:mediaType</span>) <span class="s">"?"</span>)
+                     (length (image-property image <span class="bi">:data</span>))))
+            (<span class="k">let*</span> ((save-fn (<span class="k">lambda</span> ()
+                              (<span class="k">interactive</span>)
+                              (eca-chat-save-image-at-point ov)))
+                   (map (make-sparse-keymap)))
+              (define-key map (kbd <span class="s">"RET"</span>) save-fn)
+              (define-key map [mouse-2] save-fn)
+              (overlay-put ov 'keymap map))))))
+     (parent-tool-call-id
+      (eca-chat--update-expandable-content
+       parent-tool-call-id nil
+       (eca-chat--image-fallback-string image-content) t))
+     (t
+      (eca-chat--add-text-content
+       (eca-chat--image-fallback-string image-content))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

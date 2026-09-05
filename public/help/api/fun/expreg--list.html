@@ -1,0 +1,77 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: expreg--list – Emacs Documentation Online</title>
+<meta name="description" content="expreg--list is a natively compiled function defined in expreg.el.
+Return a list of regions determined by sexp level.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>expreg--list</code></h1><p><span class="m"><code>expreg--list</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">expreg.el</span>.
+<h2>Signature</h2>
+<pre><code>(expreg--list <span class="ty">&amp;optional</span> <a href="#:~:text=If-,INHIBIT-RECURSE"><span class="arg">INHIBIT-RECURSE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a list of regions determined by sexp level.
+<p>This routine returns the following regions:
+<br>1. The list before/after point
+<br>2. The inside of the innermost enclosing list
+<br>3. The outside of every layer of enclosing list
+<p>Note that the inside of outer layer lists are not captured.
+<p>If <span class="arg">INHIBIT-RECURSE</span> is non-nil, it doesn’t try to narrow to the
+current string/comment and get lists inside.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ryq27wm6zz42wjg7mgw3mayap8817nnz-emacs-packages-deps/share/emacs/site-lisp/elpa/expreg-1.4.1/expreg.el</span>
+(<span class="k">defun</span> <span class="f">expreg--list</span> (<span class="ty">&amp;optional</span> inhibit-recurse)
+  <span class="doc">"Return a list of regions determined by sexp level.
+
+This routine returns the following regions:
+1. The list before/after point
+2. The inside of the innermost enclosing list
+3. The outside of every layer of enclosing list
+
+Note that the inside of outer layer lists are not captured.
+
+If INHIBIT-RECURSE is non-nil, it doesn’t try to narrow to the
+current string/comment and get lists inside."</span>
+  (<span class="k">condition-case</span> nil
+      (<span class="k">let</span> (inside-results inside-string)
+        (<span class="k">when</span> (<span class="k">and</span> (not inhibit-recurse)
+                   (<span class="k">or</span> (<span class="k">setq</span> inside-string (expreg--inside-string-p))
+                       (expreg--inside-comment-p)))
+          <span class="cd">;; </span><span class="c">If point is inside a string, we narrow to the inside of
+</span>          <span class="cd">;; </span><span class="c">that string and compute again.
+</span>          (<span class="k">save-restriction</span>
+            (<span class="k">let</span> ((orig (point))
+                  (string-start (expreg--start-of-comment-or-string)))
+
+              <span class="cd">;; </span><span class="c">Narrow to inside list.
+</span>              (goto-char string-start)
+              <span class="cd">;; </span><span class="c">(forward-sexp)
+</span>              (<span class="k">if</span> inside-string
+                  <span class="cd">;; </span><span class="c">We could use ‘</span><span class="m c">forward-sexp</span><span class="c">’, but narrowing plus
+</span>                  <span class="cd">;; </span><span class="c">‘</span><span class="m c">forward-sexp</span><span class="c">’ with a treesit backend would cause
+</span>                  <span class="cd">;; </span><span class="c">tree-sitter re-parse on the narrowed region and
+</span>                  <span class="cd">;; </span><span class="c">then re-parse on the widened region.
+</span>                  (goto-char (<span class="k">or</span> (scan-sexps (point) 1)
+                                 (buffer-end 1)))
+                (forward-comment (buffer-size)))
+              (<span class="k">if</span> inside-string
+                  (narrow-to-region (1+ string-start) (1- (point)))
+                (narrow-to-region string-start (point)))
+              (goto-char orig)
+              (<span class="k">setq</span> inside-results (expreg--list t)))))
+
+        <span class="cd">;; </span><span class="c">Normal computation.
+</span>        (<span class="k">let</span> ((inside-list (expreg--inside-list))
+              (list-at-point (expreg--list-at-point))
+              outside-list lst)
+
+          <span class="cd">;; </span><span class="c">Compute outer-list.
+</span>          (<span class="k">while</span> (<span class="k">setq</span> lst (expreg--outside-list))
+            (<span class="k">setq</span> outside-list
+                  (nconc lst outside-list)))
+
+          (nconc inside-results inside-list list-at-point outside-list)))
+    (scan-error nil)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

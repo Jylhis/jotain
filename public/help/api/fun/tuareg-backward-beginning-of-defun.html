@@ -1,0 +1,124 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg-backward-beginning-of-defun – Emacs Documentation Online</title>
+<meta name="description" content="tuareg-backward-beginning-of-defun is a natively compiled function
+defined in tuareg.el.
+Move the point backward to the beginning of a definition.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg-backward-beginning-of-defun</code></h1><p><span class="m"><code>tuareg-backward-beginning-of-defun</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg-backward-beginning-of-defun <span class="ty">&amp;optional</span> <a href="#:~:text=If-,STAY-IN-CURRENT"><span class="arg">STAY-IN-CURRENT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Move the point backward to the beginning of a definition.
+<p>Return the token starting the phrase (<a href="../var/nil.html"><code>nil</code></a> if it is an expression).
+If <span class="arg">STAY-IN-CURRENT</span> is non-nil, don't go to the previous defun if already
+at the start of one.
+<h2>Aliases</h2>
+<p><a href="../fun/tuareg--beginning-of-phrase.html"><code>tuareg--beginning-of-phrase</code></a> (obsolete since Apr 10, 2019)
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg-backward-beginning-of-defun</span> (<span class="ty">&amp;optional</span> stay-in-current)
+  <span class="doc">"Move the point backward to the beginning of a definition.
+Return the token starting the phrase (`</span><span class="m doc">nil</span><span class="doc">' if it is an expression).
+If STAY-IN-CURRENT is non-nil, don't go to the previous defun if already
+at the start of one."</span>
+  (<span class="k">let</span> ((state (syntax-ppss)))
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">In a string: move to its end (via the beginning).
+</span>     ((nth 3 state)
+      (goto-char (nth 8 state))
+      (smie-forward-sexp))
+     <span class="cd">;; </span><span class="c">In a comment: move to its beginning.
+</span>     ((nth 4 state)
+      (goto-char (nth 8 state)))
+     <span class="cd">;; </span><span class="c">At start of a word and we may move to previous defun: stay put.
+</span>     ((<span class="k">and</span> (not stay-in-current)
+           (looking-at (<span class="k">rx</span> symbol-start))))
+     <span class="cd">;; </span><span class="c">If in or at the beginning of a word, move to the end.
+</span>     ((/= (skip-syntax-forward <span class="s">"w_"</span>) 0))
+     <span class="cd">;; </span><span class="c">Otherwise, skip possibly trailing ";;".
+</span>     (t (tuareg--skip-backward-comments-semicolon))))
+
+  <span class="cd">;; </span><span class="c">We treat each "and" clause belonging to "d-let" or "type" as defuns
+</span>  <span class="cd">;; </span><span class="c">in the own right since that is how programmers think about it.
+</span>  (<span class="k">let*</span> ((opoint (point))
+         (and-pos nil)
+         (ret-tok nil)
+         (tick (buffer-chars-modified-tick))
+         (cache-valid (eql tuareg-smie--and-cache-tick tick)))
+    (<span class="k">while</span>
+        (<span class="k">and</span> (not (bobp))
+             <span class="cd">;; </span><span class="c">Memoised call to (smie-backward-sexp "and")
+</span>             (<span class="k">let*</span> ((cached
+                     (<span class="k">and</span> cache-valid
+                          (assq (point) tuareg-smie--backward-and-cache)))
+                    (td (<span class="k">if</span> cached
+                            (<span class="k">progn</span>
+                              (goto-char (nth 1 cached))
+                              (nth 2 cached))
+                          (<span class="k">unless</span> cache-valid
+                            (<span class="k">setq</span> tuareg-smie--forward-and-cache nil)
+                            (<span class="k">setq</span> tuareg-smie--backward-and-cache nil)
+                            (<span class="k">setq</span> tuareg-smie--and-cache-tick tick)
+                            (<span class="k">setq</span> cache-valid t))
+                          (<span class="k">let*</span> ((pt (point))
+                                 (r (smie-backward-sexp <span class="s">"and"</span>)))
+                            (<span class="k">push</span> (list pt (point) r)
+                                  tuareg-smie--backward-and-cache)
+                            r))))
+               (<span class="k">and</span> (nth 0 td)
+                    (<span class="k">let</span> ((tpos (nth 1 td))
+                          (tok (nth 2 td)))
+                      (<span class="k">cond</span>
+                       <span class="cd">;; </span><span class="c">Arrived at a token that always starts a defun.
+</span>                       ((member tok '(<span class="s">"type"</span> <span class="s">"d-let"</span> <span class="s">"exception"</span> <span class="s">"module"</span>
+                                      <span class="s">"class"</span> <span class="s">"val"</span> <span class="s">"external"</span> <span class="s">"open"</span>))
+                        (<span class="k">if</span> (<span class="k">and</span> and-pos (member tok '(<span class="s">"d-let"</span> <span class="s">"type"</span>)))
+                            <span class="cd">;; </span><span class="c">Previously found "and" is the start of the
+</span>                            <span class="cd">;; </span><span class="c">defun: return it.
+</span>                            (<span class="k">progn</span>
+                              (goto-char and-pos)
+                              (<span class="k">setq</span> ret-tok <span class="s">"and"</span>))
+                          <span class="cd">;; </span><span class="c">This is the start of the defun.
+</span>                          (goto-char tpos)
+                          (<span class="k">setq</span> ret-tok tok))
+                        nil)
+                       <span class="cd">;; </span><span class="c">Arrived at "and": keep going backwards to find
+</span>                       <span class="cd">;; </span><span class="c">out whether it was the start of a defun.
+</span>                       ((equal tok <span class="s">"and"</span>)
+                        (<span class="k">unless</span> and-pos
+                          (<span class="k">setq</span> and-pos tpos))
+                        (goto-char tpos)
+                        t)
+                       <span class="cd">;; </span><span class="c">Arrived at "let": keep going backwards.
+</span>                       ((equal tok <span class="s">"let"</span>)
+                        <span class="cd">;; </span><span class="c">Any previous "and" was not the start of a defun.
+</span>                        (<span class="k">setq</span> and-pos nil)
+                        (goto-char tpos)
+                        t)
+                       ((equal tok <span class="s">";;"</span>)
+                        (<span class="k">if</span> (<span class="k">and</span> (= (point) opoint) (not stay-in-current))
+                            <span class="cd">;; </span><span class="c">Assume this ";;" to be the last part of
+</span>                            <span class="cd">;; </span><span class="c">the defun to go past: skip and continue.
+</span>                            (<span class="k">progn</span>
+                              (goto-char tpos)
+                              t)
+                          <span class="cd">;; </span><span class="c">This marks the beginning of the defun.
+</span>                          (<span class="k">setq</span> ret-tok t)  <span class="cd">; </span><span class="c">Any non-nil value should do.
+</span>                          nil))
+                       ((member tok '(<span class="s">"do"</span> <span class="s">"downto"</span> <span class="s">"to"</span>))
+                        (goto-char tpos)
+                        t)
+                       <span class="cd">;; </span><span class="c">Left bracket or similar: keep going.
+</span>                       ((not (numberp (nth 0 td)))
+                        (goto-char tpos)
+                        t)
+                       <span class="cd">;; </span><span class="c">Something else: stop.
+</span>                       (t nil)))))))
+    ret-tok))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

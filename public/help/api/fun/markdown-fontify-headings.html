@@ -1,0 +1,70 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-fontify-headings – Emacs Documentation Online</title>
+<meta name="description" content="markdown-fontify-headings is a natively compiled function defined in
+markdown-mode.el.
+Add text properties to headings from point to LAST.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-fontify-headings</code></h1><p><span class="m"><code>markdown-fontify-headings</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-fontify-headings <a href="#:~:text=to-,LAST"><span class="arg">LAST</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Add text properties to headings from point to <span class="arg">LAST</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-fontify-headings</span> (last)
+  <span class="doc">"Add text properties to headings from point to LAST."</span>
+  (<span class="k">when</span> (markdown-match-propertized-text 'markdown-heading last)
+    (<span class="k">let*</span> ((level (markdown-outline-level))
+           (heading-face
+            (intern (format <span class="s">"markdown-header-face-%d"</span> level)))
+           (heading-props `(face ,heading-face))
+           (left-markup-props
+            `(face markdown-header-delimiter-face
+                   ,@(<span class="k">cond</span>
+                      (markdown-hide-markup
+                       `(display <span class="s">""</span>))
+                      (markdown-marginalize-headers
+                       `(display ((margin left-margin)
+                                  ,(markdown--marginalize-string level)))))))
+           (right-markup-props
+            `(face markdown-header-delimiter-face
+                   ,@(<span class="k">when</span> markdown-hide-markup `(display <span class="s">""</span>))))
+           (rule-props `(face markdown-header-rule-face
+                              ,@(<span class="k">when</span> markdown-hide-markup `(display <span class="s">""</span>)))))
+      (<span class="k">if</span> (match-end 1)
+          <span class="cd">;; </span><span class="c">Setext heading
+</span>          (<span class="k">progn</span> (add-text-properties
+                  (match-beginning 1) (match-end 1) heading-props)
+                 (<span class="k">if</span> (= level 1)
+                     (add-text-properties
+                      (match-beginning 2) (match-end 2) rule-props)
+                   (add-text-properties
+                    (match-beginning 3) (match-end 3) rule-props)))
+        <span class="cd">;; </span><span class="c">atx heading
+</span>        (<span class="k">let</span> ((fontified-start
+               (<span class="k">if</span> (<span class="k">or</span> markdown-hide-markup (not markdown-fontify-whole-heading-line))
+                   (match-beginning 5)
+                 (match-beginning 0)))
+              (fontified-end
+               (<span class="k">if</span> markdown-fontify-whole-heading-line
+                   (min (point-max) (1+ (match-end 0)))
+                 (match-end 5))))
+          (add-text-properties
+           (match-beginning 4) (match-end 4) left-markup-props)
+
+          <span class="cd">;; </span><span class="c">If closing tag is present
+</span>          (<span class="k">if</span> (match-end 6)
+              (<span class="k">progn</span>
+                (add-text-properties fontified-start fontified-end heading-props)
+                (<span class="k">when</span> (<span class="k">or</span> markdown-hide-markup (not markdown-fontify-whole-heading-line))
+                  (add-text-properties (match-beginning 6) (match-end 6) right-markup-props)))
+            <span class="cd">;; </span><span class="c">If closing tag is not present
+</span>            (add-text-properties fontified-start fontified-end heading-props)))))
+    t))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

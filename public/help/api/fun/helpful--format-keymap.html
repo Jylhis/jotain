@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: helpful--format-keymap – Emacs Documentation Online</title>
+<meta name="description" content="helpful--format-keymap is a natively compiled function defined in
+helpful.el.
+Format KEYMAP.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>helpful--format-keymap</code></h1><p><span class="m"><code>helpful--format-keymap</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">helpful.el</span>.
+<h2>Signature</h2>
+<pre><code>(helpful--format-keymap <a href="#:~:text=Format-,KEYMAP"><span class="arg">KEYMAP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Format <span class="arg">KEYMAP</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/al1y9rq93c50r6aqa0749m04ilfnar06-emacs-packages-deps/share/emacs/site-lisp/elpa/helpful-20250408.334/helpful.el</span>
+<span class="cd">;; </span><span class="c">TODO: unlike `</span><span class="m c">substitute-command-keys</span><span class="c">', this shows keybindings
+</span><span class="cd">;; </span><span class="c">which are currently shadowed (e.g. a global minor mode map).
+</span>(<span class="k">defun</span> <span class="f">helpful--format-keymap</span> (keymap)
+  <span class="doc">"Format KEYMAP."</span>
+  (<span class="k">let*</span> ((keys-and-commands (helpful--keymap-keys keymap))
+         <span class="cd">;; </span><span class="c">Convert keycodes [27 i] to "C-M-i".
+</span>         (keys (-map #'-first-item keys-and-commands))
+         <span class="cd">;; </span><span class="c">Add padding so all our strings are the same length.
+</span>         (formatted-keys (-map #'key-description keys))
+         (max-formatted-length (-max (cons 0 (-map #'length formatted-keys))))
+         (aligned-keys (<span class="k">--map</span> (s-pad-right (1+ max-formatted-length)
+                                           <span class="s">" "</span> it)
+                              formatted-keys))
+         <span class="cd">;; </span><span class="c">Format commands as buttons.
+</span>         (commands (-map (<span class="k">-lambda</span> ((_ command)) command)
+                         keys-and-commands))
+         (formatted-commands
+          (<span class="k">--map</span>
+           (<span class="k">cond</span>
+            ((symbolp it)
+             (helpful--button
+              (symbol-name it)
+              'helpful-describe-button
+              'symbol it))
+            ((<span class="k">or</span> (stringp it) (vectorp it))
+             <span class="s">"Keyboard Macro"</span>)
+            (t
+             <span class="s">"#&lt;anonymous-function&gt;"</span>))
+           commands))
+         <span class="cd">;; </span><span class="c">Build lines for display.
+</span>         (lines
+          (-map (<span class="k">-lambda</span> ((key . command)) (format <span class="s">"%s %s"</span> key command))
+                (-zip-pair aligned-keys formatted-commands))))
+    <span class="cd">;; </span><span class="c">The flattened keymap will have normal bindings first, and
+</span>    <span class="cd">;; </span><span class="c">inherited bindings last. Sort so that we group by prefix.
+</span>    (s-join <span class="s">"\n"</span> (-sort #'string&lt; lines))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

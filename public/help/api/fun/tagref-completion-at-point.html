@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tagref-completion-at-point – Emacs Documentation Online</title>
+<meta name="description" content="tagref-completion-at-point is a natively compiled function defined in
+tagref.el.
+Completion-at-point function for tagref directives.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tagref-completion-at-point</code></h1><p><span class="m"><code>tagref-completion-at-point</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">tagref.el</span>.
+<h2>Signature</h2>
+<pre><code>(tagref-completion-at-point)
+</code></pre>
+<h2>Documentation</h2>
+<p>Completion-at-point function for tagref directives.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/569pb56gyz7bfhc7d47q808dqp08qfsi-emacs-packages-deps/share/emacs/site-lisp/tagref.el</span>
+(<span class="k">defun</span> <span class="f">tagref-completion-at-point</span> ()
+  <span class="doc">"Completion-at-point function for tagref directives."</span>
+  (<span class="k">when</span> (tagref--in-enabled-project-p)
+    (<span class="k">when-let</span> ((directive (tagref--directive-at-point)))
+      (<span class="k">pcase-let</span> ((`(,type ,beg ,end ,_prefix) directive))
+        (<span class="k">let</span> ((tags (tagref--get-tags)))
+          (<span class="k">when</span> tags
+            (list beg end
+                  (mapcar #'car tags)
+                  <span class="bi">:exclusive</span> 'no
+                  <span class="bi">:category</span> 'tagref-tag
+                  <span class="bi">:annotation-function</span>
+                  (<span class="k">lambda</span> (candidate)
+                    (<span class="k">when-let</span> ((info (assoc candidate tags)))
+                      (format <span class="s">" %s:%d"</span> (cadr info) (cddr info))))
+                  <span class="bi">:exit-function</span>
+                  (<span class="k">lambda</span> (_candidate status)
+                    (<span class="k">when</span> (eq status 'finished)
+                      <span class="cd">;; </span><span class="c">Insert closing bracket if not already present
+</span>                      (<span class="k">unless</span> (looking-at-p <span class="s">"\\]"</span>)
+                        (insert <span class="s">"]"</span>))
+                      <span class="cd">;; </span><span class="c">Convert [tag: to [ref: if user selected existing tag
+</span>                      (<span class="k">when</span> (string= type <span class="s">"tag"</span>)
+                        (<span class="k">save-excursion</span>
+                          (<span class="k">when</span> (re-search-backward <span class="s">"\\[tag:"</span> (line-beginning-position) t)
+                            (replace-match <span class="s">"[ref:"</span>)))))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

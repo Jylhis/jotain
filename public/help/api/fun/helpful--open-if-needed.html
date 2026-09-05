@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: helpful--open-if-needed – Emacs Documentation Online</title>
+<meta name="description" content="helpful--open-if-needed is a natively compiled function defined in
+helpful.el.
+Return a list (BUF OPENED) where BUF is a buffer visiting PATH.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>helpful--open-if-needed</code></h1><p><span class="m"><code>helpful--open-if-needed</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">helpful.el</span>.
+<h2>Signature</h2>
+<pre><code>(helpful--open-if-needed <a href="#:~:text=visiting-,PATH"><span class="arg">PATH</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a list (BUF OPENED) where BUF is a buffer visiting <span class="arg">PATH</span>.
+<p>If a buffer already exists, return that. If not, open <span class="arg">PATH</span> with
+the <a href="../fun/emacs-lisp-mode.html"><code>emacs-lisp-mode</code></a> syntax table active but skip any hooks.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/al1y9rq93c50r6aqa0749m04ilfnar06-emacs-packages-deps/share/emacs/site-lisp/elpa/helpful-20250408.334/helpful.el</span>
+(<span class="k">defun</span> <span class="f">helpful--open-if-needed</span> (path)
+  <span class="doc">"Return a list (BUF OPENED) where BUF is a buffer visiting PATH.
+If a buffer already exists, return that. If not, open PATH with
+the `</span><span class="m doc">emacs-lisp-mode</span><span class="doc">' syntax table active but skip any hooks."</span>
+  (<span class="k">let</span> ((initial-buffers (buffer-list))
+        (buf nil)
+        (opened nil)
+        <span class="cd">;; </span><span class="c">Skip running hooks that may prompt the user.
+</span>        (find-file-hook nil)
+        <span class="cd">;; </span><span class="c">If we end up opening a buffer, don't bother with file
+</span>        <span class="cd">;; </span><span class="c">variables. It prompts the user, and we discard the buffer
+</span>        <span class="cd">;; </span><span class="c">afterwards anyway.
+</span>        (enable-local-variables nil))
+    <span class="cd">;; </span><span class="c">Opening large .c files can be slow (e.g. when looking at
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">defalias</span><span class="c">'), especially if the user has configured mode hooks.
+</span>    <span class="cd">;;</span><span class="c">
+</span>    <span class="cd">;; </span><span class="c">Bind `</span><span class="m c">auto-mode-alist</span><span class="c">' to nil, so we open the buffer in
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">fundamental-mode</span><span class="c">' if it isn't already open.
+</span>    (<span class="k">let</span> ((auto-mode-alist nil))
+      (<span class="k">setq</span> buf (find-file-noselect path)))
+
+    (<span class="k">unless</span> (-contains-p initial-buffers buf)
+      (<span class="k">setq</span> opened t)
+
+      (<span class="k">let</span> ((syntax-table emacs-lisp-mode-syntax-table))
+        (<span class="k">when</span> (s-ends-with-p <span class="s">".c"</span> path)
+          (<span class="k">setq</span> syntax-table (make-syntax-table))
+          (c-populate-syntax-table syntax-table))
+
+        <span class="cd">;; </span><span class="c">If it's a freshly opened buffer, we need to set the syntax
+</span>        <span class="cd">;; </span><span class="c">table so we can search correctly.
+</span>        (<span class="k">with-current-buffer</span> buf
+          (set-syntax-table syntax-table))))
+
+    (list buf opened)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

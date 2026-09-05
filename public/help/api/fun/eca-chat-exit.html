@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat-exit – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat-exit is a natively compiled function defined in eca-chat.el.
+Exit the ECA chat for SESSION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat-exit</code></h1><p><span class="m"><code>eca-chat-exit</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat-exit <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Exit the ECA chat for <span class="arg">SESSION</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat-exit</span> (session)
+  <span class="doc">"Exit the ECA chat for SESSION."</span>
+  <span class="cd">;; </span><span class="c">Cancel the global repeating idle timer that tracks cursor position.
+</span>  (<span class="k">when</span> (timerp eca-chat--cursor-context-timer)
+    (cancel-timer eca-chat--cursor-context-timer)
+    (<span class="k">setq</span> eca-chat--cursor-context-timer nil))
+  <span class="cd">;; </span><span class="c">Remove the global window-size-change handler registered by eca-chat-mode.
+</span>  (remove-hook 'window-size-change-functions #'eca-chat--on-window-size-change)
+  (mapcar (<span class="k">lambda</span> (title+buffer)
+            (<span class="k">let</span> ((chat-buffer (cdr title+buffer)))
+              (<span class="k">when</span> (buffer-live-p chat-buffer)
+                (<span class="k">eca-chat--with-current-buffer</span> chat-buffer
+                  <span class="cd">;; </span><span class="c">Cancel all timers if chat was still loading/stopping.
+</span>                  (eca-chat--spinner-stop)
+                  (eca-chat--tool-call-elapsed-stop-all)
+                  (<span class="k">when</span> eca-chat--modeline-timer
+                    (cancel-timer eca-chat--modeline-timer)
+                    (<span class="k">setq-local</span> eca-chat--modeline-timer nil))
+                  (<span class="k">when</span> eca-chat--stopping-safety-timer
+                    (cancel-timer eca-chat--stopping-safety-timer)
+                    (<span class="k">setq-local</span> eca-chat--stopping-safety-timer nil))
+                  (<span class="k">setq</span> eca-chat--closed t)
+                  (force-mode-line-update)
+                  (goto-char (point-max))
+                  (rename-buffer (concat (buffer-name) <span class="s">":closed"</span>) t)
+                  <span class="cd">;; </span><span class="c">Keep only the most recently closed chat buffer; kill older ones.
+</span>                  (<span class="k">let</span> ((current (current-buffer)))
+                    (<span class="k">dolist</span> (b (buffer-list))
+                      (<span class="k">when</span> (<span class="k">and</span> (not (eq b current))
+                                 (string-match-p <span class="s">"^&lt;eca-chat:.*&gt;:closed$"</span> (buffer-name b)))
+                        (kill-buffer b))))
+                  (<span class="k">when-let*</span> ((window (get-buffer-window chat-buffer)))
+                    (quit-window nil window))))))
+          (eca--session-chats session)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

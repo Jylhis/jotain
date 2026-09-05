@@ -1,0 +1,77 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark-insert – Emacs Documentation Online</title>
+<meta name="description" content="embark-insert is a natively compiled function defined in embark.el.
+Join STRINGS and insert the result at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark-insert</code></h1><p><span class="m"><code>embark-insert</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark-insert <a href="#:~:text=Join-,STRINGS"><span class="arg">STRINGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Join <span class="arg">STRINGS</span> and insert the result at point.
+<p>With a prefix argument, prompt for the separator to join the
+<span class="arg">STRINGS</span>, which defaults to a newline.
+<p>Some whitespace is also inserted if necessary to avoid having the
+inserted string blend into the existing buffer text.  More
+precisely:
+<p>1. If the inserted string does not contain newlines, a space may
+<br>be added before or after it as needed to avoid inserting a word
+constituent character next to an existing word constituent.
+<p>2. For a multiline inserted string, newlines may be added before
+<br>or after as needed to ensure the inserted string is on lines of
+its own.
+<p>As a convenience, if the buffer is read-only, attempt the insertion in
+the window returned by <a href="../fun/other-window-for-scrolling.html"><code>other-window-for-scrolling</code></a> instead.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+(<span class="k">defun</span> <span class="f">embark-insert</span> (strings)
+  <span class="doc">"Join STRINGS and insert the result at point.
+With a prefix argument, prompt for the separator to join the
+STRINGS, which defaults to a newline.
+
+Some whitespace is also inserted if necessary to avoid having the
+inserted string blend into the existing buffer text.  More
+precisely:
+
+1. If the inserted string does not contain newlines, a space may
+be added before or after it as needed to avoid inserting a word
+constituent character next to an existing word constituent.
+
+2. For a multiline inserted string, newlines may be added before
+or after as needed to ensure the inserted string is on lines of
+its own.
+
+As a convenience, if the buffer is read-only, attempt the insertion in
+the window returned by `</span><span class="m doc">other-window-for-scrolling</span><span class="doc">' instead."</span>
+  (<span class="k">let*</span> ((separator (embark--separator strings))
+         (multiline
+          (<span class="k">or</span> (<span class="k">and</span> (cdr strings) (string-match-p <span class="s">"\n"</span> separator))
+              (<span class="k">and</span> (null (cdr strings))
+                   (equal (buffer-substring (line-beginning-position)
+                                            (line-end-position))
+                          (car strings)))
+              (seq-some (<span class="k">lambda</span> (s) (string-match-p <span class="s">"\n"</span> s)) strings))))
+    (<span class="k">cl-labels</span> ((maybe-space ()
+                  (<span class="k">and</span> (looking-at <span class="s">"\\w"</span>) (looking-back <span class="s">"\\w"</span> 1)
+                       (insert <span class="s">" "</span>)))
+                (maybe-newline ()
+                  (<span class="k">or</span> (looking-back <span class="s">"^[ \t]*"</span> 40) (looking-at <span class="s">"\n"</span>)
+                      (newline-and-indent)))
+                (maybe-whitespace ()
+                  (<span class="k">if</span> multiline (maybe-newline) (maybe-space)))
+                (ins-string ()
+                  (<span class="k">let</span> ((start (point)))
+                    (insert
+                     (mapconcat #'substring-no-properties strings separator))
+                    (<span class="k">save-excursion</span> (goto-char start) (maybe-whitespace))
+                    (<span class="k">when</span> (looking-back <span class="s">"\n"</span> 1) (delete-char -1))
+                    (<span class="k">save-excursion</span> (maybe-whitespace)))))
+      (<span class="k">if</span> buffer-read-only
+          (<span class="k">with-selected-window</span> (other-window-for-scrolling)
+            (ins-string))
+        (ins-string)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

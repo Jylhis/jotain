@@ -1,0 +1,85 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sops-find-file – Emacs Documentation Online</title>
+<meta name="description" content="sops-find-file is an interactive and natively compiled function
+defined in sops.el.
+Visit PATH; if PATH does not exist, create it as a new SOPS-encrypted file.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sops-find-file</code></h1><p><span class="m"><code>sops-find-file</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">sops.el</span>.
+<h2>Signature</h2>
+<pre><code>(sops-find-file <a href="#:~:text=Visit-,PATH"><span class="arg">PATH</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Visit <span class="arg">PATH</span>; if <span class="arg">PATH</span> does not exist, create it as a new SOPS-encrypted file.
+<p>For existing paths this delegates to <a href="../fun/find-file.html"><code>find-file</code></a> -- the v0.2
+<a href="../var/find-file-hook.html"><code>find-file-hook</code></a> handles transparent decryption when <a class="v" href="../var/global-sops-mode.html"><code>global-sops-mode</code>(var)</a>/<a class="f" href="../fun/global-sops-mode.html"><code>global-sops-mode</code>(fun)</a>
+is active.
+<p>For non-existent paths, signals <a href="../fun/user-error.html"><code>user-error</code></a> before any buffer is
+created if:
+<br>&nbsp;&nbsp;- <span class="arg">PATH</span> is empty, or names a directory (ends in <a href="../fun/_002f.html"><code>/</code></a>);
+<br>&nbsp;&nbsp;- <span class="arg">PATH</span> is remote (TRAMP);
+<br>&nbsp;&nbsp;- <span class="arg">PATH</span>'s parent directory does not exist;
+<br>&nbsp;&nbsp;- no <span class="m"><code>.sops.yaml</code></span> is reachable in any ancestor of <span class="arg">PATH</span>'s parent;
+<br>&nbsp;&nbsp;- sops binary is missing or older than 3.9.0.
+<p>Otherwise visits <span class="arg">PATH</span> (which creates an empty buffer with no file on
+disk yet), seeds it with a format-appropriate SOPS example -- ported
+from upstream sops's <span class="m"><code>EmitExample</code></span> -- and enables <a class="v" href="../var/sops-mode.html"><code>sops-mode</code>(var)</a>/<a class="f" href="../fun/sops-mode.html"><code>sops-mode</code>(fun)</a> in
+<br>'creating state.  On the first successful <a href="../fun/save-buffer.html"><code>save-buffer</code></a>, sops
+<br>encrypts the buffer's contents to <span class="arg">PATH</span> and the buffer transitions
+to the normal 'decrypted state.
+<p>Interactive: prompts via <a href="../fun/read-file-name.html"><code>read-file-name</code></a>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qkr1smn94fw9pj8qis6r47djxqbd30ki-emacs-packages-deps/share/emacs/site-lisp/elpa/sops-20260518.350/sops.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">sops-find-file</span> (path)
+  <span class="doc">"Visit PATH; if PATH does not exist, create it as a new SOPS-encrypted file.
+
+For existing paths this delegates to `</span><span class="m doc">find-file</span><span class="doc">' -- the v0.2
+`</span><span class="m doc">find-file-hook</span><span class="doc">' handles transparent decryption when `</span><span class="m doc">global-sops-mode</span><span class="doc">'
+is active.
+
+For non-existent paths, signals `</span><span class="m doc">user-error</span><span class="doc">' before any buffer is
+created if:
+  - PATH is empty, or names a directory (ends in `</span><span class="m doc">/</span><span class="doc">');
+  - PATH is remote (TRAMP);
+  - PATH's parent directory does not exist;
+  - no `</span><span class="m doc">.sops.yaml</span><span class="doc">' is reachable in any ancestor of PATH's parent;
+  - sops binary is missing or older than 3.9.0.
+
+Otherwise visits PATH (which creates an empty buffer with no file on
+disk yet), seeds it with a format-appropriate SOPS example -- ported
+from upstream sops's `</span><span class="m doc">EmitExample</span><span class="doc">' -- and enables `</span><span class="m doc">sops-mode</span><span class="doc">' in
+</span><span class="bi doc">\\=</span><span class="doc">'creating state.  On the first successful `</span><span class="m doc">save-buffer</span><span class="doc">', sops
+encrypts the buffer's contents to PATH and the buffer transitions
+to the normal </span><span class="bi doc">\\=</span><span class="doc">'decrypted state.
+
+Interactive: prompts via `</span><span class="m doc">read-file-name</span><span class="doc">'."</span>
+  (<span class="k">interactive</span> (list (read-file-name <span class="s">"Find SOPS file: "</span>)))
+  (<span class="k">when</span> (string-empty-p path)
+    (<span class="w">user-error</span> <span class="s">"Sops-find-file: not a file path: %s"</span> path))
+  (<span class="k">let</span> ((path (expand-file-name path)))
+    (<span class="k">when</span> (directory-name-p path)
+      (<span class="w">user-error</span> <span class="s">"Sops-find-file: not a file path: %s"</span> path))
+    (<span class="k">when</span> (file-remote-p path)
+      (<span class="w">user-error</span> <span class="s">"Sops-find-file: remote paths not supported: %s"</span> path))
+    (<span class="k">if</span> (file-exists-p path)
+        (find-file path)
+      (<span class="k">let</span> ((parent (file-name-directory path)))
+        (<span class="k">unless</span> (<span class="k">and</span> parent (file-exists-p parent))
+          (<span class="w">user-error</span> <span class="s">"Sops-find-file: parent directory does not exist: %s"</span>
+                      parent))
+        (<span class="k">unless</span> (locate-dominating-file parent <span class="s">".sops.yaml"</span>)
+          (<span class="w">user-error</span>
+           <span class="s">"Sops-find-file: no .sops.yaml found in any ancestor of %s"</span>
+           parent))
+        (sops--ensure-version)
+        (<span class="k">let</span> ((format (sops--format-for path)))
+          (find-file path)
+          (sops--start-creation format))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

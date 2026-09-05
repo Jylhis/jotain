@@ -1,0 +1,79 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: global-kkp-mode – Emacs Documentation Online</title>
+<meta name="description" content="global-kkp-mode is a customizable variable defined in kkp.el.
+Non-nil if Global Kkp mode is enabled.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>global-kkp-mode</code></h1><p><span class="m"><code>global-kkp-mode</code></span> is a <a href="/info/elisp/variable-definitions.html">customizable</a> variable defined in <span class="bt">kkp.el</span>.
+<h2>Value</h2>
+<pre><code>nil
+</code></pre>
+<h2>Documentation</h2>
+<p>Non-nil if Global Kkp mode is enabled.
+<p>See the <a class="v" href="../var/global-kkp-mode.html"><code>global-kkp-mode</code>(var)</a>/<a class="f" href="../fun/global-kkp-mode.html"><code>global-kkp-mode</code>(fun)</a> command
+for a description of this minor mode.
+Setting this variable directly does not take effect;
+either customize it (see the info node <a href="/info/emacs/easy-customization.html">(emacs)Easy Customization</a>)
+or call the function <a class="v" href="../var/global-kkp-mode.html"><code>global-kkp-mode</code>(var)</a>/<a class="f" href="../fun/global-kkp-mode.html"><code>global-kkp-mode</code>(fun)</a>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/m2b3xmgxg24a6yvrhn2hs2kx62d820n5-emacs-packages-deps/share/emacs/site-lisp/elpa/kkp-20260706.858/kkp.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">define-minor-mode</span> <span class="f">global-kkp-mode</span>
+  <span class="doc">"Toggle KKP support in all terminal frames."</span>
+  <span class="bi">:global</span> t
+  <span class="bi">:lighter</span> nil
+  <span class="bi">:group</span> 'kkp
+  (<span class="k">cond</span>
+   (global-kkp-mode
+    <span class="cd">;; </span><span class="c">if terminal has KKP enabled, it supports symbol names as keys
+</span>    (advice-add 'display-symbol-keys-p <span class="bi">:around</span> #'kkp--display-symbol-keys-p)
+    <span class="cd">;; </span><span class="c">call setup for future terminals to be opened
+</span>    (add-hook 'tty-setup-hook #'kkp-enable-in-terminal)
+    <span class="cd">;; </span><span class="c">call teardown for terminals to be closed
+</span>    (add-hook 'kill-emacs-hook #'kkp--disable-in-active-terminals)
+    <span class="cd">;; </span><span class="c">we call this on each frame teardown, this has no effects if kkp is not enabled
+</span>    (add-to-list 'delete-terminal-functions #'kkp--terminal-teardown)
+    (add-hook 'suspend-hook #'kkp--suspend-in-terminal)
+    (add-hook 'suspend-resume-hook #'kkp--resume-in-terminal)
+    (add-hook 'suspend-tty-functions #'kkp--suspend-in-terminal)
+    (add-hook 'resume-tty-functions #'kkp--resume-in-terminal)
+    (advice-add 'delete-frame <span class="bi">:before</span> #'kkp--pre-delete-frame)
+    <span class="cd">;; </span><span class="c">opt-in: let C-g abort blocking call-process calls (see the defcustom)
+</span>    (<span class="k">when</span> kkp-restore-legacy-keys-around-subprocesses
+      (advice-add 'call-process <span class="bi">:around</span> #'kkp-restore-legacy-keys))
+
+
+    <span class="cd">;; </span><span class="c">this is by far the most reliable method to enable kkp in all associated terminals
+</span>    <span class="cd">;; </span><span class="c">trying to switch to each terminal with `</span><span class="m c">with-selected-frame</span><span class="c">' does not work very well
+</span>    <span class="cd">;; </span><span class="c">as input from `</span><span class="m c">read-event</span><span class="c">' cannot be reliably read from the corresponding terminal
+</span>    (<span class="k">add-function</span> <span class="bi">:after</span> after-focus-change-function #'kkp-focus-change)
+    <span class="cd">;; </span><span class="c">forget which terminals were enable-attempted, so focus re-enables them
+</span>    (<span class="k">dolist</span> (terminal (terminal-list))
+      (<span class="k">let</span> ((state (kkp--terminal-state terminal)))
+        (<span class="k">when</span> state
+          (<span class="k">setf</span> (kkp--state-setup-visited state) nil))))
+
+    <span class="cd">;; </span><span class="c">At startup, this global mode might be called before the '</span><span class="m c">tty-setup-hook</span><span class="c">'.
+</span>    <span class="cd">;; </span><span class="c">To avoid running '</span><span class="m c">kkp-enable-in-terminal</span><span class="c">' before, we only run it if
+</span>    <span class="cd">;; </span><span class="c">the '</span><span class="m c">tty-run-terminal-initialization</span><span class="c">' already ran.
+</span>    (<span class="k">when</span> (terminal-parameter (kkp--selected-terminal) 'terminal-initted)
+      (kkp-enable-in-terminal)))
+   (t
+    (advice-remove 'display-symbol-keys-p #'kkp--display-symbol-keys-p)
+    (kkp--disable-in-active-terminals)
+    (remove-hook 'tty-setup-hook #'kkp-enable-in-terminal)
+    (remove-hook 'kill-emacs-hook #'kkp--disable-in-active-terminals)
+    (remove-hook 'suspend-hook #'kkp--suspend-in-terminal)
+    (remove-hook 'suspend-resume-hook #'kkp--resume-in-terminal)
+    (remove-hook 'suspend-tty-functions #'kkp--suspend-in-terminal)
+    (remove-hook 'resume-tty-functions #'kkp--resume-in-terminal)
+    (advice-remove 'delete-frame #'kkp--pre-delete-frame)
+    (advice-remove 'call-process #'kkp-restore-legacy-keys)
+    (<span class="k">remove-function</span> after-focus-change-function #'kkp-focus-change)
+    (<span class="k">setq</span> delete-terminal-functions (delete #'kkp--terminal-teardown delete-terminal-functions)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

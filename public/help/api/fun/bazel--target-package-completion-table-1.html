@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--target-package-completion-table-1 – Emacs Documentation Online</title>
+<meta name="description" content="bazel--target-package-completion-table-1 is a natively compiled
+function defined in bazel.el.
+Return a completion table for Bazel packages found in DIRECTORY.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--target-package-completion-table-1</code></h1><p><span class="m"><code>bazel--target-package-completion-table-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--target-package-completion-table-1 <a href="#:~:text=in-,DIRECTORY"><span class="arg">DIRECTORY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a completion table for Bazel packages found in <span class="arg">DIRECTORY</span>.
+<p>This is a helper function for
+<br>‘bazel--target-package-completion-table’.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--target-package-completion-table-1</span> (directory)
+  <span class="doc">"Return a completion table for Bazel packages found in DIRECTORY.
+This is a helper function for
+‘</span><span class="m doc">bazel--target-package-completion-table</span><span class="doc">’."</span>
+  (<span class="w">cl-check-type</span> directory string)
+  (<span class="k">lambda</span> (string predicate action)
+    (<span class="w">cl-check-type</span> string string)
+    (<span class="w">cl-check-type</span> predicate (<span class="k">or</span> null function))
+    (<span class="k">let</span> ((completion-regexp-list
+           <span class="cd">;; </span><span class="c">Restrict completions to valid package names.
+</span>           (cons (<span class="k">rx</span> bos (+ (any <span class="s">"A-Z"</span> <span class="s">"a-z"</span> <span class="s">"0-9"</span> ?_ ?- ?.)) eos)
+                 completion-regexp-list)))
+      (<span class="k">bazel--make-conjunction</span> predicate candidate
+        (bazel--target-completion-directory-p candidate))
+      (<span class="k">ignore-error</span> file-error
+        <span class="cd">;; </span><span class="c">‘</span><span class="m c">file-name-completion</span><span class="c">’ and ‘</span><span class="m c">file-name-all-completions</span><span class="c">’ always
+</span>        <span class="cd">;; </span><span class="c">return directories as directory names.  Since a directory name
+</span>        <span class="cd">;; </span><span class="c">isn’t a valid package name, and we don’t want to give the user the
+</span>        <span class="cd">;; </span><span class="c">impression that they can’t enter a colon, strip the trailing slash.
+</span>        (<span class="k">pcase</span> action
+          ('nil
+           (<span class="k">when-let*</span> ((res (file-name-completion string directory predicate)))
+             (bazel--remove-slash res)))
+          ('t
+           (<span class="k">cl-loop</span> for cand in (file-name-all-completions string directory)
+                    when (funcall predicate cand)
+                    collect (bazel--remove-slash cand)))
+          ('lambda
+            <span class="cd">;; </span><span class="c">We complete target patterns, not packages!  In particular, a
+</span>            <span class="cd">;; </span><span class="c">valid target pattern can’t end in a slash.
+</span>            (<span class="k">and</span> (not (string-empty-p string))
+                 (not (directory-name-p string))
+                 (file-accessible-directory-p
+                  (expand-file-name string directory))
+                 (funcall predicate directory)))
+          (`(boundaries . ,suffix)
+           `(boundaries 0 . ,(string-match-p (<span class="k">rx</span> (any ?/ ?:)) suffix))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

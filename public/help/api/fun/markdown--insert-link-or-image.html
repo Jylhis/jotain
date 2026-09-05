@@ -1,0 +1,90 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown--insert-link-or-image – Emacs Documentation Online</title>
+<meta name="description" content="markdown--insert-link-or-image is a natively compiled function defined
+in markdown-mode.el.
+Interactively insert new or update an existing link or image.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown--insert-link-or-image</code></h1><p><span class="m"><code>markdown--insert-link-or-image</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown--insert-link-or-image <a href="#:~:text=When-,IMAGE"><span class="arg">IMAGE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Interactively insert new or update an existing link or image.
+<p>When <span class="arg">IMAGE</span> is non-nil, insert an image.  Otherwise, insert a link.
+This is an internal function called by
+<a href="../fun/markdown-insert-link.html"><code>markdown-insert-link</code></a> and <a href="../fun/markdown-insert-image.html"><code>markdown-insert-image</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown--insert-link-or-image</span> (image)
+  <span class="doc">"Interactively insert new or update an existing link or image.
+When IMAGE is non-nil, insert an image.  Otherwise, insert a link.
+This is an internal function called by
+`</span><span class="m doc">markdown-insert-link</span><span class="doc">' and `</span><span class="m doc">markdown-insert-image</span><span class="doc">'."</span>
+  (<span class="k">cl-multiple-value-bind</span> (begin end text uri ref title)
+      (<span class="k">if</span> (use-region-p)
+          <span class="cd">;; </span><span class="c">Use region as either link text or URL as appropriate.
+</span>          (<span class="k">let</span> ((region (buffer-substring-no-properties
+                         (region-beginning) (region-end))))
+            (<span class="k">if</span> (string-match markdown-regex-uri region)
+                <span class="cd">;; </span><span class="c">Region contains a URL; use it as such.
+</span>                (list (region-beginning) (region-end)
+                      nil (match-string 0 region) nil nil)
+              <span class="cd">;; </span><span class="c">Region doesn't contain a URL, so use it as text.
+</span>              (list (region-beginning) (region-end)
+                    region nil nil nil)))
+        <span class="cd">;; </span><span class="c">Extract and use properties of existing link, if any.
+</span>        (markdown-link-at-pos (point)))
+    (<span class="k">let*</span> ((ref (<span class="k">when</span> ref (concat <span class="s">"["</span> ref <span class="s">"]"</span>)))
+           (defined-refs (mapcar #'car (markdown-get-defined-references)))
+           (defined-ref-cands (mapcar (<span class="k">lambda</span> (ref) (concat <span class="s">"["</span> ref <span class="s">"]"</span>)) defined-refs))
+           (used-uris (markdown-get-used-uris))
+           (uri-or-ref (completing-read
+                        <span class="s">"URL or [reference]: "</span>
+                        (append defined-ref-cands used-uris)
+                        nil nil (<span class="k">or</span> uri ref)))
+           (ref (<span class="k">cond</span> ((string-match <span class="s">"\\`\\[</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\]\\'"</span> uri-or-ref)
+                       (match-string 1 uri-or-ref))
+                      ((string-equal <span class="s">""</span> uri-or-ref)
+                       <span class="s">""</span>)))
+           (uri (<span class="k">unless</span> ref uri-or-ref))
+           (text-prompt (<span class="k">if</span> image
+                            <span class="s">"Alt text: "</span>
+                          (<span class="k">if</span> ref
+                              <span class="s">"Link text: "</span>
+                            <span class="s">"Link text (blank for plain URL): "</span>)))
+           (text (<span class="k">or</span> text (<span class="k">and</span> markdown-link-make-text-function uri
+                               (funcall markdown-link-make-text-function uri))))
+           (text (completing-read text-prompt defined-refs nil nil text))
+           (text (<span class="k">if</span> (= (length text) 0) nil text))
+           (plainp (<span class="k">and</span> uri (not text)))
+           (implicitp (string-equal ref <span class="s">""</span>))
+           (ref (<span class="k">if</span> implicitp text ref))
+           (definedp (<span class="k">and</span> ref (markdown-reference-definition ref)))
+           (ref-url (<span class="k">unless</span> (<span class="k">or</span> uri definedp)
+                      (completing-read <span class="s">"Reference URL: "</span> used-uris)))
+           (title (<span class="k">unless</span> (<span class="k">or</span> plainp definedp markdown-disable-tooltip-prompt)
+                    (read-string <span class="s">"Title (tooltip text, optional): "</span> title)))
+           (title (<span class="k">if</span> (= (length title) 0) nil title)))
+      (<span class="k">when</span> (<span class="k">and</span> image implicitp)
+        (<span class="w">user-error</span> <span class="s">"Reference required: implicit image references are invalid"</span>))
+      (<span class="k">when</span> (<span class="k">and</span> begin end)
+        (delete-region begin end))
+      (<span class="k">cond</span>
+       ((<span class="k">and</span> (not image) uri text)
+        (markdown-insert-inline-link text uri title))
+       ((<span class="k">and</span> image uri text)
+        (markdown-insert-inline-image text uri title))
+       ((<span class="k">and</span> ref text)
+        (<span class="k">if</span> image
+            (markdown-insert-reference-image text (<span class="k">unless</span> implicitp ref) nil title)
+          (markdown-insert-reference-link text (<span class="k">unless</span> implicitp ref) nil title))
+        (<span class="k">unless</span> definedp
+          (markdown-insert-reference-definition ref ref-url title)))
+       ((<span class="k">and</span> (not image) uri)
+        (markdown-insert-uri uri))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

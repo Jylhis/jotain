@@ -1,0 +1,72 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--target-completion-table-2 – Emacs Documentation Online</title>
+<meta name="description" content="bazel--target-completion-table-2 is a natively compiled function
+defined in bazel.el.
+Return a completion table for Bazel targets or target patterns.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--target-completion-table-2</code></h1><p><span class="m"><code>bazel--target-completion-table-2</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--target-completion-table-2 <a href="#:~:text=patterns.-,ROOT"><span class="arg">ROOT</span></a> <a href="#:~:text=root,-,REPOSITORY"><span class="arg">REPOSITORY</span></a> <a href="#:~:text=and-,PACKAGE"><span class="arg">PACKAGE</span></a> <a href="#:~:text=If-,PATTERN"><span class="arg">PATTERN</span></a> <a href="#:~:text=If-,ONLY-TESTS"><span class="arg">ONLY-TESTS</span></a> <a href="#:~:text=If-,COLON"><span class="arg">COLON</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a completion table for Bazel targets or target patterns.
+<p><span class="arg">ROOT</span> is the main repository root, <span class="arg">REPOSITORY</span> is the external
+repository name or the empty string for the main repository, and
+<span class="arg">PACKAGE</span> is the package name within the repository.  If <span class="arg">PATTERN</span> is
+non-nil, complete target patterns, include target wildcards like
+<br>“:all”, and skip files.  If <span class="arg">ONLY-TESTS</span> is non-nil, restrict rule
+<br>target completion to test targets.  If <span class="arg">COLON</span> is non-nil, prefix
+the wildcards with a colon.  This is a helper function for
+<br>‘bazel--target-completion-table’.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--target-completion-table-2</span>
+    (root repository package pattern only-tests colon)
+  <span class="doc">"Return a completion table for Bazel targets or target patterns.
+ROOT is the main repository root, REPOSITORY is the external
+repository name or the empty string for the main repository, and
+PACKAGE is the package name within the repository.  If PATTERN is
+non-nil, complete target patterns, include target wildcards like
+“:all”, and skip files.  If ONLY-TESTS is non-nil, restrict rule
+target completion to test targets.  If COLON is non-nil, prefix
+the wildcards with a colon.  This is a helper function for
+‘</span><span class="m doc">bazel--target-completion-table</span><span class="doc">’."</span>
+  (<span class="w">cl-check-type</span> root string)
+  (<span class="w">cl-check-type</span> repository string)
+  (<span class="w">cl-check-type</span> package string)
+  (<span class="k">when-let*</span> ((external-root (<span class="k">if</span> (string-empty-p repository) root
+                               (bazel--external-repository repository root)))
+              (build-file (bazel--locate-build-file
+                           (expand-file-name package external-root))))
+    (<span class="k">let</span> ((completion-regexp-list
+           (cons (<span class="k">rx</span> bos (+ (any <span class="s">"a-z"</span> <span class="s">"A-Z"</span> <span class="s">"0-9"</span> ?-
+                                 <span class="s">"!%@^_` \"#$&amp;'()*+,;&lt;=&gt;?[]{|}~/."</span>)
+                            eos))
+                 completion-regexp-list)))
+      (completion-table-merge
+       (completion-table-with-cache
+        (<span class="k">lambda</span> (prefix)
+          (<span class="w">cl-check-type</span> prefix string)
+          (append
+           (<span class="k">bazel--with-file-buffer</span> existing build-file
+             <span class="cd">;; </span><span class="c">‘</span><span class="m c">bazel--complete-targets</span><span class="c">’ only works in ‘</span><span class="m c">bazel-mode</span><span class="c">’.
+</span>             (<span class="k">unless</span> existing (bazel-build-mode))
+             (bazel--complete-targets prefix only-tests))
+           (<span class="k">unless</span> pattern
+             <span class="cd">;; </span><span class="c">Include source files only if we’re not completing a target
+</span>             <span class="cd">;; </span><span class="c">pattern.  Building a source file makes no sense.
+</span>             (<span class="k">let</span> ((default-directory (file-name-directory build-file)))
+               (bazel--complete-files prefix)))))
+        completion-ignore-case)
+       <span class="cd">;; </span><span class="c">We only want to add the wildcards if this is indeed a package.  Do
+</span>       <span class="cd">;; </span><span class="c">this here so that we don’t have to check twice.
+</span>       (<span class="k">when</span> pattern
+         (<span class="k">if</span> colon
+             '(<span class="s">":all"</span> <span class="s">":all-targets"</span> <span class="s">":*"</span>)
+           '(<span class="s">"all"</span> <span class="s">"all-targets"</span> <span class="s">"*"</span>)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

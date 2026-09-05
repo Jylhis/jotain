@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-diff-show-or-scroll – Emacs Documentation Online</title>
+<meta name="description" content="magit-diff-show-or-scroll is a natively compiled function defined in
+magit-diff.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-diff-show-or-scroll</code></h1><p><span class="m"><code>magit-diff-show-or-scroll</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-diff-show-or-scroll <span class="arg">FN</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-diff.el</span>
+(<span class="k">defun</span> <span class="f">magit-diff-show-or-scroll</span> (fn)
+  (<span class="k">let</span> (rev cmd buf)
+    (<span class="k">cond</span>
+      ((<span class="k">and</span> (<span class="k">bound-and-true-p</span> magit-blame-mode)
+            (fboundp 'magit-current-blame-chunk))
+       (<span class="k">setq</span> rev (<span class="k">oref</span> (magit-current-blame-chunk) orig-rev))
+       (<span class="k">setq</span> cmd #'magit-show-commit)
+       (<span class="k">setq</span> buf (magit-get-mode-buffer 'magit-revision-mode)))
+      ((derived-mode-p 'git-rebase-mode)
+       (<span class="k">with-slots</span> (action-type target)
+           (git-rebase-current-line)
+         (<span class="k">if</span> (not (eq action-type 'commit))
+             (<span class="w">user-error</span> <span class="s">"No commit on this line"</span>)
+           (<span class="k">setq</span> rev target)
+           (<span class="k">setq</span> cmd #'magit-show-commit)
+           (<span class="k">setq</span> buf (magit-get-mode-buffer 'magit-revision-mode)))))
+      ((<span class="k">magit-section-case</span>
+         (branch
+          (<span class="k">setq</span> rev (magit-ref-maybe-qualify (<span class="k">oref</span> it value)))
+          (<span class="k">setq</span> cmd #'magit-show-commit)
+          (<span class="k">setq</span> buf (magit-get-mode-buffer 'magit-revision-mode)))
+         (commit
+          (<span class="k">setq</span> rev (<span class="k">oref</span> it value))
+          (<span class="k">setq</span> cmd #'magit-show-commit)
+          (<span class="k">setq</span> buf (magit-get-mode-buffer 'magit-revision-mode)))
+         (tag
+          (<span class="k">setq</span> rev (magit-commit-oid (<span class="k">oref</span> it value)))
+          (<span class="k">setq</span> cmd #'magit-show-commit)
+          (<span class="k">setq</span> buf (magit-get-mode-buffer 'magit-revision-mode)))
+         (stash
+          (<span class="k">setq</span> rev (<span class="k">oref</span> it value))
+          (<span class="k">setq</span> cmd #'magit-stash-show)
+          (<span class="k">setq</span> buf (magit-get-mode-buffer 'magit-stash-mode))))))
+    (<span class="k">cond-let*</span>
+      ((not rev)
+       (call-interactively #'magit-show-commit))
+      ([_ buf]
+       [win (get-buffer-window buf)]
+       [_ (equal (buffer-local-value 'magit-buffer-revision buf) rev)]
+       [_ (equal (buffer-local-value 'magit-buffer-revision-oid buf)
+                 (magit-rev-parse rev))]
+       (<span class="k">with-selected-window</span> win
+         (<span class="k">condition-case</span> nil
+             (funcall fn)
+           (<span class="w">error</span>
+            (<span class="k">pcase-exhaustive</span> fn
+              ('scroll-up   (goto-char (point-min)))
+              ('scroll-down (goto-char (point-max))))))))
+      [[magit-display-buffer-noselect t]]
+      ((eq cmd #'magit-show-commit)
+       (apply #'magit-show-commit rev (magit-show-commit--arguments)))
+      ((funcall cmd rev)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

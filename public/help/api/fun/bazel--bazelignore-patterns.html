@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--bazelignore-patterns – Emacs Documentation Online</title>
+<meta name="description" content="bazel--bazelignore-patterns is a natively compiled function defined in
+bazel.el.
+Parse a .bazelignore file in REPOSITORY-ROOT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--bazelignore-patterns</code></h1><p><span class="m"><code>bazel--bazelignore-patterns</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--bazelignore-patterns <a href="#:~:text=in-,REPOSITORY-ROOT"><span class="arg">REPOSITORY-ROOT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse a .bazelignore file in <span class="arg">REPOSITORY-ROOT</span>.
+<p>Return a list of glob patterns for ‘project-ignores’.
+Return nil if no .bazelignore file exists.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--bazelignore-patterns</span> (repository-root)
+  <span class="doc">"Parse a .bazelignore file in REPOSITORY-ROOT.
+Return a list of glob patterns for ‘</span><span class="m doc">project-ignores</span><span class="doc">’.
+Return nil if no .bazelignore file exists."</span>
+  (<span class="w">cl-check-type</span> repository-root string)
+  (<span class="k">with-temp-buffer</span>
+    <span class="cd">;; </span><span class="c">Bazel always treats .bazelignore files as UTF-8,
+</span>    <span class="cd">;; </span><span class="c">cf. https://github.com/bazelbuild/bazel/blob/09c621e4cf5b968f4c6cdf905ab142d5961f9ddc/src/main/java/com/google/devtools/build/lib/skyframe/IgnoredPackagePrefixesFunction.java#L52.
+</span>    (<span class="k">let</span> ((coding-system-for-read 'utf-8)
+          (format-alist nil)
+          (after-insert-file-functions nil)
+          (bazelignore-file (expand-file-name <span class="s">".bazelignore"</span> repository-root))
+          (patterns ()))
+      <span class="cd">;; </span><span class="c">It’s not a critical error if the .bazelignore file doesn’t exist or we
+</span>      <span class="cd">;; </span><span class="c">can’t read it.
+</span>      (<span class="k">when</span> (<span class="k">ignore-error</span> file-error (insert-file-contents bazelignore-file))
+        <span class="cd">;; </span><span class="c">Replicate behavior of
+</span>        <span class="cd">;; </span><span class="c">https://github.com/bazelbuild/bazel/blob/09c621e4cf5b968f4c6cdf905ab142d5961f9ddc/src/main/java/com/google/devtools/build/lib/skyframe/IgnoredPackagePrefixesFunction.java#L122-L127.
+</span>        (<span class="k">while</span> (not (eobp))
+          (<span class="k">unless</span> (<span class="k">or</span> (eolp) (eq (following-char) ?#))
+            <span class="cd">;; </span><span class="c">This glob pattern isn’t quite correct if the line contains
+</span>            <span class="cd">;; </span><span class="c">wildcard characters, but we have no way to escape them.
+</span>            (<span class="k">push</span> (concat <span class="s">"./"</span> (file-name-as-directory
+                                (buffer-substring-no-properties
+                                 (point) (line-end-position))))
+                  patterns))
+          (forward-line))
+        (nreverse patterns)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

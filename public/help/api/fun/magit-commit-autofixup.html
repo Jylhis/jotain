@@ -1,0 +1,68 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-commit-autofixup – Emacs Documentation Online</title>
+<meta name="description" content="magit-commit-autofixup is an interactive and natively compiled
+function defined in magit-commit.el.
+Spread staged or unstaged changes across recent commits.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-commit-autofixup</code></h1><p><span class="m"><code>magit-commit-autofixup</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">magit-commit.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-commit-autofixup <a href="#:~:text="><span class="arg">ARG1</span></a> <a href="#:~:text="><span class="arg">ARG2</span></a> <a href="#:~:text="><span class="arg">ARG3</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Spread staged or unstaged changes across recent commits.
+<p>If there are any staged then spread only those, otherwise spread all
+unstaged changes.  With a prefix argument use a transient command to
+select infix arguments.
+<p>This command requires the git-autofixup script, which is available from
+<a href="https://github.com/torbiak/git-autofixup">https://github.com/torbiak/git-autofixup</a>.  See <a href="../fun/magit-commit-absorb.html"><code>magit-commit-absorb</code></a> for
+an alternative implementation.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-commit.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">(autoload 'magit-commit-autofixup "magit-commit" nil t)
+</span>(<span class="k">transient-define-prefix</span> <span class="f">magit-commit-autofixup</span> (phase commit args)
+  <span class="doc">"Spread staged or unstaged changes across recent commits.
+
+If there are any staged then spread only those, otherwise spread all
+unstaged changes.  With a prefix argument use a transient command to
+select infix arguments.
+
+This command requires the git-autofixup script, which is available from
+https://github.com/torbiak/git-autofixup.  See `</span><span class="m doc">magit-commit-absorb</span><span class="doc">' for
+an alternative implementation."</span>
+  <span class="bi">:value</span> '(<span class="s">"-vv"</span>)
+  [<span class="s">"Arguments"</span>
+   (magit-autofixup:--context)
+   (magit-autofixup:--strict)
+   (<span class="s">"-v"</span> <span class="s">"Increase verbosity"</span> <span class="s">"-vv"</span>)]
+  [<span class="s">"Actions"</span>
+   (<span class="s">"x"</span>  <span class="s">"Absorb"</span> magit-commit-autofixup)]
+  (<span class="k">interactive</span> (<span class="k">if</span> current-prefix-arg
+                   (list 'transient nil nil)
+                 (list 'select
+                       (and$ (magit-get-upstream-branch)
+                             (magit-merge-base $ <span class="s">"HEAD"</span>))
+                       (transient-args 'magit-commit-autofixup))))
+  (<span class="k">if</span> (eq phase 'transient)
+      (transient-setup 'magit-commit-autofixup)
+    (<span class="k">unless</span> (magit-git-executable-find <span class="s">"git-autofixup"</span>)
+      (<span class="w">user-error</span> <span class="s">"This command requires the git-autofixup script, which %s"</span>
+                  <span class="s">"is available from https://github.com/torbiak/git-autofixup"</span>))
+    (<span class="k">unless</span> (magit-anything-modified-p)
+      (<span class="w">user-error</span> <span class="s">"There are no changes that could be absorbed"</span>))
+    (<span class="k">when</span> commit
+      (<span class="k">setq</span> commit (magit-rebase-interactive-assert commit t)))
+    (<span class="k">if</span> (<span class="k">and</span> commit (eq phase 'run))
+        (<span class="k">prog1</span> t (magit-run-git-async <span class="s">"autofixup"</span> args commit))
+      (magit-log-select
+        (<span class="k">lambda</span> (commit)
+          (with-no-warnings <span class="cd">; </span><span class="c">about non-interactive use
+</span>            (magit-commit-autofixup 'run commit args)))
+        nil nil nil nil commit))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

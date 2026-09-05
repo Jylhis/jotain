@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dirvish--clear-session – Emacs Documentation Online</title>
+<meta name="description" content="dirvish--clear-session is a natively compiled function defined in
+dirvish.el.
+Reset DV's slot and kill its buffers.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dirvish--clear-session</code></h1><p><span class="m"><code>dirvish--clear-session</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dirvish.el</span>.
+<h2>Signature</h2>
+<pre><code>(dirvish--clear-session <a href="#:~:text=Reset-,DV"><span class="arg">DV</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=buffers.-,FROM-QUIT"><span class="arg">FROM-QUIT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Reset <span class="arg">DV</span>'s slot and kill its buffers.
+<p><span class="arg">FROM-QUIT</span> is used to signify the calling command.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a7h73ip6x5m1pxn38j7f0al6n93w904q-emacs-packages-deps/share/emacs/site-lisp/elpa/dirvish-20260725.1520/dirvish.el</span>
+(<span class="k">defun</span> <span class="f">dirvish--clear-session</span> (dv <span class="ty">&amp;optional</span> from-quit)
+  <span class="doc">"Reset DV's slot and kill its buffers.
+FROM-QUIT is used to signify the calling command."</span>
+  (<span class="k">let*</span> ((idx (dv-index dv)) (ff (dv-curr-layout dv)) (wcon (dv-winconf dv))
+         (server-buf? (<span class="k">lambda</span> (root) (<span class="k">with-current-buffer</span> (cdr root)
+                                  (<span class="k">bound-and-true-p</span> server-buffer-clients))))
+         (keep (list idx)) roots kill-buffer-hook)
+    (<span class="k">cl-loop</span> with killer = (<span class="k">lambda</span> (r) (<span class="k">unless</span> (member r keep) (kill-buffer (cdr r))))
+             for root in (<span class="k">setq</span> roots (dv-roots dv))
+             if (<span class="k">or</span> (get-buffer-window (cdr root)) (funcall server-buf? root))
+             do (<span class="k">cl-pushnew</span> root keep <span class="bi">:test</span> #'equal)
+             finally do (mapc killer roots))
+    (<span class="k">when</span> (<span class="k">and</span> ff wcon) (set-window-configuration wcon))
+    (set-window-fringes
+     nil (frame-parameter nil 'left-fringe) (frame-parameter nil 'left-fringe))
+    (mapc #'dirvish--kill-buffer (dv-preview-buffers dv))
+    (mapc #'dirvish--kill-buffer (dv-special-buffers dv))
+    (<span class="k">when</span> (<span class="k">or</span> (null dirvish-reuse-session)
+              (eq dirvish-reuse-session (<span class="k">if</span> from-quit 'open 'quit)))
+      (<span class="k">unless</span> (<span class="k">or</span> (funcall server-buf? idx) <span class="cd">; </span><span class="c">client buf or displayed elsewhere
+</span>                  (length&gt; (get-buffer-window-list (cdr idx)) 1))
+        (kill-buffer (cdr idx))))
+    (<span class="k">setq</span> roots (cl-remove-if-not (<span class="k">lambda</span> (i) (buffer-live-p (cdr i))) keep))
+    (<span class="k">setf</span> (dv-preview-hash dv) (dirvish--ht) (dv-parent-hash dv) (dirvish--ht)
+          (dv-roots dv) roots (dv-index dv) (car roots)
+          (dv-preview-buffers dv) nil (dv-winconf dv) nil)
+    (<span class="k">unless</span> roots (remhash (dv-id dv) dirvish--sessions))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

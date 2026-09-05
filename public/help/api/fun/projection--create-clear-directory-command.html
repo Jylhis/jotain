@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: projection--create-clear-directory-command – Emacs Documentation Online</title>
+<meta name="description" content="projection--create-clear-directory-command is a natively compiled
+function defined in projection-core-misc.el.
+Create a interactive callback to clear the directory at DIRECTORY-GEN.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>projection--create-clear-directory-command</code></h1><p><span class="m"><code>projection--create-clear-directory-command</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">projection-core-misc.el</span>.
+<h2>Signature</h2>
+<pre><code>(projection--create-clear-directory-command <a href="#:~:text=at-,DIRECTORY-GEN"><span class="arg">DIRECTORY-GEN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create a interactive callback to clear the directory at <span class="arg">DIRECTORY-GEN</span>.
+<p><span class="arg">DIRECTORY-GEN</span> should be a:
+<br>- String or Symbol pointing to a string. This will be expanded relative to the
+<br>&nbsp;&nbsp;project root.
+<br>- A function which returns the directory as a string. It should take a single
+<br>&nbsp;&nbsp;argument which when true should make the function return a path that Emacs
+<br>&nbsp;&nbsp;itself can query (such as with tramp-prefixes). The default return value
+<br>&nbsp;&nbsp;should be a path that a compilation command could reference.
+<p>The returned command will check if the directory exists and prompt the user
+before running a compilation command to delete it.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kqajmnl5vwqnlsg3vcmlj2d28ylc2n0n-emacs-packages-deps/share/emacs/site-lisp/elpa/projection-20260614.1822/projection-core-misc.el</span>
+(<span class="k">defun</span> <span class="f">projection--create-clear-directory-command</span> (directory-gen)
+  <span class="doc">"Create a interactive callback to clear the directory at DIRECTORY-GEN.
+DIRECTORY-GEN should be a:
+- String or Symbol pointing to a string. This will be expanded relative to the
+  project root.
+- A function which returns the directory as a string. It should take a single
+  argument which when true should make the function return a path that Emacs
+  itself can query (such as with tramp-prefixes). The default return value
+  should be a path that a compilation command could reference.
+
+The returned command will check if the directory exists and prompt the user
+before running a compilation command to delete it."</span>
+  (<span class="k">lambda</span> ()
+    (<span class="k">interactive</span>)
+    (<span class="k">cl-destructuring-bind</span> (directory . directory-expanded)
+        (<span class="k">pcase</span> directory-gen
+          ((pred functionp)
+           (cons (funcall directory-gen nil)
+                 (funcall directory-gen 'expand)))
+          ((pred stringp)
+           (cons directory-gen (projection--expand-file-name-in-project directory-gen t)))
+          ((pred symbolp)
+           (<span class="k">let</span> ((directory (eval directory-gen)))
+             (cons directory (projection--expand-file-name-in-project directory t))))
+          (_ (<span class="w">error</span> <span class="s">"Clear directory command passed unsupported directory-gen type: %S"</span>
+                    directory-gen)))
+      (<span class="k">cond</span>
+       ((<span class="k">or</span> (not directory) (not directory-expanded))
+        (<span class="w">user-error</span> <span class="s">"Unable to determine directory to remove using %S"</span> directory-gen))
+       ((not (file-exists-p directory-expanded))
+        (<span class="w">user-error</span> <span class="s">"Directory %s already does not exist"</span> directory-expanded))
+       ((yes-or-no-p (format <span class="s">"Really remove directory at `</span><span class="m s">%s</span><span class="s">'?"</span> directory-expanded))
+        (<span class="k">let</span> ((default-directory (project-root (projection--current-project))))
+          (compile (concat <span class="s">"rm -rf "</span> (shell-quote-argument directory)))))
+       (t (message <span class="s">"Aborted removal of directory at %s"</span> directory-expanded))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

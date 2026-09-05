@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: async-start-process – Emacs Documentation Online</title>
+<meta name="description" content="async-start-process is a natively compiled function defined in
+async.el.
+Start the executable PROGRAM asynchronously named NAME.  See async-start.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>async-start-process</code></h1><p><span class="m"><code>async-start-process</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">async.el</span>.
+<h2>Signature</h2>
+<pre><code>(async-start-process <a href="#:~:text=named-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=executable-,PROGRAM"><span class="arg">PROGRAM</span></a> <a href="#:~:text=calling-,FINISH-FUNC"><span class="arg">FINISH-FUNC</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=passed-,PROGRAM-ARGS"><span class="arg">PROGRAM-ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Start the executable <span class="arg">PROGRAM</span> asynchronously named <span class="arg">NAME</span>.  See <a href="../fun/async-start.html"><code>async-start</code></a>.
+<p><span class="arg">PROGRAM</span> is passed <span class="arg">PROGRAM-ARGS</span>, calling <span class="arg">FINISH-FUNC</span> with the
+process object when done.  If <span class="arg">FINISH-FUNC</span> is nil, the future
+object will return the process object when the program is
+finished.  Set DEFAULT-DIRECTORY to change <span class="arg">PROGRAM</span>'s current
+working directory.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vpxd64bbf27n3ziyqnh29vmak5xnpk2l-emacs-packages-deps/share/emacs/site-lisp/elpa/async-20260729.1431/async.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">async-start-process</span> (name program finish-func <span class="ty">&amp;rest</span> program-args)
+  <span class="doc">"Start the executable PROGRAM asynchronously named NAME.  See `</span><span class="m doc">async-start</span><span class="doc">'.
+PROGRAM is passed PROGRAM-ARGS, calling FINISH-FUNC with the
+process object when done.  If FINISH-FUNC is nil, the future
+object will return the process object when the program is
+finished.  Set DEFAULT-DIRECTORY to change PROGRAM's current
+working directory."</span>
+  (<span class="k">let*</span> ((buf (generate-new-buffer (concat <span class="s">"*"</span> name <span class="s">"*"</span>)))
+         (buf-err (generate-new-buffer (concat <span class="s">"*"</span> name <span class="s">":err*"</span>)))
+         (prt-for-pwd async-prompt-for-password)
+         (proc (<span class="k">let</span> ((process-connection-type nil))
+                 (make-process
+                  <span class="bi">:name</span> name
+                  <span class="bi">:buffer</span> buf
+                  <span class="bi">:stderr</span> buf-err
+                  <span class="bi">:command</span> (cons program program-args)
+                  <span class="bi">:noquery</span> async-process-noquery-on-exit))))
+    (set-process-sentinel
+     (get-buffer-process buf-err)
+     (<span class="k">lambda</span> (proc _change)
+       (<span class="k">unless</span> (<span class="k">or</span> async-debug (process-live-p proc))
+         (kill-buffer (process-buffer proc)))))
+    (<span class="k">with-current-buffer</span> buf
+      (set (make-local-variable 'async-callback) finish-func)
+      (set (make-local-variable 'async-read-marker)
+           (set-marker (make-marker) (point-min) buf))
+      (set-marker-insertion-type async-read-marker nil)
+      (set-process-sentinel proc #'async-when-done)
+      <span class="cd">;; </span><span class="c">Pass the value of `</span><span class="m c">async-prompt-for-password</span><span class="c">' to the process
+</span>      <span class="cd">;; </span><span class="c">filter fn through the lexical local var prt-for-pwd (Issue#182).
+</span>      (set-process-filter proc (<span class="k">lambda</span> (proc string)
+                                 (async-read-from-client
+                                  proc string prt-for-pwd)))
+      (<span class="k">unless</span> (string= name <span class="s">"emacs"</span>)
+        (set (make-local-variable 'async-callback-for-process) t))
+      proc)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

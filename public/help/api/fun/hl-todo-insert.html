@@ -1,0 +1,75 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: hl-todo-insert – Emacs Documentation Online</title>
+<meta name="description" content="hl-todo-insert is an interactive and natively compiled function
+defined in hl-todo.el.
+Read a TODO or similar keyword and insert it at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>hl-todo-insert</code></h1><p><span class="m"><code>hl-todo-insert</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">hl-todo.el</span>.
+<h2>Signature</h2>
+<pre><code>(hl-todo-insert <a href="#:~:text=the-,KEYWORD"><span class="arg">KEYWORD</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Read a TODO or similar keyword and insert it at point.
+<p>If point is not inside a string or comment, then insert a new
+comment.  If point is at the end of the line, then insert the
+comment there, otherwise insert it as a new line before the
+current line.  When called interactively the <span class="arg">KEYWORD</span> is read
+via <a href="../fun/completing-read.html"><code>completing-read</code></a>.
+<p>If <a href="../var/hl-todo-require-punctuation.html"><code>hl-todo-require-punctuation</code></a> is non-nil and
+<a href="../var/hl-todo-highlight-punctuation.html"><code>hl-todo-highlight-punctuation</code></a> contains a single character,
+then append that character to the inserted string.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qpi14jchz4rd13fyys79w0acswf9phnl-emacs-packages-deps/share/emacs/site-lisp/elpa/hl-todo-20260601.1508/hl-todo.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">hl-todo-insert</span> (keyword)
+  <span class="doc">"Read a TODO or similar keyword and insert it at point.
+
+If point is not inside a string or comment, then insert a new
+comment.  If point is at the end of the line, then insert the
+comment there, otherwise insert it as a new line before the
+current line.  When called interactively the KEYWORD is read
+via `</span><span class="m doc">completing-read</span><span class="doc">'.
+
+If `</span><span class="m doc">hl-todo-require-punctuation</span><span class="doc">' is non-nil and
+`</span><span class="m doc">hl-todo-highlight-punctuation</span><span class="doc">' contains a single character,
+then append that character to the inserted string."</span>
+  (<span class="k">interactive</span>
+    (list (completing-read
+           <span class="s">"Insert keyword: "</span>
+           (mapcan (<span class="k">pcase-lambda</span> (`(,keyword . ,face))
+                     (<span class="k">and</span> (equal (regexp-quote keyword) keyword)
+                          (list (propertize keyword 'face
+                                            (hl-todo--combine-face face)))))
+                   hl-todo-keyword-faces))))
+  (<span class="k">let</span> ((keyword (<span class="k">if</span> (<span class="k">and</span> hl-todo-require-punctuation
+                          (length= hl-todo-highlight-punctuation 1))
+                     (concat keyword hl-todo-highlight-punctuation)
+                   keyword)))
+    (<span class="k">cond</span>
+      ((hl-todo--inside-comment-or-string-p)
+       (insert (concat (<span class="k">and</span> (not (memq (char-before) '(?\s ?\t))) <span class="s">" "</span>)
+                       keyword
+                       (<span class="k">and</span> (not (memq (char-after) '(?\s ?\t ?\n))) <span class="s">" "</span>))))
+      ((<span class="k">and</span> (eolp)
+            (not (looking-back <span class="s">"^[\s\t]*"</span> (line-beginning-position) t)))
+       (insert (concat (<span class="k">and</span> (not (memq (char-before) '(?\s ?\t))) <span class="s">" "</span>)
+                       (format <span class="s">"%s %s "</span> comment-start keyword))))
+      (t
+       (goto-char (line-beginning-position))
+       (insert (<span class="k">cond</span> ((derived-mode-p 'lisp-mode 'emacs-lisp-mode)
+                      (format <span class="s">"%s%s %s"</span> comment-start comment-start keyword))
+                     ((string-suffix-p <span class="s">" "</span> comment-start)
+                      (format <span class="s">"%s%s"</span> comment-start keyword))
+                     (t
+                      (format <span class="s">"%s %s"</span> comment-start keyword))))
+       (<span class="k">unless</span> (looking-at <span class="s">"[\s\t]*$"</span>)
+         (<span class="k">save-excursion</span> (insert <span class="s">"\n"</span>)))
+       (indent-region (line-beginning-position) (line-end-position))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

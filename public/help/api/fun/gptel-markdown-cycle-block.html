@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-markdown-cycle-block – Emacs Documentation Online</title>
+<meta name="description" content="gptel-markdown-cycle-block is an interactive and natively compiled
+function defined in gptel.el.
+Cycle code blocks in Markdown.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-markdown-cycle-block</code></h1><p><span class="m"><code>gptel-markdown-cycle-block</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-markdown-cycle-block)
+</code></pre>
+<h2>Documentation</h2>
+<p>Cycle code blocks in Markdown.
+<h2>Key Bindings</h2>
+<p><span class="v">gptel--markdown-block-map</span> <span class="key">&lt;tab&gt;</span>
+<span class="v">gptel--markdown-block-map</span> <span class="key">TAB</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel-markdown-cycle-block</span> ()
+  <span class="doc">"Cycle code blocks in Markdown."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">save-excursion</span>
+    (forward-line 0)
+    (<span class="k">let</span> (start end (parity 0))
+      (<span class="k">cond</span>            <span class="cd">;</span><span class="c">Find start and end of block, with possible nested blocks
+</span>       ((looking-at-p <span class="s">"^``` *\n"</span>)       <span class="cd">;</span><span class="c">end of block, find corresponding start
+</span>        (<span class="k">setq</span> parity -1 end (line-end-position))
+        (<span class="k">while</span> (<span class="k">and</span> (not (= parity 0)) (not (bobp)) (forward-line -1))
+          (<span class="k">cond</span> ((looking-at-p <span class="s">"^``` *\n"</span>) (<span class="k">cl-decf</span> parity))
+                ((looking-at-p <span class="s">"^``` ?[a-z]"</span>) (<span class="k">cl-incf</span> parity))))
+        (<span class="k">when</span> (= parity 0) (<span class="k">setq</span> start (point))))
+
+       ((looking-at-p <span class="s">"^``` ?[a-z]"</span>) <span class="cd">;</span><span class="c">beginning of block, find corresponding end
+</span>        (<span class="k">setq</span> parity 1 start (point))
+        (<span class="k">while</span> (<span class="k">and</span> (not (= parity 0)) (not (eobp)) (forward-line 1))
+          (<span class="k">cond</span> ((looking-at-p <span class="s">"^``` *\n"</span>) (<span class="k">cl-decf</span> parity))
+                ((looking-at-p <span class="s">"^``` ?[a-z]"</span>) (<span class="k">cl-incf</span> parity))))
+        (<span class="k">when</span> (= parity 0) (<span class="k">setq</span> end (line-end-position)))))
+      (<span class="k">when</span> (<span class="k">and</span> start end)
+        (goto-char start)
+        (end-of-line)
+        (<span class="k">pcase-let*</span> ((`(,value . ,hide-ov)
+                      (get-char-property-and-overlay (point) 'invisible)))
+          (<span class="k">if</span> (<span class="k">and</span> hide-ov (eq value t))
+              (delete-overlay hide-ov)
+            (<span class="k">unless</span> hide-ov (<span class="k">setq</span> hide-ov (make-overlay (point) end)))
+            (overlay-put hide-ov 'evaporate t)
+            (overlay-put hide-ov 'invisible t)
+            (overlay-put hide-ov 'before-string
+                         (propertize <span class="s">"..."</span> 'face 'shadow))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

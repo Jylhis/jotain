@@ -1,0 +1,40 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: kkp--pre-delete-frame – Emacs Documentation Online</title>
+<meta name="description" content="kkp--pre-delete-frame is a natively compiled function defined in
+kkp.el.
+Disable KKP before FRAME's terminal loses its connection.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>kkp--pre-delete-frame</code></h1><p><span class="m"><code>kkp--pre-delete-frame</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">kkp.el</span>.
+<h2>Signature</h2>
+<pre><code>(kkp--pre-delete-frame <span class="ty">&amp;optional</span> <a href="#:~:text=before-,FRAME"><span class="arg">FRAME</span></a> <span class="ty">&amp;rest</span> _)
+</code></pre>
+<h2>Documentation</h2>
+<p>Disable KKP before <span class="arg">FRAME</span>'s terminal loses its connection.
+<p>On client frames (e.g. <span class="m"><code>emacsclient -nw</code></span>), <a href="../var/delete-terminal-functions.html"><code>delete-terminal-functions</code></a> can fire
+too late for <a href="../fun/send-string-to-terminal.html"><code>send-string-to-terminal</code></a> to reach the tty, leading to mangled
+keystrokes in the outer terminal. Running the teardown from a <span class="bi">:before</span> advice
+on <a href="../fun/delete-frame.html"><code>delete-frame</code></a> guarantees the CSI bytes land while the frame, terminal, and
+output pipe are all still live. Only acts when <span class="arg">FRAME</span> is the last frame on its
+terminal.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/m2b3xmgxg24a6yvrhn2hs2kx62d820n5-emacs-packages-deps/share/emacs/site-lisp/elpa/kkp-20260706.858/kkp.el</span>
+(<span class="k">defun</span> <span class="f">kkp--pre-delete-frame</span> (<span class="ty">&amp;optional</span> frame <span class="ty">&amp;rest</span> _)
+  <span class="doc">"Disable KKP before FRAME's terminal loses its connection.
+On client frames (e.g. `emacsclient -nw'), `</span><span class="m doc">delete-terminal-functions</span><span class="doc">' can fire
+too late for `</span><span class="m doc">send-string-to-terminal</span><span class="doc">' to reach the tty, leading to mangled
+keystrokes in the outer terminal. Running the teardown from a `</span><span class="m doc">:before</span><span class="doc">' advice
+on `</span><span class="m doc">delete-frame</span><span class="doc">' guarantees the CSI bytes land while the frame, terminal, and
+output pipe are all still live. Only acts when FRAME is the last frame on its
+terminal."</span>
+  (<span class="k">let*</span> ((frame (<span class="k">or</span> frame (selected-frame)))
+         (terminal (<span class="k">and</span> (frame-live-p frame)
+                        (frame-terminal frame))))
+    (<span class="k">when</span> (<span class="k">and</span> (kkp--active-p terminal)
+               (null (cdr (frames-on-display-list terminal))))
+      (kkp--terminal-teardown terminal))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: jinx--correct-overlay – Emacs Documentation Online</title>
+<meta name="description" content="jinx--correct-overlay is a natively compiled function defined in
+jinx.el.
+Correct word at OVERLAY.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>jinx--correct-overlay</code></h1><p><span class="m"><code>jinx--correct-overlay</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">jinx.el</span>.
+<h2>Signature</h2>
+<pre><code>(jinx--correct-overlay <a href="#:~:text=at-,OVERLAY"><span class="arg">OVERLAY</span></a> <span class="ty">&amp;key</span> <a href="#:~:text=prompt-,INFO"><span class="arg">INFO</span></a> <a href="#:~:text=insert-,INITIAL"><span class="arg">INITIAL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Correct word at <span class="arg">OVERLAY</span>.
+<p>Optionally show prompt <span class="arg">INFO</span> and insert <span class="arg">INITIAL</span> input.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a84p94snryc55wrv02kbf63qv5yqsxl8-emacs-packages-deps/share/emacs/site-lisp/elpa/jinx-20260813.954/jinx.el</span>
+(<span class="k">cl-defun</span> <span class="f">jinx--correct-overlay</span> (overlay <span class="ty">&amp;key</span> info initial)
+  <span class="doc">"Correct word at OVERLAY.
+Optionally show prompt INFO and insert INITIAL input."</span>
+  (<span class="k">catch</span> '<span class="m">jinx--goto</span>
+    (<span class="k">let*</span> ((word (buffer-substring-no-properties
+                  (overlay-start overlay) (overlay-end overlay)))
+           (choice
+            (jinx--correct-highlight overlay
+              (<span class="k">lambda</span> ()
+                (<span class="k">when</span> (<span class="k">or</span> (&lt; (point) (window-start)) (&gt; (point) (window-end nil t)))
+                  (recenter))
+                (<span class="k">minibuffer-with-setup-hook</span>
+                    #'jinx--correct-setup
+                  (<span class="k">or</span> (completing-read
+                       (format <span class="s">"Correct ‘</span><span class="m s">%s</span><span class="s">’%s: "</span> word (<span class="k">or</span> info <span class="s">""</span>))
+                       (completion-table-with-metadata
+                        (jinx--correct-suggestions word)
+                        `((category . jinx)
+                          (eager-display . t)
+                          (display-sort-function . ,#'identity)
+                          (cycle-sort-function . ,#'identity)
+                          (group-function . ,#'jinx--group)
+                          (affixation-function . ,#'jinx--correct-affixation)))
+                       nil nil initial t word)
+                      word)))))
+           (len (length choice)))
+      (<span class="k">pcase</span> (<span class="k">and</span> (&gt; len 0) (assq (aref choice 0) jinx--save-keys))
+        (`(,key . ,fun)
+         (funcall fun 'add key
+                  (<span class="k">if</span> (&gt; len 1) (substring-no-properties choice 1) word))
+         (jinx--recheck-overlays))
+        ((guard (not (equal choice word)))
+         (jinx--correct-replace overlay choice)))
+      nil)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

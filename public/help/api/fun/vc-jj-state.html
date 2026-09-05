@@ -1,0 +1,79 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vc-jj-state – Emacs Documentation Online</title>
+<meta name="description" content="vc-jj-state is a natively compiled function defined in vc-jj.el.
+JJ implementation of vc-state for FILE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vc-jj-state</code></h1><p><span class="m"><code>vc-jj-state</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">vc-jj.el</span>.
+<h2>Signature</h2>
+<pre><code>(vc-jj-state <a href="#:~:text=for-,FILE"><span class="arg">FILE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>JJ implementation of <a href="../fun/vc-state.html"><code>vc-state</code></a> for <span class="arg">FILE</span>.
+<p>There are several file states recognized by vc (see the docstring of
+<a href="../fun/vc-state.html"><code>vc-state</code></a> for the full list).  Several of these are relevant to
+jujutsu.  They are:
+<br>- Added (new file)
+<br>- Removed (deleted file)
+<br>- Edited (modified file)
+<br>- Up-to-date (unmodified file)
+<br>- Conflict (merge conflict)
+<br>- Ignored (ignored by repository)
+<p>Other VCS backends would also recognize the "unregistered" state, but
+there is no such state in jj since jj automatically registers new files.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/smb5w83hp9nz5jm5ish4kf6mshmmif86-emacs-packages-deps/share/emacs/site-lisp/elpa/vc-jj-0.5/vc-jj.el</span>
+<span class="cd">;;;; </span><span class="c">state
+</span>
+(<span class="k">defun</span> <span class="f">vc-jj-state</span> (file)
+  <span class="doc">"JJ implementation of `</span><span class="m doc">vc-state</span><span class="doc">' for FILE.
+There are several file states recognized by vc (see the docstring of
+`</span><span class="m doc">vc-state</span><span class="doc">' for the full list).  Several of these are relevant to
+jujutsu.  They are:
+- Added (new file)
+- Removed (deleted file)
+- Edited (modified file)
+- Up-to-date (unmodified file)
+- Conflict (merge conflict)
+- Ignored (ignored by repository)
+
+Other VCS backends would also recognize the \"unregistered\" state, but
+there is no such state in jj since jj automatically registers new files."</span>
+  <span class="cd">;; </span><span class="c">We can deduce all of the vc states listed above with two
+</span>  <span class="cd">;; </span><span class="c">commands:
+</span>  <span class="cd">;;</span><span class="c">
+</span>  <span class="cd">;; </span><span class="c">- "jj diff --summary FILE" gets us the "added" state (when output
+</span>  <span class="cd">;;   </span><span class="c">starts with "A "), the "removed" state (when output starts with
+</span>  <span class="cd">;;   </span><span class="c">"D ") and "edited" state (when output starts with "M ").  No
+</span>  <span class="cd">;;   </span><span class="c">output is also possible (this could mean the "conflict",
+</span>  <span class="cd">;;   </span><span class="c">"ignored" or "unchanged" state), so we deduce these with the
+</span>  <span class="cd">;;   </span><span class="c">next command:
+</span>  <span class="cd">;;</span><span class="c">
+</span>  <span class="cd">;; </span><span class="c">- "jj file list -T '</span><span class="m c">conflict</span><span class="c">' FILE" prints "true" when the file
+</span>  <span class="cd">;;   </span><span class="c">is in "conflict" state, prints an empty string when the file is
+</span>  <span class="cd">;;   </span><span class="c">in "ignored" state, and "false" for any other state -- but most
+</span>  <span class="cd">;;   </span><span class="c">of these are already covered by the previous command, so we
+</span>  <span class="cd">;;   </span><span class="c">deduce "up-to-date".
+</span>  (<span class="k">let*</span> ((default-directory (vc-jj-root file))
+         (file (vc-jj--filename-to-fileset file))
+         (changed (vc-jj--command-parseable <span class="s">"diff"</span> <span class="s">"--summary"</span> <span class="s">"--"</span> file)))
+    (<span class="k">cond</span>
+     ((string-prefix-p <span class="s">"A "</span> changed) 'added)
+     ((string-prefix-p <span class="s">"D "</span> changed) 'removed)
+     ((string-prefix-p <span class="s">"M "</span> changed) 'edited)
+     (t (<span class="k">let</span> ((conflicted-ignored
+               (vc-jj--command-parseable <span class="s">"file"</span> <span class="s">"list"</span> <span class="s">"-T"</span> <span class="s">"conflict"</span> <span class="s">"--"</span>
+                                         file)))
+          (<span class="k">cond</span>
+           ((string= conflicted-ignored <span class="s">"true"</span>) 'conflict)
+           ((string-empty-p conflicted-ignored) 'ignored)
+           <span class="cd">;; </span><span class="c">If the file hasn't matched anything yet, this leaves
+</span>           <span class="cd">;; </span><span class="c">only one possible state: up-to-date
+</span>           ((string= conflicted-ignored <span class="s">"false"</span>) 'up-to-date)
+           (t
+            (<span class="w">warn</span> <span class="s">"VC state of %s is not recognized, assuming up-to-date"</span> file)
+            'up-to-date)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

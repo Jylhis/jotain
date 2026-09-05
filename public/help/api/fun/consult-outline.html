@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult-outline – Emacs Documentation Online</title>
+<meta name="description" content="consult-outline is an interactive and natively compiled function
+defined in consult.el.
+Jump to an outline heading, obtained by matching against outline-regexp.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult-outline</code></h1><p><span class="m"><code>consult-outline</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult-outline <span class="ty">&amp;optional</span> <a href="#:~:text=narrowing-,LEVEL"><span class="arg">LEVEL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Jump to an outline heading, obtained by matching against <span class="m"><code>outline-regexp</code></span>.
+<p>This command supports narrowing to a heading level and candidate
+preview.  The initial narrowing <span class="arg">LEVEL</span> can be given as prefix
+argument.  The symbol at point is added to the future history.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">consult-outline</span> (<span class="ty">&amp;optional</span> level)
+  <span class="doc">"Jump to an outline heading, obtained by matching against `</span><span class="m doc">outline-regexp</span><span class="doc">'.
+
+This command supports narrowing to a heading level and candidate
+preview.  The initial narrowing LEVEL can be given as prefix
+argument.  The symbol at point is added to the future history."</span>
+  (<span class="k">interactive</span>
+   (list (<span class="k">and</span> current-prefix-arg (prefix-numeric-value current-prefix-arg))))
+  (<span class="k">let*</span> ((candidates (<span class="k">consult--slow-operation</span>
+                         <span class="s">"Collecting headings..."</span>
+                       (consult--outline-candidates)))
+         (min-level (- (<span class="k">cl-loop</span> for cand in candidates minimize
+                                (get-text-property 0 'consult--outline-level cand))
+                       ?1))
+         (narrow-pred (<span class="k">lambda</span> (cand)
+                        (&lt;= (get-text-property 0 'consult--outline-level cand)
+                            (+ consult--narrow min-level))))
+         (narrow-keys (mapcar (<span class="k">lambda</span> (c) (cons c (format <span class="s">"Level %c"</span> c)))
+                              (number-sequence ?1 ?9)))
+         (narrow-init (<span class="k">and</span> level (max ?1 (min ?9 (+ level ?0))))))
+    (consult--read
+     candidates
+     <span class="bi">:prompt</span> <span class="s">"Go to heading: "</span>
+     <span class="bi">:annotate</span> (consult--line-fontify)
+     <span class="bi">:category</span> 'consult-location
+     <span class="bi">:sort</span> nil
+     <span class="bi">:require-match</span> t
+     <span class="bi">:lookup</span> #'consult--line-match
+     <span class="bi">:initial-narrow</span> narrow-init
+     <span class="bi">:narrow</span> (list <span class="bi">:predicate</span> narrow-pred <span class="bi">:keys</span> narrow-keys)
+     <span class="bi">:history</span> '(<span class="bi">:input</span> consult--line-history)
+     <span class="bi">:add-history</span> (thing-at-point 'symbol)
+     <span class="bi">:state</span> (consult--location-state candidates))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

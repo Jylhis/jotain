@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca--git-common-dir – Emacs Documentation Online</title>
+<meta name="description" content="eca--git-common-dir is a natively compiled function defined in
+eca-util.el.
+Return the absolute git common dir for DIR, or nil if not in a git repo.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca--git-common-dir</code></h1><p><span class="m"><code>eca--git-common-dir</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-util.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca--git-common-dir <a href="#:~:text=for-,DIR"><span class="arg">DIR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the absolute git common dir for <span class="arg">DIR</span>, or nil if not in a git repo.
+<p>Uses `git rev-parse --git-common-dir` to find the shared git
+directory, which is the same for all worktrees of a repository.
+Results are cached in <a href="../var/eca--git-common-dir-cache.html"><code>eca--git-common-dir-cache</code></a> since this can
+be called repeatedly (e.g. resolving sessions from timers) and
+spawning git each time causes visible lag (#275).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-util.el</span>
+(<span class="k">defun</span> <span class="f">eca--git-common-dir</span> (dir)
+  <span class="doc">"Return the absolute git common dir for DIR, or nil if not in a git repo.
+Uses `git rev-parse --git-common-dir` to find the shared git
+directory, which is the same for all worktrees of a repository.
+Results are cached in `</span><span class="m doc">eca--git-common-dir-cache</span><span class="doc">' since this can
+be called repeatedly (e.g. resolving sessions from timers) and
+spawning git each time causes visible lag (#275)."</span>
+  (<span class="k">let*</span> ((dir (expand-file-name dir))
+         (cached (gethash dir eca--git-common-dir-cache)))
+    (<span class="k">if</span> cached
+        (<span class="k">unless</span> (eq cached <span class="bi">:none</span>) cached)
+      (<span class="k">let*</span> ((default-directory dir)
+             (output (<span class="k">ignore-errors</span>
+                       (string-trim
+                        (<span class="k">with-output-to-string</span>
+                          (<span class="k">with-current-buffer</span> standard-output
+                            <span class="cd">;; </span><span class="c">TRAMP-aware, no intermediate shell,
+</span>                            <span class="cd">;; </span><span class="c">stderr discarded.
+</span>                            (process-file <span class="s">"git"</span> nil '(t nil) nil
+                                          <span class="s">"rev-parse"</span> <span class="s">"--git-common-dir"</span>))))))
+             (result (<span class="k">when</span> (<span class="k">and</span> output
+                                (not (string-empty-p output))
+                                <span class="cd">;; </span><span class="c">Git &lt; 2.5 echoes the flag back literally
+</span>                                (not (string= output <span class="s">"--git-common-dir"</span>)))
+                       (expand-file-name output default-directory))))
+        (puthash dir (<span class="k">or</span> result <span class="bi">:none</span>) eca--git-common-dir-cache)
+        result))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

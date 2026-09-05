@@ -1,0 +1,135 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--update-expandable-content – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--update-expandable-content is a natively compiled function
+defined in eca-chat-expandable.el.
+Update to LABEL and CONTENT the expandable content of id ID.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--update-expandable-content</code></h1><p><span class="m"><code>eca-chat--update-expandable-content</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-chat-expandable.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--update-expandable-content <a href="#:~:text=id-,ID"><span class="arg">ID</span></a> <a href="#:~:text=to-,LABEL"><span class="arg">LABEL</span></a> <a href="#:~:text=and-,CONTENT"><span class="arg">CONTENT</span></a> <span class="ty">&amp;optional</span> APPEND-CONTENT? <a href="#:~:text=If-,PARENT-ID"><span class="arg">PARENT-ID</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update to <span class="arg">LABEL</span> and <span class="arg">CONTENT</span> the expandable content of id <span class="arg">ID</span>.
+<p>If <span class="arg">LABEL</span> is nil, the existing label is preserved.
+If APPEND-CONTENT? is non-nil, append <span class="arg">CONTENT</span> to existing content.
+If <span class="arg">PARENT-ID</span> is provided and block doesn't exist yet, updates the spec
+in parent.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-expandable.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--update-expandable-content</span> (id label content <span class="ty">&amp;optional</span> append-content? parent-id)
+  <span class="doc">"Update to LABEL and CONTENT the expandable content of id ID.
+If LABEL is nil, the existing label is preserved.
+If APPEND-CONTENT? is non-nil, append CONTENT to existing content.
+If PARENT-ID is provided and block doesn't exist yet, updates the spec
+in parent."</span>
+  (<span class="k">if-let*</span> ((ov-label (eca-chat--get-expandable-content id)))
+      <span class="cd">;; </span><span class="c">Block exists (rendered), update it directly
+</span>      (<span class="k">let*</span> ((ov-content (overlay-get ov-label 'eca-chat--expandable-content-ov-content))
+             (nested? (overlay-get ov-label 'eca-chat--expandable-content-nested))
+             (indent (<span class="k">if</span> nested?
+                         eca-chat--expandable-content-nested-indent
+                       eca-chat--expandable-content-base-indent))
+             (existing (overlay-get ov-content 'eca-chat--expandable-content-content))
+             (delta (propertize content 'line-prefix indent))
+             (new-content (<span class="k">if</span> append-content?
+                              (concat existing delta)
+                            delta))
+             (open? (overlay-get ov-label 'eca-chat--expandable-content-toggle)))
+        (overlay-put ov-content 'eca-chat--expandable-content-content new-content)
+        (<span class="k">save-excursion</span>
+          (<span class="k">when</span> label
+            <span class="cd">;; </span><span class="c">Update stored icons when the label face changes
+</span>            (<span class="k">let*</span> ((new-icon-face (get-text-property 0 'font-lock-face label))
+                   (label-indent (<span class="k">when</span> nested? eca-chat--expandable-content-base-indent))
+                   (new-icons (eca-chat--make-expandable-icons new-icon-face label-indent)))
+              (overlay-put ov-label 'eca-chat--expandable-content-open-icon (car new-icons))
+              (overlay-put ov-label 'eca-chat--expandable-content-close-icon (cdr new-icons)))
+            (<span class="k">let*</span> ((children (eca-chat--segments-children
+                              (overlay-get ov-label 'eca-chat--expandable-content-segments)))
+                   (has-content? (<span class="k">or</span> (not (string-empty-p new-content)) children))
+                   (label-prefix (<span class="k">cond</span>
+                                  (has-content?
+                                   (<span class="k">if</span> open?
+                                       (overlay-get ov-label 'eca-chat--expandable-content-close-icon)
+                                     (overlay-get ov-label 'eca-chat--expandable-content-open-icon)))
+                                  (nested?
+                                   (concat eca-chat--expandable-content-base-indent
+                                           (make-string (length eca-chat-expandable-block-open-symbol) ?\s)))))
+                   (label-start (overlay-start ov-label))
+                   (label-end (1- (overlay-start ov-content)))
+                   (cur-prefix (get-text-property label-start 'line-prefix)))
+              <span class="cd">;; </span><span class="c">Skip the delete/re-insert when the rendered label is
+</span>              <span class="cd">;; </span><span class="c">already up to date; frequent while toolCallPrepare
+</span>              <span class="cd">;; </span><span class="c">streams argsText updates (#268).
+</span>              (<span class="k">unless</span> (<span class="k">and</span> (string= (substring-no-properties label)
+                                    (buffer-substring-no-properties label-start label-end))
+                           (equal (get-text-property 0 'font-lock-face label)
+                                  (get-text-property label-start 'font-lock-face))
+                           (equal (<span class="k">and</span> (stringp label-prefix) (substring-no-properties label-prefix))
+                                  (<span class="k">and</span> (stringp cur-prefix) (substring-no-properties cur-prefix))))
+                (goto-char label-start)
+                (delete-region (point) label-end)
+                (eca-chat--insert (propertize (eca-chat--propertize-only-first-word label
+                                                                                    'line-prefix label-prefix)
+                                              'help-echo <span class="s">"mouse-1 / RET / tab: expand/collapse"</span>))
+                <span class="cd">;; </span><span class="c">Repaint nested label's line-prefix after label replacement
+</span>                (eca-chat--paint-nested-label ov-label))))
+          (<span class="k">when</span> open?
+            (<span class="k">let</span> ((block-face (overlay-get ov-content 'face)))
+              (<span class="k">if</span> append-content?
+                  (<span class="k">let</span> ((insert-start (overlay-end ov-content)))
+                    (goto-char insert-start)
+                    (eca-chat--insert delta)
+                    (<span class="k">when</span> block-face
+                      (eca-chat--apply-face-to-line-prefixes
+                       insert-start (overlay-end ov-content) block-face)))
+                (<span class="k">progn</span>
+                  (delete-region (overlay-start ov-content) (overlay-end ov-content))
+                  (goto-char (overlay-start ov-content))
+                  (eca-chat--insert new-content)
+                  (<span class="k">when</span> block-face
+                    (eca-chat--apply-face-to-line-prefixes
+                     (overlay-start ov-content) (overlay-end ov-content) block-face)))))))
+        <span class="cd">;; </span><span class="c">When nested, sync updated label/content back to parent's child spec
+</span>        <span class="cd">;; </span><span class="c">so that toggling the parent closed and reopened preserves latest state
+</span>        (<span class="k">when</span> nested?
+          (<span class="k">when-let*</span> ((parent-id (overlay-get ov-label 'eca-chat--expandable-content-parent-id))
+                      (parent-ov (eca-chat--get-expandable-content parent-id))
+                      (segments (overlay-get parent-ov 'eca-chat--expandable-content-segments))
+                      (spec (-first (<span class="k">lambda</span> (s) (<span class="k">and</span> (eq 'child (plist-get s <span class="bi">:type</span>))
+                                                     (string= id (plist-get s <span class="bi">:id</span>))))
+                                    segments)))
+            (<span class="k">when</span> label (plist-put spec <span class="bi">:label</span> label))
+            (plist-put spec <span class="bi">:content</span> new-content))))
+    <span class="cd">;; </span><span class="c">Block not rendered yet
+</span>    (<span class="k">if</span> parent-id
+        <span class="cd">;; </span><span class="c">Nested: update spec in parent
+</span>        (<span class="k">when-let*</span> ((parent-ov (eca-chat--get-expandable-content parent-id)))
+          (<span class="k">let*</span> ((segments (overlay-get parent-ov 'eca-chat--expandable-content-segments))
+                 (existing-spec (-first (<span class="k">lambda</span> (spec) (<span class="k">and</span> (eq 'child (plist-get spec <span class="bi">:type</span>))
+                                                            (string= id (plist-get spec <span class="bi">:id</span>))))
+                                        segments)))
+            (<span class="k">if</span> existing-spec
+                (<span class="k">let*</span> ((old-content (plist-get existing-spec <span class="bi">:content</span>))
+                       (new-content (<span class="k">if</span> append-content?
+                                        (concat old-content content)
+                                      content)))
+                  (<span class="k">when</span> label
+                    (plist-put existing-spec <span class="bi">:label</span> label)
+                    (plist-put existing-spec <span class="bi">:icon-face</span> (get-text-property 0 'font-lock-face label)))
+                  (plist-put existing-spec <span class="bi">:content</span> new-content))
+              (<span class="k">let</span> ((child-spec (list <span class="bi">:type</span> 'child <span class="bi">:id</span> id <span class="bi">:label</span> label <span class="bi">:content</span> content
+                                     <span class="bi">:icon-face</span> (get-text-property 0 'font-lock-face label))))
+                (overlay-put parent-ov 'eca-chat--expandable-content-segments
+                             (append segments (list child-spec)))
+                (<span class="k">when</span> (overlay-get parent-ov 'eca-chat--expandable-content-toggle)
+                  (eca-chat--render-nested-block parent-ov child-spec))))))
+      <span class="cd">;; </span><span class="c">Top-level: create the block so toolCallRun et al. don't
+</span>      <span class="cd">;; </span><span class="c">silently lose content when no toolCallPrepare preceded them.
+</span>      (eca-chat--add-expandable-content id label (<span class="k">or</span> content <span class="s">""</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

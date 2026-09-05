@@ -1,0 +1,90 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-dom-errors-show – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-dom-errors-show is an interactive and natively compiled
+function defined in web-mode.el.
+Show unclosed tags.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-dom-errors-show</code></h1><p><span class="m"><code>web-mode-dom-errors-show</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-dom-errors-show)
+</code></pre>
+<h2>Documentation</h2>
+<p>Show unclosed tags.
+<h2>Key Bindings</h2>
+<p><span class="v">web-mode-map</span> <span class="key">C-c C-d d</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-dom-errors-show</span> ()
+  <span class="doc">"Show unclosed tags."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> (beg end tag pos l tags i cont cell overlay overlays first
+            (ori (point))
+            (errors 0)
+            (continue t)
+            )
+    (<span class="k">setq</span> overlays (overlays-in (point-min) (point-max)))
+    (<span class="k">when</span> overlays
+      (<span class="k">dolist</span> (overlay overlays)
+        (<span class="k">when</span> (eq (overlay-get overlay 'face) 'web-mode-warning-face)
+          (delete-overlay overlay)
+          )
+        )
+      )
+    (goto-char (point-min))
+    (<span class="k">when</span> (not (<span class="k">or</span> (get-text-property (point) 'tag-beg)
+                   (web-mode-tag-next)))
+      (<span class="k">setq</span> continue nil))
+    (<span class="k">while</span> continue
+      (<span class="k">setq</span> pos (point))
+      (<span class="k">setq</span> tag (get-text-property pos 'tag-name))
+      (<span class="k">cond</span>
+        ((eq (get-text-property (point) 'tag-type) 'start)
+         (<span class="k">setq</span> tags (<span class="k">push</span> (list tag pos) tags))
+         <span class="cd">;;        </span><span class="c">(message "(%S) opening %S" pos tag)
+</span>         )
+        ((eq (get-text-property (point) 'tag-type) 'end)
+         (<span class="k">setq</span> i 0
+               l (length tags)
+               cont t)
+         (<span class="k">while</span> (<span class="k">and</span> (&lt; i l) cont)
+           (<span class="k">setq</span> cell (nth i tags))
+           <span class="cd">;;          </span><span class="c">(message "cell=%S" cell)
+</span>           (<span class="k">setq</span> i (1+ i))
+           (<span class="k">cond</span>
+             ((string= tag (nth 0 cell))
+              (<span class="k">setq</span> cont nil)
+              )
+             (t
+              (<span class="k">setq</span> errors (1+ errors))
+              (<span class="k">setq</span> beg (nth 1 cell))
+              (<span class="k">setq</span> end (web-mode-tag-end-position beg))
+              (<span class="k">unless</span> first
+                (<span class="k">setq</span> first beg))
+              (<span class="k">setq</span> overlay (make-overlay beg (1+ end)))
+              (overlay-put overlay 'font-lock-face 'web-mode-warning-face)
+              <span class="cd">;;            </span><span class="c">(message "invalid &lt;%S&gt; at %S" (nth 0 cell) (nth 1 cell))
+</span>              )
+             ) <span class="cd">;</span><span class="c">cond
+</span>           ) <span class="cd">;</span><span class="c">while
+</span>
+         (<span class="k">dotimes</span> (_i i)
+           (<span class="k">setq</span> tags (cdr tags)))
+
+         )
+        ) <span class="cd">;</span><span class="c">cond
+</span>      (<span class="k">when</span> (not (web-mode-tag-next))
+        (<span class="k">setq</span> continue nil))
+      ) <span class="cd">;</span><span class="c">while
+</span>    (message <span class="s">"%S error(s) detected"</span> errors)
+    (<span class="k">if</span> (&lt; errors 1)
+        (goto-char ori)
+        (goto-char first)
+        (recenter))
+    <span class="cd">;;    </span><span class="c">(message "%S" tags)
+</span>    ))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

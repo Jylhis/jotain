@@ -1,0 +1,100 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--anchor-window – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--anchor-window is a natively compiled function defined in
+ghostel.el.
+Scroll WINDOW so that the last row is aligned to the bottom of the window.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--anchor-window</code></h1><p><span class="m"><code>ghostel--anchor-window</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--anchor-window <span class="ty">&amp;optional</span> <a href="#:~:text=Scroll-,WINDOW"><span class="arg">WINDOW</span></a> <a href="#:~:text=or-,FORCE"><span class="arg">FORCE</span></a> <a href="#:~:text=when-,FOLLOWING"><span class="arg">FOLLOWING</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Scroll <span class="arg">WINDOW</span> so that the last row is aligned to the bottom of the window.
+<p>In graphical frames, use Emacs's pixel layout for exact bottom alignment.
+In text frames, use line-count geometry with no vscroll.
+Do nothing unless <span class="arg">WINDOW</span> displays a live Ghostel terminal.
+A <a href="../var/ghostel-inhibit-anchor-functions.html"><code>ghostel-inhibit-anchor-functions</code></a> hook can veto anchoring a window.
+<p>The live cursor is never scrolled out of view: when bottom-aligning
+<a href="../fun/point-max.html"><code>point-max</code></a> would push the cursor's line above <a href="../fun/window-start.html"><code>window-start</code></a> (a shrunken
+window over a mostly-empty grid), the anchor starts at the cursor's line
+instead.  <a href="../fun/ghostel--window-anchored-p.html"><code>ghostel--window-anchored-p</code></a> recognizes such a clamped window
+as still following the output.
+<p>Copy mode is never anchored (the viewport is frozen).  Otherwise
+<span class="arg">WINDOW</span> anchors while <a href="../fun/ghostel--window-follows-p.html"><code>ghostel--window-follows-p</code></a> holds, or when
+<span class="arg">FOLLOWING</span> (the caller established the follow before the render moved
+the cursor) or <span class="arg">FORCE</span> (deliberate anchors such as paste/yank) is
+non-nil.  Semi-char/char/Emacs snap point to the live cursor; line
+mode keeps the user's point.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--anchor-window</span> (<span class="ty">&amp;optional</span> window force following)
+  <span class="doc">"Scroll WINDOW so that the last row is aligned to the bottom of the window.
+In graphical frames, use Emacs's pixel layout for exact bottom alignment.
+In text frames, use line-count geometry with no vscroll.
+Do nothing unless WINDOW displays a live Ghostel terminal.
+A `</span><span class="m doc">ghostel-inhibit-anchor-functions</span><span class="doc">' hook can veto anchoring a window.
+
+The live cursor is never scrolled out of view: when bottom-aligning
+`</span><span class="m doc">point-max</span><span class="doc">' would push the cursor's line above `</span><span class="m doc">window-start</span><span class="doc">' (a shrunken
+window over a mostly-empty grid), the anchor starts at the cursor's line
+instead.  `</span><span class="m doc">ghostel--window-anchored-p</span><span class="doc">' recognizes such a clamped window
+as still following the output.
+
+Copy mode is never anchored (the viewport is frozen).  Otherwise
+WINDOW anchors while `</span><span class="m doc">ghostel--window-follows-p</span><span class="doc">' holds, or when
+FOLLOWING (the caller established the follow before the render moved
+the cursor) or FORCE (deliberate anchors such as paste/yank) is
+non-nil.  Semi-char/char/Emacs snap point to the live cursor; line
+mode keeps the user's point."</span>
+  (<span class="k">when-let*</span> ((window (<span class="k">or</span> window (selected-window)))
+              (buffer (window-buffer window))
+              ((<span class="k">with-current-buffer</span> buffer
+                 (<span class="k">and</span> (derived-mode-p 'ghostel-mode)
+                      (ghostel--terminal-live-p)
+                      (<span class="k">or</span> force following
+                          (ghostel--window-follows-p window))
+                      <span class="cd">;; </span><span class="c">Per-window veto: a consumer (e.g. evil-ghostel) can
+</span>                      <span class="cd">;; </span><span class="c">keep point roaming off the live cursor while the
+</span>                      <span class="cd">;; </span><span class="c">buffer stays in a follow-capable input mode.
+</span>                      (not (run-hook-with-args-until-success
+                            'ghostel-inhibit-anchor-functions window force))))))
+    (<span class="k">with-selected-window</span> window
+      (<span class="k">with-current-buffer</span> buffer
+        (<span class="k">let*</span> ((target (point-max))
+               <span class="cd">;; </span><span class="c">Line mode's input region is user-owned; keep point instead
+</span>               <span class="cd">;; </span><span class="c">of snapping it to the terminal cursor.
+</span>               (orig (point))
+               (cursor (<span class="k">and</span> (not (eq ghostel--input-mode 'line))
+                            ghostel--cursor-char-pos))
+               (cursor-bol (<span class="k">and</span> cursor
+                                (<span class="k">save-excursion</span>
+                                  (goto-char cursor)
+                                  (line-beginning-position))))
+               (anchor (<span class="k">or</span> (<span class="k">and</span> (display-graphic-p (window-frame window))
+                                ghostel--pixel-anchor-supported-p
+                                (ghostel--pixel-anchor window target))
+                           (<span class="k">save-excursion</span>
+                             (goto-char target)
+                             (forward-line
+                              (- (floor (window-screen-lines))))
+                             (cons (point) 0))))
+               (start (<span class="k">if</span> (<span class="k">and</span> cursor-bol (&lt; cursor-bol (car anchor)))
+                          cursor-bol
+                        (car anchor)))
+               <span class="cd">;; </span><span class="c">A vscroll would partially clip the cursor's row whenever
+</span>               <span class="cd">;; </span><span class="c">it is the top line; a clamped start sits on a line
+</span>               <span class="cd">;; </span><span class="c">boundary anyway.
+</span>               (vscroll (<span class="k">if</span> (<span class="k">and</span> cursor-bol (= cursor-bol start))
+                            0
+                          (cdr anchor))))
+          (set-window-start window start)
+          (ghostel--set-window-vscroll window vscroll t t)
+          (set-window-point window (<span class="k">if</span> (eq ghostel--input-mode 'line)
+                                       orig
+                                     (<span class="k">or</span> cursor target))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--restore-state – Emacs Documentation Online</title>
+<meta name="description" content="gptel--restore-state is a natively compiled function defined in
+gptel.el.
+Restore gptel state when turning on gptel-mode.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--restore-state</code></h1><p><span class="m"><code>gptel--restore-state</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--restore-state)
+</code></pre>
+<h2>Documentation</h2>
+<p>Restore gptel state when turning on <a class="v" href="../var/gptel-mode.html"><code>gptel-mode</code>(var)</a>/<a class="f" href="../fun/gptel-mode.html"><code>gptel-mode</code>(fun)</a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--restore-state</span> ()
+  <span class="doc">"Restore gptel state when turning on `</span><span class="m doc">gptel-mode</span><span class="doc">'."</span>
+  (<span class="k">when</span> (buffer-file-name)
+    (<span class="k">if</span> (derived-mode-p 'org-mode)
+        (<span class="k">progn</span>
+          (<span class="k">require</span> '<span class="m">gptel-org</span>)
+          (gptel-org--restore-state))
+      (<span class="k">when</span> gptel--bounds
+        (gptel--restore-props gptel--bounds)
+        (message <span class="s">"gptel chat restored."</span>))
+      (<span class="k">when</span> gptel--preset
+        (<span class="k">if</span> (gptel-get-preset gptel--preset)
+            (gptel--apply-preset
+             gptel--preset (<span class="k">lambda</span> (sym val) (set (make-local-variable sym) val)))
+          (display-warning
+           '(gptel presets)
+           (format <span class="s">"Could not activate gptel preset `</span><span class="m s">%s</span><span class="s">' in buffer \"%s\""</span>
+                   gptel--preset (buffer-name)))))
+      (<span class="k">when</span> gptel--backend-name
+        (<span class="k">if-let*</span> ((backend (alist-get
+                            gptel--backend-name gptel--known-backends
+                            nil nil #'equal)))
+            (<span class="k">setq-local</span> gptel-backend backend)
+          (message
+           (substitute-command-keys
+            (concat
+             <span class="s">"Could not activate gptel backend \"%s\"!  "</span>
+             <span class="s">"Switch backends with \\[</span><span class="m s">universal-argument</span><span class="s">] \\[</span><span class="m s">gptel-send</span><span class="s">]"</span>
+             <span class="s">" before using gptel."</span>))
+           gptel--backend-name)))
+      (<span class="k">when</span> gptel--tool-names
+        (<span class="k">if-let*</span> ((tools (<span class="k">cl-loop</span>
+                          for tname in gptel--tool-names
+                          for tool = (<span class="k">with-demoted-errors</span> <span class="s">"gptel: %S"</span>
+                                       (gptel-get-tool tname))
+                          if tool collect tool else do
+                          (display-warning
+                           '(gptel org tools)
+                           (format <span class="s">"Tool %s not found, ignoring"</span> tname)))))
+            (<span class="k">setq-local</span> gptel-tools tools))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

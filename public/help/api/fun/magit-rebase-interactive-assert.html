@@ -1,0 +1,44 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-rebase-interactive-assert – Emacs Documentation Online</title>
+<meta name="description" content="magit-rebase-interactive-assert is a natively compiled function
+defined in magit-sequence.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-rebase-interactive-assert</code></h1><p><span class="m"><code>magit-rebase-interactive-assert</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-sequence.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-rebase-interactive-assert <span class="arg">SINCE</span> <span class="ty">&amp;optional</span> <span class="arg">DELAY-EDIT-CONFIRM</span> <span class="arg">REBASE-MERGES</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-sequence.el</span>
+(<span class="k">defun</span> <span class="f">magit-rebase-interactive-assert</span>
+    (since <span class="ty">&amp;optional</span> delay-edit-confirm rebase-merges)
+  (<span class="k">let*</span> ((commit (magit-rebase--target-commit since))
+         (branches (magit-list-publishing-branches commit)))
+    (<span class="k">setq</span> magit--rebase-public-edit-confirmed
+          (delete (magit-toplevel) magit--rebase-public-edit-confirmed))
+    (<span class="k">when</span> (<span class="k">and</span> branches
+               (<span class="k">or</span> (not delay-edit-confirm)
+                   <span class="cd">;; </span><span class="c">The user might have stopped at a published commit
+</span>                   <span class="cd">;; </span><span class="c">merely to add new commits *after* it.  Try not to
+</span>                   <span class="cd">;; </span><span class="c">ask users whether they really want to edit public
+</span>                   <span class="cd">;; </span><span class="c">commits, when they don't actually intend to do so.
+</span>                   (not (all (##magit-rev-equal % commit) branches))))
+      (<span class="k">let</span> ((m1 <span class="s">"Some of these commits have already been published to "</span>)
+            (m2 <span class="s">".\nDo you really want to modify them"</span>))
+        (magit-confirm (<span class="k">or</span> magit--rebase-published-symbol 'rebase-published)
+          (concat m1 <span class="s">"%s"</span> m2)
+          (concat m1 <span class="s">"%d public branches"</span> m2)
+          nil branches))
+      (<span class="k">push</span> (magit-toplevel) magit--rebase-public-edit-confirmed)))
+  (<span class="k">if</span> (<span class="k">and</span> (magit-git-lines <span class="s">"rev-list"</span> <span class="s">"--merges"</span> (concat since <span class="s">"..HEAD"</span>))
+           (not rebase-merges))
+      (<span class="k">magit-read-char-case</span> <span class="s">"Proceed despite merge in rebase range?  "</span> nil
+        (?c <span class="s">"[c]ontinue"</span> since)
+        (?s <span class="s">"[s]elect other"</span> nil)
+        (?a <span class="s">"[a]bort"</span> (<span class="w">user-error</span> <span class="s">"Quit"</span>)))
+    since))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

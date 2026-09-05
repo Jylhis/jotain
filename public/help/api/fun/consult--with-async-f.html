@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--with-async-f – Emacs Documentation Online</title>
+<meta name="description" content="consult--with-async-f is a natively compiled function defined in
+consult.el.
+See consult--with-async for documentation.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--with-async-f</code></h1><p><span class="m"><code>consult--with-async-f</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--with-async-f <a href="#:~:text="><span class="arg">ASYNC</span></a> <a href="#:~:text="><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>See <a href="../fun/consult--with-async.html"><code>consult--with-async</code></a> for documentation.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--with-async-f</span> (async body)
+  <span class="doc">"See `</span><span class="m doc">consult--with-async</span><span class="doc">' for documentation."</span>
+  (<span class="k">let</span> (new-chunk orig-chunk)
+    (<span class="k">minibuffer-with-setup-hook</span>
+        <span class="cd">;; </span><span class="c">Append such that we overwrite the completion style setting of
+</span>        <span class="cd">;; </span><span class="c">`</span><span class="m c">fido-mode</span><span class="c">'.  See `</span><span class="m c">consult--async-split</span><span class="c">' and `</span><span class="m c">consult--split-setup</span><span class="c">'.
+</span>        (<span class="bi">:append</span>
+         (<span class="k">lambda</span> ()
+           (<span class="k">when</span> (consult--async-p async)
+             (<span class="k">setq</span> new-chunk (max read-process-output-max consult--process-chunk)
+                   orig-chunk read-process-output-max
+                   read-process-output-max new-chunk)
+             (funcall async 'setup)
+             (<span class="k">let*</span> ((mb (current-buffer))
+                    (fun (<span class="k">lambda</span> ()
+                           (<span class="k">when-let*</span> ((win (active-minibuffer-window)))
+                             (<span class="k">when</span> (eq (window-buffer win) mb)
+                               (<span class="k">with-current-buffer</span> mb
+                                 (<span class="k">let</span> ((inhibit-modification-hooks t))
+                                   <span class="cd">;; </span><span class="c">Push input string to request refresh.
+</span>                                   (funcall async (minibuffer-contents-no-properties))))))))
+                    <span class="cd">;; </span><span class="c">We use a symbol in order to avoid adding lambdas to
+</span>                    <span class="cd">;; </span><span class="c">the hook variable.  Symbol indirection because of
+</span>                    <span class="cd">;; </span><span class="c">bug#46407.
+</span>                    (hook (make-symbol <span class="s">"consult--async-after-change"</span>))
+                    (timer (timer-create)))
+               (timer-set-function timer fun)
+               <span class="cd">;; </span><span class="c">Delay modification hook to ensure that minibuffer is still
+</span>               <span class="cd">;; </span><span class="c">alive after the change, such that we don't restart a new
+</span>               <span class="cd">;; </span><span class="c">asynchronous search right before exiting the minibuffer.
+</span>               (fset hook (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> _)
+                            (<span class="k">unless</span> (memq timer timer-list)
+                              (timer-set-time timer (current-time))
+                              (timer-activate timer))))
+               (add-hook 'after-change-functions hook nil 'local)
+               <span class="cd">;; </span><span class="c">Immediately start asynchronous computation. This may lead
+</span>               <span class="cd">;; </span><span class="c">to problems unnecessary work if content is inserted shortly
+</span>               <span class="cd">;; </span><span class="c">afterwards.
+</span>               (funcall fun)))))
+      (<span class="k">let</span> ((async (<span class="k">if</span> (consult--async-p async) async (<span class="k">lambda</span> (_) async))))
+        (<span class="k">unwind-protect</span>
+            (funcall body async)
+          (funcall async 'destroy)
+          (<span class="k">when</span> (<span class="k">and</span> orig-chunk (eq read-process-output-max new-chunk))
+            (<span class="k">setq</span> read-process-output-max orig-chunk)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

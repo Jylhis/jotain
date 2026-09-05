@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: corfu--affixate – Emacs Documentation Online</title>
+<meta name="description" content="corfu--affixate is a byte-compiled function defined in corfu.el.
+Annotate CANDS with annotation function.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>corfu--affixate</code></h1><p><span class="m"><code>corfu--affixate</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in <span class="bt">corfu.el</span>.
+<h2>Signature</h2>
+<pre><code>(corfu--affixate <a href="#:~:text=Annotate-,CANDS"><span class="arg">CANDS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Annotate <span class="arg">CANDS</span> with annotation function.
+<h2>Implementations</h2>
+<p>(corfu--affixate CANDS) in `<span class="bt">corfu.el</span>'.
+<p>Undocumented
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w8w9ybb6ad8ab6ghqfbq36v1kcp2igzi-emacs-packages-deps/share/emacs/site-lisp/elpa/corfu-20260828.932/corfu.el</span>
+(<span class="k">cl-defgeneric</span> <span class="f">corfu--affixate</span> (cands)
+  <span class="doc">"Annotate CANDS with annotation function."</span>
+  (<span class="k">let*</span> ((dep (corfu--metadata-get 'company-deprecated))
+         (mf (<span class="k">let</span> ((completion-extra-properties (nth 4 completion-in-region--data)))
+               (run-hook-with-args-until-success 'corfu-margin-formatters corfu--metadata))))
+    (<span class="k">setq</span> cands
+          (<span class="k">if-let*</span> ((aff (corfu--metadata-get 'affixation-function)))
+              (funcall aff cands)
+            (<span class="k">if-let*</span> ((ann (corfu--metadata-get 'annotation-function)))
+                (<span class="k">cl-loop</span> for cand in cands collect
+                         (<span class="k">let</span> ((suff (<span class="k">or</span> (funcall ann cand) <span class="s">""</span>)))
+                           <span class="cd">;; </span><span class="c">The default completion UI adds the
+</span>                           <span class="cd">;; </span><span class="c">`</span><span class="m c">completions-annotations</span><span class="c">' face if no other faces are
+</span>                           <span class="cd">;; </span><span class="c">present. We use a custom `</span><span class="m c">corfu-annotations</span><span class="c">' face to
+</span>                           <span class="cd">;; </span><span class="c">allow further styling which fits better for popups.
+</span>                           (<span class="k">unless</span> (text-property-not-all 0 (length suff) 'face nil suff)
+                             (<span class="k">setq</span> suff (propertize suff 'face 'corfu-annotations)))
+                           (list cand <span class="s">""</span> suff)))
+              (<span class="k">cl-loop</span> for cand in cands collect (list cand <span class="s">""</span> <span class="s">""</span>)))))
+    (<span class="k">cl-loop</span> for x in cands for (c . _) = x do
+             (<span class="k">when</span> mf
+               (<span class="k">setf</span> (cadr x) (funcall mf c)))
+             (<span class="k">when</span> (<span class="k">and</span> dep (funcall dep c))
+               (setcar x (<span class="k">setq</span> c (substring c)))
+               (add-face-text-property 0 (length c) 'corfu-deprecated 'append c)))
+    (cons mf cands)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,130 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: marginalia--symbol-class – Emacs Documentation Online</title>
+<meta name="description" content="marginalia--symbol-class is a natively compiled function defined in
+marginalia.el.
+Return symbol class characters for symbol S.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>marginalia--symbol-class</code></h1><p><span class="m"><code>marginalia--symbol-class</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">marginalia.el</span>.
+<h2>Signature</h2>
+<pre><code>(marginalia--symbol-class <a href="#:~:text=symbol-,S"><span class="arg">S</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return symbol class characters for symbol <span class="arg">S</span>.
+<p>This function is an extension of <a href="../fun/help--symbol-class.html"><code>help--symbol-class</code></a>.  It returns
+more fine-grained and more detailed symbol information.
+<p>Function:
+f function
+c command
+C interactive-only command
+m macro
+F special-form
+M module function
+P primitive
+g cl-generic
+p pure
+s side-effect-free
+<br>@ autoloaded
+<br>! advised
+<br>- obsolete
+<br>&amp; alias
+<p>Variable:
+u custom (U modified compared to global value)
+v variable
+l local (L modified compared to default value)
+<br>- obsolete
+<br>&amp; alias
+<p>Other:
+G custom group
+a face
+t cl-type
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ckv423l2dy50bfwsy6xzdz7l2a9ah46b-emacs-packages-deps/share/emacs/site-lisp/elpa/marginalia-20260831.1055/marginalia.el</span>
+(<span class="k">defun</span> <span class="f">marginalia--symbol-class</span> (s)
+  <span class="doc">"Return symbol class characters for symbol S.
+
+This function is an extension of `</span><span class="m doc">help--symbol-class</span><span class="doc">'.  It returns
+more fine-grained and more detailed symbol information.
+
+Function:
+f function
+c command
+C interactive-only command
+m macro
+F special-form
+M module function
+P primitive
+g cl-generic
+p pure
+s side-effect-free
+@ autoloaded
+! advised
+- obsolete
+&amp; alias
+
+Variable:
+u custom (U modified compared to global value)
+v variable
+l local (L modified compared to default value)
+- obsolete
+&amp; alias
+
+Other:
+G custom group
+a face
+t cl-type"</span>
+  (<span class="k">let</span> ((class
+         (append
+          (<span class="k">when</span> (fboundp s)
+            (list
+             (<span class="k">cond</span>
+              ((get s 'pure) '(<span class="s">"p"</span> . <span class="s">"pure"</span>))
+              ((get s 'side-effect-free) '(<span class="s">"s"</span> . <span class="s">"side-effect-free"</span>)))
+             (<span class="k">cond</span>
+              ((commandp s)
+               (<span class="k">if</span> (get s 'interactive-only)
+                   '(<span class="s">"C"</span> . <span class="s">"interactive-only command"</span>)
+                 '(<span class="s">"c"</span> . <span class="s">"command"</span>)))
+              ((cl-generic-p s) '(<span class="s">"g"</span> . <span class="s">"cl-generic"</span>))
+              ((macrop (symbol-function s)) '(<span class="s">"m"</span> . <span class="s">"macro"</span>))
+              ((special-form-p (symbol-function s)) '(<span class="s">"F"</span> . <span class="s">"special-form"</span>))
+              ((subr-primitive-p (symbol-function s)) '(<span class="s">"P"</span> . <span class="s">"primitive"</span>))
+              ((module-function-p (symbol-function s)) '(<span class="s">"M"</span> . <span class="s">"module function"</span>))
+              (t '(<span class="s">"f"</span> . <span class="s">"function"</span>)))
+             (<span class="k">and</span> (autoloadp (symbol-function s)) '(<span class="s">"@"</span> . <span class="s">"autoload"</span>))
+             (<span class="k">and</span> (marginalia--advised s) '(<span class="s">"!"</span> . <span class="s">"advised"</span>))
+             (<span class="k">and</span> (symbolp (symbol-function s))
+                  (cons <span class="s">"&amp;"</span> (format <span class="s">"alias for `</span><span class="m s">%s</span><span class="s">'"</span> (symbol-function s))))
+             (<span class="k">and</span> (get s 'byte-obsolete-info) '(<span class="s">"-"</span> . <span class="s">"obsolete"</span>))))
+          (<span class="k">when</span> (boundp s)
+            (list
+             (<span class="k">when</span> (local-variable-if-set-p s)
+               (<span class="k">if</span> (<span class="k">ignore-errors</span>
+                     (not (equal (symbol-value s)
+                                 (default-value s))))
+                   '(<span class="s">"L"</span> . <span class="s">"local, modified from global"</span>)
+                 '(<span class="s">"l"</span> . <span class="s">"local, unmodified"</span>)))
+             (<span class="k">if</span> (get s 'standard-value)
+                 (<span class="k">if</span> (<span class="k">ignore-errors</span>
+                       (not (equal (symbol-value s)
+                                   (eval (car (get s 'standard-value))))))
+                     '(<span class="s">"U"</span> . <span class="s">"custom, modified from standard"</span>)
+                   '(<span class="s">"u"</span> . <span class="s">"custom, unmodified"</span>))
+               '(<span class="s">"v"</span> . <span class="s">"variable"</span>))
+             (<span class="k">and</span> (not (eq (<span class="k">ignore-errors</span> (indirect-variable s)) s))
+                  (cons <span class="s">"&amp;"</span> (format <span class="s">"alias for `</span><span class="m s">%s</span><span class="s">'"</span> (<span class="k">ignore-errors</span> (indirect-variable s)))))
+             (<span class="k">and</span> (get s 'byte-obsolete-variable) '(<span class="s">"-"</span> . <span class="s">"obsolete"</span>))))
+          (list
+           (<span class="k">and</span> (get s 'group-documentation) '(<span class="s">"G"</span> . <span class="s">"custom group"</span>))
+           (<span class="k">and</span> (facep s) '(<span class="s">"a"</span> . <span class="s">"face"</span>))
+           (<span class="k">and</span> (get s 'cl--class) '(<span class="s">"t"</span> . <span class="s">"cl-type"</span>)))))) <span class="cd">;; </span><span class="c">cl-find-class, cl--find-class
+</span>    (<span class="k">setq</span> class (delq nil class))
+    (propertize
+     (format <span class="s">"%-6s"</span> (mapconcat #'car class <span class="s">""</span>))
+     'help-echo
+     (mapconcat (<span class="k">pcase-lambda</span> (`(,x . ,y)) (concat x <span class="s">" "</span> y)) class <span class="s">"\n"</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

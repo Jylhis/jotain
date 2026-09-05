@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-get-parent-nodes – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-get-parent-nodes is a natively compiled function defined
+in combobulate-navigation.el.
+Find POSSIBLE-PARENTS on or near POINT-NODE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-get-parent-nodes</code></h1><p><span class="m"><code>combobulate-get-parent-nodes</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">combobulate-navigation.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-get-parent-nodes <a href="#:~:text=near-,POINT-NODE"><span class="arg">POINT-NODE</span></a> <a href="#:~:text=Find-,POSSIBLE-PARENTS"><span class="arg">POSSIBLE-PARENTS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find <span class="arg">POSSIBLE-PARENTS</span> on or near <span class="arg">POINT-NODE</span>.
+<p><span class="arg">POSSIBLE-PARENTS</span> must be a list of strings or forms. If a form,
+it must be a valid combobulate query that contains one or more
+<br><span class="m"><code>@parent</code></span> labels.
+<p>Returns a list of parents ordered closest to farthest.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-navigation.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-get-parent-nodes</span> (point-node possible-parents)
+  <span class="doc">"Find POSSIBLE-PARENTS on or near POINT-NODE.
+
+POSSIBLE-PARENTS must be a list of strings or forms. If a form,
+it must be a valid combobulate query that contains one or more
+`</span><span class="m doc">@parent</span><span class="doc">' labels.
+
+Returns a list of parents ordered closest to farthest."</span>
+  (<span class="k">let*</span> ((actual-parents (combobulate-get-parents point-node))
+         (matched-parents))
+    (reverse (seq-uniq
+              (seq-sort #'combobulate-node-after-node-p
+                        (<span class="k">dolist</span> (possible-parent possible-parents matched-parents)
+                          (<span class="k">cond</span>
+                           ((stringp possible-parent)
+                            (<span class="k">when-let</span> (m (seq-find (<span class="k">lambda</span> (p) (equal (combobulate-node-type p) possible-parent))
+                                                   actual-parents))
+                              (<span class="k">push</span> m matched-parents)))
+                           ((consp possible-parent)
+                            (<span class="k">dolist</span> (actual-parent actual-parents)
+                              (<span class="k">pcase-dolist</span> (`(,label . ,match) (combobulate-query-search actual-parent possible-parent t))
+                                (<span class="k">when</span> (eq label '@parent)
+                                  (<span class="k">push</span> match matched-parents))))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

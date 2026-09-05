@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--outline-candidates – Emacs Documentation Online</title>
+<meta name="description" content="consult--outline-candidates is a natively compiled function defined in
+consult.el.
+Return list of outline heading strings with position attached.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--outline-candidates</code></h1><p><span class="m"><code>consult--outline-candidates</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--outline-candidates)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return list of outline heading strings with position attached.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+<span class="cd">;;;;; </span><span class="c">Command: consult-outline
+</span>
+(<span class="k">defun</span> <span class="f">consult--outline-candidates</span> ()
+  <span class="doc">"Return list of outline heading strings with position attached."</span>
+  (consult--forbid-minibuffer)
+  (<span class="k">let*</span> ((line (line-number-at-pos (point-min) consult-line-numbers-widen))
+         (heading-regexp (concat <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">"</span>
+                                 <span class="cd">;; </span><span class="c">default definition from outline.el
+</span>                                 (<span class="k">or</span> (<span class="k">bound-and-true-p</span> outline-regexp) <span class="s">"[*\^L]+"</span>)
+                                 <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>))
+         (heading-alist (<span class="k">bound-and-true-p</span> outline-heading-alist))
+         (level-fun (<span class="k">or</span> (<span class="k">bound-and-true-p</span> outline-level)
+                        (<span class="k">lambda</span> () <span class="cd">;; </span><span class="c">as in the default from outline.el
+</span>                          (<span class="k">or</span> (cdr (assoc (match-string 0) heading-alist))
+                              (- (match-end 0) (match-beginning 0))))))
+         (buffer (current-buffer))
+         candidates)
+    (<span class="k">save-excursion</span>
+      (goto-char (point-min))
+      (<span class="k">while</span> (<span class="k">save-excursion</span>
+               (<span class="k">if-let*</span> ((fun (<span class="k">bound-and-true-p</span> outline-search-function)))
+                   (funcall fun)
+                 (re-search-forward heading-regexp nil t)))
+        (<span class="k">incf</span> line (consult--count-lines (match-beginning 0)))
+        (<span class="k">push</span> (consult--location-candidate
+               (buffer-substring-no-properties (pos-bol) (pos-eol))
+               (cons buffer (point)) (1- line) (1- line)
+               'consult--outline-level (funcall level-fun))
+              candidates)
+        (goto-char (1+ (pos-eol)))))
+    (<span class="k">unless</span> candidates
+      (<span class="w">user-error</span> <span class="s">"No headings"</span>))
+    (nreverse candidates)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

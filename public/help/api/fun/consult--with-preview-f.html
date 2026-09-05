@@ -1,0 +1,114 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--with-preview-f – Emacs Documentation Online</title>
+<meta name="description" content="consult--with-preview-f is a natively compiled function defined in
+consult.el.
+See consult--with-preview for documentation.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--with-preview-f</code></h1><p><span class="m"><code>consult--with-preview-f</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--with-preview-f <a href="#:~:text="><span class="arg">PREVIEW-KEY</span></a> <a href="#:~:text="><span class="arg">STATE</span></a> <a href="#:~:text="><span class="arg">TRANSFORM</span></a> <a href="#:~:text="><span class="arg">CANDIDATE</span></a> <a href="#:~:text="><span class="arg">SAVE-INPUT</span></a> <a href="#:~:text="><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>See <a href="../fun/consult--with-preview.html"><code>consult--with-preview</code></a> for documentation.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--with-preview-f</span> (preview-key state transform candidate save-input body)
+  <span class="doc">"See `</span><span class="m doc">consult--with-preview</span><span class="doc">' for documentation."</span>
+  (<span class="k">let</span> ((mb-input <span class="s">""</span>) (timer (timer-create)) mb-narrow selected previewed)
+    (<span class="k">minibuffer-with-setup-hook</span>
+        (<span class="k">if</span> (<span class="k">and</span> state preview-key)
+            (<span class="k">lambda</span> ()
+              (<span class="k">let</span> ((hook (make-symbol <span class="s">"consult--preview-exit"</span>)))
+                (fset hook
+                      (<span class="k">lambda</span> ()
+                        (cancel-timer timer)
+                        (<span class="k">with-selected-window</span> (consult--original-window)
+                          <span class="cd">;; </span><span class="c">STEP 3: Reset preview
+</span>                          (<span class="k">when</span> previewed
+                            (funcall state 'preview nil))
+                          <span class="cd">;; </span><span class="c">STEP 4: Notify the preview function of the minibuffer exit
+</span>                          (funcall state 'exit nil))))
+                (add-hook 'minibuffer-exit-hook hook nil 'local))
+              <span class="cd">;; </span><span class="c">STEP 1: Setup the preview function
+</span>              (<span class="k">with-selected-window</span> (consult--original-window)
+                (funcall state 'setup nil))
+              (<span class="k">setq</span> consult--preview-function
+                    (<span class="k">lambda</span> ()
+                      (<span class="k">when-let*</span> ((cand (funcall candidate)))
+                        <span class="cd">;; </span><span class="c">Drop properties to prevent bugs regarding candidate
+</span>                        <span class="cd">;; </span><span class="c">lookup, which must handle candidates without
+</span>                        <span class="cd">;; </span><span class="c">properties.  Otherwise the arguments passed to the
+</span>                        <span class="cd">;; </span><span class="c">lookup function are confusing, since during preview
+</span>                        <span class="cd">;; </span><span class="c">the candidate has properties but for the final lookup
+</span>                        <span class="cd">;; </span><span class="c">after completion it does not.
+</span>                        (<span class="k">setq</span> cand (substring-no-properties cand))
+                        (<span class="k">with-selected-window</span> (active-minibuffer-window)
+                          (<span class="k">let</span> ((input (minibuffer-contents-no-properties))
+                                (narrow consult--narrow)
+                                (win (consult--original-window)))
+                            (<span class="k">with-selected-window</span> win
+                              (<span class="k">when-let*</span> ((transformed (funcall transform narrow input cand))
+                                          (debounce (consult--preview-key-debounce preview-key transformed)))
+                                (cancel-timer timer)
+                                <span class="cd">;; </span><span class="c">The transformed candidate may have text
+</span>                                <span class="cd">;; </span><span class="c">properties, which change the preview display.
+</span>                                <span class="cd">;; </span><span class="c">This matters for example for `</span><span class="m c">consult-grep</span><span class="c">',
+</span>                                <span class="cd">;; </span><span class="c">where the current candidate and input may
+</span>                                <span class="cd">;; </span><span class="c">stay equal, but the highlighting of the
+</span>                                <span class="cd">;; </span><span class="c">candidate changes while the candidates list
+</span>                                <span class="cd">;; </span><span class="c">is lagging a bit behind and updates
+</span>                                <span class="cd">;; </span><span class="c">asynchronously.
+</span>                                <span class="cd">;;</span><span class="c">
+</span>                                <span class="cd">;; </span><span class="c">In older Consult versions we instead compared
+</span>                                <span class="cd">;; </span><span class="c">the input without properties, since I worried
+</span>                                <span class="cd">;; </span><span class="c">that comparing the transformed candidates
+</span>                                <span class="cd">;; </span><span class="c">could be potentially expensive. However
+</span>                                <span class="cd">;; </span><span class="c">comparing the transformed candidates is more
+</span>                                <span class="cd">;; </span><span class="c">correct. The transformed candidate is the
+</span>                                <span class="cd">;; </span><span class="c">thing which is actually previewed.
+</span>                                (<span class="k">unless</span> (equal-including-properties previewed transformed)
+                                  (<span class="k">if</span> (&gt; debounce 0)
+                                      (<span class="k">progn</span>
+                                        (timer-set-function
+                                         timer
+                                         (<span class="k">lambda</span> ()
+                                           <span class="cd">;; </span><span class="c">Preview only when a completion
+</span>                                           <span class="cd">;; </span><span class="c">window is selected and when
+</span>                                           <span class="cd">;; </span><span class="c">the preview window is alive.
+</span>                                           (<span class="k">when</span> (<span class="k">and</span> (consult--completion-window-p)
+                                                      (window-live-p win))
+                                             (<span class="k">with-selected-window</span> win
+                                               <span class="cd">;; </span><span class="c">STEP 2: Preview candidate
+</span>                                               (funcall state 'preview (<span class="k">setq</span> previewed transformed))))))
+                                        (timer-set-time timer (timer-relative-time nil debounce))
+                                        (timer-activate timer))
+                                    <span class="cd">;; </span><span class="c">STEP 2: Preview candidate
+</span>                                    (funcall state 'preview (<span class="k">setq</span> previewed transformed)))))))))))
+              (consult--preview-append-local-pch
+               (<span class="k">lambda</span> ()
+                 (<span class="k">setq</span> mb-input (minibuffer-contents-no-properties)
+                       mb-narrow consult--narrow)
+                 (funcall consult--preview-function))))
+          (<span class="k">lambda</span> ()
+            (consult--preview-append-local-pch
+             (<span class="k">lambda</span> ()
+               (<span class="k">setq</span> mb-input (minibuffer-contents-no-properties)
+                     mb-narrow consult--narrow)))))
+      (<span class="k">unwind-protect</span>
+          (<span class="k">setq</span> selected (<span class="k">when-let*</span> ((result (funcall body)))
+                           (<span class="k">when-let*</span> ((save-input)
+                                       (list (symbol-value save-input))
+                                       ((equal (car list) result)))
+                             (set save-input (cdr list)))
+                           (funcall transform mb-narrow mb-input result)))
+        (<span class="k">when</span> save-input
+          (add-to-history save-input mb-input))
+        (<span class="k">when</span> state
+          <span class="cd">;; </span><span class="c">STEP 5: The preview function should perform its final action
+</span>          (funcall state 'return selected))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

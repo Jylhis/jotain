@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--config-completion-at-point – Emacs Documentation Online</title>
+<meta name="description" content="dape--config-completion-at-point is a natively compiled function
+defined in dape.el.
+Function for completion-at-point fn for dape--read-config.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--config-completion-at-point</code></h1><p><span class="m"><code>dape--config-completion-at-point</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--config-completion-at-point)
+</code></pre>
+<h2>Documentation</h2>
+<p>Function for <a href="../fun/completion-at-point.html"><code>completion-at-point</code></a> fn for <a href="../fun/dape--read-config.html"><code>dape--read-config</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--config-completion-at-point</span> ()
+  <span class="doc">"Function for `</span><span class="m doc">completion-at-point</span><span class="doc">' fn for `</span><span class="m doc">dape--read-config</span><span class="doc">'."</span>
+  (<span class="k">let</span> (key key-end args args-bounds last-p)
+    (<span class="k">save-excursion</span>
+      (goto-char (minibuffer-prompt-end))
+      (<span class="k">setq</span> key (<span class="k">ignore-errors</span> (read (current-buffer))))
+      (<span class="k">setq</span> key-end (point))
+      (<span class="k">ignore-errors</span>
+        (<span class="k">while</span> t
+          (<span class="k">setq</span> last-p (point))
+          (<span class="k">push</span> (read (current-buffer)) args)
+          (<span class="k">push</span> (cons last-p (point)) args-bounds))))
+    (<span class="k">setq</span> args (nreverse args)
+          args-bounds (nreverse args-bounds))
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">Complete key
+</span>     ((&lt;= (point) key-end)
+      (<span class="k">pcase-let</span> ((`(,start . ,end)
+                   (<span class="k">or</span> (bounds-of-thing-at-point 'symbol)
+                       (cons (point) (point)))))
+        (list start end
+              (mapcar (<span class="k">lambda</span> (suggestion) (format <span class="s">"%s "</span> suggestion))
+                      dape--minibuffer-suggestions))))
+     <span class="cd">;; </span><span class="c">Complete args
+</span>     ((<span class="k">and</span> (not (plist-member args '-)) <span class="cd">;; </span><span class="c">Skip zap/dash notation
+</span>           (alist-get key dape-configs)
+           (<span class="k">or</span> (<span class="k">and</span> (plistp args)
+                    (thing-at-point 'whitespace))
+               (<span class="k">cl-loop</span> with p = (point)
+                        for ((start . end) _) on args-bounds by 'cddr
+                        when (<span class="k">and</span> (&lt;= start p) (&lt;= p end))
+                        return t
+                        finally return nil)))
+      (<span class="k">pcase-let</span> ((`(,start . ,end)
+                   (<span class="k">or</span> (bounds-of-thing-at-point 'symbol)
+                       (cons (point) (point)))))
+        (list start end
+              (<span class="k">cl-loop</span> with plist = (append (alist-get key dape-configs)
+                                            '(compile nil))
+                       for (key _) on plist by 'cddr
+                       collect (format <span class="s">"%s "</span> key)))))
+     (t
+      (list (point) (point) nil <span class="bi">:exclusive</span> 'no)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

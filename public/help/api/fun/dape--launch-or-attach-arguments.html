@@ -1,0 +1,41 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--launch-or-attach-arguments – Emacs Documentation Online</title>
+<meta name="description" content="dape--launch-or-attach-arguments is a natively compiled function
+defined in dape.el.
+Return plist of launch/attach arguments for CONN.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--launch-or-attach-arguments</code></h1><p><span class="m"><code>dape--launch-or-attach-arguments</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--launch-or-attach-arguments <a href="#:~:text=for-,CONN"><span class="arg">CONN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return plist of launch/attach arguments for <span class="arg">CONN</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--launch-or-attach-arguments</span> (conn)
+  <span class="doc">"Return plist of launch/attach arguments for CONN."</span>
+  <span class="cd">;; </span><span class="c">Transform config to jsonrpc serializable format
+</span>  <span class="cd">;; </span><span class="c">Remove all non `</span><span class="m c">keywordp</span><span class="c">' keys and transform null to
+</span>  <span class="cd">;; </span><span class="c">:json-false
+</span>  (<span class="k">cl-labels</span>
+      ((transform-value (value)
+         (<span class="k">pcase</span> value
+           ('nil <span class="bi">:json-false</span>)
+           <span class="cd">;; </span><span class="c">Need a way to create json null values (see #72)
+</span>           (<span class="bi">:null</span> nil)
+           ((pred vectorp)
+            (cl-map 'vector #'transform-value value))
+           ((pred listp)
+            (create-body value))
+           (_ value)))
+       (create-body (config)
+         (<span class="k">cl-loop</span> for (key value) on config by 'cddr
+                  when (keywordp key)
+                  append (list key (transform-value value)))))
+    (create-body (dape--config conn))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

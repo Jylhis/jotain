@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape-select-session – Emacs Documentation Online</title>
+<meta name="description" content="dape-select-session is an interactive and natively compiled function
+defined in dape.el.
+Select CONN as the active debug session.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape-select-session</code></h1><p><span class="m"><code>dape-select-session</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape-select-session <a href="#:~:text=Select-,CONN"><span class="arg">CONN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Select <span class="arg">CONN</span> as the active debug session.
+<h2>Key Bindings</h2>
+<p><span class="v">ctl-x-map</span> <span class="key">C-a T</span>
+<span class="v">dape-global-map</span> <span class="key">T</span>
+<span class="v">global-map</span> <span class="key">C-x C-a T</span>
+<span class="v">help-quick-use-map</span> <span class="key">C-x C-a T</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape-select-session</span> (conn)
+  <span class="doc">"Select CONN as the active debug session."</span>
+  (<span class="k">interactive</span>
+   (<span class="k">let</span> ((collection
+          (<span class="k">cl-loop</span> with root = (<span class="k">when</span> dape--connection-selected
+                                 (dape--root-of dape--connection-selected))
+                   for c in (dape--live-connections-root)
+                   unless (eq c root)
+                   collect `(,(string-remove-prefix <span class="s">"dape-"</span> (jsonrpc-name c))
+                             ,c))))
+     (<span class="k">unless</span> collection
+       (<span class="w">user-error</span> <span class="s">"No other active debug sessions"</span>))
+     (cdr (assoc (completing-read <span class="s">"Select session: "</span> collection nil t)
+                 collection))))
+  (<span class="k">setq</span> dape--connection-selected
+        <span class="cd">;; </span><span class="c">Limit lookup scope to *this* session
+</span>        (<span class="k">let</span> ((dape--connections
+               (<span class="k">cl-loop</span> with root = (dape--root-of conn)
+                        for conn in dape--connections
+                        when (eq (dape--root-of conn) root)
+                        collect conn)))
+          (<span class="k">or</span> (dape--live-connection 'last t) conn)))
+  (<span class="k">when-let*</span> ((buffer (dape--shell-buffer conn)))
+    (dape--display-buffer buffer))
+  (dape--update dape--connection-selected nil t)
+  (dape--mode-line-format)
+  (force-mode-line-update t))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

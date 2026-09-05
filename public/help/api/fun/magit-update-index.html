@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-update-index – Emacs Documentation Online</title>
+<meta name="description" content="magit-update-index is an interactive and natively compiled function
+defined in magit-files.el.
+Update the index with the contents of the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-update-index</code></h1><p><span class="m"><code>magit-update-index</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-files.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-update-index)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update the index with the contents of the current buffer.
+<p>The current buffer has to be visiting a file in the index, which
+is done using <span class="m"><code>magit-find-index-noselect</code></span>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-files.el</span>
+<span class="cd">;;; </span><span class="c">Update Index
+</span>
+(<span class="k">defun</span> <span class="f">magit-update-index</span> ()
+  <span class="doc">"Update the index with the contents of the current buffer.
+The current buffer has to be visiting a file in the index, which
+is done using `</span><span class="m doc">magit-find-index-noselect</span><span class="doc">'."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((file (magit-file-relative-name)))
+    (<span class="k">unless</span> (equal magit-buffer-revision <span class="s">"{index}"</span>)
+      (<span class="w">user-error</span> <span class="s">"%s isn't visiting the index"</span> file))
+    (<span class="k">if</span> (y-or-n-p (format <span class="s">"Update index with contents of %s?"</span> (buffer-name)))
+        (<span class="k">let</span> ((index (make-temp-name
+                      (expand-file-name <span class="s">"magit-update-index-"</span> (magit-gitdir))))
+              (buffer (current-buffer)))
+          (magit-run-before-change-functions file <span class="s">"un-/stage"</span>)
+          (<span class="k">unwind-protect</span>
+              (<span class="k">progn</span>
+                (<span class="k">let</span> ((coding-system-for-write buffer-file-coding-system))
+                  (<span class="k">with-temp-file</span> index
+                    (insert-buffer-substring buffer)))
+                (<span class="k">magit-with-toplevel</span>
+                  (magit-call-git
+                   <span class="s">"update-index"</span> <span class="s">"--cacheinfo"</span>
+                   (substring (magit-git-string <span class="s">"ls-files"</span> <span class="s">"-s"</span> file)
+                              0 6)
+                   (magit-git-string <span class="s">"hash-object"</span> <span class="s">"-t"</span> <span class="s">"blob"</span> <span class="s">"-w"</span>
+                                     (concat <span class="s">"--path="</span> file)
+                                     <span class="s">"--"</span> (magit-convert-filename-for-git index))
+                   file)))
+            (<span class="k">ignore-errors</span> (delete-file index)))
+          (set-buffer-modified-p nil)
+          (magit-run-after-apply-functions file <span class="s">"un-/stage"</span>))
+      (message <span class="s">"Abort"</span>)))
+  (when$ (magit-get-mode-buffer 'magit-status-mode)
+    (<span class="k">with-current-buffer</span> $
+      (magit-refresh)))
+  t)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

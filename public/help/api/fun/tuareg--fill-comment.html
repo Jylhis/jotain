@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg--fill-comment – Emacs Documentation Online</title>
+<meta name="description" content="tuareg--fill-comment is a natively compiled function defined in
+tuareg.el.
+Assumes the point is inside a comment and justify it.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg--fill-comment</code></h1><p><span class="m"><code>tuareg--fill-comment</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg--fill-comment)
+</code></pre>
+<h2>Documentation</h2>
+<p>Assumes the point is inside a comment and justify it.
+<p>This function moves the point.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg--fill-comment</span> ()
+  <span class="doc">"Assumes the point is inside a comment and justify it.
+This function moves the point."</span>
+  (<span class="k">let*</span> ((com-start (nth 8 (syntax-ppss)))
+         content-start
+         com-end
+         in-doc-comment
+         par-start
+         par-end)
+    (<span class="k">save-excursion</span>
+      (goto-char com-start)
+      (<span class="k">setq</span> content-start (<span class="k">and</span> (looking-at comment-start-skip)
+                               (match-end 0)))
+      (<span class="k">setq</span> in-doc-comment (looking-at-p (<span class="k">rx</span> <span class="s">"(**"</span> (not (in <span class="s">"*"</span>)))))
+      (forward-comment 1)
+      (<span class="k">setq</span> com-end (point)))
+
+    <span class="cd">;; </span><span class="c">In doc comments, let @tags start a paragraph.
+</span>    (<span class="k">let</span> ((paragraph-start
+           (<span class="k">if</span> in-doc-comment
+               (concat paragraph-start
+                       <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">"</span>
+                       (<span class="k">rx</span> (* (in <span class="s">" \t"</span>)) <span class="s">"@"</span> (+ lower) symbol-end))
+             paragraph-start)))
+      (<span class="k">save-restriction</span>
+        (narrow-to-region content-start com-end)
+        (<span class="k">save-excursion</span>
+          (skip-chars-forward <span class="s">" \t"</span>)
+          (backward-paragraph)
+          (skip-chars-forward <span class="s">" \t\n"</span>)
+          (<span class="k">setq</span> par-start (point))
+          (forward-paragraph)
+          (<span class="k">setq</span> par-end (point))))
+
+      <span class="cd">;; </span><span class="c">Set `</span><span class="m c">fill-prefix</span><span class="c">' to preserve the indentation of the start of the
+</span>      <span class="cd">;; </span><span class="c">paragraph, assuming that is what the user wants.
+</span>      (<span class="k">let</span> ((fill-prefix
+             (<span class="k">save-excursion</span>
+               (goto-char par-start)
+               (<span class="k">let</span> ((col
+                      (<span class="k">if</span> (<span class="k">and</span> in-doc-comment
+                               (looking-at-p
+                                (<span class="k">rx</span> <span class="s">"@"</span> (+ lower) symbol-end)))
+                          <span class="cd">;; </span><span class="c">Indent two spaces under @tag.
+</span>                          (+ 2 (current-column))
+                        (current-column))))
+                 (make-string col ?\s)))))
+        (fill-region-as-paragraph par-start par-end)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

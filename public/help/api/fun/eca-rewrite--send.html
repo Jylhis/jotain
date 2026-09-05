@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-rewrite--send – Emacs Documentation Online</title>
+<meta name="description" content="eca-rewrite--send is a natively compiled function defined in
+eca-rewrite.el.
+Send rewrite request for SESSION and TEXT with PROMPT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-rewrite--send</code></h1><p><span class="m"><code>eca-rewrite--send</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-rewrite.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-rewrite--send <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=and-,TEXT"><span class="arg">TEXT</span></a> <a href="#:~:text=END.-,PATH"><span class="arg">PATH</span></a> <a href="#:~:text=at-,START"><span class="arg">START</span></a> <a href="#:~:text=to-,END"><span class="arg">END</span></a> <a href="#:~:text=with-,PROMPT"><span class="arg">PROMPT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Send rewrite request for <span class="arg">SESSION</span> and <span class="arg">TEXT</span> with <span class="arg">PROMPT</span>.
+<p>Creating overlay at <span class="arg">START</span> to <span class="arg">END</span>.
+<span class="arg">PATH</span> is the optional file path.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-rewrite.el</span>
+(<span class="k">defun</span> <span class="f">eca-rewrite--send</span> (session text path start end prompt)
+  <span class="doc">"Send rewrite request for SESSION and TEXT with PROMPT.
+Creating overlay at START to END.
+PATH is the optional file path."</span>
+  (<span class="k">let</span> ((start-line (line-number-at-pos start))
+        (end-line (line-number-at-pos end))
+        (start-char (<span class="k">save-excursion</span>
+                      (goto-char start)
+                      (current-column)))
+        (end-char (<span class="k">save-excursion</span>
+                    (goto-char end)
+                    (current-column)))
+        (id (number-to-string (random 100000000)))
+        (remote-path (<span class="k">when</span> path (eca--path-local-to-remote path))))
+    (eca-api-request-async
+     session
+     <span class="bi">:method</span> <span class="s">"rewrite/prompt"</span>
+     <span class="bi">:params</span> (list <span class="bi">:id</span> id
+                   <span class="bi">:text</span> text
+                   <span class="bi">:prompt</span> prompt
+                   <span class="bi">:path</span> remote-path
+                   <span class="bi">:range</span> (list <span class="bi">:start</span> (list <span class="bi">:line</span> start-line <span class="bi">:character</span> start-char)
+                                <span class="bi">:end</span> (list <span class="bi">:line</span> end-line <span class="bi">:character</span> end-char)))
+     <span class="bi">:success-callback</span>
+     (<span class="k">lambda</span> (res)
+       (eca-info <span class="s">"Rewriting..."</span>)
+       (<span class="k">setq</span> eca-rewrite--id-&gt;buffer (eca-assoc eca-rewrite--id-&gt;buffer id (current-buffer)))
+       (eca-rewrite--setup-overlay id start end text path prompt (plist-get res <span class="bi">:model</span>)))
+     <span class="bi">:error-callback</span>
+     (<span class="k">lambda</span> (err)
+       (eca-error <span class="s">"Rewrite error: %s"</span> (plist-get err <span class="bi">:message</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

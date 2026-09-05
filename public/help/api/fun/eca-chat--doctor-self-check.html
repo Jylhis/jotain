@@ -1,0 +1,84 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--doctor-self-check – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--doctor-self-check is a natively compiled function defined in
+eca-chat.el.
+Probe loaded ECA chat code and SRC-BUF for fix-presence indicators.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--doctor-self-check</code></h1><p><span class="m"><code>eca-chat--doctor-self-check</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--doctor-self-check <a href="#:~:text=and-,SRC-BUF"><span class="arg">SRC-BUF</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Probe loaded ECA chat code and <span class="arg">SRC-BUF</span> for fix-presence indicators.
+<p>Return a plist describing the state of mode-map bindings, the
+cond ordering inside <a href="../fun/eca-chat--key-pressed-return.html"><code>eca-chat--key-pressed-return</code></a>, the first
+expandable label's keymap, and whether the loaded <span class="m"><code>.elc</code></span> is stale
+relative to the on-disk <span class="m"><code>.el</code></span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--doctor-self-check</span> (src-buf)
+  <span class="doc">"Probe loaded ECA chat code and SRC-BUF for fix-presence indicators.
+Return a plist describing the state of mode-map bindings, the
+cond ordering inside `</span><span class="m doc">eca-chat--key-pressed-return</span><span class="doc">', the first
+expandable label's keymap, and whether the loaded `</span><span class="m doc">.elc</span><span class="doc">' is stale
+relative to the on-disk `</span><span class="m doc">.el</span><span class="doc">'."</span>
+  (<span class="k">let*</span> ((mode-map-ret (<span class="k">ignore-errors</span>
+                         (lookup-key eca-chat-mode-map (kbd <span class="s">"RET"</span>))))
+         (mode-map-ret-ok (eq mode-map-ret 'eca-chat--key-pressed-return))
+         (kpr-body (<span class="k">ignore-errors</span>
+                     (prin1-to-string
+                      (symbol-function 'eca-chat--key-pressed-return))))
+         (kpr-exp-pos (<span class="k">and</span> kpr-body
+                           (string-match-p <span class="s">"expandable-content-at-point"</span>
+                                           kpr-body)))
+         (kpr-md-pos (<span class="k">and</span> kpr-body
+                          (string-match-p <span class="s">"markdown-link-face"</span> kpr-body)))
+         (cond-ok (<span class="k">cond</span> ((<span class="k">and</span> kpr-exp-pos kpr-md-pos)
+                         (&lt; kpr-exp-pos kpr-md-pos))
+                        (t 'unknown)))
+         (label-ov (<span class="k">with-current-buffer</span> src-buf
+                     (-first (<span class="k">lambda</span> (o)
+                               (overlay-get o 'eca-chat--expandable-content-id))
+                             (overlays-in (point-min) (point-max)))))
+         (label-ret
+          (<span class="k">and</span> label-ov
+               (<span class="k">with-current-buffer</span> src-buf
+                 (<span class="k">save-excursion</span>
+                   (goto-char (overlay-start label-ov))
+                   (<span class="k">let</span> ((line-end (line-end-position))
+                         (km nil)
+                         (pos (point)))
+                     (<span class="k">while</span> (<span class="k">and</span> (&lt; pos line-end) (not km))
+                       (<span class="k">setq</span> km (get-text-property pos 'keymap))
+                       (<span class="k">unless</span> km
+                         (<span class="k">setq</span> pos (<span class="k">or</span> (next-single-property-change
+                                        pos 'keymap nil line-end)
+                                       line-end))))
+                     (<span class="k">when</span> km
+                       (<span class="k">or</span> (lookup-key km (kbd <span class="s">"RET"</span>))
+                           (lookup-key km (kbd <span class="s">"&lt;return&gt;"</span>)))))))))
+         (label-ret-ok (<span class="k">and</span> label-ret (functionp label-ret)))
+         (loaded-file (<span class="k">ignore-errors</span>
+                        (symbol-file 'eca-chat--insert-expandable-block
+                                     'defun)))
+         (source-file (<span class="k">ignore-errors</span>
+                        (find-library-name <span class="s">"eca-chat-expandable"</span>)))
+         (stale-elc-p (<span class="k">and</span> loaded-file source-file
+                           (string-suffix-p <span class="s">".elc"</span> loaded-file)
+                           (file-newer-than-file-p source-file
+                                                   loaded-file))))
+    (list <span class="bi">:mode-map-ret</span> mode-map-ret
+          <span class="bi">:mode-map-ret-ok</span> mode-map-ret-ok
+          <span class="bi">:cond-ok</span> cond-ok
+          <span class="bi">:has-label</span> (not (null label-ov))
+          <span class="bi">:label-ret</span> label-ret
+          <span class="bi">:label-ret-ok</span> label-ret-ok
+          <span class="bi">:loaded-file</span> loaded-file
+          <span class="bi">:source-file</span> source-file
+          <span class="bi">:stale-elc-p</span> stale-elc-p)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

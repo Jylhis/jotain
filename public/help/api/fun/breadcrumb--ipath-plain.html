@@ -1,0 +1,38 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: breadcrumb--ipath-plain – Emacs Documentation Online</title>
+<meta name="description" content="breadcrumb--ipath-plain is a natively compiled function defined in
+breadcrumb.el.
+Compute ipath for plain imenu--index-alist structures.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>breadcrumb--ipath-plain</code></h1><p><span class="m"><code>breadcrumb--ipath-plain</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">breadcrumb.el</span>.
+<h2>Signature</h2>
+<pre><code>(breadcrumb--ipath-plain <a href="#:~:text="><span class="arg">INDEX-ALIST</span></a> <a href="#:~:text="><span class="arg">POS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Compute ipath for plain <a href="../var/imenu--index-alist.html"><code>imenu--index-alist</code></a> structures.
+<p>These structures don't have a <span class="m"><code>breadcrumb-region</code></span> property on.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/rgffxr4a6vz8lckbp4wfm9fkh23cafc3-emacs-packages-deps/share/emacs/site-lisp/elpa/breadcrumb-1.0.1/breadcrumb.el</span>
+(<span class="k">defun</span> <span class="f">bc--ipath-plain</span> (index-alist pos)
+  <span class="doc">"Compute ipath for plain `</span><span class="m doc">imenu--index-alist</span><span class="doc">' structures.
+These structures don't have a `</span><span class="m doc">breadcrumb-region</span><span class="doc">' property on."</span>
+  (<span class="k">cl-labels</span> ((dfs (n <span class="ty">&amp;optional</span> ipath siblings)
+                (<span class="k">setq</span> ipath (cons (car n) ipath))
+                (<span class="k">if</span> (consp (cdr n))
+                    (mapc (<span class="k">lambda</span> (n2) (dfs n2 ipath (cdr n))) (cdr n))
+                  (put-text-property 0 1 'breadcrumb-siblings (cdr siblings) (car ipath))
+                  (<span class="k">setq</span> bc--ipath-plain-cache
+                        (vconcat bc--ipath-plain-cache
+                                 `[,(cons (cdr n) ipath)])))))
+    (<span class="k">unless</span> bc--ipath-plain-cache
+      (mapc (<span class="k">lambda</span> (i) (dfs i nil index-alist)) index-alist)
+      (<span class="k">setq</span> bc--ipath-plain-cache (cl-sort bc--ipath-plain-cache #'&lt; <span class="bi">:key</span> #'car)))
+    (<span class="k">unless</span> (&lt; pos (car (aref bc--ipath-plain-cache 0)))
+      (<span class="k">let</span> ((res (bc--bisect bc--ipath-plain-cache pos <span class="bi">:key</span> #'car <span class="bi">:from-end</span> t)))
+        (<span class="k">unless</span> (zerop res) (reverse (cdr (elt bc--ipath-plain-cache (1- res)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

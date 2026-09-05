@@ -1,0 +1,108 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: browse-url – Emacs Documentation Online</title>
+<meta name="description" content="browse-url is an autoloaded, interactive and natively compiled
+function defined in browse-url.el.gz.
+Open URL using a configurable method.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>browse-url</code></h1><p><span class="m"><code>browse-url</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a>, <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <a href="../src/net/browse-url.el.html">browse-url.el.gz</a>.
+<h2>Signature</h2>
+<pre><code>(browse-url <a href="#:~:text=Open-,URL"><span class="arg">URL</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=additional-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Open <span class="arg">URL</span> using a configurable method.
+<p>This will typically (by default) open <span class="arg">URL</span> with an external web
+browser, but a wide variety of different methods can be used,
+depending on the <span class="arg">URL</span> type.
+<p>The variables <a href="../var/browse-url-browser-function.html"><code>browse-url-browser-function</code></a>,
+<a href="../var/browse-url-handlers.html"><code>browse-url-handlers</code></a>, and <a href="../var/browse-url-default-handlers.html"><code>browse-url-default-handlers</code></a>
+determine which browser function to use.
+<p>Interactively, this command prompts for a <span class="arg">URL</span>, defaulting to the
+<span class="arg">URL</span> at or before point.
+<p>The additional <span class="arg">ARGS</span> are passed to the browser function.  See the
+doc strings of the actual functions, starting with
+<a href="../var/browse-url-browser-function.html"><code>browse-url-browser-function</code></a>, for information about the
+significance of <span class="arg">ARGS</span> (most of the functions ignore it).
+<p>If <span class="arg">ARGS</span> are omitted, the default is to pass
+<a href="../var/browse-url-new-window-flag.html"><code>browse-url-new-window-flag</code></a> as <span class="arg">ARGS</span>.  Interactively, pass the
+prefix arg as <span class="arg">ARGS</span>; if <a href="../var/browse-url-new-window-flag.html"><code>browse-url-new-window-flag</code></a> is non-nil,
+invert the prefix arg instead.
+<p><a href="/info/emacs/browse-url.html#index-browse_002durl">View in manual</a>
+<p>Probably introduced at or before Emacs version <a href="../etc/NEWS.19.html">19.31</a>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><a href="../src/net/browse-url.el.html">/usr/src/emacs/lisp/net/browse-url.el.gz</a>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">browse-url</span> (url <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Open URL using a configurable method.
+This will typically (by default) open URL with an external web
+browser, but a wide variety of different methods can be used,
+depending on the URL type.
+
+The variables `</span><span class="m doc">browse-url-browser-function</span><span class="doc">',
+`</span><span class="m doc">browse-url-handlers</span><span class="doc">', and `</span><span class="m doc">browse-url-default-handlers</span><span class="doc">'
+determine which browser function to use.
+
+Interactively, this command prompts for a URL, defaulting to the
+URL at or before point.
+
+The additional ARGS are passed to the browser function.  See the
+doc strings of the actual functions, starting with
+`</span><span class="m doc">browse-url-browser-function</span><span class="doc">', for information about the
+significance of ARGS (most of the functions ignore it).
+
+If ARGS are omitted, the default is to pass
+`</span><span class="m doc">browse-url-new-window-flag</span><span class="doc">' as ARGS.  Interactively, pass the
+prefix arg as ARGS; if `</span><span class="m doc">browse-url-new-window-flag</span><span class="doc">' is non-nil,
+invert the prefix arg instead."</span>
+  (<span class="k">interactive</span> (browse-url-interactive-arg <span class="s">"URL: "</span>))
+  (<span class="k">unless</span> (called-interactively-p 'interactive)
+    (<span class="k">setq</span> args (<span class="k">or</span> args (list browse-url-new-window-flag))))
+  (<span class="k">when</span> browse-url-transform-alist
+    (<span class="k">dolist</span> (trans browse-url-transform-alist)
+      (<span class="k">when</span> (string-match (car trans) url)
+        (<span class="k">setq</span> url (replace-match (cdr trans) nil t url)))))
+  (<span class="k">when</span> (<span class="k">and</span> url-handler-mode
+             (not (file-name-absolute-p url))
+             (not (string-match <span class="s">"\\`[a-z]+:"</span> url)))
+    (<span class="k">setq</span> url (expand-file-name url)))
+  (<span class="k">let</span> ((process-environment (copy-sequence process-environment))
+	(function (<span class="k">or</span> (browse-url-select-handler url)
+                      browse-url-browser-function))
+	<span class="cd">;; </span><span class="c">Ensure that `</span><span class="m c">default-directory</span><span class="c">' exists and is readable (bug#6077).
+</span>	(default-directory (<span class="k">or</span> (unhandled-file-name-directory default-directory)
+			       (expand-file-name <span class="s">"~/"</span>))))
+    <span class="cd">;; </span><span class="c">When connected to various displays, be careful to use the display of
+</span>    <span class="cd">;; </span><span class="c">the currently selected frame, rather than the original start display,
+</span>    <span class="cd">;; </span><span class="c">which may not even exist any more.
+</span>    (<span class="k">let</span> ((dpy (frame-parameter nil 'display))
+          classname)
+      (<span class="k">if</span> (stringp dpy)
+        (<span class="k">cond</span>
+         ((<span class="k">featurep</span> '<span class="m">pgtk</span>)
+          (<span class="k">setq</span> classname
+                (<span class="k">if</span> (window-system)
+                    (pgtk-backend-display-class)))
+          (<span class="k">if</span> (equal classname <span class="s">"GdkWaylandDisplay"</span>)
+              (<span class="k">progn</span>
+                <span class="cd">;; </span><span class="c">The `</span><span class="m c">display</span><span class="c">' frame parameter is probably wrong.
+</span>                <span class="cd">;; </span><span class="c">See bug#53969 for some context.
+</span>                <span class="cd">;; </span><span class="c">(setenv "WAYLAND_DISPLAY" dpy)
+</span>                )
+            (setenv <span class="s">"DISPLAY"</span> dpy)))
+         ((<span class="k">featurep</span> '<span class="m">android</span>)
+          <span class="cd">;; </span><span class="c">Avoid modifying the DISPLAY environment variable here,
+</span>          <span class="cd">;; </span><span class="c">which interferes with any X server the user may have
+</span>          <span class="cd">;; </span><span class="c">expressly set.
+</span>          nil)
+         (t
+          (setenv <span class="s">"DISPLAY"</span> dpy)))))
+    (<span class="k">if</span> (functionp function)
+        (apply function url args)
+      (<span class="w">error</span> <span class="s">"No suitable browser for URL %s"</span> url))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

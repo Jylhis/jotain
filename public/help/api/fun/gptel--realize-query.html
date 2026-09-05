@@ -1,0 +1,72 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--realize-query – Emacs Documentation Online</title>
+<meta name="description" content="gptel--realize-query is a natively compiled function defined in
+gptel-request.el.
+Realize the query payload for FSM from its prompt buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--realize-query</code></h1><p><span class="m"><code>gptel--realize-query</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--realize-query <a href="#:~:text=for-,FSM"><span class="arg">FSM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Realize the query payload for <span class="arg">FSM</span> from its prompt buffer.
+<p>Initiate the request when done.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+(<span class="k">defun</span> <span class="f">gptel--realize-query</span> (fsm)
+  <span class="doc">"Realize the query payload for FSM from its prompt buffer.
+
+Initiate the request when done."</span>
+  (<span class="k">let</span> ((info (gptel-fsm-info fsm)))
+    (<span class="k">with-current-buffer</span> (plist-get info <span class="bi">:data</span>)
+      (<span class="k">let*</span> ((directive (gptel--parse-directive gptel-system-prompt 'raw))
+             <span class="cd">;; </span><span class="c">DIRECTIVE contains both the system message and the template prompts
+</span>             (gptel-system-prompt
+              (<span class="k">unless</span> (gptel--model-capable-p 'nosystem) (car directive)))
+             <span class="cd">;; </span><span class="c">TODO(tool) Limit tool use to capable models after documenting :capabilities
+</span>             <span class="cd">;; </span><span class="c">(gptel-use-tools (and (gptel--model-capable-p 'tool-use) gptel-use-tools))
+</span>             (stream (<span class="k">and</span> (plist-get info <span class="bi">:stream</span>) gptel-use-curl gptel-stream
+                          <span class="cd">;; </span><span class="c">Check model-specific request-params for streaming preference
+</span>                          (<span class="k">let*</span> ((model-params (gptel--model-request-params gptel-model))
+                                 (stream-spec (plist-get model-params <span class="bi">:stream</span>)))
+                            <span class="cd">;; </span><span class="c">If not present, there is no model-specific preference
+</span>                            (<span class="k">or</span> (not (memq <span class="bi">:stream</span> model-params))
+                                <span class="cd">;; </span><span class="c">If present, it must not be :json-false or nil
+</span>                                (<span class="k">and</span> stream-spec (not (eq stream-spec <span class="bi">:json-false</span>)))))
+                          <span class="cd">;; </span><span class="c">Check backend-specific streaming settings
+</span>                          (gptel-backend-stream gptel-backend)))
+             (gptel-stream stream)
+             (full-prompt))
+        (<span class="k">when</span> (cdr directive)       <span class="cd">; </span><span class="c">prompt constructed from directive/template
+</span>          (<span class="k">save-excursion</span> (goto-char (point-min))
+                          (gptel--parse-list-and-insert (cdr directive))))
+        (goto-char (point-max))
+        (<span class="k">setq</span> full-prompt (gptel--parse-buffer <span class="cd">;</span><span class="c">prompt from buffer or explicitly supplied
+</span>                           gptel-backend (<span class="k">and</span> gptel--num-messages-to-send
+                                              (* 2 gptel--num-messages-to-send))))
+        <span class="cd">;; </span><span class="c">Inject media chunks into the first user prompt if required.  Media
+</span>        <span class="cd">;; </span><span class="c">chunks are always included with the first user message,
+</span>        <span class="cd">;; </span><span class="c">irrespective of the preference in `</span><span class="m c">gptel-use-context</span><span class="c">'.  This is
+</span>        <span class="cd">;; </span><span class="c">because media cannot be included (in general) with system messages.
+</span>        <span class="cd">;; </span><span class="c">TODO(augment): Find a way to do this in the prompt-buffer?
+</span>        (<span class="k">when</span> (<span class="k">and</span> gptel-context gptel-use-context (gptel--model-capable-p 'media))
+          (gptel--inject-media gptel-backend full-prompt))
+        (<span class="k">unless</span> stream (<span class="k">cl-remf</span> info <span class="bi">:stream</span>))
+        (plist-put info <span class="bi">:backend</span> gptel-backend)
+        (plist-put info <span class="bi">:model</span> gptel-model)
+        (<span class="k">when</span> gptel-include-reasoning   <span class="cd">;</span><span class="c">Required for next-request-only scope
+</span>          (plist-put info <span class="bi">:include-reasoning</span> gptel-include-reasoning))
+        (<span class="k">when</span> (<span class="k">and</span> gptel-use-tools gptel-tools)
+          (plist-put info <span class="bi">:tools</span> gptel-tools))
+        (plist-put info <span class="bi">:data</span>
+                   (gptel--request-data gptel-backend full-prompt)))
+      (kill-buffer (current-buffer)))
+    <span class="cd">;; </span><span class="c">INIT -&gt; WAIT
+</span>    (<span class="k">unless</span> (plist-get info <span class="bi">:dry-run</span>) (gptel--fsm-transition fsm))
+    fsm))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

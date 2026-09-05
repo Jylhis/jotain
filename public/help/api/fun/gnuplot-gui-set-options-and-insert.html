@@ -1,0 +1,106 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gnuplot-gui-set-options-and-insert – Emacs Documentation Online</title>
+<meta name="description" content="gnuplot-gui-set-options-and-insert is an autoloaded, interactive and
+natively compiled function defined in gnuplot-gui.el.
+Insert arguments using a GUI interface.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gnuplot-gui-set-options-and-insert</code></h1><p><span class="m"><code>gnuplot-gui-set-options-and-insert</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a>, <a href="/info/elisp/using-interactive.html">interactive</a> and
+<a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">gnuplot-gui.el</span>.
+<h2>Signature</h2>
+<pre><code>(gnuplot-gui-set-options-and-insert <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">EVENT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert arguments using a GUI interface.
+<p>Determine contents of current line and set up the appropriate GUI
+frame.  Bound to <kbd>M-x gnuplot-gui-set-options-and-insert</kbd> (<a href="../fun/gnuplot-gui-set-options-and-insert.html"><code>gnuplot-gui-set-options-and-insert</code></a>)
+Note that "cntrparam" is not currently supported.
+<h2>Key Bindings</h2>
+<p><span class="v">gnuplot-mode-map</span> <span class="key">C-c C-o</span>
+<span class="v">gnuplot-mode-map</span> <span class="key">S-&lt;mouse-2&gt;</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/2zm7pyv0fhyszazmqzf4kn1y6kaaizg4-emacs-packages-deps/share/emacs/site-lisp/elpa/gnuplot-20260623.1111/gnuplot-gui.el</span>
+(<span class="k">defun</span> <span class="f">gnuplot-gui-set-options-and-insert</span> (<span class="ty">&amp;optional</span> event)
+  <span class="doc">"Insert arguments using a GUI interface.
+Determine contents of current line and set up the appropriate GUI
+frame.  Bound to \\[</span><span class="m doc">gnuplot-gui-set-options-and-insert</span><span class="doc">]
+Note that \"cntrparam\" is not currently supported."</span>
+  (<span class="k">interactive</span> (list last-nonmenu-event) gnuplot-mode)
+  (<span class="k">save-excursion</span>
+    (<span class="k">if</span> event (mouse-set-point event))
+    (<span class="k">let</span> ((begin  (gnuplot--point-at-beginning-of-command))
+          (end    (<span class="k">save-excursion</span> (end-of-line)       (point-marker)))
+          (termin (concat <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">,\\s-*"</span> (regexp-quote <span class="s">"\\"</span>) <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>))
+          (set nil) (term nil))
+      (<span class="k">save-excursion</span>
+        <span class="cd">;; </span><span class="c">there can be more then one command per line
+</span>        (<span class="k">when</span> (re-search-forward termin end <span class="s">"to_limit"</span>)
+          (backward-char (length (match-string 1)))
+          (<span class="k">setq</span> end (point-marker)))
+        (goto-char begin)
+        (skip-syntax-forward <span class="s">"-"</span> end)
+        <span class="cd">;; </span><span class="c">various constructions are recognized here. at the end of this
+</span>        <span class="cd">;; </span><span class="c">cond, point should be just after the word whose arguments are
+</span>        <span class="cd">;; </span><span class="c">to be set
+</span>        (<span class="k">cond</span> ((looking-at <span class="s">"set\\s-+"</span>)
+               (<span class="k">setq</span> set t)
+               (goto-char (match-end 0))
+               (<span class="k">if</span> (looking-at <span class="s">"\\sw+"</span>) (goto-char (match-end 0)))
+               (<span class="k">when</span> (string-match <span class="s">"^ter"</span> (gnuplot-gui-this-word)) <span class="cd">; </span><span class="c">terminal?
+</span>                 (<span class="k">setq</span> term t)
+                 (forward-word 1))
+               (<span class="k">when</span> (string-match <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">da</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">fu</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> (gnuplot-gui-this-word))
+                 (<span class="k">unless</span> (looking-at <span class="s">"\\s-+st"</span>)
+                   (insert <span class="s">" style"</span>) (forward-word 1))
+                 (forward-word 1)))
+              ((looking-at (concat <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">cd</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">ca</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">lo</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">pa</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">pr</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">sa</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">u</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>
+                                   <span class="s">"\\w*"</span>
+                                   <span class="s">"[\\s-\\']"</span>))
+               (forward-word 1))
+              <span class="cd">;;</span><span class="c">(goto-char (match-end 0)))
+</span>              (t
+               (forward-word 1)))
+        (<span class="k">if</span> (&gt; (point) end) (goto-char end))
+        (<span class="k">let*</span> ((w (gnuplot-gui-this-word))
+               (wd (try-completion w gnuplot-gui-all-types))
+               (word <span class="s">""</span>) wrd list)
+          (<span class="k">cond</span> ((equal wd t)                     (<span class="k">setq</span> word w))
+                ((equal wd nil)                   (<span class="k">setq</span> word w))
+                ((assoc wd gnuplot-gui-all-types) (<span class="k">setq</span> word wd))
+                (t                                (<span class="k">setq</span> wd nil)))
+          (<span class="k">cond</span> ((equal (string-match <span class="s">"^\\s-*$"</span> w) 0)
+                 (message <span class="s">"Blank line"</span>))
+                ((<span class="k">and</span> wd (stringp word))
+                 (gnuplot-gui-correct-command word set term begin)
+                 (<span class="k">setq</span> gnuplot-gui-alist nil
+                       gnuplot-gui-current-string
+                       (buffer-substring-no-properties (point) end))
+                 (gnuplot-gui-set-alist word gnuplot-gui-current-string)
+                 (<span class="k">let*</span> ((old-height (gnuplot-gui-get-frame-param 'height))
+                        (old-top    (gnuplot-gui-get-frame-param 'top)))
+                   (<span class="k">when</span> (<span class="k">or</span>
+                          (<span class="k">and</span> (equal gnuplot-gui-plot-splot-fit-style 'complete)
+                               (member word '(<span class="s">"plot"</span> <span class="s">"splot"</span> <span class="s">"fit"</span>)))
+                          (equal word <span class="s">"test"</span>))
+                     (gnuplot-gui-set-frame-param 'height 32)
+                     (gnuplot-gui-set-frame-param 'top    50))
+                   (gnuplot-gui-prompt-for-frame word)
+                   (<span class="k">when</span> (<span class="k">or</span>
+                          (<span class="k">and</span> (equal gnuplot-gui-plot-splot-fit-style 'complete)
+                               (member word '(<span class="s">"plot"</span> <span class="s">"splot"</span> <span class="s">"fit"</span>)))
+                          (equal word <span class="s">"test"</span>))
+                     (gnuplot-gui-set-frame-param 'height old-height)
+                     (gnuplot-gui-set-frame-param 'top    old-top)) ))
+                ((<span class="k">setq</span> wrd (car (all-completions w '((<span class="s">"cntrparam"</span>)))))
+                 (message
+                  <span class="s">"Setting arguments for %S is currently unsuported in gnuplot-mode"</span>
+                  wrd))
+                ((<span class="k">setq</span> list (all-completions w gnuplot-gui-all-types))
+                 (message <span class="s">"%S could be one of %S"</span> w list))
+                (t
+                 (message
+                  <span class="s">"%S is not a gnuplot command which takes options"</span> w)))) ))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

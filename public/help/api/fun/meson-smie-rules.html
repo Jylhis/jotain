@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: meson-smie-rules – Emacs Documentation Online</title>
+<meta name="description" content="meson-smie-rules is a natively compiled function defined in
+meson-mode.el.
+Indentation rules for the SMIE engine.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>meson-smie-rules</code></h1><p><span class="m"><code>meson-smie-rules</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">meson-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(meson-smie-rules <a href="#:~:text=of-,KIND"><span class="arg">KIND</span></a> <a href="#:~:text=and-,TOKEN"><span class="arg">TOKEN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Indentation rules for the SMIE engine.
+<p>See the SMIE documentation for the meaning of <span class="arg">KIND</span> and <span class="arg">TOKEN</span>
+arguments.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ajn730848zmcji1jjy9y0s8x1mck32q9-emacs-packages-deps/share/emacs/site-lisp/elpa/meson-mode-20240601.1647/meson-mode.el</span>
+(<span class="k">defun</span> <span class="f">meson-smie-rules</span> (kind token)
+  <span class="doc">"Indentation rules for the SMIE engine.
+See the SMIE documentation for the meaning of KIND and TOKEN
+arguments."</span>
+  (<span class="k">pcase</span> (cons kind token)
+    (`(<span class="bi">:elem</span> . basic) meson-indent-basic)
+    (`(<span class="bi">:elem</span> . args) (- (<span class="k">save-excursion</span> (beginning-of-line-text) (point)) (point)))
+    (`(,_ . <span class="s">","</span>) (smie-rule-separator kind))
+    (`(,(<span class="k">or</span> <span class="bi">:before</span> <span class="bi">:after</span>) . <span class="s">"eol"</span>) (<span class="k">if</span> (smie-rule-parent-p <span class="s">"if"</span> <span class="s">"foreach"</span> <span class="s">"elif"</span> <span class="s">"else"</span>)
+					 (smie-rule-parent meson-indent-basic)
+				       (<span class="k">save-excursion</span>
+					 (smie-indent-forward-token)
+					 (smie-backward-sexp 'halfsexp)
+					 (cons 'column (current-column)))))
+    (`(<span class="bi">:list-intro</span> . ,(<span class="k">or</span> <span class="s">"eol"</span> <span class="s">":"</span> <span class="s">""</span>)) t) <span class="cd">; </span><span class="c">"" is actually "[" because that's what lexer returns
+</span>    (`(<span class="bi">:after</span> . <span class="s">":"</span>) meson-indent-basic)
+    (`(<span class="bi">:after</span> . ,(<span class="k">or</span> <span class="s">"="</span> <span class="s">"+="</span>)) meson-indent-basic)
+    (`(<span class="bi">:before</span> . ,(<span class="k">or</span> <span class="s">"["</span> <span class="s">"("</span> <span class="s">"{"</span>)) (<span class="k">if</span> (smie-rule-hanging-p)
+					(<span class="k">save-excursion</span>
+					  (smie-backward-sexp 'halfsexp) <span class="cd">; </span><span class="c">goto parent
+</span>					  (beginning-of-line-text)
+					  (cons 'column (current-column)))))
+    (`(<span class="bi">:after</span> . ,(<span class="k">or</span> <span class="s">"["</span> <span class="s">"("</span> <span class="s">"{"</span>)) meson-indent-basic)
+    (`(<span class="bi">:before</span> . <span class="s">"elif"</span>) (smie-rule-parent))
+    (_ nil)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

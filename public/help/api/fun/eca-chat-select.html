@@ -1,0 +1,80 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat-select – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat-select is an interactive and natively compiled function
+defined in eca-chat.el.
+Select a chat.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat-select</code></h1><p><span class="m"><code>eca-chat-select</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat-select)
+</code></pre>
+<h2>Documentation</h2>
+<p>Select a chat.
+<p>Shows each chat with its status (🚧 pending approval, ⏳ loading),
+title, and elapsed time annotation.
+<h2>Key Bindings</h2>
+<p><span class="v">eca-chat-mode-map</span> <span class="key">C-c C-f</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">eca-chat-select</span> ()
+  <span class="doc">"Select a chat.
+Shows each chat with its status (🚧 pending approval, ⏳ loading),
+title, and elapsed time annotation."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let*</span> ((session (eca-session))
+         (buf-by-label (make-hash-table <span class="bi">:test</span> 'equal))
+         (annotation-by-label (make-hash-table <span class="bi">:test</span> 'equal)))
+    (eca-assert-session-running session)
+    <span class="cd">;; </span><span class="c">Build items oldest-first (same order as tab-line)
+</span>    (<span class="k">let</span> ((items (append
+                  (nreverse
+                   (-keep (<span class="k">lambda</span> (buffer)
+                            (<span class="k">when</span> (buffer-live-p buffer)
+                              (<span class="k">with-current-buffer</span> buffer
+                                (<span class="k">let*</span> ((title (eca-chat-title))
+                                       (status (eca-chat--chat-status-prefix))
+                                       (label (concat status title))
+                                       <span class="cd">;; </span><span class="c">Disambiguate duplicate titles
+</span>                                       (label (<span class="k">if</span> (gethash label buf-by-label)
+                                                  (concat label <span class="s">" ("</span> eca-chat--id <span class="s">")"</span>)
+                                                label))
+                                       (face (<span class="k">cond</span>
+                                              ((eca-chat--has-pending-approvals-p) 'warning)
+                                              (eca-chat--chat-loading 'shadow)
+                                              (t nil)))
+                                       (display (<span class="k">if</span> face
+                                                    (propertize label 'face face)
+                                                  label))
+                                       (time-str (eca-chat--turn-duration-str)))
+                                  (puthash display buffer buf-by-label)
+                                  (<span class="k">when</span> time-str
+                                    (puthash display
+                                             (propertize (concat <span class="s">"  "</span> time-str)
+                                                         'face 'eca-chat-elapsed-time-face)
+                                             annotation-by-label))
+                                  display))))
+                          (eca-vals (eca--session-chats session))))
+                  (list eca-chat-new-chat-label))))
+      (<span class="k">when-let</span> (chosen (completing-read
+                         <span class="s">"Select the chat: "</span>
+                         (<span class="k">lambda</span> (string pred action)
+                           (<span class="k">if</span> (eq action 'metadata)
+                               `(metadata
+                                 (display-sort-function . ,#'identity)
+                                 (annotation-function
+                                  . ,(<span class="k">lambda</span> (candidate)
+                                       (gethash candidate annotation-by-label))))
+                             (complete-with-action action items string pred)))
+                         nil t))
+        (<span class="k">if-let</span> (buffer (gethash chosen buf-by-label))
+            (<span class="k">progn</span>
+              (<span class="k">setf</span> (eca--session-last-chat-buffer session) buffer)
+              (eca-chat-open session))
+          (eca-chat-new))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,45 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: csv-align--cursor-truncated – Emacs Documentation Online</title>
+<meta name="description" content="csv-align--cursor-truncated is a natively compiled function defined in
+csv-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>csv-align--cursor-truncated</code></h1><p><span class="m"><code>csv-align--cursor-truncated</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">csv-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(csv-align--cursor-truncated <span class="arg">WINDOW</span> <span class="arg">OLDPOS</span> <span class="arg">DIR</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mrygxsladaca2yfyr2cy0am5zm9lzddg-emacs-packages-deps/share/emacs/site-lisp/elpa/csv-mode-1.27/csv-mode.el</span>
+(<span class="k">defun</span> <span class="f">csv-align--cursor-truncated</span> (window oldpos dir)
+  <span class="cd">;; </span><span class="c">FIXME: Neither the `</span><span class="m c">entered</span><span class="c">' nor the `</span><span class="m c">left</span><span class="c">' event are guaranteed
+</span>  <span class="cd">;; </span><span class="c">to be sent, and for the `</span><span class="m c">left</span><span class="c">' case, even when we do get called,
+</span>  <span class="cd">;; </span><span class="c">it may be unclear where the revealed text was (it's somewhere around
+</span>  <span class="cd">;; </span><span class="c">`</span><span class="m c">oldpos</span><span class="c">', but that position can be stale).
+</span>  <span class="cd">;; </span><span class="c">Worse, if we have several windows displaying the buffer, when one
+</span>  <span class="cd">;; </span><span class="c">cursor leaves we may need to keep the text revealed because of
+</span>  <span class="cd">;; </span><span class="c">another window's cursor.
+</span>  (<span class="k">let*</span> ((prop (<span class="k">if</span> (eq dir 'entered) 'invisible 'csv--revealed))
+         (pos (<span class="k">cond</span>
+               ((eq dir 'entered) (window-point window))
+               (t (max (point-min)
+                       (min (point-max)
+                            (<span class="k">or</span> oldpos (window-point window)))))))
+         (start (<span class="k">cond</span>
+                 ((<span class="k">and</span> (&gt; pos (point-min))
+                       (eq (get-text-property (1- pos) prop) 'csv-truncate))
+                  (<span class="k">or</span> (previous-single-property-change pos prop) (point-min)))
+                 (t pos)))
+         (end (<span class="k">if</span> (eq (get-text-property pos prop) 'csv-truncate)
+                  (<span class="k">or</span> (next-single-property-change pos prop) (point-max))
+                pos)))
+    (<span class="k">unless</span> (eql start end)
+      (<span class="k">with-silent-modifications</span>
+        (put-text-property start end
+                           (<span class="k">if</span> (eq dir 'entered) 'csv--revealed 'invisible)
+                           'csv-truncate)
+        (remove-text-properties start end (list prop))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,93 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: denote-rewrite-front-matter – Emacs Documentation Online</title>
+<meta name="description" content="denote-rewrite-front-matter is a natively compiled function defined in
+denote.el.
+Rewrite front matter of note after denote-rename-file.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>denote-rewrite-front-matter</code></h1><p><span class="m"><code>denote-rewrite-front-matter</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">denote.el</span>.
+<h2>Signature</h2>
+<pre><code>(denote-rewrite-front-matter <a href="#:~:text=The-,FILE"><span class="arg">FILE</span></a> <a href="#:~:text=FILE,-,TITLE"><span class="arg">TITLE</span></a> <a href="#:~:text=TITLE,-,KEYWORDS"><span class="arg">KEYWORDS</span></a> <a href="#:~:text=KEYWORDS,-,SIGNATURE"><span class="arg">SIGNATURE</span></a> <a href="#:~:text=SIGNATURE,-,DATE"><span class="arg">DATE</span></a> <a href="#:~:text=DATE,-,IDENTIFIER"><span class="arg">IDENTIFIER</span></a> <a href="#:~:text=and-,FILE-TYPE"><span class="arg">FILE-TYPE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Rewrite front matter of note after <a href="../fun/denote-rename-file.html"><code>denote-rename-file</code></a>.
+<p>The <span class="arg">FILE</span>, <span class="arg">TITLE</span>, <span class="arg">KEYWORDS</span>, <span class="arg">SIGNATURE</span>, <span class="arg">DATE</span>, <span class="arg">IDENTIFIER</span>, and <span class="arg">FILE-TYPE</span>
+are given by the renaming command and are used to construct new front
+matter values if appropriate.
+<p>If <a href="../var/denote-rename-confirmations.html"><code>denote-rename-confirmations</code></a> contains <span class="m"><code>rewrite-front-matter</code></span>,
+prompt to confirm the rewriting of the front matter.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/5x9606vmybcj80x6qrajp43rma9pa1i7-emacs-packages-deps/share/emacs/site-lisp/elpa/denote-4.2.3/denote.el</span>
+(<span class="k">defun</span> <span class="f">denote-rewrite-front-matter</span> (file title keywords signature date identifier file-type)
+  <span class="doc">"Rewrite front matter of note after `</span><span class="m doc">denote-rename-file</span><span class="doc">'.
+The FILE, TITLE, KEYWORDS, SIGNATURE, DATE, IDENTIFIER, and FILE-TYPE
+are given by the renaming command and are used to construct new front
+matter values if appropriate.
+
+If `</span><span class="m doc">denote-rename-confirmations</span><span class="doc">' contains `</span><span class="m doc">rewrite-front-matter</span><span class="doc">',
+prompt to confirm the rewriting of the front matter."</span>
+  (<span class="k">let*</span> ((front-matter (denote--front-matter file-type))
+         (file-content (<span class="k">with-current-buffer</span> (find-file-noselect file) (buffer-string)))
+         (components-in-template (denote--get-front-matter-components-order front-matter file-type))
+         (components-in-file (denote--get-front-matter-components-order file-content file-type))
+         (components-to-add '())
+         (components-to-remove '())
+         (components-to-modify '())
+         (new-front-matter (denote--format-front-matter title date keywords identifier signature file-type))
+         (old-and-new-front-matter-lines (denote--get-old-and-new-front-matter-lines file new-front-matter file-type)))
+    <span class="cd">;; </span><span class="c">Build the lists of components to add, remove, modify.
+</span>    (<span class="k">dolist</span> (component '(title keywords signature identifier date))
+      <span class="cd">;; </span><span class="c">Ignore the component if it is not in the template.  It is not added, removed or modified.
+</span>      (<span class="k">when</span> (memq component components-in-template)
+        (<span class="k">let</span> ((value (<span class="k">pcase</span> component ('title title) ('keywords keywords) ('signature signature) ('date date) ('identifier identifier))))
+          (<span class="k">cond</span> ((<span class="k">and</span> (not (memq component components-in-file))
+                      (denote--component-has-value-p component value))
+                 (<span class="k">push</span> component components-to-add))
+                ((<span class="k">and</span> (memq component components-in-file)
+                      <span class="cd">;; </span><span class="c">The component can still be marked for modification.
+</span>                      (not (memq component denote-front-matter-components-present-even-if-empty-value))
+                      (not (denote--component-has-value-p component value)))
+                 (<span class="k">push</span> component components-to-remove))
+                ((<span class="k">and</span> (memq component components-in-file)
+                      (not (string= (alist-get 'old (alist-get component old-and-new-front-matter-lines))
+                                    (alist-get 'new (alist-get component old-and-new-front-matter-lines)))))
+                 (<span class="k">push</span> component components-to-modify))))))
+    <span class="cd">;; </span><span class="c">There should be at least one component in the file and the template.
+</span>    (<span class="k">when</span> (<span class="k">and</span> (seq-intersection components-in-file components-in-template)
+               (<span class="k">or</span> components-to-add components-to-remove components-to-modify))
+      (<span class="k">when-let*</span> ((final-components (denote--get-final-components-for-rewrite
+                                     components-in-file components-in-template components-to-add)))
+        (<span class="k">with-current-buffer</span> (find-file-noselect file)
+          (<span class="k">when</span> (<span class="k">or</span> (not (memq 'rewrite-front-matter denote-rename-confirmations))
+                    (y-or-n-p (denote--get-front-matter-rewrite-prompt
+                               final-components
+                               components-to-add components-to-remove components-to-modify
+                               old-and-new-front-matter-lines)))
+            (<span class="k">save-excursion</span>
+              (<span class="k">save-restriction</span>
+                (widen)
+                (goto-char (point-min))
+                <span class="cd">;; </span><span class="c">Position point at the beginning of the first front matter line
+</span>                (<span class="k">let</span> ((first-component (car (seq-difference final-components components-to-add))))
+                  (re-search-forward
+                   (funcall (denote--get-component-key-regexp-function first-component) file-type) nil t 1)
+                  (goto-char (line-beginning-position)))
+                <span class="cd">;; </span><span class="c">Do the modifications
+</span>                (<span class="k">dolist</span> (component final-components)
+                  (<span class="k">let</span> ((component-key-regexp-function (denote--get-component-key-regexp-function component))
+                        (new-line (alist-get 'new (alist-get component old-and-new-front-matter-lines))))
+                    (<span class="k">cond</span> ((memq component components-to-remove)
+                           (re-search-forward (funcall component-key-regexp-function file-type) nil t 1)
+                           (delete-region (line-beginning-position) (line-beginning-position 2)))
+                          ((memq component components-to-add)
+                           (insert (concat new-line <span class="s">"\n"</span>)))
+                          ((memq component components-to-modify)
+                           (denote--rewrite-front-matter-line component new-line file-type)
+                           (goto-char (line-beginning-position 2)))
+                          (t
+                           (goto-char (line-beginning-position 2))))))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

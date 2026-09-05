@@ -1,0 +1,254 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-attr-skip – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-attr-skip is a natively compiled function defined in
+web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-attr-skip</code></h1><p><span class="m"><code>web-mode-attr-skip</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-attr-skip <span class="arg">LIMIT</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-attr-skip</span> (limit)
+
+  (<span class="k">let</span> ((tag-flags 0) (attr-flags 0) (continue t) (attrs 0) (brace-depth 0)
+        (state 0) (equal-offset 0) (go-back nil)
+        (is-jsx (<span class="k">or</span> (string= web-mode-content-type <span class="s">"jsx"</span>) (eq (get-text-property (point) 'part-type) 'jsx)))
+        attr name-beg name-end val-beg char pos mem step escaped spaced quoted)
+
+    (<span class="k">while</span> continue
+
+      (<span class="k">setq</span> pos (point)
+            char (char-after)
+            mem state
+            <span class="cd">;;</span><span class="c">spaced (eq char ?\s)
+</span>            spaced (member char '(?\s ?\n))
+            step nil)
+
+      (ignore mem step) <span class="cd">;; </span><span class="c">Only used in debug print
+</span>      (<span class="k">when</span> quoted (<span class="k">setq</span> quoted (1+ quoted)))
+
+      (<span class="k">cond</span>
+
+        ((&gt;= pos limit)
+         (<span class="k">setq</span> continue nil)
+         (<span class="k">setq</span> go-back t)
+         (<span class="k">setq</span> attrs (+ attrs (web-mode-attr-scan pos state char name-beg name-end val-beg attr-flags equal-offset tag-flags)))
+         )
+
+        ((<span class="k">and</span> (<span class="k">or</span> (= state 0) (= state 1)) (get-text-property pos 'block-side))
+         )
+
+        ((<span class="k">or</span> (<span class="k">and</span> (= state 8) (not (member char '(?\" ?\\))))
+             (<span class="k">and</span> (= state 7) (not (member char '(?\' ?\\))))
+             (<span class="k">and</span> (= state 9) (not (member char '(?} ?\\))))
+             )
+         (<span class="k">when</span> (<span class="k">and</span> (= state 9) (eq char ?\{))
+           (<span class="k">setq</span> brace-depth (1+ brace-depth)))
+         )
+
+        ((<span class="k">and</span> (= state 9) (eq char ?\}) (&gt; brace-depth 1))
+         (<span class="k">setq</span> brace-depth (1- brace-depth)))
+
+        <span class="cd">;; </span><span class="c">#1233
+</span>        <span class="cd">;;</span><span class="c">((get-text-property pos 'block-side)
+</span>        <span class="cd">;; </span><span class="c">(when (= state 2)
+</span>        <span class="cd">;;   </span><span class="c">(setq name-end pos))
+</span>        <span class="cd">;; </span><span class="c">)
+</span>
+        ((<span class="k">and</span> (= state 2) is-jsx (eq char ?\}) (eq attr-flags 4))
+         (<span class="k">setq</span> name-end pos)
+         (<span class="k">setq</span> attrs (+ attrs (web-mode-attr-scan pos state char name-beg name-end val-beg attr-flags equal-offset tag-flags)))
+         (<span class="k">setq</span> state 0
+               attr-flags 0
+               equal-offset 0
+               name-beg nil
+               name-end nil
+               val-beg nil)
+         )
+
+        ((<span class="k">or</span> (<span class="k">and</span> (= state 8) (eq ?\" char) (not escaped))
+             (<span class="k">and</span> (= state 7) (eq ?\' char) (not escaped))
+             (<span class="k">and</span> (= state 9) (eq ?\} char) (= brace-depth 1))
+             (<span class="k">and</span> (= state 10) (get-text-property pos 'block-end))
+             )
+         (<span class="k">setq</span> attrs (+ attrs (web-mode-attr-scan pos state char name-beg name-end val-beg attr-flags equal-offset tag-flags)))
+         (<span class="k">setq</span> state 0
+               attr-flags 0
+               equal-offset 0
+               name-beg nil
+               name-end nil
+               val-beg nil)
+         )
+
+        ((<span class="k">and</span> (member state '(4 5)) (get-text-property pos 'block-beg))
+         (<span class="k">setq</span> val-beg pos)
+         (<span class="k">setq</span> state 10))
+
+        ((<span class="k">and</span> (member state '(4 5)) (member char '(?\' ?\" ?\{)))
+         (<span class="k">setq</span> val-beg pos)
+         (<span class="k">setq</span> quoted 1)
+         (<span class="k">setq</span> state (<span class="k">cond</span> ((eq ?\' char) 7)
+                           ((eq ?\" char) 8)
+                           (t             9)))
+         (<span class="k">setq</span> step 100)
+         (<span class="k">when</span> (= state 9) (<span class="k">setq</span> brace-depth 1))
+         )
+
+        ((<span class="k">and</span> (eq ?\= char) (member state '(2 3)))
+         (<span class="k">setq</span> equal-offset (- pos name-beg)
+               name-end (1- pos))
+         (<span class="k">setq</span> state 4)
+         (<span class="k">setq</span> attr (buffer-substring-no-properties name-beg (1+ name-end)))
+         (<span class="k">when</span> (<span class="k">and</span> web-mode-indentless-attributes (web-mode--indentless-attribute-p (downcase attr)))
+           (<span class="k">setq</span> attr-flags (logior attr-flags 8)))
+         )
+
+        ((<span class="k">and</span> spaced (= state 0))
+         (<span class="k">setq</span> state 1)
+         )
+
+        ((<span class="k">and</span> (eq char ?\&lt;) (not (member state '(7 8 9))))
+         (<span class="k">setq</span> continue nil)
+         (<span class="k">setq</span> go-back t)
+         (<span class="k">setq</span> attrs (+ attrs (web-mode-attr-scan pos state char name-beg name-end val-beg attr-flags equal-offset tag-flags)))
+         )
+
+        ((<span class="k">and</span> (eq char ?\&gt;) (not (member state '(7 8 9))))
+         (<span class="k">setq</span> tag-flags (logior tag-flags 16))
+         (<span class="k">when</span> (eq (char-before) ?\/)
+           (<span class="k">setq</span> tag-flags (logior tag-flags 8))
+           )
+         (<span class="k">setq</span> continue nil)
+         (<span class="k">when</span> name-beg
+           (<span class="k">setq</span> attrs (+ attrs (web-mode-attr-scan pos state char name-beg name-end val-beg attr-flags equal-offset tag-flags))))
+         )
+
+        ((<span class="k">and</span> spaced (member state '(1 3 5)))
+         )
+
+        ((<span class="k">and</span> spaced (= state 2))
+         (<span class="k">setq</span> state 3)
+         )
+
+        ((<span class="k">and</span> (eq char ?\/) (member state '(4 5)))
+         (<span class="k">setq</span> attrs (+ attrs (web-mode-attr-scan pos state char name-beg name-end val-beg attr-flags equal-offset tag-flags)))
+         (<span class="k">setq</span> state 1
+               attr-flags 0
+               equal-offset 0
+               name-beg nil
+               name-end nil
+               val-beg nil)
+         )
+
+        ((<span class="k">and</span> (eq char ?\/) (member state '(0 1)))
+         )
+
+        ((<span class="k">and</span> spaced (= state 4))
+         (<span class="k">setq</span> state 5)
+         )
+
+        ((<span class="k">and</span> (= state 3)
+              (<span class="k">or</span> (<span class="k">and</span> (&gt;= char 97) (&lt;= char 122)) <span class="cd">;</span><span class="c">a - z
+</span>                  (<span class="k">and</span> (&gt;= char 65) (&lt;= char 90)) <span class="cd">;</span><span class="c">A - Z
+</span>                  (eq char ?\-)))
+         (<span class="k">setq</span> attrs (+ attrs (web-mode-attr-scan pos state char name-beg name-end val-beg attr-flags equal-offset tag-flags)))
+         (<span class="k">setq</span> state 2
+               attr-flags 0
+               equal-offset 0
+               name-beg pos
+               name-end pos
+               val-beg nil)
+         )
+
+        ((<span class="k">and</span> (eq char ?\n) (not (member state '(7 8 9))))
+         (<span class="k">setq</span> attrs (+ attrs (web-mode-attr-scan pos state char name-beg name-end val-beg attr-flags equal-offset tag-flags)))
+         (<span class="k">setq</span> state 1
+               attr-flags 0
+               equal-offset 0
+               name-beg nil
+               name-end nil
+               val-beg nil)
+         )
+
+        ((<span class="k">and</span> (= state 6) (member char '(?\s ?\n))) <span class="cd">;</span><span class="c">#1150
+</span>         (<span class="k">setq</span> attrs (+ attrs (web-mode-attr-scan pos state char name-beg name-end val-beg attr-flags equal-offset tag-flags)))
+         (<span class="k">setq</span> state 1
+               attr-flags 0
+               equal-offset 0
+               name-beg nil
+               name-end nil
+               val-beg nil)
+         )
+
+        ((<span class="k">and</span> quoted (= quoted 2) (member char '(?\s ?\n ?\&gt;)))
+         (<span class="k">when</span> (eq char ?\&gt;)
+           (<span class="k">setq</span> tag-flags (logior tag-flags 16))
+           (<span class="k">setq</span> continue nil))
+         (<span class="k">setq</span> state 6)
+         (<span class="k">setq</span> attrs (+ attrs (web-mode-attr-scan pos state char name-beg name-end val-beg attr-flags equal-offset tag-flags)))
+         (<span class="k">setq</span> state 1
+               attr-flags 0
+               equal-offset 0
+               name-beg nil
+               name-end nil
+               val-beg nil)
+         )
+
+        ((<span class="k">and</span> (not spaced) (= state 1))
+         (<span class="k">when</span> (<span class="k">and</span> is-jsx (eq char ?\{))
+           (<span class="k">setq</span> attr-flags 4))
+         (<span class="k">setq</span> state 2)
+         (<span class="k">setq</span> name-beg pos
+               name-end pos)
+         )
+
+        ((member state '(4 5))
+         (<span class="k">setq</span> val-beg pos)
+         (<span class="k">setq</span> state 6)
+         )
+
+        ((= state 1)
+         (<span class="k">setq</span> state 2)
+         )
+
+        ((= state 2)
+         (<span class="k">setq</span> name-end pos)
+         (<span class="k">when</span> (<span class="k">and</span> nil (= attr-flags 0) (member char '(?\- ?\:)))
+           (<span class="k">let</span> (attr)
+             (<span class="k">setq</span> attr (buffer-substring-no-properties name-beg (1+ name-end)))
+             (<span class="k">cond</span>
+               ((member attr '(<span class="s">"http-equiv"</span>))
+                (<span class="k">setq</span> attr-flags (1- attr-flags))
+                )
+               ((<span class="k">and</span> (eq char ?\-) (not (string= attr <span class="s">"http-"</span>)))
+                (<span class="k">setq</span> attr-flags (logior attr-flags 1)))
+               ) <span class="cd">;</span><span class="c">cond
+</span>             ) <span class="cd">;</span><span class="c">let
+</span>           ) <span class="cd">;</span><span class="c">when attr-flags = 1
+</span>         ) <span class="cd">;</span><span class="c">state=2
+</span>
+        ) <span class="cd">;</span><span class="c">cond
+</span>
+      <span class="cd">;;</span><span class="c">(message "point(%S) state(%S) c(%S) name-beg(%S) name-end(%S) val-beg(%S) attr-flags(%S) equal-offset(%S)" pos state char name-beg name-end val-beg attr-flags equal-offset tag-flags)
+</span>
+      (<span class="k">when</span> (<span class="k">and</span> quoted (&gt;= quoted 2))
+        (<span class="k">setq</span> quoted nil))
+
+      (<span class="k">setq</span> escaped (eq ?\\ char))
+      (<span class="k">when</span> (null go-back)
+        (forward-char))
+
+      <span class="cd">;;</span><span class="c">(when (not (= mem state)) (message "pos=%S before=%S after=%S step=%S" pos mem state step))
+</span>
+      ) <span class="cd">;</span><span class="c">while
+</span>
+    (<span class="k">when</span> (&gt; attrs 0) (<span class="k">setq</span> tag-flags (logior tag-flags 1)))
+
+    tag-flags))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

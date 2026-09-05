@@ -1,0 +1,148 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-mark – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-mark is a natively compiled function defined in web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-mark</code></h1><p><span class="m"><code>web-mode-mark</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-mark <span class="arg">POS</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-mark</span> (pos)
+  (<span class="k">let</span> ((beg pos) (end pos) boundaries)
+
+    (<span class="k">if</span> mark-active
+        (<span class="k">setq</span> web-mode-expand-initial-pos (point)
+              web-mode-expand-initial-scroll (window-start))
+        )
+
+    <span class="cd">;; </span><span class="c">(message "regs=%S %S %S %S" (region-beginning) (region-end) (point-min) (point-max))
+</span>    <span class="cd">;; </span><span class="c">(message "before=%S" web-mode-expand-previous-state)
+</span>
+    (<span class="k">cond</span>
+
+      ((<span class="k">and</span> mark-active
+            (= (region-beginning) (point-min))
+            (<span class="k">or</span> (= (region-end) (point-max))
+                (= (1+ (region-end)) (point-max))))
+       (deactivate-mark)
+       (goto-char (<span class="k">or</span> web-mode-expand-initial-pos (point-min)))
+       (<span class="k">setq</span> web-mode-expand-previous-state nil)
+       (<span class="k">when</span> web-mode-expand-initial-scroll
+         (set-window-start (selected-window) web-mode-expand-initial-scroll))
+       )
+
+      ((string= web-mode-expand-previous-state <span class="s">"elt-content"</span>)
+       (web-mode-element-parent)
+       <span class="cd">;;</span><span class="c">(message "pos=%S" (point))
+</span>       (web-mode-element-select)
+       (<span class="k">setq</span> web-mode-expand-previous-state <span class="s">"html-parent"</span>))
+
+      ((<span class="k">and</span> (member (get-text-property pos 'block-token) '(comment string))
+            (not (member web-mode-expand-previous-state '(<span class="s">"block-token"</span> <span class="s">"block-body"</span> <span class="s">"block-side"</span>))))
+       (<span class="k">when</span> (eq (get-text-property pos 'block-token) (get-text-property (1- pos) 'block-token))
+         (<span class="k">setq</span> beg (<span class="k">or</span> (previous-single-property-change pos 'block-token) (point-min))))
+       (<span class="k">when</span> (eq (get-text-property pos 'block-token) (get-text-property (1+ pos) 'block-token))
+         (<span class="k">setq</span> end (next-single-property-change pos 'block-token)))
+       (set-mark beg)
+       (goto-char end)
+       (exchange-point-and-mark)
+       (<span class="k">setq</span> web-mode-expand-previous-state <span class="s">"block-token"</span>))
+
+      ((<span class="k">and</span> (get-text-property pos 'block-side)
+            (not (member web-mode-expand-previous-state '(<span class="s">"block-body"</span> <span class="s">"block-side"</span>)))
+            (not (member web-mode-engine '(django go)))
+            (<span class="k">setq</span> boundaries (web-mode-in-code-block <span class="s">"{"</span> <span class="s">"}"</span> 'block-side)))
+       (set-mark (car boundaries))
+       (goto-char (cdr boundaries))
+       (exchange-point-and-mark)
+       (<span class="k">setq</span> web-mode-expand-previous-state <span class="s">"block-body"</span>))
+
+      ((<span class="k">and</span> (get-text-property pos 'block-side)
+            (not (member web-mode-expand-previous-state '(<span class="s">"block-side"</span>))))
+       (set-mark (web-mode-block-beginning-position pos))
+       (goto-char (1+ (web-mode-block-end-position pos)))
+       (exchange-point-and-mark)
+       (<span class="k">setq</span> web-mode-expand-previous-state <span class="s">"block-side"</span>))
+
+      ((<span class="k">and</span> (get-text-property pos 'part-token)
+            (not (string= web-mode-expand-previous-state <span class="s">"part-token"</span>)))
+       (<span class="k">when</span> (eq (get-text-property pos 'part-token) (get-text-property (1- pos) 'part-token))
+         (<span class="k">setq</span> beg (previous-single-property-change pos 'part-token)))
+       (<span class="k">when</span> (eq (get-text-property pos 'part-token) (get-text-property (1+ pos) 'part-token))
+         (<span class="k">setq</span> end (next-single-property-change pos 'part-token)))
+       (set-mark beg)
+       (goto-char end)
+       (exchange-point-and-mark)
+       (<span class="k">setq</span> web-mode-expand-previous-state <span class="s">"part-token"</span>))
+
+      ((<span class="k">and</span> (get-text-property pos 'part-side)
+            (not (string= web-mode-expand-previous-state <span class="s">"client-part"</span>))
+            (<span class="k">setq</span> boundaries (web-mode-in-code-block <span class="s">"{"</span> <span class="s">"}"</span> 'part-side)))
+       (set-mark (car boundaries))
+       (goto-char (cdr boundaries))
+       (exchange-point-and-mark)
+       (<span class="k">setq</span> web-mode-expand-previous-state <span class="s">"client-part"</span>))
+
+      ((<span class="k">and</span> (get-text-property pos 'part-side)
+            (not (string= web-mode-expand-previous-state <span class="s">"part-side"</span>)))
+       (<span class="k">when</span> (eq (get-text-property pos 'part-side) (get-text-property (1- pos) 'part-side))
+         (<span class="k">setq</span> beg (previous-single-property-change pos 'part-side)))
+       (<span class="k">when</span> (eq (get-text-property pos 'part-side) (get-text-property (1+ pos) 'part-side))
+         (<span class="k">setq</span> end (next-single-property-change pos 'part-side)))
+       (<span class="k">when</span> (eq (char-after beg) ?\n)
+         (<span class="k">setq</span> beg (1+ beg)))
+       (set-mark beg)
+       (goto-char end)
+       (<span class="k">when</span> (looking-back <span class="s">"^[ \t]+"</span> (point-min))
+         (beginning-of-line))
+       (exchange-point-and-mark)
+       (<span class="k">setq</span> web-mode-expand-previous-state <span class="s">"part-side"</span>))
+
+      ((<span class="k">and</span> (get-text-property pos 'tag-attr)
+            (not (member web-mode-expand-previous-state '(<span class="s">"html-attr"</span> <span class="s">"html-tag"</span>))))
+       (web-mode-attribute-select pos)
+       (<span class="k">setq</span> web-mode-expand-previous-state <span class="s">"html-attr"</span>))
+
+      ((<span class="k">and</span> (eq (get-text-property pos 'tag-type) 'comment)
+            (not (member web-mode-expand-previous-state '(<span class="s">"html-tag"</span> <span class="s">"html-comment"</span> <span class="s">"html-elt"</span> <span class="s">"html-parent"</span>))))
+       (web-mode-tag-select)
+       (<span class="k">setq</span> web-mode-expand-previous-state <span class="s">"html-comment"</span>))
+
+      ((<span class="k">and</span> (get-text-property pos 'tag-name)
+            (not (member web-mode-expand-previous-state '(<span class="s">"html-tag"</span> <span class="s">"html-elt"</span> <span class="s">"html-parent"</span>))))
+       (web-mode-tag-select)
+       (<span class="k">setq</span> web-mode-expand-previous-state <span class="s">"html-tag"</span>))
+
+      ((<span class="k">and</span> (get-text-property pos 'tag-beg)
+            (string= web-mode-expand-previous-state <span class="s">"html-tag"</span>))
+       (web-mode-element-select)
+       (<span class="k">setq</span> web-mode-expand-previous-state <span class="s">"html-elt"</span>))
+
+      (t
+       (<span class="k">cond</span>
+         ((not (web-mode-element-parent))
+          (push-mark (point))
+          (push-mark (point-max) nil t)
+          (goto-char (point-min))
+          (<span class="k">setq</span> web-mode-expand-previous-state <span class="s">"mark-whole"</span>))
+         ((not (= (web-mode-tag-end-position (point)) (1- beg)))
+          (web-mode-element-content-select)
+          (<span class="k">setq</span> web-mode-expand-previous-state <span class="s">"elt-content"</span>))
+         (t
+          (web-mode-element-select)
+          (<span class="k">setq</span> web-mode-expand-previous-state <span class="s">"html-parent"</span>))
+         )
+       ) <span class="cd">;</span><span class="c">t
+</span>
+      ) <span class="cd">;</span><span class="c">cond
+</span>
+    <span class="cd">;;</span><span class="c">(message "w=%S" (window-end))
+</span>    <span class="cd">;;</span><span class="c">(message "after=%S" web-mode-expand-previous-state)
+</span>
+    ))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

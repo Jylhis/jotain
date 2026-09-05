@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu--jj-command-args – Emacs Documentation Online</title>
+<meta name="description" content="majutsu--jj-command-args is a natively compiled function defined in
+majutsu-command.el.
+Return jj arguments parsed from COMMAND.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu--jj-command-args</code></h1><p><span class="m"><code>majutsu--jj-command-args</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-command.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu--jj-command-args <a href="#:~:text=from-,COMMAND"><span class="arg">COMMAND</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return jj arguments parsed from <span class="arg">COMMAND</span>.
+<p><span class="arg">COMMAND</span> may start with the jj executable name, but it does not have to.
+Signal a user error if <span class="arg">COMMAND</span> is empty or uses shell syntax.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-command.el</span>
+(<span class="k">defun</span> <span class="f">majutsu--jj-command-args</span> (command)
+  <span class="doc">"Return jj arguments parsed from COMMAND.
+COMMAND may start with the jj executable name, but it does not have to.
+Signal a user error if COMMAND is empty or uses shell syntax."</span>
+  (<span class="k">setq</span> command (string-trim (<span class="k">or</span> command <span class="s">""</span>)))
+  (<span class="k">when</span> (string-empty-p command)
+    (<span class="w">user-error</span> <span class="s">"Need non-empty input"</span>))
+  (<span class="k">when</span> (majutsu--shell-command-needs-shell-p command)
+    (<span class="w">user-error</span> <span class="s">"Shell syntax is not supported here; use `</span><span class="m s">majutsu-shell-command</span><span class="s">'"</span>))
+  (<span class="k">let*</span> ((argv (<span class="k">condition-case</span> nil
+                   (split-string-shell-command command)
+                 (<span class="w">error</span>
+                  (<span class="w">user-error</span> <span class="s">"Failed to parse command: %s"</span> command))))
+         (program (car argv))
+         (jj (majutsu-jj--executable)))
+    (<span class="k">cond</span>
+     ((null argv)
+      (<span class="w">user-error</span> <span class="s">"Need non-empty input"</span>))
+     ((string= (majutsu--command-program-name program)
+               (majutsu--command-program-name jj))
+      (<span class="k">setq</span> argv (cdr argv))
+      (<span class="k">when</span> (<span class="k">and</span> argv
+                 (string= (majutsu--command-program-name (car argv))
+                          (majutsu--command-program-name jj)))
+        (<span class="k">setq</span> argv (cdr argv)))
+      (<span class="k">or</span> argv
+          (<span class="w">user-error</span> <span class="s">"Need jj subcommand"</span>)))
+     (t argv))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

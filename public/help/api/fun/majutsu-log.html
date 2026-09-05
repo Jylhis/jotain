@@ -1,0 +1,70 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-log – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-log is an interactive and natively compiled function defined
+in majutsu-log.el.
+Open the majutsu log buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-log</code></h1><p><span class="m"><code>majutsu-log</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">majutsu-log.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-log <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">DIRECTORY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Open the majutsu log buffer.
+<p>If the current directory isn't located within a jj repository, then
+prompt for a directory.  If that directory isn't a repository either,
+offer to create one using `jj git init`.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Aliases</h2>
+<p><a href="../fun/majutsu.html"><code>majutsu</code></a>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-log.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">majutsu-log</span> (<span class="ty">&amp;optional</span> directory)
+  <span class="doc">"Open the majutsu log buffer.
+
+If the current directory isn't located within a jj repository, then
+prompt for a directory.  If that directory isn't a repository either,
+offer to create one using `jj git init`."</span>
+  (<span class="k">interactive</span>
+   (list (<span class="k">and</span> (<span class="k">or</span> current-prefix-arg (not (majutsu-toplevel)))
+              (file-name-as-directory
+               (expand-file-name
+                (read-directory-name <span class="s">"Repository or directory: "</span>
+                                     nil nil nil))))))
+  (<span class="k">let*</span> ((default-directory (<span class="k">or</span> directory default-directory))
+         (topdir (majutsu-toplevel default-directory)))
+    (<span class="k">cond</span>
+     (topdir
+      (<span class="k">let</span> ((default-directory topdir))
+        (majutsu-log-setup-buffer)))
+     ((y-or-n-p (format <span class="s">"Create jj repository in %s? "</span>
+                        (abbreviate-file-name default-directory)))
+      (<span class="k">let*</span> ((dest (file-name-as-directory (expand-file-name default-directory)))
+             (default-directory dest)
+             (_ (majutsu--assert-usable-jj))
+             (jj (majutsu-jj--executable))
+             (args (majutsu-process-jj-arguments (list <span class="s">"git"</span> <span class="s">"init"</span>
+                                                       (majutsu-convert-filename-for-jj dest))))
+             (exit nil)
+             (out <span class="s">""</span>))
+        (<span class="k">with-temp-buffer</span>
+          (<span class="k">let</span> ((coding-system-for-read 'utf-8-unix)
+                (coding-system-for-write 'utf-8-unix))
+            (<span class="k">setq</span> exit (apply #'majutsu-process-file jj nil t nil args)))
+          (<span class="k">setq</span> out (string-trim (buffer-string))))
+        (<span class="k">if</span> (zerop exit)
+            (<span class="k">let</span> ((default-directory dest))
+              (majutsu-log-setup-buffer))
+          (<span class="w">user-error</span> <span class="s">"jj git init failed: %s"</span>
+                      (<span class="k">if</span> (string-empty-p out)
+                          (format <span class="s">"exit %s"</span> exit)
+                        out)))))
+     (t
+      (<span class="w">user-error</span> <span class="s">"Abort"</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

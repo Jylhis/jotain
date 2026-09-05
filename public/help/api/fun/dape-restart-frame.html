@@ -1,0 +1,41 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape-restart-frame – Emacs Documentation Online</title>
+<meta name="description" content="dape-restart-frame is an interactive and natively compiled function
+defined in dape.el.
+Restart execution from selected stack frame.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape-restart-frame</code></h1><p><span class="m"><code>dape-restart-frame</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape-restart-frame <a href="#:~:text=adapter-,CONN"><span class="arg">CONN</span></a> <a href="#:~:text=by-,STACK-ID"><span class="arg">STACK-ID</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Restart execution from selected stack frame.
+<p>The frame is identified by <span class="arg">STACK-ID</span> under adapter <span class="arg">CONN</span>.
+<h2>Key Bindings</h2>
+<p><span class="v">ctl-x-map</span> <span class="key">C-a f</span>
+<span class="v">dape-global-map</span> <span class="key">f</span>
+<span class="v">global-map</span> <span class="key">C-x C-a f</span>
+<span class="v">help-quick-use-map</span> <span class="key">C-x C-a f</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape-restart-frame</span> (conn stack-id)
+  <span class="doc">"Restart execution from selected stack frame.
+The frame is identified by STACK-ID under adapter CONN."</span>
+  (<span class="k">interactive</span>
+   (<span class="k">let</span> ((conn (dape--live-connection 'stopped t)))
+     (list conn (dape--stack-id conn))))
+  (<span class="k">unless</span> (dape--capable-p conn <span class="bi">:supportsRestartFrame</span>)
+    (<span class="w">user-error</span> <span class="s">"Adapter not capable of restarting frame"</span>))
+  (dape-select-stack conn stack-id)
+  (<span class="k">let*</span> ((current-frame (dape--current-stack-frame conn))
+	 (frame-id (plist-get current-frame <span class="bi">:id</span>)))
+    (<span class="k">dape--with-request-bind</span> (_body error)
+	(dape-request conn <span class="bi">:restartFrame</span> `(<span class="bi">:frameId</span> ,frame-id))
+      (<span class="k">when</span> error
+        (dape--warn <span class="s">"Failed to restart stack frame: %s"</span> error)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

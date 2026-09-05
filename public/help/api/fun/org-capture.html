@@ -1,0 +1,149 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-capture – Emacs Documentation Online</title>
+<meta name="description" content="org-capture is an autoloaded, interactive and natively compiled
+function defined in org-capture.el.
+Capture something.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-capture</code></h1><p><span class="m"><code>org-capture</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a>, <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">org-capture.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-capture <span class="ty">&amp;optional</span> <a href="#:~:text=argument-,GOTO"><span class="arg">GOTO</span></a> <a href="#:~:text=set-,KEYS"><span class="arg">KEYS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Capture something.
+<p>This will let you select a template from <a href="../var/org-capture-templates.html"><code>org-capture-templates</code></a>, and
+then file the newly captured information.  The text is immediately
+inserted at the target location, and an indirect buffer is shown where
+you can edit it.  Pressing <kbd>C-c C-c</kbd> (<a href="../fun/org-capture-finalize.html"><code>org-capture-finalize</code></a>) brings you back to the previous
+state of Emacs, so that you can continue your work.
+<p>When called interactively with a <kbd>C-u</kbd> (<a href="../fun/universal-argument.html"><code>universal-argument</code></a>) prefix argument <span class="arg">GOTO</span>, don't
+capture anything, just go to the file/headline where the selected
+template stores its notes.
+<p>With a <kbd>C-u</kbd> (<a href="../fun/universal-argument.html"><code>universal-argument</code></a>) <kbd>C-u</kbd> (<a href="../fun/universal-argument.html"><code>universal-argument</code></a>) prefix argument, go to the last note stored.
+<p>When called with a <span class="m"><code>C-0</code></span> (zero) prefix, insert a template at point.
+<p>When called with a <span class="m"><code>C-1</code></span> (one) prefix, force prompting for a date when
+a datetree entry is made.
+<p>Elisp programs can set <span class="arg">KEYS</span> to a string associated with a template
+in <a href="../var/org-capture-templates.html"><code>org-capture-templates</code></a>.  In this case, interactive selection
+will be bypassed.
+<p>If <a href="../var/org-capture-use-agenda-date.html"><code>org-capture-use-agenda-date</code></a> is non-nil, capturing from the
+agenda will use the date at point as the default date.  Then, a
+<span class="m"><code>C-1</code></span> prefix will tell the capture process to use the HH:MM time
+of the day at point (if any) or the current HH:MM time.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-9.8.10/org-capture.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">org-capture</span> (<span class="ty">&amp;optional</span> goto keys)
+  <span class="doc">"Capture something.
+\\&lt;</span><span class="v doc">org-capture-mode-map</span><span class="doc">&gt;
+This will let you select a template from `</span><span class="m doc">org-capture-templates</span><span class="doc">', and
+then file the newly captured information.  The text is immediately
+inserted at the target location, and an indirect buffer is shown where
+you can edit it.  Pressing `\\[</span><span class="m doc">org-capture-finalize</span><span class="doc">]' brings you back to the \
+previous
+state of Emacs, so that you can continue your work.
+
+When called interactively with a `\\[</span><span class="m doc">universal-argument</span><span class="doc">]' prefix argument \
+GOTO, don't
+capture anything, just go to the file/headline where the selected
+template stores its notes.
+
+With a `\\[</span><span class="m doc">universal-argument</span><span class="doc">] \\[</span><span class="m doc">universal-argument</span><span class="doc">]' prefix argument, go to \
+the last note stored.
+
+When called with a `</span><span class="m doc">C-0</span><span class="doc">' (zero) prefix, insert a template at point.
+
+When called with a `</span><span class="m doc">C-1</span><span class="doc">' (one) prefix, force prompting for a date when
+a datetree entry is made.
+
+Elisp programs can set KEYS to a string associated with a template
+in `</span><span class="m doc">org-capture-templates</span><span class="doc">'.  In this case, interactive selection
+will be bypassed.
+
+If `</span><span class="m doc">org-capture-use-agenda-date</span><span class="doc">' is non-nil, capturing from the
+agenda will use the date at point as the default date.  Then, a
+`</span><span class="m doc">C-1</span><span class="doc">' prefix will tell the capture process to use the HH:MM time
+of the day at point (if any) or the current HH:MM time."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">when</span> (<span class="k">and</span> org-capture-use-agenda-date
+	     (eq major-mode 'org-agenda-mode))
+    (<span class="k">setq</span> org-overriding-default-time
+	  (org-get-cursor-date (equal goto 1))))
+  (<span class="k">cond</span>
+   ((equal goto '(4))  (org-capture-goto-target keys))
+   ((equal goto '(16)) (org-capture-goto-last-stored))
+   (t
+    (<span class="k">let*</span> ((orig-buf (current-buffer))
+	   (annotation (<span class="k">if</span> (<span class="k">and</span> (boundp 'org-capture-link-is-already-stored)
+				org-capture-link-is-already-stored)
+			   (plist-get org-store-link-plist <span class="bi">:annotation</span>)
+			 (<span class="k">ignore-errors</span> (org-store-link nil))))
+	   (entry (<span class="k">or</span> org-capture-entry (org-capture-select-template keys)))
+	   initial)
+      (<span class="k">setq</span> initial (<span class="k">or</span> org-capture-initial
+			(<span class="k">and</span> (org-region-active-p)
+			     (buffer-substring (point) (mark)))))
+      (<span class="k">when</span> (stringp initial)
+	(remove-text-properties 0 (length initial) '(read-only t) initial))
+      (<span class="k">when</span> (stringp annotation)
+	(remove-text-properties 0 (length annotation)
+				'(read-only t) annotation))
+      (<span class="k">cond</span>
+       ((equal entry <span class="s">"C"</span>)
+	(customize-variable 'org-capture-templates))
+       ((equal entry <span class="s">"q"</span>)
+	(<span class="w">user-error</span> <span class="s">"Abort"</span>))
+       (t
+	(org-capture-set-plist entry)
+	(org-capture-get-template)
+	(org-capture-put <span class="bi">:original-buffer</span> orig-buf
+			 <span class="bi">:original-file</span> (<span class="k">or</span> (buffer-file-name orig-buf)
+					    (<span class="k">and</span> (<span class="k">featurep</span> '<span class="m">dired</span>)
+						 (car (rassq orig-buf
+							     dired-buffers))))
+			 <span class="bi">:original-file-nondirectory</span>
+			 (<span class="k">and</span> (buffer-file-name orig-buf)
+			      (file-name-nondirectory
+			       (buffer-file-name orig-buf)))
+			 <span class="bi">:annotation</span> annotation
+			 <span class="bi">:initial</span> initial
+			 <span class="bi">:return-to-wconf</span> (current-window-configuration)
+			 <span class="bi">:default-time</span> (<span class="k">or</span> org-overriding-default-time
+					   (org-current-time)))
+	(org-capture-set-target-location (<span class="k">and</span> (equal goto 0) 'here))
+	(<span class="k">condition-case</span> error
+	    (org-capture-put <span class="bi">:template</span> (org-capture-fill-template))
+	  ((<span class="w">error</span> quit)
+	   (<span class="w">error</span> <span class="s">"Capture abort: %s"</span> (error-message-string error))))
+
+	(<span class="k">setq</span> org-capture-clock-keep (org-capture-get <span class="bi">:clock-keep</span>))
+	(<span class="k">condition-case</span> error
+	    (org-capture-place-template
+	     (eq (car (org-capture-get <span class="bi">:target</span>)) 'function))
+	  ((<span class="w">error</span> quit)
+	   (<span class="k">when</span> (<span class="k">and</span> (buffer-base-buffer (current-buffer))
+		      (string-prefix-p <span class="s">"CAPTURE-"</span> (buffer-name)))
+	     (kill-buffer (current-buffer)))
+	   (set-window-configuration (org-capture-get <span class="bi">:return-to-wconf</span>))
+	   (<span class="w">error</span> <span class="s">"Capture template `</span><span class="m s">%s</span><span class="s">': %s"</span>
+		  (org-capture-get <span class="bi">:key</span>)
+		  (error-message-string error))))
+	(<span class="k">when</span> (<span class="k">and</span> (derived-mode-p 'org-mode) (org-capture-get <span class="bi">:clock-in</span>))
+	  (<span class="k">condition-case</span> nil
+	      (<span class="k">progn</span>
+		(<span class="k">when</span> (org-clock-is-active)
+		  (org-capture-put <span class="bi">:interrupted-clock</span>
+				   (copy-marker org-clock-marker)))
+		(org-clock-in)
+		(<span class="k">setq-local</span> org-capture-clock-was-started
+                            (copy-marker org-clock-marker)))
+	    (<span class="w">error</span> <span class="s">"Could not start the clock in this capture buffer"</span>)))
+	(<span class="k">when</span> (org-capture-get <span class="bi">:immediate-finish</span>)
+	  (org-capture-finalize))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

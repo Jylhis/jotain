@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--display-buffer – Emacs Documentation Online</title>
+<meta name="description" content="dape--display-buffer is a natively compiled function defined in
+dape.el.
+Display BUFFER according to dape-buffer-window-arrangement.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--display-buffer</code></h1><p><span class="m"><code>dape--display-buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--display-buffer <a href="#:~:text=Display-,BUFFER"><span class="arg">BUFFER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Display <span class="arg">BUFFER</span> according to <a href="../var/dape-buffer-window-arrangement.html"><code>dape-buffer-window-arrangement</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--display-buffer</span> (buffer)
+  <span class="doc">"Display BUFFER according to `</span><span class="m doc">dape-buffer-window-arrangement</span><span class="doc">'."</span>
+  (<span class="k">pcase-let*</span>
+      ((mode (buffer-local-value 'major-mode buffer))
+       (group (cl-position (<span class="k">with-current-buffer</span> buffer
+                             (dape--info-window-group))
+                           dape-info-buffer-window-groups))
+       (`(,fns . ,alist)
+        (<span class="k">pcase</span> dape-buffer-window-arrangement
+          ((<span class="k">or</span> 'left 'right)
+           (<span class="k">pcase</span> mode
+             ('dape-repl-mode
+              `((display-buffer-in-side-window)
+                (side . bottom) (slot . -1)))
+             ('dape-shell-mode
+              `((display-buffer-in-side-window)
+                (side . bottom) (slot . 0)))
+             ((guard group)
+              `((display-buffer-in-side-window)
+                (side . ,dape-buffer-window-arrangement)
+                (slot . ,(1- group))))))
+          ('gud
+           (<span class="k">pcase</span> mode
+             ('dape-repl-mode
+              '((display-buffer-in-side-window) (side . top) (slot . -1)))
+             ('dape-shell-mode
+              '((display-buffer-pop-up-window)
+                (direction . right) (dedicated . t)))
+             ((guard group)
+              `((display-buffer-in-side-window)
+                ,@(nth group '(((side . top) (slot . 1))
+                               ((side . bottom) (slot . -1))
+                               ((side . bottom) (slot . 0))
+                               ((side . top) (slot . 0))
+                               ((side . bottom) (slot . 1))))))))
+          (_ nil)))
+       (category
+        (<span class="k">when</span> group (intern (format <span class="s">"dape-info-%s"</span> group)))))
+    (display-buffer buffer
+                    `((display-buffer-reuse-window . ,fns)
+                      (category . ,category)
+                      (dedicated . 'weakly)
+                      ,@alist))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

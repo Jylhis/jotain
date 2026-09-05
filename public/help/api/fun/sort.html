@@ -1,0 +1,98 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sort – Emacs Documentation Online</title>
+<meta name="description" content="sort is a function defined in fns.c.
+Sort SEQ, stably, and return the sorted sequence.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sort</code></h1><p><span class="m"><code>sort</code></span> is a function defined in <a href="../src/fns.c.html">fns.c</a>.
+<h2>Signature</h2>
+<pre><code>(sort <a href="#:~:text=Sort-,SEQ"><span class="arg">SEQ</span></a> <span class="ty">&amp;key</span> <a href="#:~:text=the-,second"><span class="arg">KEY</span></a> <a href="#:~:text=SEQ-,LESSP"><span class="arg">LESSP</span></a> <a href="#:~:text="><span class="arg">REVERSE</span></a> <a href="#:~:text="><span class="arg">IN-PLACE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Sort <span class="arg">SEQ</span>, stably, and return the sorted sequence.
+<p><span class="arg">SEQ</span> should be a list or vector.
+Optional arguments are specified as keyword/argument pairs.  The following
+arguments are defined:
+<p>:key FUNC -- FUNC is a function that takes a single element from <span class="arg">SEQ</span> and
+<br>&nbsp;&nbsp;returns the key value to be used in comparison.  If absent or nil,
+<br>&nbsp;&nbsp;<a href="../fun/identity.html"><code>identity</code></a> is used.
+<p>:lessp FUNC -- FUNC is a function that takes two arguments and returns
+<br>&nbsp;&nbsp;non-nil if the first element should come before the second.
+<br>&nbsp;&nbsp;If absent or nil, <a href="../fun/value%3C.html"><code>value&lt;</code></a> is used.
+<p>:reverse BOOL -- if BOOL is non-nil, the sorting order implied by FUNC is
+<br>&nbsp;&nbsp;reversed.  This does not affect stability: equal elements still retain
+<br>&nbsp;&nbsp;their order in the input sequence.
+<p>:in-place BOOL -- if BOOL is non-nil, <span class="arg">SEQ</span> is sorted in-place and returned.
+<br>&nbsp;&nbsp;Otherwise, a sorted copy of <span class="arg">SEQ</span> is returned and <span class="arg">SEQ</span> remains unmodified;
+<br>&nbsp;&nbsp;this is the default.
+<p>For compatibility, the calling convention (sort <span class="arg">SEQ</span> <span class="arg">LESSP</span>) can also be used;
+in this case, sorting is always done in-place.
+<p><a href="/info/elisp/sequence-functions.html#index-sort">View in manual</a>
+<p>Probably introduced at or before Emacs version <a href="../etc/NEWS.25.html">25.1</a>.
+<h2>Demos</h2>
+<pre><code><span class="c">#+BEGIN_SRC elisp
+</span><span class="">(</span><span class="k ">let</span><span class=""> ((num '(1 3 2 6 5 4 0)))
+  (sort num #'&lt;))
+</span><span class="c">#+END_SRC
+</span>
+<span class="c">#+RESULTS:</span>
+<span class="">: (0 1 2 3 4 5 6)
+</span>
+<span class="c">#+BEGIN_SRC elisp
+</span><span class="cd ">;; </span><span class="c ">Make a sorted copy without destroying the original
+</span><span class="">(</span><span class="k ">let*</span><span class=""> ((num '(1 3 2 6 5 4 0))
+       (sorted (sort (copy-sequence num) #'&lt;)))
+  (list </span><span class="bi ">:num</span><span class=""> num </span><span class="bi ">:sorted</span><span class=""> sorted))
+</span><span class="c">#+END_SRC
+</span>
+<span class="c">#+RESULTS:</span>
+<span class="">: (:num
+</span><span class="">:  (1 3 2 6 5 4 0)
+</span><span class="">:  :sorted
+</span><span class="">:  (0 1 2 3 4 5 6))</span>
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">// Defined in </span><a href="../src/fns.c.html">/usr/src/emacs/srcfns.c</a>
+{
+  <span class="ty">Lisp_Object</span> <span class="v">seq</span> = args[0];
+  <span class="ty">Lisp_Object</span> <span class="v">key</span> = Qnil;
+  <span class="ty">Lisp_Object</span> <span class="v">lessp</span> = Qnil;
+  <span class="ty">bool</span> <span class="v">inplace</span> = <span class="m">false</span>;
+  <span class="ty">bool</span> <span class="v">reverse</span> = <span class="m">false</span>;
+  <span class="k">if</span> (nargs == 2)
+    {
+      <span class="cd">/* </span><span class="c">old-style invocation without keywords</span><span class="cd"> */</span>
+      lessp = args[1];
+      inplace = <span class="m">true</span>;
+    }
+  <span class="k">else</span> <span class="k">if</span> ((nargs &amp; 1) == 0)
+    error (<span class="s">"Invalid argument list"</span>);
+  <span class="k">else</span>
+    <span class="k">for</span> (<span class="ty">ptrdiff_t</span> <span class="v">i</span> = 1; i &lt; nargs - 1; i += 2)
+      {
+	<span class="k">if</span> (EQ (args[i], QCkey))
+	  key = args[i + 1];
+	<span class="k">else</span> <span class="k">if</span> (EQ (args[i], QClessp))
+	  lessp = args[i + 1];
+	<span class="k">else</span> <span class="k">if</span> (EQ (args[i], QCin_place))
+	  inplace = <span class="neg">!</span>NILP (args[i + 1]);
+	<span class="k">else</span> <span class="k">if</span> (EQ (args[i], QCreverse))
+	  reverse = <span class="neg">!</span>NILP (args[i + 1]);
+	<span class="k">else</span>
+	  signal_error (<span class="s">"Invalid keyword argument"</span>, args[i]);
+      }
+
+  <span class="k">if</span> (CONSP (seq))
+    <span class="k">return</span> sort_list (seq, lessp, key, reverse, inplace);
+  <span class="k">else</span> <span class="k">if</span> (NILP (seq))
+    <span class="k">return</span> seq;
+  <span class="k">else</span> <span class="k">if</span> (VECTORP (seq))
+    <span class="k">return</span> sort_vector (inplace ? seq : Fcopy_sequence (seq),
+			lessp, key, reverse);
+  <span class="k">else</span>
+    wrong_type_argument (Qlist_or_vector_p, seq);
+}</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

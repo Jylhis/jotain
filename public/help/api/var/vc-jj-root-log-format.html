@@ -1,0 +1,115 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: vc-jj-root-log-format – Emacs Documentation Online</title>
+<meta name="description" content="vc-jj-root-log-format is a customizable variable defined in vc-jj.el.
+JJ log format for vc-print-root-log.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>vc-jj-root-log-format</code></h1><p><span class="m"><code>vc-jj-root-log-format</code></span> is a <a href="/info/elisp/variable-definitions.html">customizable</a> variable defined in <span class="bt">vc-jj.el</span>.
+<h2>Value</h2>
+<pre><code>("\nif(root,\n  format_root_commit(self),\n  label(if(current_working_copy, \"working_copy\"),\n    concat(\n      separate(\" \",\n        change_id ++ \"​\" ++ change_id.shortest(8).prefix() ++ \"​\" ++ change_id.shortest(8).rest(),\n        if(author.name(), author.name(), if(author.email(), author.email().local(), email_placeholder)),\n        commit_timestamp(self).format(\"%Y-%m-%d\"),\n        bookmarks,\n        tags,\n        working_copies,\n        if(git_head, label(\"git_head\", \"git_head()\")),\n        format_short_commit_id(commit_id),\n        if(conflict, label(\"conflict\", \"conflict\")),\n        if(config(\"ui.show-cryptographic-signatures\").as_boolean(),\n          format_short_cryptographic_signature(signature)),\n        if(empty, label(\"empty\", \"(empty)\")),\n        if(description,\n          description.first_line(),\n          label(if(empty, \"empty\"), description_placeholder),\n        ),\n      ) ++ \"\n\",\n    ),\n  )\n)"
+ "^.+? \\([K-Zk-z]+\\)[[:space:]]\\([K-Zk-z]+\\)[[:space:]]\\([K-Zk-z]+\\) \\(.*\\) \\([[:digit:]]\\{4\\}-[[:digit:]]\\{2\\}-[[:digit:]]\\{2\\}\\)\\(.*?\\) \\([[:xdigit:]]+\\) \\(\\(?:conflict \\)?\\)\\(\\(?:(empty) \\)?\\)\\(\\(?:(no description set)\\)?\\).*$"
+ ((1 '(face nil invisible t)) (2 'log-view-message)
+  (3 'change-log-list) (4 'change-log-name) (5 'change-log-date)
+  (6 'vc-jj-log-view-bookmark) (7 'vc-jj-log-view-commit)
+  (8 'vc-conflict-state) (9 'change-log-function)
+  (10 'change-log-function)))
+</code></pre>
+<h2>Documentation</h2>
+<p>JJ log format for <a href="../fun/vc-print-root-log.html"><code>vc-print-root-log</code></a>.
+<p>This option determines the format and fontification of the JJ Log View
+buffer created from <a href="../fun/vc-print-root-log.html"><code>vc-print-root-log</code></a>.
+<p>It should be a list of the form (FORMAT REGEXP KEYWORDS), where FORMAT
+is a format string (a JJ template passed to "jj log"), REGEXP is a
+regular expression matching a single entry in the "jj log" output, and
+KEYWORDS is a list of font lock keywords (see
+<a href="../var/font-lock-keywords.html"><code>font-lock-keywords</code></a>and <span class="m"><code>(elisp) Search-based Fontification</code></span>) for
+highlighting the Log View buffer.
+<p>REGEXP may define capture groups that KEYWORDS can use to fontify
+various regions of the Log View buffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/smb5w83hp9nz5jm5ish4kf6mshmmif86-emacs-packages-deps/share/emacs/site-lisp/elpa/vc-jj-0.5/vc-jj.el</span>
+(<span class="k">defcustom</span> <span class="v">vc-jj-root-log-format</span>
+  (list
+   <span class="cd">;; </span><span class="c">Log format (passed as the template for "jj log")
+</span>   <span class="s">"
+if(root,
+  format_root_commit(self),
+  label(if(current_working_copy, \"working_copy\"),
+    concat(
+      separate(\" \",
+        change_id ++ \"​\" ++ change_id.shortest(8).prefix() ++ \"​\" ++ change_id.shortest(8).rest(),
+        if(author.name(), author.name(), if(author.email(), author.email().local(), email_placeholder)),
+        commit_timestamp(self).format(\"%Y-%m-%d\"),
+        bookmarks,
+        tags,
+        working_copies,
+        if(git_head, label(\"git_head\", \"git_head()\")),
+        format_short_commit_id(commit_id),
+        if(conflict, label(\"conflict\", \"conflict\")),
+        if(config(\"ui.show-cryptographic-signatures\").as_boolean(),
+          format_short_cryptographic_signature(signature)),
+        if(empty, label(\"empty\", \"(empty)\")),
+        if(description,
+          description.first_line(),
+          label(if(empty, \"empty\"), description_placeholder),
+        ),
+      ) ++ \"\n\",
+    ),
+  )
+)"</span>
+   <span class="cd">;; </span><span class="c">Log entry regexp
+</span>   (<span class="k">rx</span>
+    line-start
+    <span class="cd">;; </span><span class="c">Graph
+</span>    (+? nonl) <span class="s">" "</span>
+    <span class="cd">;; </span><span class="c">Full change ID
+</span>    (group (+ (any <span class="s">"K-Zk-z"</span>)))
+    space
+    <span class="cd">;; </span><span class="c">Visible change ID
+</span>    (group (+ (any <span class="s">"K-Zk-z"</span>)))
+    space
+    (group (+ (any <span class="s">"K-Zk-z"</span>)))
+    <span class="s">" "</span>
+    <span class="cd">;; </span><span class="c">Author
+</span>    (group (* nonl)) <span class="s">" "</span>
+    <span class="cd">;; </span><span class="c">Time
+</span>    (group (= 4 (any num)) <span class="s">"-"</span> (= 2 (any num)) <span class="s">"-"</span> (= 2 (any num)))
+    <span class="cd">;; </span><span class="c">Tags and  bookmarks
+</span>    (group (*? nonl)) <span class="s">" "</span>
+    <span class="cd">;; </span><span class="c">Commit ID
+</span>    (group (+ (any hex))) <span class="s">" "</span>
+    <span class="cd">;; </span><span class="c">Special states
+</span>    (group (opt <span class="s">"conflict "</span>))
+    (group (opt <span class="s">"(empty) "</span>))
+    (group (opt <span class="s">"(no description set)"</span>))
+    <span class="cd">;; </span><span class="c">Description
+</span>    (* nonl) line-end)
+   <span class="cd">;; </span><span class="c">Font lock keywords
+</span>   '((1 '(face nil invisible t))        <span class="cd">; </span><span class="c">Full change ID
+</span>     (2 'log-view-message)              <span class="cd">; </span><span class="c">Short change ID
+</span>     (3 'change-log-list)               <span class="cd">; </span><span class="c">Rest of Change ID
+</span>     (4 'change-log-name)               <span class="cd">; </span><span class="c">Author name
+</span>     (5 'change-log-date)               <span class="cd">; </span><span class="c">Date
+</span>     (6 'vc-jj-log-view-bookmark)       <span class="cd">; </span><span class="c">Bookmark names
+</span>     (7 'vc-jj-log-view-commit)         <span class="cd">; </span><span class="c">Commit ID
+</span>     (8 'vc-conflict-state)             <span class="cd">; </span><span class="c">Conflict marker
+</span>     (9 'change-log-function)           <span class="cd">; </span><span class="c">No description marker
+</span>     (10 'change-log-function)))        <span class="cd">; </span><span class="c">Revision description
+</span>  <span class="doc">"JJ log format for `</span><span class="m doc">vc-print-root-log</span><span class="doc">'.
+This option determines the format and fontification of the JJ Log View
+buffer created from `</span><span class="m doc">vc-print-root-log</span><span class="doc">'.
+
+It should be a list of the form (FORMAT REGEXP KEYWORDS), where FORMAT
+is a format string (a JJ template passed to \"jj log\"), REGEXP is a
+regular expression matching a single entry in the \"jj log\" output, and
+KEYWORDS is a list of font lock keywords (see
+`</span><span class="m doc">font-lock-keywords</span><span class="doc">'and `(elisp) Search-based Fontification') for
+highlighting the Log View buffer.
+
+REGEXP may define capture groups that KEYWORDS can use to fontify
+various regions of the Log View buffer."</span>
+  <span class="bi">:type</span> '(list string regexp (repeat sexp)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-file-delete – Emacs Documentation Online</title>
+<meta name="description" content="magit-file-delete is an interactive and natively compiled function
+defined in magit-files.el.
+Delete the selected FILES or one file read in the minibuffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-file-delete</code></h1><p><span class="m"><code>magit-file-delete</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-files.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-file-delete <a href="#:~:text=selected-,FILES"><span class="arg">FILES</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=argument-,FORCE"><span class="arg">FORCE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Delete the selected <span class="arg">FILES</span> or one file read in the minibuffer.
+<p>With a prefix argument <span class="arg">FORCE</span> do so even when the files have
+uncommitted changes.  When the files aren't being tracked in
+Git, then fallback to using <a href="../fun/delete-file.html"><code>delete-file</code></a>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-files.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">magit-file-delete</span> (files <span class="ty">&amp;optional</span> force)
+  <span class="doc">"Delete the selected FILES or one file read in the minibuffer.
+
+With a prefix argument FORCE do so even when the files have
+uncommitted changes.  When the files aren't being tracked in
+Git, then fallback to using `</span><span class="m doc">delete-file</span><span class="doc">'."</span>
+  (<span class="k">interactive</span> (list (<span class="k">if-let</span> ((files (magit-region-values 'file t)))
+                         (magit-confirm-files 'delete files <span class="s">"Delete"</span>)
+                       (list (magit-read-file <span class="s">"Delete file"</span> nil t)))
+                     current-prefix-arg))
+  (<span class="k">let</span> ((args (<span class="k">and</span> force (list <span class="s">"--force"</span>))))
+    (<span class="k">when-let</span> ((dirs (seq-filter #'file-directory-p files)))
+      (<span class="k">if</span> (yes-or-no-p (format <span class="s">"Recursively delete %s %S:"</span>
+                               (<span class="k">if</span> (length= dirs 1) <span class="s">"directory"</span> <span class="s">"directories"</span>)
+                               (string-join dirs <span class="s">","</span>)))
+          (<span class="k">push</span> <span class="s">"-r"</span> args)
+        (<span class="w">user-error</span> <span class="s">"Abort"</span>)))
+    (<span class="k">if</span> (magit-file-tracked-p (car files))
+        (magit-call-git <span class="s">"rm"</span> args <span class="s">"--"</span> files)
+      (<span class="k">let</span> ((topdir (magit-toplevel)))
+        (<span class="k">dolist</span> (file files)
+          (<span class="k">setq</span> file (expand-file-name file topdir))
+          (<span class="k">if</span> (file-directory-p file)
+              (delete-directory file t t)
+            (delete-file file t))))))
+  (magit-refresh))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

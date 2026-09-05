@@ -1,0 +1,78 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-process-start – Emacs Documentation Online</title>
+<meta name="description" content="eca-process-start is a natively compiled function defined in
+eca-process.el.
+Start the eca process for SESSION calling ON-START after.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-process-start</code></h1><p><span class="m"><code>eca-process-start</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-process.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-process-start <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=calling-,ON-START"><span class="arg">ON-START</span></a> <a href="#:~:text=Call-,HANDLE-MSG"><span class="arg">HANDLE-MSG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Start the eca process for <span class="arg">SESSION</span> calling <span class="arg">ON-START</span> after.
+<p>Call <span class="arg">HANDLE-MSG</span> for new msgs processed.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-process.el</span>
+<span class="cd">;; </span><span class="c">Public
+</span>
+(<span class="k">defun</span> <span class="f">eca-process-start</span> (session on-start handle-msg)
+  <span class="doc">"Start the eca process for SESSION calling ON-START after.
+Call HANDLE-MSG for new msgs processed."</span>
+  (<span class="k">unless</span> (process-live-p (eca--session-process session))
+    <span class="cd">;; </span><span class="c">Clean up any .old binary from previous updates
+</span>    (eca-process--cleanup-old-server)
+    (<span class="k">-let*</span> (((result <span class="ty">&amp;as</span> <span class="ty">&amp;plist</span> <span class="bi">:decision</span> decision <span class="bi">:command</span> command) (eca-process--server-command))
+            (start-process-fn (<span class="k">lambda</span> ()
+                                (<span class="k">let</span> ((command (append command eca-extra-args)))
+                                  (<span class="k">when</span> eca-process-wrapper-function
+                                    (<span class="k">setq</span> command
+                                          (funcall eca-process-wrapper-function
+                                                   command
+                                                   (eca--session-workspace-folders session))))
+                                  (eca-info <span class="s">"Starting process '</span><span class="m s">%s</span><span class="s">'"</span> (string-join command <span class="s">" "</span>))
+                                  (<span class="k">setf</span> (eca--session-process session)
+                                        (make-process
+                                         <span class="bi">:coding</span> 'no-conversion
+                                         <span class="bi">:connection-type</span> 'pipe
+                                         <span class="bi">:name</span> <span class="s">"eca"</span>
+                                         <span class="bi">:command</span> command
+                                         <span class="bi">:buffer</span> (eca-process--buffer-name session)
+                                         <span class="bi">:stderr</span> (get-buffer-create (eca-process--stderr-buffer-name session))
+                                         <span class="bi">:filter</span> (eca-process--make-filter handle-msg)
+                                         <span class="bi">:sentinel</span> (<span class="k">lambda</span> (process exit-str)
+                                                     (<span class="k">unless</span> (process-live-p process)
+                                                       (<span class="k">when-let*</span> ((name (eca-process--stderr-buffer-name session))
+                                                                   (buf (get-buffer name)))
+                                                         (<span class="k">with-current-buffer</span> buf
+                                                           (rename-buffer (concat (buffer-name) <span class="s">":closed"</span>) t)
+                                                           (<span class="k">setq-local</span> mode-line-format '(<span class="s">"*Closed session*"</span>))))
+                                                       (eca-delete-session session)
+                                                       (eca-info <span class="s">"process has exited (%s)"</span> (s-trim exit-str))))
+                                         <span class="bi">:file-handler</span> t
+                                         <span class="bi">:noquery</span> t)))
+                                (funcall on-start))))
+      (<span class="k">pcase</span> decision
+        ('custom (funcall start-process-fn))
+
+        ('system (funcall start-process-fn))
+
+        ('error-download (<span class="w">user-error</span> (eca-error (plist-get result <span class="bi">:message</span>))))
+
+        ('already-installed (funcall start-process-fn))
+
+        ('download (eca-process--download-server
+                    (<span class="k">lambda</span> () (funcall start-process-fn))
+                    (plist-get result <span class="bi">:latest-version</span>)
+                    <span class="cd">;; </span><span class="c">When updating an already installed server, a
+</span>                    <span class="cd">;; </span><span class="c">failed download (e.g. GitHub outage) falls back
+</span>                    <span class="cd">;; </span><span class="c">to starting the installed binary.
+</span>                    (<span class="k">when</span> (f-exists? eca-server-install-path)
+                      (<span class="k">lambda</span> (err)
+                        (eca-warn <span class="s">"Failed to download eca server (%s), starting installed version instead"</span> err)
+                        (funcall start-process-fn)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

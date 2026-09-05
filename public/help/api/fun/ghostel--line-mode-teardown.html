@@ -1,0 +1,85 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--line-mode-teardown – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--line-mode-teardown is a natively compiled function defined in
+ghostel-line-mode.el.
+Clean up line-mode state and hand any pending input back to the shell.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--line-mode-teardown</code></h1><p><span class="m"><code>ghostel--line-mode-teardown</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel-line-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--line-mode-teardown <span class="ty">&amp;optional</span> <a href="#:~:text=When-,PAUSE"><span class="arg">PAUSE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Clean up line-mode state and hand any pending input back to the shell.
+<p>Any in-progress input is forwarded to the PTY raw (no newline) so
+the user can continue editing it at the shell's own prompt after
+the mode switch instead of losing what they typed.  Callers that
+have already handled the input themselves (like
+<a href="../fun/ghostel-line-mode-send.html"><code>ghostel-line-mode-send</code></a> and <a href="../fun/ghostel-line-mode-interrupt.html"><code>ghostel-line-mode-interrupt</code></a>) delete
+it from the buffer before calling this, so no double-send happens.
+<p>Forces a final redraw so the buffer truncation done at entry is
+re-materialized from libghostty.
+<p>When <span class="arg">PAUSE</span> is non-nil, skip forwarding pending input to the PTY,
+skip the readline-clearing backspaces (the alt-screen TUI would receive them),
+and skip the trailing redraw; used by <a href="../fun/ghostel--line-mode-pause.html"><code>ghostel--line-mode-pause</code></a>,
+which discards any type-ahead and runs inside <a href="../fun/ghostel--redraw-now.html"><code>ghostel--redraw-now</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-line-mode.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--line-mode-teardown</span> (<span class="ty">&amp;optional</span> pause)
+  <span class="doc">"Clean up line-mode state and hand any pending input back to the shell.
+Any in-progress input is forwarded to the PTY raw (no newline) so
+the user can continue editing it at the shell's own prompt after
+the mode switch instead of losing what they typed.  Callers that
+have already handled the input themselves (like
+`</span><span class="m doc">ghostel-line-mode-send</span><span class="doc">' and `</span><span class="m doc">ghostel-line-mode-interrupt</span><span class="doc">') delete
+it from the buffer before calling this, so no double-send happens.
+
+Forces a final redraw so the buffer truncation done at entry is
+re-materialized from libghostty.
+
+When PAUSE is non-nil, skip forwarding pending input to the PTY,
+skip the readline-clearing backspaces (the alt-screen TUI would receive them),
+and skip the trailing redraw; used by `</span><span class="m doc">ghostel--line-mode-pause</span><span class="doc">',
+which discards any type-ahead and runs inside `</span><span class="m doc">ghostel--redraw-now</span><span class="doc">'."</span>
+  <span class="cd">;; </span><span class="c">Undo is off outside line mode; disable it before the teardown edits
+</span>  <span class="cd">;; </span><span class="c">below so none of them are recorded.
+</span>  (<span class="k">setq</span> buffer-undo-list t)
+  (<span class="k">unless</span> pause
+    (<span class="k">let</span> ((input (ghostel--line-mode-input-text)))
+      <span class="cd">;; </span><span class="c">Erase the adopted prefix from the shell's readline before
+</span>      <span class="cd">;; </span><span class="c">handing back our (possibly edited) version, so the shell ends
+</span>      <span class="cd">;; </span><span class="c">up holding exactly INPUT instead of "&lt;adopted&gt;INPUT".
+</span>      (ghostel--line-mode-clear-shell-readline)
+      (<span class="k">when</span> (&gt; (length input) 0)
+        (ghostel--write-pty ghostel--term input))))
+  (ghostel--line-mode-delete-input)
+  <span class="cd">;; </span><span class="c">Drop the `</span><span class="m c">read-only</span><span class="c">' and `</span><span class="m c">rear-nonsticky</span><span class="c">' properties that
+</span>  <span class="cd">;; </span><span class="c">protected the scrollback region during line mode; after this teardown
+</span>  <span class="cd">;; </span><span class="c">the whole ghostel buffer returns to the default renderer-owned lock.
+</span>  (<span class="k">let</span> ((inhibit-read-only t))
+    (remove-text-properties (point-min) (point-max)
+                            '(read-only nil rear-nonsticky nil)))
+  (<span class="k">setq</span> buffer-read-only t)
+  (<span class="k">when</span> (markerp ghostel--line-input-start)
+    (set-marker ghostel--line-input-start nil))
+  (<span class="k">when</span> (markerp ghostel--line-input-end)
+    (set-marker ghostel--line-input-end nil))
+  (<span class="k">setq</span> ghostel--line-input-start nil)
+  (<span class="k">setq</span> ghostel--line-input-end nil)
+  (<span class="k">setq</span> ghostel--line-mode-history-index nil)
+  (<span class="k">setq</span> ghostel--line-mode-adopted-count nil)
+  (<span class="k">setq</span> ghostel--line-mode-on-alt-screen nil)
+  (<span class="k">when</span> ghostel--line-mode-saved-cursor-type
+    (<span class="k">setq</span> cursor-type (car ghostel--line-mode-saved-cursor-type))
+    (<span class="k">setq</span> ghostel--line-mode-saved-cursor-type nil))
+  (<span class="k">unless</span> pause
+    (<span class="k">when</span> ghostel--term
+      (<span class="k">let</span> ((inhibit-read-only t)
+            (inhibit-modification-hooks t))
+        (ghostel--redraw ghostel--term t t))
+      (ghostel--schedule-link-detection))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

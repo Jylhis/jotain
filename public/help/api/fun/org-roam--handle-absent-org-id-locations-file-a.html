@@ -1,0 +1,77 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam--handle-absent-org-id-locations-file-a – Emacs Documentation Online</title>
+<meta name="description" content="org-roam--handle-absent-org-id-locations-file-a is a natively compiled
+function defined in org-roam-compat.el.
+Gracefully handle errors related to absence of org-id-locations-file.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam--handle-absent-org-id-locations-file-a</code></h1><p><span class="m"><code>org-roam--handle-absent-org-id-locations-file-a</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">org-roam-compat.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam--handle-absent-org-id-locations-file-a <a href="#:~:text=file.-,FN"><span class="arg">FN</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=and-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Gracefully handle errors related to absence of <a href="../var/org-id-locations-file.html"><code>org-id-locations-file</code></a>.
+<p><span class="arg">FN</span> is <a href="../fun/org-id-add-location.html"><code>org-id-add-location</code></a> that comes from advice and <span class="arg">ARGS</span> are
+passed to it.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-compat.el</span>
+(<span class="k">defun</span> <span class="f">org-roam--handle-absent-org-id-locations-file-a</span> (fn <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Gracefully handle errors related to absence of `</span><span class="m doc">org-id-locations-file</span><span class="doc">'.
+FN is `</span><span class="m doc">org-id-add-location</span><span class="doc">' that comes from advice and ARGS are
+passed to it."</span>
+  (<span class="k">condition-case</span> err
+      (apply fn args)
+    <span class="cd">;; </span><span class="c">`</span><span class="m c">org-id</span><span class="c">' makes the assumption that `</span><span class="m c">org-id-locations-file</span><span class="c">' will be stored in `</span><span class="m c">user-emacs-directory</span><span class="c">'
+</span>    <span class="cd">;; </span><span class="c">which always exist if you have Emacs, so it uses `</span><span class="m c">with-temp-file</span><span class="c">' to write to the file. However, the
+</span>    <span class="cd">;; </span><span class="c">users *do* change the path to this file and `</span><span class="m c">with-temp-file</span><span class="c">' unable to create the file, if the path to
+</span>    <span class="cd">;; </span><span class="c">it consists of directories that don't exist. We'll have to handle this ourselves.
+</span>    (<span class="w">error</span>
+     (advice-remove 'org-id-add-location #'org-roam--handle-absent-org-id-locations-file-a)
+     (<span class="k">if</span> (file-exists-p (file-truename org-id-locations-file))
+         (<span class="w">signal</span> (car err) (cdr err))
+       <span class="cd">;; </span><span class="c">Pre-allocate the hash table to avoid weird access related errors during the regeneration.
+</span>       (<span class="k">or</span> org-id-locations (<span class="k">setq</span> org-id-locations (make-hash-table <span class="bi">:test</span> 'equal)))
+       <span class="cd">;; </span><span class="c">If permissions allow that, try to create the user specified directory path to
+</span>       <span class="cd">;; </span><span class="c">`</span><span class="m c">org-id-locations-file</span><span class="c">' ourselves.
+</span>       (<span class="k">condition-case</span> _err
+           (<span class="k">progn</span> (org-roam-message (concat <span class="s">"`</span><span class="m s">org-id-locations-file</span><span class="s">' (%s) doesn't exist. "</span>
+                                            <span class="s">"Trying to regenerate it (this may take a while)..."</span>)
+                                    org-id-locations-file)
+                  (make-directory (file-name-directory (file-truename org-id-locations-file)))
+                  (org-roam-update-org-id-locations)
+                  (apply fn args))
+         <span class="cd">;; </span><span class="c">In case of failure (lack of permissions), we'll patch it to at least handle the current session
+</span>         <span class="cd">;; </span><span class="c">without errors.
+</span>         (file-error (org-roam-message <span class="s">"Failed to regenerate `</span><span class="m s">org-id-locations-file</span><span class="s">'"</span>)
+                     (lwarn 'org-roam <span class="bi">:error</span> <span class="s">"
+--------
+WARNING: `</span><span class="m s">org-id-locations-file</span><span class="s">' (%s) doesn't exist!
+         Org-roam is unable to create it for you.
+--------
+
+This happens when Emacs doesn't have permissions to create the
+path to your `</span><span class="m s">org-id-locations-file</span><span class="s">'. Org-roam will now fallback
+storing the file in your current `</span><span class="m s">org-roam-directory</span><span class="s">', but the
+warning will keep popup with each new session.
+
+To stop this warning from popping up, set `</span><span class="m s">org-id-locations-file</span><span class="s">'
+to the location you want and ensure that the path exists on your
+filesystem, then run M-x `</span><span class="m s">org-roam-update-org-id-locations</span><span class="s">'.
+
+Note: While Org-roam doesn't depend on `</span><span class="m s">org-id-locations-file</span><span class="s">' to
+lookup IDs for the nodes that are stored in the database, it
+still tries to keep it updated so IDs work across other files in
+Org-mode, so the IDs used in your `</span><span class="m s">org-roam-directory</span><span class="s">' would be
+able to cross-reference outside of `</span><span class="m s">org-roam-directory</span><span class="s">'. It also
+allows to keep linking with \"id:\" links within the current
+`</span><span class="m s">org-roam-directory</span><span class="s">' to headings and files that are excluded from
+identification (e.g. with \"ROAM_EXCLUDE\" property) as Org-roam
+nodes."</span> org-id-locations-file)
+                     (<span class="k">setq</span> org-id-locations-file
+                           (expand-file-name <span class="s">".orgids"</span> (file-truename org-roam-directory)))
+                     (apply fn args)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,72 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-eldoc-function – Emacs Documentation Online</title>
+<meta name="description" content="markdown-eldoc-function is a natively compiled function defined in
+markdown-mode.el.
+Return a helpful string when appropriate based on context.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-eldoc-function</code></h1><p><span class="m"><code>markdown-eldoc-function</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-eldoc-function <span class="ty">&amp;rest</span> <a href="#:~:text="><span class="arg">IGNORED</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a helpful string when appropriate based on context.
+<p>* Report URL when point is at a hidden URL.
+<br>* Report language name when point is a code block with hidden markup.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+<span class="cd">;;; </span><span class="c">ElDoc Support =============================================================
+</span>
+(<span class="k">defun</span> <span class="f">markdown-eldoc-function</span> (<span class="ty">&amp;rest</span> _ignored)
+  <span class="doc">"Return a helpful string when appropriate based on context.
+* Report URL when point is at a hidden URL.
+* Report language name when point is a code block with hidden markup."</span>
+  (<span class="k">cond</span>
+   <span class="cd">;; </span><span class="c">Hidden URL or reference for inline link
+</span>   ((<span class="k">and</span> (<span class="k">or</span> (thing-at-point-looking-at markdown-regex-link-inline)
+             (thing-at-point-looking-at markdown-regex-link-reference))
+         (<span class="k">or</span> markdown-hide-urls markdown-hide-markup))
+    (<span class="k">let*</span> ((imagep (string-equal (match-string 1) <span class="s">"!"</span>))
+           (referencep (string-equal (match-string 5) <span class="s">"["</span>))
+           (link (match-string-no-properties 6))
+           (edit-keys (markdown--substitute-command-keys
+                       (<span class="k">if</span> imagep
+                           <span class="s">"\\[</span><span class="m s">markdown-insert-image</span><span class="s">]"</span>
+                         <span class="s">"\\[</span><span class="m s">markdown-insert-link</span><span class="s">]"</span>)))
+           (edit-str (propertize edit-keys 'face 'font-lock-constant-face))
+           (object (<span class="k">if</span> referencep <span class="s">"reference"</span> <span class="s">"URL"</span>)))
+      (format <span class="s">"Hidden %s (%s to edit): %s"</span> object edit-str
+              (<span class="k">if</span> referencep
+                  (concat
+                   (propertize <span class="s">"["</span> 'face 'markdown-markup-face)
+                   (propertize link 'face 'markdown-reference-face)
+                   (propertize <span class="s">"]"</span> 'face 'markdown-markup-face))
+                (propertize link 'face 'markdown-url-face)))))
+   <span class="cd">;; </span><span class="c">Hidden URL for wiki links
+</span>   ((<span class="k">and</span> (<span class="k">and</span> markdown-enable-wiki-links
+              (thing-at-point-looking-at markdown-regex-wiki-link))
+         (<span class="k">or</span> markdown-hide-urls markdown-hide-markup))
+    (<span class="k">let*</span> ((aliasp (string-equal (match-string-no-properties 4) <span class="s">"|"</span>))
+           (part1 (match-string-no-properties 3))
+           (part2 (match-string-no-properties 5))
+           (link (<span class="k">if</span> (<span class="k">and</span> aliasp markdown-wiki-link-alias-first) part2 part1))
+           (edit-keys (markdown--substitute-command-keys
+                       <span class="s">"\\[</span><span class="m s">markdown-insert-wiki-link</span><span class="s">]"</span>))
+           (edit-str (propertize edit-keys 'face 'font-lock-constant-face)))
+      (format <span class="s">"Hidden URL (%s to edit): %s"</span>
+              edit-str (propertize link 'face 'markdown-reference-face))))
+   <span class="cd">;; </span><span class="c">Hidden language name for fenced code blocks
+</span>   ((<span class="k">and</span> (markdown-code-block-at-point-p)
+         (not (get-text-property (point) 'markdown-pre))
+         markdown-hide-markup)
+    (<span class="k">let</span> ((lang (<span class="k">save-excursion</span> (markdown-code-block-lang))))
+      (<span class="k">unless</span> lang (<span class="k">setq</span> lang <span class="s">"[unspecified]"</span>))
+      (format <span class="s">"Hidden code block language: %s (%s to toggle markup)"</span>
+              (propertize lang 'face 'markdown-language-keyword-face)
+              (markdown--substitute-command-keys
+               <span class="s">"\\[</span><span class="m s">markdown-toggle-markup-hiding</span><span class="s">]"</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

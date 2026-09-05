@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp--handle-tools-list – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp--handle-tools-list is a natively compiled function
+defined in claude-code-ide-mcp.el.
+Handle the tools/list request with ID.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp--handle-tools-list</code></h1><p><span class="m"><code>claude-code-ide-mcp--handle-tools-list</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide-mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp--handle-tools-list <a href="#:~:text=with-,ID"><span class="arg">ID</span></a> <a href="#:~:text="><span class="arg">PARAMS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle the tools/list request with <span class="arg">ID</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp--handle-tools-list</span> (id _params)
+  <span class="doc">"Handle the tools/list request with ID."</span>
+  (<span class="k">claude-code-ide-debug</span> <span class="s">"Handling tools/list request with id: %s"</span> id)
+  <span class="cd">;; </span><span class="c">Rebuild tool lists to respect current settings
+</span>  (<span class="k">setq</span> claude-code-ide-mcp-tools (claude-code-ide-mcp--build-tool-list))
+  (<span class="k">setq</span> claude-code-ide-mcp-tool-schemas (claude-code-ide-mcp--build-tool-schemas))
+  (<span class="k">setq</span> claude-code-ide-mcp-tool-descriptions (claude-code-ide-mcp--build-tool-descriptions))
+  <span class="cd">;; </span><span class="c">Ensure handlers are loaded
+</span>  (<span class="k">claude-code-ide-debug</span> <span class="s">"Building tools list from %d registered tools"</span>
+                         (length claude-code-ide-mcp-tools))
+  (<span class="k">let</span> ((tools '()))
+    (<span class="k">dolist</span> (tool-entry claude-code-ide-mcp-tools)
+      (<span class="k">let*</span> ((name (car tool-entry))
+             (schema (alist-get name claude-code-ide-mcp-tool-schemas nil nil #'string=))
+             (prepared-schema (claude-code-ide-mcp--prepare-schema-for-json schema))
+             (description (alist-get name claude-code-ide-mcp-tool-descriptions nil nil #'string=)))
+        (<span class="k">claude-code-ide-debug</span> <span class="s">"  Tool: %s (has schema: %s, has description: %s)"</span>
+                               name
+                               (<span class="k">if</span> schema <span class="s">"yes"</span> <span class="s">"no"</span>)
+                               (<span class="k">if</span> description <span class="s">"yes"</span> <span class="s">"no"</span>))
+        (<span class="k">push</span> `((name . ,name)
+                (description . ,description)
+                (inputSchema . ,prepared-schema))
+              tools)))
+    (<span class="k">let*</span> ((tools-array (vconcat (nreverse tools)))
+           (response `((tools . ,tools-array))))
+      (<span class="k">claude-code-ide-debug</span> <span class="s">"Returning %d tools in response"</span> (length tools-array))
+      (claude-code-ide-mcp--make-response id response))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

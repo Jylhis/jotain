@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-view--write-contents-function – Emacs Documentation Online</title>
+<meta name="description" content="pdf-view--write-contents-function is a natively compiled function
+defined in pdf-view.el.
+Function for write-contents-functions to save the buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-view--write-contents-function</code></h1><p><span class="m"><code>pdf-view--write-contents-function</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">pdf-view.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-view--write-contents-function)
+</code></pre>
+<h2>Documentation</h2>
+<p>Function for <a href="../var/write-contents-functions.html"><code>write-contents-functions</code></a> to save the buffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-view.el</span>
+(<span class="k">defun</span> <span class="f">pdf-view--write-contents-function</span> ()
+  <span class="doc">"Function for `</span><span class="m doc">write-contents-functions</span><span class="doc">' to save the buffer."</span>
+  (<span class="k">when</span> (pdf-util-pdf-buffer-p)
+    (<span class="k">let</span> ((tempfile (pdf-info-save pdf-view--server-file-name)))
+      (<span class="k">unwind-protect</span>
+          (<span class="k">progn</span>
+            <span class="cd">;; </span><span class="c">Order matters here: We need to first copy the new
+</span>            <span class="cd">;; </span><span class="c">content (tempfile) to the PDF, and then close the PDF.
+</span>            <span class="cd">;; </span><span class="c">Since while closing the file (and freeing its resources
+</span>            <span class="cd">;; </span><span class="c">in the process), it may be immediately reopened due to
+</span>            <span class="cd">;; </span><span class="c">redisplay happening inside the pdf-info-close function
+</span>            <span class="cd">;; </span><span class="c">(while waiting for a response from the process.).
+</span>            (copy-file tempfile (<span class="k">or</span> (buffer-file-name)
+                                    (read-file-name
+                                     <span class="s">"File name to save PDF to: "</span>))
+                       t)
+            (pdf-info-close pdf-view--server-file-name)
+
+            (<span class="k">when</span> pdf-view--buffer-file-name
+              (copy-file tempfile pdf-view--buffer-file-name t))
+            (clear-visited-file-modtime)
+            (set-buffer-modified-p nil)
+            (<span class="k">setq</span> pdf-view--server-file-name
+                  (pdf-view-buffer-file-name))
+            t)
+        (<span class="k">when</span> (file-exists-p tempfile)
+          (delete-file tempfile))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

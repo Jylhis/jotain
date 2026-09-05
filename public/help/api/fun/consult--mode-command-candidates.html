@@ -1,0 +1,80 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--mode-command-candidates – Emacs Documentation Online</title>
+<meta name="description" content="consult--mode-command-candidates is a natively compiled function
+defined in consult.el.
+Extract commands from MODES.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--mode-command-candidates</code></h1><p><span class="m"><code>consult--mode-command-candidates</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--mode-command-candidates <a href="#:~:text=from-,MODES"><span class="arg">MODES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Extract commands from <span class="arg">MODES</span>.
+<p>The list of features is searched for files belonging to the modes.
+From these files, the commands are extracted.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--mode-command-candidates</span> (modes)
+  <span class="doc">"Extract commands from MODES.
+
+The list of features is searched for files belonging to the modes.
+From these files, the commands are extracted."</span>
+  (<span class="k">let*</span> ((case-fold-search)
+         (buffer (current-buffer))
+         (command-filter (consult--regexp-filter (seq-filter #'stringp consult-mode-command-filter)))
+         (feature-filter (seq-filter #'symbolp consult-mode-command-filter))
+         (minor-hash (consult--string-hash minor-mode-list))
+         (minor-local-modes (seq-filter (<span class="k">lambda</span> (m)
+                                          (<span class="k">and</span> (gethash m minor-hash)
+                                               (local-variable-if-set-p m)))
+                                        modes))
+         (minor-global-modes (seq-filter (<span class="k">lambda</span> (m)
+                                           (<span class="k">and</span> (gethash m minor-hash)
+                                                (not (local-variable-if-set-p m))))
+                                         modes))
+         (major-modes (seq-remove (<span class="k">lambda</span> (m)
+                                    (gethash m minor-hash))
+                                  modes))
+         (major-paths-hash (consult--string-hash (mapcar #'symbol-file major-modes)))
+         (minor-local-paths-hash (consult--string-hash (mapcar #'symbol-file minor-local-modes)))
+         (minor-global-paths-hash (consult--string-hash (mapcar #'symbol-file minor-global-modes)))
+         (major-name-regexp (regexp-opt (mapcar #'consult--mode-name major-modes)))
+         (minor-local-name-regexp (regexp-opt (mapcar #'consult--mode-name minor-local-modes)))
+         (minor-global-name-regexp (regexp-opt (mapcar #'consult--mode-name minor-global-modes)))
+         (commands))
+    (<span class="k">dolist</span> (feature load-history commands)
+      (<span class="k">when-let*</span> ((name (alist-get 'provide feature)))
+        (<span class="k">let*</span> ((path (car feature))
+               (file (file-name-nondirectory path))
+               (key (<span class="k">cond</span>
+                     ((memq name feature-filter) nil)
+                     ((<span class="k">or</span> (gethash path major-paths-hash)
+                          (string-match-p major-name-regexp file))
+                      ?m)
+                     ((<span class="k">or</span> (gethash path minor-local-paths-hash)
+                          (string-match-p minor-local-name-regexp file))
+                      ?l)
+                     ((<span class="k">or</span> (gethash path minor-global-paths-hash)
+                          (string-match-p minor-global-name-regexp file))
+                      ?g))))
+          (<span class="k">when</span> key
+            (<span class="k">dolist</span> (cmd (cdr feature))
+              (<span class="k">let</span> ((sym (cdr-safe cmd)))
+                (<span class="k">when</span> (<span class="k">and</span> (consp cmd)
+                           (eq (car cmd) 'defun)
+                           (commandp sym)
+                           (not (get sym 'byte-obsolete-info))
+                           (<span class="k">or</span> (not read-extended-command-predicate)
+                               (funcall read-extended-command-predicate sym buffer)))
+                  (<span class="k">let</span> ((name (symbol-name sym)))
+                    (<span class="k">unless</span> (string-match-p command-filter name)
+                      (<span class="k">push</span> (propertize name
+                                        'consult--candidate sym
+                                        'consult--type key)
+                            commands))))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

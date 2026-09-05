@@ -1,0 +1,90 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--remote-term-preamble – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--remote-term-preamble is a natively compiled function defined
+in ghostel.el.
+Return a /bin/sh snippet that sets TERM for a remote spawn wrapper.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--remote-term-preamble</code></h1><p><span class="m"><code>ghostel--remote-term-preamble</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--remote-term-preamble)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a <span class="m"><code>/bin/sh</code></span> snippet that sets TERM for a remote spawn wrapper.
+<p>Designed to run *on the remote*, inside the per-spawn <span class="m"><code>/bin/sh -c</code></span>
+wrapper, so the choice happens after TRAMP env propagation.  This
+sidesteps <a href="../fun/tramp-local-environment-variable-p.html"><code>tramp-local-environment-variable-p</code></a>, which strips
+<span class="m"><code>TERM=</code></span> entries that match the local default top-level
+<a href="../var/process-environment.html"><code>process-environment</code></a> — leaving the remote shell to inherit
+TERM=dumb from TRAMP's connection shell, and disabling
+readline/ZLE/fish line editing on the remote (issue #224).
+<p>When <a href="../var/ghostel-term.html"><code>ghostel-term</code></a> is the default "xterm-ghostty", the snippet:
+<br>1. Prepends ~/.local/share/ghostel/terminfo to TERMINFO_DIRS when
+<br>&nbsp;&nbsp;&nbsp;that directory holds the bundled entry.  This lets manual
+<br>&nbsp;&nbsp;&nbsp;setups co-locate terminfo with the shell-integration scripts
+<br>&nbsp;&nbsp;&nbsp;(see README, <span class="s">"Option 2: Manual setup"</span>) in one place — no
+<br>&nbsp;&nbsp;&nbsp;tic, no touching ~/.terminfo.
+<br>2. Probes via <span class="m"><code>infocmp xterm-ghostty</code></span>.  The probe honors all of
+<br>&nbsp;&nbsp;&nbsp;ncurses' standard lookup paths (the prepended dir, $TERMINFO,
+<br>&nbsp;&nbsp;&nbsp;~/.terminfo, $TERMINFO_DIRS, and the compiled defaults), so
+<br>&nbsp;&nbsp;&nbsp;it succeeds whenever the entry is reachable any way — bundled,
+<br>&nbsp;&nbsp;&nbsp;system-installed, or pushed via <a href="../var/ghostel-tramp-shell-integration.html"><code>ghostel-tramp-shell-integration</code></a>.
+<br>&nbsp;&nbsp;&nbsp;On success, advertise ghostty; on failure, fall back to
+<br>&nbsp;&nbsp;&nbsp;"xterm-256color" (universally available) so echo keeps working.
+<p>When <a href="../var/ghostel-term.html"><code>ghostel-term</code></a> was customized to anything else, honor it
+verbatim.  <span class="m"><code>COLORTERM=truecolor</code></span> is exported unconditionally.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--remote-term-preamble</span> ()
+  <span class="doc">"Return a `</span><span class="m doc">/bin/sh</span><span class="doc">' snippet that sets TERM for a remote spawn wrapper.
+Designed to run *on the remote*, inside the per-spawn `/bin/sh -c'
+wrapper, so the choice happens after TRAMP env propagation.  This
+sidesteps `</span><span class="m doc">tramp-local-environment-variable-p</span><span class="doc">', which strips
+`</span><span class="m doc">TERM=</span><span class="doc">' entries that match the local default top-level
+`</span><span class="m doc">process-environment</span><span class="doc">' — leaving the remote shell to inherit
+TERM=dumb from TRAMP's connection shell, and disabling
+readline/ZLE/fish line editing on the remote (issue #224).
+
+When `</span><span class="m doc">ghostel-term</span><span class="doc">' is the default \"xterm-ghostty\", the snippet:
+1. Prepends ~/.local/share/ghostel/terminfo to TERMINFO_DIRS when
+   that directory holds the bundled entry.  This lets manual
+   setups co-locate terminfo with the shell-integration scripts
+   (see README, \"Option 2: Manual setup\") in one place — no
+   `</span><span class="m doc">tic</span><span class="doc">', no touching ~/.terminfo.
+2. Probes via `infocmp xterm-ghostty'.  The probe honors all of
+   ncurses' standard lookup paths (the prepended dir, $TERMINFO,
+   ~/.terminfo, $TERMINFO_DIRS, and the compiled defaults), so
+   it succeeds whenever the entry is reachable any way — bundled,
+   system-installed, or pushed via `</span><span class="m doc">ghostel-tramp-shell-integration</span><span class="doc">'.
+   On success, advertise ghostty; on failure, fall back to
+   \"xterm-256color\" (universally available) so echo keeps working.
+
+When `</span><span class="m doc">ghostel-term</span><span class="doc">' was customized to anything else, honor it
+verbatim.  `</span><span class="m doc">COLORTERM=truecolor</span><span class="doc">' is exported unconditionally."</span>
+  (<span class="k">cond</span>
+   ((equal ghostel-term <span class="s">"xterm-ghostty"</span>)
+    (concat
+     <span class="cd">;; </span><span class="c">Pick up a co-located bundle if the user dropped one alongside
+</span>     <span class="cd">;; </span><span class="c">the shell integration scripts.  Tilde expands in assignment
+</span>     <span class="cd">;; </span><span class="c">context per POSIX; ${TERMINFO_DIRS:+:$TERMINFO_DIRS} preserves
+</span>     <span class="cd">;; </span><span class="c">any prior search list.
+</span>     <span class="s">"if [ -e ~/.local/share/ghostel/terminfo/x/xterm-ghostty ] "</span>
+     <span class="s">"|| [ -e ~/.local/share/ghostel/terminfo/78/xterm-ghostty ]; "</span>
+     <span class="s">"then export TERMINFO_DIRS=~/.local/share/ghostel/terminfo"</span>
+     <span class="s">"${TERMINFO_DIRS:+:$TERMINFO_DIRS}; "</span>
+     <span class="s">"fi; "</span>
+     <span class="s">"TERM=xterm-256color; "</span>
+     <span class="s">"if infocmp xterm-ghostty &gt;/dev/null 2&gt;&amp;1; then "</span>
+     <span class="s">"TERM=xterm-ghostty; "</span>
+     <span class="s">"TERM_PROGRAM=ghostty; TERM_PROGRAM_VERSION=1.3.2; "</span>
+     <span class="s">"export TERM_PROGRAM TERM_PROGRAM_VERSION; "</span>
+     <span class="s">"fi; "</span>
+     <span class="s">"COLORTERM=truecolor; export TERM COLORTERM; "</span>))
+   (t
+    (concat <span class="s">"TERM="</span> (shell-quote-argument ghostel-term)
+            <span class="s">"; COLORTERM=truecolor; export TERM COLORTERM; "</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

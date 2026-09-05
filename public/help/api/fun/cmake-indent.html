@@ -1,0 +1,81 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: cmake-indent – Emacs Documentation Online</title>
+<meta name="description" content="cmake-indent is an interactive and natively compiled function defined
+in cmake-mode.el.
+Indent current line as CMake code.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>cmake-indent</code></h1><p><span class="m"><code>cmake-indent</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">cmake-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(cmake-indent)
+</code></pre>
+<h2>Documentation</h2>
+<p>Indent current line as CMake code.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bi26xggfjzcsi930rshs0l5i3q34551h-emacs-packages-deps/share/emacs/site-lisp/elpa/cmake-mode-20260825.1510/cmake-mode.el</span>
+<span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Line indentation function.
+</span><span class="cd">;;</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">cmake-indent</span> ()
+  <span class="doc">"Indent current line as CMake code."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">unless</span> (cmake-line-starts-inside-string)
+    (<span class="k">if</span> (bobp)
+        (cmake-indent-line-to 0)
+      (<span class="k">let</span> (cur-indent)
+        (<span class="k">save-excursion</span>
+          (beginning-of-line)
+          (<span class="k">let</span> ((point-start (point))
+                (closing-parens-only (looking-at cmake-regex-closing-parens-line))
+                (case-fold-search t)  <span class="cd">;; </span><span class="c">case-insensitive
+</span>                token)
+            <span class="cd">;; </span><span class="c">Search back for the last indented line.
+</span>            (cmake-find-last-indented-line)
+            <span class="cd">;; </span><span class="c">Start with the indentation on this line.
+</span>            (<span class="k">setq</span> cur-indent (current-indentation))
+            (<span class="k">if</span> closing-parens-only
+                (<span class="k">let</span> ((open-parens 0))
+                  (<span class="k">while</span> (re-search-forward cmake-regex-token point-start t)
+                    (<span class="k">setq</span> token (match-string 0))
+                    (<span class="k">cond</span>
+                     ((string-match cmake-regex-token-paren-left token)
+                      (<span class="k">setq</span> open-parens (+ open-parens 1)))
+                     ((string-match cmake-regex-token-paren-right token)
+                      (<span class="k">setq</span> open-parens (- open-parens 1)))))
+                  <span class="cd">;; </span><span class="c">Don't outdent if last indented line has open parens
+</span>                  (<span class="k">unless</span> (&gt; open-parens 0)
+                    (<span class="k">setq</span> cur-indent (- cur-indent cmake-tab-width))))
+              <span class="cd">;; </span><span class="c">Skip detailed analysis if last indented line is a 'closing
+</span>              <span class="cd">;; </span><span class="c">parens only line'
+</span>              (<span class="k">unless</span> (looking-at cmake-regex-closing-parens-line)
+                <span class="cd">;; </span><span class="c">Search forward counting tokens that adjust indentation.
+</span>                (<span class="k">while</span> (re-search-forward cmake-regex-token point-start t)
+                  (<span class="k">setq</span> token (match-string 0))
+                  (<span class="k">when</span> (<span class="k">or</span> (string-match cmake-regex-token-paren-left token)
+                            (<span class="k">and</span> (string-match cmake-regex-block-open token)
+                                 (looking-at (concat <span class="s">"[ \t]*"</span> cmake-regex-paren-left))))
+                    (<span class="k">setq</span> cur-indent (+ cur-indent cmake-tab-width)))
+                  (<span class="k">when</span> (string-match cmake-regex-token-paren-right token)
+                    (<span class="k">setq</span> cur-indent (- cur-indent cmake-tab-width)))
+                  ))
+              (goto-char point-start)
+              <span class="cd">;; </span><span class="c">If next token closes the block, decrease indentation
+</span>              (<span class="k">when</span> (looking-at cmake-regex-close)
+                (<span class="k">setq</span> cur-indent (- cur-indent cmake-tab-width))
+                )
+              )
+            )
+          )
+        <span class="cd">;; </span><span class="c">Indent this line by the amount selected.
+</span>        (cmake-indent-line-to (max cur-indent 0))
+        )
+      )
+    )
+  )</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

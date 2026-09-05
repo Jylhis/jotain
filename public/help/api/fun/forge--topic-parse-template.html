@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--topic-parse-template – Emacs Documentation Online</title>
+<meta name="description" content="forge--topic-parse-template is a natively compiled function defined in
+forge-topic.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--topic-parse-template</code></h1><p><span class="m"><code>forge--topic-parse-template</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">forge-topic.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--topic-parse-template <span class="arg">NAME</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-topic.el</span>
+(<span class="k">defun</span> <span class="f">forge--topic-parse-template</span> (name)
+  (goto-char (point-min))
+  (skip-chars-forward <span class="s">"\s\t\n\r"</span>)
+  (<span class="k">if-let</span> ((beg (<span class="k">and</span> (looking-at <span class="s">"^---[\s\t]*$"</span>)
+                     (point)))
+           (end (<span class="k">and</span> (zerop (forward-line))
+                     (re-search-forward <span class="s">"^---[\s\t]*$"</span> nil t)
+                     (match-beginning 0)))
+           (repoid (<span class="k">oref</span> (forge-get-repository <span class="bi">:tracked</span>) id)))
+      (<span class="k">let-alist</span> (yaml-parse-string (buffer-str beg end)
+                                    <span class="bi">:object-type</span> 'alist
+                                    <span class="bi">:sequence-type</span> 'list
+                                    <span class="bi">:null-object</span> nil
+                                    <span class="bi">:false-object</span> nil)
+        (<span class="k">when</span> (stringp .name)
+          (<span class="k">setq</span> name .name))
+        (<span class="k">setq</span> name (propertize .name 'face 'bold))
+        `((prompt    . ,(<span class="k">if</span> .about (format <span class="s">"%s — %s"</span> name .about) name))
+          (title     . ,(<span class="k">and</span> .title
+                             (stringp .title)
+                             (string-trim .title)))
+          (text      . ,(string-trim (buffer-str (point))))
+          <span class="cd">;; </span><span class="c">Prevent ad hock creation or previously unknown labels.
+</span>          (labels    . ,(cl-intersection
+                         (ensure-list .labels)
+                         (forge-sql-car [<span class="bi">:select</span> name <span class="bi">:from</span> label
+                                         <span class="bi">:where</span> (= repository $s1)]
+                                        repoid)
+                         <span class="bi">:test</span> #'equal))
+          <span class="cd">;; </span><span class="c">Server errors on invalid assignees.
+</span>          (assignees . ,(cl-intersection
+                         (ensure-list .assignees)
+                         (forge-sql-car [<span class="bi">:select</span> login <span class="bi">:from</span> assignee
+                                         <span class="bi">:where</span> (= repository $s1)]
+                                        repoid)
+                         <span class="bi">:test</span> #'equal))
+          (draft     . ,(<span class="k">and</span> (booleanp .draft) .draft))))
+    `((prompt . ,(propertize name 'face 'bold))
+      (text   . ,(string-trim (buffer-str))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,88 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-modern-mode – Emacs Documentation Online</title>
+<meta name="description" content="org-modern-mode is an interactive and natively compiled function
+defined in org-modern.el.
+Modern looks for Org.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-modern-mode</code></h1><p><span class="m"><code>org-modern-mode</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">org-modern.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-modern-mode <span class="ty">&amp;optional</span> <a href="#:~:text=if-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Modern looks for Org.
+<p>This is a minor mode.  If called interactively, toggle the <span class="m"><code>Org-Modern
+mode</code></span> mode.  If the prefix argument is positive, enable the mode, and if
+it is zero or negative, disable the mode.
+<p>If called from Lisp, toggle the mode if <span class="arg">ARG</span> is <span class="m"><code>toggle</code></span>.  Enable the
+mode if <span class="arg">ARG</span> is nil, omitted, or is a positive number.  Disable the mode
+if <span class="arg">ARG</span> is a negative number.
+<p>To check whether the minor mode is enabled in the current buffer,
+evaluate the variable <a class="v" href="../var/org-modern-mode.html"><code>org-modern-mode</code>(var)</a>/<a class="f" href="../fun/org-modern-mode.html"><code>org-modern-mode</code>(fun)</a>.
+<p>The mode's hook is called both when the mode is enabled and when it is
+disabled.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/c2c3l8drcnybmya5zjrxb6fifrfpi1c0-emacs-packages-deps/share/emacs/site-lisp/elpa/org-modern-20260722.1411/org-modern.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">define-minor-mode</span> <span class="f">org-modern-mode</span>
+  <span class="doc">"Modern looks for Org."</span>
+  <span class="bi">:global</span> nil
+  <span class="bi">:group</span> 'org-modern
+  (<span class="k">unless</span> (derived-mode-p 'org-mode)
+    (<span class="w">error</span> <span class="s">"`</span><span class="m s">org-modern-mode</span><span class="s">' should be enabled only in `</span><span class="m s">org-mode</span><span class="s">'"</span>))
+  (<span class="k">cond</span>
+   (org-modern-mode
+    (add-to-invisibility-spec 'org-modern)
+    (<span class="k">setq</span>
+     org-modern--folded-star-cache
+     (<span class="k">and</span> (eq org-modern-star 'fold)
+          (vconcat (mapcar #'org-modern--symbol (mapcar #'car org-modern-fold-stars))))
+     org-modern--expanded-star-cache
+     (<span class="k">and</span> org-modern-star
+          (vconcat (mapcar #'org-modern--symbol (<span class="k">if</span> (eq org-modern-star 'fold)
+                                                    (mapcar #'cdr org-modern-fold-stars)
+                                                  org-modern-replace-stars))))
+     org-modern--hide-stars-cache
+     (<span class="k">and</span> (<span class="k">and</span> (char-or-string-p org-modern-hide-stars)
+               (not (<span class="k">bound-and-true-p</span> org-indent-mode)))
+          (list (org-modern--symbol org-modern-hide-stars)
+                (org-modern--symbol org-modern-hide-stars)))
+     org-modern--checkbox-cache
+     (mapcar (<span class="k">pcase-lambda</span> (`(,k . ,v)) (cons k (org-modern--symbol v)))
+             org-modern-checkbox)
+     org-modern--font-lock-keywords
+     (append (remove '(org-fontify-meta-lines-and-blocks)
+                     (remove '(org-activate-folds)
+                             org-font-lock-keywords))
+             (org-modern--make-font-lock-keywords)))
+    (font-lock-remove-keywords nil org-font-lock-keywords)
+    (font-lock-add-keywords nil org-modern--font-lock-keywords)
+    (<span class="k">setq-local</span> font-lock-unfontify-region-function #'org-modern--unfontify)
+    (add-hook 'pre-redisplay-functions #'org-modern--pre-redisplay nil 'local)
+    (add-hook 'org-after-promote-entry-hook #'org-modern--unfontify-line nil 'local)
+    (add-hook 'org-after-demote-entry-hook #'org-modern--unfontify-line nil 'local)
+    (<span class="k">when</span> (eq org-modern-star 'fold)
+      (add-hook 'org-cycle-hook #'org-modern--cycle nil 'local))
+    (org-modern--update-faces)
+    (org-modern--update-bitmaps))
+   (t
+    (remove-from-invisibility-spec 'org-modern)
+    (font-lock-remove-keywords nil org-modern--font-lock-keywords)
+    (font-lock-add-keywords nil org-font-lock-keywords)
+    (<span class="k">setq-local</span> font-lock-unfontify-region-function #'org-unfontify-region)
+    (remove-hook 'pre-redisplay-functions #'org-modern--pre-redisplay 'local)
+    (remove-hook 'org-after-promote-entry-hook #'org-modern--unfontify-line 'local)
+    (remove-hook 'org-after-demote-entry-hook #'org-modern--unfontify-line 'local)
+    (<span class="k">when</span> (eq org-modern-star 'fold)
+      (remove-hook 'org-cycle-hook #'org-modern--cycle 'local))))
+  (<span class="k">without-restriction</span>
+    (<span class="k">with-silent-modifications</span>
+      (org-modern--unfontify (point-min) (point-max)))
+    (font-lock-flush)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--invalidate – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--invalidate is a natively compiled function defined in
+ghostel.el.
+Trigger a redraw for pending terminal output.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--invalidate</code></h1><p><span class="m"><code>ghostel--invalidate</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--invalidate)
+</code></pre>
+<h2>Documentation</h2>
+<p>Trigger a redraw for pending terminal output.
+<p>Visible output arriving within <a href="../var/ghostel-immediate-redraw-interval.html"><code>ghostel-immediate-redraw-interval</code></a> of the
+last keystroke is redrawn immediately; other visible output uses a coalescing
+timer.  Hidden output remains pending until the buffer is displayed.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--invalidate</span> ()
+  <span class="doc">"Trigger a redraw for pending terminal output.
+Visible output arriving within `</span><span class="m doc">ghostel-immediate-redraw-interval</span><span class="doc">' of the
+last keystroke is redrawn immediately; other visible output uses a coalescing
+timer.  Hidden output remains pending until the buffer is displayed."</span>
+  (<span class="k">if</span> (ghostel--get-render-window (current-buffer))
+      <span class="cd">;; </span><span class="c">Interactive echo: output arriving within
+</span>      <span class="cd">;; </span><span class="c">`</span><span class="m c">ghostel-immediate-redraw-interval</span><span class="c">' of the last keystroke.
+</span>      (<span class="k">if</span> (<span class="k">and</span> ghostel--last-send-time
+               (&lt; (float-time (time-subtract (current-time)
+                                             ghostel--last-send-time))
+                  ghostel-immediate-redraw-interval))
+          (ghostel--redraw-now (current-buffer))
+        <span class="cd">;; </span><span class="c">Bulk output: schedule a later redraw.
+</span>        (<span class="k">unless</span> ghostel--redraw-timer
+          (<span class="k">let</span> ((delay (<span class="k">if</span> (<span class="k">and</span> ghostel-adaptive-fps ghostel--last-output-time)
+                           (<span class="k">let</span> ((idle-secs
+                                  (float-time
+                                   (time-subtract
+                                    (current-time) ghostel--last-output-time))))
+                             <span class="cd">;; </span><span class="c">If idle for more than 100ms, use a short delay
+</span>                             <span class="cd">;; </span><span class="c">for snappy first-frame response.
+</span>                             (<span class="k">if</span> (&gt; idle-secs 0.1)
+                                 (min 0.016 ghostel-timer-delay)
+                               ghostel-timer-delay))
+                         ghostel-timer-delay)))
+            (<span class="k">setq</span> ghostel--last-output-time (current-time))
+            (<span class="k">setq</span> ghostel--redraw-timer
+                  (run-with-timer delay nil
+                                  #'ghostel--redraw-now
+                                  (current-buffer))))))
+    (<span class="k">when</span> ghostel--redraw-timer
+      (cancel-timer ghostel--redraw-timer)
+      (<span class="k">setq</span> ghostel--redraw-timer nil))
+    (<span class="k">setq</span> ghostel--pending-redraw t)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

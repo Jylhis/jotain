@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape-breakpoint-load – Emacs Documentation Online</title>
+<meta name="description" content="dape-breakpoint-load is an interactive and natively compiled function
+defined in dape.el.
+Restore breakpoints from previously saved FILE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape-breakpoint-load</code></h1><p><span class="m"><code>dape-breakpoint-load</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape-breakpoint-load <span class="ty">&amp;optional</span> <a href="#:~:text=if-,FILENAME"><span class="arg">FILENAME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Restore breakpoints from previously saved FILE.
+<p>All breakpoints will be removed before loading new ones.
+Will open buffers containing breakpoints.
+Will use <a href="../var/dape-default-breakpoints-file.html"><code>dape-default-breakpoints-file</code></a> if <span class="arg">FILENAME</span> is nil.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape-breakpoint-load</span> (<span class="ty">&amp;optional</span> filename)
+  <span class="doc">"Restore breakpoints from previously saved FILE.
+All breakpoints will be removed before loading new ones.
+Will open buffers containing breakpoints.
+Will use `</span><span class="m doc">dape-default-breakpoints-file</span><span class="doc">' if FILENAME is nil."</span>
+  (<span class="k">interactive</span>
+   (list (read-file-name <span class="s">"Load breakpoints from file: "</span>)))
+  (<span class="k">setq</span> filename (<span class="k">or</span> filename dape-default-breakpoints-file))
+  (<span class="k">when</span> (file-exists-p filename)
+    (dape-breakpoint-remove-all)
+    (<span class="k">let</span> ((breakpoints
+           (<span class="k">with-temp-buffer</span>
+             (insert-file-contents filename)
+             (goto-char (point-min))
+             (nreverse (read (current-buffer))))))
+      (<span class="k">cl-loop</span> for (filename line type value) in breakpoints
+               if (find-buffer-visiting filename)
+               do (<span class="k">dape--with-line</span> (find-file-noselect filename) line
+                    (dape--breakpoint-place type value))
+               else do
+               (add-hook 'find-file-hook #'dape--breakpoint-find-file-hook)
+               (<span class="k">push</span> (make-dape--source-breakpoint <span class="bi">:location</span> (cons filename line)
+                                                   <span class="bi">:type</span> type
+                                                   <span class="bi">:value</span> value)
+                     dape--breakpoints))))
+  (dape--breakpoint-notify-all))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

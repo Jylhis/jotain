@@ -1,0 +1,43 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-selection--render-overlay – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-selection--render-overlay is a natively compiled function
+defined in majutsu-selection.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-selection--render-overlay</code></h1><p><span class="m"><code>majutsu-selection--render-overlay</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-selection.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-selection--render-overlay <span class="arg">SESSION</span> <span class="arg">ID</span> <span class="arg">LABELS</span> <span class="arg">LOCATE-FN</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-selection.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-selection--render-overlay</span> (session id labels locate-fn)
+  (<span class="k">majutsu-selection--with-session-buffer</span> session
+    (<span class="k">let</span> ((overlays (majutsu-selection-session-overlays session))
+          (locate-fn (<span class="k">or</span> locate-fn #'majutsu-selection--locate-default)))
+      (<span class="k">if</span> labels
+          (<span class="k">when-let*</span> ((located (funcall locate-fn id))
+                      (range (<span class="k">cond</span> ((consp located) located)
+                                   ((eieio-object-p located)
+                                    (majutsu-selection--overlay-range located)))))
+            (<span class="k">let*</span> ((existing (gethash id overlays))
+                   (start (car range))
+                   (end (cdr range)))
+              (<span class="k">unless</span> (<span class="k">and</span> existing
+                           (= (overlay-start existing) start)
+                           (= (overlay-end existing) end))
+                (<span class="k">when</span> existing (delete-overlay existing))
+                (<span class="k">setq</span> existing (make-overlay start end nil t))
+                (overlay-put existing 'evaporate t)
+                (overlay-put existing 'priority '(nil . 50))
+                (overlay-put existing 'majutsu-selection t)
+                (puthash id existing overlays))
+              (overlay-put existing 'before-string
+                           (concat (mapconcat #'identity (nreverse labels) <span class="s">" "</span>) <span class="s">" "</span>))))
+        (<span class="k">when-let*</span> ((existing (gethash id overlays)))
+          (delete-overlay existing)
+          (remhash id overlays))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

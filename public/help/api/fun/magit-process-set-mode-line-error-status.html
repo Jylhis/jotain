@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-process-set-mode-line-error-status – Emacs Documentation Online</title>
+<meta name="description" content="magit-process-set-mode-line-error-status is a natively compiled
+function defined in magit-process.el.
+Apply an error face to the string set by magit-process-set-mode-line.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-process-set-mode-line-error-status</code></h1><p><span class="m"><code>magit-process-set-mode-line-error-status</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">magit-process.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-process-set-mode-line-error-status <span class="ty">&amp;optional</span> <a href="#:~:text=If-,ERROR"><span class="arg">ERROR</span></a> <a href="#:~:text=If-,STR"><span class="arg">STR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply an error face to the string set by <a href="../fun/magit-process-set-mode-line.html"><code>magit-process-set-mode-line</code></a>.
+<p>If <span class="arg">ERROR</span> is supplied, include it in the <a href="../var/mode-line-process.html"><code>mode-line-process</code></a> tooltip.
+<p>If <span class="arg">STR</span> is supplied, it replaces the <a href="../var/mode-line-process.html"><code>mode-line-process</code></a> text.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-process.el</span>
+(<span class="k">defun</span> <span class="f">magit-process-set-mode-line-error-status</span> (<span class="ty">&amp;optional</span> error str)
+  <span class="doc">"Apply an error face to the string set by `</span><span class="m doc">magit-process-set-mode-line</span><span class="doc">'.
+
+If ERROR is supplied, include it in the `</span><span class="m doc">mode-line-process</span><span class="doc">' tooltip.
+
+If STR is supplied, it replaces the `</span><span class="m doc">mode-line-process</span><span class="doc">' text."</span>
+  (<span class="k">setq</span> str (<span class="k">or</span> str (magit-repository-local-get 'mode-line-process)))
+  (<span class="k">when</span> str
+    (<span class="k">setq</span> error (format <span class="s">"%smouse-1: Show process buffer"</span>
+                        (<span class="k">if</span> (stringp error)
+                            (concat error <span class="s">"\n\n"</span>)
+                          <span class="s">""</span>)))
+    (<span class="k">setq</span> str (concat <span class="s">" "</span> (propertize
+                           (substring-no-properties str 1)
+                           'mouse-face 'highlight
+                           'keymap magit-mode-line-process-map
+                           'help-echo error
+                           'font-lock-face 'magit-mode-line-process-error)))
+    (magit-repository-local-set 'mode-line-process str)
+    (<span class="k">dolist</span> (buf (magit-mode-get-buffers))
+      (<span class="k">with-current-buffer</span> buf
+        (<span class="k">setq</span> mode-line-process str)))
+    (force-mode-line-update t)
+    <span class="cd">;; </span><span class="c">We remove any error status from the mode line when a magit
+</span>    <span class="cd">;; </span><span class="c">buffer is refreshed (see `</span><span class="m c">magit-refresh-buffer</span><span class="c">'), but we must
+</span>    <span class="cd">;; </span><span class="c">ensure that we ignore any refreshes during the remainder of the
+</span>    <span class="cd">;; </span><span class="c">current command -- otherwise a newly-set error status would be
+</span>    <span class="cd">;; </span><span class="c">removed before it was seen.  We set a flag which prevents the
+</span>    <span class="cd">;; </span><span class="c">status from being removed prior to the next command, so that
+</span>    <span class="cd">;; </span><span class="c">the error status is guaranteed to remain visible until then.
+</span>    (<span class="k">let</span> ((repokey (magit-repository-local-repository)))
+      <span class="cd">;; </span><span class="c">The following closure captures the repokey value, and is
+</span>      <span class="cd">;; </span><span class="c">added to `</span><span class="m c">pre-command-hook</span><span class="c">'.
+</span>      (<span class="k">cl-labels</span> ((enable-magit-process-unset-mode-line ()
+                    <span class="cd">;; </span><span class="c">Remove ourself from the hook variable, so
+</span>                    <span class="cd">;; </span><span class="c">that we only run once.
+</span>                    (remove-hook 'pre-command-hook
+                                 #'enable-magit-process-unset-mode-line)
+                    <span class="cd">;; </span><span class="c">Clear the inhibit flag for the repository in
+</span>                    <span class="cd">;; </span><span class="c">which we set it.
+</span>                    (magit-repository-local-set
+                     'inhibit-magit-process-unset-mode-line nil repokey)))
+        <span class="cd">;; </span><span class="c">Set the inhibit flag until the next command is invoked.
+</span>        (magit-repository-local-set
+         'inhibit-magit-process-unset-mode-line t repokey)
+        (add-hook 'pre-command-hook
+                  #'enable-magit-process-unset-mode-line)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

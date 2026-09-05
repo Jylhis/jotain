@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sops--decrypt-buffer – Emacs Documentation Online</title>
+<meta name="description" content="sops--decrypt-buffer is a natively compiled function defined in
+sops.el.
+Decrypt current buffer's file via sops, replacing buffer contents.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sops--decrypt-buffer</code></h1><p><span class="m"><code>sops--decrypt-buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">sops.el</span>.
+<h2>Signature</h2>
+<pre><code>(sops--decrypt-buffer)
+</code></pre>
+<h2>Documentation</h2>
+<p>Decrypt current buffer's file via sops, replacing buffer contents.
+<p>Return t on success, nil on failure (popping an error buffer).
+Caller must have set the variable <a class="v" href="../var/buffer-file-name.html"><code>buffer-file-name</code>(var)</a>/<a class="f" href="../fun/buffer-file-name.html"><code>buffer-file-name</code>(fun)</a> to the encrypted file path.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qkr1smn94fw9pj8qis6r47djxqbd30ki-emacs-packages-deps/share/emacs/site-lisp/elpa/sops-20260518.350/sops.el</span>
+(<span class="k">defun</span> <span class="f">sops--decrypt-buffer</span> ()
+  <span class="doc">"Decrypt current buffer's file via sops, replacing buffer contents.
+Return t on success, nil on failure (popping an error buffer).
+Caller must have set the variable `</span><span class="m doc">buffer-file-name</span><span class="doc">' to the encrypted file path."</span>
+  (run-hooks 'sops-before-decrypt-hook)
+  (<span class="k">let*</span> ((file buffer-file-name)
+         (input-type (sops--input-type-for file))
+         (args (append '(<span class="s">"decrypt"</span>)
+                       (<span class="k">when</span> input-type (list <span class="s">"--input-type"</span> input-type))
+                       (sops--maybe-output-type
+                        input-type sops-extra-decrypt-args)
+                       sops-extra-decrypt-args
+                       (list file)))
+         (result (sops--run args))
+         (exit (plist-get result <span class="bi">:exit-status</span>)))
+    (<span class="k">if</span> (eq 0 exit)
+        (<span class="k">progn</span>
+          (<span class="k">let</span> ((inhibit-read-only t))
+            (erase-buffer)
+            (insert (plist-get result <span class="bi">:stdout</span>)))
+          (set-buffer-modified-p nil)
+          <span class="cd">;; </span><span class="c">Re-detect major mode against the now-decrypted plaintext, but
+</span>          <span class="cd">;; </span><span class="c">via `</span><span class="m c">set-auto-mode</span><span class="c">' (extension/auto-mode-alist only) rather
+</span>          <span class="cd">;; </span><span class="c">than `</span><span class="m c">normal-mode</span><span class="c">' which would also process file-local
+</span>          <span class="cd">;; </span><span class="c">variables and `-*- eval: ... -*-' cookies.  The decrypted
+</span>          <span class="cd">;; </span><span class="c">content is not from a trusted source -- a third party with
+</span>          <span class="cd">;; </span><span class="c">write access to the ciphertext could embed malicious
+</span>          <span class="cd">;; </span><span class="c">cookies that `</span><span class="m c">normal-mode</span><span class="c">' would honor at decrypt time.
+</span>          (set-auto-mode)
+          t)
+      (sops--popup-error file args exit (plist-get result <span class="bi">:stderr</span>))
+      nil)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

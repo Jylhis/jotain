@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: neocaml--syntax-propertize – Emacs Documentation Online</title>
+<meta name="description" content="neocaml--syntax-propertize is a natively compiled function defined in
+neocaml.el.
+Apply syntax properties to OCaml char literals and quoted strings.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>neocaml--syntax-propertize</code></h1><p><span class="m"><code>neocaml--syntax-propertize</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">neocaml.el</span>.
+<h2>Signature</h2>
+<pre><code>(neocaml--syntax-propertize <a href="#:~:text=between-,START"><span class="arg">START</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply syntax properties to OCaml char literals and quoted strings.
+<p>Operates between <span class="arg">START</span> and <span class="arg">END</span>.  See the commentary above for why this
+is needed.  This avoids calling <a href="../fun/syntax-ppss.html"><code>syntax-ppss</code></a> (which would be re-entrant,
+since <a href="../fun/syntax-propertize.html"><code>syntax-propertize</code></a> runs from within it); quoted strings are
+matched whole from their opening delimiter.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/6yvzbjq5ljnchx97n8s5w91crk1nh47b-emacs-packages-deps/share/emacs/site-lisp/elpa/neocaml-20260710.532/neocaml.el</span>
+<span class="cd">;;;; </span><span class="c">Syntax propertization
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">A static syntax table can't classify OCaml's character literals and
+</span><span class="cd">;; </span><span class="c">quoted strings correctly, because they may contain characters that the
+</span><span class="cd">;; </span><span class="c">table would otherwise read as a string quote (`"'), a paren (`(' / `)'),
+</span><span class="cd">;; </span><span class="c">or a comment opener (`(*').  We fix this with a `</span><span class="m c">syntax-propertize-function</span><span class="c">'
+</span><span class="cd">;; </span><span class="c">that marks those lexemes so the syntactic layer (sexp motion,
+</span><span class="cd">;; </span><span class="c">`</span><span class="m c">electric-pair-mode</span><span class="c">', `</span><span class="m c">delete-pair</span><span class="c">', `</span><span class="m c">syntax-ppss</span><span class="c">') agrees with the parse
+</span><span class="cd">;; </span><span class="c">tree.  Font-lock is handled by tree-sitter and is unaffected.
+</span>
+(<span class="k">defun</span> <span class="f">neocaml--syntax-propertize</span> (start end)
+  <span class="doc">"Apply syntax properties to OCaml char literals and quoted strings.
+Operates between START and END.  See the commentary above for why this
+is needed.  This avoids calling `</span><span class="m doc">syntax-ppss</span><span class="doc">' (which would be re-entrant,
+since `</span><span class="m doc">syntax-propertize</span><span class="doc">' runs from within it); quoted strings are
+matched whole from their opening delimiter."</span>
+  (goto-char start)
+  (funcall
+   (<span class="k">syntax-propertize-rules</span>
+    <span class="cd">;; </span><span class="c">Character literals: '</span><span class="m c">a</span><span class="c">', '</span><span class="m c">\\n</span><span class="c">', '</span><span class="m c">\\xFF</span><span class="c">', '"', '(', etc.  Mark both
+</span>    <span class="cd">;; </span><span class="c">quotes as string delimiters so the contents are inert.  A closing
+</span>    <span class="cd">;; </span><span class="c">quote is required, so type variables (e.g. 'a) are left untouched.
+</span>    (<span class="s">"\\_&lt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">'</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[</span><span class="neg s">^</span><span class="s">'\\\n]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\\\\.[</span><span class="neg s">^</span><span class="s">\\'\n \")]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">'</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>
+     (1 <span class="s">"\""</span>) (2 <span class="s">"\""</span>))
+    <span class="cd">;; </span><span class="c">Quoted strings {tag|...|tag}.  Mark the opening brace as a generic
+</span>    <span class="cd">;; </span><span class="c">string fence and, if the matching |tag} is found, the closing brace
+</span>    <span class="cd">;; </span><span class="c">too, so the contents are inert.
+</span>    (<span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">{</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:lower:]_]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">|"</span>
+     (1 (<span class="k">let*</span> ((tag (match-string 2))
+               (close-pos (<span class="k">save-excursion</span>
+                            (<span class="k">when</span> (search-forward (concat <span class="s">"|"</span> tag <span class="s">"}"</span>) end t)
+                              (point)))))
+          (<span class="k">when</span> close-pos
+            (put-text-property (1- close-pos) close-pos
+                               'syntax-table (string-to-syntax <span class="s">"|"</span>)))
+          (string-to-syntax <span class="s">"|"</span>)))))
+   (point) end))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

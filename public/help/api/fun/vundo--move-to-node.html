@@ -1,0 +1,89 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vundo--move-to-node – Emacs Documentation Online</title>
+<meta name="description" content="vundo--move-to-node is a natively compiled function defined in
+vundo.el.
+Move from CURRENT node to DEST node by undoing in ORIG-BUFFER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vundo--move-to-node</code></h1><p><span class="m"><code>vundo--move-to-node</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">vundo.el</span>.
+<h2>Signature</h2>
+<pre><code>(vundo--move-to-node <a href="#:~:text=from-,CURRENT"><span class="arg">CURRENT</span></a> <a href="#:~:text=to-,DEST"><span class="arg">DEST</span></a> <a href="#:~:text=in-,ORIG-BUFFER"><span class="arg">ORIG-BUFFER</span></a> <a href="#:~:text=state.-,MOD-LIST"><span class="arg">MOD-LIST</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Move from <span class="arg">CURRENT</span> node to <span class="arg">DEST</span> node by undoing in <span class="arg">ORIG-BUFFER</span>.
+<p><span class="arg">ORIG-BUFFER</span> must be at <span class="arg">CURRENT</span> state. <span class="arg">MOD-LIST</span> is the list you
+get from <a href="../fun/vundo--mod-list-from.html"><code>vundo--mod-list-from</code></a>. You should refresh vundo buffer
+after calling this function. (You can call this function
+repeatedly before refreshing, but moving back-and-forth might not
+work, see docstring of ‘vundo--trim-undo-list’.)
+<p>This function modifies the content of <span class="arg">ORIG-BUFFER</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/7c2696v2qdrdv2vf2im8alazibi7qq0z-emacs-packages-deps/share/emacs/site-lisp/elpa/vundo-2.4.0/vundo.el</span>
+(<span class="k">defun</span> <span class="f">vundo--move-to-node</span> (current dest orig-buffer mod-list)
+  <span class="doc">"Move from CURRENT node to DEST node by undoing in ORIG-BUFFER.
+ORIG-BUFFER must be at CURRENT state. MOD-LIST is the list you
+get from `</span><span class="m doc">vundo--mod-list-from</span><span class="doc">'. You should refresh vundo buffer
+after calling this function. (You can call this function
+repeatedly before refreshing, but moving back-and-forth might not
+work, see docstring of ‘</span><span class="m doc">vundo--trim-undo-list</span><span class="doc">’.)
+
+This function modifies the content of ORIG-BUFFER."</span>
+  (<span class="w">cl-assert</span> (not (eq current dest)))
+  <span class="cd">;; </span><span class="c">1. Find the route we want to take.
+</span>  (<span class="k">if-let*</span> ((route (vundo--calculate-shortest-route current dest)))
+      (<span class="k">let*</span> ((source-idx (car route))
+             (dest-idx (car (last route)))
+             <span class="cd">;; </span><span class="c">The complete undo-list that stops at SOURCE.
+</span>             (undo-list-at-source
+              (vundo-m-undo-list (aref mod-list source-idx)))
+             <span class="cd">;; </span><span class="c">The complete undo-list that stops at DEST.
+</span>             (undo-list-at-dest
+              (vundo-m-undo-list (aref mod-list dest-idx)))
+             <span class="cd">;; </span><span class="c">We will undo these modifications.
+</span>             (planned-undo (vundo--list-subtract
+                            undo-list-at-source undo-list-at-dest))
+             <span class="cd">;; </span><span class="c">We don’t want to quit in the middle of this function.
+</span>             (inhibit-quit t))
+        (<span class="k">with-current-buffer</span> orig-buffer
+          (<span class="k">setq-local</span> buffer-read-only t)
+          <span class="cd">;; </span><span class="c">2. Undo. This will undo modifications in PLANNED-UNDO and
+</span>          <span class="cd">;; </span><span class="c">add new entries to `</span><span class="m c">buffer-undo-list</span><span class="c">'.
+</span>          (<span class="k">let</span> ((undo-in-progress t))
+            (<span class="k">cl-loop</span>
+             for step = (- source-idx dest-idx)
+             then (1- step)
+             while (<span class="k">and</span> (&gt; step 0)
+                        <span class="cd">;; </span><span class="c">If there is a quit signal, we break the
+</span>                        <span class="cd">;; </span><span class="c">loop, continue to step 3 and 4, then quits
+</span>                        <span class="cd">;; </span><span class="c">when we go out of the let-form.
+</span>                        (not quit-flag))
+             for stop = (1- source-idx) then (1- stop)
+             do
+             (<span class="k">progn</span>
+               <span class="cd">;; </span><span class="c">Stop at each intermediate stop along the route to
+</span>               <span class="cd">;; </span><span class="c">create trim points for future undo.
+</span>               (<span class="k">setq</span> planned-undo (primitive-undo 1 planned-undo))
+               (<span class="w">cl-assert</span> (not (<span class="k">and</span> (consp buffer-undo-list)
+                                    (null (car buffer-undo-list)))))
+               (<span class="k">let</span> ((undo-list-at-stop
+                      (vundo-m-undo-list (aref mod-list stop))))
+                 (puthash buffer-undo-list (<span class="k">or</span> undo-list-at-stop t)
+                          undo-equiv-table))
+               (<span class="k">push</span> nil buffer-undo-list))))
+          <span class="cd">;; </span><span class="c">3. Some misc work.
+</span>          (<span class="k">when</span> vundo--message
+            (message <span class="s">"%s -&gt; %s Steps: %s Undo-list len: %s"</span>
+                     (mapcar #'vundo-m-idx (vundo--eqv-list-of
+                                            (aref mod-list source-idx)))
+                     (mapcar #'vundo-m-idx (vundo--eqv-list-of
+                                            (aref mod-list dest-idx)))
+                     (length planned-undo)
+                     (length buffer-undo-list)))
+          (<span class="k">when-let</span> ((win (get-buffer-window)))
+            (set-window-point win (point)))))
+    (<span class="w">error</span> <span class="s">"No possible route"</span>)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

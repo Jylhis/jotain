@@ -1,0 +1,130 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge-add-repository – Emacs Documentation Online</title>
+<meta name="description" content="forge-add-repository is an interactive and natively compiled function
+defined in forge-commands.el.
+Add a repository to the database.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge-add-repository</code></h1><p><span class="m"><code>forge-add-repository</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">forge-commands.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge-add-repository <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">ARG1</span></a> <a href="#:~:text="><span class="arg">ARG2</span></a> <a href="#:~:text="><span class="arg">ARG3</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Add a repository to the database.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-commands.el</span>
+<span class="cd">;;; </span><span class="c">Add repositories
+</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">(autoload 'forge-add-repository "forge-commands" nil t)
+</span>(<span class="k">transient-define-prefix</span> <span class="f">forge-add-repository</span> (<span class="ty">&amp;optional</span> repo limit callback)
+  <span class="doc">"Add a repository to the database."</span>
+  <span class="bi">:refresh-suffixes</span> t
+  [<span class="bi">:class</span> transient-subgroups
+
+   <span class="cd">;; </span><span class="c">Already tracked.
+</span>   [<span class="bi">:if</span> (##forge--scope <span class="bi">:tracked</span>)
+    (<span class="bi">:info*</span>
+     (<span class="k">lambda</span> ()
+       (format
+        (propertize <span class="s">"%s is already being tracked"</span> 'face 'transient-heading)
+        (propertize (forge--scope 'url) 'face 'bold)))
+     <span class="bi">:format</span> <span class="s">"%d"</span>)]
+
+   <span class="cd">;; </span><span class="c">Nothing to track.
+</span>   [<span class="bi">:if-not</span> (##forge--scope 'topdir)
+    (<span class="bi">:info*</span>
+     (<span class="k">lambda</span> ()
+       (format
+        (propertize <span class="s">"%s is not inside a Git repository"</span> 'face 'transient-heading)
+        (propertize default-directory 'face 'bold)))
+     <span class="bi">:format</span> <span class="s">"%d"</span>)]
+
+   <span class="cd">;; </span><span class="c">Cannot track.
+</span>   [<span class="bi">:if</span> (##and (not (forge--scope 'repo)) (forge--scope 'topdir))
+    <span class="bi">:description</span>
+    (<span class="k">lambda</span> ()
+      (concat
+       (format (propertize <span class="s">"Cannot determine forge host for %s\n"</span>
+                           'face 'transient-heading)
+               (propertize (forge--scope 'topdir) 'face 'bold))
+       (<span class="k">if-let*</span> ((remote (forge--get-remote))
+                 (url (magit-git-string <span class="s">"remote"</span> <span class="s">"get-url"</span> remote)))
+           (format (propertize <span class="s">"because %s is not on a host known to Forge."</span>
+                               'face 'transient-heading)
+                   (propertize url 'face 'bold))
+         (propertize <span class="s">"because no suitable remote was detected."</span>
+                     'face 'transient-heading))))
+    (<span class="s">"r"</span> forge-forge.remote <span class="bi">:format</span> <span class="s">" %k Try another %d %v"</span> <span class="bi">:face</span> 'bold)
+    (<span class="s">"h"</span> <span class="s">"Learn how to configure another Github host"</span>
+     (<span class="k">lambda</span> () (<span class="k">interactive</span>) (info <span class="s">"(forge)Setup for Another Github Instance"</span>)))
+    (<span class="s">"l"</span> <span class="s">"Learn how to configure another Gitlab host"</span>
+     (<span class="k">lambda</span> () (<span class="k">interactive</span>) (info <span class="s">"(forge)Setup for Another Gitlab Instance"</span>)))
+    (<span class="s">"p"</span> <span class="s">"Learn how to configure partially supported host"</span>
+     (<span class="k">lambda</span> () (<span class="k">interactive</span>) (info <span class="s">"(forge)Setup a Partially Supported Host"</span>)))]
+
+   <span class="cd">;; </span><span class="c">Track it!
+</span>   [<span class="bi">:if</span> (##forge--scope <span class="bi">:untracked</span>)
+    <span class="bi">:description</span>
+    (<span class="k">lambda</span> ()
+      (format
+       (propertize <span class="s">"Adding %s to database,"</span> 'face 'transient-heading)
+       (propertize (forge--scope 'url) 'face 'bold)))
+    (<span class="s">"r"</span> forge-forge.remote <span class="bi">:format</span> <span class="s">" %k from %d %v,"</span> <span class="bi">:face</span> 'bold)
+    (<span class="s">"a"</span> <span class="s">"pulling all topics"</span>
+     (<span class="k">lambda</span> (repo)
+       (<span class="k">interactive</span> (list (forge--scope 'repo)))
+       (forge-add-repository repo)))
+    (<span class="s">"s"</span> <span class="s">"pulling only topics since &lt;date&gt;"</span>
+     (<span class="k">lambda</span> (repo date)
+       (<span class="k">interactive</span>
+         (list (forge--scope 'repo)
+               (forge-read-date <span class="s">"Limit pulling to topics updated since: "</span>)))
+       (forge-add-repository repo date)))
+    (<span class="s">"i"</span> <span class="s">"to allow pulling of individual topics"</span>
+     (<span class="k">lambda</span> (repo)
+       (<span class="k">interactive</span> (list (forge--scope 'repo)))
+       (forge-add-repository repo <span class="bi">:selective</span>)))]
+
+   <span class="cd">;; </span><span class="c">Pivot.
+</span>   [(<span class="s">"o"</span> <span class="s">"Add another repository"</span> forge-add-some-repository)
+    (7 <span class="s">"U"</span> <span class="s">"Add all source repositories belonging to a user"</span>
+       forge-add-user-repositories)
+    (7 <span class="s">"O"</span> <span class="s">"Add all source repositories belonging to an organization"</span>
+       forge-add-organization-repositories)]]
+  (<span class="k">declare</span> (interactive-only nil))
+  (<span class="k">interactive</span>)
+  (<span class="k">cond</span>
+    ((not repo)
+     (transient-setup 'forge-add-repository nil nil
+                      <span class="bi">:scope</span> (forge-add-repository--scope)))
+    ((stringp repo)
+     (transient-setup 'forge-add-repository nil nil
+                      <span class="bi">:scope</span> (forge-add-repository--scope repo)))
+    (t
+     (<span class="k">when-let*</span>
+         ((_(not (eq limit <span class="bi">:selective</span>)))
+          (_(magit-git-config-p <span class="s">"forge.autoPull"</span> t))
+          (remote  (<span class="k">oref</span> repo remote))
+          (refspec (<span class="k">oref</span> repo pullreq-refspec))
+          (default-directory (forge-get-worktree repo))
+          (_(<span class="k">and</span> (not (member refspec (magit-get-all <span class="s">"remote"</span> remote <span class="s">"fetch"</span>)))
+                 (<span class="k">or</span> (eq forge-add-pullreq-refspec t)
+                     (<span class="k">and</span> (eq forge-add-pullreq-refspec 'ask)
+                          (y-or-n-p (format <span class="s">"Also add %S refspec? "</span> refspec)))))))
+       (magit-call-git <span class="s">"config"</span> <span class="s">"--add"</span>
+                       (format <span class="s">"remote.%s.fetch"</span> remote)
+                       refspec))
+     (<span class="k">setq</span> repo (forge-get-repository repo nil <span class="bi">:insert!</span>))
+     (<span class="k">when</span> (eq limit <span class="bi">:selective</span>)
+       (<span class="k">oset</span> repo selective-p t)
+       (<span class="k">setq</span> limit nil))
+     (forge--pull repo
+                  (<span class="k">or</span> callback (<span class="k">and</span> (not (forge-get-worktree repo)) #'ignore))
+                  limit))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gnuplot-indent-line – Emacs Documentation Online</title>
+<meta name="description" content="gnuplot-indent-line is an interactive and natively compiled function
+defined in gnuplot.el.
+Set indentation in gnuplot buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gnuplot-indent-line</code></h1><p><span class="m"><code>gnuplot-indent-line</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">gnuplot.el</span>.
+<h2>Signature</h2>
+<pre><code>(gnuplot-indent-line)
+</code></pre>
+<h2>Documentation</h2>
+<p>Set indentation in gnuplot buffer.
+<p>For most lines, set indentation to previous level of indentation.
+Add additional indentation for continuation lines.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/2zm7pyv0fhyszazmqzf4kn1y6kaaizg4-emacs-packages-deps/share/emacs/site-lisp/elpa/gnuplot-20260623.1111/gnuplot.el</span>
+<span class="cd">;; </span><span class="c">Adjust indentation for the line containing point
+</span>(<span class="k">defun</span> <span class="f">gnuplot-indent-line</span> ()
+  <span class="doc">"Set indentation in gnuplot buffer.
+For most lines, set indentation to previous level of indentation.
+Add additional indentation for continuation lines."</span>
+  (<span class="k">interactive</span> nil gnuplot-mode)
+  (<span class="k">let</span> (indent)
+    (<span class="k">if</span> (gnuplot--in-string (line-beginning-position))
+        <span class="cd">;; </span><span class="c">Continued strings begin at left margin
+</span>        (<span class="k">setq</span> indent 0)
+      (<span class="k">save-excursion</span>
+        (<span class="k">if</span> (gnuplot--continuation-line-p)
+            <span class="cd">;; </span><span class="c">This is a continuation line. Indent to the same level as
+</span>            <span class="cd">;; </span><span class="c">the second word on the line beginning this command (i.e.,
+</span>            <span class="cd">;; </span><span class="c">the first non-whitespace character after whitespace)
+</span>            (<span class="k">progn</span>
+              (gnuplot--beginning-of-continuation)
+              (back-to-indentation)
+              (re-search-forward <span class="s">"\\S-+\\s-+"</span> (line-end-position) 'end-at-limit)
+              (<span class="k">setq</span> indent (current-column)))
+
+          <span class="cd">;; </span><span class="c">Not a continuation line; indent according to block
+</span>          <span class="cd">;; </span><span class="c">nesting depth
+</span>          (<span class="k">save-excursion</span>
+            (<span class="k">condition-case</span> nil
+                (<span class="k">progn</span>
+                  (beginning-of-line)
+                  (skip-syntax-forward <span class="s">"-"</span> (line-end-position))
+                  (<span class="k">if</span> (looking-at <span class="s">"\\s)"</span>) (forward-char))
+                  (backward-up-list)
+                  (gnuplot--beginning-of-continuation)
+                  (<span class="k">setq</span> indent (+ gnuplot-basic-offset (current-indentation))))
+              (<span class="w">error</span>
+               (<span class="k">setq</span> indent 0)))))))
+
+    <span class="cd">;; </span><span class="c">Set indentation
+</span>    (<span class="k">save-excursion</span>
+      (indent-line-to indent))
+
+    <span class="cd">;; </span><span class="c">Move point after indentation when at beginning of line
+</span>    (<span class="k">when</span> (&lt; (current-column) indent)
+      (move-to-column indent))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

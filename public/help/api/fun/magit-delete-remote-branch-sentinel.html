@@ -1,0 +1,36 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-delete-remote-branch-sentinel – Emacs Documentation Online</title>
+<meta name="description" content="magit-delete-remote-branch-sentinel is a natively compiled function
+defined in magit-branch.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-delete-remote-branch-sentinel</code></h1><p><span class="m"><code>magit-delete-remote-branch-sentinel</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-branch.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-delete-remote-branch-sentinel <span class="arg">REMOTE</span> <span class="arg">REFS</span> <span class="arg">PROCESS</span> <span class="arg">EVENT</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-branch.el</span>
+(<span class="k">defun</span> <span class="f">magit-delete-remote-branch-sentinel</span> (remote refs process event)
+  (<span class="k">cond-let*</span>
+    ((not (memq (process-status process) '(exit signal))))
+    ([_(= (process-exit-status process) 1)]
+     [on-remote (mapcar (##concat <span class="s">"refs/remotes/"</span> remote <span class="s">"/"</span> %)
+                        (magit-remote-list-branches remote))]
+     [rest (seq-filter (##and (not (member % on-remote))
+                              (magit-ref-exists-p %))
+                       refs)]
+     (process-put process 'inhibit-refresh t)
+     (magit-process-sentinel process event)
+     (<span class="k">setq</span> magit-this-error nil)
+     (message <span class="s">"Some remote branches no longer exist.  %s"</span>
+              <span class="s">"Deleting just the local tracking refs instead..."</span>)
+     (<span class="k">dolist</span> (ref rest)
+       (magit-call-git <span class="s">"update-ref"</span> <span class="s">"-d"</span> ref))
+     (magit-refresh)
+     (message <span class="s">"Deleting local remote-tracking refs...done"</span>))
+    ((magit-process-sentinel process event))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

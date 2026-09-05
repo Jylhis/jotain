@@ -1,0 +1,78 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--event-key-spec – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--event-key-spec is a natively compiled function defined in
+ghostel.el.
+Decode EVENT into a (KEY-NAME . MOD-STRING) cons for the key encoder.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--event-key-spec</code></h1><p><span class="m"><code>ghostel--event-key-spec</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--event-key-spec <a href="#:~:text=Decode-,EVENT"><span class="arg">EVENT</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=nil-,META"><span class="arg">META</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Decode <span class="arg">EVENT</span> into a (KEY-NAME . MOD-STRING) cons for the key encoder.
+<p>Non-nil <span class="arg">META</span> adds the meta modifier unless <span class="arg">EVENT</span> already carries it.
+Returns nil when <span class="arg">EVENT</span> has no encoder representation.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--event-key-spec</span> (event <span class="ty">&amp;optional</span> meta)
+  <span class="doc">"Decode EVENT into a (KEY-NAME . MOD-STRING) cons for the key encoder.
+Non-nil META adds the meta modifier unless EVENT already carries it.
+Returns nil when EVENT has no encoder representation."</span>
+  (<span class="k">let*</span> ((base (event-basic-type event))
+         (mods (event-modifiers event))
+         (mods (<span class="k">if</span> (<span class="k">and</span> meta (not (memq 'meta mods)))
+                   (cons 'meta mods)
+                 mods))
+         <span class="cd">;; </span><span class="c">Raw C0 bytes for RET/TAB/ESC are ambiguous with C-m/C-i/C-[
+</span>         <span class="cd">;; </span><span class="c">and Emacs decodes them as ctrl+letter.  Treat them as the
+</span>         <span class="cd">;; </span><span class="c">functional key and drop the artifact ctrl modifier so Enter
+</span>         <span class="cd">;; </span><span class="c">encodes as CR, not as a fixterms CSI-u sequence.
+</span>         (c0-key (<span class="k">and</span> (memq event '(?\r ?\t ?\e))
+                      (cdr (assq event '((?\r . <span class="s">"return"</span>)
+                                         (?\t . <span class="s">"tab"</span>)
+                                         (?\e . <span class="s">"escape"</span>))))))
+         (mods (<span class="k">if</span> c0-key (remq 'control mods) mods))
+         (key-name (<span class="k">cond</span>
+                    (c0-key c0-key)
+                    <span class="cd">;; </span><span class="c">backtab is Emacs's name for S-TAB
+</span>                    ((eq base 'backtab) <span class="s">"tab"</span>)
+                    <span class="cd">;; </span><span class="c">Terminal mode sends ASCII 127 for the backspace key
+</span>                    ((<span class="k">and</span> (integerp base) (= base 127)) <span class="s">"backspace"</span>)
+                    <span class="cd">;; </span><span class="c">Integer base (character key).  Uppercase chords
+</span>                    <span class="cd">;; </span><span class="c">arrive as lowercase base + shift; restore the case
+</span>                    <span class="cd">;; </span><span class="c">so the encoder emits the shifted character.
+</span>                    ((integerp base)
+                     (<span class="k">and</span> (&lt; base 128)
+                          (string (<span class="k">if</span> (<span class="k">and</span> (memq 'shift mods)
+                                           (&lt;= ?a base ?z))
+                                      (upcase base)
+                                    base))))
+                    ((eq base 'deletechar) <span class="s">"delete"</span>)
+                    <span class="cd">;; </span><span class="c">Normal function key symbol
+</span>                    ((<span class="k">and</span> base (symbolp base)) (symbol-name base))
+                    <span class="cd">;; </span><span class="c">Modified return/tab/backspace/escape: event-basic-type
+</span>                    <span class="cd">;; </span><span class="c">returns nil but modifiers are extracted correctly.
+</span>                    <span class="cd">;; </span><span class="c">Strip modifier prefixes from the symbol name.
+</span>                    ((<span class="k">and</span> (null base) (symbolp event))
+                     (replace-regexp-in-string
+                      <span class="s">"\\`</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[CMSHs]-</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">*"</span> <span class="s">""</span> (symbol-name event)))
+                    (t nil)))
+         <span class="cd">;; </span><span class="c">backtab needs shift added back since it's baked into the name
+</span>         (mods (<span class="k">if</span> (eq base 'backtab) (cons 'shift mods) mods))
+         (mod-str (mapconcat
+                   #'identity
+                   (delq nil
+                         (mapcar (<span class="k">lambda</span> (m)
+                                   (<span class="k">pcase</span> m
+                                     ('shift <span class="s">"shift"</span>) ('control <span class="s">"ctrl"</span>)
+                                     ('meta <span class="s">"meta"</span>) ('alt <span class="s">"alt"</span>)
+                                     ('hyper <span class="s">"hyper"</span>) ('super <span class="s">"super"</span>)))
+                                 mods))
+                   <span class="s">","</span>)))
+    (<span class="k">when</span> key-name (cons key-name mod-str))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

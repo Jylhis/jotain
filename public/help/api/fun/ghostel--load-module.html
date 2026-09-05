@@ -1,0 +1,131 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--load-module – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--load-module is a natively compiled function defined in
+ghostel-module-install.el.
+Ensure the ghostel native module is loaded.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--load-module</code></h1><p><span class="m"><code>ghostel--load-module</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel-module-install.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--load-module <span class="ty">&amp;optional</span> <a href="#:~:text=When-,PROMPT-USER"><span class="arg">PROMPT-USER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Ensure the ghostel native module is loaded.
+<p>When <span class="arg">PROMPT-USER</span> is non-nil (called from an interactive command like
+<a href="../fun/ghostel.html"><code>ghostel</code></a>), missing or stale modules trigger
+<a href="../var/ghostel-module-auto-install.html"><code>ghostel-module-auto-install</code></a> and load failures signal <a href="../fun/user-error.html"><code>user-error</code></a>
+so the calling flow aborts.  Otherwise (load time, including
+byte-compilation and Emacs 31's <span class="m"><code>user-lisp/</code></span> auto-compile), this
+function never prompts, downloads, or compiles - it only loads an
+existing module file and warns if one is missing or stale.  Module
+installation only happens on an explicit user action: <span class="m"><code>M-x ghostel</code></span>,
+<span class="m"><code>M-x ghostel-download-module</code></span>, or <span class="m"><code>M-x ghostel-module-compile</code></span>.
+<p>Before calling <a href="../fun/module-load.html"><code>module-load</code></a> the sidecar file
+<span class="m"><code>ghostel-module.version</code></span> (written by <span class="m"><code>build.zig</code></span> and the downloader)
+is consulted.  When the sidecar reports a version older than
+<a href="../var/ghostel--minimum-module-version.html"><code>ghostel--minimum-module-version</code></a> the .so is NOT mapped into this
+process — that lets the freshly installed module be loaded in
+place after a subsequent <a href="../fun/ghostel--ensure-module.html"><code>ghostel--ensure-module</code></a> call, avoiding an
+extra restart.
+<p>The guard also honours <span class="m"><code>ghostel--new</code></span> being already <a href="../fun/fboundp.html"><code>fboundp</code></a>, which
+covers the pure-Elisp test path where <a href="../fun/cl-letf.html"><code>cl-letf</code></a> stubs the native
+entry points so tests run without the module present.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-module-install.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--load-module</span> (<span class="ty">&amp;optional</span> prompt-user)
+  <span class="doc">"Ensure the ghostel native module is loaded.
+When PROMPT-USER is non-nil (called from an interactive command like
+`</span><span class="m doc">ghostel</span><span class="doc">'), missing or stale modules trigger
+`</span><span class="m doc">ghostel-module-auto-install</span><span class="doc">' and load failures signal `</span><span class="m doc">user-error</span><span class="doc">'
+so the calling flow aborts.  Otherwise (load time, including
+byte-compilation and Emacs 31's `</span><span class="m doc">user-lisp/</span><span class="doc">' auto-compile), this
+function never prompts, downloads, or compiles - it only loads an
+existing module file and warns if one is missing or stale.  Module
+installation only happens on an explicit user action: `M-x ghostel',
+`M-x ghostel-download-module', or `M-x ghostel-module-compile'.
+
+Before calling `</span><span class="m doc">module-load</span><span class="doc">' the sidecar file
+`</span><span class="m doc">ghostel-module.version</span><span class="doc">' (written by `</span><span class="m doc">build.zig</span><span class="doc">' and the downloader)
+is consulted.  When the sidecar reports a version older than
+`</span><span class="m doc">ghostel--minimum-module-version</span><span class="doc">' the .so is NOT mapped into this
+process — that lets the freshly installed module be loaded in
+place after a subsequent `</span><span class="m doc">ghostel--ensure-module</span><span class="doc">' call, avoiding an
+extra restart.
+
+The guard also honours `</span><span class="m doc">ghostel--new</span><span class="doc">' being already `</span><span class="m doc">fboundp</span><span class="doc">', which
+covers the pure-Elisp test path where `</span><span class="m doc">cl-letf</span><span class="doc">' stubs the native
+entry points so tests run without the module present."</span>
+  (<span class="k">let*</span> ((dir (ghostel--module-directory))
+         (mod (expand-file-name
+               (concat <span class="s">"ghostel-module"</span> module-file-suffix) dir))
+         (sidecar-ver (ghostel--read-module-sidecar-version dir)))
+    (<span class="k">unless</span> (<span class="k">or</span> (<span class="k">featurep</span> '<span class="m">ghostel-module</span>)
+                (fboundp 'ghostel--new))
+      (<span class="k">cond</span>
+       <span class="cd">;; </span><span class="c">Sidecar tells us the on-disk module is too old.  Refuse to map
+</span>       <span class="cd">;; </span><span class="c">it so a subsequent install can `</span><span class="m c">module-load</span><span class="c">' the fresh file in
+</span>       <span class="cd">;; </span><span class="c">this same Emacs process.
+</span>       ((<span class="k">and</span> sidecar-ver
+             (version&lt; sidecar-ver ghostel--minimum-module-version))
+        (display-warning
+         'ghostel
+         (format <span class="s">"Module version %s on disk is older than required %s"</span>
+                 sidecar-ver ghostel--minimum-module-version))
+        (<span class="k">when</span> prompt-user
+          (ghostel--ensure-module dir)
+          (<span class="k">let</span> ((new-ver (ghostel--read-module-sidecar-version dir)))
+            (<span class="k">when</span> (<span class="k">and</span> (file-exists-p mod)
+                       new-ver
+                       (not (version&lt; new-ver
+                                      ghostel--minimum-module-version)))
+              (<span class="k">condition-case</span> err
+                  (module-load mod)
+                (<span class="w">error</span>
+                 (<span class="w">user-error</span> <span class="s">"Failed to load ghostel native module: %s"</span>
+                             (error-message-string err))))))))
+       <span class="cd">;; </span><span class="c">Module file missing.
+</span>       ((not (file-exists-p mod))
+        (<span class="k">cond</span>
+         (prompt-user
+          (ghostel--ensure-module dir)
+          (<span class="k">when</span> (file-exists-p mod)
+            (<span class="k">condition-case</span> err
+                (module-load mod)
+              (<span class="w">error</span>
+               (<span class="w">user-error</span> <span class="s">"Failed to load ghostel native module: %s"</span>
+                           (error-message-string err))))))
+         (t
+          (display-warning
+           'ghostel
+           (concat <span class="s">"Native module not found: "</span> mod
+                   <span class="s">"\nRun M-x ghostel-download-module or M-x ghostel-module-compile"</span>)))))
+       <span class="cd">;; </span><span class="c">File exists and the sidecar (when present) is fresh.  Load it.
+</span>       <span class="cd">;; </span><span class="c">When the sidecar is absent (existing installs predating it),
+</span>       <span class="cd">;; </span><span class="c">fall back to a live version check post-load.  We skip the live
+</span>       <span class="cd">;; </span><span class="c">check here when PROMPT-USER is non-nil; the tail below runs it
+</span>       <span class="cd">;; </span><span class="c">instead, avoiding a double prompt.
+</span>       (t
+        (<span class="k">condition-case</span> err
+            (<span class="k">progn</span>
+              (module-load mod)
+              (<span class="k">unless</span> prompt-user
+                (ghostel--check-module-version dir nil)))
+          (<span class="w">error</span>
+           (<span class="k">if</span> prompt-user
+               (<span class="w">user-error</span> <span class="s">"Failed to load ghostel native module: %s"</span>
+                           (error-message-string err))
+             (display-warning
+              'ghostel
+              (format <span class="s">"Failed to load native module: %s\nTry M-x ghostel-module-compile to rebuild"</span>
+                      (error-message-string err)))))))))
+    <span class="cd">;; </span><span class="c">Surface the version check at every interactive entry point — not
+</span>    <span class="cd">;; </span><span class="c">just when this call loaded the module.  Otherwise a stale .so
+</span>    <span class="cd">;; </span><span class="c">mapped in by an earlier load (e.g. sidecar absent at startup) is
+</span>    <span class="cd">;; </span><span class="c">silently kept and the user only ever sees the bare warning.
+</span>    (<span class="k">when</span> (<span class="k">and</span> prompt-user (<span class="k">featurep</span> '<span class="m">ghostel-module</span>))
+      (ghostel--check-module-version dir t))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

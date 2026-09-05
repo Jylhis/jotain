@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- Jotain - a GNU Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer.
+
+Copyright © Markus Jylhänkangas. -->
+<title>Early Init (Jotain Emacs Configuration)</title>
+
+<meta name="description" content="Early Init (Jotain Emacs Configuration)">
+<meta name="keywords" content="Early Init (Jotain Emacs Configuration)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Packages.html" rel="next" title="Packages">
+<link href="Init-File.html" rel="prev" title="Init File">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+span:hover a.copiable-link {visibility: visible}
+</style>
+<link rel="stylesheet" type="text/css" href="manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Early-Init">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Packages.html" rel="next">Packages</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Init-File.html" rel="prev">Init File</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+<h2 class="chapter" id="Early-Init-1"><span>8 Early Init<a class="copiable-link" href="#Early-Init-1"> &para;</a></span></h2>
+
+<p><code class="code">early-init.el</code> is loaded before <code class="code">package.el</code> runs, before the first frame is drawn, and before <code class="code">init.el</code> is evaluated. Anything that <em class="emph">must</em> happen that early lives here; everything else lives in <code class="code">init.el</code> or one of the <code class="code">lisp/init-*.el</code> modules.
+</p>
+<ul class="mini-toc">
+<li><a href="#Garbage-collection">Garbage collection</a></li>
+<li><a href="#Bidirectional-text">Bidirectional text</a></li>
+<li><a href="#Load-preference">Load preference</a></li>
+<li><a href="#package_002eel-and-use_002dpackage">package.el and use-package</a></li>
+<li><a href="#Frame-chrome">Frame chrome</a></li>
+<li><a href="#Byte_002dcompiler-noise">Byte-compiler noise</a></li>
+<li><a href="#Font-caches">Font caches</a></li>
+<li><a href="#Native-compilation">Native compilation</a></li>
+<li><a href="#Tree_002dsitter-grammars-1">Tree-sitter grammars</a></li>
+<li><a href="#Terminal-aliases">Terminal aliases</a></li>
+</ul>
+<div class="section-level-extent" id="Garbage-collection">
+<h3 class="section"><span>8.1 Garbage collection<a class="copiable-link" href="#Garbage-collection"> &para;</a></span></h3>
+<p>The GC threshold is bumped to &quot;effectively never&quot; during startup; <code class="code">init-core</code> restores a 16 MiB runtime value.
+</p>
+<pre class="verbatim">(setq gc-cons-threshold most-positive-fixnum
+      gc-cons-percentage 0.6)
+</pre>
+</div>
+<div class="section-level-extent" id="Bidirectional-text">
+<h3 class="section"><span>8.2 Bidirectional text<a class="copiable-link" href="#Bidirectional-text"> &para;</a></span></h3>
+<p>Jotain targets LTR-only usage, so disable the bidirectional reordering and parenthesis algorithms &mdash; they otherwise run on every redisplay and are measurable on large files.
+</p>
+<pre class="verbatim">(setq-default bidi-display-reordering nil
+              bidi-paragraph-direction 'left-to-right)
+(setopt bidi-inhibit-bpa t)
+</pre>
+</div>
+<div class="section-level-extent" id="Load-preference">
+<h3 class="section"><span>8.3 Load preference<a class="copiable-link" href="#Load-preference"> &para;</a></span></h3>
+<p>Prefer newer source files to stale <code class="code">.elc</code> in batch mode only. Interactive sessions keep <code class="code">.elc</code> preference for speed.
+</p>
+<pre class="verbatim">(setq load-prefer-newer noninteractive)
+</pre>
+</div>
+<div class="section-level-extent" id="package_002eel-and-use_002dpackage">
+<h3 class="section"><span>8.4 package.el and use-package<a class="copiable-link" href="#package_002eel-and-use_002dpackage"> &para;</a></span></h3>
+<p><code class="code">package.el</code> stays on and <code class="code">package-quickstart</code> is enabled &mdash; Nix (and, in dev, devenv) already provides most packages via <code class="code">load-path</code>, so startup is fast without any trickery. <code class="code">use-package</code> is built in on Emacs 29+, so the only thing we configure before <code class="code">init.el</code> loads is imenu support and <code class="code">use-package-always-ensure</code>.
+</p>
+<pre class="verbatim">(setq package-quickstart-file
+      (expand-file-name &quot;var/package-quickstart.el&quot; user-emacs-directory)
+      package-quickstart t)
+(setq use-package-enable-imenu-support t
+      use-package-always-ensure t)
+</pre>
+<p><code class="code">package-quickstart-file</code> <strong class="strong">must</strong> be pinned here, not in <code class="code">init.el</code>: <code class="code">startup.el</code> runs its automatic <code class="code">package-activate-all</code> between <code class="code">early-init.el</code> and <code class="code">init.el</code>, and looks up the quickstart file at whatever path <code class="code">package-quickstart-file</code> holds at that moment. Leaving it at its default puts the file outside <code class="code">var/</code>, and Emacs never finds it on later startups &mdash; quickstart ends up paying its refresh + byte-compile cost on every <code class="code">package-install</code> without providing any actual speedup.
+</p>
+<p>With <code class="code">use-package-always-ensure</code> set to <code class="code">t</code>, every <code class="code">use-package</code> block defaults to &quot;install if missing&quot;. Built-ins must opt out with <code class="code">:ensure nil</code>.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Silencing-a-quickstart-false_002dpositive">Silencing a quickstart false-positive</a></li>
+</ul>
+<div class="subsection-level-extent" id="Silencing-a-quickstart-false_002dpositive">
+<h4 class="subsection"><span>8.4.1 Silencing a quickstart false-positive<a class="copiable-link" href="#Silencing-a-quickstart-false_002dpositive"> &para;</a></span></h4>
+<p><code class="code">package-quickstart-refresh</code> (called after every <code class="code">package-install</code> via <code class="code">package--quickstart-maybe-refresh</code>) internally re-calls <code class="code">package-initialize</code>, which trips the &quot;Unnecessary call to <code class="code">package-initialize</code> in init file&quot; warning even though the call is legitimate. Emacs&rsquo;s own code can&rsquo;t distinguish that internal self-call from a user one, so we suppress the warning type directly:
+</p>
+<pre class="verbatim">(with-eval-after-load 'warnings
+  (add-to-list 'warning-suppress-log-types '(package reinitialization)))
+</pre>
+</div>
+</div>
+<div class="section-level-extent" id="Frame-chrome">
+<h3 class="section"><span>8.5 Frame chrome<a class="copiable-link" href="#Frame-chrome"> &para;</a></span></h3>
+<p>GUI chrome is disabled in <code class="code">default-frame-alist</code> <em class="emph">before</em> the first frame is drawn &mdash; this is much faster than toggling the modes off afterwards.
+</p>
+<pre class="verbatim">(push '(menu-bar-lines . 0) default-frame-alist)
+(push '(tool-bar-lines . 0) default-frame-alist)
+(push '(vertical-scroll-bars) default-frame-alist)
+(when (featurep 'ns)
+  (push '(ns-transparent-titlebar . t) default-frame-alist)
+  (push '(ns-appearance . dark) default-frame-alist))
+
+(setq inhibit-startup-screen t
+      inhibit-startup-message t
+      inhibit-startup-echo-area-message user-login-name
+      initial-scratch-message nil)
+</pre>
+</div>
+<div class="section-level-extent" id="Byte_002dcompiler-noise">
+<h3 class="section"><span>8.6 Byte-compiler noise<a class="copiable-link" href="#Byte_002dcompiler-noise"> &para;</a></span></h3>
+<p>Silence obsolete-symbol warnings from third-party packages we do not control. Real warnings still surface.
+</p>
+<pre class="verbatim">(setq byte-compile-warnings '(not obsolete))
+</pre>
+</div>
+<div class="section-level-extent" id="Font-caches">
+<h3 class="section"><span>8.7 Font caches<a class="copiable-link" href="#Font-caches"> &para;</a></span></h3>
+<p>Trade a bit of RAM for smoother redisplay.
+</p>
+<pre class="verbatim">(setq inhibit-compacting-font-caches t)
+(when (eq system-type 'darwin)
+  (setq ns-use-thin-smoothing t))
+</pre>
+</div>
+<div class="section-level-extent" id="Native-compilation">
+<h3 class="section"><span>8.8 Native compilation<a class="copiable-link" href="#Native-compilation"> &para;</a></span></h3>
+<p>On Emacs 30 with native compilation available, keep the eln-cache out of the config directory, silence the firehose of async warnings during init, and crank native-comp speed.
+</p>
+<pre class="verbatim">(when (and (fboundp 'native-comp-available-p)
+           (native-comp-available-p))
+  (setq native-comp-async-report-warnings-errors nil
+        native-comp-speed 2)
+  (when (fboundp 'startup-redirect-eln-cache)
+    (startup-redirect-eln-cache
+     (convert-standard-filename
+      (expand-file-name &quot;var/eln-cache/&quot; user-emacs-directory)))))
+</pre>
+</div>
+<div class="section-level-extent" id="Tree_002dsitter-grammars-1">
+<h3 class="section"><span>8.9 Tree-sitter grammars<a class="copiable-link" href="#Tree_002dsitter-grammars-1"> &para;</a></span></h3>
+<p>Nix sets <code class="code">TREE_SITTER_DIR</code> to point at the grammar bundle produced by <code class="code">default.nix</code>; <code class="code">early-init.el</code> picks it up and wires it into <code class="code">treesit-extra-load-path</code>.
+</p>
+<pre class="verbatim">(when-let* ((ts-dir (getenv &quot;TREE_SITTER_DIR&quot;)))
+  (setq treesit-extra-load-path (list ts-dir)))
+</pre>
+</div>
+<div class="section-level-extent" id="Terminal-aliases">
+<h3 class="section"><span>8.10 Terminal aliases<a class="copiable-link" href="#Terminal-aliases"> &para;</a></span></h3>
+<p>Ghostty advertises <code class="code">TERM=xterm-ghostty</code>, but Emacs does not ship <code class="code">term/xterm-ghostty.el</code>. Aliasing to <code class="code">xterm-256color</code> makes <code class="code">term/xterm.el</code> load instead, restoring <code class="code">modifyOtherKeys</code> and 24-bit colour. This must be set in <code class="code">early-init.el</code> because <code class="code">tty-run-terminal-initialization</code> fires before <code class="code">init.el</code>.
+</p>
+<pre class="verbatim">(add-to-list 'term-file-aliases '(&quot;xterm-ghostty&quot; . &quot;xterm-256color&quot;))
+</pre>
+</div>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Packages.html" rel="next">Packages</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Init-File.html" rel="prev">Init File</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+
+
+
+</body>
+</html>

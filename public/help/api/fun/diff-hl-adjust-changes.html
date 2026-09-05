@@ -1,0 +1,80 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: diff-hl-adjust-changes – Emacs Documentation Online</title>
+<meta name="description" content="diff-hl-adjust-changes is a natively compiled function defined in
+diff-hl.el.
+Adjust changesets in OLD using changes in NEW.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>diff-hl-adjust-changes</code></h1><p><span class="m"><code>diff-hl-adjust-changes</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">diff-hl.el</span>.
+<h2>Signature</h2>
+<pre><code>(diff-hl-adjust-changes <a href="#:~:text=in-,OLD"><span class="arg">OLD</span></a> <a href="#:~:text=in-,NEW"><span class="arg">NEW</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Adjust changesets in <span class="arg">OLD</span> using changes in <span class="arg">NEW</span>.
+<p>The result alters the values inside the <span class="arg">OLD</span> changeset so that the line
+numbers and insertion/deletion counts refer to the lines in the file
+contents as they are (or would be) after applying the changes in <span class="arg">NEW</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/742jfhd6j9y7y1gqxy624dchx31gwmax-emacs-packages-deps/share/emacs/site-lisp/elpa/diff-hl-20260830.1400/diff-hl.el</span>
+(<span class="k">defun</span> <span class="f">diff-hl-adjust-changes</span> (old new)
+  <span class="doc">"Adjust changesets in OLD using changes in NEW.
+The result alters the values inside the OLD changeset so that the line
+numbers and insertion/deletion counts refer to the lines in the file
+contents as they are (or would be) after applying the changes in NEW."</span>
+  (<span class="k">let</span> ((acc 0)
+        (ref old)
+        overlap)
+    (<span class="k">while</span> (<span class="k">and</span> new old)
+      (<span class="k">cond</span>
+       ((&lt;= (+ (nth 0 (car new)) (nth 2 (car new)))
+            (+ acc (nth 0 (car old))))
+        <span class="cd">;; </span><span class="c">(A) NEW-END &lt;= OLD-BEG
+</span>        (<span class="k">cl-incf</span> acc (- (nth 1 (car new)) (nth 2 (car new))))
+        (<span class="k">setq</span> new (cdr new)))
+       ((&lt;= (+ acc (nth 0 (car old)) (nth 1 (car old)))
+            (nth 0 (car new)))
+        <span class="cd">;; </span><span class="c">(B) OLD-END &lt;= NEW-BEG
+</span>        (<span class="k">cl-incf</span> (nth 0 (car old)) acc)
+        (<span class="k">setq</span> old (cdr old)))
+       (t
+        <span class="cd">;; </span><span class="c">There is overlap.
+</span>        (<span class="k">setq</span> overlap
+              (-
+               (min
+                (+ (nth 0 (car new)) (nth 2 (car new)))
+                (+ acc (nth 0 (car old)) (nth 1 (car old))))
+               (max
+                (nth 0 (car new))
+                (+ acc (nth 0 (car old))))))
+        (<span class="k">cl-decf</span> (nth 1 (car old)) overlap)
+        <span class="cd">;; </span><span class="c">Add INSERTION amount to either before or inside.
+</span>        (<span class="k">cl-incf</span> (nth
+                  (<span class="k">if</span> (&gt; (nth 0 (car new))
+                         (+ acc (nth 0 (car old))))
+                      1 0)
+                  (car old))
+                 (-
+                  (nth 1 (car new))
+                  (- (nth 2 (car new))
+                     overlap)))
+        <span class="cd">;; </span><span class="c">See which of the heads to pop.
+</span>        (<span class="k">if</span> (&gt; (+ (nth 0 (car new)) (nth 1 (car new)))
+               (+ acc (nth 0 (car old)) (nth 1 (car old))))
+            (<span class="k">progn</span>
+              <span class="cd">;; </span><span class="c">Repetition of B (how to avoid dup?)
+</span>              (<span class="k">cl-incf</span> (nth 0 (car old)) acc)
+              (<span class="k">setq</span> old (cdr old)))
+          <span class="cd">;; </span><span class="c">Repetition of A.
+</span>          (<span class="k">cl-incf</span> acc (- (nth 1 (car new)) (nth 2 (car new))))
+          <span class="cd">;; </span><span class="c">But also decrease OLD-BEG by the same amount: it's added later.
+</span>          (<span class="k">cl-decf</span> (nth 0 (car old)) (- (nth 1 (car new)) (nth 2 (car new))))
+          (<span class="k">setq</span> new (cdr new))))))
+    (<span class="k">while</span> old
+      (<span class="k">cl-incf</span> (nth 0 (car old)) acc)
+      (<span class="k">setq</span> old (cdr old)))
+    ref))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

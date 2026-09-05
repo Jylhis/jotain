@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-interactive--build-file-patch – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-interactive--build-file-patch is a natively compiled function
+defined in majutsu-interactive.el.
+Build patch string for FILE-SECTION with HUNKS-WITH-SPECS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-interactive--build-file-patch</code></h1><p><span class="m"><code>majutsu-interactive--build-file-patch</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-interactive.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-interactive--build-file-patch <a href="#:~:text=for-,FILE-SECTION"><span class="arg">FILE-SECTION</span></a> <a href="#:~:text=with-,HUNKS-WITH-SPECS"><span class="arg">HUNKS-WITH-SPECS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=SPEC [-,INVERT"><span class="arg">INVERT</span></a> <a href="#:~:text=When-,CONTEXT-ON-ADDED"><span class="arg">CONTEXT-ON-ADDED</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Build patch string for <span class="arg">FILE-SECTION</span> with <span class="arg">HUNKS-WITH-SPECS</span>.
+<p><span class="arg">HUNKS-WITH-SPECS</span> is list of (HUNK-SECTION SPEC [<span class="arg">INVERT</span>]).
+When <span class="arg">INVERT</span> is non-nil, invert selected hunks by default.
+When <span class="arg">CONTEXT-ON-ADDED</span> is non-nil, treat unselected added lines as context.
+Note: context-on-added is disabled for new files (--- /dev/null).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-interactive.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-interactive--build-file-patch</span> (file-section hunks-with-specs <span class="ty">&amp;optional</span> invert context-on-added)
+  <span class="doc">"Build patch string for FILE-SECTION with HUNKS-WITH-SPECS.
+HUNKS-WITH-SPECS is list of (HUNK-SECTION SPEC [INVERT]).
+When INVERT is non-nil, invert selected hunks by default.
+When CONTEXT-ON-ADDED is non-nil, treat unselected added lines as context.
+Note: context-on-added is disabled for new files (--- /dev/null)."</span>
+  (<span class="k">let</span> ((header (<span class="k">oref</span> file-section header))
+        (hunk-patches nil)
+        <span class="cd">;; </span><span class="c">New files cannot have context lines, so disable context-on-added
+</span>        (effective-context-on-added (<span class="k">and</span> context-on-added
+                                         (not (majutsu-interactive--file-is-new-p file-section)))))
+    (<span class="k">dolist</span> (hs hunks-with-specs)
+      (<span class="k">let*</span> ((hunk (nth 0 hs))
+             (spec (nth 1 hs))
+             (hunk-invert (<span class="k">if</span> (&gt; (length hs) 2) (nth 2 hs) invert))
+             (hunk-patch (majutsu-interactive--build-hunk-patch
+                          hunk spec hunk-invert effective-context-on-added)))
+        (<span class="k">when</span> hunk-patch
+          (<span class="k">push</span> hunk-patch hunk-patches))))
+    (<span class="k">when</span> hunk-patches
+      (concat header
+              (mapconcat #'identity (nreverse hunk-patches) <span class="s">""</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

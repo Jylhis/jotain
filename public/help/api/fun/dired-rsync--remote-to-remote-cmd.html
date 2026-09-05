@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dired-rsync--remote-to-remote-cmd – Emacs Documentation Online</title>
+<meta name="description" content="dired-rsync--remote-to-remote-cmd is a natively compiled function
+defined in dired-rsync.el.
+Construct and trigger an rsync run for remote copy.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dired-rsync--remote-to-remote-cmd</code></h1><p><span class="m"><code>dired-rsync--remote-to-remote-cmd</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">dired-rsync.el</span>.
+<h2>Signature</h2>
+<pre><code>(dired-rsync--remote-to-remote-cmd <a href="#:~:text=source-,SHOST"><span class="arg">SHOST</span></a> <a href="#:~:text="><span class="arg">SPORT</span></a> <a href="#:~:text=and-,SFILES"><span class="arg">SFILES</span></a> <a href="#:~:text=remote-,DUSER"><span class="arg">DUSER</span></a> <a href="#:~:text=DUSER @-,DHOST"><span class="arg">DHOST</span></a> <a href="#:~:text="><span class="arg">DPORT</span></a> <a href="#:~:text=to-,DPATH"><span class="arg">DPATH</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Construct and trigger an rsync run for remote copy.
+<p>The source <span class="arg">SHOST</span> and <span class="arg">SFILES</span> to remote <span class="arg">DUSER</span> @ <span class="arg">DHOST</span> to <span class="arg">DPATH</span>.
+<p>rsync doesn't support this mode of operation but we can fake it by
+providing a port forward from the source host which we pass onto the
+destination.  This requires ssh'ing to the source and running the rsync
+there.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kxyb1l0wdk5rkn342k748mzcbfgargan-emacs-packages-deps/share/emacs/site-lisp/elpa/dired-rsync-20260716.1319/dired-rsync.el</span>
+<span class="cd">;; </span><span class="c">ref: https://unix.stackexchange.com/questions/183504/how-to-rsync-files-between-two-remotes
+</span>(<span class="k">defun</span> <span class="f">dired-rsync--remote-to-remote-cmd</span> (shost sport sfiles duser dhost dport dpath)
+  <span class="doc">"Construct and trigger an rsync run for remote copy.
+The source SHOST and SFILES to remote DUSER @ DHOST to DPATH.
+
+rsync doesn't support this mode of operation but we can fake it by
+providing a port forward from the source host which we pass onto the
+destination.  This requires ssh'ing to the source and running the rsync
+there."</span>
+  (s-join <span class="s">" "</span> (-flatten
+               (list <span class="s">"ssh"</span> <span class="s">"-A"</span> (<span class="k">when</span> sport (format <span class="s">"-p %s"</span> sport))
+                     <span class="s">"-R"</span> (format <span class="s">"localhost:%d:%s:%s"</span>
+                                  (dired-rsync--get-remote-port) dhost
+                                  (<span class="k">or</span> dport <span class="s">"22"</span>))
+                     shost
+                     (format
+                      <span class="s">"\"%s %s -e \\\"%s\\\" -- %s %s@localhost:%s\""</span>
+                      dired-rsync-command
+                      dired-rsync-options
+                      (dired-rsync--get-remote-portfwd)
+                      (s-join <span class="s">" "</span> sfiles)
+                      duser
+                      dpath)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

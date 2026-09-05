@@ -1,0 +1,77 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-build-nested-query – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-build-nested-query is a natively compiled function defined
+in combobulate-navigation.el.
+Build a nested query from NODES and call INSERT-FN for each one.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-build-nested-query</code></h1><p><span class="m"><code>combobulate-build-nested-query</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">combobulate-navigation.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-build-nested-query <a href="#:~:text=from-,NODES"><span class="arg">NODES</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=call-,INSERT-FN"><span class="arg">INSERT-FN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Build a nested query from <span class="arg">NODES</span> and call <span class="arg">INSERT-FN</span> for each one.
+<p>The output is of the form:
+<p>&nbsp;&nbsp;(A (B (C (D))))
+<p>Where <span class="arg">NODES</span> is a list of (A B C D) and query is a valid
+<a href="../fun/combobulate-query-search.html"><code>combobulate-query-search</code></a> query.
+<p>The <span class="arg">INSERT-FN</span> is called with the following arguments:
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="arg">INSERT-FN</span> NODE REST-NODES BEFORE CT)
+<p>Where NODE is the current node; REST-NODES is the rest of the
+nodes to be processed; BEFORE indicates whether the function is
+called before NODE or after NODE; and CT is the number of nodes
+processed so far as an integer, with the inner-most node (the
+<a href="../fun/car.html"><code>car</code></a> in <span class="arg">NODES</span>) being 0.
+<p>The <span class="arg">INSERT-FN</span> should return a list (or nil, in which case nothing
+is inserted) to be *spliced into* into the query at that
+position.  The nodes can be symbols, strings, or a list of the
+two.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-navigation.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-build-nested-query</span> (nodes <span class="ty">&amp;optional</span> insert-fn)
+  <span class="doc">"Build a nested query from NODES and call INSERT-FN for each one.
+
+The output is of the form:
+
+  (A (B (C (D))))
+
+Where NODES is a list of (A B C D) and query is a valid
+`</span><span class="m doc">combobulate-query-search</span><span class="doc">' query.
+
+The INSERT-FN is called with the following arguments:
+
+        (INSERT-FN NODE REST-NODES BEFORE CT)
+
+Where NODE is the current node; REST-NODES is the rest of the
+nodes to be processed; BEFORE indicates whether the function is
+called before NODE or after NODE; and CT is the number of nodes
+processed so far as an integer, with the inner-most node (the
+`</span><span class="m doc">car</span><span class="doc">' in NODES) being 0.
+
+The INSERT-FN should return a list (or nil, in which case nothing
+is inserted) to be *spliced into* into the query at that
+position.  The nodes can be symbols, strings, or a list of the
+two."</span>
+  (<span class="k">let</span> ((acc) (n) (ct 0) (insert-fn (<span class="k">or</span> insert-fn #'ignore)))
+    (<span class="k">while</span> nodes
+      (<span class="k">let</span> ((node (<span class="k">pop</span> nodes)))
+        (<span class="k">setq</span> n (<span class="k">pcase</span> node
+                  ((<span class="k">and</span> (pred consp) n))
+                  ((<span class="k">and</span> (pred stringp) n) (make-symbol n))
+                  ((<span class="k">and</span> (pred symbolp) n) n)
+                  ((<span class="k">and</span> (pred combobulate-node-p) n)
+                   (combobulate-query--node-type n))
+                  ((<span class="k">and</span> (pred combobulate-proxy-node-p) n)
+                   (combobulate-query--node-type n))
+                  (_ (<span class="w">error</span> <span class="s">"Unknown node type"</span>))))
+        (<span class="k">setq</span> acc (cons n (seq-remove
+                           #'null `(,@(funcall insert-fn node nodes t ct)
+                                    ,acc
+                                    ,@(funcall insert-fn node nodes nil ct)))))
+        (<span class="k">cl-incf</span> ct)))
+    acc))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

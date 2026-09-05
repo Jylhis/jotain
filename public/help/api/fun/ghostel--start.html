@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--start – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--start is a natively compiled function defined in ghostel.el.
+Find or create the ghostel slot for CONTEXT and pop to it.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--start</code></h1><p><span class="m"><code>ghostel--start</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--start <a href="#:~:text=for-,CONTEXT"><span class="arg">CONTEXT</span></a> <a href="#:~:text=pair;-,NAME"><span class="arg">NAME</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=buffer.-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find or create the ghostel slot for <span class="arg">CONTEXT</span> and pop to it.
+<p><span class="arg">CONTEXT</span> is an identity alist without its <span class="m"><code>instance</code></span> pair; <span class="arg">NAME</span> is
+the buffer name for a new instance-1 buffer.  <span class="arg">ARG</span> follows
+<a href="../fun/ghostel.html"><code>ghostel</code></a>'s prefix conventions: a number selects that instance, any
+other non-nil value creates the next free instance.  Returns the
+buffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--start</span> (context name <span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Find or create the ghostel slot for CONTEXT and pop to it.
+CONTEXT is an identity alist without its `</span><span class="m doc">instance</span><span class="doc">' pair; NAME is
+the buffer name for a new instance-1 buffer.  ARG follows
+`</span><span class="m doc">ghostel</span><span class="doc">''s prefix conventions: a number selects that instance, any
+other non-nil value creates the next free instance.  Returns the
+buffer."</span>
+  (ghostel--load-module t)
+  (<span class="k">let*</span> ((fresh (<span class="k">and</span> arg (not (numberp arg))))
+         (instance (<span class="k">cond</span> ((numberp arg) arg)
+                         (fresh (ghostel--next-instance context))
+                         (t 1)))
+         (identity (append context `((instance . ,instance))))
+         (buf-name (<span class="k">if</span> (&gt; instance 1) (format <span class="s">"%s&lt;%d&gt;"</span> name instance) name))
+         (display-action (append display-buffer--same-window-action
+                                 '((category . comint))))
+         (existing (<span class="k">and</span> (not fresh)
+                        (ghostel--find-buffer-by-identity identity)))
+         (buffer (<span class="k">or</span> existing (ghostel--create buf-name display-action))))
+    (<span class="k">if</span> existing
+        (<span class="k">progn</span>
+          (<span class="k">unless</span> (buffer-local-value 'ghostel--term existing)
+            (<span class="w">user-error</span> <span class="s">"Ghostel buffer %s has no terminal"</span>
+                        (buffer-name existing)))
+          (pop-to-buffer existing display-action))
+      (<span class="k">with-current-buffer</span> buffer
+        (<span class="k">setq</span> ghostel--managed-buffer-name (buffer-name)
+              ghostel--initial-name (buffer-name)
+              ghostel-identity identity)
+        (ghostel--start-process)
+        (ghostel--apply-initial-input-mode)))
+    buffer))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

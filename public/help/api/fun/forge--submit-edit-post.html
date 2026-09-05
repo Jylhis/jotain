@@ -1,0 +1,72 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--submit-edit-post – Emacs Documentation Online</title>
+<meta name="description" content="forge--submit-edit-post is a byte-compiled function defined in
+forge-github.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--submit-edit-post</code></h1><p><span class="m"><code>forge--submit-edit-post</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in
+<span class="bt">forge-github.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--submit-edit-post <span class="ty">&amp;rest</span> <span class="arg">ARGS</span>)
+</code></pre>
+<h2>Implementations</h2>
+<p>(forge--submit-edit-post (_ forge-gitlab-repository) (POST forge-post)) in `<span class="bt">forge-gitlab.el</span>'.
+<p>Undocumented
+<p>(forge--submit-edit-post (REPO forge-github-repository) (POST forge-post)) in `<span class="bt">forge-github.el</span>'.
+<p>Undocumented
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-github.el</span>
+(<span class="k">cl-defmethod</span> <span class="f">forge--submit-edit-post</span>
+  ((repo forge-github-repository)
+   (post forge-post))
+  (<span class="k">cl-typecase</span> post
+    ((<span class="k">or</span> forge-issue-post forge-pullreq-post)
+     <span class="cd">;; </span><span class="c">Cannot use GraphQL because we made the mistake to derive our ID
+</span>     <span class="cd">;; </span><span class="c">from the number instead of their ID.  `</span><span class="m c">updatePullRequestComment</span><span class="c">'
+</span>     <span class="cd">;; </span><span class="c">(or something equivalent under an inconsistent name) does not
+</span>     <span class="cd">;; </span><span class="c">exist, so for that we would have to continue to use REST anyway.
+</span>     (<span class="k">forge-rest</span> post <span class="s">"PATCH"</span> <span class="s">"/repos/:owner/:repo/issues/comments/:number"</span>
+       ((body (string-trim (buffer-str))))
+       <span class="bi">:callback</span>  (forge--post-submit-callback)
+       <span class="bi">:errorback</span> (forge--post-submit-errorback)))
+    (t
+     (forge--query repo
+       `(mutation (,(<span class="k">cl-etypecase</span> post
+                      (forge-discussion       'updateDiscussion)
+                      (forge-issue            'updateIssue)
+                      (forge-pullreq          'updatePullRequest)
+                      (forge-discussion-post  'updateDiscussionComment)
+                      (forge-discussion-reply 'updateDiscussionComment)
+                      (forge-issue-post       'updateIssueComment)
+                      (forge-pullreq-post     'updatePullRequestComment))
+                   [(input
+                     $input
+                     ,(<span class="k">cl-etypecase</span> post
+                        (forge-discussion       'UpdateDiscussionInput!)
+                        (forge-issue            'UpdateIssueInput!)
+                        (forge-pullreq          'UpdatePullRequestInput!)
+                        (forge-discussion-post  'UpdateDiscussionCommentInput!)
+                        (forge-discussion-reply 'UpdateDiscussionCommentInput!)
+                        (forge-issue-post       'UpdateIssueCommentInput!)
+                        (forge-pullreq-post     'UpdatePullRequestCommentInput!)))]
+                   clientMutationId))
+       `((input (,(<span class="k">cl-etypecase</span> post
+                    (forge-discussion       'discussionId)
+                    (forge-issue            'id)
+                    (forge-pullreq          'pullRequestId)
+                    (forge-discussion-post  'commentId)
+                    (forge-discussion-reply 'commentId)
+                    (forge-issue-post       'id)
+                    (forge-pullreq-post     'id))
+                 . ,(forge--their-id post))
+                ,@(<span class="k">if</span> (cl-typep post 'forge-topic)
+                      (<span class="k">pcase-let</span> ((`(,title . ,body) (forge--post-buffer-text)))
+                        `((title . ,title)
+                          (body  . ,body)))
+                    `((body . ,(string-trim (buffer-str)))))))
+       <span class="bi">:callback</span>  (forge--post-submit-callback)
+       <span class="bi">:errorback</span> (forge--post-submit-errorback)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

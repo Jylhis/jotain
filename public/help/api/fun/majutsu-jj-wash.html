@@ -1,0 +1,73 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-jj-wash – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-jj-wash is a natively compiled function defined in
+majutsu-jj.el.
+Run jj with ARGS, insert output at point, then call WASHER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-jj-wash</code></h1><p><span class="m"><code>majutsu-jj-wash</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-jj.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-jj-wash <a href="#:~:text=call-,WASHER"><span class="arg">WASHER</span></a> <a href="#:~:text=WASHER.-,KEEP-ERROR"><span class="arg">KEEP-ERROR</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=with-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run jj with <span class="arg">ARGS</span>, insert output at point, then call <span class="arg">WASHER</span>.
+<p><span class="arg">KEEP-ERROR</span> matches <a href="../fun/magit--git-wash.html"><code>magit--git-wash</code></a>: nil drops stderr on error,
+<span class="m"><code>wash-anyway</code></span> keeps output even on non-zero exit, anything else keeps the
+error text.  Output is optionally colorized based on
+<a href="../var/majutsu-process-apply-ansi-colors.html"><code>majutsu-process-apply-ansi-colors</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-jj.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-jj-wash</span> (washer keep-error <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Run jj with ARGS, insert output at point, then call WASHER.
+KEEP-ERROR matches `</span><span class="m doc">magit--git-wash</span><span class="doc">': nil drops stderr on error,
+`</span><span class="m doc">wash-anyway</span><span class="doc">' keeps output even on non-zero exit, anything else keeps the
+error text.  Output is optionally colorized based on
+`</span><span class="m doc">majutsu-process-apply-ansi-colors</span><span class="doc">'."</span>
+  (<span class="k">declare</span> (indent 2))
+  (<span class="k">setq</span> args (majutsu-process-jj-arguments args))
+  (<span class="k">let*</span> ((beg (point))
+         (exit (apply #'majutsu-process-file (majutsu-jj--executable) nil t nil args)))
+    (<span class="k">when</span> (<span class="k">and</span> (<span class="k">bound-and-true-p</span> majutsu-process-apply-ansi-colors)
+               (&gt; (point) beg))
+      <span class="cd">;; </span><span class="c">Use text-properties instead of overlays so that subsequent
+</span>      <span class="cd">;; </span><span class="c">washing/parsing that uses `</span><span class="m c">buffer-substring</span><span class="c">' preserves faces.
+</span>      (<span class="k">let</span> ((ansi-color-apply-face-function #'ansi-color-apply-text-property-face))
+        (ansi-color-apply-on-region beg (point))))
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">Command produced no output.
+</span>     ((= (point) beg)
+      (<span class="k">if</span> (= exit 0)
+          (magit-cancel-section)
+        (insert (propertize (format <span class="s">"jj %s failed (exit %s)\n"</span>
+                                    (string-join args <span class="s">" "</span>) exit)
+                            'font-lock-face 'error))
+        (<span class="k">unless</span> (bolp)
+          (insert <span class="s">"\n"</span>))))
+     <span class="cd">;; </span><span class="c">Failure path (unless we explicitly wash anyway).
+</span>     ((<span class="k">and</span> (not (eq keep-error 'wash-anyway))
+           (not (= exit 0)))
+      (goto-char beg)
+      (insert (propertize (format <span class="s">"jj %s failed (exit %s)\n"</span>
+                                  (string-join args <span class="s">" "</span>) exit)
+                          'font-lock-face 'error))
+      (<span class="k">unless</span> (bolp)
+        (insert <span class="s">"\n"</span>)))
+     <span class="cd">;; </span><span class="c">Success (or wash anyway).
+</span>     (t
+      (<span class="k">unless</span> (bolp)
+        (insert <span class="s">"\n"</span>))
+      (<span class="k">when</span> (<span class="k">or</span> (= exit 0)
+                (eq keep-error 'wash-anyway))
+        (<span class="k">save-restriction</span>
+          (narrow-to-region beg (point))
+          (goto-char beg)
+          (funcall washer args))
+        (<span class="k">when</span> (<span class="k">or</span> (= (point) beg)
+                  (= (point) (1+ beg)))
+          (magit-cancel-section)))))
+    exit))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-envelope-get-applicable-nodes – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-envelope-get-applicable-nodes is a natively compiled
+function defined in combobulate-envelope.el.
+Given an ENVELOPE, return a list of valid nodes to apply it to.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-envelope-get-applicable-nodes</code></h1><p><span class="m"><code>combobulate-envelope-get-applicable-nodes</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">combobulate-envelope.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-envelope-get-applicable-nodes <a href="#:~:text=an-,ENVELOPE"><span class="arg">ENVELOPE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">FORCE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Given an <span class="arg">ENVELOPE</span>, return a list of valid nodes to apply it to.
+<p>The NODES are the nodes that the envelope can be applied to. The
+NODES must be a list of strings or procedures. If a string, it is
+the name of a node type. If a procedure, then it follows the
+procedural rules laid out in <a href="../fun/combobulate-procedure-apply.html"><code>combobulate-procedure-apply</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-envelope.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-envelope-get-applicable-nodes</span> (envelope <span class="ty">&amp;optional</span> _force)
+  <span class="doc">"Given an ENVELOPE, return a list of valid nodes to apply it to.
+
+The NODES are the nodes that the envelope can be applied to. The
+NODES must be a list of strings or procedures. If a string, it is
+the name of a node type. If a procedure, then it follows the
+procedural rules laid out in `</span><span class="m doc">combobulate-procedure-apply</span><span class="doc">'."</span>
+  (<span class="k">map-let</span> (<span class="bi">:nodes</span> <span class="bi">:shorthand</span>) envelope
+    <span class="cd">;; </span><span class="c">only nodes or shorthand can be used in the same envelope, never both.
+</span>    (<span class="k">if</span> (<span class="k">and</span> nodes shorthand)
+        (<span class="w">error</span> <span class="s">"Envelope `</span><span class="m s">%s</span><span class="s">' has both `</span><span class="m s">:nodes</span><span class="s">' and `</span><span class="m s">:shorthand</span><span class="s">' defined. \
+Only one can be used."</span> envelope))
+    (<span class="k">let*</span> ((string-elements (seq-filter #'stringp nodes))
+           (procedure-elements
+            (append (seq-filter #'listp nodes)
+                    (<span class="k">and</span> shorthand (combobulate-envelope-get-shorthand-procedure shorthand)))))
+      (seq-sort #'combobulate-node-after-node-p
+                (mapcar #'combobulate-procedure-result-action-node
+                        (append
+                         (<span class="k">and</span> procedure-elements (combobulate-procedure-start (point) procedure-elements t))
+                         <span class="cd">;; </span><span class="c">As we have no selectors nor a parent discriminator, we just use the action node.
+</span>                         (combobulate-procedure-start (point) `((<span class="bi">:activation-nodes</span> ((<span class="bi">:nodes</span> ,string-elements)))) t)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

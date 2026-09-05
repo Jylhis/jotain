@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: denote-file-type – Emacs Documentation Online</title>
+<meta name="description" content="denote-file-type is a natively compiled function defined in denote.el.
+Use the file extension to detect the file type of FILE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>denote-file-type</code></h1><p><span class="m"><code>denote-file-type</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">denote.el</span>.
+<h2>Signature</h2>
+<pre><code>(denote-file-type <a href="#:~:text=of-,FILE"><span class="arg">FILE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Use the file extension to detect the file type of <span class="arg">FILE</span>.
+<p>Do so in accordance with <a href="../var/denote-file-types.html"><code>denote-file-types</code></a>.
+<p>If more than one file type correspond to this file extension, return the
+first file type whose <span class="bi">:get-file-type-function</span> returns non-nil.  If
+<br><span class="bi">:get-file-type-function</span> is nil rely on the <span class="bi">:title-key-regexp</span> and
+<br>return the first matching file type.
+<p>Return nil if <span class="arg">FILE</span> is not recognized.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/5x9606vmybcj80x6qrajp43rma9pa1i7-emacs-packages-deps/share/emacs/site-lisp/elpa/denote-4.2.3/denote.el</span>
+(<span class="k">defun</span> <span class="f">denote-file-type</span> (file)
+  <span class="doc">"Use the file extension to detect the file type of FILE.
+Do so in accordance with `</span><span class="m doc">denote-file-types</span><span class="doc">'.
+
+If more than one file type correspond to this file extension, return the
+first file type whose `</span><span class="m doc">:get-file-type-function</span><span class="doc">' returns non-nil.  If
+`</span><span class="m doc">:get-file-type-function</span><span class="doc">' is nil rely on the `</span><span class="m doc">:title-key-regexp</span><span class="doc">' and
+return the first matching file type.
+
+Return nil if FILE is not recognized."</span>
+  (<span class="k">when-let*</span> ((extension (denote-get-file-extension-sans-encryption file))
+              (types (denote--file-types-with-extension extension))
+              (length (length types)))
+    (<span class="k">cond</span>
+     ((<span class="k">when-let*</span> ((_ (&gt; length 1))
+                  (found (seq-find
+                          (<span class="k">lambda</span> (type)
+                            (<span class="k">let</span> ((properties (cdr type)))
+                              (<span class="k">if-let*</span> ((file-type-fn (plist-get properties <span class="bi">:get-file-type-function</span>))
+                                        (_ (file-exists-p file)))
+                                  (funcall file-type-fn file)
+                                (<span class="k">ignore-errors</span>
+                                  (denote--regexp-in-file-p (plist-get properties <span class="bi">:title-key-regexp</span>) file)))))
+                          types)))
+        (car found)))
+     ((<span class="k">and</span> (&gt; length 1)
+           (memq denote-file-type (mapcar #'car types)))
+      denote-file-type)
+     (t
+      (caar types)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

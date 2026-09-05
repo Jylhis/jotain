@@ -1,0 +1,78 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apheleia-log--formatter-result – Emacs Documentation Online</title>
+<meta name="description" content="apheleia-log--formatter-result is a natively compiled function defined
+in apheleia-log.el.
+Log the result of a formatter process.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apheleia-log--formatter-result</code></h1><p><span class="m"><code>apheleia-log--formatter-result</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">apheleia-log.el</span>.
+<h2>Signature</h2>
+<pre><code>(apheleia-log--formatter-result <a href="#:~:text=process.-,CTX"><span class="arg">CTX</span></a> <a href="#:~:text=context).-,LOG-BUFFER"><span class="arg">LOG-BUFFER</span></a> <a href="#:~:text=buffer.-,EXIT-OK"><span class="arg">EXIT-OK</span></a> <a href="#:~:text=successfully.-,DIRECTORY"><span class="arg">DIRECTORY</span></a> <a href="#:~:text=ran.-,STDERR-STRING"><span class="arg">STDERR-STRING</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Log the result of a formatter process.
+<p><span class="arg">CTX</span> The formatter process context (see <a class="v" href="../var/apheleia-formatter--context.html"><code>apheleia-formatter--context</code>(var)</a>/<a class="f" href="../fun/apheleia-formatter--context.html"><code>apheleia-formatter--context</code>(fun)</a>).
+<span class="arg">LOG-BUFFER</span> is the name of the log-buffer.
+<span class="arg">EXIT-OK</span> is true when the formatter exited successfully.
+<span class="arg">DIRECTORY</span> is the directory in which the formatter ran.
+<span class="arg">STDERR-STRING</span> is the stderr output of the formatter.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbykkl13khzh84lv9vw1bf1vijzg30fr-emacs-packages-deps/share/emacs/site-lisp/elpa/apheleia-20260817.2331/apheleia-log.el</span>
+(<span class="k">defun</span> <span class="f">apheleia-log--formatter-result</span>
+    (ctx log-buffer exit-ok directory stderr-string)
+  <span class="doc">"Log the result of a formatter process.
+CTX The formatter process context (see `</span><span class="m doc">apheleia-formatter--context</span><span class="doc">').
+LOG-BUFFER is the name of the log-buffer.
+EXIT-OK is true when the formatter exited successfully.
+DIRECTORY is the directory in which the formatter ran.
+STDERR-STRING is the stderr output of the formatter."</span>
+  (<span class="k">with-current-buffer</span> (get-buffer-create log-buffer)
+    (special-mode)
+    (<span class="k">save-restriction</span>
+      (widen)
+      (<span class="k">let</span> ((inhibit-read-only t)
+            (orig-point (point))
+            (keep-at-end (eobp)))
+        (goto-char (point-max))
+        (skip-chars-backward <span class="s">"\n"</span>)
+        (delete-region (point) (point-max))
+        (<span class="k">unless</span> (bobp)
+          (insert <span class="s">"\n\n\C-l\n"</span>))
+
+        (<span class="k">unless</span> exit-ok
+          (<span class="k">unless</span> apheleia--last-error-marker
+            (<span class="k">setq</span> apheleia--last-error-marker (make-marker)))
+          (move-marker apheleia--last-error-marker (point)))
+
+        (insert
+         (current-time-string)
+         <span class="s">" :: "</span>
+         directory
+         <span class="s">"\n$ "</span>
+         (mapconcat #'shell-quote-argument
+                    `(,(apheleia-formatter--arg1 ctx)
+                      ,@(apheleia-formatter--argv ctx))
+                    <span class="s">" "</span>)
+         <span class="s">"\n\n"</span>
+         (<span class="k">if</span> (string-empty-p stderr-string)
+             <span class="s">"(no output on stderr)"</span>
+           stderr-string)
+         <span class="s">"\n\n"</span>
+         <span class="s">"Command "</span>
+         (<span class="k">if</span> exit-ok <span class="s">"succeeded"</span> <span class="s">"failed"</span>)
+         <span class="s">" with exit code "</span>
+         (number-to-string (apheleia-formatter--exit-status ctx))
+         <span class="s">".\n"</span>)
+        <span class="cd">;; </span><span class="c">Known issue: this does not actually work; point is left at the end
+</span>        <span class="cd">;; </span><span class="c">of the previous command output, instead of being moved to the end of
+</span>        <span class="cd">;; </span><span class="c">the buffer for some reason.
+</span>        (goto-char
+         (<span class="k">if</span> keep-at-end
+             (point-max)
+           (min (point-max) orig-point)))
+        (goto-char (point-max))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

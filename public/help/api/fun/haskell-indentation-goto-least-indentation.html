@@ -1,0 +1,73 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-indentation-goto-least-indentation – Emacs Documentation Online</title>
+<meta name="description" content="haskell-indentation-goto-least-indentation is a natively compiled
+function defined in haskell-indentation.el.
+
+
+Demos
+[Add]">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-indentation-goto-least-indentation</code></h1><p><span class="m"><code>haskell-indentation-goto-least-indentation</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">haskell-indentation.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-indentation-goto-least-indentation)
+</code></pre>
+<h2>Documentation</h2>
+<p>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-indentation.el</span>
+(<span class="k">defvar</span> <span class="v">implicit-layout-active</span>) <span class="cd">;; </span><span class="c">is "off-side" rule active?
+</span>
+(<span class="k">defun</span> <span class="f">haskell-indentation-goto-least-indentation</span> ()
+  <span class="doc">""</span> <span class="cd">; </span><span class="c">FIXME
+</span>  (beginning-of-line)
+  (<span class="k">if</span> (haskell-indentation-bird-p)
+      (<span class="k">catch</span> '<span class="m">return</span>
+        (<span class="k">while</span> t
+          (<span class="k">when</span> (not (eq (char-after) ?&gt;))
+            (forward-line)
+            (forward-char 2)
+            (<span class="k">throw</span> '<span class="m">return</span> nil))
+          (<span class="k">let</span> ((ps (nth 8 (syntax-ppss))))
+            (<span class="k">when</span> ps <span class="cd">;; </span><span class="c">inside comment or string
+</span>              (goto-char ps)
+              (beginning-of-line)))
+          (<span class="k">when</span> (<span class="k">and</span> (&gt;= 2 (haskell-indentation-current-indentation))
+                     (not (looking-at <span class="s">"&gt;\\s-*$"</span>)))
+            (forward-char 2)
+            (<span class="k">throw</span> '<span class="m">return</span> nil))
+          (<span class="k">when</span> (bobp)
+            (forward-char 2)
+            (<span class="k">throw</span> '<span class="m">return</span> nil))
+          (forward-line -1)))
+    <span class="cd">;; </span><span class="c">not bird style
+</span>    (<span class="k">catch</span> '<span class="m">return</span>
+      (<span class="k">while</span> (not (bobp))
+        (<span class="k">let</span> ((point (point)))
+          <span class="cd">;; </span><span class="c">(forward-comment -1) gets lost if there are unterminated
+</span>          <span class="cd">;; </span><span class="c">string constants and does not move point anywhere. We fix
+</span>          <span class="cd">;; </span><span class="c">that case with (forward-line -1)
+</span>          (forward-comment (- (buffer-size)))
+          (<span class="k">if</span> (equal (point) point)
+              (forward-line -1)
+            (beginning-of-line)))
+        (<span class="k">let*</span> ((ps (syntax-ppss))
+              (start-of-comment-or-string (nth 8 ps))
+              (start-of-list-expression (nth 1 ps)))
+          (<span class="k">cond</span>
+           (start-of-comment-or-string
+            <span class="cd">;; </span><span class="c">inside comment or string
+</span>            (goto-char start-of-comment-or-string))
+           (start-of-list-expression
+            <span class="cd">;; </span><span class="c">inside a parenthesized expression
+</span>            (goto-char start-of-list-expression))
+           ((= 0 (haskell-indentation-current-indentation))
+             (<span class="k">throw</span> '<span class="m">return</span> nil))))))
+    (beginning-of-line)
+    (<span class="k">when</span> (bobp)
+      (forward-comment (buffer-size)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

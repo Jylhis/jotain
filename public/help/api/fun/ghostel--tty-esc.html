@@ -1,0 +1,45 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--tty-esc – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--tty-esc is a natively compiled function defined in
+ghostel.el.
+Translate a lone ESC to escape in ghostel terminal-input buffers.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--tty-esc</code></h1><p><span class="m"><code>ghostel--tty-esc</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--tty-esc <a href="#:~:text=return-,MAP"><span class="arg">MAP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Translate a lone ESC to <span class="m"><code>escape</code></span> in ghostel terminal-input buffers.
+<p><span class="m"><code>menu-item</code></span> filter on the ESC entry of a TTY's <a href="../var/input-decode-map.html"><code>input-decode-map</code></a>.
+When no follow-up byte arrives within <a href="../var/ghostel-tty-escape-delay.html"><code>ghostel-tty-escape-delay</code></a>,
+yield the <span class="m"><code>escape</code></span> event; otherwise return <span class="arg">MAP</span> so escape sequences
+and ESC-as-meta decode as usual.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--tty-esc</span> (map)
+  <span class="doc">"Translate a lone ESC to `</span><span class="m doc">escape</span><span class="doc">' in ghostel terminal-input buffers.
+`</span><span class="m doc">menu-item</span><span class="doc">' filter on the ESC entry of a TTY's `</span><span class="m doc">input-decode-map</span><span class="doc">'.
+When no follow-up byte arrives within `</span><span class="m doc">ghostel-tty-escape-delay</span><span class="doc">',
+yield the `</span><span class="m doc">escape</span><span class="doc">' event; otherwise return MAP so escape sequences
+and ESC-as-meta decode as usual."</span>
+  (<span class="k">if</span> (<span class="k">and</span> ghostel-tty-escape-delay
+           (ghostel--terminal-input-mode-p)
+           ghostel--term
+           (<span class="k">let*</span> ((keys (this-single-command-keys))
+                  (len (length keys)))
+             (<span class="k">and</span> (&gt; len 0)
+                  (eq (aref keys (1- len)) ?\e)
+                  <span class="cd">;; </span><span class="c">The first ESC of a fast pair is already committed
+</span>                  <span class="cd">;; </span><span class="c">when the second decodes; leave the second raw so
+</span>                  <span class="cd">;; </span><span class="c">[27 27] reaches the ESC ESC binding instead of
+</span>                  <span class="cd">;; </span><span class="c">the unbound ESC &lt;escape&gt;.
+</span>                  (not (<span class="k">and</span> (&gt; len 1) (eq (aref keys (- len 2)) ?\e)))))
+           (sit-for ghostel-tty-escape-delay))
+      [escape]
+    map))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

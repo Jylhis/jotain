@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: compile-multi – Emacs Documentation Online</title>
+<meta name="description" content="compile-multi is an interactive and natively compiled function defined
+in compile-multi.el.
+Multi-target interface to compile.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>compile-multi</code></h1><p><span class="m"><code>compile-multi</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">compile-multi.el</span>.
+<h2>Signature</h2>
+<pre><code>(compile-multi <span class="ty">&amp;optional</span> <a href="#:~:text=argument-,QUERY"><span class="arg">QUERY</span></a> <a href="#:~:text=running.-,COMMAND"><span class="arg">COMMAND</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Multi-target interface to compile.
+<p>With optional argument <span class="arg">QUERY</span> allow user to modify compilation command before
+running. <span class="arg">COMMAND</span> when set will be used instead of prompting the user for a
+compile-multi command.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/n9g199gdc6vrzif3lm10ki51lkffqvg0-emacs-packages-deps/share/emacs/site-lisp/elpa/compile-multi-20250831.1542/compile-multi.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">compile-multi</span> (<span class="ty">&amp;optional</span> query command)
+  <span class="doc">"Multi-target interface to compile.
+With optional argument QUERY allow user to modify compilation command before
+running. COMMAND when set will be used instead of prompting the user for a
+compile-multi command."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">let*</span> ((default-directory (<span class="k">or</span> (<span class="k">and</span> compile-multi-default-directory
+                                     (funcall compile-multi-default-directory))
+                                default-directory))
+         (compile-cmd
+          (<span class="k">or</span> command
+              (plist-get (cdr (<span class="k">or</span> (compile-multi--get-task)
+                                  (<span class="w">user-error</span> <span class="s">"compile-multi: Invalid task read from user"</span>)))
+                         <span class="bi">:command</span>))))
+    (<span class="k">cond</span>
+     ((stringp compile-cmd)
+      (<span class="k">when</span> query
+        (<span class="k">setq</span> compile-cmd
+              (compilation-read-command compile-cmd)))
+      (compile compile-cmd (consp query)))
+     ((<span class="k">and</span> (functionp compile-cmd)
+           (commandp compile-cmd))
+      (<span class="k">if</span> query
+          (eval-expression
+           (read--expression <span class="s">"Eval: "</span> (format <span class="s">"(%s)"</span> `(call-interactively ,compile-cmd))))
+        (call-interactively compile-cmd)))
+     ((functionp compile-cmd)
+      (<span class="k">if</span> query
+          (eval-expression
+           (read--expression <span class="s">"Eval: "</span> (format <span class="s">"(%s)"</span> compile-cmd)))
+        (funcall compile-cmd)))
+     (t (<span class="w">error</span> <span class="s">"Don't know how to run the command %s"</span> compile-cmd)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

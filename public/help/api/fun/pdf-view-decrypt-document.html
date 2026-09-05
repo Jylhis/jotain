@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-view-decrypt-document – Emacs Documentation Online</title>
+<meta name="description" content="pdf-view-decrypt-document is an interactive and natively compiled
+function defined in pdf-view.el.
+Read a password, if the document is encrypted and open it.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-view-decrypt-document</code></h1><p><span class="m"><code>pdf-view-decrypt-document</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">pdf-view.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-view-decrypt-document)
+</code></pre>
+<h2>Documentation</h2>
+<p>Read a password, if the document is encrypted and open it.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-view.el</span>
+(<span class="k">defun</span> <span class="f">pdf-view-decrypt-document</span> ()
+  <span class="doc">"Read a password, if the document is encrypted and open it."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">when</span> (pdf-info-encrypted-p)
+    (<span class="k">let</span> ((fn (buffer-file-name))
+          (prompt <span class="s">"Enter password for pdf document: "</span>)
+          (i 3)
+          key password)
+
+      (<span class="k">when</span> fn
+        (<span class="k">setq</span> prompt (format <span class="s">"Enter password for `</span><span class="m s">%s</span><span class="s">': "</span>
+                             (abbreviate-file-name fn)))
+        (<span class="k">setq</span> key (concat <span class="s">"/pdf-tools"</span> fn))
+        <span class="cd">;; </span><span class="c">First, try with a cached password
+</span>        (<span class="k">when</span> (<span class="k">setq</span> password (password-read-from-cache key))
+          (<span class="k">ignore-errors</span> (pdf-info-open nil password))
+          (<span class="k">when</span> (pdf-info-encrypted-p)
+            (password-cache-remove key))))
+
+      (<span class="k">while</span> (<span class="k">and</span> (&gt; i 0)
+                  (pdf-info-encrypted-p))
+        (<span class="k">setq</span> i (1- i))
+        <span class="cd">;; </span><span class="c">Cached password was not present or valid, try reading a new password
+</span>        <span class="cd">;; </span><span class="c">without cache.
+</span>        (<span class="k">setq</span> password (password-read prompt))
+        (<span class="k">setq</span> prompt <span class="s">"Invalid password, try again: "</span>)
+        (<span class="k">ignore-errors</span> (pdf-info-open nil password)))
+      (pdf-info-open nil password)
+      (<span class="k">when</span> key
+        (password-cache-add key password))))
+  nil)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

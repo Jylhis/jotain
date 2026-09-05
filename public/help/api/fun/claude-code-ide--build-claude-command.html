@@ -1,0 +1,83 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide--build-claude-command – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide--build-claude-command is a natively compiled function
+defined in claude-code-ide.el.
+Build the Claude command with optional flags.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide--build-claude-command</code></h1><p><span class="m"><code>claude-code-ide--build-claude-command</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide--build-claude-command <span class="ty">&amp;optional</span> <a href="#:~:text=If-,CONTINUE"><span class="arg">CONTINUE</span></a> <a href="#:~:text=If-,RESUME"><span class="arg">RESUME</span></a> <a href="#:~:text=If-,SESSION-ID"><span class="arg">SESSION-ID</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Build the Claude command with optional flags.
+<p>If <span class="arg">CONTINUE</span> is non-nil, add the -c flag.
+If <span class="arg">RESUME</span> is non-nil, add the -r flag.
+If <span class="arg">SESSION-ID</span> is provided, it's included in the MCP server URL path.
+If <a href="../var/claude-code-ide-cli-debug.html"><code>claude-code-ide-cli-debug</code></a> is non-nil, add the -d flag.
+If <a href="../var/claude-code-ide-system-prompt.html"><code>claude-code-ide-system-prompt</code></a> is non-nil, add the --append-system-prompt flag.
+Additional flags from <a href="../var/claude-code-ide-cli-extra-flags.html"><code>claude-code-ide-cli-extra-flags</code></a> are also included.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide--build-claude-command</span> (<span class="ty">&amp;optional</span> continue resume session-id)
+  <span class="doc">"Build the Claude command with optional flags.
+If CONTINUE is non-nil, add the -c flag.
+If RESUME is non-nil, add the -r flag.
+If SESSION-ID is provided, it's included in the MCP server URL path.
+If `</span><span class="m doc">claude-code-ide-cli-debug</span><span class="doc">' is non-nil, add the -d flag.
+If `</span><span class="m doc">claude-code-ide-system-prompt</span><span class="doc">' is non-nil, add the --append-system-prompt flag.
+Additional flags from `</span><span class="m doc">claude-code-ide-cli-extra-flags</span><span class="doc">' are also included."</span>
+  (<span class="k">let</span> ((claude-cmd claude-code-ide-cli-path))
+    <span class="cd">;; </span><span class="c">Add debug flag if enabled
+</span>    (<span class="k">when</span> claude-code-ide-cli-debug
+      (<span class="k">setq</span> claude-cmd (concat claude-cmd <span class="s">" -d"</span>)))
+    <span class="cd">;; </span><span class="c">Add resume flag if requested
+</span>    (<span class="k">when</span> resume
+      (<span class="k">setq</span> claude-cmd (concat claude-cmd <span class="s">" -r"</span>)))
+    <span class="cd">;; </span><span class="c">Add continue flag if requested
+</span>    (<span class="k">when</span> continue
+      (<span class="k">setq</span> claude-cmd (concat claude-cmd <span class="s">" -c"</span>)))
+    <span class="cd">;; </span><span class="c">Add append-system-prompt flag with Emacs context
+</span>    (<span class="k">let</span> ((emacs-prompt <span class="s">"IMPORTANT: Connected to Emacs via claude-code-ide.el integration. Emacs uses mixed coordinates: Lines: 1-based (line 1 = first line), Columns: 0-based (column 0 = first column). Example: First character in file is at line 1, column 0. Available: xref (LSP), tree-sitter, imenu, project.el, flycheck/flymake diagnostics. Context-aware with automatic project/file/selection tracking."</span>)
+          (combined-prompt nil))
+      <span class="cd">;; </span><span class="c">Always include the Emacs-specific prompt
+</span>      (<span class="k">setq</span> combined-prompt emacs-prompt)
+      <span class="cd">;; </span><span class="c">Append user's custom prompt if set
+</span>      (<span class="k">when</span> claude-code-ide-system-prompt
+        (<span class="k">setq</span> combined-prompt (concat combined-prompt <span class="s">"\n\n"</span> claude-code-ide-system-prompt)))
+      <span class="cd">;; </span><span class="c">Add the combined prompt to the command
+</span>      (<span class="k">setq</span> claude-cmd (concat claude-cmd <span class="s">" --append-system-prompt "</span>
+                               (shell-quote-argument combined-prompt))))
+    <span class="cd">;; </span><span class="c">Add any extra flags
+</span>    (<span class="k">when</span> (<span class="k">and</span> claude-code-ide-cli-extra-flags
+               (not (string-empty-p claude-code-ide-cli-extra-flags)))
+      (<span class="k">setq</span> claude-cmd (concat claude-cmd <span class="s">" "</span> claude-code-ide-cli-extra-flags)))
+    <span class="cd">;; </span><span class="c">Add MCP tools config if enabled
+</span>    (<span class="k">when</span> (claude-code-ide-mcp-server-ensure-server)
+      (<span class="k">when-let</span> ((config (claude-code-ide-mcp-server-get-config session-id)))
+        (<span class="k">let</span> ((json-str (json-encode config)))
+          (<span class="k">claude-code-ide-debug</span> <span class="s">"MCP tools config JSON: %s"</span> json-str)
+          <span class="cd">;; </span><span class="c">For vterm, we need to escape for sh -c context
+</span>          <span class="cd">;; </span><span class="c">First escape backslashes, then quotes
+</span>          (<span class="k">setq</span> json-str (replace-regexp-in-string <span class="s">"\\\\"</span> <span class="s">"\\\\\\\\"</span> json-str))
+          (<span class="k">setq</span> json-str (replace-regexp-in-string <span class="s">"\""</span> <span class="s">"\\\\\""</span> json-str))
+          (<span class="k">setq</span> claude-cmd (concat claude-cmd <span class="s">" --mcp-config \""</span> json-str <span class="s">"\""</span>))
+          <span class="cd">;; </span><span class="c">Add allowedTools flag if configured
+</span>          (<span class="k">let</span> ((allowed-tools
+                 (<span class="k">cond</span>
+                  <span class="cd">;; </span><span class="c">Auto mode: get all emacs-tools names
+</span>                  ((eq claude-code-ide-mcp-allowed-tools 'auto)
+                   (mapconcat 'identity (claude-code-ide-mcp-server-get-tool-names <span class="s">"mcp__emacs-tools__"</span>) <span class="s">" "</span>))
+                  <span class="cd">;; </span><span class="c">List of specific tools
+</span>                  ((listp claude-code-ide-mcp-allowed-tools)
+                   (mapconcat 'identity claude-code-ide-mcp-allowed-tools <span class="s">" "</span>))
+                  <span class="cd">;; </span><span class="c">String pattern or nil
+</span>                  (t claude-code-ide-mcp-allowed-tools))))
+            (<span class="k">when</span> allowed-tools
+              (<span class="k">setq</span> claude-cmd (concat claude-cmd <span class="s">" --allowedTools "</span> allowed-tools)))))))
+    claude-cmd))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

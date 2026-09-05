@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: diff-hl-root-diff-reference-goto-hunk – Emacs Documentation Online</title>
+<meta name="description" content="diff-hl-root-diff-reference-goto-hunk is an interactive and natively
+compiled function defined in diff-hl.el.
+Run VC diff command against the reference for the whole tree.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>diff-hl-root-diff-reference-goto-hunk</code></h1><p><span class="m"><code>diff-hl-root-diff-reference-goto-hunk</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <span class="bt">diff-hl.el</span>.
+<h2>Signature</h2>
+<pre><code>(diff-hl-root-diff-reference-goto-hunk)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run VC diff command against the reference for the whole tree.
+<p>And if the current buffer is visiting a file, and it has changes, the diff
+buffer will show the position corresponding to its current line.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/742jfhd6j9y7y1gqxy624dchx31gwmax-emacs-packages-deps/share/emacs/site-lisp/elpa/diff-hl-20260830.1400/diff-hl.el</span>
+(<span class="k">defun</span> <span class="f">diff-hl-root-diff-reference-goto-hunk</span> ()
+  <span class="doc">"Run VC diff command against the reference for the whole tree.
+And if the current buffer is visiting a file, and it has changes, the diff
+buffer will show the position corresponding to its current line."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">defvar</span> <span class="v">vc-sentinel-movepoint</span>)
+  (<span class="k">with-current-buffer</span> (current-buffer)
+    (<span class="k">let</span> ((backend (vc-deduce-backend))
+          (default-directory default-directory)
+          rootdir fileset
+          relname)
+      (<span class="k">if</span> backend
+          (<span class="k">setq</span> rootdir (vc-call-backend backend 'root default-directory)
+                default-directory rootdir
+                fileset `(,backend (,rootdir))
+                relname (<span class="k">let</span> ((file (diff-hl--buffer-file-name)))
+                          (<span class="k">when</span> file
+                            (file-relative-name file rootdir))))
+        (<span class="w">error</span> <span class="s">"Directory is not version controlled"</span>))
+      (<span class="k">setq</span> fileset (<span class="k">or</span> fileset (vc-deduce-fileset)))
+      (<span class="k">static-if</span> (&lt; emacs-major-version 28)
+          (<span class="k">when</span> buffer-file-name (vc-buffer-sync t))
+        (vc-buffer-sync-fileset fileset t))
+      (<span class="k">let*</span> ((line (line-number-at-pos)))
+        (vc-diff-internal
+         (<span class="k">if</span> (boundp 'vc-allow-async-diff)
+             vc-allow-async-diff
+           t)
+         fileset diff-hl-reference-revision nil t)
+        (<span class="k">vc-run-delayed</span> (<span class="k">when</span> relname
+                          (diff-hl-diff-skip-to line relname)
+                          (<span class="k">setq</span> vc-sentinel-movepoint (point))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

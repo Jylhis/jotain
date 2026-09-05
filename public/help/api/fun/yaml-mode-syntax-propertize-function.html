@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: yaml-mode-syntax-propertize-function – Emacs Documentation Online</title>
+<meta name="description" content="yaml-mode-syntax-propertize-function is a natively compiled function
+defined in yaml-mode.el.
+Override buffer's syntax table for special syntactic constructs.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>yaml-mode-syntax-propertize-function</code></h1><p><span class="m"><code>yaml-mode-syntax-propertize-function</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">yaml-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(yaml-mode-syntax-propertize-function <a href="#:~:text="><span class="arg">BEG</span></a> <a href="#:~:text="><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Override buffer's syntax table for special syntactic constructs.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kfwdxlq9csqcyhcd7ifdnayvbydv25am-emacs-packages-deps/share/emacs/site-lisp/elpa/yaml-mode-20260830.2340/yaml-mode.el</span>
+(<span class="k">defun</span> <span class="f">yaml-mode-syntax-propertize-function</span> (beg end)
+  <span class="doc">"Override buffer's syntax table for special syntactic constructs."</span>
+  <span class="cd">;; </span><span class="c">Unhighlight foo#bar tokens between BEG and END.
+</span>  (<span class="k">save-excursion</span>
+    (goto-char beg)
+    (<span class="k">while</span> (search-forward <span class="s">"#"</span> end t)
+      (<span class="k">save-excursion</span>
+        (forward-char -1)
+        <span class="cd">;; </span><span class="c">both ^# and [ \t]# are comments
+</span>        (<span class="k">when</span> (<span class="k">and</span> (not (bolp))
+                   (not (memq (preceding-char) '(?\s ?\t))))
+          (put-text-property (point) (1+ (point))
+                             'syntax-table (string-to-syntax <span class="s">"_"</span>))))))
+
+  (<span class="k">save-excursion</span>
+    (goto-char beg)
+    (<span class="k">while</span> (<span class="k">and</span>
+            (&gt; end (point))
+            (re-search-forward <span class="s">"['\"]"</span> end t))
+      (<span class="k">when</span> (get-text-property (point) 'yaml-block-literal)
+        (put-text-property (1- (point)) (point)
+                           'syntax-table (string-to-syntax <span class="s">"w"</span>)))
+      (<span class="k">let*</span> ((pt (point))
+             (sps (<span class="k">save-excursion</span> (syntax-ppss (1- pt)))))
+        (<span class="k">when</span> (not (nth 8 sps))
+          (<span class="k">cond</span>
+           ((<span class="k">and</span> (char-before (1- pt))
+                 (char-equal ?' (char-before (1- pt)))
+                 (char-equal ?' (char-before pt)))
+            (put-text-property (- pt 2) pt
+                               'syntax-table (string-to-syntax <span class="s">"w"</span>))
+            <span class="cd">;; </span><span class="c">Workaround for https://debbugs.gnu.org/41195.
+</span>            (<span class="k">let</span> ((syntax-propertize--done syntax-propertize--done))
+              <span class="cd">;; </span><span class="c">Carefully invalidate the last cached ppss.
+</span>              (syntax-ppss-flush-cache (- pt 2))))
+           <span class="cd">;; </span><span class="c">If quote is detected as a syntactic string start but appeared
+</span>           <span class="cd">;; </span><span class="c">after a non-whitespace character, then mark it as syntactic word.
+</span>           ((<span class="k">and</span> (char-before (1- pt))
+                 (char-equal ?w (char-syntax (char-before (1- pt)))))
+            (put-text-property (1- pt) pt
+                               'syntax-table (string-to-syntax <span class="s">"w"</span>)))
+           (t
+            <span class="cd">;; </span><span class="c">We're right after a quote that opens a string literal.
+</span>            <span class="cd">;; </span><span class="c">Skip over it (big speedup for long JSON strings).
+</span>            (goto-char (1- pt))
+            (<span class="k">condition-case</span> nil
+                (forward-sexp)
+              (scan-error
+               (goto-char end))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

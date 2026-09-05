@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-send – Emacs Documentation Online</title>
+<meta name="description" content="gptel-send is an interactive and natively compiled function defined in
+gptel.el.
+Submit this prompt to the current LLM backend.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-send</code></h1><p><span class="m"><code>gptel-send</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-send <span class="ty">&amp;optional</span> <a href="#:~:text=arg-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Submit this prompt to the current LLM backend.
+<p>By default, the contents of the buffer up to the cursor position
+are sent.  If the region is active, its contents are sent
+instead.
+<p>The response from the LLM is inserted below the cursor position
+at the time of sending.  To change this behavior or model
+parameters, use prefix arg <span class="arg">ARG</span> activate a transient menu with
+more options instead.
+<p>This command is asynchronous, you can continue to use Emacs while
+waiting for the response.
+<h2>Key Bindings</h2>
+<p><span class="v">gptel-mode-map</span> <span class="key">C-c RET</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+<span class="cd">;;; </span><span class="c">Send queries, handle responses
+</span><span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">gptel-send</span> (<span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Submit this prompt to the current LLM backend.
+
+By default, the contents of the buffer up to the cursor position
+are sent.  If the region is active, its contents are sent
+instead.
+
+The response from the LLM is inserted below the cursor position
+at the time of sending.  To change this behavior or model
+parameters, use prefix arg ARG activate a transient menu with
+more options instead.
+
+This command is asynchronous, you can continue to use Emacs while
+waiting for the response."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">if</span> (<span class="k">and</span> arg (<span class="k">require</span> '<span class="m">gptel-transient</span> nil t))
+      (call-interactively #'gptel-menu)
+    (gptel--sanitize-model)
+    (<span class="k">let</span> ((fsm (gptel-make-fsm <span class="bi">:table</span> gptel-send--transitions
+                               <span class="bi">:handlers</span> gptel-send--handlers)))
+      (gptel-request nil
+        <span class="bi">:stream</span> gptel-stream
+        <span class="bi">:transforms</span> gptel-prompt-transform-functions
+        <span class="bi">:fsm</span> fsm)
+      (message <span class="s">"Querying %s..."</span>
+               (<span class="k">thread-first</span> (gptel-fsm-info fsm)
+                             (plist-get <span class="bi">:backend</span>)
+                             (<span class="k">or</span> gptel-backend)
+                             (gptel-backend-name))))
+    (gptel--update-status <span class="s">" Waiting..."</span> 'warning)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

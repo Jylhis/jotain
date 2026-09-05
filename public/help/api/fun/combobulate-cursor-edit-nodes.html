@@ -1,0 +1,95 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-cursor-edit-nodes – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-cursor-edit-nodes is a natively compiled function defined
+in combobulate-cursor.el.
+Interactively edit NODES optionally placed at DEFAULT-ACTION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-cursor-edit-nodes</code></h1><p><span class="m"><code>combobulate-cursor-edit-nodes</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">combobulate-cursor.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-cursor-edit-nodes <a href="#:~:text=edit-,NODES"><span class="arg">NODES</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=at-,DEFAULT-ACTION"><span class="arg">DEFAULT-ACTION</span></a> <a href="#:~:text=disregarded.-,CTX-NODE"><span class="arg">CTX-NODE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Interactively edit <span class="arg">NODES</span> optionally placed at <span class="arg">DEFAULT-ACTION</span>.
+<p><span class="arg">NODES</span> is a list of nodes to edit, or a list of cons cells where the car
+is the action to take and the cdr is the node to edit. Note that if
+<a href="../var/combobulate-cursor-tool.html"><code>combobulate-cursor-tool</code></a> is set to <a href="../fun/combobulate.html"><code>combobulate</code></a>, the action is
+disregarded.
+<p><span class="arg">DEFAULT-ACTION</span> is the action to take if <span class="arg">NODES</span> is a list of nodes. For
+<span class="m"><code>multiple-cursors</code></span>, the placement action (or <span class="arg">DEFAULT-ACTION</span> if the list
+of <span class="arg">NODES</span> is not a list of cons cells) must be <span class="m"><code>before</code></span>, <span class="m"><code>after</code></span>, or
+<a href="../fun/mark.html"><code>mark</code></a>. For <a href="../fun/combobulate.html"><code>combobulate</code></a>, the value is disregarded.
+<p><span class="arg">CTX-NODE</span> is the node that was used to generate <span class="arg">NODES</span>, such as a
+parent node. It is only used for messaging.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-cursor.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-cursor-edit-nodes</span> (nodes <span class="ty">&amp;optional</span> default-action ctx-node)
+  <span class="doc">"Interactively edit NODES optionally placed at DEFAULT-ACTION.
+
+NODES is a list of nodes to edit, or a list of cons cells where the car
+is the action to take and the cdr is the node to edit. Note that if
+`</span><span class="m doc">combobulate-cursor-tool</span><span class="doc">' is set to `</span><span class="m doc">combobulate</span><span class="doc">', the action is
+disregarded.
+
+DEFAULT-ACTION is the action to take if NODES is a list of nodes. For
+`</span><span class="m doc">multiple-cursors</span><span class="doc">', the placement action (or DEFAULT-ACTION if the list
+of NODES is not a list of cons cells) must be `</span><span class="m doc">before</span><span class="doc">', `</span><span class="m doc">after</span><span class="doc">', or
+`</span><span class="m doc">mark</span><span class="doc">'. For `</span><span class="m doc">combobulate</span><span class="doc">', the value is disregarded.
+
+CTX-NODE is the node that was used to generate NODES, such as a
+parent node. It is only used for messaging."</span>
+  <span class="cd">;; </span><span class="c">Determine if we are dealing with a list of nodes or list of cons
+</span>  <span class="cd">;; </span><span class="c">cells.
+</span>  (<span class="k">let</span> ((action-nodes
+         (<span class="k">if</span> (<span class="k">and</span> (listp nodes)
+                  (not (consp (car nodes))))
+             (mapcar (<span class="k">lambda</span> (node) (cons default-action node)) nodes)
+           <span class="cd">;; </span><span class="c">action-nodes is a list of cons cells. So NODES must then
+</span>           <span class="cd">;; </span><span class="c">be turned into a flat list of nodes.
+</span>           (<span class="k">prog1</span> nodes
+             (<span class="k">setq</span> nodes (mapcar #'cdr nodes))))))
+    (<span class="k">cond</span> ((= (length nodes) 0)
+           (combobulate-message <span class="s">"There are zero editable nodes."</span>))
+          (t (combobulate-message
+              (concat <span class="s">"Editing "</span> (combobulate-tally-nodes nodes t)
+                      (<span class="k">and</span> ctx-node (format <span class="s">" in `</span><span class="m s">%s</span><span class="s">'"</span>
+                                            (propertize
+                                             (combobulate-pretty-print-node ctx-node)
+                                             'face 'combobulate-active-indicator-face)))))))
+    (<span class="k">cond</span>
+     ((null nodes) (<span class="w">error</span> <span class="s">"There are no editable nodes."</span>))
+     ((eq combobulate-cursor-tool 'combobulate)
+      (<span class="k">let</span> ((proxy-nodes (combobulate-proxy-node-make-from-nodes nodes))
+            (combobulate-cursor--refactor-id (combobulate-refactor-setup))
+            (combobulate-cursor--active-buffer (current-buffer)))
+        (<span class="k">combobulate-refactor</span> (<span class="bi">:id</span> combobulate-cursor--refactor-id)
+          <span class="cd">;; </span><span class="c">Ditch the proxy nodes' text in the buffer and commit the
+</span>          <span class="cd">;; </span><span class="c">deletions immediately. The fields we insert will be the new
+</span>          <span class="cd">;; </span><span class="c">values.
+</span>          (mapc #'mark-node-deleted proxy-nodes)
+          (commit)
+          <span class="cd">;; </span><span class="c">Create new fields with the new values in the same places
+</span>          <span class="cd">;; </span><span class="c">as the old ones.
+</span>          (mapc (<span class="k">lambda</span> (node)
+                  (mark-field (combobulate-node-start node)
+                              combobulate-cursor--field-tag
+                              (combobulate-node-text node)))
+                proxy-nodes)
+          (combobulate-envelope-prompt
+           (substitute-command-keys <span class="s">"Editing fields. Use \\`</span><span class="m m s">C-h</span><span class="s">' for help."</span>)
+           nil
+           combobulate-cursor--active-buffer
+           (combobulate-cursor--update-function
+            combobulate-cursor--active-buffer
+            combobulate-cursor--field-tag)
+           combobulate-cursor-substitute-default
+           combobulate-cursor-key-map)
+          (commit))))
+     ((eq combobulate-cursor-tool 'multiple-cursors)
+      (combobulate--mc-place-nodes action-nodes))
+     (t (<span class="w">error</span> <span class="s">"Unknown cursor tool: %s"</span> combobulate-cursor-tool)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

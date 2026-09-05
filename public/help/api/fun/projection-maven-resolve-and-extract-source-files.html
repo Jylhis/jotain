@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: projection-maven-resolve-and-extract-source-files – Emacs Documentation Online</title>
+<meta name="description" content="projection-maven-resolve-and-extract-source-files is an autoloaded and
+natively compiled function defined in projection-type-maven.el.
+Resolve, download, and extract all dependencies of the currrent project.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>projection-maven-resolve-and-extract-source-files</code></h1><p><span class="m"><code>projection-maven-resolve-and-extract-source-files</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a> and
+<a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">projection-type-maven.el</span>.
+<h2>Signature</h2>
+<pre><code>(projection-maven-resolve-and-extract-source-files)
+</code></pre>
+<h2>Documentation</h2>
+<p>Resolve, download, and extract all dependencies of the currrent project.
+<p>Artifacts will be dumped to a subdirectory of
+<a href="../var/projection-local-cache-directory.html"><code>projection-local-cache-directory</code></a>. When invoked this function will clear any
+cached value for <a href="../fun/projection-maven-local-source-directories.html"><code>projection-maven-local-source-directories</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kqajmnl5vwqnlsg3vcmlj2d28ylc2n0n-emacs-packages-deps/share/emacs/site-lisp/elpa/projection-20260614.1822/projection-type-maven.el</span>
+<span class="cd">;; </span><span class="c">Maven source download.
+</span>
+(<span class="k">defun</span> <span class="f">projection-maven-resolve-and-extract-source-files</span> ()
+  <span class="doc">"Resolve, download, and extract all dependencies of the currrent project.
+Artifacts will be dumped to a subdirectory of
+`</span><span class="m doc">projection-local-cache-directory</span><span class="doc">'. When invoked this function will clear any
+cached value for `</span><span class="m doc">projection-maven-local-source-directories</span><span class="doc">'."</span>
+  (<span class="k">unless</span> (executable-find <span class="s">"unzip"</span>)
+    (<span class="w">user-error</span> <span class="s">"Extracting java source files requires unzip to be installed"</span>))
+  (<span class="k">let</span> ((output-file (make-temp-file <span class="s">"projection-maven"</span>)))
+    (<span class="k">unwind-protect</span>
+        (<span class="k">progn</span>
+          (message <span class="s">"Resolving maven sources, this may take a while."</span>)
+          (<span class="k">projection--log</span> <span class="bi">:info</span> <span class="s">"Resolving maven sources"</span>)
+
+          (<span class="k">when</span> (projection-maven--call-resolve-sources output-file)
+            (<span class="k">with-temp-buffer</span>
+              (insert-file-contents output-file)
+              (<span class="k">if</span> (search-forward-regexp (<span class="k">rx</span> <span class="s">"The following files have been resolved:"</span>) nil 'noerror)
+                  (<span class="k">while-let</span> ((resolved-source (projection-maven--next-resolved-source-line)))
+                    (<span class="k">cl-destructuring-bind</span> (group-id artifact-id artifact-format
+                                                     artifact-type version location)
+                        resolved-source
+                      (<span class="k">when</span> (<span class="k">and</span> (string-equal artifact-format <span class="s">"jar"</span>)
+                                 (string-equal artifact-type <span class="s">"sources"</span>))
+                        (message <span class="s">"Extracting %s"</span> location)
+                        (<span class="k">let</span> ((dest-dir (projection-maven--resolved-source-local-source-directory
+                                         group-id artifact-id version)))
+                          (make-directory dest-dir 'parents)
+                          (projection--shell-command-to-string
+                           (projection--join-shell-command
+                            `(<span class="s">"unzip"</span> <span class="s">"-d"</span> ,dest-dir <span class="s">"-o"</span> ,location)))))))
+                (<span class="w">error</span> <span class="s">"Unable to find start of resolved file list in output: %s"</span> (buffer-substring (point-min) (point-max)))))))
+      (delete-file output-file)
+      (projection-cache-clear-single
+       (projection--current-project 'no-error)
+       'projection-maven-local-source-directories
+       projection--project-cache))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

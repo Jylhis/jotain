@@ -1,0 +1,87 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sops--encrypt-and-write – Emacs Documentation Online</title>
+<meta name="description" content="sops--encrypt-and-write is a natively compiled function defined in
+sops.el.
+Encrypt current buffer via sops and write to the variable buffer-file-name.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sops--encrypt-and-write</code></h1><p><span class="m"><code>sops--encrypt-and-write</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">sops.el</span>.
+<h2>Signature</h2>
+<pre><code>(sops--encrypt-and-write)
+</code></pre>
+<h2>Documentation</h2>
+<p>Encrypt current buffer via sops and write to the variable <a class="v" href="../var/buffer-file-name.html"><code>buffer-file-name</code>(var)</a>/<a class="f" href="../fun/buffer-file-name.html"><code>buffer-file-name</code>(fun)</a>.
+<p>Return t on success.  Signals <a href="../fun/user-error.html"><code>user-error</code></a> on failure (aborts save).
+<p>Reads the full buffer (widened) so a narrowed buffer isn't silently
+truncated on save.  Suppresses backups (<a href="../var/make-backup-files.html"><code>make-backup-files</code></a>) around
+the write because ciphertext backups accumulate without recovery
+value -- the user can't usefully edit them manually.
+<p>After <a href="../fun/write-region.html"><code>write-region</code></a>, refreshes <a href="../fun/visited-file-modtime.html"><code>visited-file-modtime</code></a> so Emacs's
+modtime check (used by <a href="../fun/verify-visited-file-modtime.html"><code>verify-visited-file-modtime</code></a>) matches the
+file we just wrote.  Without this, the next edit triggers a
+<br>"FILE has changed on disk; really edit the buffer?" prompt
+<br>because <a href="../fun/find-file.html"><code>find-file</code></a> recorded the *encrypted* file's modtime and
+our write replaced it.
+<p>On the first successful save of a <a href="../fun/sops-find-file.html"><code>sops-find-file</code></a> 'creating
+buffer, transitions <span class="m"><code>sops--state.status</code></span> to 'decrypted so
+subsequent saves and reverts follow the normal v0.2 paths.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qkr1smn94fw9pj8qis6r47djxqbd30ki-emacs-packages-deps/share/emacs/site-lisp/elpa/sops-20260518.350/sops.el</span>
+(<span class="k">defun</span> <span class="f">sops--encrypt-and-write</span> ()
+  <span class="doc">"Encrypt current buffer via sops and write to the variable `</span><span class="m doc">buffer-file-name</span><span class="doc">'.
+Return t on success.  Signals `</span><span class="m doc">user-error</span><span class="doc">' on failure (aborts save).
+
+Reads the full buffer (widened) so a narrowed buffer isn't silently
+truncated on save.  Suppresses backups (`</span><span class="m doc">make-backup-files</span><span class="doc">') around
+the write because ciphertext backups accumulate without recovery
+value -- the user can't usefully edit them manually.
+
+After `</span><span class="m doc">write-region</span><span class="doc">', refreshes `</span><span class="m doc">visited-file-modtime</span><span class="doc">' so Emacs's
+modtime check (used by `</span><span class="m doc">verify-visited-file-modtime</span><span class="doc">') matches the
+file we just wrote.  Without this, the next edit triggers a
+\"FILE has changed on disk; really edit the buffer?\" prompt
+because `</span><span class="m doc">find-file</span><span class="doc">' recorded the *encrypted* file's modtime and
+our write replaced it.
+
+On the first successful save of a `</span><span class="m doc">sops-find-file</span><span class="doc">' </span><span class="bi doc">\\=</span><span class="doc">'creating
+buffer, transitions `</span><span class="m doc">sops--state.status</span><span class="doc">' to </span><span class="bi doc">\\=</span><span class="doc">'decrypted so
+subsequent saves and reverts follow the normal v0.2 paths."</span>
+  (run-hooks 'sops-before-encrypt-hook)
+  (<span class="k">let*</span> ((file buffer-file-name)
+         (input-type (sops--input-type-for file))
+         (args (append '(<span class="s">"encrypt"</span> <span class="s">"--filename-override"</span>)
+                       (list file)
+                       (<span class="k">when</span> input-type (list <span class="s">"--input-type"</span> input-type))
+                       (sops--maybe-output-type
+                        input-type sops-extra-encrypt-args)
+                       sops-extra-encrypt-args))
+         (result (sops--run args <span class="bi">:input</span> (<span class="k">save-restriction</span>
+                                          (widen)
+                                          (buffer-substring-no-properties
+                                           (point-min) (point-max)))))
+         (exit (plist-get result <span class="bi">:exit-status</span>))
+         (stdout (plist-get result <span class="bi">:stdout</span>)))
+    (<span class="k">cond</span>
+     ((not (eq 0 exit))
+      (sops--popup-error file args exit (plist-get result <span class="bi">:stderr</span>))
+      (<span class="w">user-error</span> <span class="s">"Sops encrypt failed (exit %d)"</span> exit))
+     ((zerop (length stdout))
+      (sops--popup-error file args exit <span class="s">"sops: encrypt produced empty output\n"</span>)
+      (<span class="w">user-error</span> <span class="s">"Sops encrypt produced empty output"</span>)))
+    (<span class="k">let</span> ((coding-system-for-write 'no-conversion)
+          (make-backup-files nil))
+      (write-region stdout nil file nil 'silent))
+    (set-visited-file-modtime)
+    (set-buffer-modified-p nil)
+    <span class="cd">;; </span><span class="c">First-save transition for sops-find-file's 'creating buffers.
+</span>    <span class="cd">;; </span><span class="c">After this, the buffer is indistinguishable from one decrypted
+</span>    <span class="cd">;; </span><span class="c">via the find-file-hook; reverts go through sops--revert-buffer.
+</span>    (<span class="k">when</span> (<span class="k">and</span> sops--state
+               (eq (sops-state-status sops--state) 'creating))
+      (<span class="k">setf</span> (sops-state-status sops--state) 'decrypted))
+    t))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

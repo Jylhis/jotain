@@ -1,0 +1,109 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--build-tool-call-approval-str-content – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--build-tool-call-approval-str-content is a natively compiled
+function defined in eca-chat.el.
+Build the tool call approval string for SESSION, ID and SPACING-LINE-PREFIX.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--build-tool-call-approval-str-content</code></h1><p><span class="m"><code>eca-chat--build-tool-call-approval-str-content</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--build-tool-call-approval-str-content <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=SESSION,-,ID"><span class="arg">ID</span></a> <a href="#:~:text=and-,SPACING-LINE-PREFIX"><span class="arg">SPACING-LINE-PREFIX</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=PREFIX.-,CHAT-ID"><span class="arg">CHAT-ID</span></a> <a href="#:~:text=calls.-,DETAILS"><span class="arg">DETAILS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Build the tool call approval string for <span class="arg">SESSION</span>, <span class="arg">ID</span> and <span class="arg">SPACING-LINE-PREFIX</span>.
+<p><span class="arg">CHAT-ID</span> overrides the buffer-local <a href="../var/eca-chat--id.html"><code>eca-chat--id</code></a> for the approval
+request, useful for subagent tool calls.
+<span class="arg">DETAILS</span> is the tool call details, used for shellCommand breakdowns to
+show which commands an approve &amp; remember would remember, hiding the
+remember action when nothing can be remembered.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--build-tool-call-approval-str-content</span> (session id spacing-line-prefix <span class="ty">&amp;optional</span> chat-id details)
+  <span class="doc">"Build the tool call approval string for SESSION, ID and SPACING-LINE-PREFIX.
+CHAT-ID overrides the buffer-local `</span><span class="m doc">eca-chat--id</span><span class="doc">' for the approval
+request, useful for subagent tool calls.
+DETAILS is the tool call details, used for shellCommand breakdowns to
+show which commands an approve &amp; remember would remember, hiding the
+remember action when nothing can be remembered."</span>
+  (<span class="k">let*</span> ((keybinding-for (<span class="k">lambda</span> (command)
+                           (concat <span class="s">"("</span>
+                                   (key-description (car (where-is-internal command eca-chat-mode-map)))
+                                   <span class="s">")"</span>)))
+         (effective-chat-id (<span class="k">or</span> chat-id eca-chat--id))
+         (shell-command? (string= <span class="s">"shellCommand"</span> (plist-get details <span class="bi">:type</span>)))
+         <span class="cd">;; </span><span class="c">Only the keys that would be newly remembered: already-remembered
+</span>         <span class="cd">;; </span><span class="c">commands are excluded from the label.
+</span>         (remember-keys (<span class="k">when</span> shell-command?
+                          (delete-dups
+                           (delq nil (mapcar (<span class="k">lambda</span> (cmd)
+                                               (<span class="k">-let*</span> (((<span class="ty">&amp;plist</span> <span class="bi">:approvalKey</span> approval-key <span class="bi">:remembered</span> remembered) cmd))
+                                                 (<span class="k">when</span> (<span class="k">and</span> approval-key (not remembered))
+                                                   approval-key)))
+                                             (plist-get details <span class="bi">:commands</span>))))))
+         <span class="cd">;; </span><span class="c">When remembering would save nothing new (no generalizable command,
+</span>         <span class="cd">;; </span><span class="c">or everything already remembered), hide the remember action.
+</span>         (hide-remember? (<span class="k">and</span> shell-command? (null remember-keys)))
+         (remember-suffix
+          (<span class="k">if</span> remember-keys
+              (concat (propertize <span class="s">" "</span> 'font-lock-face 'eca-chat-tool-call-approval-content-face)
+                      (mapconcat (<span class="k">lambda</span> (key)
+                                   (propertize key 'font-lock-face 'eca-chat--tool-call-argument-value-face))
+                                 remember-keys
+                                 (propertize <span class="s">", "</span> 'font-lock-face 'eca-chat-tool-call-approval-content-face))
+                      (propertize <span class="s">" "</span> 'font-lock-face 'eca-chat-tool-call-approval-content-face))
+            (propertize <span class="s">" for this session "</span>
+                        'font-lock-face 'eca-chat-tool-call-approval-content-face))))
+    (concat (propertize <span class="s">"\n"</span> 'font-lock-face 'eca-chat-tool-call-spacing-face)
+            (eca-buttonize
+             eca-chat-mode-map
+             (propertize <span class="s">"Accept"</span>
+                         'eca-tool-call-pending-approval-accept t
+                         'line-prefix spacing-line-prefix
+                         'font-lock-face 'eca-chat-tool-call-accept-face)
+             (<span class="k">lambda</span> ()
+               (eca-api-notify session
+                               <span class="bi">:method</span> <span class="s">"chat/toolCallApprove"</span>
+                               <span class="bi">:params</span> (list <span class="bi">:chatId</span> effective-chat-id
+                                             <span class="bi">:toolCallId</span> id))))
+            (propertize <span class="s">" "</span> 'font-lock-face 'eca-chat-tool-call-approval-content-face)
+            (propertize (funcall keybinding-for #'eca-chat-tool-call-accept-all)
+                        'font-lock-face 'eca-chat-tool-call-keybinding-face)
+            (<span class="k">unless</span> hide-remember?
+              (concat
+               (propertize <span class="s">"\n"</span> 'font-lock-face 'eca-chat-tool-call-spacing-face)
+               (eca-buttonize
+                eca-chat-mode-map
+                (propertize <span class="s">"Accept and remember"</span>
+                            'eca-tool-call-pending-approval-accept-and-remember t
+                            'line-prefix spacing-line-prefix
+                            'font-lock-face 'eca-chat-tool-call-accept-and-remember-face)
+                (<span class="k">lambda</span> ()
+                  (eca-api-notify session
+                                  <span class="bi">:method</span> <span class="s">"chat/toolCallApprove"</span>
+                                  <span class="bi">:params</span> (list <span class="bi">:chatId</span> effective-chat-id
+                                                <span class="bi">:save</span> <span class="s">"session"</span>
+                                                <span class="bi">:toolCallId</span> id))))
+               remember-suffix
+               (propertize (funcall keybinding-for #'eca-chat-tool-call-accept-all-and-remember)
+                           'font-lock-face 'eca-chat-tool-call-keybinding-face)))
+            (propertize <span class="s">"\n"</span> 'font-lock-face 'eca-chat-tool-call-spacing-face)
+            (eca-buttonize
+             eca-chat-mode-map
+             (propertize <span class="s">"Reject"</span>
+                         'eca-tool-call-pending-approval-reject t
+                         'line-prefix spacing-line-prefix
+                         'font-lock-face 'eca-chat-tool-call-reject-face)
+             (<span class="k">lambda</span> ()
+               (eca-api-notify session
+                               <span class="bi">:method</span> <span class="s">"chat/toolCallReject"</span>
+                               <span class="bi">:params</span> (list <span class="bi">:chatId</span> effective-chat-id
+                                             <span class="bi">:toolCallId</span> id))))
+            (propertize <span class="s">" and tell ECA what to do differently "</span>
+                        'font-lock-face 'eca-chat-tool-call-approval-content-face)
+            (propertize (funcall keybinding-for #'eca-chat-tool-call-reject-next)
+                        'font-lock-face 'eca-chat-tool-call-keybinding-face))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

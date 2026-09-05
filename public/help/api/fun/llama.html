@@ -1,0 +1,156 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: llama – Emacs Documentation Online</title>
+<meta name="description" content="llama is a macro defined in llama.el.
+Expand to a lambda expression that wraps around FN and BODY.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>llama</code></h1><p><span class="m"><code>llama</code></span> is a macro defined in <span class="bt">llama.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">llama</span> <a href="#:~:text=around-,FN"><span class="arg">FN</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=and-,BODY"><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Expand to a <a href="../fun/lambda.html"><code>lambda</code></a> expression that wraps around <span class="arg">FN</span> and <span class="arg">BODY</span>.
+<p>This macro provides a compact way to write short <a href="../fun/lambda.html"><code>lambda</code></a> expressions.
+It expands to a <a href="../fun/lambda.html"><code>lambda</code></a> expression, which calls the function <span class="arg">FN</span> with
+arguments <span class="arg">BODY</span> and returns its value.  The arguments of the <a href="../fun/lambda.html"><code>lambda</code></a>
+expression are derived from symbols found in <span class="arg">BODY</span>.
+<p>Each symbol from <span class="m"><code>%1</code></span> through <span class="m"><code>%9</code></span>, which appears in an unquoted part
+of <span class="arg">BODY</span>, specifies a mandatory argument.  Each symbol from <span class="m"><code>&amp;1</code></span> through
+<br><span class="m"><code>&amp;9</code></span>, which appears in an unquoted part of <span class="arg">BODY</span>, specifies an optional
+<br>argument.  The symbol <span class="m"><code>&amp;*</code></span> specifies extra (<span class="m"><code>&amp;rest</code></span>) arguments.
+<p>The shorter symbol <a href="../fun/%25.html"><code>%</code></a> can be used instead of <span class="m"><code>%1</code></span>, but using both in
+the same expression is not allowed.  Likewise <span class="m"><code>&amp;</code></span> can be used instead
+of <span class="m"><code>&amp;1</code></span>.  These shorthands are not recognized in function position.
+<p>To support binding forms that use a vector as VARLIST (such as <a href="../fun/-let.html"><code>-let</code></a>
+from the <span class="m"><code>dash</code></span> package), argument symbols are also detected inside of
+vectors.
+<p>The space between <a href="../fun/%23%23.html"><code>##</code></a> and <span class="arg">FN</span> can be omitted because <a href="../fun/%23%23.html"><code>##</code></a> is read-syntax
+for the symbol whose name is the empty string.  If you prefer you can
+place a space there anyway, and if you prefer to not use this somewhat
+magical symbol at all, you can instead use the alternative name <a href="../fun/llama.html"><code>llama</code></a>.
+<p>Instead of:
+<p>&nbsp;&nbsp;(<span class="k">lambda</span> (a <span class="ty">&amp;optional</span> _ c <span class="ty">&amp;rest</span> d)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;(foo a (bar c) d))
+<p>you can use this macro and write:
+<p>&nbsp;&nbsp;(##foo %1 (bar <span class="ty">&amp;3</span>) <span class="ty">&amp;*</span>)
+<p>which expands to:
+<p>&nbsp;&nbsp;(<span class="k">lambda</span> (%1 <span class="ty">&amp;optional</span> _&amp;2 <span class="ty">&amp;3</span> <span class="ty">&amp;rest</span> <span class="ty">&amp;*</span>)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;(foo %1 (bar <span class="ty">&amp;3</span>) <span class="ty">&amp;*</span>))
+<p>Unused trailing arguments and mandatory unused arguments at the border
+between mandatory and optional arguments are also supported:
+<p>&nbsp;&nbsp;(##list %1 _%3 <span class="ty">&amp;5</span> _&amp;6)
+<p>becomes:
+<p>&nbsp;&nbsp;(<span class="k">lambda</span> (%1 _%2 _%3 <span class="ty">&amp;optional</span> _&amp;4 <span class="ty">&amp;5</span> _&amp;6)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;(list %1 <span class="ty">&amp;5</span>))
+<p>Note how <span class="m"><code>_%3</code></span> and <span class="m"><code>_&amp;6</code></span> are removed from the body, because their names
+begin with an underscore.  Also note that <span class="m"><code>_&amp;4</code></span> is optional, unlike the
+explicitly specified <span class="m"><code>_%3</code></span>.
+<p>Consider enabling <a class="v" href="../var/llama-fontify-mode.html"><code>llama-fontify-mode</code>(var)</a>/<a class="f" href="../fun/llama-fontify-mode.html"><code>llama-fontify-mode</code>(fun)</a> to highlight <a href="../fun/%23%23.html"><code>##</code></a> and its
+special arguments.
+<h2>Aliases</h2>
+<p>
+<a href="../fun/%23%23.html"><code>##</code></a>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/llama-20260601.1455/llama.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defmacro</span> <span class="f">llama</span> (fn <span class="ty">&amp;rest</span> body)
+  <span class="doc">"Expand to a `</span><span class="m doc">lambda</span><span class="doc">' expression that wraps around FN and BODY.
+
+This macro provides a compact way to write short `</span><span class="m doc">lambda</span><span class="doc">' expressions.
+It expands to a `</span><span class="m doc">lambda</span><span class="doc">' expression, which calls the function FN with
+arguments BODY and returns its value.  The arguments of the `</span><span class="m doc">lambda</span><span class="doc">'
+expression are derived from symbols found in BODY.
+
+Each symbol from `</span><span class="m doc">%1</span><span class="doc">' through `</span><span class="m doc">%9</span><span class="doc">', which appears in an unquoted part
+of BODY, specifies a mandatory argument.  Each symbol from `</span><span class="m doc">&amp;1</span><span class="doc">' through
+`</span><span class="m doc">&amp;9</span><span class="doc">', which appears in an unquoted part of BODY, specifies an optional
+argument.  The symbol `</span><span class="m doc">&amp;*</span><span class="doc">' specifies extra (`</span><span class="m doc">&amp;rest</span><span class="doc">') arguments.
+
+The shorter symbol `</span><span class="m doc">%</span><span class="doc">' can be used instead of `</span><span class="m doc">%1</span><span class="doc">', but using both in
+the same expression is not allowed.  Likewise `</span><span class="m doc">&amp;</span><span class="doc">' can be used instead
+of `</span><span class="m doc">&amp;1</span><span class="doc">'.  These shorthands are not recognized in function position.
+
+To support binding forms that use a vector as VARLIST (such as `</span><span class="m doc">-let</span><span class="doc">'
+from the `</span><span class="m doc">dash</span><span class="doc">' package), argument symbols are also detected inside of
+vectors.
+
+The space between `##' and FN can be omitted because `##' is read-syntax
+for the symbol whose name is the empty string.  If you prefer you can
+place a space there anyway, and if you prefer to not use this somewhat
+magical symbol at all, you can instead use the alternative name `</span><span class="m doc">llama</span><span class="doc">'.
+
+Instead of:
+
+  (lambda (a &amp;optional _ c &amp;rest d)
+    (foo a (bar c) d))
+
+you can use this macro and write:
+
+  (##foo %1 (bar &amp;3) &amp;*)
+
+which expands to:
+
+  (lambda (%1 &amp;optional _&amp;2 &amp;3 &amp;rest &amp;*)
+    (foo %1 (bar &amp;3) &amp;*))
+
+Unused trailing arguments and mandatory unused arguments at the border
+between mandatory and optional arguments are also supported:
+
+  (##list %1 _%3 &amp;5 _&amp;6)
+
+becomes:
+
+  (lambda (%1 _%2 _%3 &amp;optional _&amp;4 &amp;5 _&amp;6)
+    (list %1 &amp;5))
+
+Note how `</span><span class="m doc">_%3</span><span class="doc">' and `</span><span class="m doc">_&amp;6</span><span class="doc">' are removed from the body, because their names
+begin with an underscore.  Also note that `</span><span class="m doc">_&amp;4</span><span class="doc">' is optional, unlike the
+explicitly specified `</span><span class="m doc">_%3</span><span class="doc">'.
+
+Consider enabling `</span><span class="m doc">llama-fontify-mode</span><span class="doc">' to highlight `##' and its
+special arguments."</span>
+  (<span class="k">cond</span> ((symbolp fn))
+        ((<span class="k">and</span> (eq (car-safe fn) backquote-backquote-symbol)
+              (not body))
+         (<span class="k">setq</span> body (cdr fn))
+         (<span class="k">setq</span> fn backquote-backquote-symbol))
+        ((<span class="w">signal</span> 'wrong-type-argument
+                 (list 'symbolp backquote-backquote-symbol fn))))
+  (<span class="k">let*</span> ((args (make-vector 10 nil))
+         (body (cdr (llama--collect (cons fn body) args)))
+         (rest (aref args 0))
+         (args (nreverse (cdr (append args nil))))
+         (args (<span class="k">progn</span> (<span class="k">while</span> (<span class="k">and</span> args (null (car args)))
+                        (<span class="k">setq</span> args (cdr args)))
+                      args))
+         (pos  (length args))
+         (opt  nil)
+         (args (mapcar
+                (<span class="k">lambda</span> (arg)
+                  (<span class="k">if</span> arg
+                      (<span class="k">setq</span> opt (string-match-p <span class="s">"\\`_?&amp;"</span> (symbol-name arg)))
+                    (<span class="k">setq</span> arg (intern (format <span class="s">"_%c%s"</span> (<span class="k">if</span> opt ?&amp; ?%) pos))))
+                  (<span class="k">setq</span> pos (1- pos))
+                  arg)
+                args))
+         (opt  nil)
+         (args (mapcar
+                (<span class="k">lambda</span> (symbol)
+                  (<span class="k">cond</span>
+                    ((string-match-p <span class="s">"\\`_?%"</span> (symbol-name symbol))
+                     (<span class="k">when</span> opt
+                       (<span class="w">error</span> <span class="s">"`</span><span class="m s">%s</span><span class="s">' cannot follow optional arguments"</span> symbol))
+                     (list symbol))
+                    (opt
+                     (list symbol))
+                    ((<span class="k">setq</span> opt t)
+                     (list '<span class="ty">&amp;optional</span> symbol))))
+                (nreverse args))))
+    `(<span class="k">lambda</span>
+       (,@(apply #'nconc args)
+        ,@(<span class="k">and</span> rest (list '<span class="ty">&amp;rest</span> rest)))
+       (,fn ,@body))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

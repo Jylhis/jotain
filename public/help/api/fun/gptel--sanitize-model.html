@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--sanitize-model – Emacs Documentation Online</title>
+<meta name="description" content="gptel--sanitize-model is a natively compiled function defined in
+gptel-request.el.
+Check if MODEL is available in BACKEND, adjust accordingly.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--sanitize-model</code></h1><p><span class="m"><code>gptel--sanitize-model</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--sanitize-model <span class="ty">&amp;key</span> (<a href="#:~:text=in-,BACKEND"><span class="arg">BACKEND</span></a> gptel-backend) (<a href="#:~:text=if-,MODEL"><span class="arg">MODEL</span></a> gptel-model) (<a href="#:~:text=If-,SHOOSH"><span class="arg">SHOOSH</span></a> t))
+</code></pre>
+<h2>Documentation</h2>
+<p>Check if <span class="arg">MODEL</span> is available in <span class="arg">BACKEND</span>, adjust accordingly.
+<p>If <span class="arg">SHOOSH</span> is true, don't issue a warning.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+(<span class="k">cl-defun</span> <span class="f">gptel--sanitize-model</span> (<span class="ty">&amp;key</span> (backend gptel-backend)
+                                      (model gptel-model)
+                                      (shoosh t))
+  <span class="doc">"Check if MODEL is available in BACKEND, adjust accordingly.
+
+If SHOOSH is true, don't issue a warning."</span>
+  (<span class="k">unless</span> backend
+    (<span class="k">setq</span> gptel-backend
+          (<span class="k">or</span> (cdar gptel--known-backends) <span class="cd">;</span><span class="c">First available backend
+</span>              (gptel-make-openai <span class="s">"ChatGPT"</span> <span class="bi">:key</span> 'gptel-api-key <span class="bi">:stream</span> t))
+          backend gptel-backend)
+    (<span class="k">unless</span> shoosh
+      (display-warning
+       'gptel (format <span class="s">"No gptel-backend defined: defaulting to %s"</span>
+                      (gptel-backend-name gptel-backend)))))
+  (<span class="k">let</span> ((available (gptel-backend-models backend)))
+    (<span class="k">when</span> (stringp model)
+      (<span class="k">unless</span> shoosh
+        (display-warning
+         'gptel
+         (format <span class="s">"`</span><span class="m s">gptel-model</span><span class="s">' expects a symbol, found string \"%s\"
+   Resetting `</span><span class="m s">gptel-model</span><span class="s">' to %s"</span>
+                 model model)))
+      (<span class="k">setq</span> gptel-model (gptel--intern model)
+            model gptel-model))
+    (<span class="k">unless</span> (member model available)
+      (<span class="k">let</span> ((fallback (car available)))
+        (<span class="k">unless</span> shoosh
+          (display-warning
+           'gptel
+           (format (concat <span class="s">"Preferred `</span><span class="m s">gptel-model</span><span class="s">' \"%s\" not"</span>
+                           <span class="s">"supported in \"%s\", using \"%s\" instead"</span>)
+                   model (gptel-backend-name backend) fallback)))
+        (<span class="k">setq</span> gptel-model fallback)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

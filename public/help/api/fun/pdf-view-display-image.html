@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-view-display-image – Emacs Documentation Online</title>
+<meta name="description" content="pdf-view-display-image is a natively compiled function defined in
+pdf-view.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-view-display-image</code></h1><p><span class="m"><code>pdf-view-display-image</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">pdf-view.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-view-display-image <span class="arg">IMAGE</span> <span class="arg">PAGE</span> <span class="ty">&amp;optional</span> <span class="arg">WINDOW</span> <span class="arg">INHIBIT-SLICE-P</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-view.el</span>
+(<span class="k">defun</span> <span class="f">pdf-view-display-image</span> (image page <span class="ty">&amp;optional</span> window inhibit-slice-p)
+  <span class="cd">;; </span><span class="c">TODO: write documentation!
+</span>  (<span class="k">if</span> pdf-view-roll-minor-mode
+      (pdf-roll-display-image
+       image page (<span class="k">or</span> window (selected-window)) inhibit-slice-p)
+    (<span class="k">let</span> ((ol (<span class="k">pdf-view-current-overlay</span> window)))
+      (<span class="k">when</span> (window-live-p (overlay-get ol 'window))
+        (<span class="k">let*</span> ((size (image-size image t))
+               (slice (<span class="k">if</span> (not inhibit-slice-p)
+                          (<span class="k">pdf-view-current-slice</span> window)))
+               (displayed-width (floor
+                                 (<span class="k">if</span> slice
+                                     (* (nth 2 slice)
+                                        (car (image-size image)))
+                                   (car (image-size image))))))
+          (<span class="k">setf</span> (<span class="k">pdf-view-current-image</span> window) image)
+          (move-overlay ol (point-min) (point-max))
+          <span class="cd">;; </span><span class="c">In case the window is wider than the image, center the image
+</span>          <span class="cd">;; </span><span class="c">horizontally.
+</span>          (overlay-put ol 'before-string
+                       (<span class="k">when</span> (&gt; (window-width window)
+                                displayed-width)
+                         (propertize <span class="s">" "</span> 'display
+                                     `(space <span class="bi">:align-to</span>
+                                       ,(/ (- (window-width window)
+                                              displayed-width) <span class="w">2)))))</span>
+          (overlay-put ol 'display
+                       (<span class="k">if</span> slice
+                           (list (cons 'slice
+                                       (pdf-util-scale slice size 'round))
+                                 image)
+                         image))
+          (<span class="k">let*</span> ((win (overlay-get ol 'window))
+                 (hscroll (image-mode-window-get 'hscroll win))
+                 (vscroll (image-mode-window-get 'vscroll win)))
+            <span class="cd">;; </span><span class="c">Reset scroll settings, in case they were changed.
+</span>            (<span class="k">if</span> hscroll (set-window-hscroll win hscroll))
+            (<span class="k">if</span> vscroll (set-window-vscroll
+                         win vscroll pdf-view-have-image-mode-pixel-vscroll))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

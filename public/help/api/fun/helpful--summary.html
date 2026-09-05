@@ -1,0 +1,143 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: helpful--summary – Emacs Documentation Online</title>
+<meta name="description" content="helpful--summary is a natively compiled function defined in
+helpful.el.
+Return a one sentence summary for SYM.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>helpful--summary</code></h1><p><span class="m"><code>helpful--summary</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">helpful.el</span>.
+<h2>Signature</h2>
+<pre><code>(helpful--summary <a href="#:~:text=for-,SYM"><span class="arg">SYM</span></a> <a href="#:~:text="><span class="arg">CALLABLE-P</span></a> <a href="#:~:text="><span class="arg">BUF</span></a> <a href="#:~:text="><span class="arg">POS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a one sentence summary for <span class="arg">SYM</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/al1y9rq93c50r6aqa0749m04ilfnar06-emacs-packages-deps/share/emacs/site-lisp/elpa/helpful-20250408.334/helpful.el</span>
+(<span class="k">defun</span> <span class="f">helpful--summary</span> (sym callable-p buf pos)
+  <span class="doc">"Return a one sentence summary for SYM."</span>
+  (<span class="k">-let*</span> ((primitive-p (helpful--primitive-p sym callable-p))
+          (canonical-sym (helpful--canonical-symbol sym callable-p))
+          (alias-p (not (eq canonical-sym sym)))
+          (alias-button
+           (<span class="k">if</span> callable-p
+               <span class="cd">;; </span><span class="c">Show a link to '</span><span class="m c">defalias</span><span class="c">' in the manual.
+</span>               (helpful--button
+                <span class="s">"function alias"</span>
+                'helpful-manual-button
+                'symbol 'defalias)
+             <span class="cd">;; </span><span class="c">Show a link to the variable aliases section in the
+</span>             <span class="cd">;; </span><span class="c">manual.
+</span>             (helpful--button
+              <span class="s">"alias"</span>
+              'helpful-info-button
+              'info-node <span class="s">"(elisp)Variable Aliases"</span>)))
+          (special-form-button
+           (helpful--button
+            <span class="s">"special form"</span>
+            'helpful-info-button
+            'info-node <span class="s">"(elisp)Special Forms"</span>))
+          (user-option-button
+           (helpful--button
+            <span class="s">"customizable"</span>
+            'helpful-info-button
+            'info-node <span class="s">"(elisp)Variable Definitions"</span>))
+          (keyboard-macro-button
+           (helpful--button
+            <span class="s">"keyboard macro"</span>
+            'helpful-info-button
+            'info-node <span class="s">"(elisp)Keyboard Macros"</span>))
+          (interactive-button
+           (helpful--button
+            <span class="s">"interactive"</span>
+            'helpful-info-button
+            'info-node <span class="s">"(elisp)Using Interactive"</span>))
+          (autoload-button
+           (helpful--button
+            <span class="s">"autoloaded"</span>
+            'helpful-info-button
+            'info-node <span class="s">"(elisp)Autoload"</span>))
+          (compiled-button
+           (helpful--button
+            <span class="s">"byte-compiled"</span>
+            'helpful-info-button
+            'info-node <span class="s">"(elisp)Byte Compilation"</span>))
+          (native-compiled-button
+           (helpful--button
+            <span class="s">"natively compiled"</span>
+            'helpful-describe-button
+            'symbol 'native-compile))
+          (buffer-local-button
+           (helpful--button
+            <span class="s">"buffer-local"</span>
+            'helpful-info-button
+            'info-node <span class="s">"(elisp)Buffer-Local Variables"</span>))
+          (autoloaded-p
+           (<span class="k">and</span> callable-p buf (helpful--autoloaded-p sym buf)))
+          (compiled-p
+           (<span class="k">and</span> callable-p (helpful--compiled-p sym)))
+          (native-compiled-p
+           (<span class="k">and</span> callable-p (helpful--native-compiled-p sym)))
+          (buttons
+           (list
+            (<span class="k">if</span> alias-p alias-button)
+            (<span class="k">if</span> (<span class="k">and</span> callable-p autoloaded-p) autoload-button)
+            (<span class="k">if</span> (<span class="k">and</span> callable-p (commandp sym)) interactive-button)
+            (<span class="k">if</span> compiled-p compiled-button)
+            (<span class="k">if</span> native-compiled-p native-compiled-button)
+            (<span class="k">if</span> (<span class="k">and</span> (not callable-p) (custom-variable-p sym))
+                user-option-button)
+            (<span class="k">if</span> (<span class="k">and</span> (not callable-p) (local-variable-if-set-p sym))
+                buffer-local-button)))
+          (description
+           (helpful--join-and (-non-nil buttons)))
+          (kind
+           (<span class="k">cond</span>
+            ((special-form-p sym)
+             special-form-button)
+            (alias-p
+             (format <span class="s">"for %s,"</span>
+                     (helpful--button
+                      (symbol-name canonical-sym)
+                      'helpful-describe-exactly-button
+                      'symbol canonical-sym
+                      'callable-p callable-p)))
+            ((not callable-p) <span class="s">"variable"</span>)
+            ((macrop sym) <span class="s">"macro"</span>)
+            ((helpful--kbd-macro-p sym) keyboard-macro-button)
+            (t <span class="s">"function"</span>)))
+          (defined
+            (<span class="k">cond</span>
+             (buf
+              (<span class="k">let</span> ((path (buffer-file-name buf)))
+                (<span class="k">if</span> path
+                    (format
+                     <span class="s">"defined in %s"</span>
+                     (helpful--navigate-button
+                      (file-name-nondirectory path) path pos))
+                  (format <span class="s">"defined in buffer %s"</span>
+                          (helpful--buffer-button buf pos)))))
+             (primitive-p
+              <span class="s">"defined in C source code"</span>)
+             ((helpful--kbd-macro-p sym) nil)
+             (t
+              <span class="s">"without a source file"</span>))))
+
+    (s-word-wrap
+     70
+     (format <span class="s">"%s is %s %s %s%s."</span>
+             (<span class="k">if</span> (symbolp sym)
+                 (helpful--format-symbol sym)
+               <span class="s">"This lambda"</span>)
+             (<span class="k">if</span> (string-match-p
+                  (<span class="k">rx</span> bos (<span class="k">or</span> <span class="s">"a"</span> <span class="s">"e"</span> <span class="s">"i"</span> <span class="s">"o"</span> <span class="s">"u"</span>))
+                  description)
+                 <span class="s">"an"</span>
+               <span class="s">"a"</span>)
+             description
+             kind
+             (<span class="k">if</span> defined (concat <span class="s">" "</span> defined) <span class="s">""</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

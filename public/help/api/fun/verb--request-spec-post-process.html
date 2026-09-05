@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb--request-spec-post-process – Emacs Documentation Online</title>
+<meta name="description" content="verb--request-spec-post-process is a natively compiled function
+defined in verb.el.
+Validate and prepare request spec RS to be used.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb--request-spec-post-process</code></h1><p><span class="m"><code>verb--request-spec-post-process</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">verb.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb--request-spec-post-process <a href="#:~:text=spec-,RS"><span class="arg">RS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Validate and prepare request spec <span class="arg">RS</span> to be used.
+<p>The following checks/preparations are run:
+<br>1) Check if <a href="../var/verb-base-headers.html"><code>verb-base-headers</code></a> needs to be applied.
+<br>2) Apply request mapping function, if one was specified.
+<br>3) Read any response mapping function, if one was specified.
+<br>4) Run validations with <a href="../fun/verb-request-spec-validate.html"><code>verb-request-spec-validate</code></a>.
+<p>After that, return <span class="arg">RS</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb.el</span>
+(<span class="k">defun</span> <span class="f">verb--request-spec-post-process</span> (rs)
+  <span class="doc">"Validate and prepare request spec RS to be used.
+
+The following checks/preparations are run:
+1) Check if `</span><span class="m doc">verb-base-headers</span><span class="doc">' needs to be applied.
+2) Apply request mapping function, if one was specified.
+3) Read any response mapping function, if one was specified.
+4) Run validations with `</span><span class="m doc">verb-request-spec-validate</span><span class="doc">'.
+
+After that, return RS."</span>
+  <span class="cd">;; </span><span class="c">Use `</span><span class="m c">verb-base-headers</span><span class="c">' if necessary.
+</span>  (<span class="k">when</span> verb-base-headers
+    (<span class="k">setq</span> rs (verb-request-spec-override
+              (verb-request-spec <span class="bi">:headers</span> verb-base-headers
+                                 <span class="bi">:url</span> (verb--request-spec-url-origin rs))
+              rs)))
+  <span class="cd">;; </span><span class="c">Apply the request mapping function, if present.
+</span>  (<span class="k">when-let</span> ((form (verb--request-spec-metadata-get rs <span class="s">"map-request"</span>))
+             (fn (verb--try-read-fn-form form)))
+    (<span class="k">if</span> (functionp fn)
+        (<span class="k">setq</span> rs (funcall fn rs))
+      (<span class="w">user-error</span> <span class="s">"`</span><span class="m s">%s</span><span class="s">' is not a valid request mapping function"</span> fn))
+    (<span class="k">unless</span> (verb--object-of-class-p rs 'verb-request-spec)
+      (<span class="w">user-error</span> (concat <span class="s">"Request mapping function `</span><span class="m s">%s</span><span class="s">' must return a "</span>
+                          <span class="s">"`</span><span class="m s">verb-request-spec</span><span class="s">' value"</span>)
+                  fn)))
+  <span class="cd">;; </span><span class="c">Read the response mapping function, if present.
+</span>  (<span class="k">when-let</span> ((form (verb--request-spec-metadata-get rs <span class="s">"map-response"</span>))
+             (fn (verb--try-read-fn-form form)))
+    (<span class="k">if</span> (functionp fn)
+        (verb--request-spec-metadata-set rs <span class="s">"map-response"</span> fn)
+      (<span class="w">user-error</span> <span class="s">"`</span><span class="m s">%s</span><span class="s">' is not a valid response mapping function"</span> fn)))
+  <span class="cd">;; </span><span class="c">Validate and return.
+</span>  (verb-request-spec-validate rs))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

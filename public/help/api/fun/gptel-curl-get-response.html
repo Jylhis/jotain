@@ -1,0 +1,101 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-curl-get-response – Emacs Documentation Online</title>
+<meta name="description" content="gptel-curl-get-response is a natively compiled function defined in
+gptel-request.el.
+Fetch response to prompt in state FSM from the LLM using Curl.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-curl-get-response</code></h1><p><span class="m"><code>gptel-curl-get-response</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-curl-get-response <a href="#:~:text=state-,FSM"><span class="arg">FSM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Fetch response to prompt in state <span class="arg">FSM</span> from the LLM using Curl.
+<p><span class="arg">FSM</span> is the state machine driving this request.
+<p><span class="arg">FSM</span> is the state machine driving this request.  Its INFO slot
+contains the data required for setting up the request.  INFO is a
+plist with the following keys, among others:
+<br>- :data     (the data being sent)
+<br>- :buffer   (the gptel buffer)
+<br>- :position (marker at which to insert the response).
+<br>- :callback (optional, the request callback)
+<p>Call CALLBACK with the response and INFO afterwards.  If omitted
+the response is inserted into the current buffer after point.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">gptel-curl-get-response</span> (fsm)
+  <span class="doc">"Fetch response to prompt in state FSM from the LLM using Curl.
+
+FSM is the state machine driving this request.
+
+FSM is the state machine driving this request.  Its INFO slot
+contains the data required for setting up the request.  INFO is a
+plist with the following keys, among others:
+- :data     (the data being sent)
+- :buffer   (the gptel buffer)
+- :position (marker at which to insert the response).
+- :callback (optional, the request callback)
+
+Call CALLBACK with the response and INFO afterwards.  If omitted
+the response is inserted into the current buffer after point."</span>
+  (<span class="k">let*</span> ((uuid (md5 (format <span class="s">"%s%s%s%s"</span> (random)
+                            (emacs-pid) (user-full-name) (recent-keys))))
+         (info (gptel-fsm-info fsm))
+         (backend (plist-get info <span class="bi">:backend</span>))
+         (stream (plist-get info <span class="bi">:stream</span>))
+         (command (nconc (list (gptel--curl-path))
+                         (gptel-curl--get-config-args info)
+                         (list <span class="s">"--config"</span> <span class="s">"-"</span>)))
+         (process (make-process
+                   <span class="bi">:name</span> <span class="s">"gptel-curl"</span>
+                   <span class="bi">:buffer</span> (<span class="k">gptel--temp-buffer</span> <span class="s">" *gptel-curl*"</span>)
+                   <span class="bi">:command</span> command
+                   <span class="bi">:connection-type</span> 'pipe)))
+    (<span class="k">when</span> (eq gptel-log-level 'debug)
+      (gptel--log (format <span class="s">"%s"</span> command) <span class="s">"request command"</span>))
+    (<span class="k">with-current-buffer</span> (process-buffer process)
+      (<span class="k">cond</span>
+       ((eq (gptel-backend-coding-system backend) 'binary)
+        <span class="cd">;; </span><span class="c">set-buffer-file-coding-system is not needed since we don't save this buffer
+</span>        (set-buffer-multibyte nil)
+        (set-process-coding-system process 'binary 'binary))
+       (t
+        <span class="cd">;; </span><span class="c">Don't try to convert cr-lf to cr on Windows so that curl's "header size
+</span>        <span class="cd">;; </span><span class="c">in bytes" stays correct. Explicitly set utf-8 for non-win systems too,
+</span>        <span class="cd">;; </span><span class="c">for cases when buffer coding system is not set to utf-8.
+</span>        (set-process-coding-system process 'utf-8-unix 'utf-8-unix)))
+      (set-process-query-on-exit-flag process nil)
+      (process-send-string process (gptel-curl--get-config info uuid))
+      (process-send-eof process)
+      (<span class="k">if</span> (plist-get info <span class="bi">:uuid</span>)        <span class="cd">;</span><span class="c">not the first run, set only the uuid
+</span>          (plist-put info <span class="bi">:uuid</span> uuid)
+        (<span class="k">setf</span> (gptel-fsm-info fsm)      <span class="cd">;</span><span class="c">fist run, set all process parameters
+</span>              (nconc (list <span class="bi">:uuid</span> uuid
+                           <span class="bi">:transformer</span>
+                           (<span class="k">when</span> (<span class="k">with-current-buffer</span> (plist-get info <span class="bi">:buffer</span>)
+                                   (<span class="k">and</span> (derived-mode-p 'org-mode)
+                                        gptel-org-convert-response))
+                             (gptel--stream-convert-markdown-&gt;org
+                              (plist-get info <span class="bi">:position</span>))))
+                     (<span class="k">unless</span> (plist-get info <span class="bi">:callback</span>)
+                       (list <span class="bi">:callback</span> (<span class="k">if</span> stream
+                                           #'gptel-curl--stream-insert-response
+                                         #'gptel--insert-response)))
+                     info)))
+      (<span class="k">if</span> stream
+          (<span class="k">progn</span> (set-process-sentinel process #'gptel-curl--stream-cleanup)
+                 (set-process-filter process #'gptel-curl--stream-filter))
+        (set-process-sentinel process #'gptel-curl--sentinel))
+      (<span class="k">setf</span> (alist-get process gptel--request-alist)
+            (cons fsm
+                  #'(<span class="k">lambda</span> ()
+                      <span class="cd">;; </span><span class="c">Clean up Curl process
+</span>                      (set-process-sentinel process #'ignore)
+                      (delete-process process)
+                      (kill-buffer (process-buffer process))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

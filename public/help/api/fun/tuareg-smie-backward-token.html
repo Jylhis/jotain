@@ -1,0 +1,103 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg-smie-backward-token – Emacs Documentation Online</title>
+<meta name="description" content="tuareg-smie-backward-token is a natively compiled function defined in
+tuareg.el.
+Move point to the beginning of the previous token and return its SMIE name.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg-smie-backward-token</code></h1><p><span class="m"><code>tuareg-smie-backward-token</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg-smie-backward-token)
+</code></pre>
+<h2>Documentation</h2>
+<p>Move point to the beginning of the previous token and return its SMIE name.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg-smie-backward-token</span> ()
+  <span class="doc">"Move point to the beginning of the previous token and return its SMIE name."</span>
+  (<span class="k">let</span> ((tok (tuareg-smie--backward-token)))
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">Distinguish a let expression from a let declaration.
+</span>     ((equal tok <span class="s">"let"</span>) (tuareg-smie--let-disambiguate))
+     ((equal <span class="s">".&lt;.~"</span> tok) (forward-char 2) <span class="s">".~"</span>) <span class="cd">;</span><span class="c">FIXME: Likely too ad-hoc!
+</span>     <span class="cd">;; </span><span class="c">Handle "let module" and friends.
+</span>     ((member tok '(<span class="s">"module"</span> <span class="s">"class"</span> <span class="s">"open"</span>))
+      (<span class="k">let</span> ((prev (<span class="k">save-excursion</span> (tuareg-smie--backward-token))))
+        (<span class="k">cond</span>
+         ((equal prev <span class="s">"let"</span>) (concat <span class="s">"l-"</span> tok))
+         ((<span class="k">and</span> (member prev '(<span class="s">"with"</span> <span class="s">"and"</span>)) (equal tok <span class="s">"module"</span>)) <span class="s">"w-module"</span>)
+         (t tok))))
+     <span class="cd">;; </span><span class="c">Distinguish a "type -&gt;" from a "case -&gt;".
+</span>     ((equal tok <span class="s">"-&gt;"</span>)
+      (<span class="k">save-excursion</span>
+        (<span class="k">let</span> (nearest)
+          (<span class="k">while</span> (<span class="k">progn</span>
+                   (<span class="k">setq</span> nearest (tuareg-smie--search-backward
+                                  '(<span class="s">"with"</span> <span class="s">"|"</span> <span class="s">"fun"</span> <span class="s">"function"</span> <span class="s">"functor"</span>
+                                    <span class="s">"type"</span> <span class="s">":"</span> <span class="s">"of"</span>)))
+                   (<span class="k">and</span> (equal nearest <span class="s">":"</span>)
+                        (tuareg-smie--label-colon-p))))
+          (<span class="k">if</span> (member nearest '(<span class="s">"with"</span> <span class="s">"|"</span> <span class="s">"fun"</span> <span class="s">"function"</span> <span class="s">"functor"</span>))
+              tok <span class="s">"t-&gt;"</span>))))
+     <span class="cd">;; </span><span class="c">Handle "module type", "class type", mod-constraint's "with/and type"
+</span>     <span class="cd">;; </span><span class="c">and polymorphic syntax.
+</span>     ((equal tok <span class="s">"type"</span>)
+      (<span class="k">save-excursion</span>
+        (<span class="k">let</span> ((prev (tuareg-smie--backward-token)))
+          (<span class="k">cond</span> ((equal prev <span class="s">"module"</span>) <span class="s">"m-type"</span>)
+                ((equal prev <span class="s">"class"</span>) <span class="s">"c-type"</span>)
+                ((member prev '(<span class="s">"and"</span> <span class="s">"with"</span>)) <span class="s">"w-type"</span>)
+                ((equal prev <span class="s">":"</span>) <span class="s">"d-type"</span>)<span class="cd">; </span><span class="c">": type a. ..."
+</span>                (t tok)))))
+     <span class="cd">;; </span><span class="c">Disambiguate mod-constraint's "and" and "with".
+</span>     ((member tok '(<span class="s">"with"</span> <span class="s">"and"</span>))
+      (<span class="k">save-excursion</span>
+        (tuareg-smie--forward-token)
+        (<span class="k">if</span> (member (tuareg-smie--forward-token) '(<span class="s">"type"</span> <span class="s">"module"</span>))
+            (concat <span class="s">"m-"</span> tok) tok)))
+     <span class="cd">;; </span><span class="c">Distinguish a defining = from a comparison-=.
+</span>     ((equal tok <span class="s">"="</span>)
+      (tuareg-smie--=-disambiguate))
+     ((equal tok <span class="s">":="</span>) (tuareg-smie--:=-disambiguate))
+     ((zerop (length tok))
+      (<span class="k">if</span> (not (<span class="k">and</span> (memq (char-before) '(?\} ?\]))
+                    (<span class="k">save-excursion</span> (forward-char -2)
+                                    (looking-at <span class="s">"&gt;}</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">|\\]"</span>))))
+          tok
+        (goto-char (match-beginning 0))
+        (match-string 0)))
+     ((<span class="k">and</span> (equal tok <span class="s">"|"</span>) (eq (char-before) ?\[)) (forward-char -1) <span class="s">"[|"</span>)
+     ((<span class="k">and</span> (equal tok <span class="s">"&lt;"</span>) (eq (char-before) ?\{)) (forward-char -1) <span class="s">"{&lt;"</span>)
+     ((equal tok <span class="s">"|"</span>)
+      <span class="cd">;; </span><span class="c">Check if it's the | of an or-pattern, since it has a slightly
+</span>      <span class="cd">;; </span><span class="c">different precedence (see Issue #71 for an example).
+</span>      (<span class="k">if</span> (tuareg-smie--|-or-p) <span class="s">"|-or"</span> <span class="s">"|"</span>))
+     <span class="cd">;; </span><span class="c">Some infix operators get a precedence based on their prefix, so we
+</span>     <span class="cd">;; </span><span class="c">collapse them into a canonical representative.
+</span>     <span class="cd">;; </span><span class="c">See https://v2.ocaml.org/manual/expr.html.
+</span>     ((memq (aref tok 0) '(?* ?/ ?% ?+ ?- ?@ ?^ ?= ?&lt; ?&gt; ?| ?&amp; ?$))
+      (<span class="k">cond</span>
+       ((member tok '(<span class="s">"|"</span> <span class="s">"||"</span> <span class="s">"&amp;"</span> <span class="s">"&amp;&amp;"</span> <span class="s">"&lt;-"</span> <span class="s">"-&gt;"</span> <span class="s">"&gt;."</span>)) tok)
+       ((<span class="k">and</span> (eq (aref tok 0) ?*) (&gt; (length tok) 1) (eq (aref tok 1) ?*))
+        <span class="s">"**…"</span>)
+       (t (string (aref tok 0) ?…))))
+     ((equal tok <span class="s">":"</span>)
+      (<span class="k">let</span> ((pos (point)))
+        (<span class="k">if</span> (tuareg-smie--label-colon-p)
+            <span class="s">"label:"</span>
+          (goto-char pos)
+          tok)))
+     ((equal tok <span class="s">"exception"</span>)
+      (<span class="k">let</span> ((back-tok (<span class="k">save-excursion</span> (tuareg-smie--backward-token))))
+        (<span class="k">cond</span>
+         ((member back-tok '(<span class="s">"|"</span> <span class="s">"with"</span>)) <span class="s">"exception-case"</span>)
+         ((equal back-tok <span class="s">"let"</span>) <span class="s">"exception-let"</span>)
+         (t tok))))
+     ((string-match-p <span class="s">"\\`[[:alpha:]_].*\\.\\'"</span>  tok)
+      (forward-char (1- (length tok))) <span class="s">"."</span>)
+     (t tok))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

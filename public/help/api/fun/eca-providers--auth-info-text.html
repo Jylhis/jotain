@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-providers--auth-info-text – Emacs Documentation Online</title>
+<meta name="description" content="eca-providers--auth-info-text is a natively compiled function defined
+in eca-providers.el.
+Build the auth info line text from AUTH plist.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-providers--auth-info-text</code></h1><p><span class="m"><code>eca-providers--auth-info-text</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-providers.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-providers--auth-info-text <a href="#:~:text=from-,AUTH"><span class="arg">AUTH</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Build the auth info line text from <span class="arg">AUTH</span> plist.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-providers.el</span>
+(<span class="k">defun</span> <span class="f">eca-providers--auth-info-text</span> (auth)
+  <span class="doc">"Build the auth info line text from AUTH plist."</span>
+  (<span class="k">let</span> ((status (plist-get auth <span class="bi">:status</span>))
+        (type (plist-get auth <span class="bi">:type</span>))
+        (mode (plist-get auth <span class="bi">:mode</span>))
+        (source (plist-get auth <span class="bi">:source</span>))
+        (expires-at (plist-get auth <span class="bi">:expiresAt</span>))
+        (env-var (plist-get auth <span class="bi">:envVar</span>)))
+    (<span class="k">cond</span>
+     ((string= status <span class="s">"local"</span>) nil)
+     ((string= status <span class="s">"unauthenticated"</span>) nil)
+     (t
+      (<span class="k">let</span> ((parts '()))
+        (<span class="k">when</span> mode (<span class="k">push</span> (capitalize mode) parts))
+        (<span class="k">when</span> (<span class="k">and</span> type (not mode))
+          (<span class="k">push</span> (<span class="k">if</span> (string= type <span class="s">"oauth"</span>) <span class="s">"OAuth"</span> <span class="s">"API Key"</span>) parts))
+        (<span class="k">cond</span>
+         ((<span class="k">and</span> (string= source <span class="s">"env"</span>) env-var)
+          (<span class="k">push</span> (format <span class="s">"(env: %s)"</span> env-var) parts))
+         ((string= source <span class="s">"config"</span>) (<span class="k">push</span> <span class="s">"(config)"</span> parts))
+         ((string= source <span class="s">"login"</span>) (<span class="k">push</span> <span class="s">"(login)"</span> parts)))
+        (<span class="k">when</span> expires-at
+          (<span class="k">let</span> ((diff (- expires-at (float-time))))
+            (<span class="k">when</span> (&gt; diff 0)
+              (<span class="k">cond</span>
+               ((&lt;= diff 3600)
+                (<span class="k">push</span> (format <span class="s">"expires in %dm"</span> (max 1 (/ (round diff) 60))) parts))
+               ((&lt;= diff 86400)
+                (<span class="k">push</span> (format <span class="s">"expires in %dh"</span> (/ (round diff) 3600)) parts))
+               (t
+                (<span class="k">push</span> (format <span class="s">"expires in %dd"</span> (/ (round diff) 86400)) parts))))))
+        (<span class="k">when</span> (<span class="k">and</span> (string= status <span class="s">"authenticated"</span>) (not expires-at))
+          (<span class="k">push</span> <span class="s">"active"</span> parts))
+        (string-join (nreverse parts) <span class="s">" · "</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

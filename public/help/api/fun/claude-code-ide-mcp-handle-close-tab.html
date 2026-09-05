@@ -1,0 +1,103 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp-handle-close-tab – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp-handle-close-tab is a natively compiled function
+defined in claude-code-ide-mcp-handlers.el.
+Close a tab/buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp-handle-close-tab</code></h1><p><span class="m"><code>claude-code-ide-mcp-handle-close-tab</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide-mcp-handlers.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp-handle-close-tab <a href="#:~:text=buffer.-,ARGUMENTS"><span class="arg">ARGUMENTS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Close a tab/buffer.
+<p><span class="arg">ARGUMENTS</span> should contain <span class="m"><code>path</code></span> or <span class="m"><code>tab_name</code></span> of the file to close.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp-handlers.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp-handle-close-tab</span> (arguments)
+  <span class="doc">"Close a tab/buffer.
+ARGUMENTS should contain `</span><span class="m doc">path</span><span class="doc">' or `</span><span class="m doc">tab_name</span><span class="doc">' of the file to close."</span>
+  (<span class="k">let</span> ((path (alist-get 'path arguments))
+        (tab-name (alist-get 'tab_name arguments)))
+    (<span class="k">cond</span>
+     (path
+      (<span class="k">let</span> ((buffer (find-buffer-visiting path)))
+        (<span class="k">if</span> buffer
+            (<span class="k">progn</span>
+              (kill-buffer buffer)
+              <span class="cd">;; </span><span class="c">Return in VS Code format
+</span>              (list `((type . <span class="s">"text"</span>)
+                      (text . <span class="s">"TAB_CLOSED"</span>))))
+          <span class="cd">;; </span><span class="c">Error case
+</span>          (<span class="w">signal</span> 'mcp-error (list (format <span class="s">"No buffer visiting %s"</span> path))))))
+     (tab-name
+      <span class="cd">;; </span><span class="c">Check if it's a diff tab first - need to check all sessions
+</span>      (<span class="k">let*</span> ((found-session nil)
+             (found-diff-info nil))
+        <span class="cd">;; </span><span class="c">Search all sessions for this diff tab
+</span>        (<span class="k">catch</span> '<span class="m">found</span>
+          (maphash (<span class="k">lambda</span> (_proj-dir session)
+                     (<span class="k">let*</span> ((session-diffs (claude-code-ide-mcp-session-active-diffs session))
+                            (diff-info (gethash tab-name session-diffs)))
+                       (<span class="k">when</span> diff-info
+                         (<span class="k">setq</span> found-session session
+                               found-diff-info diff-info)
+                         (<span class="k">throw</span> '<span class="m">found</span> t))))
+                   claude-code-ide-mcp--sessions))
+        (<span class="k">if</span> found-diff-info
+            (<span class="k">progn</span>
+              <span class="cd">;; </span><span class="c">Check if ediff is still active and quit it using stored control buffer
+</span>              (<span class="k">when-let</span> ((control-buf (alist-get 'control-buffer found-diff-info)))
+                (<span class="k">when</span> (buffer-live-p control-buf)
+                  <span class="cd">;; </span><span class="c">Set a flag in diff-info to indicate this quit is from Claude
+</span>                  (<span class="k">setf</span> (alist-get 'quit-from-claude found-diff-info) t)
+                  <span class="cd">;; </span><span class="c">Store all ediff buffer references in diff-info before quitting
+</span>                  (<span class="k">with-current-buffer</span> control-buf
+                    (<span class="k">when</span> (<span class="k">and</span> (boundp 'ediff-error-buffer) ediff-error-buffer)
+                      (<span class="k">setf</span> (alist-get 'error-buffer found-diff-info) ediff-error-buffer))
+                    (<span class="k">when</span> (<span class="k">and</span> (boundp 'ediff-diff-buffer) ediff-diff-buffer)
+                      (<span class="k">setf</span> (alist-get 'diff-buffer found-diff-info) ediff-diff-buffer))
+                    (<span class="k">when</span> (<span class="k">and</span> (boundp 'ediff-fine-diff-buffer) ediff-fine-diff-buffer)
+                      (<span class="k">setf</span> (alist-get 'fine-diff-buffer found-diff-info) ediff-fine-diff-buffer))
+                    (<span class="k">when</span> (<span class="k">and</span> (boundp 'ediff-custom-diff-buffer) ediff-custom-diff-buffer)
+                      (<span class="k">setf</span> (alist-get 'custom-diff-buffer found-diff-info) ediff-custom-diff-buffer)))
+                  (puthash tab-name found-diff-info (claude-code-ide-mcp-session-active-diffs found-session))
+                  <span class="cd">;; </span><span class="c">Use ediff's proper quit mechanism if available
+</span>                  (<span class="k">condition-case</span> err
+                      (<span class="k">if</span> (fboundp 'ediff-really-quit)
+                          <span class="cd">;; </span><span class="c">Properly quit ediff which will run our quit hooks
+</span>                          (<span class="k">with-current-buffer</span> control-buf
+                            (ediff-really-quit nil))
+                        <span class="cd">;; </span><span class="c">Fallback: just kill the control buffer
+</span>                        (kill-buffer control-buf))
+                    (<span class="w">error</span>
+                     <span class="cd">;; </span><span class="c">If ediff-really-quit fails (e.g., side window issues),
+</span>                     <span class="cd">;; </span><span class="c">just kill the control buffer directly
+</span>                     (<span class="k">claude-code-ide-debug</span> <span class="s">"Error quitting ediff: %s. Killing control buffer directly."</span>
+                                            (error-message-string err))
+                     (<span class="k">when</span> (buffer-live-p control-buf)
+                       (kill-buffer control-buf))))))
+
+              <span class="cd">;; </span><span class="c">Clean up the diff buffers with the found session
+</span>              (claude-code-ide-mcp--cleanup-diff tab-name found-session)
+
+              <span class="cd">;; </span><span class="c">Return in VS Code format
+</span>              (list `((type . <span class="s">"text"</span>)
+                      (text . <span class="s">"TAB_CLOSED"</span>))))
+          <span class="cd">;; </span><span class="c">Not a diff - treat tab_name as buffer name
+</span>          (<span class="k">let</span> ((buffer (get-buffer tab-name)))
+            (<span class="k">if</span> buffer
+                (<span class="k">progn</span>
+                  (kill-buffer buffer)
+                  <span class="cd">;; </span><span class="c">Return in VS Code format
+</span>                  (list `((type . <span class="s">"text"</span>)
+                          (text . <span class="s">"TAB_CLOSED"</span>))))
+              <span class="cd">;; </span><span class="c">Error case - VS Code returns isError: true
+</span>              (<span class="w">signal</span> 'mcp-error (list (format <span class="s">"No buffer named %s"</span> tab-name))))))))
+     (t
+      (<span class="w">signal</span> 'mcp-error '(<span class="s">"Either '</span><span class="m s">path</span><span class="s">' or '</span><span class="m s">tab_name</span><span class="s">' must be provided"</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

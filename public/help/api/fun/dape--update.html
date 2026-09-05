@@ -1,0 +1,42 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--update – Emacs Documentation Online</title>
+<meta name="description" content="dape--update is a natively compiled function defined in dape.el.
+Update adapter CONN data and UI.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--update</code></h1><p><span class="m"><code>dape--update</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--update <a href="#:~:text=adapter-,CONN"><span class="arg">CONN</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=Use-,INVALIDATE"><span class="arg">INVALIDATE</span></a> <a href="#:~:text=If-,DISPLAY-SOURCE-P"><span class="arg">DISPLAY-SOURCE-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update adapter <span class="arg">CONN</span> data and UI.
+<p>Use <span class="arg">INVALIDATE</span> to invalidate <span class="m"><code>stack-frames</code></span> or <span class="m"><code>variables</code></span>.
+If <span class="arg">DISPLAY-SOURCE-P</span> is non-nil, display displayable top frame.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--update</span> (conn <span class="ty">&amp;optional</span> invalidate display-source-p)
+  <span class="doc">"Update adapter CONN data and UI.
+Use INVALIDATE to invalidate `</span><span class="m doc">stack-frames</span><span class="doc">' or `</span><span class="m doc">variables</span><span class="doc">'.
+If DISPLAY-SOURCE-P is non-nil, display displayable top frame."</span>
+  <span class="cd">;; </span><span class="c">Invalidate parts of each thread's data
+</span>  (<span class="k">when</span> invalidate
+    (<span class="k">dolist</span> (thread (dape--threads conn))
+      (<span class="k">pcase</span> invalidate
+        ('stack-frames
+         (<span class="k">setf</span> (plist-get thread <span class="bi">:stackFrames</span>) nil
+               (plist-get thread <span class="bi">:totalFrames</span>) nil))
+        ('variables
+         (<span class="k">dolist</span> (frame (plist-get thread <span class="bi">:stackFrames</span>))
+           (<span class="k">setf</span> (plist-get frame <span class="bi">:scopes</span>) nil))))))
+  <span class="cd">;; </span><span class="c">Hydrate current thread's data (unless cached)
+</span>  (<span class="k">dape--with-request</span> (dape--stack-trace conn (dape--current-thread conn) 1)
+    (<span class="k">when</span> display-source-p
+      <span class="cd">;; </span><span class="c">Display source ASAP (top frame has just been acquired)
+</span>      (dape--stack-frame-display conn))
+    (<span class="k">dape--with-request</span> (dape--scopes conn (dape--current-stack-frame conn))
+      <span class="cd">;; </span><span class="c">Scopes buffers needs scopes in place... for some reason
+</span>      (run-hooks 'dape-update-ui-hook))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

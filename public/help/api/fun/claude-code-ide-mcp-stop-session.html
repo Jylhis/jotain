@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp-stop-session – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp-stop-session is a natively compiled function
+defined in claude-code-ide-mcp.el.
+Stop the MCP session for PROJECT-DIR.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp-stop-session</code></h1><p><span class="m"><code>claude-code-ide-mcp-stop-session</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide-mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp-stop-session <a href="#:~:text=for-,PROJECT-DIR"><span class="arg">PROJECT-DIR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Stop the MCP session for <span class="arg">PROJECT-DIR</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp-stop-session</span> (project-dir)
+  <span class="doc">"Stop the MCP session for PROJECT-DIR."</span>
+  (<span class="k">when-let</span> ((session (gethash project-dir claude-code-ide-mcp--sessions)))
+    (<span class="k">claude-code-ide-debug</span> <span class="s">"Stopping MCP session for %s"</span> project-dir)
+
+    <span class="cd">;; </span><span class="c">Close server and client
+</span>    (<span class="k">when-let</span> ((server (claude-code-ide-mcp-session-server session)))
+      (websocket-server-close server))
+
+    <span class="cd">;; </span><span class="c">Stop timers
+</span>    (<span class="k">when-let</span> ((ping-timer (claude-code-ide-mcp-session-ping-timer session)))
+      (cancel-timer ping-timer))
+    (<span class="k">when-let</span> ((sel-timer (claude-code-ide-mcp-session-selection-timer session)))
+      (cancel-timer sel-timer))
+
+    <span class="cd">;; </span><span class="c">Remove lockfile
+</span>    (<span class="k">when-let</span> ((port (claude-code-ide-mcp-session-port session)))
+      (<span class="k">claude-code-ide-debug</span> <span class="s">"Removing lockfile for port %d"</span> port)
+      (claude-code-ide-mcp--remove-lockfile port))
+
+    <span class="cd">;; </span><span class="c">Remove session from registry
+</span>    (remhash project-dir claude-code-ide-mcp--sessions)
+
+    <span class="cd">;; </span><span class="c">Invalidate cache in all buffers that belong to this project
+</span>    (<span class="k">dolist</span> (buffer (buffer-list))
+      (<span class="k">with-current-buffer</span> buffer
+        (<span class="k">when</span> (<span class="k">and</span> claude-code-ide-mcp--buffer-project-cache
+                   (string= claude-code-ide-mcp--buffer-project-cache project-dir))
+          (claude-code-ide-mcp--invalidate-buffer-cache))))
+
+    <span class="cd">;; </span><span class="c">Remove hooks if no more sessions
+</span>    (<span class="k">when</span> (= 0 (hash-table-count claude-code-ide-mcp--sessions))
+      (remove-hook 'post-command-hook #'claude-code-ide-mcp--track-selection)
+      (remove-hook 'post-command-hook #'claude-code-ide-mcp--track-active-buffer))
+
+    (<span class="k">claude-code-ide-debug</span> <span class="s">"MCP server stopped for %s"</span>
+                           (file-name-nondirectory (directory-file-name project-dir)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

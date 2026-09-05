@@ -1,0 +1,67 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark-define-overlay-target – Emacs Documentation Online</title>
+<meta name="description" content="embark-define-overlay-target is a macro defined in embark.el.
+Define a target finder for NAME that targets overlays with property PROP.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark-define-overlay-target</code></h1><p><span class="m"><code>embark-define-overlay-target</code></span> is a macro defined in <span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">embark-define-overlay-target</span> <a href="#:~:text=for-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=property-,PROP"><span class="arg">PROP</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=optional-,PRED"><span class="arg">PRED</span></a> <a href="#:~:text=symbol-,TYPE"><span class="arg">TYPE</span></a> <a href="#:~:text=optional-,TARGET"><span class="arg">TARGET</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Define a target finder for <span class="arg">NAME</span> that targets overlays with property <span class="arg">PROP</span>.
+<p>The function defined is named embark-target-<span class="arg">NAME</span>-at-point and it
+returns Embark targets based on the overlays around point.  An
+overlay provides a target if its property named <span class="arg">PROP</span> is non-nil.
+<p>If the optional <span class="arg">PRED</span> argument is given, it should be an
+expression and it further restricts the targets to only those
+overlays for which <span class="arg">PRED</span> evaluates to non-nil.
+<p>The target finder returns target type <span class="arg">NAME</span> or optional symbol
+<span class="arg">TYPE</span> if given.
+<p>The target finder returns the substring of the buffer covered by
+the overlay as the target string or the result of evaluating the
+optional <span class="arg">TARGET</span> expression if given.
+<p><span class="arg">PRED</span> and <span class="arg">TARGET</span> are expressions (not functions) and when evaluated the
+symbols <span class="m"><code>%o</code></span> and <span class="m"><code>%p</code></span> are bound to the overlay and the overlay's
+property respectively.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+(<span class="k">defmacro</span> <span class="f">embark-define-overlay-target</span> (name prop <span class="ty">&amp;optional</span> pred type target)
+  <span class="doc">"Define a target finder for NAME that targets overlays with property PROP.
+The function defined is named embark-target-NAME-at-point and it
+returns Embark targets based on the overlays around point.  An
+overlay provides a target if its property named PROP is non-nil.
+
+If the optional PRED argument is given, it should be an
+expression and it further restricts the targets to only those
+overlays for which PRED evaluates to non-nil.
+
+The target finder returns target type NAME or optional symbol
+TYPE if given.
+
+The target finder returns the substring of the buffer covered by
+the overlay as the target string or the result of evaluating the
+optional TARGET expression if given.
+
+PRED and TARGET are expressions (not functions) and when evaluated the
+symbols `</span><span class="m doc">%o</span><span class="doc">' and `</span><span class="m doc">%p</span><span class="doc">' are bound to the overlay and the overlay's
+property respectively."</span>
+  `(<span class="k">defun</span> ,(intern (format <span class="s">"embark-target-%s-at-point"</span> name)) ()
+     ,(format <span class="s">"Target %s at point."</span> name)
+     (<span class="k">when-let*</span> ((%o (seq-find
+                      (<span class="k">lambda</span> (%o)
+                        (<span class="k">when-let*</span> ((%p (overlay-get %o ',prop)))
+                          (ignore %p)
+                          ,(<span class="k">or</span> pred t)))
+                      (overlays-in (max (point-min) (1- (point)))
+                                   (min (point-max) (1+ (point))))))
+                 (%p (overlay-get %o ',prop)))
+       (ignore %p)
+       (cons ',(<span class="k">or</span> type name)
+             (cons ,(<span class="k">or</span> target `(buffer-substring-no-properties
+                                 (overlay-start %o) (overlay-end %o)))
+                   (cons (overlay-start %o) (overlay-end %o)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

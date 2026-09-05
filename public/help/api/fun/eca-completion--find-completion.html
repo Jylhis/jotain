@@ -1,0 +1,44 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-completion--find-completion – Emacs Documentation Online</title>
+<meta name="description" content="eca-completion--find-completion is a natively compiled function
+defined in eca-completion.el.
+Find completion requesting server calling ON-SUCCESS for the response.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-completion--find-completion</code></h1><p><span class="m"><code>eca-completion--find-completion</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-completion.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-completion--find-completion <span class="ty">&amp;key</span> <a href="#:~:text=calling-,ON-SUCCESS"><span class="arg">ON-SUCCESS</span></a> <a href="#:~:text=Call-,ON-ERROR"><span class="arg">ON-ERROR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find completion requesting server calling <span class="arg">ON-SUCCESS</span> for the response.
+<p>Call <span class="arg">ON-ERROR</span> when error.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-completion.el</span>
+(<span class="k">cl-defun</span> <span class="f">eca-completion--find-completion</span> (<span class="ty">&amp;key</span> on-success on-error)
+  <span class="doc">"Find completion requesting server calling ON-SUCCESS for the response.
+Call ON-ERROR when error."</span>
+  (<span class="k">let</span> ((line (+ (1- (line-number-at-pos)) eca-completion--line-bias))
+        (character (1+ (- (point) (line-beginning-position)))))
+    (<span class="k">when-let</span> ((session (eca-session)))
+      (eca-api-request-async session
+                             <span class="bi">:method</span> <span class="s">"completion/inline"</span>
+                             <span class="bi">:params</span> (list <span class="bi">:doc-text</span> (buffer-substring-no-properties (point-min) (point-max))
+                                           <span class="bi">:doc-version</span> eca-completion--doc-version
+                                           <span class="bi">:path</span> (eca--path-local-to-remote (buffer-file-name))
+                                           <span class="bi">:position</span> (list <span class="bi">:line</span> line <span class="bi">:character</span> character))
+                             <span class="bi">:success-callback</span> (<span class="k">-lambda</span> ((<span class="ty">&amp;plist</span> <span class="bi">:items</span> items <span class="bi">:error</span> error))
+                                                 (<span class="k">if</span> error
+                                                     (funcall on-error error)
+                                                   (funcall on-success items)))
+                             <span class="bi">:error-callback</span> (<span class="k">-lambda</span> (<span class="w">error</span>)
+                                               (<span class="k">let</span> ((type (plist-get error <span class="bi">:type</span>))
+                                                     (msg (plist-get error <span class="bi">:message</span>)))
+                                                 (<span class="k">pcase</span> type
+                                                   (<span class="s">"error"</span> (eca-error msg))
+                                                   (<span class="s">"warning"</span> (eca-warn msg))
+                                                   (<span class="s">"info"</span> (eca-info msg)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

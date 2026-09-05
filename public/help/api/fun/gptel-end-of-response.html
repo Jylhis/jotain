@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-end-of-response – Emacs Documentation Online</title>
+<meta name="description" content="gptel-end-of-response is an interactive and natively compiled function
+defined in gptel.el.
+Move point to end of LLM response.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-end-of-response</code></h1><p><span class="m"><code>gptel-end-of-response</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-end-of-response <span class="ty">&amp;optional</span> <a href="#:~:text=With-,BEG"><span class="arg">BEG</span></a> <a href="#:~:text=With-,END"><span class="arg">END</span></a> <a href="#:~:text=when-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Move point to end of LLM response.
+<p>With <span class="arg">BEG</span>, start search from <span class="arg">BEG</span> when <span class="arg">ARG</span> is negative.
+With <span class="arg">END</span>, start search from <span class="arg">END</span> when <span class="arg">ARG</span> is positive.
+Otherwise move <span class="arg">ARG</span> times, defaulting to 1.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel-end-of-response</span> (<span class="ty">&amp;optional</span> beg end arg)
+  <span class="doc">"Move point to end of LLM response.
+
+With BEG, start search from BEG when ARG is negative.
+With END, start search from END when ARG is positive.
+Otherwise move ARG times, defaulting to 1."</span>
+  (<span class="k">interactive</span> (list nil nil
+                     (prefix-numeric-value current-prefix-arg)))
+  (<span class="k">unless</span> arg (<span class="k">setq</span> arg 1))
+  (<span class="k">let*</span> ((search (<span class="k">if</span> (&gt; arg 0)
+                     #'text-property-search-forward
+                   #'text-property-search-backward))
+         (goto-prefix-end
+          (<span class="k">lambda</span> () (<span class="k">when-let*</span> ((prefix (gptel-prompt-prefix-string))
+                            ((not (string-empty-p prefix)))
+                            ((looking-at (concat <span class="s">"\n\\{1,2\\}"</span>
+                                                 (regexp-quote prefix) <span class="s">"?"</span>))))
+                  (goto-char (match-end 0)))))
+         (goto-prefix-beg
+          (<span class="k">lambda</span> () (<span class="k">when-let*</span> ((prefix (gptel-response-prefix-string))
+                            ((not (string-empty-p prefix)))
+                            ((looking-back (concat (regexp-quote prefix) <span class="s">"?"</span>)
+                                           (point-min))))
+                  (goto-char (match-beginning 0))))))
+    (<span class="k">cond</span>
+     ((<span class="k">and</span> end (&gt; arg 0)) (goto-char end) (<span class="k">cl-decf</span> arg) (funcall goto-prefix-end))
+     ((<span class="k">and</span> beg (&lt; arg 0)) (goto-char beg) (<span class="k">cl-incf</span> arg) (funcall goto-prefix-beg)))
+    (<span class="k">dotimes</span> (_ (abs arg))
+      (funcall search 'gptel 'response t)
+      (<span class="k">if</span> (&gt; arg 0)
+          (funcall goto-prefix-end)
+        (funcall goto-prefix-beg)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

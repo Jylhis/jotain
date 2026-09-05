@@ -1,0 +1,74 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--stack-frame-display-1 – Emacs Documentation Online</title>
+<meta name="description" content="dape--stack-frame-display-1 is a natively compiled function defined in
+dape.el.
+Display FRAME for adapter CONN.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--stack-frame-display-1</code></h1><p><span class="m"><code>dape--stack-frame-display-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--stack-frame-display-1 <a href="#:~:text=adapter-,CONN"><span class="arg">CONN</span></a> <a href="#:~:text=Display-,FRAME"><span class="arg">FRAME</span></a> <a href="#:~:text=If-,SELECTED-P"><span class="arg">SELECTED-P</span></a> <a href="#:~:text=If-,FIRST-SELECTED-P"><span class="arg">FIRST-SELECTED-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Display <span class="arg">FRAME</span> for adapter <span class="arg">CONN</span>.
+<p>If <span class="arg">SELECTED-P</span> is non-nil, this frame is selected.
+If <span class="arg">FIRST-SELECTED-P</span> is non-nil, the top frame is selected.
+Helper for <a href="../fun/dape--stack-frame-display.html"><code>dape--stack-frame-display</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--stack-frame-display-1</span> (conn frame selected-p first-selected-p)
+  <span class="doc">"Display FRAME for adapter CONN.
+If SELECTED-P is non-nil, this frame is selected.
+If FIRST-SELECTED-P is non-nil, the top frame is selected.
+Helper for `</span><span class="m doc">dape--stack-frame-display</span><span class="doc">'."</span>
+  (<span class="k">dape--with-request</span> (dape--source-ensure conn frame)
+    <span class="cd">;; </span><span class="c">Delete overlay before dropping the reference
+</span>    (dape--stack-frame-cleanup)
+    (<span class="k">when-let*</span> ((marker (dape--object-to-marker conn frame)))
+      (<span class="k">with-current-buffer</span> (marker-buffer marker)
+        (dape--add-eldoc-hook)
+        (<span class="k">save-excursion</span>
+          (goto-char (marker-position marker))
+          (<span class="k">setq</span> dape--stack-position-overlay
+                (<span class="k">let</span> ((ov (make-overlay (line-beginning-position)
+                                        (line-beginning-position 2))))
+                  (overlay-put ov 'category 'dape-source-line)
+                  (overlay-put ov 'face 'dape-source-line-face)
+                  (<span class="k">when-let*</span> (first-selected-p
+                              (description (dape--exception-description conn)))
+                    (overlay-put ov 'after-string
+                                 (propertize description 'face
+                                             'dape-exception-description-face)))
+                  ov)
+                fringe-indicator-alist
+                (<span class="k">unless</span> (<span class="k">and</span> selected-p first-selected-p)
+                  '((overlay-arrow . hollow-right-triangle))))
+          <span class="cd">;; </span><span class="c">Move `</span><span class="m c">overaly-arrow</span><span class="c">' arrow to point
+</span>          (move-marker dape--overlay-arrow-position
+                       (line-beginning-position)))
+        (<span class="k">when-let*</span> ((window
+                     (display-buffer (marker-buffer marker)
+                                     dape-display-source-buffer-action)))
+          <span class="cd">;; </span><span class="c">Change selected window if not `</span><span class="m c">dape-repl</span><span class="c">' buffer is selected
+</span>          (<span class="k">unless</span> (<span class="k">with-current-buffer</span> (window-buffer)
+                    (cl-some #'derived-mode-p '(dape-repl-mode
+                                                dape-info-parent-mode
+                                                dape-disassemble-mode)))
+            (select-window window))
+          (<span class="k">with-selected-window</span> window
+            <span class="cd">;; </span><span class="c">XXX This is where point is moved after step commands.
+</span>            <span class="cd">;; </span><span class="c">Which means that `</span><span class="m c">post-command-hook</span><span class="c">' has already run
+</span>            <span class="cd">;; </span><span class="c">from `</span><span class="m c">dape-next</span><span class="c">' etc.  Can't call the hook directly
+</span>            <span class="cd">;; </span><span class="c">from this timer context because it will lead to
+</span>            <span class="cd">;; </span><span class="c">strangeness, but we can handle the important bits.
+</span>            (goto-char (marker-position marker))
+            <span class="cd">;; </span><span class="c">...like fixing `</span><span class="m c">hl-line</span><span class="c">'
+</span>            (<span class="k">when</span> (<span class="k">featurep</span> '<span class="m">hl-line</span>)
+	      (<span class="k">cond</span> (global-hl-line-mode (global-hl-line-highlight))
+                    ((<span class="k">and</span> hl-line-mode hl-line-sticky-flag) (hl-line-highlight))))
+            (run-hooks 'dape-display-source-hook)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

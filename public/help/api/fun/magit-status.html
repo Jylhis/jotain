@@ -1,0 +1,105 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-status – Emacs Documentation Online</title>
+<meta name="description" content="magit-status is an interactive and natively compiled function defined
+in magit-status.el.
+Show the status of the current Git repository in a buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-status</code></h1><p><span class="m"><code>magit-status</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">magit-status.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-status <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">DIRECTORY</span></a> <a href="#:~:text="><span class="arg">CACHE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Show the status of the current Git repository in a buffer.
+<p>If the current directory isn't located within a Git repository,
+then prompt for an existing repository or an arbitrary directory,
+depending on option <a href="../var/magit-repository-directories.html"><code>magit-repository-directories</code></a>, and show the
+status of the selected repository instead.
+<p>* If that option specifies any existing repositories, then offer
+<br>&nbsp;&nbsp;those for completion and show the status buffer for the
+<br>&nbsp;&nbsp;selected one.
+<p>* Otherwise read an arbitrary directory using regular file-name
+<br>&nbsp;&nbsp;completion.  If the selected directory is the top-level of an
+<br>&nbsp;&nbsp;existing working tree, then show the status buffer for that.
+<p>* Otherwise offer to initialize the selected directory as a new
+<br>&nbsp;&nbsp;repository.  After creating the repository show its status
+<br>&nbsp;&nbsp;buffer.
+<p>These fallback behaviors can also be forced using one or more
+prefix arguments:
+<p>* With two prefix arguments (or more precisely a numeric prefix
+<br>&nbsp;&nbsp;value of 16 or greater) read an arbitrary directory and act on
+<br>&nbsp;&nbsp;it as described above.  The same could be accomplished using
+<br>&nbsp;&nbsp;the command <a href="../fun/magit-init.html"><code>magit-init</code></a>.
+<p>* With a single prefix argument read an existing repository, or
+<br>&nbsp;&nbsp;if none can be found based on <a href="../var/magit-repository-directories.html"><code>magit-repository-directories</code></a>,
+<br>&nbsp;&nbsp;then fall back to the same behavior as with two prefix
+<br>&nbsp;&nbsp;arguments.
+<h2>Key Bindings</h2>
+<p><span class="v">ctl-x-map</span> <span class="key">g</span>
+<span class="v">global-map</span> <span class="key">C-x g</span>
+<span class="v">help-quick-use-map</span> <span class="key">C-x g</span>
+<h2>Aliases</h2>
+<p><a href="../fun/magit.html"><code>magit</code></a>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-status.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">magit-status</span> (<span class="ty">&amp;optional</span> directory cache)
+  <span class="doc">"Show the status of the current Git repository in a buffer.
+
+If the current directory isn't located within a Git repository,
+then prompt for an existing repository or an arbitrary directory,
+depending on option `</span><span class="m doc">magit-repository-directories</span><span class="doc">', and show the
+status of the selected repository instead.
+
+* If that option specifies any existing repositories, then offer
+  those for completion and show the status buffer for the
+  selected one.
+
+* Otherwise read an arbitrary directory using regular file-name
+  completion.  If the selected directory is the top-level of an
+  existing working tree, then show the status buffer for that.
+
+* Otherwise offer to initialize the selected directory as a new
+  repository.  After creating the repository show its status
+  buffer.
+
+These fallback behaviors can also be forced using one or more
+prefix arguments:
+
+* With two prefix arguments (or more precisely a numeric prefix
+  value of 16 or greater) read an arbitrary directory and act on
+  it as described above.  The same could be accomplished using
+  the command `</span><span class="m doc">magit-init</span><span class="doc">'.
+
+* With a single prefix argument read an existing repository, or
+  if none can be found based on `</span><span class="m doc">magit-repository-directories</span><span class="doc">',
+  then fall back to the same behavior as with two prefix
+  arguments."</span>
+  (<span class="k">interactive</span>
+    (<span class="k">let</span> ((magit--refresh-cache (list (cons 0 0))))
+      (list (<span class="k">and</span> (<span class="k">or</span> current-prefix-arg (not (magit-toplevel)))
+                 (<span class="k">progn</span> (magit--assert-usable-git)
+                        (magit-read-repository
+                         (&gt;= (prefix-numeric-value current-prefix-arg) 16))))
+            magit--refresh-cache)))
+  (<span class="k">let</span> ((magit--refresh-cache (<span class="k">or</span> cache (list (cons 0 0)))))
+    (<span class="k">if</span> directory
+        (<span class="k">let</span> ((toplevel (magit-toplevel directory)))
+          (<span class="k">setq</span> directory (file-name-as-directory
+                           (expand-file-name directory)))
+          (<span class="k">if</span> (<span class="k">and</span> toplevel (file-equal-p directory toplevel))
+              (magit-status-setup-buffer directory)
+            (<span class="k">when</span> (y-or-n-p
+                   (<span class="k">if</span> toplevel
+                       (format <span class="s">"%s is a repository.  Create another in %s? "</span>
+                               toplevel directory)
+                     (format <span class="s">"Create repository in %s? "</span> directory)))
+              <span class="cd">;; </span><span class="c">Creating a new repository invalidates cached values.
+</span>              (<span class="k">setq</span> magit--refresh-cache nil)
+              (magit-init directory))))
+      (magit-status-setup-buffer default-directory))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

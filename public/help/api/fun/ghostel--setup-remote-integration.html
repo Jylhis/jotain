@@ -1,0 +1,128 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--setup-remote-integration – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--setup-remote-integration is a natively compiled function
+defined in ghostel.el.
+Set up shell integration on the remote host for SHELL-TYPE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--setup-remote-integration</code></h1><p><span class="m"><code>ghostel--setup-remote-integration</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--setup-remote-integration <a href="#:~:text=for-,SHELL-TYPE"><span class="arg">SHELL-TYPE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Set up shell integration on the remote host for <span class="arg">SHELL-TYPE</span>.
+<p>Reads the local integration script, writes it (with any necessary
+preamble) to a temporary file on the remote host.  When the bundled
+terminfo is available locally, also pushes it to a remote temp dir
+over the same TRAMP connection and adds <span class="m"><code>TERMINFO=...</code></span> to the env.
+Returns a plist (:env :args :temp-files :temp-dirs) for
+<a href="../fun/ghostel--start-process.html"><code>ghostel--start-process</code></a>.
+Returns nil on failure.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--setup-remote-integration</span> (shell-type)
+  <span class="doc">"Set up shell integration on the remote host for SHELL-TYPE.
+Reads the local integration script, writes it (with any necessary
+preamble) to a temporary file on the remote host.  When the bundled
+terminfo is available locally, also pushes it to a remote temp dir
+over the same TRAMP connection and adds `</span><span class="m doc">TERMINFO=...</span><span class="doc">' to the env.
+Returns a plist (:env :args :temp-files :temp-dirs) for
+`</span><span class="m doc">ghostel--start-process</span><span class="doc">'.
+Returns nil on failure."</span>
+  (<span class="k">condition-case</span> err
+      (<span class="k">let*</span> ((remote-prefix (file-remote-p default-directory))
+             (ghostel-dir (ghostel--resource-root))
+             (ext (symbol-name shell-type))
+             (integration (ghostel--read-local-file
+                           (expand-file-name
+                            (format <span class="s">"etc/shell/ghostel.%s"</span> ext) ghostel-dir)))
+             (tinfo (<span class="k">and</span> (ghostel--ssh-install-enabled-p)
+                         (ghostel--push-remote-terminfo remote-prefix)))
+             (base (<span class="k">pcase</span> shell-type
+          <span class="cd">;; </span><span class="c">Bash: --rcfile replaces normal rc loading, so we source
+</span>          <span class="cd">;; </span><span class="c">startup files explicitly before the integration.
+</span>          ('bash
+           (<span class="k">let*</span> ((temp (make-temp-file
+                         (concat remote-prefix <span class="s">"ghostel-"</span>) nil <span class="s">".bash"</span>))
+                  (path (file-remote-p temp 'localname)))
+             (ghostel--write-remote-file temp
+                                         (concat
+                                          <span class="s">"# Source standard startup files\n"</span>
+                                          <span class="s">"if shopt -q login_shell 2&gt;/dev/null; then\n"</span>
+                                          <span class="s">"  [ -r /etc/profile ] &amp;&amp; . /etc/profile\n"</span>
+                                          <span class="s">"  for __gf in ~/.bash_profile ~/.bash_login ~/.profile; do\n"</span>
+                                          <span class="s">"    [ -r \"$__gf\" ] &amp;&amp; { . \"$__gf\"; break; }; done\n"</span>
+                                          <span class="s">"  unset __gf\n"</span>
+                                          <span class="s">"else\n"</span>
+                                          <span class="s">"  for __gf in /etc/bash.bashrc /etc/bash/bashrc /etc/bashrc; do\n"</span>
+                                          <span class="s">"    [ -r \"$__gf\" ] &amp;&amp; { . \"$__gf\"; break; }; done\n"</span>
+                                          <span class="s">"  unset __gf\n"</span>
+                                          <span class="s">"  [ -r ~/.bashrc ] &amp;&amp; . ~/.bashrc\n"</span>
+                                          <span class="s">"fi\n"</span>
+                                          integration))
+             (list <span class="bi">:env</span> nil <span class="bi">:args</span> (list <span class="s">"--rcfile"</span> path)
+                   <span class="bi">:temp-files</span> (list temp))))
+          <span class="cd">;; </span><span class="c">Zsh: ZDOTDIR replaces .zshenv search, so we restore it,
+</span>          <span class="cd">;; </span><span class="c">source the user's .zshenv, then load integration.
+</span>          ('zsh
+           (<span class="k">let*</span> ((temp-dir (make-temp-file
+                             (concat remote-prefix <span class="s">"ghostel-"</span>) t))
+                  (temp-zshenv (concat (file-name-as-directory temp-dir)
+                                       <span class="s">".zshenv"</span>))
+                  (remote-dir (file-remote-p temp-dir 'localname)))
+             (ghostel--write-remote-file temp-zshenv
+                                         (concat
+                                          <span class="s">"if [[ -n \"${GHOSTEL_ZSH_ZDOTDIR+X}\" ]]; then\n"</span>
+                                          <span class="s">"    '</span><span class="m s">builtin</span><span class="s">' '</span><span class="m s">export</span><span class="s">' ZDOTDIR=\"$GHOSTEL_ZSH_ZDOTDIR\"\n"</span>
+                                          <span class="s">"    '</span><span class="m s">builtin</span><span class="s">' '</span><span class="m s">unset</span><span class="s">' '</span><span class="m s">GHOSTEL_ZSH_ZDOTDIR</span><span class="s">'\n"</span>
+                                          <span class="s">"else\n"</span>
+                                          <span class="s">"    '</span><span class="m s">builtin</span><span class="s">' '</span><span class="m s">unset</span><span class="s">' '</span><span class="m s">ZDOTDIR</span><span class="s">'\n"</span>
+                                          <span class="s">"fi\n"</span>
+                                          <span class="s">"{\n"</span>
+                                          <span class="s">"    '</span><span class="m s">builtin</span><span class="s">' '</span><span class="m s">typeset</span><span class="s">' _ghostel_file="</span>
+                                          <span class="s">"\"${ZDOTDIR-$HOME}/.zshenv\"\n"</span>
+                                          <span class="s">"    [[ ! -r \"$_ghostel_file\" ]] || "</span>
+                                          <span class="s">"'</span><span class="m s">builtin</span><span class="s">' '</span><span class="m s">source</span><span class="s">' '</span><span class="m s">--</span><span class="s">' \"$_ghostel_file\"\n"</span>
+                                          <span class="s">"} always {\n"</span>
+                                          <span class="s">"    if [[ -o '</span><span class="m s">interactive</span><span class="s">' ]]; then\n"</span>
+                                          integration <span class="s">"\n"</span>
+                                          <span class="s">"    fi\n"</span>
+                                          <span class="s">"    '</span><span class="m s">builtin</span><span class="s">' '</span><span class="m s">unset</span><span class="s">' '</span><span class="m s">_ghostel_file</span><span class="s">'\n"</span>
+                                          <span class="s">"}\n"</span>))
+             (list <span class="bi">:env</span> (list (format <span class="s">"ZDOTDIR=%s"</span> remote-dir))
+                   <span class="bi">:args</span> nil
+                   <span class="bi">:temp-dirs</span> (list temp-dir))))
+          <span class="cd">;; </span><span class="c">Fish: -C runs after config, so just source the script.
+</span>          ('fish
+           (<span class="k">let*</span> ((temp (make-temp-file
+                         (concat remote-prefix <span class="s">"ghostel-"</span>) nil <span class="s">".fish"</span>))
+                  (path (file-remote-p temp 'localname)))
+             (ghostel--write-remote-file temp integration)
+             (list <span class="bi">:env</span> nil
+                   <span class="bi">:args</span> (list <span class="s">"-C"</span> (format <span class="s">"source %s"</span>
+                                            (shell-quote-argument path)))
+                   <span class="bi">:temp-files</span> (list temp))))
+          <span class="cd">;; </span><span class="c">Nushell: --execute runs after config (like fish's -C).
+</span>          <span class="cd">;; </span><span class="c">nushell `</span><span class="m c">source</span><span class="c">' needs a parse-time-constant path, so the
+</span>          <span class="cd">;; </span><span class="c">literal remote temp path is embedded in the --execute arg.
+</span>          ('nu
+           (<span class="k">let*</span> ((temp (make-temp-file
+                         (concat remote-prefix <span class="s">"ghostel-"</span>) nil <span class="s">".nu"</span>))
+                  (path (file-remote-p temp 'localname)))
+             (ghostel--write-remote-file temp integration)
+             (list <span class="bi">:env</span> nil
+                   <span class="bi">:args</span> (list <span class="s">"--execute"</span> (format <span class="s">"source %s"</span>
+                                                   (shell-quote-argument path)))
+                   <span class="bi">:temp-files</span> (list temp)))))))
+        (<span class="k">if</span> tinfo
+            (ghostel--merge-integration-plists base tinfo)
+          base))
+    (<span class="w">error</span>
+     (message <span class="s">"ghostel: remote shell integration failed: %s"</span>
+              (error-message-string err))
+     nil)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

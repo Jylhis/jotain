@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: edebug – Emacs Documentation Online</title>
+<meta name="description" content="edebug is a natively compiled function defined in edebug.el.gz.
+Replacement for debug.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>edebug</code></h1><p><span class="m"><code>edebug</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <a href="../src/emacs-lisp/edebug.el.html">edebug.el.gz</a>.
+<h2>Signature</h2>
+<pre><code>(edebug <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">ARG-MODE</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text="><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Replacement for <a href="../fun/debug.html"><code>debug</code></a>.
+<p>If we are running an edebugged function, show where we last were.
+Otherwise call <a href="../fun/debug.html"><code>debug</code></a> normally.
+<p><a href="/info/elisp/edebug.html#index-edebug">View in manual</a>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><a href="../src/emacs-lisp/edebug.el.html">/usr/src/emacs/lisp/emacs-lisp/edebug.el.gz</a>
+<span class="cd">;;; </span><span class="c">Interface with standard debugger.
+</span>
+<span class="cd">;; </span><span class="c">(setq debugger 'edebug) ; to use the edebug debugger
+</span><span class="cd">;; </span><span class="c">(setq debugger 'debug)  ; use the standard debugger
+</span>
+<span class="cd">;; </span><span class="c">Note that debug and its utilities must be byte-compiled to work,
+</span><span class="cd">;; </span><span class="c">since they depend on the backtrace looking a certain way.  Edebug
+</span><span class="cd">;; </span><span class="c">will work if not byte-compiled, but it will not be able correctly
+</span><span class="cd">;; </span><span class="c">remove its instrumentation from backtraces unless it is
+</span><span class="cd">;; </span><span class="c">byte-compiled.
+</span>
+(<span class="k">defun</span> <span class="f">edebug</span> (<span class="ty">&amp;optional</span> arg-mode <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Replacement for `</span><span class="m doc">debug</span><span class="doc">'.
+If we are running an edebugged function, show where we last were.
+Otherwise call `</span><span class="m doc">debug</span><span class="doc">' normally."</span>
+  <span class="cd">;;</span><span class="c">(message "entered: %s  depth: %s  edebug-recursion-depth: %s"
+</span>  <span class="cd">;;  </span><span class="c">edebug-entered (recursion-depth) edebug-recursion-depth) (sit-for 1)
+</span>  (<span class="k">if</span> (<span class="k">and</span> edebug-entered  <span class="cd">; </span><span class="c">anything active?
+</span>	   (eq (recursion-depth) edebug-recursion-depth))
+      (<span class="k">let</span> (<span class="cd">;; </span><span class="c">Where were we before the error occurred?
+</span>	    (offset-index (car edebug-offset-indices))
+	    (value (car args))
+	    <span class="cd">;; </span><span class="c">Bind variables required by edebug--display.
+</span>	    edebug-breakpoints
+	    edebug-break-data
+	    edebug-break-condition
+	    edebug-global-break
+	    (edebug-break (null arg-mode)) <span class="cd">;; </span><span class="c">If called explicitly.
+</span>	    )
+	(edebug--display value offset-index arg-mode)
+	(<span class="k">if</span> (eq arg-mode 'error)
+	    nil
+	  value))
+
+    <span class="cd">;; </span><span class="c">Otherwise call debug normally.
+</span>    <span class="cd">;; </span><span class="c">Still need to remove extraneous edebug calls from stack.
+</span>    (apply #'debug arg-mode args)
+    ))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,77 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sops--run – Emacs Documentation Online</title>
+<meta name="description" content="sops--run is a natively compiled function defined in sops.el.
+Run sops with ARGS.  KEYS is a plist of keyword options.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sops--run</code></h1><p><span class="m"><code>sops--run</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">sops.el</span>.
+<h2>Signature</h2>
+<pre><code>(sops--run <a href="#:~:text=with-,ARGS"><span class="arg">ARGS</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=ARGS.-,KEYS"><span class="arg">KEYS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run sops with <span class="arg">ARGS</span>.  <span class="arg">KEYS</span> is a plist of keyword options.
+<p>Keyword args:
+<br>&nbsp;&nbsp;:input STRING  -- write STRING to a temp file (mode 0600) and pass
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;its path to sops as the trailing argument.  The
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;temp file is deleted in the <a href="../fun/unwind-protect.html"><code>unwind-protect</code></a> cleanup.
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Matches Emacs core's EPG/EPA convention: stdin is
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;reserved for prompt responses; payload bytes go
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;via the file path.
+<br>&nbsp;&nbsp;:filter FN     -- process filter (nil in v0.2; populated in future work)
+<br>Return plist (:exit-status N :stdout STR :stderr STR).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qkr1smn94fw9pj8qis6r47djxqbd30ki-emacs-packages-deps/share/emacs/site-lisp/elpa/sops-20260518.350/sops.el</span>
+(<span class="k">defun</span> <span class="f">sops--run</span> (args <span class="ty">&amp;rest</span> keys)
+  <span class="doc">"Run sops with ARGS.  KEYS is a plist of keyword options.
+Keyword args:
+  :input STRING  -- write STRING to a temp file (mode 0600) and pass
+                    its path to sops as the trailing argument.  The
+                    temp file is deleted in the `</span><span class="m doc">unwind-protect</span><span class="doc">' cleanup.
+                    Matches Emacs core's EPG/EPA convention: stdin is
+                    reserved for prompt responses; payload bytes go
+                    via the file path.
+  :filter FN     -- process filter (nil in v0.2; populated in future work)
+Return plist (:exit-status N :stdout STR :stderr STR)."</span>
+  (<span class="k">let*</span> ((input (plist-get keys <span class="bi">:input</span>))
+         (filter (plist-get keys <span class="bi">:filter</span>))
+         (stdout-buf (generate-new-buffer <span class="s">" *sops-stdout*"</span> t))
+         (stderr-buf (generate-new-buffer <span class="s">" *sops-stderr*"</span> t))
+         (input-file (<span class="k">when</span> input
+                       (<span class="k">with-file-modes</span> #o600
+                         (make-temp-file <span class="s">"sops-input-"</span>))))
+         (done nil)
+         (proc nil))
+    (<span class="k">unwind-protect</span>
+        (<span class="k">let</span> ((process-environment
+               (cons <span class="s">"SOPS_DISABLE_VERSION_CHECK=true"</span> process-environment)))
+          (<span class="k">when</span> input
+            (<span class="k">let</span> ((coding-system-for-write 'utf-8-unix))
+              (write-region input nil input-file nil 'silent)))
+          (<span class="k">setq</span> proc
+                (make-process
+                 <span class="bi">:name</span> <span class="s">"sops"</span>
+                 <span class="bi">:buffer</span> stdout-buf
+                 <span class="bi">:stderr</span> stderr-buf
+                 <span class="bi">:command</span> (cons sops-executable
+                                (<span class="k">if</span> input-file
+                                    (append args (list input-file))
+                                  args))
+                 <span class="bi">:connection-type</span> 'pipe
+                 <span class="bi">:filter</span> filter
+                 <span class="bi">:sentinel</span> (<span class="k">lambda</span> (_p _event) (<span class="k">setq</span> done t))))
+          (set-process-coding-system proc 'utf-8-unix 'utf-8-unix)
+          (<span class="k">while</span> (not done)
+            (accept-process-output proc 0.1))
+          (list <span class="bi">:exit-status</span> (process-exit-status proc)
+                <span class="bi">:stdout</span> (<span class="k">with-current-buffer</span> stdout-buf (buffer-string))
+                <span class="bi">:stderr</span> (<span class="k">with-current-buffer</span> stderr-buf (buffer-string))))
+      (<span class="k">when</span> (<span class="k">and</span> proc (process-live-p proc))
+        (delete-process proc))
+      (<span class="k">when</span> (buffer-live-p stdout-buf) (kill-buffer stdout-buf))
+      (<span class="k">when</span> (buffer-live-p stderr-buf) (kill-buffer stderr-buf))
+      (<span class="k">when</span> (<span class="k">and</span> input-file (file-exists-p input-file))
+        (delete-file input-file)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

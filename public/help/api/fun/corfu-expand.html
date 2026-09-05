@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: corfu-expand – Emacs Documentation Online</title>
+<meta name="description" content="corfu-expand is an interactive and natively compiled function defined
+in corfu.el.
+Expands the common prefix of all candidates.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>corfu-expand</code></h1><p><span class="m"><code>corfu-expand</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">corfu.el</span>.
+<h2>Signature</h2>
+<pre><code>(corfu-expand)
+</code></pre>
+<h2>Documentation</h2>
+<p>Expands the common prefix of all candidates.
+<p>If the currently selected candidate is previewed, invoke
+<a href="../fun/corfu-complete.html"><code>corfu-complete</code></a> instead.  Expansion relies on the completion
+styles via <a href="../fun/completion-try-completion.html"><code>completion-try-completion</code></a>.  Return non-nil if the
+input has been expanded.
+<h2>Key Bindings</h2>
+<p><span class="v">corfu-map</span> <span class="key">C-M-i</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w8w9ybb6ad8ab6ghqfbq36v1kcp2igzi-emacs-packages-deps/share/emacs/site-lisp/elpa/corfu-20260828.932/corfu.el</span>
+(<span class="k">defun</span> <span class="f">corfu-expand</span> ()
+  <span class="doc">"Expands the common prefix of all candidates.
+If the currently selected candidate is previewed, invoke
+`</span><span class="m doc">corfu-complete</span><span class="doc">' instead.  Expansion relies on the completion
+styles via `</span><span class="m doc">completion-try-completion</span><span class="doc">'.  Return non-nil if the
+input has been expanded."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">if</span> (corfu--preview-current-p)
+      (corfu-complete)
+    (<span class="k">pcase-let*</span> ((`(,beg ,end ,table ,pred . ,_) completion-in-region--data)
+                 (pt (max 0 (- (point) beg)))
+                 (str (buffer-substring-no-properties beg end)))
+      (<span class="k">pcase</span> (corfu--try-completion str table pred pt)
+        ('t
+         (goto-char end)
+         (corfu--done str 'finished corfu--candidates)
+         t)
+        ((<span class="k">and</span> `(,newstr . ,newpt) (guard (not (<span class="k">and</span> (= pt newpt) (equal newstr str)))))
+         (corfu--replace beg end newstr)
+         (goto-char (+ beg newpt))
+         <span class="cd">;; </span><span class="c">Exit with status 'finished if input is a valid match
+</span>         <span class="cd">;; </span><span class="c">and no further completion is possible.
+</span>         (<span class="k">and</span> (test-completion newstr table pred)
+              (not (consp (corfu--try-completion newstr table pred newpt)))
+              (corfu--done newstr 'finished corfu--candidates))
+         t)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

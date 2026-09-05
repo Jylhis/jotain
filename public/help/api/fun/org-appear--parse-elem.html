@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-appear--parse-elem – Emacs Documentation Online</title>
+<meta name="description" content="org-appear--parse-elem is a natively compiled function defined in
+org-appear.el.
+Return bounds of element ELEM.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-appear--parse-elem</code></h1><p><span class="m"><code>org-appear--parse-elem</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">org-appear.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-appear--parse-elem <a href="#:~:text=element-,ELEM"><span class="arg">ELEM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return bounds of element <span class="arg">ELEM</span>.
+<p>Return nil if element cannot be parsed.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/h68d0k7qg0i0kn245ckyaf2x4scf8f79-emacs-packages-deps/share/emacs/site-lisp/elpa/org-appear-20260716.2120/org-appear.el</span>
+(<span class="k">defun</span> <span class="f">org-appear--parse-elem</span> (elem)
+  <span class="doc">"Return bounds of element ELEM.
+Return nil if element cannot be parsed."</span>
+  (<span class="k">let*</span> ((elem-type (car elem))
+	 (elem-tag (<span class="k">cond</span> ((memq elem-type '(bold
+					    italic
+					    underline
+					    strike-through
+					    verbatim
+					    code))
+			  'emph)
+			 ((memq elem-type '(subscript
+					    superscript))
+			  'script)
+			 ((eq elem-type 'entity)
+			  'entity)
+			 ((eq elem-type 'link)
+			  'link)
+			 ((eq elem-type 'keyword)
+			  'keyword)
+			 ((memq elem-type '(latex-fragment latex-environment))
+			  'latex-fragment)
+			 (t nil)))
+	 (elem-start (org-element-property <span class="bi">:begin</span> elem))
+	 (elem-end (org-element-property <span class="bi">:end</span> elem))
+	 (elem-content-start (org-element-property <span class="bi">:contents-begin</span> elem))
+	 (elem-content-end (org-element-property <span class="bi">:contents-end</span> elem))
+	 <span class="cd">;; </span><span class="c">Some elements have extra spaces at the end
+</span>	 <span class="cd">;; </span><span class="c">The number of spaces is stored in the post-blank property
+</span>	 (post-elem-spaces (org-element-property <span class="bi">:post-blank</span> elem))
+	 (elem-end-real (- elem-end post-elem-spaces)))
+    <span class="cd">;; </span><span class="c">Only sub/superscript elements are guaranteed to have
+</span>    <span class="cd">;; </span><span class="c">contents-begin and contents-end properties
+</span>    (<span class="k">when</span> elem-tag
+      `(<span class="bi">:start</span> ,elem-start
+	       <span class="bi">:end</span> ,elem-end-real
+	       <span class="bi">:visible-start</span> ,(<span class="k">pcase</span> elem-tag
+				 ('emph (1+ elem-start))
+				 ('script elem-content-start)
+				 ('link (<span class="k">or</span> elem-content-start (+ elem-start 2))))
+	       <span class="bi">:visible-end</span> ,(<span class="k">pcase</span> elem-tag
+			       ('emph (1- elem-end-real))
+			       ('script elem-content-end)
+			       ('link (<span class="k">or</span> elem-content-end (- elem-end-real 2))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

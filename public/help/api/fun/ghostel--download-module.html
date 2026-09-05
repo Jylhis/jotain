@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--download-module – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--download-module is a natively compiled function defined in
+ghostel-module-install.el.
+Download a pre-built module into DIR.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--download-module</code></h1><p><span class="m"><code>ghostel--download-module</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel-module-install.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--download-module <a href="#:~:text=into-,DIR"><span class="arg">DIR</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=When-,VERSION"><span class="arg">VERSION</span></a> <a href="#:~:text=When-,LATEST-RELEASE"><span class="arg">LATEST-RELEASE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Download a pre-built module into <span class="arg">DIR</span>.
+<p>When <span class="arg">VERSION</span> is non-nil, download that release tag.
+When <span class="arg">LATEST-RELEASE</span> is non-nil, use the latest release asset URL.
+On success, also writes the sidecar version file alongside the module.
+Returns non-nil on success.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-module-install.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--download-module</span> (dir <span class="ty">&amp;optional</span> version latest-release)
+  <span class="doc">"Download a pre-built module into DIR.
+When VERSION is non-nil, download that release tag.
+When LATEST-RELEASE is non-nil, use the latest release asset URL.
+On success, also writes the sidecar version file alongside the module.
+Returns non-nil on success."</span>
+  (<span class="k">condition-case</span> err
+      (<span class="k">let*</span> ((requested-version (<span class="k">unless</span> latest-release
+                                  (<span class="k">or</span> version ghostel--minimum-module-version)))
+             (url (ghostel--module-download-url requested-version)))
+        (<span class="k">when</span> url
+          (<span class="k">unless</span> (string-prefix-p <span class="s">"https://"</span> url)
+            (<span class="w">error</span> <span class="s">"Refusing non-HTTPS download URL: %s"</span> url))
+          (make-directory dir t)
+          (<span class="k">let</span> ((dest (expand-file-name
+                       (concat <span class="s">"ghostel-module"</span> module-file-suffix) dir))
+                (sidecar (ghostel--module-sidecar-path dir)))
+            <span class="cd">;; </span><span class="c">Drop any pre-existing sidecar so that, if the download or the
+</span>            <span class="cd">;; </span><span class="c">subsequent sidecar write fails partway, the loader sees `</span><span class="m c">absent</span><span class="c">'
+</span>            <span class="cd">;; </span><span class="c">rather than `</span><span class="m c">stale</span><span class="c">' (refuse to map a fresh module).
+</span>            (<span class="k">when</span> (file-exists-p sidecar)
+              (delete-file sidecar))
+            (message <span class="s">"ghostel: downloading native module from %s..."</span> url)
+            (<span class="k">when-let*</span> ((final-url (ghostel--download-file url dest)))
+              <span class="cd">;; </span><span class="c">Resolve the version that was actually fetched.  For an
+</span>              <span class="cd">;; </span><span class="c">explicit version we trust the request; for `</span><span class="m c">latest</span><span class="c">' we
+</span>              <span class="cd">;; </span><span class="c">parse the URL the server redirected us to.  If parsing
+</span>              <span class="cd">;; </span><span class="c">fails we fall back to the minimum so the sidecar still
+</span>              <span class="cd">;; </span><span class="c">reflects a safe lower bound.
+</span>              (<span class="k">let*</span> ((downloaded-version (ghostel--release-version-from-url final-url))
+                     (resolved (<span class="k">or</span> requested-version
+                                   downloaded-version
+                                   ghostel--minimum-module-version)))
+                (ghostel--install-support-assets
+                 dir (<span class="k">or</span> requested-version downloaded-version))
+                (ghostel--write-module-sidecar-version dir resolved))
+              (message <span class="s">"ghostel: native module downloaded successfully"</span>)
+              t))))
+    (<span class="w">error</span>
+     (message <span class="s">"ghostel: download failed: %s"</span> (error-message-string err))
+     nil)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

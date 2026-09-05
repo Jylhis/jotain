@@ -1,0 +1,75 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: cape-wrap-super – Emacs Documentation Online</title>
+<meta name="description" content="cape-wrap-super is a natively compiled function defined in cape.el.
+Call CAPFS and return merged completion result.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>cape-wrap-super</code></h1><p><span class="m"><code>cape-wrap-super</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">cape.el</span>.
+<h2>Signature</h2>
+<pre><code>(cape-wrap-super <span class="ty">&amp;rest</span> <a href="#:~:text=Call-,CAPFS"><span class="arg">CAPFS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Call <span class="arg">CAPFS</span> and return merged completion result.
+<p>The <span class="arg">CAPFS</span> list can contain the keyword <span class="bi">:with</span> to mark the Capfs
+afterwards as auxiliary.  One of the non-auxiliary Capfs before <span class="bi">:with</span>
+must return non-nil for the super Capf to set in and return a non-nil
+result.  Such behavior is useful when listing multiple super Capfs in
+the <a href="../var/completion-at-point-functions.html"><code>completion-at-point-functions</code></a>:
+<p>&nbsp;&nbsp;(<span class="k">setq</span> completion-at-point-functions
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(list (cape-capf-super 'elisp-completion-at-point
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:with</span> 'tempel-complete)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(cape-capf-super 'cape-dabbrev
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:with</span> 'tempel-complete)))
+<p>See the dual <a href="../fun/cape-wrap-choose.html"><code>cape-wrap-choose</code></a> if you want to try multiple Capfs in
+turn.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4ylqcdhr31fki9yxzd4rhd2bm54ydhdn-emacs-packages-deps/share/emacs/site-lisp/elpa/cape-20260821.1208/cape.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">cape-wrap-super</span> (<span class="ty">&amp;rest</span> capfs)
+  <span class="doc">"Call CAPFS and return merged completion result.
+The CAPFS list can contain the keyword `</span><span class="m doc">:with</span><span class="doc">' to mark the Capfs
+afterwards as auxiliary.  One of the non-auxiliary Capfs before `</span><span class="m doc">:with</span><span class="doc">'
+must return non-nil for the super Capf to set in and return a non-nil
+result.  Such behavior is useful when listing multiple super Capfs in
+the `</span><span class="m doc">completion-at-point-functions</span><span class="doc">':
+
+  (setq completion-at-point-functions
+        (list (cape-capf-super </span><span class="bi doc">\\=</span><span class="doc">'elisp-completion-at-point
+                               :with </span><span class="bi doc">\\=</span><span class="doc">'tempel-complete)
+              (cape-capf-super </span><span class="bi doc">\\=</span><span class="doc">'cape-dabbrev
+                               :with </span><span class="bi doc">\\=</span><span class="doc">'tempel-complete)))
+
+See the dual `</span><span class="m doc">cape-wrap-choose</span><span class="doc">' if you want to try multiple Capfs in
+turn."</span>
+  (<span class="k">when-let*</span> ((results (<span class="k">cl-loop</span> for capf in capfs until (eq capf <span class="bi">:with</span>)
+                                for res = (funcall capf)
+                                if res collect (cons t res))))
+    (nconc results (<span class="k">cl-loop</span> for capf in (cdr (memq <span class="bi">:with</span> capfs))
+                            for res = (funcall capf)
+                            if res collect (cons nil res)))
+    (<span class="k">pcase-let*</span> ((`((,_main ,beg ,end . ,_)) results)
+                 (`(,tables ,exc ,plen) (cape--super-prefix beg end results))
+                 (cache (cons nil nil)))
+      `( ,beg ,end
+         ,(<span class="k">lambda</span> (str pred action)
+            (<span class="k">pcase</span> action
+              ((<span class="k">or</span> `(boundaries . ,_) 'metadata) nil)
+              ('t <span class="cd">;; </span><span class="c">all-completions
+</span>               (cape--super-all str pred tables exc cache))
+              ('nil <span class="cd">;; </span><span class="c">try-completion
+</span>               (<span class="k">let</span> ((cands (cape--super-all str pred tables exc cache)))
+                 (<span class="k">or</span> (try-completion str cands pred)
+                     (cape--super-complete str pred action tables))))
+              (_ <span class="cd">;; </span><span class="c">test-completion and other actions
+</span>               (cape--super-complete str pred action tables))))
+         <span class="bi">:category</span> cape-super
+         <span class="bi">:company-prefix-length</span> ,plen
+         <span class="bi">:display-sort-function</span> ,#'identity
+         <span class="bi">:cycle-sort-function</span> ,#'identity
+         ,@(<span class="k">and</span> (not exc) '(<span class="bi">:exclusive</span> no))
+         ,@(<span class="k">cl-loop</span> for f in cape--super-functions
+                    collect f collect (cape--super-function f cache))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

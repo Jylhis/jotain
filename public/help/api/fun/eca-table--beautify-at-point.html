@@ -1,0 +1,92 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-table--beautify-at-point – Emacs Documentation Online</title>
+<meta name="description" content="eca-table--beautify-at-point is a natively compiled function defined
+in eca-table.el.
+Apply visual overlays to the markdown table at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-table--beautify-at-point</code></h1><p><span class="m"><code>eca-table--beautify-at-point</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-table.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-table--beautify-at-point)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply visual overlays to the markdown table at point.
+<p>Point must be inside a table.  Adds header highlighting, dims the
+separator row and pipe characters, and applies zebra striping to
+data rows.  For tables wider than the window, an action bar is shown
+allowing the user to toggle between wrapped and scrollable display.
+All changes are overlay-only — buffer text is untouched.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-table.el</span>
+(<span class="k">defun</span> <span class="f">eca-table--beautify-at-point</span> ()
+  <span class="doc">"Apply visual overlays to the markdown table at point.
+Point must be inside a table.  Adds header highlighting, dims the
+separator row and pipe characters, and applies zebra striping to
+data rows.  For tables wider than the window, an action bar is shown
+allowing the user to toggle between wrapped and scrollable display.
+All changes are overlay-only — buffer text is untouched."</span>
+  (<span class="k">let*</span> ((tbl-beg (markdown-table-begin))
+         (tbl-end (markdown-table-end))
+         (row-num 0)
+         (max-width (eca-table--max-line-width tbl-beg tbl-end))
+         (window-width (<span class="k">when-let*</span> ((win (get-buffer-window (current-buffer))))
+                         (window-body-width win)))
+         (wide-p (<span class="k">and</span> window-width (&gt; max-width window-width))))
+    <span class="cd">;; </span><span class="c">Clean any previous overlays in this table region
+</span>    (eca-table-remove-overlays tbl-beg tbl-end)
+    <span class="cd">;; </span><span class="c">Add action bar for wide tables
+</span>    (<span class="k">if</span> wide-p
+        (<span class="k">let</span> ((action-ov (make-overlay tbl-beg tbl-end)))
+          (overlay-put action-ov 'eca-table-overlay t)
+          (overlay-put action-ov 'eca-table-action t)
+          (overlay-put action-ov 'eca-table-truncated nil)
+          <span class="cd">;; </span><span class="c">`</span><span class="m c">eca-table-actions-map</span><span class="c">' binds w (wrap) and o (open).
+</span>          (overlay-put action-ov 'keymap eca-table-actions-map)
+          (overlay-put action-ov 'evaporate t)
+          (eca-table--refresh-action-bar action-ov))
+      <span class="cd">;; </span><span class="c">Narrower tables get no action bar, but still bind `</span><span class="m c">o</span><span class="c">' so the
+</span>      <span class="cd">;; </span><span class="c">table can be opened in its own buffer from anywhere on it.
+</span>      (<span class="k">let</span> ((open-ov (make-overlay tbl-beg tbl-end)))
+        (overlay-put open-ov 'eca-table-overlay t)
+        (overlay-put open-ov 'keymap eca-table-open-map)
+        (overlay-put open-ov 'evaporate t)))
+    (<span class="k">save-excursion</span>
+      (goto-char tbl-beg)
+      (<span class="k">while</span> (&lt; (point) tbl-end)
+        (<span class="k">let</span> ((line-beg (line-beginning-position))
+              (line-end (line-end-position)))
+          (<span class="k">cond</span>
+           <span class="cd">;; </span><span class="c">Row 0: header row
+</span>           ((= row-num 0)
+            (<span class="k">let</span> ((ov (make-overlay line-beg (1+ line-end))))
+              (overlay-put ov 'eca-table-overlay t)
+              (overlay-put ov 'face 'eca-table-header-face)
+              (overlay-put ov 'evaporate t)))
+           <span class="cd">;; </span><span class="c">Row 1: separator row (|---|---|)
+</span>           ((= row-num 1)
+            (<span class="k">let</span> ((ov (make-overlay line-beg (1+ line-end))))
+              (overlay-put ov 'eca-table-overlay t)
+              (overlay-put ov 'face 'eca-table-separator-face)
+              (overlay-put ov 'evaporate t)))
+           <span class="cd">;; </span><span class="c">Data rows: zebra stripe even rows (row 2 = first data row = even)
+</span>           (t
+            (<span class="k">when</span> (cl-evenp row-num)
+              (<span class="k">let</span> ((ov (make-overlay line-beg (1+ line-end))))
+                (overlay-put ov 'eca-table-overlay t)
+                (overlay-put ov 'face 'eca-table-row-even-face)
+                (overlay-put ov 'evaporate t)))))
+          <span class="cd">;; </span><span class="c">Dim pipe characters on this line
+</span>          (<span class="k">save-excursion</span>
+            (goto-char line-beg)
+            (<span class="k">while</span> (search-forward <span class="s">"|"</span> line-end t)
+              (<span class="k">let</span> ((ov (make-overlay (1- (point)) (point))))
+                (overlay-put ov 'eca-table-overlay t)
+                (overlay-put ov 'face 'eca-table-pipe-face)
+                (overlay-put ov 'evaporate t)))))
+        (<span class="k">setq</span> row-num (1+ row-num))
+        (forward-line 1)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

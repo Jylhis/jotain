@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--key-pressed-return – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--key-pressed-return is an interactive and natively compiled
+function defined in eca-chat.el.
+Send the current prompt to eca process if in prompt.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--key-pressed-return</code></h1><p><span class="m"><code>eca-chat--key-pressed-return</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--key-pressed-return)
+</code></pre>
+<h2>Documentation</h2>
+<p>Send the current prompt to eca process if in prompt.
+<h2>Key Bindings</h2>
+<p><span class="v">eca-chat-mode-map</span> <span class="key">RET</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--key-pressed-return</span> ()
+  <span class="doc">"Send the current prompt to eca process if in prompt."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">eca-chat--allow-write</span>
+   (<span class="k">let*</span> ((session (eca-session))
+          (prompt (eca-chat--prompt-content)))
+     (<span class="k">cond</span>
+      <span class="cd">;; </span><span class="c">check if completion popup is active
+</span>      ((eca-chat--completion-active-p)
+       (eca-chat--completion-accept))
+
+      <span class="cd">;; </span><span class="c">check it's an actionable text
+</span>      ((<span class="k">-some-&gt;&gt;</span> (thing-at-point 'symbol) (get-text-property 0 'eca-button-on-action))
+       (<span class="k">-some-&gt;&gt;</span> (thing-at-point 'symbol)
+         (get-text-property 0 'eca-button-on-action)
+         (funcall)))
+
+      <span class="cd">;; </span><span class="c">check is inside a expandable text
+</span>      ((eca-chat--expandable-content-at-point)
+       (<span class="k">let</span> ((ov (eca-chat--expandable-content-at-point)))
+         (eca-chat--expandable-content-toggle (overlay-get ov 'eca-chat--expandable-content-id))))
+
+      <span class="cd">;; </span><span class="c">follow markdown link [text](url) or a bare URL, even when the URL
+</span>      <span class="cd">;; </span><span class="c">is wrapped in emphasis like **https://...** (face is then a list,
+</span>      <span class="cd">;; </span><span class="c">so check membership instead of `</span><span class="m c">eq</span><span class="c">' against a single symbol).
+</span>      ((eca-chat--face-at-point-member-p '(markdown-link-face
+                                           markdown-url-face
+                                           markdown-plain-url-face))
+       (eca-chat--follow-link-at-point))
+
+      <span class="cd">;; </span><span class="c">pending question + freeform allowed — answer with prompt text
+</span>      ((<span class="k">and</span> eca-chat--pending-question
+            (plist-get eca-chat--pending-question <span class="bi">:allow-freeform</span>)
+            (not (string-empty-p prompt)))
+       (eca-chat--answer-question prompt))
+
+      <span class="cd">;; </span><span class="c">pending question — block normal send/steer
+</span>      (eca-chat--pending-question nil)
+
+      <span class="cd">;; </span><span class="c">check prompt
+</span>      ((<span class="k">and</span> (not (string-empty-p prompt))
+            (not eca-chat--chat-loading))
+       (eca-chat--send-prompt session prompt))
+
+      ((<span class="k">and</span> (not (string-empty-p prompt))
+            eca-chat--chat-loading)
+       (eca-chat--steer-prompt session prompt))
+
+      (t nil)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

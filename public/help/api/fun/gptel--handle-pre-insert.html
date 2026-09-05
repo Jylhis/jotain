@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--handle-pre-insert – Emacs Documentation Online</title>
+<meta name="description" content="gptel--handle-pre-insert is a natively compiled function defined in
+gptel.el.
+Tasks before inserting the LLM response for state FSM.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--handle-pre-insert</code></h1><p><span class="m"><code>gptel--handle-pre-insert</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--handle-pre-insert <a href="#:~:text=state-,FSM"><span class="arg">FSM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Tasks before inserting the LLM response for state <span class="arg">FSM</span>.
+<p>Handle read-only buffers and run pre-response hooks (but only if
+the request succeeded).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+<span class="cd">;;;; </span><span class="c">State machine handlers
+</span><span class="cd">;; </span><span class="c">The next few functions are default state handlers for gptel-send, see
+</span><span class="cd">;; </span><span class="c">`</span><span class="m c">gptel-send--handlers</span><span class="c">'.
+</span>
+(<span class="k">defun</span> <span class="f">gptel--handle-pre-insert</span> (fsm)
+  <span class="doc">"Tasks before inserting the LLM response for state FSM.
+
+Handle read-only buffers and run pre-response hooks (but only if
+the request succeeded)."</span>
+  (<span class="k">let*</span> ((info (gptel-fsm-info fsm))
+         (start-marker (plist-get info <span class="bi">:position</span>)))
+    (<span class="k">when</span> (memq (plist-get info <span class="bi">:callback</span>)
+                '(gptel--insert-response gptel-curl--stream-insert-response))
+      (<span class="k">with-current-buffer</span> (marker-buffer start-marker)
+        (<span class="k">when</span> (<span class="k">or</span> buffer-read-only (get-char-property start-marker 'read-only))
+          (<span class="k">cond</span>
+           ((derived-mode-p 'vterm-mode)
+            (<span class="k">require</span> '<span class="m">gptel-integrations</span>)
+            (gptel--vterm-pre-insert info))
+           (t
+            (message <span class="s">"Buffer is read only, displaying reply in buffer \"*LLM response*\""</span>)
+            (display-buffer
+             (<span class="k">with-current-buffer</span> (get-buffer-create <span class="s">"*LLM response*"</span>)
+               (visual-line-mode 1)
+               (goto-char (point-max))
+               (move-marker start-marker (point) (current-buffer))
+               (current-buffer))
+             '((display-buffer-reuse-window
+                display-buffer-pop-up-window)
+               (reusable-frames . visible))))))))
+    (<span class="k">with-current-buffer</span> (marker-buffer start-marker)
+      (<span class="k">when</span> (plist-get info <span class="bi">:stream</span>)
+        (gptel--update-status <span class="s">" Typing..."</span> 'success))
+      (<span class="k">save-excursion</span>
+        (goto-char start-marker)
+        (<span class="k">when</span> (<span class="k">and</span> (member (plist-get info <span class="bi">:http-status</span>) '(<span class="s">"200"</span> <span class="s">"100"</span>))
+                   gptel-pre-response-hook)
+          (run-hooks 'gptel-pre-response-hook))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

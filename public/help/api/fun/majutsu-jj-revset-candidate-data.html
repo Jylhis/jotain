@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-jj-revset-candidate-data – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-jj-revset-candidate-data is a natively compiled function
+defined in majutsu-jj.el.
+Return revset completion payload.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-jj-revset-candidate-data</code></h1><p><span class="m"><code>majutsu-jj-revset-candidate-data</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-jj.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-jj-revset-candidate-data)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return revset completion payload.
+<p>The return value is a plist with keys :category and :candidates.
+Candidates are repository references: other workspaces' working-copy
+refs (<span class="m"><code>&lt;workspace&gt;@</code></span>), bookmarks, and tags.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-jj.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-jj-revset-candidate-data</span> ()
+  <span class="doc">"Return revset completion payload.
+The return value is a plist with keys :category and :candidates.
+Candidates are repository references: other workspaces' working-copy
+refs (`</span><span class="m doc">&lt;workspace&gt;@</span><span class="doc">'), bookmarks, and tags."</span>
+  (<span class="k">let</span> ((seen (make-hash-table <span class="bi">:test</span> #'equal))
+        (candidates nil))
+    (<span class="k">cl-labels</span> ((add (candidate)
+                  (<span class="k">when</span> (<span class="k">and</span> (stringp candidate)
+                             (not (string-empty-p candidate))
+                             (not (gethash candidate seen)))
+                    (puthash candidate t seen)
+                    (<span class="k">push</span> candidate candidates))))
+      (<span class="k">dolist</span> (name (majutsu-jj--safe-lines
+                     <span class="s">"workspace"</span> <span class="s">"list"</span> <span class="s">"-T"</span> <span class="s">"name ++ \"\\n\""</span>))
+        (add (concat name <span class="s">"@"</span>)))
+      (<span class="k">dolist</span> (name (majutsu-jj--safe-lines
+                     <span class="s">"bookmark"</span> <span class="s">"list"</span> <span class="s">"--quiet"</span> <span class="s">"-T"</span> <span class="s">"name ++ \"\\n\""</span>))
+        (add name))
+      (<span class="k">dolist</span> (name (majutsu-jj--safe-lines
+                     <span class="s">"tag"</span> <span class="s">"list"</span> <span class="s">"--quiet"</span> <span class="s">"-T"</span> <span class="s">"name ++ \"\\n\""</span>))
+        (add name)))
+    (list <span class="bi">:category</span> 'majutsu-revision
+          <span class="bi">:candidates</span> (nreverse candidates))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

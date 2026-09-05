@@ -1,0 +1,89 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-todos--insert-items – Emacs Documentation Online</title>
+<meta name="description" content="magit-todos--insert-items is a natively compiled function defined in
+magit-todos.el.
+Insert to-do ITEMS into MAGIT-STATUS-BUFFER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-todos--insert-items</code></h1><p><span class="m"><code>magit-todos--insert-items</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-todos.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-todos--insert-items <a href="#:~:text=into-,MAGIT-STATUS-BUFFER"><span class="arg">MAGIT-STATUS-BUFFER</span></a> <a href="#:~:text=do-,ITEMS"><span class="arg">ITEMS</span></a> <span class="ty">&amp;key</span> <a href="#:~:text=If-,BRANCH-P"><span class="arg">BRANCH-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert to-do <span class="arg">ITEMS</span> into <span class="arg">MAGIT-STATUS-BUFFER</span>.
+<p>If <span class="arg">BRANCH-P</span> is non-nil, do not update <a href="../var/magit-todos-item-cache.html"><code>magit-todos-item-cache</code></a>,
+<a href="../var/magit-todos-last-update-time.html"><code>magit-todos-last-update-time</code></a>, and <a href="../var/magit-todos-updating.html"><code>magit-todos-updating</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/na5pd87dpfy16i19v2xzgb9ry6gjpyvw-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-todos-20250928.1611/magit-todos.el</span>
+(<span class="k">cl-defun</span> <span class="f">magit-todos--insert-items</span> (magit-status-buffer items <span class="ty">&amp;key</span> branch-p)
+  <span class="doc">"Insert to-do ITEMS into MAGIT-STATUS-BUFFER.
+If BRANCH-P is non-nil, do not update `</span><span class="m doc">magit-todos-item-cache</span><span class="doc">',
+`</span><span class="m doc">magit-todos-last-update-time</span><span class="doc">', and `</span><span class="m doc">magit-todos-updating</span><span class="doc">'."</span>
+  (<span class="k">declare</span> (indent defun))
+  <span class="cd">;; </span><span class="c">NOTE: This could be factored out into some kind of `</span><span class="m c">magit-insert-section-async</span><span class="c">' macro if necessary.
+</span>  <span class="cd">;; </span><span class="c">MAYBE: Use `</span><span class="m c">magit-insert-section-body</span><span class="c">'.
+</span>  (<span class="k">when</span> (not (buffer-live-p magit-status-buffer))
+    (message <span class="s">"`</span><span class="m s">magit-todos--insert-items-callback</span><span class="s">': Callback called for deleted buffer"</span>))
+  (<span class="k">let*</span> ((items (magit-todos--sort items))
+         (num-items (length items))
+         (magit-section-show-child-count t)
+         <span class="cd">;; </span><span class="c">HACK: "For internal use only."  But this makes collapsing the new section work!
+</span>         (magit-insert-section--parent magit-root-section)
+         (inhibit-read-only t))
+    (<span class="k">when</span> (buffer-live-p magit-status-buffer)
+      <span class="cd">;; </span><span class="c">Don't try to select a killed status buffer
+</span>      (<span class="k">with-current-buffer</span> magit-status-buffer
+        (<span class="k">unless</span> branch-p
+          <span class="cd">;; </span><span class="c">Don't do any of this for the branch-diff scanner.
+</span>          (<span class="k">when</span> magit-todos-updating
+            (<span class="k">when</span> (<span class="k">or</span> (null magit-todos-update)      <span class="cd">; </span><span class="c">Manual updates
+</span>                      (integerp magit-todos-update)) <span class="cd">; </span><span class="c">Caching
+</span>              (<span class="k">setq</span> magit-todos-item-cache items)
+              (<span class="k">setq</span> magit-todos-last-update-time (current-time)))
+            <span class="cd">;; </span><span class="c">HACK: I don't like setting this special var, but it works.  See other comment where
+</span>            <span class="cd">;; </span><span class="c">it's set t.
+</span>            (<span class="k">setq</span> magit-todos-updating nil)))
+        (<span class="k">save-excursion</span>
+          <span class="cd">;; </span><span class="c">Insert items
+</span>          (goto-char (point-min))
+          <span class="cd">;; </span><span class="c">Go to insertion position
+</span>          (goto-char (<span class="k">or</span> (<span class="k">cl-loop</span> for section in magit-todos-insert-after
+                                  for pos = (magit-todos--section-end section)
+                                  when pos return pos)
+                         (magit-todos--section-end 'bottom)))
+          <span class="cd">;; </span><span class="c">Insert section
+</span>          (<span class="k">let*</span> ((group-fns (<span class="k">pcase</span> magit-todos-auto-group-items
+                              ('never nil)
+                              ('always magit-todos-group-by)
+                              ((pred integerp) (<span class="k">when</span> (&gt; num-items magit-todos-auto-group-items)
+                                                 magit-todos-group-by))
+                              (_ (<span class="w">error</span> <span class="s">"Invalid value for magit-todos-auto-group-items"</span>))))
+                 (magit-todos-show-filenames (not (member 'magit-todos-item-filename group-fns)))
+                 (reminder (<span class="k">if</span> magit-todos-update
+                               <span class="s">""</span>      <span class="cd">; </span><span class="c">Automatic updates: no reminder
+</span>                             <span class="cd">;; </span><span class="c">Manual updates: remind user
+</span>                             <span class="s">" (update manually)"</span>)))
+            (<span class="k">if</span> (not items)
+                (<span class="k">unless</span> magit-todos-update
+                  <span class="cd">;; </span><span class="c">Manual updates: Insert section to remind user
+</span>                  (<span class="k">let</span> ((magit-insert-section--parent magit-root-section))
+                    (<span class="k">magit-insert-section</span> (todos)
+                      (<span class="k">magit-insert-heading</span> (concat (propertize magit-todos-section-heading
+                                                                'face 'magit-section-heading
+                                                                'font-lock-face 'magit-section-heading)
+                                                    <span class="s">" (0)"</span> reminder <span class="s">"\n"</span>)))))
+              (<span class="k">let</span> ((section (magit-todos--insert-groups <span class="bi">:type</span> 'todos
+                               <span class="bi">:heading</span> (format <span class="s">"%s (%s)%s"</span>
+                                                (propertize magit-todos-section-heading
+                                                            'face 'magit-section-heading
+                                                            'font-lock-face 'magit-section-heading)
+                                                num-items reminder)
+                               <span class="bi">:group-fns</span> group-fns
+                               <span class="bi">:items</span> items
+                               <span class="bi">:depth</span> 0)))
+                (magit-todos--set-visibility <span class="bi">:section</span> section <span class="bi">:num-items</span> num-items)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

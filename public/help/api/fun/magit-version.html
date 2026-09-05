@@ -1,0 +1,155 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-version – Emacs Documentation Online</title>
+<meta name="description" content="magit-version is an interactive and natively compiled function defined
+in magit.el.
+Return the version of Magit currently in use.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-version</code></h1><p><span class="m"><code>magit-version</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">magit.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-version <span class="ty">&amp;optional</span> <a href="#:~:text=argument-,PRINT-DEST"><span class="arg">PRINT-DEST</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the version of Magit currently in use.
+<p>If optional argument <span class="arg">PRINT-DEST</span> is non-nil, also print the used
+versions of Magit, Transient, Git and Emacs to the output stream
+selected by that argument.  Interactively use the echo area, or
+with a prefix argument use the current buffer.  Additionally put
+the output in the kill ring.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">magit-version</span> (<span class="ty">&amp;optional</span> print-dest interactive nowarn)
+  <span class="doc">"Return the version of Magit currently in use.
+
+If optional argument PRINT-DEST is non-nil, also print the used
+versions of Magit, Transient, Git and Emacs to the output stream
+selected by that argument.  Interactively use the echo area, or
+with a prefix argument use the current buffer.  Additionally put
+the output in the kill ring.
+\n(fn &amp;optional PRINT-DEST)"</span>
+  (<span class="k">interactive</span> (list (<span class="k">if</span> current-prefix-arg (current-buffer) t) t))
+  (<span class="k">let</span> ((magit-git-global-arguments nil)
+        (toplib (<span class="k">or</span> load-file-name buffer-file-name))
+        debug)
+    (<span class="k">unless</span> (<span class="k">and</span> toplib
+                 (member (file-name-nondirectory toplib)
+                         '(<span class="s">"magit.el"</span> <span class="s">"magit.el.gz"</span>)))
+      (<span class="k">let</span> ((load-suffixes (reverse load-suffixes))) <span class="cd">; </span><span class="c">prefer .el than .elc
+</span>        (<span class="k">setq</span> toplib (locate-library <span class="s">"magit"</span>))))
+    (<span class="k">setq</span> toplib (<span class="k">and</span> toplib (magit--chase-links toplib)))
+    (<span class="k">push</span> toplib debug)
+    (<span class="k">when</span> toplib
+      (<span class="k">let*</span> ((topdir (file-name-directory toplib))
+             (gitdir (expand-file-name
+                      <span class="s">".git"</span> (file-name-directory
+                              (directory-file-name topdir))))
+             (static (locate-library <span class="s">"magit-version.el"</span> nil (list topdir)))
+             (static (<span class="k">and</span> static (magit--chase-links static))))
+        (<span class="k">or</span> (<span class="k">progn</span>
+              (<span class="k">push</span> 'repo debug)
+              (<span class="k">when</span> (<span class="k">and</span> (file-exists-p gitdir)
+                         <span class="cd">;; </span><span class="c">It is a repo, but is it the Magit repo?
+</span>                         (file-exists-p
+                          (expand-file-name <span class="s">"../lisp/magit.el"</span> gitdir)))
+                (<span class="k">push</span> t debug)
+                <span class="cd">;; </span><span class="c">Inside the repo the version file should only exist
+</span>                <span class="cd">;; </span><span class="c">while running make.
+</span>                (<span class="k">when</span> (<span class="k">and</span> static (not noninteractive))
+                  (<span class="k">ignore-errors</span> (delete-file static)))
+                (<span class="k">setq</span> magit-version
+                      (<span class="k">let</span> ((default-directory topdir))
+                        (magit-git-string <span class="s">"describe"</span>
+                                          <span class="s">"--tags"</span> <span class="s">"--dirty"</span> <span class="s">"--always"</span>)))))
+            (<span class="k">progn</span>
+              (<span class="k">push</span> 'static debug)
+              (<span class="k">when</span> (<span class="k">and</span> static (file-exists-p static))
+                (<span class="k">push</span> t debug)
+                (load-file static)
+                magit-version))
+            (<span class="k">when</span> (<span class="k">and</span> (<span class="k">featurep</span> '<span class="m">package</span>)
+                       (boundp 'package-alist)
+                       (fboundp 'package-version-join))
+              (<span class="k">push</span> 'elpa debug)
+              (<span class="k">ignore-errors</span>
+                (<span class="k">when-let</span> ((version (cadr (assq 'magit package-alist))))
+                  (<span class="k">push</span> t debug)
+                  (<span class="k">setq</span> magit-version
+                        (<span class="k">and</span> (fboundp 'package-desc-version)
+                             (package-version-join
+                              (package-desc-version version)))))))
+            (<span class="k">progn</span>
+              (<span class="k">push</span> 'dirname debug)
+              (<span class="k">let</span> ((dirname (file-name-nondirectory
+                              (directory-file-name topdir))))
+                (<span class="k">when</span> (string-match <span class="s">"\\`magit-</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9].*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> dirname)
+                  (<span class="k">setq</span> magit-version (match-str 1 dirname)))))
+            <span class="cd">;; </span><span class="c">If all else fails, just report the commit hash. It's
+</span>            <span class="cd">;; </span><span class="c">better than nothing and we cannot do better in the case
+</span>            <span class="cd">;; </span><span class="c">of e.g., a shallow clone.
+</span>            (<span class="k">progn</span>
+              (<span class="k">push</span> 'hash debug)
+              <span class="cd">;; </span><span class="c">Same check as above to see if it's really the Magit repo.
+</span>              (<span class="k">when</span> (<span class="k">and</span> (file-exists-p gitdir)
+                         (file-exists-p
+                          (expand-file-name <span class="s">"../lisp/magit.el"</span> gitdir)))
+                (<span class="k">setq</span> magit-version
+                      (<span class="k">let</span> ((default-directory topdir))
+                        (magit-git-string <span class="s">"rev-parse"</span> <span class="s">"HEAD"</span>))))))))
+    (<span class="k">if</span> (stringp magit-version)
+        (<span class="k">when</span> print-dest
+          (<span class="k">let*</span> ((alt (<span class="k">or</span> (<span class="k">and</span> (<span class="k">ignore-errors</span>
+                                 (magit--version&gt;= magit-version <span class="s">"2008"</span>))
+                               (<span class="k">ignore-errors</span>
+                                 (<span class="k">require</span> '<span class="m">lisp-mnt</span>)
+                                 (<span class="k">and</span> (fboundp 'lm-header)
+                                      (<span class="k">with-temp-buffer</span>
+                                        (insert-file-contents
+                                         (locate-library <span class="s">"magit.el"</span> t))
+                                        (lm-header <span class="s">"Package-Version"</span>)))))))
+                 (str (format
+                       <span class="s">"Magit %s%s, Transient %s,%s Git %s, Emacs %s, %s"</span>
+                       (<span class="k">or</span> magit-version <span class="s">"(unknown)"</span>)
+                       (<span class="k">if</span> (<span class="k">and</span> alt (not (equal alt magit-version)))
+                           (format <span class="s">" [&gt;= %s]"</span> alt)
+                         <span class="s">""</span>)
+                       (<span class="k">or</span> (<span class="k">ignore-errors</span>
+                             (<span class="k">require</span> '<span class="m">lisp-mnt</span>)
+                             (<span class="k">and</span> (fboundp 'lm-header)
+                                  (<span class="k">with-temp-buffer</span>
+                                    (insert-file-contents
+                                     (locate-library <span class="s">"transient.el"</span> t))
+                                    (lm-header <span class="s">"Package-Version"</span>))))
+                           <span class="s">"(unknown)"</span>)
+                       (<span class="k">let</span> ((lib (locate-library <span class="s">"forge.el"</span> t)))
+                         (<span class="k">or</span> (<span class="k">and</span> lib
+                                  (format
+                                   <span class="s">" Forge %s,"</span>
+                                   (<span class="k">or</span> (<span class="k">ignore-errors</span>
+                                         (<span class="k">require</span> '<span class="m">lisp-mnt</span>)
+                                         (<span class="k">with-temp-buffer</span>
+                                           (insert-file-contents lib)
+                                           (<span class="k">and</span> (fboundp 'lm-header)
+                                                (lm-header <span class="s">"Package-Version"</span>))))
+                                       <span class="s">"(unknown)"</span>)))
+                             <span class="s">""</span>))
+                       (magit--safe-git-version)
+                       emacs-version
+                       system-type)))
+            (<span class="k">when</span> interactive
+              (kill-new str))
+            (princ str print-dest)))
+      (<span class="k">setq</span> debug (reverse debug))
+      (<span class="k">setq</span> magit-version 'error)
+      (<span class="k">when</span> magit-version
+        (<span class="k">push</span> magit-version debug))
+      (<span class="k">unless</span> (<span class="k">or</span> nowarn (equal (getenv <span class="s">"CI"</span>) <span class="s">"true"</span>))
+        (message <span class="s">"Cannot determine Magit's version %S"</span> debug)))
+    magit-version))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: logview--iterate-entries-forward – Emacs Documentation Online</title>
+<meta name="description" content="logview--iterate-entries-forward is a natively compiled function
+defined in logview.el.
+Invoke CALLBACK for successive valid log entries forward.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>logview--iterate-entries-forward</code></h1><p><span class="m"><code>logview--iterate-entries-forward</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">logview.el</span>.
+<h2>Signature</h2>
+<pre><code>(logview--iterate-entries-forward <a href="#:~:text=around-,POSITION"><span class="arg">POSITION</span></a> <a href="#:~:text=Invoke-,CALLBACK"><span class="arg">CALLBACK</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,ONLY-VISIBLE"><span class="arg">ONLY-VISIBLE</span></a> <a href="#:~:text=or-,VALIDATOR"><span class="arg">VALIDATOR</span></a> <a href="#:~:text=if-,SKIP-CURRENT"><span class="arg">SKIP-CURRENT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Invoke <span class="arg">CALLBACK</span> for successive valid log entries forward.
+<p>Iteration starts at the entry around <span class="arg">POSITION</span> (or the next, if
+<span class="arg">SKIP-CURRENT</span> is non-nil) and continues forward until <span class="arg">CALLBACK</span>
+returns nil or end of buffer is reached.  This function does not
+alter the point, nor is it affected in any way by <span class="arg">CALLBACK</span> or
+<span class="arg">VALIDATOR</span> altering it.
+<p><span class="arg">CALLBACK</span> is called with two arguments: value of the
+<span class="m"><code>logview-entry</code></span> property and the beginning of the entry.
+<p>If <span class="arg">ONLY-VISIBLE</span> is non-nil, hidden entries are skipped.  If
+<span class="arg">VALIDATOR</span> is non-nil, entries for which the function returns nil
+are skipped too.  <span class="arg">VALIDATOR</span> is called with the same parameters as
+<span class="arg">CALLBACK</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qid656ql5mh048bd0k84vvsbc2517lh9-emacs-packages-deps/share/emacs/site-lisp/elpa/logview-20260218.2013/logview.el</span>
+(<span class="k">defun</span> <span class="f">logview--iterate-entries-forward</span> (position callback <span class="ty">&amp;optional</span> only-visible validator skip-current)
+  <span class="doc">"Invoke CALLBACK for successive valid log entries forward.
+
+Iteration starts at the entry around POSITION (or the next, if
+SKIP-CURRENT is non-nil) and continues forward until CALLBACK
+returns nil or end of buffer is reached.  This function does not
+alter the point, nor is it affected in any way by CALLBACK or
+VALIDATOR altering it.
+
+CALLBACK is called with two arguments: value of the
+`</span><span class="m doc">logview-entry</span><span class="doc">' property and the beginning of the entry.
+
+If ONLY-VISIBLE is non-nil, hidden entries are skipped.  If
+VALIDATOR is non-nil, entries for which the function returns nil
+are skipped too.  VALIDATOR is called with the same parameters as
+CALLBACK."</span>
+  (<span class="k">let</span> ((entry+start (logview--do-locate-current-entry position)))
+    (<span class="k">when</span> entry+start
+      (<span class="k">let</span> ((entry    (car entry+start))
+            (entry-at (cdr entry+start))
+            (limit    (<span class="k">if</span> only-visible (logview--point-max) (point-max))))
+        (<span class="k">unless</span> (<span class="k">and</span> skip-current (&gt;= (<span class="k">setq</span> entry-at (logview--entry-end entry entry-at)) limit))
+          (<span class="k">while</span> (<span class="k">progn</span> (<span class="k">setq</span> entry (<span class="k">or</span> (get-text-property entry-at 'logview-entry)
+                                        (<span class="k">progn</span> (logview--find-region-entries entry-at (+ entry-at logview--lazy-region-size))
+                                               (get-text-property entry-at 'logview-entry))))
+                        (<span class="k">and</span> (<span class="k">or</span> (<span class="k">and</span> only-visible (invisible-p entry-at))
+                                 (<span class="k">and</span> validator (not (funcall validator entry entry-at)))
+                                 (funcall callback entry entry-at))
+                             (&lt; (<span class="k">setq</span> entry-at (logview--entry-end entry entry-at)) limit)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

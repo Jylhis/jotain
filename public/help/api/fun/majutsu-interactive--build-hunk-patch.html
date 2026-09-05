@@ -1,0 +1,105 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-interactive--build-hunk-patch – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-interactive--build-hunk-patch is a natively compiled function
+defined in majutsu-interactive.el.
+Build a patch hunk for SECTION using SPEC and INVERT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-interactive--build-hunk-patch</code></h1><p><span class="m"><code>majutsu-interactive--build-hunk-patch</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-interactive.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-interactive--build-hunk-patch <a href="#:~:text=for-,SECTION"><span class="arg">SECTION</span></a> <a href="#:~:text=using-,SPEC"><span class="arg">SPEC</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=and-,INVERT"><span class="arg">INVERT</span></a> <a href="#:~:text=When-,CONTEXT-ON-ADDED"><span class="arg">CONTEXT-ON-ADDED</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Build a patch hunk for <span class="arg">SECTION</span> using <span class="arg">SPEC</span> and <span class="arg">INVERT</span>.
+<p><span class="arg">SPEC</span> is <span class="bi">:all</span> or list of (BEG . END) ranges.
+When <span class="arg">INVERT</span> is non-nil, invert selection for change lines.
+When <span class="arg">CONTEXT-ON-ADDED</span> is non-nil, treat unselected added lines as context.
+Return a hunk string or nil when no change lines remain.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-interactive.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-interactive--build-hunk-patch</span> (section spec <span class="ty">&amp;optional</span> invert context-on-added)
+  <span class="doc">"Build a patch hunk for SECTION using SPEC and INVERT.
+SPEC is `</span><span class="m doc">:all</span><span class="doc">' or list of (BEG . END) ranges.
+When INVERT is non-nil, invert selection for change lines.
+When CONTEXT-ON-ADDED is non-nil, treat unselected added lines as context.
+Return a hunk string or nil when no change lines remain."</span>
+  (<span class="k">let*</span> ((header (majutsu-interactive--hunk-header section))
+         (parsed (majutsu-interactive--parse-hunk-header header))
+         (lines (majutsu-interactive--hunk-lines section))
+         (ranges (<span class="k">cond</span>
+                  ((eq spec <span class="bi">:all</span>) nil)
+                  ((consp spec) (<span class="k">if</span> (<span class="k">and</span> spec (consp (car spec))) spec (list spec)))
+                  (t nil)))
+         (selected-lines nil)
+         (old-skip 0)
+         (new-skip 0)
+         (old-len 0)
+         (new-len 0)
+         (has-change nil)
+         (started nil)
+         (prev-included-line nil))
+    (<span class="k">dolist</span> (line lines)
+      (<span class="k">pcase-let</span> ((`(,text ,type ,bol ,eol) line))
+        (<span class="k">let*</span> ((selected (<span class="k">if</span> ranges
+                             (majutsu-interactive--line-selected-p bol eol ranges)
+                           t))
+               (include-change (<span class="k">if</span> invert (not selected) selected))
+               (convert-added (<span class="k">and</span> context-on-added (eq type 'added) (not include-change)))
+               (convert-removed (<span class="k">and</span> (not context-on-added) (eq type 'removed) (not include-change)))
+               (include (<span class="k">pcase</span> type
+                          ('context t)
+                          ('added (<span class="k">or</span> include-change convert-added))
+                          ('removed (<span class="k">or</span> include-change convert-removed))
+                          ('meta prev-included-line)
+                          (_ nil)))
+               (old-inc (<span class="k">pcase</span> type
+                          ('context 1)
+                          ('removed 1)
+                          (_ 0)))
+               (new-inc (<span class="k">pcase</span> type
+                          ('context 1)
+                          ('added 1)
+                          (_ 0))))
+          (<span class="k">if</span> include
+              (<span class="k">progn</span>
+                (<span class="k">unless</span> started
+                  (<span class="k">setq</span> started t))
+                (<span class="k">when</span> (<span class="k">and</span> (memq type '(added removed)) include-change)
+                  (<span class="k">setq</span> has-change t))
+                (<span class="k">setq</span> prev-included-line (memq type '(context added removed)))
+                (<span class="k">cond</span>
+                 (convert-added
+                  (<span class="k">setq</span> old-len (1+ old-len))
+                  (<span class="k">setq</span> new-len (1+ new-len))
+                  (<span class="k">push</span> (concat <span class="s">" "</span> (substring text 1)) selected-lines))
+                 (convert-removed
+                  (<span class="k">setq</span> old-len (1+ old-len))
+                  (<span class="k">setq</span> new-len (1+ new-len))
+                  (<span class="k">push</span> (concat <span class="s">" "</span> (substring text 1)) selected-lines))
+                 (t
+                  (<span class="k">setq</span> old-len (+ old-len old-inc))
+                  (<span class="k">setq</span> new-len (+ new-len new-inc))
+                  (<span class="k">push</span> text selected-lines))))
+            (<span class="k">when</span> (<span class="k">and</span> (not started) (memq type '(context added removed)))
+              (<span class="k">setq</span> old-skip (+ old-skip old-inc))
+              (<span class="k">setq</span> new-skip (+ new-skip new-inc)))
+            (<span class="k">unless</span> (eq type 'meta)
+              (<span class="k">setq</span> prev-included-line nil))))))
+    (<span class="k">when</span> (<span class="k">and</span> has-change selected-lines)
+      (<span class="k">let*</span> ((body (mapconcat #'identity (nreverse selected-lines) <span class="s">""</span>))
+             (hunk-header
+              (<span class="k">if</span> parsed
+                  (<span class="k">pcase-let</span> ((`(,old-start ,_old-len ,new-start ,_new-len ,suffix) parsed))
+                    (majutsu-interactive--format-hunk-header
+                     (+ old-start old-skip)
+                     old-len
+                     (+ new-start new-skip)
+                     new-len
+                     suffix))
+                header)))
+        (concat hunk-header body)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

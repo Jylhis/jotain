@@ -1,0 +1,76 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apheleia--make-process – Emacs Documentation Online</title>
+<meta name="description" content="apheleia--make-process is a natively compiled function defined in
+apheleia-formatters.el.
+Helper to run a formatter process asynchronously.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apheleia--make-process</code></h1><p><span class="m"><code>apheleia--make-process</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">apheleia-formatters.el</span>.
+<h2>Signature</h2>
+<pre><code>(apheleia--make-process <span class="ty">&amp;key</span> <a href="#:~:text=the-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=connects-,STDIN"><span class="arg">STDIN</span></a> <a href="#:~:text=STDIN,-,STDOUT"><span class="arg">STDOUT</span></a> <a href="#:~:text=and-,STDERR"><span class="arg">STDERR</span></a> <a href="#:~:text=using-,COMMAND"><span class="arg">COMMAND</span></a> <a href="#:~:text=completion.-,REMOTE"><span class="arg">REMOTE</span></a> <a href="#:~:text=and-,NOQUERY"><span class="arg">NOQUERY</span></a> <a href="#:~:text="><span class="arg">CONNECTION-TYPE</span></a> <a href="#:~:text=finished-,CALLBACK"><span class="arg">CALLBACK</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Helper to run a formatter process asynchronously.
+<p>This starts a formatter process using <span class="arg">COMMAND</span> and then connects
+<span class="arg">STDIN</span>, <span class="arg">STDOUT</span> and <span class="arg">STDERR</span> buffers to the processes different
+streams. Once the process is finished <span class="arg">CALLBACK</span> will be invoked
+with the exit-code of the formatter process as well as a boolean
+saying whether the process was interrupted before completion.
+<span class="arg">REMOTE</span> if supplied will be passed as the FILE-HANDLER argument to
+<a href="../fun/make-process.html"><code>make-process</code></a>.
+<p>See <a href="../fun/make-process.html"><code>make-process</code></a> for a description of the <span class="arg">NAME</span> and <span class="arg">NOQUERY</span>
+arguments.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbykkl13khzh84lv9vw1bf1vijzg30fr-emacs-packages-deps/share/emacs/site-lisp/elpa/apheleia-20260817.2331/apheleia-formatters.el</span>
+(<span class="k">cl-defun</span> <span class="f">apheleia--make-process</span>
+    (<span class="ty">&amp;key</span> name stdin stdout stderr command
+          remote noquery connection-type callback)
+  <span class="doc">"Helper to run a formatter process asynchronously.
+This starts a formatter process using COMMAND and then connects
+STDIN, STDOUT and STDERR buffers to the processes different
+streams. Once the process is finished CALLBACK will be invoked
+with the exit-code of the formatter process as well as a boolean
+saying whether the process was interrupted before completion.
+REMOTE if supplied will be passed as the FILE-HANDLER argument to
+`</span><span class="m doc">make-process</span><span class="doc">'.
+
+See `</span><span class="m doc">make-process</span><span class="doc">' for a description of the NAME and NOQUERY
+arguments."</span>
+  (apheleia--log
+   'process <span class="s">"Using make-process to create process %s with %S"</span> name command)
+  (<span class="k">let</span> ((proc
+         (make-process
+          <span class="bi">:name</span> name
+          <span class="bi">:buffer</span> stdout
+          <span class="bi">:stderr</span> stderr
+          <span class="bi">:command</span> command
+          <span class="bi">:file-handler</span> remote
+          <span class="bi">:noquery</span> noquery
+          <span class="bi">:connection-type</span> connection-type
+          <span class="bi">:sentinel</span>
+          (<span class="k">lambda</span> (proc _event)
+            (<span class="k">unless</span> (process-live-p proc)
+              (funcall
+               callback
+               (process-exit-status proc)
+               (process-get proc <span class="bi">:interrupted</span>)))))))
+    (set-process-sentinel (get-buffer-process stderr) #'ignore)
+    (<span class="k">when</span> stdin
+      (apheleia--log
+       'process
+       <span class="s">"Sending %d bytes to stdin of process %s"</span> (buffer-size stdin) name)
+      (set-process-coding-system
+       proc
+       nil
+       (buffer-local-value 'buffer-file-coding-system stdin))
+      (process-send-string
+       proc
+       (<span class="k">with-current-buffer</span> stdin
+         (buffer-string))))
+    (process-send-eof proc)
+    proc))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

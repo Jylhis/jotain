@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-db-update-file – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-db-update-file is a natively compiled function defined in
+org-roam-db.el.
+Update Org-roam cache for FILE-PATH.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-db-update-file</code></h1><p><span class="m"><code>org-roam-db-update-file</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">org-roam-db.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-db-update-file <span class="ty">&amp;optional</span> <a href="#:~:text=for-,FILE-PATH"><span class="arg">FILE-PATH</span></a> <a href="#:~:text="><span class="arg">DEPRECATED-ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update Org-roam cache for <span class="arg">FILE-PATH</span>.
+<p>Assumes <span class="arg">FILE-PATH</span> exists. See also <a href="../fun/org-roam-db-clear-file.html"><code>org-roam-db-clear-file</code></a>.
+<p>If NO-REQUIRE, don't require optional libraries. Set NO-REQUIRE
+when the libraries are already required at some toplevel, e.g.
+in <a href="../fun/org-roam-db-sync.html"><code>org-roam-db-sync</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-db.el</span>
+<span class="cd">;;;; </span><span class="c">Synchronization
+</span>(<span class="k">defun</span> <span class="f">org-roam-db-update-file</span> (<span class="ty">&amp;optional</span> file-path _deprecated-arg)
+  <span class="doc">"Update Org-roam cache for FILE-PATH.
+
+Assumes FILE-PATH exists. See also `</span><span class="m doc">org-roam-db-clear-file</span><span class="doc">'.
+
+If NO-REQUIRE, don't require optional libraries. Set NO-REQUIRE
+when the libraries are already required at some toplevel, e.g.
+in `</span><span class="m doc">org-roam-db-sync</span><span class="doc">'."</span>
+  (<span class="k">setq</span> file-path (<span class="k">or</span> file-path (buffer-file-name (buffer-base-buffer))))
+  (<span class="k">let</span> ((content-hash (org-roam-db--file-hash file-path))
+        (db-hash (caar (org-roam-db-query [<span class="bi">:select</span> hash <span class="bi">:from</span> files
+                                           <span class="bi">:where</span> (= file $s1)] <span class="w">file-path)))</span>
+        info)
+    (<span class="k">unless</span> (string= content-hash db-hash)
+      (<span class="k">require</span> '<span class="m">org-ref</span> nil t)
+      (<span class="k">org-roam-with-file</span> file-path nil
+        (<span class="k">emacsql-with-transaction</span> (org-roam-db)
+          (<span class="k">org-with-wide-buffer</span>
+           (org-set-regexps-and-options 'tags-only)
+           <span class="cd">;; </span><span class="c">Org doesn't use this anymore, so we probably should stop too.
+</span>           <span class="cd">;; </span><span class="c">(org-refresh-category-properties)
+</span>           (org-roam-db-clear-file)
+           (org-roam-db-insert-file content-hash)
+           (org-roam-db-insert-file-node)
+           (<span class="k">setq</span> org-outline-path-cache nil)
+           (org-roam-db-map-nodes
+            (list #'org-roam-db-insert-node-data
+                  #'org-roam-db-insert-aliases
+                  #'org-roam-db-insert-tags
+                  #'org-roam-db-insert-refs))
+           (<span class="k">setq</span> org-outline-path-cache nil)
+           (<span class="k">setq</span> info (org-element-parse-buffer))
+           (org-roam-db-map-links
+            (list #'org-roam-db-insert-link))
+           (<span class="k">when</span> (<span class="k">require</span> '<span class="m">oc</span> nil t)
+             (org-roam-db-map-citations
+              info
+              (list #'org-roam-db-insert-citation)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

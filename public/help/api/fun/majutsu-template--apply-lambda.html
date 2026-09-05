@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-template--apply-lambda – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-template--apply-lambda is a natively compiled function defined
+in majutsu-template.el.
+Apply LAMBDA-NODE to ARG-NODES by compile-time substitution.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-template--apply-lambda</code></h1><p><span class="m"><code>majutsu-template--apply-lambda</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">majutsu-template.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-template--apply-lambda <a href="#:~:text=Apply-,LAMBDA-NODE"><span class="arg">LAMBDA-NODE</span></a> <a href="#:~:text=to-,ARG-NODES"><span class="arg">ARG-NODES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply <span class="arg">LAMBDA-NODE</span> to <span class="arg">ARG-NODES</span> by compile-time substitution.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-template.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-template--apply-lambda</span> (lambda-node arg-nodes)
+  <span class="doc">"Apply LAMBDA-NODE to ARG-NODES by compile-time substitution."</span>
+  (<span class="k">let</span> ((params (majutsu-template--lambda-params lambda-node)))
+    (<span class="k">unless</span> (= (length params) (length arg-nodes))
+      (<span class="w">user-error</span> <span class="s">"majutsu-template: lambda expects %d arguments, got %d"</span>
+                  (length params) (length arg-nodes)))
+    (<span class="k">when-let*</span> ((expected-types (majutsu-template--type-ref-lambda-arg-types
+                                 (majutsu-template-node-type lambda-node))))
+      (<span class="k">cl-loop</span> for expected in expected-types
+               for arg in arg-nodes
+               do (<span class="k">unless</span> (majutsu-template--node-satisfies-type-p arg expected)
+                    (<span class="w">user-error</span> <span class="s">"majutsu-template: lambda expects %S, got %S"</span>
+                                expected (majutsu-template-node-type arg)))))
+    (<span class="k">if-let*</span> ((body-form (plist-get (majutsu-template-node-props lambda-node) <span class="bi">:body-form</span>)))
+        (<span class="k">let*</span> ((arg-type (<span class="k">and</span> (= (length arg-nodes) 1)
+                              (majutsu-template-node-type (car arg-nodes))))
+               (specialized (<span class="k">and</span> arg-type
+                                 (majutsu-template--specialize-lambda-node lambda-node arg-type)))
+               (specialized-body-form (<span class="k">and</span> specialized
+                                           (plist-get (majutsu-template-node-props specialized) <span class="bi">:body-form</span>))))
+          (<span class="k">if</span> specialized-body-form
+              (<span class="k">let*</span> ((self-type (car (<span class="k">or</span> (majutsu-template--type-ref-lambda-arg-types
+                                          (majutsu-template-node-type specialized))
+                                         '(Unknown))))
+                     (self-type (<span class="k">unless</span> (memq (majutsu-template--type-ref-base-type self-type)
+                                              '(Unknown Template))
+                                  self-type))
+                     (bindings (cl-mapcar (<span class="k">lambda</span> (param arg)
+                                            (majutsu-template--make-binding
+                                             <span class="bi">:name</span> param
+                                             <span class="bi">:type</span> (majutsu-template-node-type arg)
+                                             <span class="bi">:node</span> arg))
+                                          params arg-nodes)))
+                (majutsu-template--call-with-bindings
+                 bindings
+                 (<span class="k">lambda</span> ()
+                   (majutsu-template--call-with-self-binding
+                    (car arg-nodes)
+                    self-type
+                    (<span class="k">lambda</span> ()
+                      (majutsu-template--sugar-transform specialized-body-form))))))
+            (<span class="k">cl-loop</span> with result = (majutsu-template--lambda-body lambda-node)
+                     for param in params
+                     for arg in arg-nodes
+                     do (<span class="k">setq</span> result (majutsu-template--substitute-var result param arg))
+                     finally return result)))
+      (<span class="k">cl-loop</span> with result = (majutsu-template--lambda-body lambda-node)
+               for param in params
+               for arg in arg-nodes
+               do (<span class="k">setq</span> result (majutsu-template--substitute-var result param arg))
+               finally return result))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

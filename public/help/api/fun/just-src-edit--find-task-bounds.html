@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: just-src-edit--find-task-bounds – Emacs Documentation Online</title>
+<meta name="description" content="just-src-edit--find-task-bounds is a natively compiled function
+defined in just-ts-mode.el.
+Find the bounds of the task at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>just-src-edit--find-task-bounds</code></h1><p><span class="m"><code>just-src-edit--find-task-bounds</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">just-ts-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(just-src-edit--find-task-bounds)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find the bounds of the task at point.
+<p>Returns (task-name body-start body-end) or nil if not in a task.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4mrcq9a0hg0kfl5gxbbg2vjzwc644has-emacs-packages-deps/share/emacs/site-lisp/elpa/just-ts-mode-20260319.1513/just-ts-mode.el</span>
+(<span class="k">defun</span> <span class="f">just-src-edit--find-task-bounds</span> ()
+  <span class="doc">"Find the bounds of the task at point.
+Returns (task-name body-start body-end) or nil if not in a task."</span>
+  (<span class="k">save-excursion</span>
+    (<span class="k">let</span> ((start-pos (point))
+          (task-regexp <span class="s">"^@?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[A-Z_a-z][0-9A-Z_a-z-]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">.*:[</span><span class="neg s">^</span><span class="s">=]"</span>)
+          task-name body-start body-end)
+
+      <span class="cd">;; </span><span class="c">Find the task we're currently in using the same regex as imenu
+</span>      <span class="cd">;; </span><span class="c">Go back to find a task line
+</span>      (<span class="k">while</span> (<span class="k">and</span> (not (bobp))
+                  (not (looking-at task-regexp)))
+        (forward-line -1))
+
+      <span class="cd">;; </span><span class="c">Task line found
+</span>      (<span class="k">when</span> (looking-at task-regexp)
+        (<span class="k">setq</span> task-name (match-string 1))
+        (<span class="k">setq</span> body-start (line-beginning-position 2))
+
+        <span class="cd">;; </span><span class="c">Find the next line with no indentation (column 0)
+</span>        (forward-line 1)
+        (<span class="k">while</span> (<span class="k">and</span> (not (eobp))
+                    (not (<span class="k">and</span> (not (looking-at <span class="s">"^\\s-*$"</span>)) <span class="cd">; </span><span class="c">not empty line
+</span>                              (looking-at <span class="s">"^[</span><span class="neg s">^</span><span class="s"> \t\n]"</span>))))  <span class="cd">; </span><span class="c">starts at column 0
+</span>          (forward-line 1))
+
+        <span class="cd">;; </span><span class="c">Go back to find the last non-empty line before the unindented line
+</span>        (forward-line -1)
+        (<span class="k">while</span> (<span class="k">and</span> (&gt; (point) body-start)
+                    (looking-at <span class="s">"^\\s-*$"</span>))
+          (forward-line -1))
+        (<span class="k">setq</span> body-end (line-end-position))
+
+        <span class="cd">;; </span><span class="c">Ensure body-end is at least at body-start
+</span>        (<span class="k">when</span> (&lt;= body-end body-start)
+          (<span class="k">setq</span> body-end (<span class="k">save-excursion</span>
+                           (goto-char body-start)
+                           (line-end-position))))
+
+        <span class="cd">;; </span><span class="c">Check if original point was within the task body
+</span>        (<span class="k">when</span> (<span class="k">and</span> (&gt;= start-pos body-start)
+                   (&lt;= start-pos body-end))
+          (list task-name body-start body-end))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-thingatpt--git-revision – Emacs Documentation Online</title>
+<meta name="description" content="magit-thingatpt--git-revision is a natively compiled function defined
+in magit-git.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-thingatpt--git-revision</code></h1><p><span class="m"><code>magit-thingatpt--git-revision</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">magit-git.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-thingatpt--git-revision <span class="ty">&amp;optional</span> <span class="arg">DISALLOW</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-git.el</span>
+(<span class="k">defun</span> <span class="f">magit-thingatpt--git-revision</span> (<span class="ty">&amp;optional</span> disallow)
+  <span class="cd">;; </span><span class="c">Support hashes and references.
+</span>  (<span class="k">and-let*</span> ((bounds
+              (<span class="k">let</span> ((c (concat <span class="s">"\s\n\t~^:?*[\\"</span> disallow)))
+                (<span class="k">cl-letf</span>
+                    (((get 'git-revision 'beginning-op)
+                      (<span class="k">lambda</span> ()
+                        (<span class="k">if</span> (re-search-backward (format <span class="s">"[%s]"</span> c) nil t)
+                            (forward-char)
+                          (goto-char (point-min)))))
+                     ((get 'git-revision 'end-op)
+                      (<span class="k">lambda</span> ()
+                        (re-search-forward (format <span class="s">"</span><span class="bi s">\\=</span><span class="s">[</span><span class="neg s">^</span><span class="s">%s]*"</span> c) nil t))))
+                  (bounds-of-thing-at-point 'git-revision))))
+             (string (buffer-substring-no-properties (car bounds) (cdr bounds)))
+             <span class="cd">;; </span><span class="c">References are allowed to contain most parentheses and
+</span>             <span class="cd">;; </span><span class="c">most punctuation, but if those characters appear at the
+</span>             <span class="cd">;; </span><span class="c">edges of a possible reference in arbitrary text, then
+</span>             <span class="cd">;; </span><span class="c">they are much more likely to be intended as just that:
+</span>             <span class="cd">;; </span><span class="c">punctuation and delimiters.
+</span>             (string (<span class="k">thread-first</span> string
+                       (string-trim-left  <span class="s">"[(&lt;/]"</span>)
+                       (string-trim-right <span class="s">"[])&gt;/.,;!]"</span>))))
+    (<span class="k">let</span> (disallow)
+      (<span class="k">when</span> (<span class="k">or</span> (string-match-p <span class="s">"\\.\\."</span> string)
+                (string-match-p <span class="s">"/\\."</span> string))
+        (<span class="k">setq</span> disallow (concat disallow <span class="s">"."</span>)))
+      (<span class="k">when</span> (string-match-p <span class="s">"@{"</span> string)
+        (<span class="k">setq</span> disallow (concat disallow <span class="s">"@{"</span>)))
+      (<span class="k">if</span> disallow
+          <span class="cd">;; </span><span class="c">These additional restrictions overcompensate,
+</span>          <span class="cd">;; </span><span class="c">but that only matters in rare cases.
+</span>          (magit-thingatpt--git-revision disallow)
+        (<span class="k">and</span> (not (equal string <span class="s">"@"</span>))
+             (<span class="k">or</span> (<span class="k">and</span> (&gt;= (length string) 7)
+                      (string-match-p <span class="s">"[a-z]"</span> string)
+                      (magit-commit-oid string t))
+                 (<span class="k">and</span> (magit-ref-p string)
+                      (member (get-text-property (point) 'face)
+                              magit-revision-faces)))
+             string)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

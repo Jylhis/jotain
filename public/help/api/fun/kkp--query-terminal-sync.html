@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: kkp--query-terminal-sync – Emacs Documentation Online</title>
+<meta name="description" content="kkp--query-terminal-sync is a natively compiled function defined in
+kkp.el.
+Send QUERY to the current terminal and return its response (if any).">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>kkp--query-terminal-sync</code></h1><p><span class="m"><code>kkp--query-terminal-sync</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">kkp.el</span>.
+<h2>Signature</h2>
+<pre><code>(kkp--query-terminal-sync <a href="#:~:text=Send-,QUERY"><span class="arg">QUERY</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=until-,TERMINATOR"><span class="arg">TERMINATOR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Send <span class="arg">QUERY</span> to the current terminal and return its response (if any).
+<p>Read events until <span class="arg">TERMINATOR</span> (a character) is received, then stop.
+When <span class="arg">TERMINATOR</span> is nil, or the terminal
+never sends it, keep reading until the timeout elapses with no more input.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/m2b3xmgxg24a6yvrhn2hs2kx62d820n5-emacs-packages-deps/share/emacs/site-lisp/elpa/kkp-20260706.858/kkp.el</span>
+(<span class="k">defun</span> <span class="f">kkp--query-terminal-sync</span> (query <span class="ty">&amp;optional</span> terminator)
+  <span class="doc">"Send QUERY to the current terminal and return its response (if any).
+Read events until TERMINATOR (a character) is received, then stop.
+When TERMINATOR is nil, or the terminal
+never sends it, keep reading until the timeout elapses with no more input."</span>
+  (kkp--verbose <span class="s">"query (sync): sending CSI %S (timeout %s s)"</span> query (<span class="k">or</span> kkp-terminal-query-timeout <span class="s">"none"</span>))
+  (discard-input)
+  (send-string-to-terminal (kkp--csi-escape query))
+  (<span class="k">kkp--flush-standard-output</span>)
+  (<span class="k">let</span> ((loop-cond t)
+        (terminal-input nil))
+    (<span class="k">while</span> loop-cond
+      (<span class="k">let</span> ((evt (read-event nil nil kkp-terminal-query-timeout)))
+        (<span class="k">cond</span>
+         ((null evt) (<span class="k">setq</span> loop-cond nil))
+         (t (<span class="k">push</span> evt terminal-input)
+            (<span class="k">when</span> (eql evt terminator)
+              (<span class="k">setq</span> loop-cond nil))))))
+    (<span class="k">let</span> ((reply (nreverse terminal-input)))
+      (kkp--verbose <span class="s">"query (sync): got %s bytes%s"</span> (length reply)
+                    (<span class="k">if</span> (null reply)
+                        <span class="s">" (no reply; slow SSH or non-KKP?)"</span>
+                      (concat <span class="s">" "</span> (kkp--format-bytes-and-readable reply))))
+      reply)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

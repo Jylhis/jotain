@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: cape-wrap-debug – Emacs Documentation Online</title>
+<meta name="description" content="cape-wrap-debug is a natively compiled function defined in cape.el.
+Call CAPF and return a completion table which prints trace messages.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>cape-wrap-debug</code></h1><p><span class="m"><code>cape-wrap-debug</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">cape.el</span>.
+<h2>Signature</h2>
+<pre><code>(cape-wrap-debug <a href="#:~:text=Call-,CAPF"><span class="arg">CAPF</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=Capf-,NAME"><span class="arg">NAME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Call <span class="arg">CAPF</span> and return a completion table which prints trace messages.
+<p>If <span class="arg">CAPF</span> is an anonymous lambda, pass the Capf <span class="arg">NAME</span> explicitly for
+meaningful debugging output.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4ylqcdhr31fki9yxzd4rhd2bm54ydhdn-emacs-packages-deps/share/emacs/site-lisp/elpa/cape-20260821.1208/cape.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">cape-wrap-debug</span> (capf <span class="ty">&amp;optional</span> name)
+  <span class="doc">"Call CAPF and return a completion table which prints trace messages.
+If CAPF is an anonymous lambda, pass the Capf NAME explicitly for
+meaningful debugging output."</span>
+  (<span class="k">unless</span> name
+    (<span class="k">setq</span> name (<span class="k">if</span> (symbolp capf) capf <span class="s">"capf"</span>)))
+  (<span class="k">setq</span> name (format <span class="s">"%s@%s"</span> name (<span class="k">incf</span> cape--debug-id)))
+  (<span class="k">pcase</span> (funcall capf)
+    (`(,beg ,end ,table . ,plist)
+     (<span class="k">let*</span> ((limit (1+ cape--debug-length))
+            (pred (plist-get plist <span class="bi">:predicate</span>))
+            (cands
+             <span class="cd">;; </span><span class="c">Reset regexps for `</span><span class="m c">all-completions</span><span class="c">'
+</span>             (<span class="k">let</span> (completion-ignore-case completion-regexp-list)
+               (all-completions
+                <span class="s">""</span> table
+                (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> args)
+                  (<span class="k">and</span> (<span class="k">or</span> (not pred) (apply pred args)) (&gt;= (<span class="k">decf</span> limit) 0))))))
+            (plist-str <span class="s">""</span>)
+            (plist-elt plist))
+       (<span class="k">while</span> (cdr plist-elt)
+         (<span class="k">setq</span> plist-str (format <span class="s">"%s %s=%s"</span> plist-str
+                                 (substring (symbol-name (car plist-elt)) 1)
+                                 (cape--debug-print (cadr plist-elt)))
+               plist-elt (cddr plist-elt)))
+       (cape--debug-message
+        <span class="s">"%s =&gt; input=%s:%s:%S table=%s%s"</span>
+        name (+ beg 0) (+ end 0) (buffer-substring-no-properties beg end)
+        (cape--debug-print cands)
+        plist-str))
+     `( ,beg ,end
+        ,(cape--debug-table
+          table name (copy-marker beg) (copy-marker end t))
+        ,@(<span class="k">when-let*</span> ((exit (plist-get plist <span class="bi">:exit-function</span>)))
+            (list <span class="bi">:exit-function</span>
+                  (<span class="k">lambda</span> (str status)
+                    (cape--debug-message <span class="s">"%s:exit(status=%s string=%S)"</span>
+                                         name status str)
+                    (funcall exit str status))))
+        . ,plist))
+    (result
+     (cape--debug-message <span class="s">"%s() =&gt; %s (No completion)"</span>
+                          name (cape--debug-print result)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

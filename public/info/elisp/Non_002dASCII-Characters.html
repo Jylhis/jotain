@@ -1,0 +1,2432 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.1.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Non-ASCII Characters (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Non-ASCII Characters (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Non-ASCII Characters (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Searching-and-Matching.html#Searching-and-Matching" rel="next" title="Searching and Matching">
+<link href="Text.html#Text" rel="prev" title="Text">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+dt.def-line {font-size: 1rem}
+kbd.kbd {font-style: oblique}
+kbd.key {font-style: normal}
+span.r {font-family: initial; font-weight: normal; font-style: normal}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold}
+ul.mark-bullet {list-style-type: disc}
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Non_002dASCII-Characters">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Searching-and-Matching.html#Searching-and-Matching" rel="next">Searching and Matching</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Text.html#Text" rel="prev">Text</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Emacs Lisp</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h2 class="chapter" id="Non_002dASCII-Characters-1"><span>34 Non-<abbr class="acronym">ASCII</abbr> Characters<a class="copiable-link" href="#Non_002dASCII-Characters-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-multibyte-characters"></a>
+<a class="index-entry-id" id="index-characters_002c-multi_002dbyte"></a>
+<a class="index-entry-id" id="index-non_002dASCII-characters"></a>
+
+<p>This chapter covers the special issues relating to characters and
+how they are stored in strings and buffers.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Text-Representations">Text Representations</a></li>
+<li><a href="#Disabling-Multibyte">Disabling Multibyte Characters</a></li>
+<li><a href="#Converting-Representations">Converting Text Representations</a></li>
+<li><a href="#Selecting-a-Representation">Selecting a Representation</a></li>
+<li><a href="#Character-Codes">Character Codes</a></li>
+<li><a href="#Character-Properties">Character Properties</a></li>
+<li><a href="#Character-Sets">Character Sets</a></li>
+<li><a href="#Scanning-Charsets">Scanning for Character Sets</a></li>
+<li><a href="#Translation-of-Characters">Translation of Characters</a></li>
+<li><a href="#Coding-Systems">Coding Systems</a></li>
+<li><a href="#Input-Methods">Input Methods</a></li>
+<li><a href="#Locales">Locales</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Text-Representations">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Disabling-Multibyte" rel="next">Disabling Multibyte Characters</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Non_002dASCII-Characters" rel="up">Non-<abbr class="acronym">ASCII</abbr> Characters</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Text-Representations-1"><span>34.1 Text Representations<a class="copiable-link" href="#Text-Representations-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-text-representation"></a>
+
+<p>Emacs buffers and strings support a large repertoire of characters
+from many different scripts, allowing users to type and display text
+in almost any known written language.
+</p>
+<a class="index-entry-id" id="index-character-codepoint"></a>
+<a class="index-entry-id" id="index-codespace"></a>
+<a class="index-entry-id" id="index-Unicode"></a>
+<p>To support this multitude of characters and scripts, Emacs closely
+follows the <em class="dfn">Unicode Standard</em>.  The Unicode Standard assigns a
+unique number, called a <em class="dfn">codepoint</em>, to each and every character.
+The range of codepoints defined by Unicode, or the Unicode
+<em class="dfn">codespace</em>, is <code class="code">0..#x10FFFF</code> (in hexadecimal notation),
+inclusive.  Emacs extends this range with codepoints in the range
+<code class="code">#x110000..#x3FFFFF</code>, which it uses for representing characters
+that are not unified with Unicode and <em class="dfn">raw 8-bit bytes</em> that
+cannot be interpreted as characters.  Thus, a character codepoint in
+Emacs is a 22-bit integer.
+</p>
+<a class="index-entry-id" id="index-internal-representation-of-characters"></a>
+<a class="index-entry-id" id="index-characters_002c-representation-in-buffers-and-strings"></a>
+<a class="index-entry-id" id="index-multibyte-text"></a>
+<p>To conserve memory, Emacs does not hold fixed-length 22-bit numbers
+that are codepoints of text characters within buffers and strings.
+Rather, Emacs uses a variable-length internal representation of
+characters, that stores each character as a sequence of 1 to 5 8-bit
+bytes, depending on the magnitude of its codepoint<a class="footnote" id="DOCF27" href="#FOOT27"><sup>27</sup></a>.  For example, any <abbr class="acronym">ASCII</abbr> character takes up only 1
+byte, a Latin-1 character takes up 2 bytes, etc.  We call this
+representation of text <em class="dfn">multibyte</em>.
+</p>
+<p>Outside Emacs, characters can be represented in many different
+encodings, such as ISO-8859-1, GB-2312, Big-5, etc.  Emacs converts
+between these external encodings and its internal representation, as
+appropriate, when it reads text into a buffer or a string, or when it
+writes text to a disk file or passes it to some other process.
+</p>
+<p>Occasionally, Emacs needs to hold and manipulate encoded text or
+binary non-text data in its buffers or strings.  For example, when
+Emacs visits a file, it first reads the file&rsquo;s text verbatim into a
+buffer, and only then converts it to the internal representation.
+Before the conversion, the buffer holds encoded text.
+</p>
+<a class="index-entry-id" id="index-unibyte-text"></a>
+<p>Encoded text is not really text, as far as Emacs is concerned, but
+rather a sequence of raw 8-bit bytes.  We call buffers and strings
+that hold encoded text <em class="dfn">unibyte</em> buffers and strings, because
+Emacs treats them as a sequence of individual bytes.  Usually, Emacs
+displays unibyte buffers and strings as octal codes such as
+<code class="code">\237</code>.  We recommend that you never use unibyte buffers and
+strings except for manipulating encoded text or binary non-text data.
+</p>
+<p>In a buffer, the buffer-local value of the variable
+<code class="code">enable-multibyte-characters</code> specifies the representation used.
+The representation for a string is determined and recorded in the string
+when the string is constructed.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-enable_002dmultibyte_002dcharacters"><span class="category-def">Variable: </span><span><strong class="def-name">enable-multibyte-characters</strong><a class="copiable-link" href="#index-enable_002dmultibyte_002dcharacters"> &para;</a></span></dt>
+<dd><p>This variable specifies the current buffer&rsquo;s text representation.
+If it is non-<code class="code">nil</code>, the buffer contains multibyte text; otherwise,
+it contains unibyte encoded text or binary non-text data.
+</p>
+<p>You cannot set this variable directly; instead, use the function
+<code class="code">set-buffer-multibyte</code> to change a buffer&rsquo;s representation.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-position_002dbytes"><span class="category-def">Function: </span><span><strong class="def-name">position-bytes</strong> <var class="def-var-arguments">position</var><a class="copiable-link" href="#index-position_002dbytes"> &para;</a></span></dt>
+<dd><p>Buffer positions are measured in character units.  This function
+returns the byte-position corresponding to buffer position
+<var class="var">position</var> in the current buffer.  This is 1 at the start of the
+buffer, and counts upward in bytes.  If <var class="var">position</var> is out of
+range, the value is <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-byte_002dto_002dposition"><span class="category-def">Function: </span><span><strong class="def-name">byte-to-position</strong> <var class="def-var-arguments">byte-position</var><a class="copiable-link" href="#index-byte_002dto_002dposition"> &para;</a></span></dt>
+<dd><p>Return the buffer position, in character units, corresponding to given
+<var class="var">byte-position</var> in the current buffer.  If <var class="var">byte-position</var> is
+out of range, the value is <code class="code">nil</code>.  In a multibyte buffer, an
+arbitrary value of <var class="var">byte-position</var> can be not at character
+boundary, but inside a multibyte sequence representing a single
+character; in this case, this function returns the buffer position of
+the character whose multibyte sequence includes <var class="var">byte-position</var>.
+In other words, the value does not change for all byte positions that
+belong to the same character.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-convert-file-byte-to-buffer-position"></a>
+<a class="index-entry-id" id="index-convert-buffer-position-to-file-byte"></a>
+<p>The following two functions are useful when a Lisp program needs to
+map buffer positions to byte offsets in a file visited by the buffer.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-bufferpos_002dto_002dfilepos"><span class="category-def">Function: </span><span><strong class="def-name">bufferpos-to-filepos</strong> <var class="def-var-arguments">position &amp;optional quality coding-system</var><a class="copiable-link" href="#index-bufferpos_002dto_002dfilepos"> &para;</a></span></dt>
+<dd><p>This function is similar to <code class="code">position-bytes</code>, but instead of byte
+position in the current buffer it returns the offset from the
+beginning of the current buffer&rsquo;s file of the byte that corresponds to
+the given character <var class="var">position</var> in the buffer.  The conversion
+requires knowing how the text is encoded in the buffer&rsquo;s file; this is
+what the <var class="var">coding-system</var> argument is for, defaulting to the value
+of <code class="code">buffer-file-coding-system</code>.  The optional argument
+<var class="var">quality</var> specifies how accurate the result should be; it should
+be one of the following:
+</p>
+<dl class="table">
+<dt><code class="code">exact</code></dt>
+<dd><p>The result must be accurate.  The function may need to encode and
+decode a large part of the buffer, which is expensive and can be slow.
+</p></dd>
+<dt><code class="code">approximate</code></dt>
+<dd><p>The value can be an approximation.  The function may avoid expensive
+processing and return an inexact result.
+</p></dd>
+<dt><code class="code">nil</code></dt>
+<dd><p>If the exact result needs expensive processing, the function will
+return <code class="code">nil</code> rather than an approximation.  This is the default
+if the argument is omitted.
+</p></dd>
+</dl>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-filepos_002dto_002dbufferpos"><span class="category-def">Function: </span><span><strong class="def-name">filepos-to-bufferpos</strong> <var class="def-var-arguments">byte &amp;optional quality coding-system</var><a class="copiable-link" href="#index-filepos_002dto_002dbufferpos"> &para;</a></span></dt>
+<dd><p>This function returns the buffer position corresponding to a file
+position specified by <var class="var">byte</var>, a zero-base byte offset from the
+file&rsquo;s beginning.  The function performs the conversion opposite to
+what <code class="code">bufferpos-to-filepos</code> does.  Optional arguments
+<var class="var">quality</var> and <var class="var">coding-system</var> have the same meaning and values
+as for <code class="code">bufferpos-to-filepos</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-multibyte_002dstring_002dp"><span class="category-def">Function: </span><span><strong class="def-name">multibyte-string-p</strong> <var class="def-var-arguments">string</var><a class="copiable-link" href="#index-multibyte_002dstring_002dp"> &para;</a></span></dt>
+<dd><p>Return <code class="code">t</code> if <var class="var">string</var> is a multibyte string, <code class="code">nil</code>
+otherwise.  This function also returns <code class="code">nil</code> if <var class="var">string</var> is
+some object other than a string.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-string_002dbytes"><span class="category-def">Function: </span><span><strong class="def-name">string-bytes</strong> <var class="def-var-arguments">string</var><a class="copiable-link" href="#index-string_002dbytes"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-string_002c-number-of-bytes"></a>
+<p>This function returns the number of bytes in <var class="var">string</var>.
+If <var class="var">string</var> is a multibyte string, this can be greater than
+<code class="code">(length <var class="var">string</var>)</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-unibyte_002dstring"><span class="category-def">Function: </span><span><strong class="def-name">unibyte-string</strong> <var class="def-var-arguments">&amp;rest bytes</var><a class="copiable-link" href="#index-unibyte_002dstring"> &para;</a></span></dt>
+<dd><p>This function concatenates all its argument <var class="var">bytes</var> and makes the
+result a unibyte string.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Disabling-Multibyte">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Converting-Representations" rel="next">Converting Text Representations</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Text-Representations" rel="prev">Text Representations</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Non_002dASCII-Characters" rel="up">Non-<abbr class="acronym">ASCII</abbr> Characters</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Disabling-Multibyte-Characters"><span>34.2 Disabling Multibyte Characters<a class="copiable-link" href="#Disabling-Multibyte-Characters"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-disabling-multibyte"></a>
+
+<p>By default, Emacs starts in multibyte mode: it stores the contents
+of buffers and strings using an internal encoding that represents
+non-<abbr class="acronym">ASCII</abbr> characters using multi-byte sequences.  Multibyte
+mode allows you to use all the supported languages and scripts without
+limitations.
+</p>
+<a class="index-entry-id" id="index-turn-multibyte-support-on-or-off"></a>
+<p>Under very special circumstances, you may want to disable multibyte
+character support, for a specific buffer.
+When multibyte characters are disabled in a buffer, we call
+that <em class="dfn">unibyte mode</em>.  In unibyte mode, each character in the
+buffer has a character code ranging from 0 through 255 (0377 octal); 0
+through 127 (0177 octal) represent <abbr class="acronym">ASCII</abbr> characters, and 128
+(0200 octal) through 255 (0377 octal) represent non-<abbr class="acronym">ASCII</abbr>
+characters.
+</p>
+<p>To edit a particular file in unibyte representation, visit it using
+<code class="code">find-file-literally</code>.  See <a class="xref" href="Files.html#Visiting-Functions">Functions for Visiting Files</a>.  You can
+convert a multibyte buffer to unibyte by saving it to a file, killing
+the buffer, and visiting the file again with
+<code class="code">find-file-literally</code>.  Alternatively, you can use <kbd class="kbd">C-x
+<kbd class="key">RET</kbd> c</kbd> (<code class="code">universal-coding-system-argument</code>) and specify
+&lsquo;<samp class="samp">raw-text</samp>&rsquo; as the coding system with which to visit or save a
+file.  See <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Text-Coding.html#Text-Coding">Specifying a Coding System for File Text</a> in <cite class="cite">GNU Emacs Manual</cite>.  Unlike <code class="code">find-file-literally</code>, finding
+a file as &lsquo;<samp class="samp">raw-text</samp>&rsquo; doesn&rsquo;t disable format conversion,
+uncompression, or auto mode selection.
+</p>
+<a class="index-entry-id" id="index-enable_002dmultibyte_002dcharacters-1"></a>
+<p>The buffer-local variable <code class="code">enable-multibyte-characters</code> is
+non-<code class="code">nil</code> in multibyte buffers, and <code class="code">nil</code> in unibyte ones.
+The mode line also indicates whether a buffer is multibyte or not.
+With a graphical display, in a multibyte buffer, the portion of the
+mode line that indicates the character set has a tooltip that (amongst
+other things) says that the buffer is multibyte.  In a unibyte buffer,
+the character set indicator is absent.  Thus, in a unibyte buffer
+(when using a graphical display) there is normally nothing before the
+indication of the visited file&rsquo;s end-of-line convention (colon,
+backslash, etc.), unless you are using an input method.
+</p>
+<a class="index-entry-id" id="index-toggle_002denable_002dmultibyte_002dcharacters"></a>
+<p>You can turn off multibyte support in a specific buffer by invoking the
+command <code class="code">toggle-enable-multibyte-characters</code> in that buffer.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Converting-Representations">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Selecting-a-Representation" rel="next">Selecting a Representation</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Disabling-Multibyte" rel="prev">Disabling Multibyte Characters</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Non_002dASCII-Characters" rel="up">Non-<abbr class="acronym">ASCII</abbr> Characters</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Converting-Text-Representations"><span>34.3 Converting Text Representations<a class="copiable-link" href="#Converting-Text-Representations"> &para;</a></span></h3>
+
+<p>Emacs can convert unibyte text to multibyte; it can also convert
+multibyte text to unibyte, provided that the multibyte text contains
+only <abbr class="acronym">ASCII</abbr> and 8-bit raw bytes.  In general, these
+conversions happen when inserting text into a buffer, or when putting
+text from several strings together in one string.  You can also
+explicitly convert a string&rsquo;s contents to either representation.
+</p>
+<p>Emacs chooses the representation for a string based on the text from
+which it is constructed.  The general rule is to convert unibyte text
+to multibyte text when combining it with other multibyte text, because
+the multibyte representation is more general and can hold whatever
+characters the unibyte text has.
+</p>
+<p>When inserting text into a buffer, Emacs converts the text to the
+buffer&rsquo;s representation, as specified by
+<code class="code">enable-multibyte-characters</code> in that buffer.  In particular, when
+you insert multibyte text into a unibyte buffer, Emacs converts the text
+to unibyte, even though this conversion cannot in general preserve all
+the characters that might be in the multibyte text.  The other natural
+alternative, to convert the buffer contents to multibyte, is not
+acceptable because the buffer&rsquo;s representation is a choice made by the
+user that cannot be overridden automatically.
+</p>
+<p>Converting unibyte text to multibyte text leaves <abbr class="acronym">ASCII</abbr>
+characters unchanged, and converts bytes with codes 128 through 255 to
+the multibyte representation of raw eight-bit bytes.
+</p>
+<p>Converting multibyte text to unibyte converts all <abbr class="acronym">ASCII</abbr>
+and eight-bit characters to their single-byte form, but loses
+information for non-<abbr class="acronym">ASCII</abbr> characters by discarding all but
+the low 8 bits of each character&rsquo;s codepoint.  Converting unibyte text
+to multibyte and back to unibyte reproduces the original unibyte text.
+</p>
+<p>The next two functions either return the argument <var class="var">string</var>, or a
+newly created string with no text properties.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-string_002dto_002dmultibyte"><span class="category-def">Function: </span><span><strong class="def-name">string-to-multibyte</strong> <var class="def-var-arguments">string</var><a class="copiable-link" href="#index-string_002dto_002dmultibyte"> &para;</a></span></dt>
+<dd><p>This function returns a multibyte string containing the same sequence
+of characters as <var class="var">string</var>.  If <var class="var">string</var> is a multibyte string,
+it is returned unchanged.  The function assumes that <var class="var">string</var>
+includes only <abbr class="acronym">ASCII</abbr> characters and raw 8-bit bytes; the
+latter are converted to their multibyte representation corresponding
+to the codepoints <code class="code">#x3FFF80</code> through <code class="code">#x3FFFFF</code>, inclusive
+(see <a class="pxref" href="#Text-Representations">codepoints</a>).
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-string_002dto_002dunibyte"><span class="category-def">Function: </span><span><strong class="def-name">string-to-unibyte</strong> <var class="def-var-arguments">string</var><a class="copiable-link" href="#index-string_002dto_002dunibyte"> &para;</a></span></dt>
+<dd><p>This function returns a unibyte string containing the same sequence of
+characters as <var class="var">string</var>.  If <var class="var">string</var> is a unibyte string, it
+is returned unchanged.  Otherwise, <abbr class="acronym">ASCII</abbr> characters and
+characters in the <code class="code">eight-bit</code> charset are converted to their
+corresponding byte values.  Use this function for <var class="var">string</var>
+arguments that contain only <abbr class="acronym">ASCII</abbr> and eight-bit characters;
+the function signals an error if any other characters are encountered.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-byte_002dto_002dstring"><span class="category-def">Function: </span><span><strong class="def-name">byte-to-string</strong> <var class="def-var-arguments">byte</var><a class="copiable-link" href="#index-byte_002dto_002dstring"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-byte-to-string"></a>
+<p>This function returns a unibyte string containing a single byte of
+character data, <var class="var">byte</var>.  It signals an error if <var class="var">byte</var> is not
+an integer between 0 and 255.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-multibyte_002dchar_002dto_002dunibyte"><span class="category-def">Function: </span><span><strong class="def-name">multibyte-char-to-unibyte</strong> <var class="def-var-arguments">char</var><a class="copiable-link" href="#index-multibyte_002dchar_002dto_002dunibyte"> &para;</a></span></dt>
+<dd><p>This converts the multibyte character <var class="var">char</var> to a unibyte
+character, and returns that character.  If <var class="var">char</var> is neither
+<abbr class="acronym">ASCII</abbr> nor eight-bit, the function returns &minus;1.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-unibyte_002dchar_002dto_002dmultibyte"><span class="category-def">Function: </span><span><strong class="def-name">unibyte-char-to-multibyte</strong> <var class="def-var-arguments">char</var><a class="copiable-link" href="#index-unibyte_002dchar_002dto_002dmultibyte"> &para;</a></span></dt>
+<dd><p>This converts the unibyte character <var class="var">char</var> to a multibyte
+character, assuming <var class="var">char</var> is either <abbr class="acronym">ASCII</abbr> or raw 8-bit
+byte.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Selecting-a-Representation">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Character-Codes" rel="next">Character Codes</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Converting-Representations" rel="prev">Converting Text Representations</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Non_002dASCII-Characters" rel="up">Non-<abbr class="acronym">ASCII</abbr> Characters</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Selecting-a-Representation-1"><span>34.4 Selecting a Representation<a class="copiable-link" href="#Selecting-a-Representation-1"> &para;</a></span></h3>
+
+<p>Sometimes it is useful to examine an existing buffer or string as
+multibyte when it was unibyte, or vice versa.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dbuffer_002dmultibyte"><span class="category-def">Function: </span><span><strong class="def-name">set-buffer-multibyte</strong> <var class="def-var-arguments">multibyte</var><a class="copiable-link" href="#index-set_002dbuffer_002dmultibyte"> &para;</a></span></dt>
+<dd><p>Set the representation type of the current buffer.  If <var class="var">multibyte</var>
+is non-<code class="code">nil</code>, the buffer becomes multibyte.  If <var class="var">multibyte</var>
+is <code class="code">nil</code>, the buffer becomes unibyte.
+</p>
+<p>This function leaves the buffer contents unchanged when viewed as a
+sequence of bytes.  As a consequence, it can change the contents
+viewed as characters; for instance, a sequence of three bytes which is
+treated as one character in multibyte representation will count as
+three characters in unibyte representation.  Eight-bit characters
+representing raw bytes are an exception.  They are represented by one
+byte in a unibyte buffer, but when the buffer is set to multibyte,
+they are converted to two-byte sequences, and vice versa.
+</p>
+<p>This function sets <code class="code">enable-multibyte-characters</code> to record which
+representation is in use.  It also adjusts various data in the buffer
+(including overlays, text properties and markers) so that they cover the
+same text as they did before.
+</p>
+<p>This function signals an error if the buffer is narrowed, since the
+narrowing might have occurred in the middle of multibyte character
+sequences.
+</p>
+<p>This function also signals an error if the buffer is an indirect
+buffer.  An indirect buffer always inherits the representation of its
+base buffer.
+</p></dd></dl>
+
+<p>The following two functions are obsolete and will be removed in a future
+version of Emacs; use <code class="code">encode-coding-string</code> instead.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-string_002das_002dunibyte"><span class="category-def">Function: </span><span><strong class="def-name">string-as-unibyte</strong> <var class="def-var-arguments">string</var><a class="copiable-link" href="#index-string_002das_002dunibyte"> &para;</a></span></dt>
+<dd><p>If <var class="var">string</var> is already a unibyte string, this function returns
+<var class="var">string</var> itself.  Otherwise, it returns a new string with the same
+bytes as <var class="var">string</var>, but treating each byte as a separate character
+(so that the value may have more characters than <var class="var">string</var>); as an
+exception, each eight-bit character representing a raw byte is
+converted into a single byte.  The newly-created string contains no
+text properties.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-string_002das_002dmultibyte"><span class="category-def">Function: </span><span><strong class="def-name">string-as-multibyte</strong> <var class="def-var-arguments">string</var><a class="copiable-link" href="#index-string_002das_002dmultibyte"> &para;</a></span></dt>
+<dd><p>If <var class="var">string</var> is a multibyte string, this function returns
+<var class="var">string</var> itself.  Otherwise, it returns a new string with the same
+bytes as <var class="var">string</var>, but treating each multibyte sequence as one
+character.  This means that the value may have fewer characters than
+<var class="var">string</var> has.  If a byte sequence in <var class="var">string</var> is invalid as a
+multibyte representation of a single character, each byte in the
+sequence is treated as a raw 8-bit byte.  The newly-created string
+contains no text properties.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Character-Codes">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Character-Properties" rel="next">Character Properties</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Selecting-a-Representation" rel="prev">Selecting a Representation</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Non_002dASCII-Characters" rel="up">Non-<abbr class="acronym">ASCII</abbr> Characters</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Character-Codes-1"><span>34.5 Character Codes<a class="copiable-link" href="#Character-Codes-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-character-codes"></a>
+
+<p>The unibyte and multibyte text representations use different
+character codes.  The valid character codes for unibyte representation
+range from 0 to <code class="code">#xFF</code> (255)&mdash;the values that can fit in one
+byte.  The valid character codes for multibyte representation range
+from 0 to <code class="code">#x3FFFFF</code>.  In this code space, values 0 through
+<code class="code">#x7F</code> (127) are for <abbr class="acronym">ASCII</abbr> characters, and values
+<code class="code">#x80</code> (128) through <code class="code">#x3FFF7F</code> (4194175) are for
+non-<abbr class="acronym">ASCII</abbr> characters.
+</p>
+<p>Emacs character codes are a superset of the Unicode standard.
+Values 0 through <code class="code">#x10FFFF</code> (1114111) correspond to Unicode
+characters of the same codepoint; values <code class="code">#x110000</code> (1114112)
+through <code class="code">#x3FFF7F</code> (4194175) represent characters that are not
+unified with Unicode; and values <code class="code">#x3FFF80</code> (4194176) through
+<code class="code">#x3FFFFF</code> (4194303) represent eight-bit raw bytes.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-characterp"><span class="category-def">Function: </span><span><strong class="def-name">characterp</strong> <var class="def-var-arguments">charcode</var><a class="copiable-link" href="#index-characterp"> &para;</a></span></dt>
+<dd><p>This returns <code class="code">t</code> if <var class="var">charcode</var> is a valid character, and
+<code class="code">nil</code> otherwise.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(characterp 65)
+     &rArr; t
+</pre></div><div class="group"><pre class="example-preformatted">(characterp 4194303)
+     &rArr; t
+</pre></div><div class="group"><pre class="example-preformatted">(characterp 4194304)
+     &rArr; nil
+</pre></div></div>
+</dd></dl>
+
+<a class="index-entry-id" id="index-maximum-value-of-character-codepoint"></a>
+<a class="index-entry-id" id="index-codepoint_002c-largest-value"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-max_002dchar"><span class="category-def">Function: </span><span><strong class="def-name">max-char</strong> <var class="def-var-arguments">&amp;optional unicode</var><a class="copiable-link" href="#index-max_002dchar"> &para;</a></span></dt>
+<dd><p>This function returns the largest value that a valid character
+codepoint can have in Emacs.  If the optional argument <var class="var">unicode</var>
+is non-<code class="code">nil</code>, it returns the largest character codepoint defined
+by the Unicode Standard (which is smaller than the maximum codepoint
+supported by Emacs).
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(characterp (max-char))
+     &rArr; t
+</pre></div><div class="group"><pre class="example-preformatted">(characterp (1+ (max-char)))
+     &rArr; nil
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-char_002dfrom_002dname"><span class="category-def">Function: </span><span><strong class="def-name">char-from-name</strong> <var class="def-var-arguments">string &amp;optional ignore-case</var><a class="copiable-link" href="#index-char_002dfrom_002dname"> &para;</a></span></dt>
+<dd><p>This function returns the character whose Unicode name is <var class="var">string</var>.
+If <var class="var">ignore-case</var> is non-<code class="code">nil</code>, case is ignored in <var class="var">string</var>.
+This function returns <code class="code">nil</code> if <var class="var">string</var> does not name a character.
+</p>
+<div class="example">
+<pre class="example-preformatted">;; U+03A3
+(= (char-from-name &quot;GREEK CAPITAL LETTER SIGMA&quot;) #x03A3)
+     &rArr; t
+</pre></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-char_002dto_002dname"><span class="category-def">Function: </span><span><strong class="def-name">char-to-name</strong> <var class="def-var-arguments">char</var><a class="copiable-link" href="#index-char_002dto_002dname"> &para;</a></span></dt>
+<dd><p>This function returns the Unicode name of <var class="var">char</var>.  It returns
+<code class="code">nil</code> if <var class="var">char</var> is not a character or has no Unicode name.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-get_002dbyte"><span class="category-def">Function: </span><span><strong class="def-name">get-byte</strong> <var class="def-var-arguments">&amp;optional pos string</var><a class="copiable-link" href="#index-get_002dbyte"> &para;</a></span></dt>
+<dd><p>This function returns the byte at character position <var class="var">pos</var> in the
+current buffer.  If the current buffer is unibyte, this is literally
+the byte at that position.  If the buffer is multibyte, byte values of
+<abbr class="acronym">ASCII</abbr> characters are the same as character codepoints,
+whereas eight-bit raw bytes are converted to their 8-bit codes.  The
+function signals an error if the character at <var class="var">pos</var> is
+non-<abbr class="acronym">ASCII</abbr>.
+</p>
+<p>The optional argument <var class="var">string</var> means to get a byte value from that
+string instead of the current buffer.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Character-Properties">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Character-Sets" rel="next">Character Sets</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Character-Codes" rel="prev">Character Codes</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Non_002dASCII-Characters" rel="up">Non-<abbr class="acronym">ASCII</abbr> Characters</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Character-Properties-1"><span>34.6 Character Properties<a class="copiable-link" href="#Character-Properties-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-character-properties"></a>
+<p>A <em class="dfn">character property</em> is a named attribute of a character that
+specifies how the character behaves and how it should be handled
+during text processing and display.  Thus, character properties are an
+important part of specifying the character&rsquo;s semantics.
+</p>
+<p>On the whole, Emacs follows the Unicode Standard in its implementation
+of character properties.  In particular, Emacs supports the
+<a class="uref" href="https://www.unicode.org/reports/tr23/">Unicode Character Property
+Model</a>, and the Emacs character property database is derived from the
+Unicode Character Database (<abbr class="acronym">UCD</abbr>).  See the
+<a class="uref" href="https://www.unicode.org/versions/Unicode15.0.0/ch04.pdf">Character
+Properties chapter of the Unicode Standard</a>, for a detailed
+description of Unicode character properties and their meaning.  This
+section assumes you are already familiar with that chapter of the
+Unicode Standard, and want to apply that knowledge to Emacs Lisp
+programs.
+</p>
+<p>In Emacs, each property has a name, which is a symbol, and a set of
+possible values, whose types depend on the property; if a character
+does not have a certain property, the value is <code class="code">nil</code>.  As a
+general rule, the names of character properties in Emacs are produced
+from the corresponding Unicode properties by downcasing them and
+replacing each &lsquo;<samp class="samp">_</samp>&rsquo; character with a dash &lsquo;<samp class="samp">-</samp>&rsquo;.  For example,
+<code class="code">Canonical_Combining_Class</code> becomes
+<code class="code">canonical-combining-class</code>.  However, sometimes we shorten the
+names to make their use easier.
+</p>
+<a class="index-entry-id" id="index-unassigned-character-codepoints"></a>
+<p>Some codepoints are left <em class="dfn">unassigned</em> by the
+<abbr class="acronym">UCD</abbr>&mdash;they don&rsquo;t correspond to any character.  The Unicode
+Standard defines default values of properties for such codepoints;
+they are mentioned below for each property.
+</p>
+<p>Here is the full list of value types for all the character
+properties that Emacs knows about:
+</p>
+<dl class="table">
+<dt><code class="code">name</code></dt>
+<dd><p>Corresponds to the <code class="code">Name</code> Unicode property.  The value is a
+string consisting of upper-case Latin letters A to Z, digits, spaces,
+and hyphen &lsquo;<samp class="samp">-</samp>&rsquo; characters.  For unassigned codepoints, the value
+is <code class="code">nil</code>.
+</p>
+</dd>
+<dt><a id="index-unicode-general-category"></a><span><code class="code">general-category</code><a class="copiable-link" href="#index-unicode-general-category"> &para;</a></span></dt>
+<dd><p>Corresponds to the <code class="code">General_Category</code> Unicode property.  The
+value is a symbol whose name is a 2-letter abbreviation of the
+character&rsquo;s classification.  For unassigned codepoints, the value
+is <code class="code">Cn</code>.
+</p>
+</dd>
+<dt><code class="code">canonical-combining-class</code></dt>
+<dd><p>Corresponds to the <code class="code">Canonical_Combining_Class</code> Unicode property.
+The value is an integer.  For unassigned codepoints, the value
+is zero.
+</p>
+</dd>
+<dt><a id="index-bidirectional-class-of-characters"></a><span><code class="code">bidi-class</code><a class="copiable-link" href="#index-bidirectional-class-of-characters"> &para;</a></span></dt>
+<dd><p>Corresponds to the Unicode <code class="code">Bidi_Class</code> property.  The value is a
+symbol whose name is the Unicode <em class="dfn">directional type</em> of the
+character.  Emacs uses this property when it reorders bidirectional
+text for display (see <a class="pxref" href="Display.html#Bidirectional-Display">Bidirectional Display</a>).  For unassigned
+codepoints, the value depends on the code blocks to which the
+codepoint belongs: most unassigned codepoints get the value of
+<code class="code">L</code> (strong L), but some get values of <code class="code">AL</code> (Arabic letter)
+or <code class="code">R</code> (strong R).
+</p>
+</dd>
+<dt><code class="code">decomposition</code></dt>
+<dd><p>Corresponds to the Unicode properties <code class="code">Decomposition_Type</code> and
+<code class="code">Decomposition_Value</code>.  The value is a list, whose first element
+may be a symbol representing a compatibility formatting tag, such as
+<code class="code">small</code><a class="footnote" id="DOCF28" href="#FOOT28"><sup>28</sup></a>; the other elements are characters that give the
+compatibility decomposition sequence of this character.  For
+characters that don&rsquo;t have decomposition sequences, and for unassigned
+codepoints, the value is a list with a single member, the character
+itself.
+</p>
+</dd>
+<dt><code class="code">decimal-digit-value</code></dt>
+<dd><p>Corresponds to the Unicode <code class="code">Numeric_Value</code> property for
+characters whose <code class="code">Numeric_Type</code> is &lsquo;<samp class="samp">Decimal</samp>&rsquo;.  The value is
+an integer, or <code class="code">nil</code> if the character has no decimal digit value.
+For unassigned codepoints, the value is <code class="code">nil</code>, which means
+<abbr class="acronym">NaN</abbr>, or &ldquo;not a number&rdquo;.
+</p>
+</dd>
+<dt><code class="code">digit-value</code></dt>
+<dd><p>Corresponds to the Unicode <code class="code">Numeric_Value</code> property for
+characters whose <code class="code">Numeric_Type</code> is &lsquo;<samp class="samp">Digit</samp>&rsquo;.  The value is an
+integer.  Examples of such characters include compatibility subscript
+and superscript digits, for which the value is the corresponding
+number.  For characters that don&rsquo;t have any numeric value, and for
+unassigned codepoints, the value is <code class="code">nil</code>, which means
+<abbr class="acronym">NaN</abbr>.
+</p>
+</dd>
+<dt><code class="code">numeric-value</code></dt>
+<dd><p>Corresponds to the Unicode <code class="code">Numeric_Value</code> property for
+characters whose <code class="code">Numeric_Type</code> is &lsquo;<samp class="samp">Numeric</samp>&rsquo;.  The value of
+this property is a number.  Examples of characters that have this
+property include fractions, subscripts, superscripts, Roman numerals,
+currency numerators, and encircled numbers.  For example, the value of
+this property for the character U+2155 <small class="sc">VULGAR FRACTION ONE
+FIFTH</small> is <code class="code">0.2</code>.  For characters that don&rsquo;t have any numeric
+value, and for unassigned codepoints, the value is <code class="code">nil</code>, which
+means <abbr class="acronym">NaN</abbr>.
+</p>
+</dd>
+<dt><a id="index-mirroring-of-characters"></a><span><code class="code">mirrored</code><a class="copiable-link" href="#index-mirroring-of-characters"> &para;</a></span></dt>
+<dd><p>Corresponds to the Unicode <code class="code">Bidi_Mirrored</code> property.  The value
+of this property is a symbol, either <code class="code">Y</code> or <code class="code">N</code>.  For
+unassigned codepoints, the value is <code class="code">N</code>.
+</p>
+</dd>
+<dt><code class="code">mirroring</code></dt>
+<dd><p>Corresponds to the Unicode <code class="code">Bidi_Mirroring_Glyph</code> property.  The
+value of this property is a character whose glyph represents the
+mirror image of the character&rsquo;s glyph, or <code class="code">nil</code> if there&rsquo;s no
+defined mirroring glyph.  All the characters whose <code class="code">mirrored</code>
+property is <code class="code">N</code> have <code class="code">nil</code> as their <code class="code">mirroring</code>
+property; however, some characters whose <code class="code">mirrored</code> property is
+<code class="code">Y</code> also have <code class="code">nil</code> for <code class="code">mirroring</code>, because no
+appropriate characters exist with mirrored glyphs.  Emacs uses this
+property to display mirror images of characters when appropriate
+(see <a class="pxref" href="Display.html#Bidirectional-Display">Bidirectional Display</a>).  For unassigned codepoints, the value
+is <code class="code">nil</code>.
+</p>
+</dd>
+<dt><code class="code">paired-bracket</code></dt>
+<dd><p>Corresponds to the Unicode <code class="code">Bidi_Paired_Bracket</code> property.  The
+value of this property is the codepoint of a character&rsquo;s <em class="dfn">paired
+bracket</em>, or <code class="code">nil</code> if the character is not a bracket character.
+This establishes a mapping between characters that are treated as
+bracket pairs by the Unicode Bidirectional Algorithm; Emacs uses this
+property when it decides how to reorder for display parentheses,
+braces, and other similar characters (see <a class="pxref" href="Display.html#Bidirectional-Display">Bidirectional Display</a>).
+</p>
+</dd>
+<dt><code class="code">bracket-type</code></dt>
+<dd><p>Corresponds to the Unicode <code class="code">Bidi_Paired_Bracket_Type</code> property.
+For characters whose <code class="code">paired-bracket</code> property is non-<code class="code">nil</code>,
+the value of this property is a symbol, either <code class="code">o</code> (for opening
+bracket characters) or <code class="code">c</code> (for closing bracket characters).  For
+characters whose <code class="code">paired-bracket</code> property is <code class="code">nil</code>, the
+value is the symbol <code class="code">n</code> (None).  Like <code class="code">paired-bracket</code>, this
+property is used for bidirectional display.
+</p>
+</dd>
+<dt><code class="code">old-name</code></dt>
+<dd><p>Corresponds to the Unicode <code class="code">Unicode_1_Name</code> property.  The value
+is a string.  For unassigned codepoints, and characters that have no
+value for this property, the value is <code class="code">nil</code>.
+</p>
+</dd>
+<dt><code class="code">iso-10646-comment</code></dt>
+<dd><p>Corresponds to the Unicode <code class="code">ISO_Comment</code> property.  The value is
+either a string or <code class="code">nil</code>.  For unassigned codepoints, the value
+is <code class="code">nil</code>.
+</p>
+</dd>
+<dt><code class="code">uppercase</code></dt>
+<dd><p>Corresponds to the Unicode <code class="code">Simple_Uppercase_Mapping</code> property.
+The value of this property is a single character.  For unassigned
+codepoints, the value is <code class="code">nil</code>, which means the character itself.
+</p>
+</dd>
+<dt><code class="code">lowercase</code></dt>
+<dd><p>Corresponds to the Unicode <code class="code">Simple_Lowercase_Mapping</code> property.
+The value of this property is a single character.  For unassigned
+codepoints, the value is <code class="code">nil</code>, which means the character itself.
+</p>
+</dd>
+<dt><code class="code">titlecase</code></dt>
+<dd><p>Corresponds to the Unicode <code class="code">Simple_Titlecase_Mapping</code> property.
+<em class="dfn">Title case</em> is a special form of a character used when the first
+character of a word needs to be capitalized.  The value of this
+property is a single character.  For unassigned codepoints, the value
+is <code class="code">nil</code>, which means the character itself.
+</p>
+</dd>
+<dt><code class="code">special-uppercase</code></dt>
+<dd><p>Corresponds to Unicode language- and context-independent special upper-casing
+rules.  The value of this property is a string (which may be empty).  For
+example for U+00DF <small class="sc">LATIN SMALL LETTER SHARP S</small> the value is
+<code class="code">&quot;SS&quot;</code>.  This mapping overrides the <code class="code">uppercase</code> property, and
+thus the current case table.  For characters with no special mapping,
+the value is <code class="code">nil</code>, which means the <code class="code">uppercase</code> property needs to
+be consulted instead.
+</p>
+</dd>
+<dt><code class="code">special-lowercase</code></dt>
+<dd><p>Corresponds to Unicode language- and context-independent special
+lower-casing rules.  The value of this property is a string (which may
+be empty).  For example for U+0130 <small class="sc">LATIN CAPITAL LETTER I
+WITH DOT ABOVE</small> the value is <code class="code">&quot;i\u0307&quot;</code> (i.e., a 2-character string
+consisting of <small class="sc">LATIN SMALL LETTER I</small> followed by U+0307
+<small class="sc">COMBINING DOT ABOVE</small>).  This mapping overrides the <code class="code">lowercase</code>
+property, and thus the current case table.  For characters with no
+special mapping, the value is <code class="code">nil</code>, which means the <code class="code">lowercase</code>
+property needs to be consulted instead.
+</p>
+</dd>
+<dt><code class="code">special-titlecase</code></dt>
+<dd><p>Corresponds to Unicode unconditional special title-casing rules.  The value of
+this property is a string (which may be empty).  For example for
+U+FB01 <small class="sc">LATIN SMALL LIGATURE FI</small> the value is <code class="code">&quot;Fi&quot;</code>.  This
+mapping overrides the <code class="code">titlecase</code> property, and thus the current
+case table.  For characters with no special mapping, the value is
+<code class="code">nil</code>, which means the <code class="code">titlecase</code> property needs to be consulted
+instead.
+</p></dd>
+</dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-get_002dchar_002dcode_002dproperty"><span class="category-def">Function: </span><span><strong class="def-name">get-char-code-property</strong> <var class="def-var-arguments">char propname</var><a class="copiable-link" href="#index-get_002dchar_002dcode_002dproperty"> &para;</a></span></dt>
+<dd><p>This function returns the value of <var class="var">char</var>&rsquo;s <var class="var">propname</var> property.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(get-char-code-property ?\s 'general-category)
+     &rArr; Zs
+</pre></div><div class="group"><pre class="example-preformatted">(get-char-code-property ?1 'general-category)
+     &rArr; Nd
+</pre></div><div class="group"><pre class="example-preformatted">;; U+2084
+(get-char-code-property ?\N{SUBSCRIPT FOUR}
+                        'digit-value)
+     &rArr; 4
+</pre></div><div class="group"><pre class="example-preformatted">;; U+2155
+(get-char-code-property ?\N{VULGAR FRACTION ONE FIFTH}
+                        'numeric-value)
+     &rArr; 0.2
+</pre></div><div class="group"><pre class="example-preformatted">;; U+2163
+(get-char-code-property ?\N{ROMAN NUMERAL FOUR}
+                        'numeric-value)
+     &rArr; 4
+</pre></div><div class="group"><pre class="example-preformatted">(get-char-code-property ?\( 'paired-bracket)
+     &rArr; 41  ; closing parenthesis
+</pre></div><div class="group"><pre class="example-preformatted">(get-char-code-property ?\) 'bracket-type)
+     &rArr; c
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-char_002dcode_002dproperty_002ddescription"><span class="category-def">Function: </span><span><strong class="def-name">char-code-property-description</strong> <var class="def-var-arguments">prop value</var><a class="copiable-link" href="#index-char_002dcode_002dproperty_002ddescription"> &para;</a></span></dt>
+<dd><p>This function returns the description string of property <var class="var">prop</var>&rsquo;s
+<var class="var">value</var>, or <code class="code">nil</code> if <var class="var">value</var> has no description.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(char-code-property-description 'general-category 'Zs)
+     &rArr; &quot;Separator, Space&quot;
+</pre></div><div class="group"><pre class="example-preformatted">(char-code-property-description 'general-category 'Nd)
+     &rArr; &quot;Number, Decimal Digit&quot;
+</pre></div><div class="group"><pre class="example-preformatted">(char-code-property-description 'numeric-value '1/5)
+     &rArr; nil
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-put_002dchar_002dcode_002dproperty"><span class="category-def">Function: </span><span><strong class="def-name">put-char-code-property</strong> <var class="def-var-arguments">char propname value</var><a class="copiable-link" href="#index-put_002dchar_002dcode_002dproperty"> &para;</a></span></dt>
+<dd><p>This function stores <var class="var">value</var> as the value of the property
+<var class="var">propname</var> for the character <var class="var">char</var>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-unicode_002dcategory_002dtable"><span class="category-def">Variable: </span><span><strong class="def-name">unicode-category-table</strong><a class="copiable-link" href="#index-unicode_002dcategory_002dtable"> &para;</a></span></dt>
+<dd><p>The value of this variable is a char-table (see <a class="pxref" href="Sequences-Arrays-Vectors.html#Char_002dTables">Char-Tables</a>) that
+specifies, for each character, its Unicode <code class="code">General_Category</code>
+property as a symbol.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-script-symbols"></a>
+<a class="index-entry-id" id="index-list-of-scripts"></a>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-char_002dscript_002dtable"><span class="category-def">Variable: </span><span><strong class="def-name">char-script-table</strong><a class="copiable-link" href="#index-char_002dscript_002dtable"> &para;</a></span></dt>
+<dd><p>The value of this variable is a char-table that specifies, for each
+character, a symbol whose name is the script to which the character
+belongs, according to the Unicode Standard classification of the
+Unicode code space into script-specific blocks.  This char-table has a
+single extra slot whose value is the list of all script symbols, so you
+can evaluate
+</p>
+<div class="example lisp">
+<pre class="lisp-preformatted">(char-table-extra-slot char-script-table 0)
+</pre></div>
+
+<p>to obtain the list of all the scripts known to Emacs.  Note that Emacs&rsquo;s
+classification of characters into scripts is not a 1-for-1 reflection of
+the Unicode standard, for example there is no &lsquo;<samp class="samp">symbol</samp>&rsquo; script in
+Unicode.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-char_002dwidth_002dtable"><span class="category-def">Variable: </span><span><strong class="def-name">char-width-table</strong><a class="copiable-link" href="#index-char_002dwidth_002dtable"> &para;</a></span></dt>
+<dd><p>The value of this variable is a char-table that specifies the width of
+each character in columns that it will occupy on the screen.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-printable_002dchars"><span class="category-def">Variable: </span><span><strong class="def-name">printable-chars</strong><a class="copiable-link" href="#index-printable_002dchars"> &para;</a></span></dt>
+<dd><p>The value of this variable is a char-table that specifies, for each
+character, whether it is printable or not.  That is, if evaluating
+<code class="code">(aref printable-chars char)</code> results in <code class="code">t</code>, the character
+is printable, and if it results in <code class="code">nil</code>, it is not.  The
+definition of what is a printable character is the same as for the
+&lsquo;<samp class="samp">[:print:]</samp>&rsquo; character class in regular expressions, see <a class="pxref" href="Searching-and-Matching.html#Char-Classes">Character Classes</a>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Character-Sets">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Scanning-Charsets" rel="next">Scanning for Character Sets</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Character-Properties" rel="prev">Character Properties</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Non_002dASCII-Characters" rel="up">Non-<abbr class="acronym">ASCII</abbr> Characters</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Character-Sets-1"><span>34.7 Character Sets<a class="copiable-link" href="#Character-Sets-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-character-sets"></a>
+
+<a class="index-entry-id" id="index-charset"></a>
+<a class="index-entry-id" id="index-coded-character-set"></a>
+<p>An Emacs <em class="dfn">character set</em>, or <em class="dfn">charset</em>, is a set of characters
+in which each character is assigned a numeric code point.  (The
+Unicode Standard calls this a <em class="dfn">coded character set</em>.)  Each Emacs
+charset has a name which is a symbol.  A single character can belong
+to any number of different character sets, but it will generally have
+a different code point in each charset.  Examples of character sets
+include <code class="code">ascii</code>, <code class="code">iso-8859-1</code>, <code class="code">greek-iso8859-7</code>, and
+<code class="code">windows-1255</code>.  The code point assigned to a character in a
+charset is usually different from its code point used in Emacs buffers
+and strings.
+</p>
+<a class="index-entry-id" id="index-emacs_002c-a-charset"></a>
+<a class="index-entry-id" id="index-unicode_002c-a-charset"></a>
+<a class="index-entry-id" id="index-eight_002dbit_002c-a-charset"></a>
+<p>Emacs defines several special character sets.  The character set
+<code class="code">unicode</code> includes all the characters whose Emacs code points are
+in the range <code class="code">0..#x10FFFF</code>.  The character set <code class="code">emacs</code>
+includes all <abbr class="acronym">ASCII</abbr> and non-<abbr class="acronym">ASCII</abbr> characters.
+Finally, the <code class="code">eight-bit</code> charset includes the 8-bit raw bytes;
+Emacs uses it to represent raw bytes encountered in text.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-charsetp"><span class="category-def">Function: </span><span><strong class="def-name">charsetp</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-charsetp"> &para;</a></span></dt>
+<dd><p>Returns <code class="code">t</code> if <var class="var">object</var> is a symbol that names a character set,
+<code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-charset_002dlist"><span class="category-def">Variable: </span><span><strong class="def-name">charset-list</strong><a class="copiable-link" href="#index-charset_002dlist"> &para;</a></span></dt>
+<dd><p>The value is a list of all defined character set names.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-charset_002dpriority_002dlist"><span class="category-def">Function: </span><span><strong class="def-name">charset-priority-list</strong> <var class="def-var-arguments">&amp;optional highestp</var><a class="copiable-link" href="#index-charset_002dpriority_002dlist"> &para;</a></span></dt>
+<dd><p>This function returns a list of all defined character sets ordered by
+their priority.  If <var class="var">highestp</var> is non-<code class="code">nil</code>, the function
+returns a single character set of the highest priority.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dcharset_002dpriority"><span class="category-def">Function: </span><span><strong class="def-name">set-charset-priority</strong> <var class="def-var-arguments">&amp;rest charsets</var><a class="copiable-link" href="#index-set_002dcharset_002dpriority"> &para;</a></span></dt>
+<dd><p>This function makes <var class="var">charsets</var> the highest priority character sets.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-char_002dcharset"><span class="category-def">Function: </span><span><strong class="def-name">char-charset</strong> <var class="def-var-arguments">character &amp;optional restriction</var><a class="copiable-link" href="#index-char_002dcharset"> &para;</a></span></dt>
+<dd><p>This function returns the name of the character set of highest
+priority that <var class="var">character</var> belongs to.  <abbr class="acronym">ASCII</abbr> characters
+are an exception: for them, this function always returns <code class="code">ascii</code>.
+</p>
+<p>If <var class="var">restriction</var> is non-<code class="code">nil</code>, it should be a list of
+charsets to search.  Alternatively, it can be a coding system, in
+which case the returned charset must be supported by that coding
+system (see <a class="pxref" href="#Coding-Systems">Coding Systems</a>).
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-charset_002dplist"><span class="category-def">Function: </span><span><strong class="def-name">charset-plist</strong> <var class="def-var-arguments">charset</var><a class="copiable-link" href="#index-charset_002dplist"> &para;</a></span></dt>
+<dd><p>This function returns the property list of the character set
+<var class="var">charset</var>.  Although <var class="var">charset</var> is a symbol, this is not the
+same as the property list of that symbol.  Charset properties include
+important information about the charset, such as its documentation
+string, short name, etc.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-put_002dcharset_002dproperty"><span class="category-def">Function: </span><span><strong class="def-name">put-charset-property</strong> <var class="def-var-arguments">charset propname value</var><a class="copiable-link" href="#index-put_002dcharset_002dproperty"> &para;</a></span></dt>
+<dd><p>This function sets the <var class="var">propname</var> property of <var class="var">charset</var> to the
+given <var class="var">value</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-get_002dcharset_002dproperty"><span class="category-def">Function: </span><span><strong class="def-name">get-charset-property</strong> <var class="def-var-arguments">charset propname</var><a class="copiable-link" href="#index-get_002dcharset_002dproperty"> &para;</a></span></dt>
+<dd><p>This function returns the value of <var class="var">charset</var>s property
+<var class="var">propname</var>.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-list_002dcharset_002dchars"><span class="category-def">Command: </span><span><strong class="def-name">list-charset-chars</strong> <var class="def-var-arguments">charset</var><a class="copiable-link" href="#index-list_002dcharset_002dchars"> &para;</a></span></dt>
+<dd><p>This command displays a list of characters in the character set
+<var class="var">charset</var>.
+</p></dd></dl>
+
+<p>Emacs can convert between its internal representation of a character
+and the character&rsquo;s codepoint in a specific charset.  The following
+two functions support these conversions.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-decode_002dchar"><span class="category-def">Function: </span><span><strong class="def-name">decode-char</strong> <var class="def-var-arguments">charset code-point</var><a class="copiable-link" href="#index-decode_002dchar"> &para;</a></span></dt>
+<dd><p>This function decodes a character that is assigned a <var class="var">code-point</var>
+in <var class="var">charset</var>, to the corresponding Emacs character, and returns
+it.  If <var class="var">charset</var> doesn&rsquo;t contain a character of that code point,
+the value is <code class="code">nil</code>.
+</p>
+<p>For backward compatibility, if <var class="var">code-point</var> doesn&rsquo;t fit in a Lisp
+fixnum (see <a class="pxref" href="Numbers.html#Integer-Basics">most-positive-fixnum</a>), it can be
+specified as a cons cell <code class="code">(<var class="var">high</var> . <var class="var">low</var>)</code>, where
+<var class="var">low</var> are the lower 16 bits of the value and <var class="var">high</var> are the
+high 16 bits.  This usage is obsolescent.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-encode_002dchar"><span class="category-def">Function: </span><span><strong class="def-name">encode-char</strong> <var class="def-var-arguments">char charset</var><a class="copiable-link" href="#index-encode_002dchar"> &para;</a></span></dt>
+<dd><p>This function returns the code point assigned to the character
+<var class="var">char</var> in <var class="var">charset</var>.  If
+<var class="var">charset</var> doesn&rsquo;t have a codepoint for <var class="var">char</var>, the value is
+<code class="code">nil</code>.
+</p></dd></dl>
+
+<p>The following function comes in handy for applying a certain
+function to all or part of the characters in a charset:
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-map_002dcharset_002dchars"><span class="category-def">Function: </span><span><strong class="def-name">map-charset-chars</strong> <var class="def-var-arguments">function charset &amp;optional arg from-code to-code</var><a class="copiable-link" href="#index-map_002dcharset_002dchars"> &para;</a></span></dt>
+<dd><p>Call <var class="var">function</var> for characters in <var class="var">charset</var>.  <var class="var">function</var>
+is called with two arguments.  The first one is a cons cell
+<code class="code">(<var class="var">from</var> .  <var class="var">to</var>)</code>, where <var class="var">from</var> and <var class="var">to</var>
+indicate a range of characters contained in <var class="var">charset</var>.  The second
+argument passed to <var class="var">function</var> is <var class="var">arg</var>, or <code class="code">nil</code> if
+<var class="var">arg</var> is omitted.
+</p>
+<p>By default, the range of codepoints passed to <var class="var">function</var> includes
+all the characters in <var class="var">charset</var>, but optional arguments
+<var class="var">from-code</var> and <var class="var">to-code</var> limit that to the range of
+characters between these two codepoints of <var class="var">charset</var>.  If either
+of them is <code class="code">nil</code>, it defaults to the first or last codepoint of
+<var class="var">charset</var>, respectively.  Note that <var class="var">from-code</var> and
+<var class="var">to-code</var> are <var class="var">charset</var>&rsquo;s codepoints, not the Emacs codes of
+characters; by contrast, the values <var class="var">from</var> and <var class="var">to</var> in the
+cons cell passed to <var class="var">function</var> <em class="emph">are</em> Emacs character codes.
+Those Emacs character codes are either Unicode code points, or Emacs
+internal code points that extend Unicode and are beyond the Unicode
+range of characters <code class="code">0..#x10FFFF</code> (see <a class="pxref" href="#Text-Representations">Text Representations</a>).
+The latter happens rarely, with legacy CJK charsets for codepoints of
+<var class="var">charset</var> which specify characters not yet unified with Unicode.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Scanning-Charsets">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Translation-of-Characters" rel="next">Translation of Characters</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Character-Sets" rel="prev">Character Sets</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Non_002dASCII-Characters" rel="up">Non-<abbr class="acronym">ASCII</abbr> Characters</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Scanning-for-Character-Sets"><span>34.8 Scanning for Character Sets<a class="copiable-link" href="#Scanning-for-Character-Sets"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-scanning-for-character-sets"></a>
+<a class="index-entry-id" id="index-character-set_002c-searching"></a>
+
+<p>Sometimes it is useful to find out which character set a particular
+character belongs to.  One use for this is in determining which coding
+systems (see <a class="pxref" href="#Coding-Systems">Coding Systems</a>) are capable of representing all of
+the text in question; another is to determine the font(s) for
+displaying that text.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-charset_002dafter"><span class="category-def">Function: </span><span><strong class="def-name">charset-after</strong> <var class="def-var-arguments">&amp;optional pos</var><a class="copiable-link" href="#index-charset_002dafter"> &para;</a></span></dt>
+<dd><p>This function returns the charset of highest priority containing the
+character at position <var class="var">pos</var> in the current buffer.  If <var class="var">pos</var>
+is omitted or <code class="code">nil</code>, it defaults to the current value of point.
+If <var class="var">pos</var> is out of range, the value is <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-find_002dcharset_002dregion"><span class="category-def">Function: </span><span><strong class="def-name">find-charset-region</strong> <var class="def-var-arguments">beg end &amp;optional translation</var><a class="copiable-link" href="#index-find_002dcharset_002dregion"> &para;</a></span></dt>
+<dd><p>This function returns a list of the character sets of highest priority
+that contain characters in the current buffer between positions
+<var class="var">beg</var> and <var class="var">end</var>.
+</p>
+<p>The optional argument <var class="var">translation</var> specifies a translation table
+to use for scanning the text (see <a class="pxref" href="#Translation-of-Characters">Translation of Characters</a>).  If
+it is non-<code class="code">nil</code>, then each character in the region is translated
+through this table, and the value returned describes the translated
+characters instead of the characters actually in the buffer.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-find_002dcharset_002dstring"><span class="category-def">Function: </span><span><strong class="def-name">find-charset-string</strong> <var class="def-var-arguments">string &amp;optional translation</var><a class="copiable-link" href="#index-find_002dcharset_002dstring"> &para;</a></span></dt>
+<dd><p>This function returns a list of character sets of highest priority
+that contain characters in <var class="var">string</var>.  It is just like
+<code class="code">find-charset-region</code>, except that it applies to the contents of
+<var class="var">string</var> instead of part of the current buffer.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Translation-of-Characters">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Coding-Systems" rel="next">Coding Systems</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Scanning-Charsets" rel="prev">Scanning for Character Sets</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Non_002dASCII-Characters" rel="up">Non-<abbr class="acronym">ASCII</abbr> Characters</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Translation-of-Characters-1"><span>34.9 Translation of Characters<a class="copiable-link" href="#Translation-of-Characters-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-character-translation-tables"></a>
+<a class="index-entry-id" id="index-translation-tables"></a>
+
+<p>A <em class="dfn">translation table</em> is a char-table (see <a class="pxref" href="Sequences-Arrays-Vectors.html#Char_002dTables">Char-Tables</a>) that
+specifies a mapping of characters into characters.  These tables are
+used in encoding and decoding, and for other purposes.  Some coding
+systems specify their own particular translation tables; there are
+also default translation tables which apply to all other coding
+systems.
+</p>
+<p>A translation table has two extra slots.  The first is either
+<code class="code">nil</code> or a translation table that performs the reverse
+translation; the second is the maximum number of characters to look up
+for translating sequences of characters (see the description of
+<code class="code">make-translation-table-from-alist</code> below).
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dtranslation_002dtable"><span class="category-def">Function: </span><span><strong class="def-name">make-translation-table</strong> <var class="def-var-arguments">&amp;rest translations</var><a class="copiable-link" href="#index-make_002dtranslation_002dtable"> &para;</a></span></dt>
+<dd><p>This function returns a translation table based on the argument
+<var class="var">translations</var>.  Each element of <var class="var">translations</var> should be a
+list of elements of the form <code class="code">(<var class="var">from</var> . <var class="var">to</var>)</code>; this says
+to translate the character <var class="var">from</var> into <var class="var">to</var>.
+</p>
+<p>The arguments and the forms in each argument are processed in order,
+and if a previous form already translates <var class="var">to</var> to some other
+character, say <var class="var">to-alt</var>, <var class="var">from</var> is also translated to
+<var class="var">to-alt</var>.
+</p></dd></dl>
+
+<p>During decoding, the translation table&rsquo;s translations are applied to
+the characters that result from ordinary decoding.  If a coding system
+has the property <code class="code">:decode-translation-table</code>, that specifies the
+translation table to use, or a list of translation tables to apply in
+sequence.  (This is a property of the coding system, as returned by
+<code class="code">coding-system-get</code>, not a property of the symbol that is the
+coding system&rsquo;s name.  See <a class="xref" href="#Coding-System-Basics">Basic Concepts of
+Coding Systems</a>.)  Finally, if
+<code class="code">standard-translation-table-for-decode</code> is non-<code class="code">nil</code>, the
+resulting characters are translated by that table.
+</p>
+<p>During encoding, the translation table&rsquo;s translations are applied to
+the characters in the buffer, and the result of translation is
+actually encoded.  If a coding system has property
+<code class="code">:encode-translation-table</code>, that specifies the translation table
+to use, or a list of translation tables to apply in sequence.  In
+addition, if the variable <code class="code">standard-translation-table-for-encode</code>
+is non-<code class="code">nil</code>, it specifies the translation table to use for
+translating the result.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-standard_002dtranslation_002dtable_002dfor_002ddecode"><span class="category-def">Variable: </span><span><strong class="def-name">standard-translation-table-for-decode</strong><a class="copiable-link" href="#index-standard_002dtranslation_002dtable_002dfor_002ddecode"> &para;</a></span></dt>
+<dd><p>This is the default translation table for decoding.  If a coding
+system specifies its own translation tables, the table that is the
+value of this variable, if non-<code class="code">nil</code>, is applied after them.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-standard_002dtranslation_002dtable_002dfor_002dencode"><span class="category-def">Variable: </span><span><strong class="def-name">standard-translation-table-for-encode</strong><a class="copiable-link" href="#index-standard_002dtranslation_002dtable_002dfor_002dencode"> &para;</a></span></dt>
+<dd><p>This is the default translation table for encoding.  If a coding
+system specifies its own translation tables, the table that is the
+value of this variable, if non-<code class="code">nil</code>, is applied after them.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-translation_002dtable_002dfor_002dinput"><span class="category-def">Variable: </span><span><strong class="def-name">translation-table-for-input</strong><a class="copiable-link" href="#index-translation_002dtable_002dfor_002dinput"> &para;</a></span></dt>
+<dd><p>Self-inserting characters are translated through this translation
+table before they are inserted.  Search commands also translate their
+input through this table, so they can compare more reliably with
+what&rsquo;s in the buffer.
+</p>
+<p>This variable automatically becomes buffer-local when set.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dtranslation_002dtable_002dfrom_002dvector"><span class="category-def">Function: </span><span><strong class="def-name">make-translation-table-from-vector</strong> <var class="def-var-arguments">vec</var><a class="copiable-link" href="#index-make_002dtranslation_002dtable_002dfrom_002dvector"> &para;</a></span></dt>
+<dd><p>This function returns a translation table made from <var class="var">vec</var> that is
+an array of 256 elements to map bytes (values 0 through #xFF) to
+characters.  Elements may be <code class="code">nil</code> for untranslated bytes.  The
+returned table has a translation table for reverse mapping in the
+first extra slot, and the value <code class="code">1</code> in the second extra slot.
+</p>
+<p>This function provides an easy way to make a private coding system
+that maps each byte to a specific character.  You can specify the
+returned table and the reverse translation table using the properties
+<code class="code">:decode-translation-table</code> and <code class="code">:encode-translation-table</code>
+respectively in the <var class="var">props</var> argument to
+<code class="code">define-coding-system</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dtranslation_002dtable_002dfrom_002dalist"><span class="category-def">Function: </span><span><strong class="def-name">make-translation-table-from-alist</strong> <var class="def-var-arguments">alist</var><a class="copiable-link" href="#index-make_002dtranslation_002dtable_002dfrom_002dalist"> &para;</a></span></dt>
+<dd><p>This function is similar to <code class="code">make-translation-table</code> but returns
+a complex translation table rather than a simple one-to-one mapping.
+Each element of <var class="var">alist</var> is of the form <code class="code">(<var class="var">from</var>
+. <var class="var">to</var>)</code>, where <var class="var">from</var> and <var class="var">to</var> are either characters or
+vectors specifying a sequence of characters.  If <var class="var">from</var> is a
+character, that character is translated to <var class="var">to</var> (i.e., to a
+character or a character sequence).  If <var class="var">from</var> is a vector of
+characters, that sequence is translated to <var class="var">to</var>.  The returned
+table has a translation table for reverse mapping in the first extra
+slot, and the maximum length of all the <var class="var">from</var> character sequences
+in the second extra slot.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Coding-Systems">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Input-Methods" rel="next">Input Methods</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Translation-of-Characters" rel="prev">Translation of Characters</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Non_002dASCII-Characters" rel="up">Non-<abbr class="acronym">ASCII</abbr> Characters</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Coding-Systems-1"><span>34.10 Coding Systems<a class="copiable-link" href="#Coding-Systems-1"> &para;</a></span></h3>
+
+<a class="index-entry-id" id="index-coding-system"></a>
+<p>When Emacs reads or writes a file, and when Emacs sends text to a
+subprocess or receives text from a subprocess, it normally performs
+character code conversion and end-of-line conversion as specified
+by a particular <em class="dfn">coding system</em>.
+</p>
+<p>How to define a coding system is an arcane matter, and is not
+documented here.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Coding-System-Basics">Basic Concepts of Coding Systems</a></li>
+<li><a href="#Encoding-and-I_002fO">Encoding and I/O</a></li>
+<li><a href="#Lisp-and-Coding-Systems">Coding Systems in Lisp</a></li>
+<li><a href="#User_002dChosen-Coding-Systems">User-Chosen Coding Systems</a></li>
+<li><a href="#Default-Coding-Systems">Default Coding Systems</a></li>
+<li><a href="#Specifying-Coding-Systems">Specifying a Coding System for One Operation</a></li>
+<li><a href="#Explicit-Encoding">Explicit Encoding and Decoding</a></li>
+<li><a href="#Terminal-I_002fO-Encoding">Terminal I/O Encoding</a></li>
+</ul>
+<hr>
+<div class="subsection-level-extent" id="Coding-System-Basics">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Encoding-and-I_002fO" rel="next">Encoding and I/O</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Coding-Systems" rel="up">Coding Systems</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Basic-Concepts-of-Coding-Systems"><span>34.10.1 Basic Concepts of Coding Systems<a class="copiable-link" href="#Basic-Concepts-of-Coding-Systems"> &para;</a></span></h4>
+
+<a class="index-entry-id" id="index-character-code-conversion"></a>
+<p><em class="dfn">Character code conversion</em> involves conversion between the
+internal representation of characters used inside Emacs and some other
+encoding.  Emacs supports many different encodings, in that it can
+convert to and from them.  For example, it can convert text to or from
+encodings such as Latin 1, Latin 2, Latin 3, Latin 4, Latin 5, and
+several variants of ISO 2022.  In some cases, Emacs supports several
+alternative encodings for the same characters; for example, there are
+three coding systems for the Cyrillic (Russian) alphabet: ISO,
+Alternativnyj, and KOI8.
+</p>
+<a class="index-entry-id" id="index-undecided-coding-system"></a>
+<a class="index-entry-id" id="index-prefer_002dutf_002d8-coding-system"></a>
+<p>Every coding system specifies a particular set of character code
+conversions, but the coding system <code class="code">undecided</code> is special: it
+leaves the choice unspecified, to be chosen heuristically for each
+file or string, based on the file&rsquo;s or string&rsquo;s data, when they are
+decoded or encoded.  The coding system <code class="code">prefer-utf-8</code> is like
+<code class="code">undecided</code>, but it prefers to choose <code class="code">utf-8</code> when possible.
+</p>
+<p>In general, a coding system doesn&rsquo;t guarantee roundtrip identity:
+decoding a byte sequence using a coding system, then encoding the
+resulting text in the same coding system, can produce a different byte
+sequence.  But some coding systems do guarantee that the byte sequence
+will be the same as what you originally decoded.  Here are a few
+examples:
+</p>
+<blockquote class="quotation">
+<p>iso-8859-1, utf-8, big5, shift_jis, euc-jp
+</p></blockquote>
+
+<p>Encoding buffer text and then decoding the result can also fail to
+reproduce the original text.  For instance, if you encode a character
+with a coding system which does not support that character, the result
+is unpredictable, and thus decoding it using the same coding system
+may produce a different text.  Currently, Emacs can&rsquo;t report errors
+that result from encoding unsupported characters.
+</p>
+<a class="index-entry-id" id="index-EOL-conversion"></a>
+<a class="index-entry-id" id="index-end_002dof_002dline-conversion"></a>
+<a class="index-entry-id" id="index-line-end-conversion"></a>
+<p><em class="dfn">End of line conversion</em> handles three different conventions used
+on various systems for representing end of line in files.  The Unix
+convention, used on GNU and Unix systems, and macOS, is to use the
+linefeed character (also called newline).  The DOS convention, used on
+MS-Windows and MS-DOS systems, is to use a carriage return and a
+linefeed.  The Mac convention, used in Classic Mac OS and now rare
+outside of legacy software, is to use just carriage return.
+</p>
+<a class="index-entry-id" id="index-base-coding-system"></a>
+<a class="index-entry-id" id="index-variant-coding-system"></a>
+<p><em class="dfn">Base coding systems</em> such as <code class="code">latin-1</code> leave the end-of-line
+conversion unspecified, to be chosen based on the data.  <em class="dfn">Variant
+coding systems</em> such as <code class="code">latin-1-unix</code>, <code class="code">latin-1-dos</code> and
+<code class="code">latin-1-mac</code> specify the end-of-line conversion explicitly as
+well.  Most base coding systems have three corresponding variants whose
+names are formed by adding &lsquo;<samp class="samp">-unix</samp>&rsquo;, &lsquo;<samp class="samp">-dos</samp>&rsquo; and &lsquo;<samp class="samp">-mac</samp>&rsquo;.
+</p>
+<a class="index-entry-id" id="index-raw_002dtext-coding-system"></a>
+<p>The coding system <code class="code">raw-text</code> is special in that it prevents
+character code conversion, and causes the buffer visited with this
+coding system to be a unibyte buffer.  For historical reasons, you can
+save both unibyte and multibyte text with this coding system.  When
+you use <code class="code">raw-text</code> to encode multibyte text, it does perform one
+character code conversion: it converts eight-bit characters to their
+single-byte external representation.  <code class="code">raw-text</code> does not specify
+the end-of-line conversion, allowing that to be determined as usual by
+the data, and has the usual three variants which specify the
+end-of-line conversion.
+</p>
+<a class="index-entry-id" id="index-no_002dconversion-coding-system"></a>
+<a class="index-entry-id" id="index-binary-coding-system"></a>
+<p><code class="code">no-conversion</code> (and its alias <code class="code">binary</code>) is equivalent to
+<code class="code">raw-text-unix</code>: it specifies no conversion of either character
+codes or end-of-line.
+</p>
+<a class="index-entry-id" id="index-emacs_002dinternal-coding-system"></a>
+<a class="index-entry-id" id="index-utf_002d8_002demacs-coding-system"></a>
+<p>The coding system <code class="code">utf-8-emacs</code> specifies that the data is
+represented in the internal Emacs encoding (see <a class="pxref" href="#Text-Representations">Text Representations</a>).  This is like <code class="code">raw-text</code> in that no code
+conversion happens, but different in that the result is multibyte
+data.  The name <code class="code">emacs-internal</code> is an alias for
+<code class="code">utf-8-emacs-unix</code> (so it forces no conversion of end-of-line,
+unlike <code class="code">utf-8-emacs</code>, which can decode all 3 kinds of
+end-of-line conventions).  Since this coding system can represent all
+the characters supported by Emacs in its buffers and strings, we
+recommend using it whenever saving text for internal purposes, such as
+caching.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-coding_002dsystem_002dget"><span class="category-def">Function: </span><span><strong class="def-name">coding-system-get</strong> <var class="def-var-arguments">coding-system property</var><a class="copiable-link" href="#index-coding_002dsystem_002dget"> &para;</a></span></dt>
+<dd><p>This function returns the specified property of the coding system
+<var class="var">coding-system</var>.  Most coding system properties exist for internal
+purposes, but one that you might find useful is <code class="code">:mime-charset</code>.
+That property&rsquo;s value is the name used in MIME for the character coding
+which this coding system can read and write.  Examples:
+</p>
+<div class="example">
+<pre class="example-preformatted">(coding-system-get 'iso-latin-1 :mime-charset)
+     &rArr; iso-8859-1
+(coding-system-get 'iso-2022-cn :mime-charset)
+     &rArr; iso-2022-cn
+(coding-system-get 'cyrillic-koi8 :mime-charset)
+     &rArr; koi8-r
+</pre></div>
+
+<p>The value of the <code class="code">:mime-charset</code> property is also defined
+as an alias for the coding system.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-alias_002c-for-coding-systems"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-coding_002dsystem_002daliases"><span class="category-def">Function: </span><span><strong class="def-name">coding-system-aliases</strong> <var class="def-var-arguments">coding-system</var><a class="copiable-link" href="#index-coding_002dsystem_002daliases"> &para;</a></span></dt>
+<dd><p>This function returns the list of aliases of <var class="var">coding-system</var>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Encoding-and-I_002fO">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Lisp-and-Coding-Systems" rel="next">Coding Systems in Lisp</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Coding-System-Basics" rel="prev">Basic Concepts of Coding Systems</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Coding-Systems" rel="up">Coding Systems</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Encoding-and-I_002fO-1"><span>34.10.2 Encoding and I/O<a class="copiable-link" href="#Encoding-and-I_002fO-1"> &para;</a></span></h4>
+
+<p>The principal purpose of coding systems is for use in reading and
+writing files.  The function <code class="code">insert-file-contents</code> uses a coding
+system to decode the file data, and <code class="code">write-region</code> uses one to
+encode the buffer contents.
+</p>
+<p>You can specify the coding system to use either explicitly
+(see <a class="pxref" href="#Specifying-Coding-Systems">Specifying a Coding System for One Operation</a>), or implicitly using a default
+mechanism (see <a class="pxref" href="#Default-Coding-Systems">Default Coding Systems</a>).  But these methods may not
+completely specify what to do.  For example, they may choose a coding
+system such as <code class="code">undecided</code> which leaves the character code
+conversion to be determined from the data.  In these cases, the I/O
+operation finishes the job of choosing a coding system.  Very often
+you will want to find out afterwards which coding system was chosen.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-buffer_002dfile_002dcoding_002dsystem"><span class="category-def">Variable: </span><span><strong class="def-name">buffer-file-coding-system</strong><a class="copiable-link" href="#index-buffer_002dfile_002dcoding_002dsystem"> &para;</a></span></dt>
+<dd><p>This buffer-local variable records the coding system used for saving the
+buffer and for writing part of the buffer with <code class="code">write-region</code>.  If
+the text to be written cannot be safely encoded using the coding system
+specified by this variable, these operations select an alternative
+encoding by calling the function <code class="code">select-safe-coding-system</code>
+(see <a class="pxref" href="#User_002dChosen-Coding-Systems">User-Chosen Coding Systems</a>).  If selecting a different encoding
+requires asking the user to specify a coding system,
+<code class="code">buffer-file-coding-system</code> is updated to the newly selected coding
+system.
+</p>
+<p><code class="code">buffer-file-coding-system</code> does <em class="emph">not</em> affect sending text
+to a subprocess.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-save_002dbuffer_002dcoding_002dsystem"><span class="category-def">Variable: </span><span><strong class="def-name">save-buffer-coding-system</strong><a class="copiable-link" href="#index-save_002dbuffer_002dcoding_002dsystem"> &para;</a></span></dt>
+<dd><p>This variable specifies the coding system for saving the buffer (by
+overriding <code class="code">buffer-file-coding-system</code>).  Note that it is not used
+for <code class="code">write-region</code>.
+</p>
+<p>When a command to save the buffer starts out to use
+<code class="code">buffer-file-coding-system</code> (or <code class="code">save-buffer-coding-system</code>),
+and that coding system cannot handle
+the actual text in the buffer, the command asks the user to choose
+another coding system (by calling <code class="code">select-safe-coding-system</code>).
+After that happens, the command also updates
+<code class="code">buffer-file-coding-system</code> to represent the coding system that
+the user specified.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-last_002dcoding_002dsystem_002dused"><span class="category-def">Variable: </span><span><strong class="def-name">last-coding-system-used</strong><a class="copiable-link" href="#index-last_002dcoding_002dsystem_002dused"> &para;</a></span></dt>
+<dd><p>I/O operations for files and subprocesses set this variable to the
+coding system name that was used.  The explicit encoding and decoding
+functions (see <a class="pxref" href="#Explicit-Encoding">Explicit Encoding and Decoding</a>) set it too.
+</p>
+<p><strong class="strong">Warning:</strong> Since receiving subprocess output sets this variable,
+it can change whenever Emacs waits; therefore, you should copy the
+value shortly after the function call that stores the value you are
+interested in.
+</p></dd></dl>
+
+<p>The variable <code class="code">selection-coding-system</code> specifies how to encode
+selections for the window system.  See <a class="xref" href="Frames.html#Window-System-Selections">Window System Selections</a>.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-file_002dname_002dcoding_002dsystem"><span class="category-def">Variable: </span><span><strong class="def-name">file-name-coding-system</strong><a class="copiable-link" href="#index-file_002dname_002dcoding_002dsystem"> &para;</a></span></dt>
+<dd><p>The variable <code class="code">file-name-coding-system</code> specifies the coding
+system to use for encoding file names.  Emacs encodes file names using
+that coding system for all file operations.  If
+<code class="code">file-name-coding-system</code> is <code class="code">nil</code>, Emacs uses a default
+coding system determined by the selected language environment.  In the
+default language environment, any non-<abbr class="acronym">ASCII</abbr> characters in
+file names are not encoded specially; they appear in the file system
+using the internal Emacs representation.
+</p></dd></dl>
+
+<p><strong class="strong">Warning:</strong> if you change <code class="code">file-name-coding-system</code> (or
+the language environment) in the middle of an Emacs session, problems
+can result if you have already visited files whose names were encoded
+using the earlier coding system and are handled differently under the
+new coding system.  If you try to save one of these buffers under the
+visited file name, saving may use the wrong file name, or it may get
+an error.  If such a problem happens, use <kbd class="kbd">C-x C-w</kbd> to specify a
+new file name for that buffer.
+</p>
+<a class="index-entry-id" id="index-file_002dname-encoding_002c-MS_002dWindows"></a>
+<p>On Windows 2000 and later, Emacs by default uses Unicode APIs to
+pass file names to the OS, so the value of
+<code class="code">file-name-coding-system</code> is largely ignored.  Lisp applications
+that need to encode or decode file names on the Lisp level should use
+<code class="code">utf-8</code> coding-system when <code class="code">system-type</code> is
+<code class="code">windows-nt</code>; the conversion of UTF-8 encoded file names to the
+encoding appropriate for communicating with the OS is performed
+internally by Emacs.
+</p>
+<hr>
+</div>
+<div class="subsection-level-extent" id="Lisp-and-Coding-Systems">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#User_002dChosen-Coding-Systems" rel="next">User-Chosen Coding Systems</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Encoding-and-I_002fO" rel="prev">Encoding and I/O</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Coding-Systems" rel="up">Coding Systems</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Coding-Systems-in-Lisp"><span>34.10.3 Coding Systems in Lisp<a class="copiable-link" href="#Coding-Systems-in-Lisp"> &para;</a></span></h4>
+
+<p>Here are the Lisp facilities for working with coding systems:
+</p>
+<a class="index-entry-id" id="index-list-all-coding-systems"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-coding_002dsystem_002dlist"><span class="category-def">Function: </span><span><strong class="def-name">coding-system-list</strong> <var class="def-var-arguments">&amp;optional base-only</var><a class="copiable-link" href="#index-coding_002dsystem_002dlist"> &para;</a></span></dt>
+<dd><p>This function returns a list of all coding system names (symbols).  If
+<var class="var">base-only</var> is non-<code class="code">nil</code>, the value includes only the
+base coding systems.  Otherwise, it includes alias and variant coding
+systems as well.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-coding_002dsystem_002dp"><span class="category-def">Function: </span><span><strong class="def-name">coding-system-p</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-coding_002dsystem_002dp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is a coding system
+name or <code class="code">nil</code>.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-validity-of-coding-system"></a>
+<a class="index-entry-id" id="index-coding-system_002c-validity-check"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-check_002dcoding_002dsystem"><span class="category-def">Function: </span><span><strong class="def-name">check-coding-system</strong> <var class="def-var-arguments">coding-system</var><a class="copiable-link" href="#index-check_002dcoding_002dsystem"> &para;</a></span></dt>
+<dd><p>This function checks the validity of <var class="var">coding-system</var>.  If that is
+valid, it returns <var class="var">coding-system</var>.  If <var class="var">coding-system</var> is
+<code class="code">nil</code>, the function returns <code class="code">nil</code>.  For any other values, it
+signals an error whose <code class="code">error-symbol</code> is <code class="code">coding-system-error</code>
+(see <a class="pxref" href="Control-Structures.html#Signaling-Errors">signal</a>).
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-eol-type-of-coding-system"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-coding_002dsystem_002deol_002dtype"><span class="category-def">Function: </span><span><strong class="def-name">coding-system-eol-type</strong> <var class="def-var-arguments">coding-system</var><a class="copiable-link" href="#index-coding_002dsystem_002deol_002dtype"> &para;</a></span></dt>
+<dd><p>This function returns the type of end-of-line (a.k.a. <em class="dfn">eol</em>)
+conversion used by <var class="var">coding-system</var>.  If <var class="var">coding-system</var>
+specifies a certain eol conversion, the return value is an integer 0,
+1, or 2, standing for <code class="code">unix</code>, <code class="code">dos</code>, and <code class="code">mac</code>,
+respectively.  If <var class="var">coding-system</var> doesn&rsquo;t specify eol conversion
+explicitly, the return value is a vector of coding systems, each one
+with one of the possible eol conversion types, like this:
+</p>
+<div class="example lisp">
+<pre class="lisp-preformatted">(coding-system-eol-type 'latin-1)
+     &rArr; [latin-1-unix latin-1-dos latin-1-mac]
+</pre></div>
+
+<p>If this function returns a vector, Emacs will decide, as part of the
+text encoding or decoding process, what eol conversion to use.  For
+decoding, the end-of-line format of the text is auto-detected, and the
+eol conversion is set to match it (e.g., DOS-style CRLF format will
+imply <code class="code">dos</code> eol conversion).  For encoding, the eol conversion is
+taken from the appropriate default coding system (e.g.,
+default value of <code class="code">buffer-file-coding-system</code> for
+<code class="code">buffer-file-coding-system</code>), or from the default eol conversion
+appropriate for the underlying platform.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-eol-conversion-of-coding-system"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-coding_002dsystem_002dchange_002deol_002dconversion"><span class="category-def">Function: </span><span><strong class="def-name">coding-system-change-eol-conversion</strong> <var class="def-var-arguments">coding-system eol-type</var><a class="copiable-link" href="#index-coding_002dsystem_002dchange_002deol_002dconversion"> &para;</a></span></dt>
+<dd><p>This function returns a coding system which is like <var class="var">coding-system</var>
+except for its eol conversion, which is specified by <code class="code">eol-type</code>.
+<var class="var">eol-type</var> should be <code class="code">unix</code>, <code class="code">dos</code>, <code class="code">mac</code>, or
+<code class="code">nil</code>.  If it is <code class="code">nil</code>, the returned coding system determines
+the end-of-line conversion from the data.
+</p>
+<p><var class="var">eol-type</var> may also be 0, 1 or 2, standing for <code class="code">unix</code>,
+<code class="code">dos</code> and <code class="code">mac</code>, respectively.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-text-conversion-of-coding-system"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-coding_002dsystem_002dchange_002dtext_002dconversion"><span class="category-def">Function: </span><span><strong class="def-name">coding-system-change-text-conversion</strong> <var class="def-var-arguments">eol-coding text-coding</var><a class="copiable-link" href="#index-coding_002dsystem_002dchange_002dtext_002dconversion"> &para;</a></span></dt>
+<dd><p>This function returns a coding system which uses the end-of-line
+conversion of <var class="var">eol-coding</var>, and the text conversion of
+<var class="var">text-coding</var>.  If <var class="var">text-coding</var> is <code class="code">nil</code>, it returns
+<code class="code">undecided</code>, or one of its variants according to <var class="var">eol-coding</var>.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-safely-encode-region"></a>
+<a class="index-entry-id" id="index-coding-systems-for-encoding-region"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-find_002dcoding_002dsystems_002dregion"><span class="category-def">Function: </span><span><strong class="def-name">find-coding-systems-region</strong> <var class="def-var-arguments">from to</var><a class="copiable-link" href="#index-find_002dcoding_002dsystems_002dregion"> &para;</a></span></dt>
+<dd><p>This function returns a list of coding systems that could be used to
+encode a text between <var class="var">from</var> and <var class="var">to</var>.  All coding systems in
+the list can safely encode any multibyte characters in that portion of
+the text.
+</p>
+<p>If the text contains no multibyte characters, the function returns the
+list <code class="code">(undecided)</code>.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-safely-encode-a-string"></a>
+<a class="index-entry-id" id="index-coding-systems-for-encoding-a-string"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-find_002dcoding_002dsystems_002dstring"><span class="category-def">Function: </span><span><strong class="def-name">find-coding-systems-string</strong> <var class="def-var-arguments">string</var><a class="copiable-link" href="#index-find_002dcoding_002dsystems_002dstring"> &para;</a></span></dt>
+<dd><p>This function returns a list of coding systems that could be used to
+encode the text of <var class="var">string</var>.  All coding systems in the list can
+safely encode any multibyte characters in <var class="var">string</var>.  If the text
+contains no multibyte characters, this returns the list
+<code class="code">(undecided)</code>.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-charset_002c-coding-systems-to-encode"></a>
+<a class="index-entry-id" id="index-safely-encode-characters-in-a-charset"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-find_002dcoding_002dsystems_002dfor_002dcharsets"><span class="category-def">Function: </span><span><strong class="def-name">find-coding-systems-for-charsets</strong> <var class="def-var-arguments">charsets</var><a class="copiable-link" href="#index-find_002dcoding_002dsystems_002dfor_002dcharsets"> &para;</a></span></dt>
+<dd><p>This function returns a list of coding systems that could be used to
+encode all the character sets in the list <var class="var">charsets</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-check_002dcoding_002dsystems_002dregion"><span class="category-def">Function: </span><span><strong class="def-name">check-coding-systems-region</strong> <var class="def-var-arguments">start end coding-system-list</var><a class="copiable-link" href="#index-check_002dcoding_002dsystems_002dregion"> &para;</a></span></dt>
+<dd><p>This function checks whether coding systems in the list
+<code class="code">coding-system-list</code> can encode all the characters in the region
+between <var class="var">start</var> and <var class="var">end</var>.  If all of the coding systems in
+the list can encode the specified text, the function returns
+<code class="code">nil</code>.  If some coding systems cannot encode some of the
+characters, the value is an alist, each element of which has the form
+<code class="code">(<var class="var">coding-system1</var> <var class="var">pos1</var> <var class="var">pos2</var> &hellip;)</code>, meaning
+that <var class="var">coding-system1</var> cannot encode characters at buffer positions
+<var class="var">pos1</var>, <var class="var">pos2</var>, <small class="enddots">...</small>.
+</p>
+<p><var class="var">start</var> may be a string, in which case <var class="var">end</var> is ignored and
+the returned value references string indices instead of buffer
+positions.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-detect_002dcoding_002dregion"><span class="category-def">Function: </span><span><strong class="def-name">detect-coding-region</strong> <var class="def-var-arguments">start end &amp;optional highest</var><a class="copiable-link" href="#index-detect_002dcoding_002dregion"> &para;</a></span></dt>
+<dd><p>This function chooses a plausible coding system for decoding the text
+from <var class="var">start</var> to <var class="var">end</var>.  This text should be a byte sequence,
+i.e., unibyte text or multibyte text with only <abbr class="acronym">ASCII</abbr> and
+eight-bit characters (see <a class="pxref" href="#Explicit-Encoding">Explicit Encoding and Decoding</a>).
+</p>
+<p>Normally this function returns a list of coding systems that could
+handle decoding the text that was scanned.  They are listed in order of
+decreasing priority.  But if <var class="var">highest</var> is non-<code class="code">nil</code>, then the
+return value is just one coding system, the one that is highest in
+priority.
+</p>
+<p>If the region contains only <abbr class="acronym">ASCII</abbr> characters except for such
+ISO-2022 control characters ISO-2022 as <code class="code">ESC</code>, the value is
+<code class="code">undecided</code> or <code class="code">(undecided)</code>, or a variant specifying
+end-of-line conversion, if that can be deduced from the text.
+</p>
+<p>If the region contains null bytes, the value is <code class="code">no-conversion</code>,
+even if the region contains text encoded in some coding system.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-detect_002dcoding_002dstring"><span class="category-def">Function: </span><span><strong class="def-name">detect-coding-string</strong> <var class="def-var-arguments">string &amp;optional highest</var><a class="copiable-link" href="#index-detect_002dcoding_002dstring"> &para;</a></span></dt>
+<dd><p>This function is like <code class="code">detect-coding-region</code> except that it
+operates on the contents of <var class="var">string</var> instead of bytes in the buffer.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-null-bytes_002c-and-decoding-text"></a>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-inhibit_002dnull_002dbyte_002ddetection"><span class="category-def">Variable: </span><span><strong class="def-name">inhibit-null-byte-detection</strong><a class="copiable-link" href="#index-inhibit_002dnull_002dbyte_002ddetection"> &para;</a></span></dt>
+<dd><p>If this variable has a non-<code class="code">nil</code> value, null bytes are ignored
+when detecting the encoding of a region or a string.  This allows the
+encoding of text that contains null bytes to be correctly detected,
+such as Info files with Index nodes.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-inhibit_002diso_002descape_002ddetection"><span class="category-def">Variable: </span><span><strong class="def-name">inhibit-iso-escape-detection</strong><a class="copiable-link" href="#index-inhibit_002diso_002descape_002ddetection"> &para;</a></span></dt>
+<dd><p>If this variable has a non-<code class="code">nil</code> value, ISO-2022 escape sequences
+are ignored when detecting the encoding of a region or a string.  The
+result is that no text is ever detected as encoded in some ISO-2022
+encoding, and all escape sequences become visible in a buffer.
+<strong class="strong">Warning:</strong> <em class="emph">Use this variable with extreme caution,
+because many files in the Emacs distribution use ISO-2022 encoding.</em>
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-charsets-supported-by-a-coding-system"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-coding_002dsystem_002dcharset_002dlist"><span class="category-def">Function: </span><span><strong class="def-name">coding-system-charset-list</strong> <var class="def-var-arguments">coding-system</var><a class="copiable-link" href="#index-coding_002dsystem_002dcharset_002dlist"> &para;</a></span></dt>
+<dd><p>This function returns the list of character sets (see <a class="pxref" href="#Character-Sets">Character Sets</a>) supported by <var class="var">coding-system</var>.  Some coding systems that
+support too many character sets to list them all yield special values:
+</p><ul class="itemize mark-bullet">
+<li>If <var class="var">coding-system</var> supports all Emacs characters, the value is
+<code class="code">(emacs)</code>.
+</li><li>If <var class="var">coding-system</var> supports all Unicode characters, the value is
+<code class="code">(unicode)</code>.
+</li><li>If <var class="var">coding-system</var> supports all ISO-2022 charsets, the value is
+<code class="code">iso-2022</code>.
+</li><li>If <var class="var">coding-system</var> supports all the characters in the internal
+coding system used by Emacs version 21 (prior to the implementation of
+internal Unicode support), the value is <code class="code">emacs-mule</code>.
+</li></ul>
+</dd></dl>
+
+<p>See <a class="xref" href="Processes.html#Coding-systems-for-a-subprocess">Process Information</a>, in
+particular the description of the functions
+<code class="code">process-coding-system</code> and <code class="code">set-process-coding-system</code>, for
+how to examine or set the coding systems used for I/O to a subprocess.
+</p>
+<hr>
+</div>
+<div class="subsection-level-extent" id="User_002dChosen-Coding-Systems">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Default-Coding-Systems" rel="next">Default Coding Systems</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Lisp-and-Coding-Systems" rel="prev">Coding Systems in Lisp</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Coding-Systems" rel="up">Coding Systems</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="User_002dChosen-Coding-Systems-1"><span>34.10.4 User-Chosen Coding Systems<a class="copiable-link" href="#User_002dChosen-Coding-Systems-1"> &para;</a></span></h4>
+
+<a class="index-entry-id" id="index-select-safe-coding-system"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-select_002dsafe_002dcoding_002dsystem"><span class="category-def">Function: </span><span><strong class="def-name">select-safe-coding-system</strong> <var class="def-var-arguments">from to &amp;optional default-coding-system accept-default-p file</var><a class="copiable-link" href="#index-select_002dsafe_002dcoding_002dsystem"> &para;</a></span></dt>
+<dd><p>This function selects a coding system for encoding specified text,
+asking the user to choose if necessary.  Normally the specified text
+is the text in the current buffer between <var class="var">from</var> and <var class="var">to</var>.  If
+<var class="var">from</var> is a string, the string specifies the text to encode, and
+<var class="var">to</var> is ignored.
+</p>
+<p>If the specified text includes raw bytes (see <a class="pxref" href="#Text-Representations">Text Representations</a>), <code class="code">select-safe-coding-system</code> suggests
+<code class="code">raw-text</code> for its encoding.
+</p>
+<p>If <var class="var">default-coding-system</var> is non-<code class="code">nil</code>, that is the first
+coding system to try; if that can handle the text,
+<code class="code">select-safe-coding-system</code> returns that coding system.  It can
+also be a list of coding systems; then the function tries each of them
+one by one.  After trying all of them, it next tries the current
+buffer&rsquo;s value of <code class="code">buffer-file-coding-system</code> (if it is not
+<code class="code">undecided</code>), then the default value of
+<code class="code">buffer-file-coding-system</code> and finally the user&rsquo;s most
+preferred coding system, which the user can set using the command
+<code class="code">prefer-coding-system</code> (see <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Recognize-Coding.html#Recognize-Coding">Recognizing
+Coding Systems</a> in <cite class="cite">The GNU Emacs Manual</cite>).
+</p>
+<p>If one of those coding systems can safely encode all the specified
+text, <code class="code">select-safe-coding-system</code> chooses it and returns it.
+Otherwise, it asks the user to choose from a list of coding systems
+which can encode all the text, and returns the user&rsquo;s choice.
+</p>
+<p><var class="var">default-coding-system</var> can also be a list whose first element is
+<code class="code">t</code> and whose other elements are coding systems.  Then, if no coding
+system in the list can handle the text, <code class="code">select-safe-coding-system</code>
+queries the user immediately, without trying any of the three
+alternatives described above.  This is handy for checking only the
+coding systems in the list.
+</p>
+<p>The optional argument <var class="var">accept-default-p</var> determines whether a
+coding system selected without user interaction is acceptable.  If
+it&rsquo;s omitted or <code class="code">nil</code>, such a silent selection is always
+acceptable.  If it is non-<code class="code">nil</code>, it should be a function;
+<code class="code">select-safe-coding-system</code> calls this function with one
+argument, the base coding system of the selected coding system.  If
+the function returns <code class="code">nil</code>, <code class="code">select-safe-coding-system</code>
+rejects the silently selected coding system, and asks the user to
+select a coding system from a list of possible candidates.
+</p>
+<a class="index-entry-id" id="index-select_002dsafe_002dcoding_002dsystem_002daccept_002ddefault_002dp"></a>
+<p>If the variable <code class="code">select-safe-coding-system-accept-default-p</code> is
+non-<code class="code">nil</code>, it should be a function taking a single argument.
+It is used in place of <var class="var">accept-default-p</var>, overriding any
+value supplied for this argument.
+</p>
+<p>As a final step, before returning the chosen coding system,
+<code class="code">select-safe-coding-system</code> checks whether that coding system is
+consistent with what would be selected if the contents of the region
+were read from a file.  (If not, this could lead to data corruption in
+a file subsequently re-visited and edited.)  Normally,
+<code class="code">select-safe-coding-system</code> uses <code class="code">buffer-file-name</code> as the
+file for this purpose, but if <var class="var">file</var> is non-<code class="code">nil</code>, it uses
+that file instead (this can be relevant for <code class="code">write-region</code> and
+similar functions).  If it detects an apparent inconsistency,
+<code class="code">select-safe-coding-system</code> queries the user before selecting the
+coding system.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-select_002dsafe_002dcoding_002dsystem_002dfunction"><span class="category-def">Variable: </span><span><strong class="def-name">select-safe-coding-system-function</strong><a class="copiable-link" href="#index-select_002dsafe_002dcoding_002dsystem_002dfunction"> &para;</a></span></dt>
+<dd><p>This variable names the function to be called to request the user to
+select a proper coding system for encoding text when the default
+coding system for an output operation cannot safely encode that text.
+The default value of this variable is <code class="code">select-safe-coding-system</code>.
+Emacs primitives that write text to files, such as
+<code class="code">write-region</code>, or send text to other processes, such as
+<code class="code">process-send-region</code>, normally call the value of this variable,
+unless <code class="code">coding-system-for-write</code> is bound to a non-<code class="code">nil</code>
+value (see <a class="pxref" href="#Specifying-Coding-Systems">Specifying a Coding System for One Operation</a>).
+</p></dd></dl>
+
+<p>Here are two functions you can use to let the user specify a coding
+system, with completion.  See <a class="xref" href="Minibuffers.html#Completion">Completion</a>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-read_002dcoding_002dsystem"><span class="category-def">Function: </span><span><strong class="def-name">read-coding-system</strong> <var class="def-var-arguments">prompt &amp;optional default</var><a class="copiable-link" href="#index-read_002dcoding_002dsystem"> &para;</a></span></dt>
+<dd><p>This function reads a coding system using the minibuffer, prompting with
+string <var class="var">prompt</var>, and returns the coding system name as a symbol.  If
+the user enters null input, <var class="var">default</var> specifies which coding system
+to return.  It should be a symbol or a string.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-read_002dnon_002dnil_002dcoding_002dsystem"><span class="category-def">Function: </span><span><strong class="def-name">read-non-nil-coding-system</strong> <var class="def-var-arguments">prompt</var><a class="copiable-link" href="#index-read_002dnon_002dnil_002dcoding_002dsystem"> &para;</a></span></dt>
+<dd><p>This function reads a coding system using the minibuffer, prompting with
+string <var class="var">prompt</var>, and returns the coding system name as a symbol.  If
+the user tries to enter null input, it asks the user to try again.
+See <a class="xref" href="#Coding-Systems">Coding Systems</a>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Default-Coding-Systems">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Specifying-Coding-Systems" rel="next">Specifying a Coding System for One Operation</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#User_002dChosen-Coding-Systems" rel="prev">User-Chosen Coding Systems</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Coding-Systems" rel="up">Coding Systems</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Default-Coding-Systems-1"><span>34.10.5 Default Coding Systems<a class="copiable-link" href="#Default-Coding-Systems-1"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-default-coding-system"></a>
+<a class="index-entry-id" id="index-coding-system_002c-automatically-determined"></a>
+
+<p>This section describes variables that specify the default coding
+system for certain files or when running certain subprograms, and the
+function that I/O operations use to access them.
+</p>
+<p>The idea of these variables is that you set them once and for all to the
+defaults you want, and then do not change them again.  To specify a
+particular coding system for a particular operation in a Lisp program,
+don&rsquo;t change these variables; instead, override them using
+<code class="code">coding-system-for-read</code> and <code class="code">coding-system-for-write</code>
+(see <a class="pxref" href="#Specifying-Coding-Systems">Specifying a Coding System for One Operation</a>).
+</p>
+<a class="index-entry-id" id="index-file-contents_002c-and-default-coding-system"></a>
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-auto_002dcoding_002dregexp_002dalist"><span class="category-def">User Option: </span><span><strong class="def-name">auto-coding-regexp-alist</strong><a class="copiable-link" href="#index-auto_002dcoding_002dregexp_002dalist"> &para;</a></span></dt>
+<dd><p>This variable is an alist of text patterns and corresponding coding
+systems.  Each element has the form <code class="code">(<var class="var">regexp</var>
+. <var class="var">coding-system</var>)</code>; a file whose first few kilobytes match
+<var class="var">regexp</var> is decoded with <var class="var">coding-system</var> when its contents are
+read into a buffer.  The settings in this alist take priority over
+<code class="code">coding:</code> tags in the files and the contents of
+<code class="code">file-coding-system-alist</code> (see below).  The default value is set
+so that Emacs automatically recognizes mail files in Babyl format and
+reads them with no code conversions.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-file-name_002c-and-default-coding-system"></a>
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-file_002dcoding_002dsystem_002dalist"><span class="category-def">User Option: </span><span><strong class="def-name">file-coding-system-alist</strong><a class="copiable-link" href="#index-file_002dcoding_002dsystem_002dalist"> &para;</a></span></dt>
+<dd><p>This variable is an alist that specifies the coding systems to use for
+reading and writing particular files.  Each element has the form
+<code class="code">(<var class="var">pattern</var> . <var class="var">coding</var>)</code>, where <var class="var">pattern</var> is a regular
+expression that matches certain file names.  The element applies to file
+names that match <var class="var">pattern</var>.
+</p>
+<p>The <small class="sc">CDR</small> of the element, <var class="var">coding</var>, should be either a coding
+system, a cons cell containing two coding systems, or a function name (a
+symbol with a function definition).  If <var class="var">coding</var> is a coding system,
+that coding system is used for both reading the file and writing it.  If
+<var class="var">coding</var> is a cons cell containing two coding systems, its <small class="sc">CAR</small>
+specifies the coding system for decoding, and its <small class="sc">CDR</small> specifies the
+coding system for encoding.
+</p>
+<p>If <var class="var">coding</var> is a function name, the function should take one
+argument, a list of all arguments passed to
+<code class="code">find-operation-coding-system</code>.  It must return a coding system
+or a cons cell containing two coding systems.  This value has the same
+meaning as described above.
+</p>
+<p>If <var class="var">coding</var> (or what returned by the above function) is
+<code class="code">undecided</code>, the normal code-detection is performed.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-auto_002dcoding_002dalist"><span class="category-def">User Option: </span><span><strong class="def-name">auto-coding-alist</strong><a class="copiable-link" href="#index-auto_002dcoding_002dalist"> &para;</a></span></dt>
+<dd><p>This variable is an alist that specifies the coding systems to use for
+reading and writing particular files.  Its form is like that of
+<code class="code">file-coding-system-alist</code>, but, unlike the latter, this variable
+takes priority over any <code class="code">coding:</code> tags in the file.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-program-name_002c-and-default-coding-system"></a>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-process_002dcoding_002dsystem_002dalist"><span class="category-def">Variable: </span><span><strong class="def-name">process-coding-system-alist</strong><a class="copiable-link" href="#index-process_002dcoding_002dsystem_002dalist"> &para;</a></span></dt>
+<dd><p>This variable is an alist specifying which coding systems to use for a
+subprocess, depending on which program is running in the subprocess.  It
+works like <code class="code">file-coding-system-alist</code>, except that <var class="var">pattern</var> is
+matched against the program name used to start the subprocess.  The coding
+system or systems specified in this alist are used to initialize the
+coding systems used for I/O to the subprocess, but you can specify
+other coding systems later using <code class="code">set-process-coding-system</code>.
+</p></dd></dl>
+
+<p><strong class="strong">Warning:</strong> Coding systems such as <code class="code">undecided</code>, which
+determine the coding system from the data, do not work entirely reliably
+with asynchronous subprocess output.  This is because Emacs handles
+asynchronous subprocess output in batches, as it arrives.  If the coding
+system leaves the character code conversion unspecified, or leaves the
+end-of-line conversion unspecified, Emacs must try to detect the proper
+conversion from one batch at a time, and this does not always work.
+</p>
+<p>Therefore, with an asynchronous subprocess, if at all possible, use a
+coding system which determines both the character code conversion and
+the end of line conversion&mdash;that is, one like <code class="code">latin-1-unix</code>,
+rather than <code class="code">undecided</code> or <code class="code">latin-1</code>.
+</p>
+<a class="index-entry-id" id="index-port-number_002c-and-default-coding-system"></a>
+<a class="index-entry-id" id="index-network-service-name_002c-and-default-coding-system"></a>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-network_002dcoding_002dsystem_002dalist"><span class="category-def">Variable: </span><span><strong class="def-name">network-coding-system-alist</strong><a class="copiable-link" href="#index-network_002dcoding_002dsystem_002dalist"> &para;</a></span></dt>
+<dd><p>This variable is an alist that specifies the coding system to use for
+network streams.  It works much like <code class="code">file-coding-system-alist</code>,
+with the difference that the <var class="var">pattern</var> in an element may be either a
+port number or a regular expression.  If it is a regular expression, it
+is matched against the network service name used to open the network
+stream.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-default_002dprocess_002dcoding_002dsystem"><span class="category-def">Variable: </span><span><strong class="def-name">default-process-coding-system</strong><a class="copiable-link" href="#index-default_002dprocess_002dcoding_002dsystem"> &para;</a></span></dt>
+<dd><p>This variable specifies the coding systems to use for subprocess (and
+network stream) input and output, when nothing else specifies what to
+do.
+</p>
+<p>The value should be a cons cell of the form <code class="code">(<var class="var">input-coding</var>
+. <var class="var">output-coding</var>)</code>.  Here <var class="var">input-coding</var> applies to input from
+the subprocess, and <var class="var">output-coding</var> applies to output to it.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-default-coding-system_002c-functions-to-determine"></a>
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-auto_002dcoding_002dfunctions"><span class="category-def">User Option: </span><span><strong class="def-name">auto-coding-functions</strong><a class="copiable-link" href="#index-auto_002dcoding_002dfunctions"> &para;</a></span></dt>
+<dd><p>This variable holds a list of functions that try to determine a
+coding system for a file based on its undecoded contents.
+</p>
+<p>Each function in this list should be written to look at text in the
+current buffer, but should not modify it in any way.  The buffer will
+contain the text of parts of the file.  Each function should take one
+argument, <var class="var">size</var>, which tells it how many characters to look at,
+starting from point.  If the function succeeds in determining a coding
+system for the file, it should return that coding system.  Otherwise,
+it should return <code class="code">nil</code>.
+Each function can also find the name of the file to which
+the buffer&rsquo;s content belong in the variable
+<code class="code">auto-coding-file-name</code>.
+</p>
+<p>The functions in this list could be called either when the file is
+visited and Emacs wants to decode its contents, and/or when the file&rsquo;s
+buffer is about to be saved and Emacs wants to determine how to encode
+its contents.
+</p>
+<p>If a file has a &lsquo;<samp class="samp">coding:</samp>&rsquo; tag, that takes precedence, so these
+functions won&rsquo;t be called.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-find_002dauto_002dcoding"><span class="category-def">Function: </span><span><strong class="def-name">find-auto-coding</strong> <var class="def-var-arguments">filename size</var><a class="copiable-link" href="#index-find_002dauto_002dcoding"> &para;</a></span></dt>
+<dd><p>This function tries to determine a suitable coding system for
+<var class="var">filename</var>.  It examines the buffer visiting the named file, using
+the variables documented above in sequence, until it finds a match for
+one of the rules specified by these variables.  It then returns a cons
+cell of the form <code class="code">(<var class="var">coding</var> . <var class="var">source</var>)</code>, where
+<var class="var">coding</var> is the coding system to use and <var class="var">source</var> is a symbol,
+one of <code class="code">auto-coding-alist</code>, <code class="code">auto-coding-regexp-alist</code>,
+<code class="code">:coding</code>, or <code class="code">auto-coding-functions</code>, indicating which one
+supplied the matching rule.  The value <code class="code">:coding</code> means the coding
+system was specified by the <code class="code">coding:</code> tag in the file
+(see <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Specify-Coding.html#Specify-Coding">coding tag</a> in <cite class="cite">The GNU Emacs Manual</cite>).
+The order of looking for a matching rule is <code class="code">auto-coding-alist</code>
+first, then <code class="code">auto-coding-regexp-alist</code>, then the <code class="code">coding:</code>
+tag, and lastly <code class="code">auto-coding-functions</code>.  If no matching rule was
+found, the function returns <code class="code">nil</code>.
+</p>
+<p>The second argument <var class="var">size</var> is the size of text, in characters,
+following point.  The function examines text only within <var class="var">size</var>
+characters after point.  Normally, the buffer should be positioned at
+the beginning when this function is called, because one of the places
+for the <code class="code">coding:</code> tag is the first one or two lines of the file;
+in that case, <var class="var">size</var> should be the size of the buffer.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dauto_002dcoding"><span class="category-def">Function: </span><span><strong class="def-name">set-auto-coding</strong> <var class="def-var-arguments">filename size</var><a class="copiable-link" href="#index-set_002dauto_002dcoding"> &para;</a></span></dt>
+<dd><p>This function returns a suitable coding system for file
+<var class="var">filename</var>.  It uses <code class="code">find-auto-coding</code> to find the coding
+system.  If no coding system could be determined, the function returns
+<code class="code">nil</code>.  The meaning of the argument <var class="var">size</var> is like in
+<code class="code">find-auto-coding</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-find_002doperation_002dcoding_002dsystem"><span class="category-def">Function: </span><span><strong class="def-name">find-operation-coding-system</strong> <var class="def-var-arguments">operation &amp;rest arguments</var><a class="copiable-link" href="#index-find_002doperation_002dcoding_002dsystem"> &para;</a></span></dt>
+<dd><p>This function returns the coding system to use (by default) for
+performing <var class="var">operation</var> with <var class="var">arguments</var>.  The value has this
+form:
+</p>
+<div class="example">
+<pre class="example-preformatted">(<var class="var">decoding-system</var> . <var class="var">encoding-system</var>)
+</pre></div>
+
+<p>The first element, <var class="var">decoding-system</var>, is the coding system to use
+for decoding (in case <var class="var">operation</var> does decoding), and
+<var class="var">encoding-system</var> is the coding system for encoding (in case
+<var class="var">operation</var> does encoding).
+</p>
+<p>The argument <var class="var">operation</var> is a symbol; it should be one of
+<code class="code">write-region</code>, <code class="code">start-process</code>, <code class="code">call-process</code>,
+<code class="code">call-process-region</code>, <code class="code">insert-file-contents</code>, or
+<code class="code">open-network-stream</code>.  These are the names of the Emacs I/O
+primitives that can do character code and eol conversion.
+</p>
+<p>The remaining arguments should be the same arguments that might be given
+to the corresponding I/O primitive.  Depending on the primitive, one
+of those arguments is selected as the <em class="dfn">target</em>.  For example, if
+<var class="var">operation</var> does file I/O, whichever argument specifies the file
+name is the target.  For subprocess primitives, the process name is the
+target.  For <code class="code">open-network-stream</code>, the target is the service name
+or port number.
+</p>
+<p>Depending on <var class="var">operation</var>, this function looks up the target in
+<code class="code">file-coding-system-alist</code>, <code class="code">process-coding-system-alist</code>,
+or <code class="code">network-coding-system-alist</code>.  If the target is found in the
+alist, <code class="code">find-operation-coding-system</code> returns its association in
+the alist; otherwise it returns <code class="code">nil</code>.
+</p>
+<p>If <var class="var">operation</var> is <code class="code">insert-file-contents</code>, the argument
+corresponding to the target may be a cons cell of the form
+<code class="code">(<var class="var">filename</var> . <var class="var">buffer</var>)</code>.  In that case, <var class="var">filename</var>
+is a file name to look up in <code class="code">file-coding-system-alist</code>, and
+<var class="var">buffer</var> is a buffer that contains the file&rsquo;s contents (not yet
+decoded).  If <code class="code">file-coding-system-alist</code> specifies a function to
+call for this file, and that function needs to examine the file&rsquo;s
+contents (as it usually does), it should examine the contents of
+<var class="var">buffer</var> instead of reading the file.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Specifying-Coding-Systems">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Explicit-Encoding" rel="next">Explicit Encoding and Decoding</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Default-Coding-Systems" rel="prev">Default Coding Systems</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Coding-Systems" rel="up">Coding Systems</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Specifying-a-Coding-System-for-One-Operation"><span>34.10.6 Specifying a Coding System for One Operation<a class="copiable-link" href="#Specifying-a-Coding-System-for-One-Operation"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-specify-coding-system"></a>
+<a class="index-entry-id" id="index-force-coding-system-for-operation"></a>
+<a class="index-entry-id" id="index-coding-system-for-operation"></a>
+
+<p>You can specify the coding system for a specific operation by binding
+the variables <code class="code">coding-system-for-read</code> and/or
+<code class="code">coding-system-for-write</code>.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-coding_002dsystem_002dfor_002dread"><span class="category-def">Variable: </span><span><strong class="def-name">coding-system-for-read</strong><a class="copiable-link" href="#index-coding_002dsystem_002dfor_002dread"> &para;</a></span></dt>
+<dd><p>If this variable is non-<code class="code">nil</code>, it specifies the coding system to
+use for reading a file, or for input from a synchronous subprocess.
+</p>
+<p>It also applies to any asynchronous subprocess or network stream, but in
+a different way: the value of <code class="code">coding-system-for-read</code> when you
+start the subprocess or open the network stream specifies the input
+decoding method for that subprocess or network stream.  It remains in
+use for that subprocess or network stream unless and until overridden.
+</p>
+<p>The right way to use this variable is to bind it with <code class="code">let</code> for a
+specific I/O operation.  Its global value is normally <code class="code">nil</code>, and
+you should not globally set it to any other value.  Here is an example
+of the right way to use the variable:
+</p>
+<div class="example">
+<pre class="example-preformatted">;; <span class="r">Read the file with no character code conversion.</span>
+(let ((coding-system-for-read 'no-conversion))
+  (insert-file-contents filename))
+</pre></div>
+
+<p>When its value is non-<code class="code">nil</code>, this variable takes precedence over
+all other methods of specifying a coding system to use for input,
+including <code class="code">file-coding-system-alist</code>,
+<code class="code">process-coding-system-alist</code> and
+<code class="code">network-coding-system-alist</code>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-coding_002dsystem_002dfor_002dwrite"><span class="category-def">Variable: </span><span><strong class="def-name">coding-system-for-write</strong><a class="copiable-link" href="#index-coding_002dsystem_002dfor_002dwrite"> &para;</a></span></dt>
+<dd><p>This works much like <code class="code">coding-system-for-read</code>, except that it
+applies to output rather than input.  It affects writing to files,
+as well as sending output to subprocesses and net connections.  It
+also applies to encoding command-line arguments with which Emacs
+invokes subprocesses.
+</p>
+<p>When a single operation does both input and output, as do
+<code class="code">call-process-region</code> and <code class="code">start-process</code>, both
+<code class="code">coding-system-for-read</code> and <code class="code">coding-system-for-write</code>
+affect it.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-coding_002dsystem_002drequire_002dwarning"><span class="category-def">Variable: </span><span><strong class="def-name">coding-system-require-warning</strong><a class="copiable-link" href="#index-coding_002dsystem_002drequire_002dwarning"> &para;</a></span></dt>
+<dd><p>Binding <code class="code">coding-system-for-write</code> to a non-<code class="code">nil</code> value
+prevents output primitives from calling the function specified by
+<code class="code">select-safe-coding-system-function</code> (see <a class="pxref" href="#User_002dChosen-Coding-Systems">User-Chosen Coding Systems</a>).  This is because <kbd class="kbd">C-x <kbd class="key">RET</kbd> c</kbd>
+(<code class="code">universal-coding-system-argument</code>) works by binding
+<code class="code">coding-system-for-write</code>, and Emacs should obey user selection.
+If a Lisp program binds <code class="code">coding-system-for-write</code> to a value that
+might not be safe for encoding the text to be written, it can also bind
+<code class="code">coding-system-require-warning</code> to a non-<code class="code">nil</code> value, which
+will force the output primitives to check the encoding by calling the
+value of <code class="code">select-safe-coding-system-function</code> even though
+<code class="code">coding-system-for-write</code> is non-<code class="code">nil</code>.  Alternatively, call
+<code class="code">select-safe-coding-system</code> explicitly before using the specified
+encoding.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-inhibit_002deol_002dconversion"><span class="category-def">User Option: </span><span><strong class="def-name">inhibit-eol-conversion</strong><a class="copiable-link" href="#index-inhibit_002deol_002dconversion"> &para;</a></span></dt>
+<dd><p>When this variable is non-<code class="code">nil</code>, no end-of-line conversion is done,
+no matter which coding system is specified.  This applies to all the
+Emacs I/O and subprocess primitives, and to the explicit encoding and
+decoding functions (see <a class="pxref" href="#Explicit-Encoding">Explicit Encoding and Decoding</a>).
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-priority-order-of-coding-systems"></a>
+<a class="index-entry-id" id="index-coding-systems_002c-priority"></a>
+<p>Sometimes, you need to prefer several coding systems for some
+operation, rather than fix a single one.  Emacs lets you specify a
+priority order for using coding systems.  This ordering affects the
+sorting of lists of coding systems returned by functions such as
+<code class="code">find-coding-systems-region</code> (see <a class="pxref" href="#Lisp-and-Coding-Systems">Coding Systems in Lisp</a>).
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-coding_002dsystem_002dpriority_002dlist"><span class="category-def">Function: </span><span><strong class="def-name">coding-system-priority-list</strong> <var class="def-var-arguments">&amp;optional highestp</var><a class="copiable-link" href="#index-coding_002dsystem_002dpriority_002dlist"> &para;</a></span></dt>
+<dd><p>This function returns the list of coding systems in the order of their
+current priorities.  Optional argument <var class="var">highestp</var>, if
+non-<code class="code">nil</code>, means return only the highest priority coding system.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dcoding_002dsystem_002dpriority"><span class="category-def">Function: </span><span><strong class="def-name">set-coding-system-priority</strong> <var class="def-var-arguments">&amp;rest coding-systems</var><a class="copiable-link" href="#index-set_002dcoding_002dsystem_002dpriority"> &para;</a></span></dt>
+<dd><p>This function puts <var class="var">coding-systems</var> at the beginning of the
+priority list for coding systems, thus making their priority higher
+than all the rest.
+</p></dd></dl>
+
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-with_002dcoding_002dpriority"><span class="category-def">Macro: </span><span><strong class="def-name">with-coding-priority</strong> <var class="def-var-arguments">coding-systems &amp;rest body</var><a class="copiable-link" href="#index-with_002dcoding_002dpriority"> &para;</a></span></dt>
+<dd><p>This macro executes <var class="var">body</var>, like <code class="code">progn</code> does
+(see <a class="pxref" href="Control-Structures.html#Sequencing">progn</a>), with <var class="var">coding-systems</var> at the front of
+the priority list for coding systems.  <var class="var">coding-systems</var> should be
+a list of coding systems to prefer during execution of <var class="var">body</var>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Explicit-Encoding">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Terminal-I_002fO-Encoding" rel="next">Terminal I/O Encoding</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Specifying-Coding-Systems" rel="prev">Specifying a Coding System for One Operation</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Coding-Systems" rel="up">Coding Systems</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Explicit-Encoding-and-Decoding"><span>34.10.7 Explicit Encoding and Decoding<a class="copiable-link" href="#Explicit-Encoding-and-Decoding"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-encoding-in-coding-systems"></a>
+<a class="index-entry-id" id="index-decoding-in-coding-systems"></a>
+
+<p>All the operations that transfer text in and out of Emacs have the
+ability to use a coding system to encode or decode the text.
+You can also explicitly encode and decode text using the functions
+in this section.
+</p>
+<p>The result of encoding, and the input to decoding, are not ordinary
+text.  They logically consist of a series of byte values; that is, a
+series of <abbr class="acronym">ASCII</abbr> and eight-bit characters.  In unibyte
+buffers and strings, these characters have codes in the range 0
+through #xFF (255).  In a multibyte buffer or string, eight-bit
+characters have character codes higher than #xFF (see <a class="pxref" href="#Text-Representations">Text Representations</a>), but Emacs transparently converts them to their
+single-byte values when you encode or decode such text.
+</p>
+<p>The usual way to read a file into a buffer as a sequence of bytes, so
+you can decode the contents explicitly, is with
+<code class="code">insert-file-contents-literally</code> (see <a class="pxref" href="Files.html#Reading-from-Files">Reading from Files</a>);
+alternatively, specify a non-<code class="code">nil</code> <var class="var">rawfile</var> argument when
+visiting a file with <code class="code">find-file-noselect</code>.  These methods result in
+a unibyte buffer.
+</p>
+<p>The usual way to use the byte sequence that results from explicitly
+encoding text is to copy it to a file or process&mdash;for example, to write
+it with <code class="code">write-region</code> (see <a class="pxref" href="Files.html#Writing-to-Files">Writing to Files</a>), and suppress
+encoding by binding <code class="code">coding-system-for-write</code> to
+<code class="code">no-conversion</code>.
+</p>
+<p>Here are the functions to perform explicit encoding or decoding.  The
+encoding functions produce sequences of bytes; the decoding functions
+are meant to operate on sequences of bytes.  All of these functions
+discard text properties.  They also set <code class="code">last-coding-system-used</code>
+to the precise coding system they used.
+</p>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-encode_002dcoding_002dregion"><span class="category-def">Command: </span><span><strong class="def-name">encode-coding-region</strong> <var class="def-var-arguments">start end coding-system &amp;optional destination</var><a class="copiable-link" href="#index-encode_002dcoding_002dregion"> &para;</a></span></dt>
+<dd><p>This command encodes the text from <var class="var">start</var> to <var class="var">end</var> according
+to coding system <var class="var">coding-system</var>.  Normally, the encoded text
+replaces the original text in the buffer, but the optional argument
+<var class="var">destination</var> can change that.  If <var class="var">destination</var> is a buffer,
+the encoded text is inserted in that buffer after point (point does
+not move); if it is <code class="code">t</code>, the command returns the encoded text as
+a unibyte string without inserting it.
+</p>
+<p>If encoded text is inserted in some buffer, this command returns the
+length of the encoded text.
+</p>
+<p>The result of encoding is logically a sequence of bytes, but the
+buffer remains multibyte if it was multibyte before, and any 8-bit
+bytes are converted to their multibyte representation (see <a class="pxref" href="#Text-Representations">Text Representations</a>).
+</p>
+<a class="index-entry-id" id="index-undecided-coding_002dsystem_002c-when-encoding"></a>
+<p>Do <em class="emph">not</em> use <code class="code">undecided</code> for <var class="var">coding-system</var> when
+encoding text, since that may lead to unexpected results.  Instead,
+use <code class="code">select-safe-coding-system</code> (see <a class="pxref" href="#User_002dChosen-Coding-Systems">select-safe-coding-system</a>) to suggest a suitable encoding,
+if there&rsquo;s no obvious pertinent value for <var class="var">coding-system</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-encode_002dcoding_002dstring"><span class="category-def">Function: </span><span><strong class="def-name">encode-coding-string</strong> <var class="def-var-arguments">string coding-system &amp;optional nocopy buffer</var><a class="copiable-link" href="#index-encode_002dcoding_002dstring"> &para;</a></span></dt>
+<dd><p>This function encodes the text in <var class="var">string</var> according to coding
+system <var class="var">coding-system</var>.  It returns a new string containing the
+encoded text, except when <var class="var">nocopy</var> is non-<code class="code">nil</code>, in which
+case the function may return <var class="var">string</var> itself if the encoding
+operation is trivial.  The result of encoding is a unibyte string.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-decode_002dcoding_002dregion"><span class="category-def">Command: </span><span><strong class="def-name">decode-coding-region</strong> <var class="def-var-arguments">start end coding-system &amp;optional destination</var><a class="copiable-link" href="#index-decode_002dcoding_002dregion"> &para;</a></span></dt>
+<dd><p>This command decodes the text from <var class="var">start</var> to <var class="var">end</var> according
+to coding system <var class="var">coding-system</var>.  To make explicit decoding
+useful, the text before decoding ought to be a sequence of byte
+values, but both multibyte and unibyte buffers are acceptable (in the
+multibyte case, the raw byte values should be represented as eight-bit
+characters).  Normally, the decoded text replaces the original text in
+the buffer, but the optional argument <var class="var">destination</var> can change
+that.  If <var class="var">destination</var> is a buffer, the decoded text is inserted
+in that buffer after point (point does not move); if it is <code class="code">t</code>,
+the command returns the decoded text as a multibyte string without
+inserting it.
+</p>
+<p>If decoded text is inserted in some buffer, this command returns the
+length of the decoded text.  If that buffer is a unibyte buffer
+(see <a class="pxref" href="#Selecting-a-Representation">Selecting a Representation</a>), the internal representation of
+the decoded text (see <a class="pxref" href="#Text-Representations">Text Representations</a>) is inserted into the
+buffer as individual bytes.
+</p>
+<a class="index-entry-id" id="index-charset_002c-text-property-on-buffer-text"></a>
+<p>This command puts a <code class="code">charset</code> text property on the decoded text.
+The value of the property states the character set used to decode the
+original text.
+</p>
+<a class="index-entry-id" id="index-undecided-coding_002dsystem_002c-when-decoding"></a>
+<p>This command detects the encoding of the text if necessary.  If
+<var class="var">coding-system</var> is <code class="code">undecided</code>, the command detects the
+encoding of the text based on the byte sequences it finds in the text,
+and also detects the type of end-of-line convention used by the text
+(see <a class="pxref" href="#Lisp-and-Coding-Systems">eol type</a>).  If <var class="var">coding-system</var>
+is <code class="code">undecided-<var class="var">eol-type</var></code>, where <var class="var">eol-type</var> is
+<code class="code">unix</code>, <code class="code">dos</code>, or <code class="code">mac</code>, then the command detects only
+the encoding of the text.  Any <var class="var">coding-system</var> that doesn&rsquo;t
+specify <var class="var">eol-type</var>, as in <code class="code">utf-8</code>, causes the command to
+detect the end-of-line convention; specify the encoding completely, as
+in <code class="code">utf-8-unix</code>, if the EOL convention used by the text is known
+in advance, to prevent any automatic detection.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-decode_002dcoding_002dstring"><span class="category-def">Function: </span><span><strong class="def-name">decode-coding-string</strong> <var class="def-var-arguments">string coding-system &amp;optional nocopy buffer</var><a class="copiable-link" href="#index-decode_002dcoding_002dstring"> &para;</a></span></dt>
+<dd><p>This function decodes the text in <var class="var">string</var> according to
+<var class="var">coding-system</var>.  It returns a new string containing the decoded
+text, except when <var class="var">nocopy</var> is non-<code class="code">nil</code>, in which case the
+function may return <var class="var">string</var> itself if the decoding operation is
+trivial.  To make explicit decoding useful, the contents of
+<var class="var">string</var> ought to be a unibyte string with a sequence of byte
+values, but a multibyte string is also acceptable (assuming it
+contains 8-bit bytes in their multibyte form).
+</p>
+<p>This function detects the encoding of the string if needed, like
+<code class="code">decode-coding-region</code> does.
+</p>
+<p>If optional argument <var class="var">buffer</var> specifies a buffer, the decoded text
+is inserted in that buffer after point (point does not move).  In this
+case, the return value is the length of the decoded text.  If that
+buffer is a unibyte buffer, the internal representation of the decoded
+text is inserted into it as individual bytes.
+</p>
+<a class="index-entry-id" id="index-charset_002c-text-property-on-strings"></a>
+<p>This function puts a <code class="code">charset</code> text property on the decoded text.
+The value of the property states the character set used to decode the
+original text:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(decode-coding-string &quot;Gr\374ss Gott&quot; 'latin-1)
+     &rArr; #(&quot;Gr&uuml;ss Gott&quot; 0 10 (charset iso-8859-1))
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-decode_002dcoding_002dinserted_002dregion"><span class="category-def">Function: </span><span><strong class="def-name">decode-coding-inserted-region</strong> <var class="def-var-arguments">from to filename &amp;optional visit beg end replace</var><a class="copiable-link" href="#index-decode_002dcoding_002dinserted_002dregion"> &para;</a></span></dt>
+<dd><p>This function decodes the text from <var class="var">from</var> to <var class="var">to</var> as if
+it were being read from file <var class="var">filename</var> using <code class="code">insert-file-contents</code>
+using the rest of the arguments provided.
+</p>
+<p>The normal way to use this function is after reading text from a file
+without decoding, if you decide you would rather have decoded it.
+Instead of deleting the text and reading it again, this time with
+decoding, you can call this function.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Terminal-I_002fO-Encoding">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Explicit-Encoding" rel="prev">Explicit Encoding and Decoding</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Coding-Systems" rel="up">Coding Systems</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Terminal-I_002fO-Encoding-1"><span>34.10.8 Terminal I/O Encoding<a class="copiable-link" href="#Terminal-I_002fO-Encoding-1"> &para;</a></span></h4>
+
+<p>Emacs can use coding systems to decode keyboard input and encode
+terminal output.  This is useful for terminals that transmit or
+display text using a particular encoding, such as Latin-1.  Emacs does
+not set <code class="code">last-coding-system-used</code> when encoding or decoding
+terminal I/O.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-keyboard_002dcoding_002dsystem"><span class="category-def">Function: </span><span><strong class="def-name">keyboard-coding-system</strong> <var class="def-var-arguments">&amp;optional terminal</var><a class="copiable-link" href="#index-keyboard_002dcoding_002dsystem"> &para;</a></span></dt>
+<dd><p>This function returns the coding system used for decoding keyboard
+input from <var class="var">terminal</var>.  A value of <code class="code">no-conversion</code> means no
+decoding is done.  If <var class="var">terminal</var> is omitted or <code class="code">nil</code>, it
+means the selected frame&rsquo;s terminal.  See <a class="xref" href="Frames.html#Multiple-Terminals">Multiple Terminals</a>.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-set_002dkeyboard_002dcoding_002dsystem"><span class="category-def">Command: </span><span><strong class="def-name">set-keyboard-coding-system</strong> <var class="def-var-arguments">coding-system &amp;optional terminal</var><a class="copiable-link" href="#index-set_002dkeyboard_002dcoding_002dsystem"> &para;</a></span></dt>
+<dd><p>This command specifies <var class="var">coding-system</var> as the coding system to use
+for decoding keyboard input from <var class="var">terminal</var>.  If
+<var class="var">coding-system</var> is <code class="code">nil</code>, that means not to decode keyboard
+input.  If <var class="var">terminal</var> is a frame, it means that frame&rsquo;s terminal;
+if it is <code class="code">nil</code>, that means the currently selected frame&rsquo;s
+terminal.  See <a class="xref" href="Frames.html#Multiple-Terminals">Multiple Terminals</a>.  Note that on modern MS-Windows
+systems Emacs always uses Unicode input when decoding keyboard input,
+so the encoding set by this command has no effect on Windows.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-terminal_002dcoding_002dsystem"><span class="category-def">Function: </span><span><strong class="def-name">terminal-coding-system</strong> <var class="def-var-arguments">&amp;optional terminal</var><a class="copiable-link" href="#index-terminal_002dcoding_002dsystem"> &para;</a></span></dt>
+<dd><p>This function returns the coding system that is in use for encoding
+terminal output from <var class="var">terminal</var>.  A value of <code class="code">no-conversion</code>
+means no encoding is done.  If <var class="var">terminal</var> is a frame, it means
+that frame&rsquo;s terminal; if it is <code class="code">nil</code>, that means the currently
+selected frame&rsquo;s terminal.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-set_002dterminal_002dcoding_002dsystem"><span class="category-def">Command: </span><span><strong class="def-name">set-terminal-coding-system</strong> <var class="def-var-arguments">coding-system &amp;optional terminal</var><a class="copiable-link" href="#index-set_002dterminal_002dcoding_002dsystem"> &para;</a></span></dt>
+<dd><p>This command specifies <var class="var">coding-system</var> as the coding system to use
+for encoding terminal output from <var class="var">terminal</var>.  If
+<var class="var">coding-system</var> is <code class="code">nil</code>, that means not to encode terminal
+output.  If <var class="var">terminal</var> is a frame, it means that frame&rsquo;s terminal;
+if it is <code class="code">nil</code>, that means the currently selected frame&rsquo;s
+terminal.
+</p></dd></dl>
+
+<hr>
+</div>
+</div>
+<div class="section-level-extent" id="Input-Methods">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Locales" rel="next">Locales</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Coding-Systems" rel="prev">Coding Systems</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Non_002dASCII-Characters" rel="up">Non-<abbr class="acronym">ASCII</abbr> Characters</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Input-Methods-1"><span>34.11 Input Methods<a class="copiable-link" href="#Input-Methods-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-input-methods"></a>
+
+<p><em class="dfn">Input methods</em> provide convenient ways of entering non-<abbr class="acronym">ASCII</abbr>
+characters from the keyboard.  Unlike coding systems, which translate
+non-<abbr class="acronym">ASCII</abbr> characters to and from encodings meant to be read by
+programs, input methods provide human-friendly commands.  (See <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Input-Methods.html#Input-Methods">Input
+Methods</a> in <cite class="cite">The GNU Emacs Manual</cite>, for information on how users
+use input methods to enter text.)  How to define input methods is not
+yet documented in this manual, but here we describe how to use them.
+</p>
+<p>Each input method has a name, which is currently a string;
+in the future, symbols may also be usable as input method names.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-current_002dinput_002dmethod"><span class="category-def">Variable: </span><span><strong class="def-name">current-input-method</strong><a class="copiable-link" href="#index-current_002dinput_002dmethod"> &para;</a></span></dt>
+<dd><p>This variable holds the name of the input method now active in the
+current buffer.  (It automatically becomes local in each buffer when set
+in any fashion.)  It is <code class="code">nil</code> if no input method is active in the
+buffer now.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-default_002dinput_002dmethod"><span class="category-def">User Option: </span><span><strong class="def-name">default-input-method</strong><a class="copiable-link" href="#index-default_002dinput_002dmethod"> &para;</a></span></dt>
+<dd><p>This variable holds the default input method for commands that choose an
+input method.  Unlike <code class="code">current-input-method</code>, this variable is
+normally global.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-set_002dinput_002dmethod"><span class="category-def">Command: </span><span><strong class="def-name">set-input-method</strong> <var class="def-var-arguments">input-method</var><a class="copiable-link" href="#index-set_002dinput_002dmethod"> &para;</a></span></dt>
+<dd><p>This command activates input method <var class="var">input-method</var> for the current
+buffer.  It also sets <code class="code">default-input-method</code> to <var class="var">input-method</var>.
+If <var class="var">input-method</var> is <code class="code">nil</code>, this command deactivates any input
+method for the current buffer.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-read_002dinput_002dmethod_002dname"><span class="category-def">Function: </span><span><strong class="def-name">read-input-method-name</strong> <var class="def-var-arguments">prompt &amp;optional default inhibit-null</var><a class="copiable-link" href="#index-read_002dinput_002dmethod_002dname"> &para;</a></span></dt>
+<dd><p>This function reads an input method name with the minibuffer, prompting
+with <var class="var">prompt</var>.  If <var class="var">default</var> is non-<code class="code">nil</code>, that is returned
+by default, if the user enters empty input.  However, if
+<var class="var">inhibit-null</var> is non-<code class="code">nil</code>, empty input signals an error.
+</p>
+<p>The returned value is a string.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-input_002dmethod_002dalist"><span class="category-def">Variable: </span><span><strong class="def-name">input-method-alist</strong><a class="copiable-link" href="#index-input_002dmethod_002dalist"> &para;</a></span></dt>
+<dd><p>This variable defines all the supported input methods.
+Each element defines one input method, and should have the form:
+</p>
+<div class="example">
+<pre class="example-preformatted">(<var class="var">input-method</var> <var class="var">language-env</var> <var class="var">activate-func</var>
+ <var class="var">title</var> <var class="var">description</var> <var class="var">args</var>...)
+</pre></div>
+
+<p>Here <var class="var">input-method</var> is the input method name, a string;
+<var class="var">language-env</var> is another string, the name of the language
+environment this input method is recommended for.  (That serves only for
+documentation purposes.)
+</p>
+<p><var class="var">activate-func</var> is a function to call to activate this method.  The
+<var class="var">args</var>, if any, are passed as arguments to <var class="var">activate-func</var>.  All
+told, the arguments to <var class="var">activate-func</var> are <var class="var">input-method</var> and
+the <var class="var">args</var>.
+</p>
+<p><var class="var">title</var> is a string to display in the mode line while this method is
+active.  <var class="var">description</var> is a string describing this method and what
+it is good for.
+</p></dd></dl>
+
+<p>The fundamental interface to input methods is through the
+variable <code class="code">input-method-function</code>.  See <a class="xref" href="Command-Loop.html#Reading-One-Event">Reading One Event</a>,
+and <a class="ref" href="Command-Loop.html#Invoking-the-Input-Method">Invoking the Input Method</a>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Locales">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Input-Methods" rel="prev">Input Methods</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Non_002dASCII-Characters" rel="up">Non-<abbr class="acronym">ASCII</abbr> Characters</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Locales-1"><span>34.12 Locales<a class="copiable-link" href="#Locales-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-locale"></a>
+
+<p>In POSIX, locales control which language
+to use in language-related features.  These Emacs variables control
+how Emacs interacts with these features.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-locale_002dcoding_002dsystem"><span class="category-def">Variable: </span><span><strong class="def-name">locale-coding-system</strong><a class="copiable-link" href="#index-locale_002dcoding_002dsystem"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-keyboard-input-decoding-on-X"></a>
+<p>This variable specifies the coding system to use for decoding system
+error messages and&mdash;on X Window system only&mdash;keyboard input, for
+sending batch output to the standard output and error streams, for
+encoding the format argument to <code class="code">format-time-string</code>, and for
+decoding the return value of <code class="code">format-time-string</code>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-system_002dmessages_002dlocale"><span class="category-def">Variable: </span><span><strong class="def-name">system-messages-locale</strong><a class="copiable-link" href="#index-system_002dmessages_002dlocale"> &para;</a></span></dt>
+<dd><p>This variable specifies the locale to use for generating system error
+messages.  Changing the locale can cause messages to come out in a
+different language or in a different orthography.  If the variable is
+<code class="code">nil</code>, the locale is specified by environment variables in the
+usual POSIX fashion.
+Otherwise, the variable should specify a locale compatible with the
+coding system implied by those environment variables.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-system_002dtime_002dlocale"><span class="category-def">Variable: </span><span><strong class="def-name">system-time-locale</strong><a class="copiable-link" href="#index-system_002dtime_002dlocale"> &para;</a></span></dt>
+<dd><p>This variable specifies the locale to use for formatting time values.
+Changing the locale can cause messages to appear according to the
+conventions of a different language.  If the variable is <code class="code">nil</code>, the
+locale is specified by environment variables in the usual POSIX fashion.
+Otherwise, the variable should specify a locale compatible with the
+coding system implied by those environment variables.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-locale_002dinfo"><span class="category-def">Function: </span><span><strong class="def-name">locale-info</strong> <var class="def-var-arguments">item</var><a class="copiable-link" href="#index-locale_002dinfo"> &para;</a></span></dt>
+<dd><p>This function returns locale data <var class="var">item</var> for the current POSIX
+locale, if available.  <var class="var">item</var> should be one of these symbols:
+</p>
+<dl class="table">
+<dt><code class="code">codeset</code></dt>
+<dd><p>Return the character set as a string (locale item <code class="code">CODESET</code>).
+</p>
+</dd>
+<dt><code class="code">days</code></dt>
+<dd><p>Return a 7-element vector of day names (locale items
+<code class="code">DAY_1</code> through <code class="code">DAY_7</code>);
+</p>
+</dd>
+<dt><code class="code">months</code></dt>
+<dd><p>Return a 12-element vector of month names (locale items <code class="code">MON_1</code>
+through <code class="code">MON_12</code>).
+</p>
+</dd>
+<dt><code class="code">paper</code></dt>
+<dd><p>Return a list <code class="code">(<var class="var">width</var>&nbsp;<var class="var">height</var>)</code><!-- /@w --> of 2 integers, for
+the default paper size measured in millimeters (locale items
+<code class="code">_NL_PAPER_WIDTH</code> and <code class="code">_NL_PAPER_HEIGHT</code>).
+</p></dd>
+</dl>
+
+<p>If the system can&rsquo;t provide the requested information, or if
+<var class="var">item</var> is not one of those symbols, the value is <code class="code">nil</code>.  All
+strings in the return value are decoded using
+<code class="code">locale-coding-system</code>.  See <a data-manual="libc" href="https://www.gnu.org/software/libc/manual/html_node/Locales.html#Locales">Locales</a> in <cite class="cite">The GNU Libc Manual</cite>,
+for more information about locales and locale items.
+</p></dd></dl>
+
+</div>
+</div>
+<div class="footnotes-segment">
+<hr>
+<h4 class="footnotes-heading">Footnotes</h4>
+
+<h5 class="footnote-body-heading"><a id="FOOT27" href="#DOCF27">(27)</a></h5>
+<p>This internal representation is based on one of the encodings defined
+by the Unicode Standard, called <em class="dfn">UTF-8</em>, for representing any
+Unicode codepoint, but Emacs extends UTF-8 to represent the additional
+codepoints it uses for raw 8-bit bytes and characters not unified with
+Unicode.</p>
+<h5 class="footnote-body-heading"><a id="FOOT28" href="#DOCF28">(28)</a></h5>
+<p>The Unicode specification writes these tag names
+inside &lsquo;<samp class="samp">&lt;..&gt;</samp>&rsquo; brackets, but the tag names in Emacs do not include
+the brackets; e.g., Unicode specifies &lsquo;<samp class="samp">&lt;small&gt;</samp>&rsquo; where Emacs uses
+&lsquo;<samp class="samp">small</samp>&rsquo;.  </p>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Searching-and-Matching.html#Searching-and-Matching" rel="next">Searching and Matching</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Text.html#Text" rel="prev">Text</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Emacs Lisp</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+
+
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vc-jj-log-view-bookmark-set – Emacs Documentation Online</title>
+<meta name="description" content="vc-jj-log-view-bookmark-set is an interactive and natively compiled
+function defined in vc-jj.el.
+Set the bookmark of revision at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vc-jj-log-view-bookmark-set</code></h1><p><span class="m"><code>vc-jj-log-view-bookmark-set</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">vc-jj.el</span>.
+<h2>Signature</h2>
+<pre><code>(vc-jj-log-view-bookmark-set)
+</code></pre>
+<h2>Documentation</h2>
+<p>Set the bookmark of revision at point.
+<p>When called in a <a href="../fun/vc-jj-log-view-mode.html"><code>vc-jj-log-view-mode</code></a> buffer, prompt for a bookmark to
+set at the revision at point.  If the bookmark already exists and would
+be moved backwards or sideways in the revision history, confirm with the
+user first.
+<h2>Key Bindings</h2>
+<p><span class="v">vc-jj-log-view-mode-map</span> <span class="key">b s</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/smb5w83hp9nz5jm5ish4kf6mshmmif86-emacs-packages-deps/share/emacs/site-lisp/elpa/vc-jj-0.5/vc-jj.el</span>
+(<span class="k">defun</span> <span class="f">vc-jj-log-view-bookmark-set</span> ()
+  <span class="doc">"Set the bookmark of revision at point.
+When called in a `</span><span class="m doc">vc-jj-log-view-mode</span><span class="doc">' buffer, prompt for a bookmark to
+set at the revision at point.  If the bookmark already exists and would
+be moved backwards or sideways in the revision history, confirm with the
+user first."</span>
+  (<span class="k">interactive</span> nil vc-jj-log-view-mode)
+  (<span class="k">when</span> (derived-mode-p 'vc-jj-log-view-mode)
+    (<span class="k">let*</span> ((target-rev (log-view-current-tag))
+           (bookmarks (vc-jj--process-lines <span class="s">"bookmark"</span> <span class="s">"list"</span> <span class="s">"-T"</span> <span class="s">"self.name() ++ \"\n\""</span>))
+           (bookmark (completing-read <span class="s">"Move or create bookmark: "</span> bookmarks))
+           (new-bookmark-p (not (member bookmark bookmarks)))
+           <span class="cd">;; </span><span class="c">If the bookmark already exists and target-rev is not a
+</span>           <span class="cd">;; </span><span class="c">descendant of the revision that the bookmark is
+</span>           <span class="cd">;; </span><span class="c">currently on, this means that the bookmark will be moved
+</span>           <span class="cd">;; </span><span class="c">sideways or backwards
+</span>           (backwards-move-p
+            (<span class="k">unless</span> new-bookmark-p
+              <span class="cd">;; </span><span class="c">If `</span><span class="m c">vc-jj--process-lines</span><span class="c">' returns nil, then that
+</span>              <span class="cd">;; </span><span class="c">means the jj command returned no revisions.  This
+</span>              <span class="cd">;; </span><span class="c">REVSET is the intersection between BOOKMARK, its
+</span>              <span class="cd">;; </span><span class="c">descendants, and TARGET-REV.  That intersection is
+</span>              <span class="cd">;; </span><span class="c">non-empty only when TARGET-REV is BOOKMARK or a
+</span>              <span class="cd">;; </span><span class="c">descendant or BOOKMARK
+</span>              (not (vc-jj--process-lines <span class="s">"log"</span> <span class="s">"-r"</span> (format <span class="s">"%s &amp; %s::"</span> target-rev bookmark))))))
+      (<span class="k">when</span> backwards-move-p
+        (<span class="k">unless</span> (yes-or-no-p
+                 (format-prompt <span class="s">"Moving bookmark %s to revision %s would move it either backwards or sideways. Is this okay?"</span>
+                                nil bookmark target-rev bookmark))
+          (<span class="w">user-error</span> <span class="s">"Aborted moving bookmark %s to revision %s"</span> bookmark target-rev)))
+      (vc-jj--command-dispatched nil 0 nil <span class="s">"bookmark"</span> <span class="s">"set"</span> bookmark <span class="s">"-r"</span> target-rev
+                                 <span class="s">"--allow-backwards"</span> <span class="s">"--quiet"</span>)
+      (revert-buffer))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

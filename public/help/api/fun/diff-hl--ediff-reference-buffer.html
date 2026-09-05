@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: diff-hl--ediff-reference-buffer – Emacs Documentation Online</title>
+<meta name="description" content="diff-hl--ediff-reference-buffer is a natively compiled function
+defined in diff-hl.el.
+Return the reference buffer for FILE used in Ediff.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>diff-hl--ediff-reference-buffer</code></h1><p><span class="m"><code>diff-hl--ediff-reference-buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">diff-hl.el</span>.
+<h2>Signature</h2>
+<pre><code>(diff-hl--ediff-reference-buffer <a href="#:~:text=for-,FILE"><span class="arg">FILE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the reference buffer for <span class="arg">FILE</span> used in Ediff.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/742jfhd6j9y7y1gqxy624dchx31gwmax-emacs-packages-deps/share/emacs/site-lisp/elpa/diff-hl-20260830.1400/diff-hl.el</span>
+(<span class="k">defun</span> <span class="f">diff-hl--ediff-reference-buffer</span> (file)
+  <span class="doc">"Return the reference buffer for FILE used in Ediff."</span>
+  (<span class="k">unless</span> file
+    (<span class="w">user-error</span> <span class="s">"No current file"</span>))
+  (<span class="k">let</span> ((backend (vc-backend file)))
+    (<span class="k">unless</span> backend
+      (<span class="w">user-error</span> <span class="s">"The buffer is not under version control"</span>))
+    (<span class="k">let*</span> ((reference diff-hl-reference-revision)
+           <span class="cd">;; </span><span class="c">Use the index snapshot only when diff-hl hides staged changes.
+</span>           (use-index (<span class="k">and</span> (diff-hl--use-git-index-base-p backend)
+                           (not diff-hl-highlight-reference-function)))
+           (buf
+            (<span class="k">if</span> use-index
+                (<span class="k">let</span> ((obj (diff-hl-git-index-object-name file)))
+                  (<span class="k">unless</span> obj
+                    (<span class="w">user-error</span> <span class="s">"No index entry for %s"</span> file))
+                  (<span class="k">let</span> ((filename (diff-hl-git-index-revision file obj)))
+                    (find-file-noselect filename)))
+              (<span class="k">let</span> ((rev (<span class="k">or</span> reference
+                             (assoc-default backend diff-hl-head-revision-alist)
+                             (diff-hl-working-revision file backend))))
+                (<span class="k">unless</span> rev
+                  (<span class="w">user-error</span> <span class="s">"No reference revision specified"</span>))
+                (<span class="k">setq</span> rev (diff-hl-resolved-revision backend rev))
+                (vc-find-revision-no-save file rev backend)))))
+      (<span class="k">with-current-buffer</span> buf
+        (set-buffer-modified-p nil)
+        (read-only-mode 1))
+      buf)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

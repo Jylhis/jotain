@@ -1,0 +1,318 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-block-scan – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-block-scan is a natively compiled function defined in
+web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-block-scan</code></h1><p><span class="m"><code>web-mode-block-scan</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-block-scan <span class="arg">BLOCK-BEG</span> <span class="arg">BLOCK-END</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-block-scan</span> (block-beg block-end)
+  (<span class="k">let</span> (sub1 sub2 sub3 regexp token-type)
+
+    <span class="cd">;;</span><span class="c">(message "block-beg=%S block-end=%S" block-beg block-end)
+</span>    <span class="cd">;;</span><span class="c">(remove-text-properties block-beg block-end web-mode-scan-properties)
+</span>
+    (goto-char block-beg)
+
+    (<span class="k">cond</span>
+      ((&gt;= (point-max) (+ block-beg 3))
+       (<span class="k">setq</span> sub3 (buffer-substring-no-properties block-beg (+ block-beg 3))
+             sub2 (buffer-substring-no-properties block-beg (+ block-beg 2))
+             sub1 (buffer-substring-no-properties block-beg (+ block-beg 1)))
+       )
+      ((&gt;= (point-max) (+ block-beg 2))
+       (<span class="k">setq</span> sub3 (buffer-substring-no-properties block-beg (+ block-beg 2))
+             sub2 (buffer-substring-no-properties block-beg (+ block-beg 2))
+             sub1 (buffer-substring-no-properties block-beg (+ block-beg 1)))
+       )
+      (t
+       (<span class="k">setq</span> sub1 (buffer-substring-no-properties block-beg (+ block-beg 1)))
+       (<span class="k">setq</span> sub2 sub1
+             sub3 sub1)
+       )
+      )
+
+    (<span class="k">cond</span>
+
+      ((member web-mode-engine '(<span class="s">"php"</span> <span class="s">"lsp"</span> <span class="s">"python"</span> <span class="s">"web2py"</span> <span class="s">"mason"</span>))
+       (<span class="k">setq</span> regexp web-mode-engine-token-regexp))
+
+      ((string= web-mode-engine <span class="s">"mako"</span>)
+       (<span class="k">cond</span>
+         ((string= sub2 <span class="s">"##"</span>)
+          (<span class="k">setq</span> token-type 'comment)
+          )
+         (t
+          (<span class="k">setq</span> regexp web-mode-engine-token-regexp))
+         )
+       ) <span class="cd">;</span><span class="c">mako
+</span>
+      ((string= web-mode-engine <span class="s">"django"</span>)
+       (<span class="k">cond</span>
+         ((member sub2 '(<span class="s">"{{"</span> <span class="s">"{%"</span>))
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         ((string= sub2 <span class="s">"{#"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         )
+       ) <span class="cd">;</span><span class="c">django
+</span>
+      ((string= web-mode-engine <span class="s">"ctemplate"</span>)
+       (<span class="k">cond</span>
+         ((string= sub3 <span class="s">"{{!"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         ((member sub2 '(<span class="s">"{{"</span>))
+          )
+         )
+       ) <span class="cd">;</span><span class="c">ctemplate
+</span>
+      ((string= web-mode-engine <span class="s">"antlers"</span>)
+       (<span class="k">cond</span>
+         ((string= sub3 <span class="s">"{{#"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         ((member sub2 '(<span class="s">"{{"</span>))
+          )
+         )
+       ) <span class="cd">;</span><span class="c">antlers
+</span>
+      ((string= web-mode-engine <span class="s">"astro"</span>)
+       (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>)
+       ) <span class="cd">;</span><span class="c">astro
+</span>
+      ((string= web-mode-engine <span class="s">"go"</span>)
+       (<span class="k">cond</span>
+         ((string= sub3 <span class="s">"{{/"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         ((string= sub2 <span class="s">"{{"</span>)
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         )
+       ) <span class="cd">;</span><span class="c">go
+</span>
+      ((string= web-mode-engine <span class="s">"hero"</span>)
+       (<span class="k">cond</span>
+         ((string= sub3 <span class="s">"&lt;%#"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         (t
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         )
+       ) <span class="cd">;</span><span class="c">hero
+</span>
+      ((string= web-mode-engine <span class="s">"razor"</span>)
+       (<span class="k">cond</span>
+         ((string= sub2 <span class="s">"@*"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         (t
+          (<span class="k">setq</span> regexp <span class="s">"//</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">@\\*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         )
+       ) <span class="cd">;</span><span class="c">razor
+</span>
+      ((string= web-mode-engine <span class="s">"blade"</span>)
+       (<span class="k">cond</span>
+         ((string= sub3 <span class="s">"{{-"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         (t
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         )
+       ) <span class="cd">;</span><span class="c">blade
+</span>
+      ((string= web-mode-engine <span class="s">"cl-emb"</span>)
+       (<span class="k">cond</span>
+         ((string= sub3 <span class="s">"&lt;%#"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         (t
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         )
+       ) <span class="cd">;</span><span class="c">cl-emb
+</span>
+      ((string= web-mode-engine <span class="s">"artanis"</span>)
+       (<span class="k">cond</span>
+         ((string= sub3 <span class="s">"&lt;%;"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         ((string= sub3 <span class="s">"&lt;%#|"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         (t
+          (<span class="k">setq</span> regexp <span class="s">"\""</span>))
+         )
+       ) <span class="cd">;</span><span class="c">artanis
+</span>
+      ((string= web-mode-engine <span class="s">"elixir"</span>)
+       (<span class="k">cond</span>
+         ((string= sub3 <span class="s">"&lt;%#"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         (t
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         )
+       ) <span class="cd">;</span><span class="c">elixir
+</span>
+      ((string= web-mode-engine <span class="s">"mojolicious"</span>)
+       (<span class="k">cond</span>
+         ((<span class="k">or</span> (string= sub2 <span class="s">"%#"</span>) (string= sub3 <span class="s">"&lt;%#"</span>))
+          (<span class="k">setq</span> token-type 'comment))
+         (t
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         )
+       ) <span class="cd">;</span><span class="c">mojolicious
+</span>
+      ((string= web-mode-engine <span class="s">"velocity"</span>)
+       (<span class="k">cond</span>
+         ((member sub2 '(<span class="s">"##"</span> <span class="s">"#*"</span>))
+          (<span class="k">setq</span> token-type 'comment))
+         ((member sub1 '(<span class="s">"$"</span> <span class="s">"#"</span>))
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         )
+       ) <span class="cd">;</span><span class="c">velocity
+</span>
+      ((string= web-mode-engine <span class="s">"jsp"</span>)
+       (<span class="k">cond</span>
+         ((string= sub3 <span class="s">"&lt;%-"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         ((string= sub3 <span class="s">"&lt;%@"</span>)
+          (<span class="k">setq</span> regexp <span class="s">"/\\*"</span>))
+         ((member sub2 '(<span class="s">"${"</span> <span class="s">"#{"</span>))
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         ((string= sub2 <span class="s">"&lt;%"</span>)
+          (<span class="k">setq</span> regexp <span class="s">"//</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">/\\*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         )
+       ) <span class="cd">;</span><span class="c">jsp
+</span>
+      ((string= web-mode-engine <span class="s">"clip"</span>)
+       (<span class="k">setq</span> regexp nil)
+       ) <span class="cd">;</span><span class="c">clip
+</span>
+      ((string= web-mode-engine <span class="s">"perl"</span>)
+       (<span class="k">setq</span> regexp nil)
+       ) <span class="cd">;</span><span class="c">perl
+</span>
+      ((<span class="k">and</span> (string= web-mode-engine <span class="s">"asp"</span>)
+            (string= sub2 <span class="s">"&lt;%"</span>))
+       (<span class="k">setq</span> regexp <span class="s">"//</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">/\\*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>)
+       ) <span class="cd">;</span><span class="c">asp
+</span>
+      ((string= web-mode-engine <span class="s">"aspx"</span>)
+       (<span class="k">cond</span>
+         ((string= sub3 <span class="s">"&lt;%-"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         ((string= sub3 <span class="s">"&lt;%@"</span>)
+          (<span class="k">setq</span> regexp <span class="s">"/\\*"</span>))
+         ((string= sub3 <span class="s">"&lt;%$"</span>)
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         (t
+          (<span class="k">setq</span> regexp <span class="s">"//</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">/\\*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         )
+       ) <span class="cd">;</span><span class="c">aspx
+</span>
+      ((string= web-mode-engine <span class="s">"freemarker"</span>)
+       (<span class="k">cond</span>
+         ((member sub3 '(<span class="s">"&lt;#-"</span> <span class="s">"[#-"</span>))
+          (<span class="k">setq</span> token-type 'comment))
+         ((member sub2 '(<span class="s">"${"</span> <span class="s">"#{"</span>))
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         ((<span class="k">or</span> (member sub2 '(<span class="s">"&lt;@"</span> <span class="s">"[@"</span> <span class="s">"&lt;#"</span> <span class="s">"[#"</span>))
+              (member sub3 '(<span class="s">"&lt;/@"</span> <span class="s">"[/@"</span> <span class="s">"&lt;/#"</span> <span class="s">"[/#"</span>)))
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         )
+       ) <span class="cd">;</span><span class="c">freemarker
+</span>
+      ((member web-mode-engine '(<span class="s">"ejs"</span> <span class="s">"erb"</span>))
+       (<span class="k">cond</span>
+         ((string= sub3 <span class="s">"&lt;%#"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         (t
+          (<span class="k">setq</span> regexp web-mode-engine-token-regexp))
+         )
+       ) <span class="cd">;</span><span class="c">erb
+</span>
+      ((string= web-mode-engine <span class="s">"template-toolkit"</span>)
+       (<span class="k">cond</span>
+         ((member sub3 '(<span class="s">"[%#"</span> <span class="s">"%%#"</span>))
+          (<span class="k">setq</span> token-type 'comment))
+         (t
+          (<span class="k">setq</span> regexp <span class="s">"#</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         )
+       ) <span class="cd">;</span><span class="c">template-toolkit
+</span>
+      ((string= web-mode-engine <span class="s">"underscore"</span>)
+       (<span class="k">setq</span> regexp <span class="s">"/\\*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>)
+       ) <span class="cd">;</span><span class="c">underscore
+</span>
+      ((string= web-mode-engine <span class="s">"angular"</span>)
+       (<span class="k">setq</span> regexp <span class="s">"#</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>)) <span class="cd">;</span><span class="c">angular
+</span>
+      ((string= web-mode-engine <span class="s">"vue"</span>)
+       ) <span class="cd">;</span><span class="c">vue
+</span>
+      ((string= web-mode-engine <span class="s">"smarty"</span>)
+       (<span class="k">cond</span>
+         ((string= sub2 <span class="s">"{*"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         (t
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>)))
+       ) <span class="cd">;</span><span class="c">smarty
+</span>
+      ((string= web-mode-engine <span class="s">"xoops"</span>)
+       (<span class="k">cond</span>
+         ((string= sub3 <span class="s">"&lt;{*"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         (t
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>)))
+       ) <span class="cd">;</span><span class="c">xoops
+</span>
+      ((string= web-mode-engine <span class="s">"spip"</span>)
+       (<span class="k">if</span> (string= (buffer-substring-no-properties
+                     block-beg (+ block-beg 7))
+                    <span class="s">"[(#REM)"</span>)
+           (<span class="k">setq</span> token-type 'comment
+                 regexp <span class="s">"\\]"</span>)))
+
+      ((string= web-mode-engine <span class="s">"dust"</span>)
+       (<span class="k">cond</span>
+         ((string= sub2 <span class="s">"{!"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         (t
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         )
+       ) <span class="cd">;</span><span class="c">dust
+</span>
+      ((string= web-mode-engine <span class="s">"expressionengine"</span>)
+       (<span class="k">cond</span>
+         ((string= sub2 <span class="s">"{!"</span>)
+          (<span class="k">setq</span> token-type 'comment))
+         (t
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>)))
+       ) <span class="cd">;</span><span class="c">expressionengine
+</span>
+      ((string= web-mode-engine <span class="s">"closure"</span>)
+       (<span class="k">cond</span>
+         ((member sub2 '(<span class="s">"/*"</span> <span class="s">"//"</span>))
+          (<span class="k">setq</span> token-type 'comment))
+         (t
+          (<span class="k">setq</span> regexp <span class="s">"\"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">'"</span>))
+         )
+       ) <span class="cd">;</span><span class="c">closure
+</span>
+      ((string= web-mode-engine <span class="s">"svelte"</span>)
+       ) <span class="cd">;</span><span class="c">svelte
+</span>
+      ) <span class="cd">;</span><span class="c">cond
+</span>
+    (<span class="k">cond</span>
+      (token-type
+       (put-text-property block-beg block-end 'block-token token-type))
+      ((<span class="k">and</span> regexp
+            (&gt; (- block-end block-beg) 6))
+       (web-mode-block-tokenize
+        (web-mode-block-code-beginning-position block-beg)
+        (web-mode-block-code-end-position block-beg)
+        regexp)
+       )
+      ) <span class="cd">;</span><span class="c">cond
+</span>
+    ))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,100 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-ident-pos-at-point – Emacs Documentation Online</title>
+<meta name="description" content="haskell-ident-pos-at-point is a natively compiled function defined in
+haskell-mode.el.
+Return the span of the identifier near point going backward.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-ident-pos-at-point</code></h1><p><span class="m"><code>haskell-ident-pos-at-point</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">haskell-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-ident-pos-at-point)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the span of the identifier near point going backward.
+<p>Returns nil if no identifier found or point is inside string or
+comment.  May return a qualified name.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-mode.el</span>
+(<span class="k">defun</span> <span class="f">haskell-ident-pos-at-point</span> ()
+  <span class="doc">"Return the span of the identifier near point going backward.
+Returns nil if no identifier found or point is inside string or
+comment.  May return a qualified name."</span>
+  (<span class="k">when</span> (not (nth 8 (syntax-ppss)))
+    <span class="cd">;; </span><span class="c">Do not handle comments and strings
+</span>    (<span class="k">let</span> (start end)
+      <span class="cd">;; </span><span class="c">Initial point position is non-deterministic, it may occur anywhere
+</span>      <span class="cd">;; </span><span class="c">inside identifier span, so the approach is:
+</span>      <span class="cd">;; </span><span class="c">- first try go left and find left boundary
+</span>      <span class="cd">;; </span><span class="c">- then try go right and find right boundary
+</span>      <span class="cd">;;</span><span class="c">
+</span>      <span class="cd">;; </span><span class="c">In both cases assume the longest path, e.g. when going left take into
+</span>      <span class="cd">;; </span><span class="c">account than point may occur at the end of identifier, when going right
+</span>      <span class="cd">;; </span><span class="c">take into account that point may occur at the beginning of identifier.
+</span>      <span class="cd">;;</span><span class="c">
+</span>      <span class="cd">;; </span><span class="c">We should handle `.` character very careful because it is heavily
+</span>      <span class="cd">;; </span><span class="c">overloaded.  Examples of possible cases:
+</span>      <span class="cd">;; </span><span class="c">Control.Monad.&gt;&gt;=  -- delimiter
+</span>      <span class="cd">;; </span><span class="c">Control.Monad.when -- delimiter
+</span>      <span class="cd">;; </span><span class="c">Data.Aeson..:      -- delimiter and operator symbol
+</span>      <span class="cd">;; </span><span class="c">concat.map         -- composition function
+</span>      <span class="cd">;; </span><span class="c">.?                 -- operator symbol
+</span>      (<span class="k">save-excursion</span>
+        <span class="cd">;; </span><span class="c">First, skip whitespace if we're on it, moving point to last
+</span>        <span class="cd">;; </span><span class="c">identifier char.  That way, if we're at "map ", we'll see the word
+</span>        <span class="cd">;; </span><span class="c">"map".
+</span>        (<span class="k">when</span> (<span class="k">and</span> (eolp)
+                   (not (bolp)))
+          (backward-char))
+        (<span class="k">when</span> (<span class="k">and</span> (not (eobp))
+                   (eq (char-syntax (char-after)) ? ))
+          (skip-chars-backward <span class="s">" \t"</span>)
+          (backward-char))
+        <span class="cd">;; </span><span class="c">Now let's try to go left.
+</span>        (<span class="k">save-excursion</span>
+          (<span class="k">if</span> (not (haskell-mode--looking-at-varsym))
+              <span class="cd">;; </span><span class="c">Looking at non-operator char, this is quite simple
+</span>              (<span class="k">progn</span>
+                (skip-syntax-backward <span class="s">"w_"</span>)
+                <span class="cd">;; </span><span class="c">Remember position
+</span>                (<span class="k">setq</span> start (point)))
+            <span class="cd">;; </span><span class="c">Looking at operator char.
+</span>            (<span class="k">while</span> (<span class="k">and</span> (not (bobp))
+                        (haskell-mode--looking-at-varsym))
+              <span class="cd">;; </span><span class="c">skip all operator chars backward
+</span>              (<span class="k">setq</span> start (point))
+              (backward-char))
+            <span class="cd">;; </span><span class="c">Extra check for case when reached beginning of the buffer.
+</span>            (<span class="k">when</span> (haskell-mode--looking-at-varsym)
+              (<span class="k">setq</span> start (point))))
+          <span class="cd">;; </span><span class="c">Slurp qualification part if present.  If identifier is qualified in
+</span>          <span class="cd">;; </span><span class="c">case of non-operator point will stop before `.` dot, but in case of
+</span>          <span class="cd">;; </span><span class="c">operator it will stand at `.` delimiting dot.  So if we're looking
+</span>          <span class="cd">;; </span><span class="c">at `.` let's step one char forward and try to get qualification
+</span>          <span class="cd">;; </span><span class="c">part.
+</span>          (goto-char start)
+          (<span class="k">when</span> (looking-at-p (<span class="k">rx</span> <span class="s">"."</span>))
+            (forward-char))
+          (<span class="k">let</span> ((pos (haskell-mode--skip-qualification-backward)))
+            (<span class="k">when</span> pos
+              (<span class="k">setq</span> start pos))))
+        <span class="cd">;; </span><span class="c">Finally, let's try to go right.
+</span>        (<span class="k">save-excursion</span>
+          <span class="cd">;; </span><span class="c">Try to slurp qualification part first.
+</span>          (skip-syntax-forward <span class="s">"w_"</span>)
+          (<span class="k">setq</span> end (point))
+          (<span class="k">while</span> (<span class="k">and</span> (looking-at (<span class="k">rx</span> <span class="s">"."</span> upper))
+                      (not (zerop (<span class="k">progn</span> (forward-char)
+                                         (skip-syntax-forward <span class="s">"w_"</span>)))))
+            (<span class="k">setq</span> end (point)))
+          <span class="cd">;; </span><span class="c">If point was at non-operator we already done, otherwise we need an
+</span>          <span class="cd">;; </span><span class="c">extra check.
+</span>          (<span class="k">while</span> (haskell-mode--looking-at-varsym)
+            (forward-char)
+            (<span class="k">setq</span> end (point))))
+        (<span class="k">when</span> (not (= start end))
+          (cons start end))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

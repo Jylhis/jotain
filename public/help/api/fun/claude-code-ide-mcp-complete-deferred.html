@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp-complete-deferred – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp-complete-deferred is a natively compiled function
+defined in claude-code-ide-mcp.el.
+Complete a deferred response for SESSION and TOOL-NAME with RESULT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp-complete-deferred</code></h1><p><span class="m"><code>claude-code-ide-mcp-complete-deferred</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide-mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp-complete-deferred <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=and-,TOOL-NAME"><span class="arg">TOOL-NAME</span></a> <a href="#:~:text=with-,RESULT"><span class="arg">RESULT</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,UNIQUE-KEY"><span class="arg">UNIQUE-KEY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Complete a deferred response for <span class="arg">SESSION</span> and <span class="arg">TOOL-NAME</span> with <span class="arg">RESULT</span>.
+<p><span class="arg">SESSION</span> is the MCP session that owns the deferred response.
+If <span class="arg">UNIQUE-KEY</span> is provided, it's used to disambiguate multiple deferred
+responses.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp-complete-deferred</span> (session tool-name result <span class="ty">&amp;optional</span> unique-key)
+  <span class="doc">"Complete a deferred response for SESSION and TOOL-NAME with RESULT.
+SESSION is the MCP session that owns the deferred response.
+If UNIQUE-KEY is provided, it's used to disambiguate multiple deferred
+responses."</span>
+  (<span class="k">let*</span> ((lookup-key (<span class="k">if</span> unique-key
+                         (format <span class="s">"%s-%s"</span> tool-name unique-key)
+                       tool-name)))
+    (<span class="k">claude-code-ide-debug</span> <span class="s">"Complete deferred for %s"</span> lookup-key)
+    (<span class="k">if</span> (not session)
+        (<span class="k">claude-code-ide-debug</span> <span class="s">"No session provided for completing deferred response %s"</span> lookup-key)
+      <span class="cd">;; </span><span class="c">Use the provided session directly
+</span>      (<span class="k">let*</span> ((session-deferred (claude-code-ide-mcp-session-deferred session))
+             (id (gethash lookup-key session-deferred)))
+        (<span class="k">if</span> id
+            (<span class="k">let</span> ((client (claude-code-ide-mcp-session-client session)))
+              (<span class="k">claude-code-ide-debug</span> <span class="s">"Found deferred response id %s in session for %s"</span>
+                                     id (claude-code-ide-mcp-session-project-dir session))
+              (remhash lookup-key session-deferred)
+              (<span class="k">if</span> client
+                  (<span class="k">let*</span> ((response (claude-code-ide-mcp--make-response id `((content . ,result))))
+                         (json-response (json-encode response)))
+                    (<span class="k">claude-code-ide-debug</span> <span class="s">"Sending deferred response: %s"</span> json-response)
+                    (websocket-send-text client json-response)
+                    (<span class="k">claude-code-ide-debug</span> <span class="s">"Deferred response sent"</span>))
+                (<span class="k">claude-code-ide-debug</span> <span class="s">"No client connected for session, cannot send deferred response"</span>)))
+          (<span class="k">claude-code-ide-debug</span> <span class="s">"No deferred response found for %s"</span> lookup-key))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

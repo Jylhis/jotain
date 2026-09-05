@@ -1,0 +1,76 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--render-history-contents – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--render-history-contents is a natively compiled function
+defined in eca-chat.el.
+Prepend CONTENTS above existing content in CHAT-BUFFER for SESSION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--render-history-contents</code></h1><p><span class="m"><code>eca-chat--render-history-contents</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--render-history-contents <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=in-,CHAT-BUFFER"><span class="arg">CHAT-BUFFER</span></a> <a href="#:~:text=Prepend-,CONTENTS"><span class="arg">CONTENTS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Prepend <span class="arg">CONTENTS</span> above existing content in <span class="arg">CHAT-BUFFER</span> for <span class="arg">SESSION</span>.
+<p><span class="arg">CONTENTS</span> is the list of <span class="m"><code>chat/history</code></span> items (each shaped like a
+<span class="m"><code>chat/contentReceived</code></span> payload); they are rendered in order at the top
+of the message area so older pages stack above newer ones.  Subagent
+items (those carrying :parentChatId) are routed into their parent tool
+call exactly as the streaming path does.
+<p>The live-turn marker <a href="../var/eca-chat--last-user-message-pos.html"><code>eca-chat--last-user-message-pos</code></a> is saved and
+restored so prepending older content does not move the scope used by the
+streaming renderer; fontification and table styling are applied to the
+prepended region explicitly.  Callers are expected to re-apply
+<a href="../fun/eca-chat--protect-non-prompt.html"><code>eca-chat--protect-non-prompt</code></a> afterwards.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--render-history-contents</span> (session chat-buffer contents)
+  <span class="doc">"Prepend CONTENTS above existing content in CHAT-BUFFER for SESSION.
+CONTENTS is the list of `</span><span class="m doc">chat/history</span><span class="doc">' items (each shaped like a
+`</span><span class="m doc">chat/contentReceived</span><span class="doc">' payload); they are rendered in order at the top
+of the message area so older pages stack above newer ones.  Subagent
+items (those carrying :parentChatId) are routed into their parent tool
+call exactly as the streaming path does.
+
+The live-turn marker `</span><span class="m doc">eca-chat--last-user-message-pos</span><span class="doc">' is saved and
+restored so prepending older content does not move the scope used by the
+streaming renderer; fontification and table styling are applied to the
+prepended region explicitly.  Callers are expected to re-apply
+`</span><span class="m doc">eca-chat--protect-non-prompt</span><span class="doc">' afterwards."</span>
+  (<span class="k">eca-chat--with-current-buffer</span> chat-buffer
+    (<span class="k">let*</span> ((roots (eca--session-workspace-folders session))
+           (start (eca-chat--older-content-start))
+           (m (copy-marker start t))
+           (saved-last-user-pos eca-chat--last-user-message-pos))
+      (<span class="k">unwind-protect</span>
+          (<span class="k">let</span> ((eca-chat--insertion-point-override m))
+            (seq-do
+             (<span class="k">lambda</span> (item)
+               (<span class="k">let</span> ((role (plist-get item <span class="bi">:role</span>))
+                     (content (plist-get item <span class="bi">:content</span>))
+                     (parent-chat-id (plist-get item <span class="bi">:parentChatId</span>))
+                     (item-chat-id (plist-get item <span class="bi">:chatId</span>)))
+                 (<span class="k">if</span> parent-chat-id
+                     (<span class="k">when-let*</span> ((tool-call-id (gethash item-chat-id eca-chat--subagent-chat-id-&gt;tool-call-id)))
+                       (eca-chat--render-content session chat-buffer role content roots tool-call-id item-chat-id))
+                   (eca-chat--render-content session chat-buffer role content roots))))
+             contents))
+        (<span class="k">setq-local</span> eca-chat--last-user-message-pos saved-last-user-pos)
+        <span class="cd">;; </span><span class="c">Separate the prepended block from the content below with a single
+</span>        <span class="cd">;; </span><span class="c">newline: historical content has no trailing turn-end newline, so the
+</span>        <span class="cd">;; </span><span class="c">last older line would otherwise glue to the first existing line.
+</span>        (<span class="k">let</span> ((pos (marker-position m)))
+          (<span class="k">when</span> (<span class="k">and</span> (&gt; pos (point-min))
+                     (&lt; pos (point-max))
+                     (not (eq (char-before pos) ?\n))
+                     (not (eq (char-after pos) ?\n)))
+            (<span class="k">save-excursion</span> (goto-char pos) (insert <span class="s">"\n"</span>))))
+        (<span class="k">let</span> ((end (marker-position m)))
+          (font-lock-ensure start end)
+          (eca-chat--align-tables start)
+          (eca-chat--beautify-tables start))
+        (set-marker m nil)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

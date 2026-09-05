@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sqlind-syntax-in-insert – Emacs Documentation Online</title>
+<meta name="description" content="sqlind-syntax-in-insert is a natively compiled function defined in
+sql-indent.el.
+Return the syntax at POS which is inside an &quot;insert&quot; statement at START.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sqlind-syntax-in-insert</code></h1><p><span class="m"><code>sqlind-syntax-in-insert</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">sql-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(sqlind-syntax-in-insert <a href="#:~:text=at-,POS"><span class="arg">POS</span></a> <a href="#:~:text=at-,START"><span class="arg">START</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the syntax at <span class="arg">POS</span> which is inside an "insert" statement at <span class="arg">START</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vgm6xb2iy00bs19rdw9z3nfi5nf8g873-emacs-packages-deps/share/emacs/site-lisp/elpa/sql-indent-1.7/sql-indent.el</span>
+(<span class="k">defun</span> <span class="f">sqlind-syntax-in-insert</span> (pos start)
+  <span class="doc">"Return the syntax at POS which is inside an \"insert\" statement at START."</span>
+
+  <span class="cd">;; </span><span class="c">The insert clause is really easy since it has the form insert into TABLE
+</span>  <span class="cd">;; </span><span class="c">(COLUMN_LIST) values (VALUE_LIST) or insert into TABLE select
+</span>  <span class="cd">;; </span><span class="c">SELECT_CLAUSE
+</span>  <span class="cd">;;</span><span class="c">
+</span>  <span class="cd">;; </span><span class="c">note that we will never be called when point is in COLUMN_LIST or
+</span>  <span class="cd">;; </span><span class="c">VALUE_LIST, as that is a nested-statement-continuation which starts with
+</span>  <span class="cd">;; </span><span class="c">the open paranthesis.
+</span>  <span class="cd">;;</span><span class="c">
+</span>  <span class="cd">;; </span><span class="c">if we are inside the SELECT_CLAUSE, we delegate the syntax to
+</span>  <span class="cd">;; </span><span class="c">`</span><span class="m c">sqlind-syntax-in-select</span><span class="c">'
+</span>
+  (<span class="k">save-excursion</span>
+    (<span class="k">catch</span> '<span class="m">finished</span>
+      (goto-char pos)
+
+      <span class="cd">;; </span><span class="c">all select query components are indented relative to the
+</span>      <span class="cd">;; </span><span class="c">start of the select statement)
+</span>      (<span class="k">when</span> (looking-at sqlind-insert-clauses-regexp)
+	(<span class="k">throw</span> '<span class="m">finished</span> (cons 'insert-clause start)))
+
+      (<span class="k">while</span> (re-search-backward sqlind-insert-clauses-regexp start t)
+	(<span class="k">let*</span> ((match-pos (match-beginning 0))
+	       (clause (sqlind-match-string 0)))
+	  (<span class="k">setq</span> clause (replace-regexp-in-string <span class="s">"[ \t\r\n\f]"</span> <span class="s">" "</span> clause))
+	  (<span class="k">when</span> (sqlind-same-level-statement (point) start)
+	    (<span class="k">throw</span> '<span class="m">finished</span>
+	      (<span class="k">if</span> (looking-at <span class="s">"select"</span>)
+		  (sqlind-syntax-in-select pos match-pos)
+		(cons (list 'in-insert-clause clause) match-pos)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

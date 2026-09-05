@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca--path--translate – Emacs Documentation Online</title>
+<meta name="description" content="eca--path--translate is a natively compiled function defined in
+eca-util.el.
+Translate PATH using explicit and TRAMP-derived path mappings.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca--path--translate</code></h1><p><span class="m"><code>eca--path--translate</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-util.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca--path--translate <a href="#:~:text=Translate-,PATH"><span class="arg">PATH</span></a> <a href="#:~:text=mappings.-,FROM-FN"><span class="arg">FROM-FN</span></a> <a href="#:~:text=PATH;-,TO-FN"><span class="arg">TO-FN</span></a> <a href="#:~:text=If-,EXPAND-FROM-P"><span class="arg">EXPAND-FROM-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Translate <span class="arg">PATH</span> using explicit and TRAMP-derived path mappings.
+<p><span class="arg">FROM-FN</span> extracts the side of each mapping to match against <span class="arg">PATH</span>;
+<span class="arg">TO-FN</span> extracts the side to substitute in.  If <span class="arg">EXPAND-FROM-P</span> is
+non-nil, expand the from-side path.  The longest matching prefix
+wins; explicit user mappings take priority over TRAMP-derived ones
+for equal-length prefixes.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-util.el</span>
+(<span class="k">defun</span> <span class="f">eca--path--translate</span> (path from-fn to-fn expand-from-p)
+  <span class="doc">"Translate PATH using explicit and TRAMP-derived path mappings.
+FROM-FN extracts the side of each mapping to match against PATH;
+TO-FN extracts the side to substitute in.  If EXPAND-FROM-P is
+non-nil, expand the from-side path.  The longest matching prefix
+wins; explicit user mappings take priority over TRAMP-derived ones
+for equal-length prefixes."</span>
+  (<span class="k">let*</span> ((ensure-slash (<span class="k">lambda</span> (s) (<span class="k">if</span> (string-suffix-p <span class="s">"/"</span> s) s (concat s <span class="s">"/"</span>))))
+         (strip-slash (<span class="k">lambda</span> (s) (<span class="k">if</span> (string-suffix-p <span class="s">"/"</span> s) (substring s 0 -1) s)))
+         (sorted (sort (copy-sequence (eca--path-mappings))
+                       (<span class="k">lambda</span> (a b)
+                         (<span class="k">let</span> ((la (length (funcall from-fn a)))
+                               (lb (length (funcall from-fn b))))
+                           (<span class="k">if</span> (= la lb)
+                               (<span class="k">let</span> ((explicit-a (member a eca-local-to-remote-prefix-map))
+                                     (explicit-b (member b eca-local-to-remote-prefix-map)))
+                                 (<span class="k">cond</span>
+                                  ((<span class="k">and</span> explicit-a (not explicit-b)) t)
+                                  ((<span class="k">and</span> (not explicit-a) explicit-b) nil)
+                                  (t (&gt; (length (funcall to-fn a))
+                                        (length (funcall to-fn b))))))
+                             (&gt; la lb)))))))
+    (<span class="k">or</span> (seq-some
+         (<span class="k">lambda</span> (m)
+           (<span class="k">let*</span> ((from-raw (funcall from-fn m))
+                  (to-raw (funcall to-fn m))
+                  (from (funcall ensure-slash
+                                 (<span class="k">if</span> (<span class="k">and</span> expand-from-p (not (file-remote-p from-raw)))
+                                     (expand-file-name from-raw)
+                                   from-raw)))
+                  (to-expanded (<span class="k">if</span> (<span class="k">and</span> (not expand-from-p) (not (file-remote-p to-raw)))
+                                   (expand-file-name to-raw)
+                                 to-raw)))
+             (<span class="k">cond</span>
+              ((string= path (funcall strip-slash from))
+               (funcall strip-slash to-expanded))
+              ((string-prefix-p from path)
+               (concat (funcall ensure-slash to-expanded) (substring path (length from)))))))
+         sorted)
+        path)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

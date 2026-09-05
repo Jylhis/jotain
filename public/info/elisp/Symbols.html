@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.1.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Symbols (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Symbols (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Symbols (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Evaluation.html#Evaluation" rel="next" title="Evaluation">
+<link href="Hash-Tables.html#Hash-Tables" rel="prev" title="Hash Tables">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+dt.def-line {font-size: 1rem}
+kbd.kbd {font-style: oblique}
+span.r {font-family: initial; font-weight: normal; font-style: normal}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold}
+ul.mark-bullet {list-style-type: disc}
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Symbols">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Evaluation.html#Evaluation" rel="next">Evaluation</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Hash-Tables.html#Hash-Tables" rel="prev">Hash Tables</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Emacs Lisp</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h2 class="chapter" id="Symbols-1"><span>9 Symbols<a class="copiable-link" href="#Symbols-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-symbol"></a>
+
+<p>A <em class="dfn">symbol</em> is an object with a unique name.  This chapter
+describes symbols, their components, their property lists, and how they
+are created and interned.  Separate chapters describe the use of symbols
+as variables and as function names; see <a class="ref" href="Variables.html#Variables">Variables</a>, and
+<a class="ref" href="Functions.html#Functions">Functions</a>.  For the precise read syntax for symbols, see
+<a class="ref" href="Lisp-Data-Types.html#Symbol-Type">Symbol Type</a>.
+</p>
+<p>You can test whether an arbitrary Lisp object is a symbol with
+<code class="code">symbolp</code>:
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-symbolp"><span class="category-def">Function: </span><span><strong class="def-name">symbolp</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-symbolp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is a symbol, <code class="code">nil</code>
+otherwise.
+</p></dd></dl>
+
+
+<ul class="mini-toc">
+<li><a href="#Symbol-Components">Symbol Components</a></li>
+<li><a href="#Definitions">Defining Symbols</a></li>
+<li><a href="#Creating-Symbols">Creating and Interning Symbols</a></li>
+<li><a href="#Symbol-Properties">Symbol Properties</a></li>
+<li><a href="#Shorthands">Shorthands</a></li>
+<li><a href="#Symbols-with-Position">Symbols with Position</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Symbol-Components">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Definitions" rel="next">Defining Symbols</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Symbols" rel="up">Symbols</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Symbol-Components-1"><span>9.1 Symbol Components<a class="copiable-link" href="#Symbol-Components-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-symbol-components"></a>
+
+<p>Each symbol has four components (or &ldquo;cells&rdquo;), each of which
+references another object:
+</p>
+<dl class="table">
+<dt><a id="index-print-name-cell"></a><span>Print name<a class="copiable-link" href="#index-print-name-cell"> &para;</a></span></dt>
+<dd><p>The symbol&rsquo;s name.
+</p>
+</dd>
+<dt><a id="index-value-cell"></a><span>Value<a class="copiable-link" href="#index-value-cell"> &para;</a></span></dt>
+<dd><p>The symbol&rsquo;s current value as a variable.
+</p>
+</dd>
+<dt><a id="index-function-cell"></a><span>Function<a class="copiable-link" href="#index-function-cell"> &para;</a></span></dt>
+<dd><p>The symbol&rsquo;s function definition.  It can also hold a symbol, a
+keymap, or a keyboard macro.
+</p>
+</dd>
+<dt><a id="index-property-list-cell"></a><span>Property list<a class="copiable-link" href="#index-property-list-cell"> &para;</a></span></dt>
+<dd><p>The symbol&rsquo;s property list.
+</p></dd>
+</dl>
+
+<p>The print name cell always holds a string, and cannot be changed.
+Each of the other three cells can be set to any Lisp object.
+</p>
+<p>The print name cell holds the string that is the name of a symbol.
+Since symbols are represented textually by their names, it is
+important not to have two symbols with the same name.  The Lisp reader
+ensures this: every time it reads a symbol, it looks for an existing
+symbol with the specified name before it creates a new one.  To get a
+symbol&rsquo;s name, use the function <code class="code">symbol-name</code> (see <a class="pxref" href="#Creating-Symbols">Creating and Interning Symbols</a>).  However, although each symbol has only one unique
+<em class="emph">print name</em>, it is nevertheless possible to refer to that same
+symbol via different alias names called &ldquo;shorthands&rdquo;
+(see <a class="pxref" href="#Shorthands">Shorthands</a>).
+</p>
+<p>The value cell holds a symbol&rsquo;s value as a variable, which is what
+you get if the symbol itself is evaluated as a Lisp expression.
+See <a class="xref" href="Variables.html#Variables">Variables</a>, for details about how values are set and retrieved,
+including complications such as <em class="dfn">local bindings</em> and <em class="dfn">scoping
+rules</em>.  Most symbols can have any Lisp object as a value, but certain
+special symbols have values that cannot be changed; these include
+<code class="code">nil</code> and <code class="code">t</code>, and any symbol whose name starts with
+&lsquo;<samp class="samp">:</samp>&rsquo; (those are called <em class="dfn">keywords</em>).  See <a class="xref" href="Variables.html#Constant-Variables">Variables that Never Change</a>.
+</p>
+<p>The function cell holds a symbol&rsquo;s function definition.  Often, we
+refer to &ldquo;the function <code class="code">foo</code>&rdquo; when we really mean the function
+stored in the function cell of <code class="code">foo</code>; we make the distinction
+explicit only when necessary.  Typically, the function cell is used to
+hold a function (see <a class="pxref" href="Functions.html#Functions">Functions</a>) or a macro (see <a class="pxref" href="Macros.html#Macros">Macros</a>).
+However, it can also be used to hold a symbol (see <a class="pxref" href="Evaluation.html#Function-Indirection">Symbol Function Indirection</a>), keyboard macro (see <a class="pxref" href="Command-Loop.html#Keyboard-Macros">Keyboard Macros</a>), keymap
+(see <a class="pxref" href="Keymaps.html#Keymaps">Keymaps</a>), or autoload object (see <a class="pxref" href="Evaluation.html#Autoloading">Autoloading</a>).  To get
+the contents of a symbol&rsquo;s function cell, use the function
+<code class="code">symbol-function</code> (see <a class="pxref" href="Functions.html#Function-Cells">Accessing Function Cell Contents</a>).
+</p>
+<p>The property list cell normally should hold a correctly formatted
+property list.  To get a symbol&rsquo;s property list, use the function
+<code class="code">symbol-plist</code>.  See <a class="xref" href="#Symbol-Properties">Symbol Properties</a>.
+</p>
+<p>The value cell may be <em class="dfn">void</em>, which means that the cell does not
+reference any object.  (This is not the same thing as holding the symbol
+<code class="code">void</code>, nor the same as holding the symbol <code class="code">nil</code>.)  Examining
+a value cell that is void results in an error, such as &lsquo;<samp class="samp">Symbol's
+value as variable is void</samp>&rsquo;.
+</p>
+<p>Because each symbol has separate value and function cells, the names
+of variables and functions do not conflict.  For example, the symbol
+<code class="code">buffer-file-name</code> has a value (the name of the file being visited
+in the current buffer) as well as a function definition (a primitive
+function that returns the name of the file):
+</p>
+<div class="example">
+<pre class="example-preformatted">buffer-file-name
+     &rArr; &quot;/gnu/elisp/symbols.texi&quot;
+(symbol-function 'buffer-file-name)
+     &rArr; #&lt;subr buffer-file-name&gt;
+</pre></div>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Definitions">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Creating-Symbols" rel="next">Creating and Interning Symbols</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Symbol-Components" rel="prev">Symbol Components</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Symbols" rel="up">Symbols</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Defining-Symbols"><span>9.2 Defining Symbols<a class="copiable-link" href="#Defining-Symbols"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-definitions-of-symbols"></a>
+
+<p>A <em class="dfn">definition</em> is a special kind of Lisp expression that
+announces your intention to use a symbol in a particular way.  It
+typically specifies a value or meaning for the symbol for one kind of
+use, plus documentation for its meaning when used in this way.  Thus,
+when you define a symbol as a variable, you can supply an initial
+value for the variable, plus documentation for the variable.
+</p>
+<p><code class="code">defvar</code> and <code class="code">defconst</code> are special forms that define a
+symbol as a <em class="dfn">global variable</em>&mdash;a variable that can be accessed at
+any point in a Lisp program.  See <a class="xref" href="Variables.html#Variables">Variables</a>, for details about
+variables.  To define a customizable variable, use the
+<code class="code">defcustom</code> macro, which also calls <code class="code">defvar</code> as a subroutine
+(see <a class="pxref" href="Customization.html#Customization">Customization Settings</a>).
+</p>
+<p>In principle, you can assign a variable value to any symbol with
+<code class="code">setq</code>, whether or not it has first been defined as a variable.
+However, you ought to write a variable definition for each global
+variable that you want to use; otherwise, your Lisp program may not
+act correctly if it is evaluated with lexical scoping enabled
+(see <a class="pxref" href="Variables.html#Variable-Scoping">Scoping Rules for Variable Bindings</a>).
+</p>
+<p><code class="code">defun</code> defines a symbol as a function, creating a lambda
+expression and storing it in the function cell of the symbol.  This
+lambda expression thus becomes the function definition of the symbol.
+(The term &ldquo;function definition&rdquo;, meaning the contents of the function
+cell, is derived from the idea that <code class="code">defun</code> gives the symbol its
+definition as a function.)  <code class="code">defsubst</code> and <code class="code">defalias</code> are two
+other ways of defining a function.  See <a class="xref" href="Functions.html#Functions">Functions</a>.
+</p>
+<p><code class="code">defmacro</code> defines a symbol as a macro.  It creates a macro
+object and stores it in the function cell of the symbol.  Note that a
+given symbol can be a macro or a function, but not both at once, because
+both macro and function definitions are kept in the function cell, and
+that cell can hold only one Lisp object at any given time.
+See <a class="xref" href="Macros.html#Macros">Macros</a>.
+</p>
+<p>As previously noted, Emacs Lisp allows the same symbol to be defined
+both as a variable (e.g., with <code class="code">defvar</code>) and as a function or
+macro (e.g., with <code class="code">defun</code>).  Such definitions do not conflict.
+</p>
+<p>These definitions also act as guides for programming tools.  For
+example, the <kbd class="kbd">C-h f</kbd> and <kbd class="kbd">C-h v</kbd> commands create help buffers
+containing links to the relevant variable, function, or macro
+definitions.  See <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Name-Help.html#Name-Help">Name Help</a> in <cite class="cite">The GNU Emacs Manual</cite>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Creating-Symbols">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Symbol-Properties" rel="next">Symbol Properties</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Definitions" rel="prev">Defining Symbols</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Symbols" rel="up">Symbols</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Creating-and-Interning-Symbols"><span>9.3 Creating and Interning Symbols<a class="copiable-link" href="#Creating-and-Interning-Symbols"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-reading-symbols"></a>
+
+<p>To understand how symbols are created in GNU Emacs Lisp, you must
+know how Lisp reads them.  Lisp must ensure that it finds the same
+symbol every time it reads the same sequence of characters in the same
+context.  Failure to do so would cause complete confusion.
+</p>
+<a class="index-entry-id" id="index-obarray"></a>
+<p>When the Lisp reader encounters a name that references a symbol in
+the source code, it looks up that name in a table called an <em class="dfn">obarray</em>
+to find the symbol that the programmer meant.  An obarray is an unordered
+container of symbols, indexed by name.
+</p>
+<p>The Lisp reader also considers &ldquo;shorthands&rdquo;.
+If the programmer supplied them, this allows the reader to find a
+symbol even if its name isn&rsquo;t present in its full form in the source
+code.  See <a class="xref" href="#Shorthands">Shorthands</a>.
+</p>
+<a class="index-entry-id" id="index-interning"></a>
+<p>If a symbol with the desired name is found, the reader uses that
+symbol.  If the obarray does not contain a symbol with that name, the
+reader makes a new symbol and adds it to the obarray.  Finding or adding
+a symbol with a certain name is called <em class="dfn">interning</em> it, and the
+symbol is then called an <em class="dfn">interned symbol</em>.
+</p>
+<p>Interning ensures that each obarray has just one symbol with any
+particular name.  Other like-named symbols may exist, but not in the
+same obarray.  Thus, the reader gets the same symbols for the same
+names, as long as you keep reading with the same obarray.
+</p>
+<p>Interning usually happens automatically in the reader, but sometimes
+other programs may want to do it.  For example, after the <kbd class="kbd">M-x</kbd>
+command obtains the command name as a string using the minibuffer, it
+then interns the string, to get the interned symbol with that name.
+As another example, a hypothetical telephone book program could intern
+the name of each looked up person&rsquo;s name as a symbol, even if the
+obarray did not contain it, so that it could attach information to
+that new symbol, such as the last time someone looked it up.
+</p>
+<a class="index-entry-id" id="index-symbol-equality"></a>
+<a class="index-entry-id" id="index-uninterned-symbol"></a>
+<p>No obarray contains all symbols; in fact, some symbols are not in any
+obarray.  They are called <em class="dfn">uninterned symbols</em>.  An uninterned
+symbol has the same four cells as other symbols; however, the only way
+to gain access to it is by finding it in some other object or as the
+value of a variable.  Uninterned symbols are sometimes useful in
+generating Lisp code, see below.
+</p>
+<a class="index-entry-id" id="index-CL-note_002d_002d_002dsymbol-in-obarrays"></a>
+<blockquote class="quotation">
+<p><b class="b">Common Lisp note:</b> Unlike Common Lisp, Emacs Lisp does not provide
+for interning the same name in several different &ldquo;packages&rdquo;, thus
+creating multiple symbols with the same name but different packages.
+Emacs Lisp provides a different namespacing system called
+&ldquo;shorthands&rdquo; (see <a class="pxref" href="#Shorthands">Shorthands</a>).
+</p></blockquote>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-obarray_002dmake"><span class="category-def">Function: </span><span><strong class="def-name">obarray-make</strong> <var class="def-var-arguments">&amp;optional size</var><a class="copiable-link" href="#index-obarray_002dmake"> &para;</a></span></dt>
+<dd><p>This function creates and returns a new obarray.
+The optional <var class="var">size</var> may be used to specify the number of symbols
+that it is expected to hold, but since obarrays grow automatically
+as needed, this rarely provides any benefit.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-obarrayp"><span class="category-def">Function: </span><span><strong class="def-name">obarrayp</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-obarrayp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is an obarray,
+<code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<p>Most of the functions below take a name and sometimes an obarray as
+arguments.  A <code class="code">wrong-type-argument</code> error is signaled if the name
+is not a string, or if the obarray is not an obarray object.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-symbol_002dname"><span class="category-def">Function: </span><span><strong class="def-name">symbol-name</strong> <var class="def-var-arguments">symbol</var><a class="copiable-link" href="#index-symbol_002dname"> &para;</a></span></dt>
+<dd><p>This function returns the string that is <var class="var">symbol</var>&rsquo;s name.  For example:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(symbol-name 'foo)
+     &rArr; &quot;foo&quot;
+</pre></div></div>
+
+<p><strong class="strong">Warning:</strong> Never alter the string returned by that function.
+Doing that might make Emacs dysfunctional, and might even crash Emacs.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-uninterned-symbol_002c-and-generating-Lisp-code"></a>
+<p>Creating an uninterned symbol is useful in generating Lisp code,
+because an uninterned symbol used as a variable in the code you
+generate cannot clash with any variables used in other Lisp programs.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dsymbol"><span class="category-def">Function: </span><span><strong class="def-name">make-symbol</strong> <var class="def-var-arguments">name</var><a class="copiable-link" href="#index-make_002dsymbol"> &para;</a></span></dt>
+<dd><p>This function returns a newly-allocated, uninterned symbol whose name is
+<var class="var">name</var> (which must be a string).  Its value and function definition
+are void, and its property list is <code class="code">nil</code>.  In the example below,
+the value of <code class="code">sym</code> is not <code class="code">eq</code> to <code class="code">foo</code> because it is a
+distinct uninterned symbol whose name is also &lsquo;<samp class="samp">foo</samp>&rsquo;.
+</p>
+<div class="example">
+<pre class="example-preformatted">(setq sym (make-symbol &quot;foo&quot;))
+     &rArr; foo
+(eq sym 'foo)
+     &rArr; nil
+</pre></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-gensym"><span class="category-def">Function: </span><span><strong class="def-name">gensym</strong> <var class="def-var-arguments">&amp;optional prefix</var><a class="copiable-link" href="#index-gensym"> &para;</a></span></dt>
+<dd><p>This function returns a symbol using <code class="code">make-symbol</code>, whose name is
+made by appending <code class="code">gensym-counter</code> to <var class="var">prefix</var> and incrementing
+that counter, guaranteeing that no two calls to this function will
+generate a symbol with the same name.  The prefix defaults to
+<code class="code">&quot;g&quot;</code>.
+</p></dd></dl>
+
+<p>To avoid problems when accidentally interning printed representation
+of generated code (see <a class="pxref" href="Lisp-Data-Types.html#Printed-Representation">Printed Representation and Read Syntax</a>), it is recommended
+to use <code class="code">gensym</code> instead of <code class="code">make-symbol</code>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-intern"><span class="category-def">Function: </span><span><strong class="def-name">intern</strong> <var class="def-var-arguments">name &amp;optional obarray</var><a class="copiable-link" href="#index-intern"> &para;</a></span></dt>
+<dd><p>This function returns the interned symbol whose name is <var class="var">name</var>.  If
+there is no such symbol in the obarray <var class="var">obarray</var>, <code class="code">intern</code>
+creates a new one, adds it to the obarray, and returns it.  If
+<var class="var">obarray</var> is omitted, the value of the global variable
+<code class="code">obarray</code> is used.
+</p>
+<div class="example">
+<pre class="example-preformatted">(setq sym (intern &quot;foo&quot;))
+     &rArr; foo
+(eq sym 'foo)
+     &rArr; t
+
+(setq sym1 (intern &quot;foo&quot; other-obarray))
+     &rArr; foo
+(eq sym1 'foo)
+     &rArr; nil
+</pre></div>
+</dd></dl>
+
+<a class="index-entry-id" id="index-CL-note_002d_002d_002dinterning-existing-symbol"></a>
+<blockquote class="quotation">
+<p><b class="b">Common Lisp note:</b> In Common Lisp, you can intern an existing symbol
+in an obarray.  In Emacs Lisp, you cannot do this, because the argument
+to <code class="code">intern</code> must be a string, not a symbol.
+</p></blockquote>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-intern_002dsoft"><span class="category-def">Function: </span><span><strong class="def-name">intern-soft</strong> <var class="def-var-arguments">name &amp;optional obarray</var><a class="copiable-link" href="#index-intern_002dsoft"> &para;</a></span></dt>
+<dd><p>This function returns the symbol in <var class="var">obarray</var> whose name is
+<var class="var">name</var>, or <code class="code">nil</code> if <var class="var">obarray</var> has no symbol with that name.
+Therefore, you can use <code class="code">intern-soft</code> to test whether a symbol with
+a given name is already interned.  If <var class="var">obarray</var> is omitted, the
+value of the global variable <code class="code">obarray</code> is used.
+</p>
+<p>The argument <var class="var">name</var> may also be a symbol; in that case,
+the function returns <var class="var">name</var> if <var class="var">name</var> is interned
+in the specified obarray, and otherwise <code class="code">nil</code>.
+</p>
+<div class="example">
+<pre class="example-preformatted">(intern-soft &quot;frazzle&quot;)        ; <span class="r">No such symbol exists.</span>
+     &rArr; nil
+(make-symbol &quot;frazzle&quot;)        ; <span class="r">Create an uninterned one.</span>
+     &rArr; frazzle
+</pre><div class="group"><pre class="example-preformatted">(intern-soft &quot;frazzle&quot;)        ; <span class="r">That one cannot be found.</span>
+     &rArr; nil
+</pre></div><div class="group"><pre class="example-preformatted">(setq sym (intern &quot;frazzle&quot;))  ; <span class="r">Create an interned one.</span>
+     &rArr; frazzle
+</pre></div><div class="group"><pre class="example-preformatted">(intern-soft &quot;frazzle&quot;)        ; <span class="r">That one can be found!</span>
+     &rArr; frazzle
+</pre></div><div class="group"><pre class="example-preformatted">(eq sym 'frazzle)              ; <span class="r">And it is the same one.</span>
+     &rArr; t
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-obarray-1"><span class="category-def">Variable: </span><span><strong class="def-name">obarray</strong><a class="copiable-link" href="#index-obarray-1"> &para;</a></span></dt>
+<dd><p>This variable is the standard obarray for use by <code class="code">intern</code> and
+<code class="code">read</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-mapatoms"><span class="category-def">Function: </span><span><strong class="def-name">mapatoms</strong> <var class="def-var-arguments">function &amp;optional obarray</var><a class="copiable-link" href="#index-mapatoms"> &para;</a></span></dt>
+<dd><a class="anchor" id="Definition-of-mapatoms"></a><p>This function calls <var class="var">function</var> once with each symbol in the obarray
+<var class="var">obarray</var>.  Then it returns <code class="code">nil</code>.  If <var class="var">obarray</var> is
+omitted, it defaults to the value of <code class="code">obarray</code>, the standard
+obarray for ordinary symbols.
+</p>
+<div class="example">
+<pre class="example-preformatted">(setq count 0)
+     &rArr; 0
+(defun count-syms (s)
+  (setq count (1+ count)))
+     &rArr; count-syms
+(mapatoms 'count-syms)
+     &rArr; nil
+count
+     &rArr; 1871
+</pre></div>
+
+<p>See <code class="code">documentation</code> in <a class="ref" href="Documentation.html#Accessing-Documentation">Access to Documentation Strings</a>, for another
+example using <code class="code">mapatoms</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-unintern"><span class="category-def">Function: </span><span><strong class="def-name">unintern</strong> <var class="def-var-arguments">symbol obarray</var><a class="copiable-link" href="#index-unintern"> &para;</a></span></dt>
+<dd><p>This function deletes <var class="var">symbol</var> from the obarray <var class="var">obarray</var>.  If
+<code class="code">symbol</code> is not actually in the obarray, <code class="code">unintern</code> does
+nothing.  If <var class="var">obarray</var> is <code class="code">nil</code>, the current obarray is used.
+</p>
+<p>If you provide a string instead of a symbol as <var class="var">symbol</var>, it stands
+for a symbol name.  Then <code class="code">unintern</code> deletes the symbol (if any) in
+the obarray which has that name.  If there is no such symbol,
+<code class="code">unintern</code> does nothing.
+</p>
+<p>If <code class="code">unintern</code> does delete a symbol, it returns <code class="code">t</code>.  Otherwise
+it returns <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-obarray_002dclear"><span class="category-def">Function: </span><span><strong class="def-name">obarray-clear</strong> <var class="def-var-arguments">obarray</var><a class="copiable-link" href="#index-obarray_002dclear"> &para;</a></span></dt>
+<dd><p>This function removes all symbols from <var class="var">obarray</var>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Symbol-Properties">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Shorthands" rel="next">Shorthands</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Creating-Symbols" rel="prev">Creating and Interning Symbols</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Symbols" rel="up">Symbols</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Symbol-Properties-1"><span>9.4 Symbol Properties<a class="copiable-link" href="#Symbol-Properties-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-symbol-property"></a>
+
+<p>A symbol may possess any number of <em class="dfn">symbol properties</em>, which
+can be used to record miscellaneous information about the symbol.  For
+example, when a symbol has a <code class="code">risky-local-variable</code> property with
+a non-<code class="code">nil</code> value, that means the variable which the symbol names
+is a risky file-local variable (see <a class="pxref" href="Variables.html#File-Local-Variables">File Local Variables</a>).
+</p>
+<p>Each symbol&rsquo;s properties and property values are stored in the
+symbol&rsquo;s property list cell (see <a class="pxref" href="#Symbol-Components">Symbol Components</a>), in the form
+of a property list (see <a class="pxref" href="Lists.html#Property-Lists">Property Lists</a>).
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Symbol-Plists">Accessing Symbol Properties</a></li>
+<li><a href="#Standard-Properties">Standard Symbol Properties</a></li>
+</ul>
+<hr>
+<div class="subsection-level-extent" id="Symbol-Plists">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Standard-Properties" rel="next">Standard Symbol Properties</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Symbol-Properties" rel="up">Symbol Properties</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Accessing-Symbol-Properties"><span>9.4.1 Accessing Symbol Properties<a class="copiable-link" href="#Accessing-Symbol-Properties"> &para;</a></span></h4>
+
+<p>The following functions can be used to access symbol properties.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-get"><span class="category-def">Function: </span><span><strong class="def-name">get</strong> <var class="def-var-arguments">symbol property</var><a class="copiable-link" href="#index-get"> &para;</a></span></dt>
+<dd><p>This function returns the value of the property named <var class="var">property</var>
+in <var class="var">symbol</var>&rsquo;s property list.  If there is no such property, it
+returns <code class="code">nil</code>.  Thus, there is no distinction between a value of
+<code class="code">nil</code> and the absence of the property.
+</p>
+<p>The name <var class="var">property</var> is compared with the existing property names
+using <code class="code">eq</code>, so any object is a legitimate property.
+</p>
+<p>See <code class="code">put</code> for an example.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-put"><span class="category-def">Function: </span><span><strong class="def-name">put</strong> <var class="def-var-arguments">symbol property value</var><a class="copiable-link" href="#index-put"> &para;</a></span></dt>
+<dd><p>This function puts <var class="var">value</var> onto <var class="var">symbol</var>&rsquo;s property list under
+the property name <var class="var">property</var>, replacing any previous property value.
+The <code class="code">put</code> function returns <var class="var">value</var>.
+</p>
+<div class="example">
+<pre class="example-preformatted">(put 'fly 'verb 'transitive)
+     &rArr;'transitive
+(put 'fly 'noun '(a buzzing little bug))
+     &rArr; (a buzzing little bug)
+(get 'fly 'verb)
+     &rArr; transitive
+(symbol-plist 'fly)
+     &rArr; (verb transitive noun (a buzzing little bug))
+</pre></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-symbol_002dplist"><span class="category-def">Function: </span><span><strong class="def-name">symbol-plist</strong> <var class="def-var-arguments">symbol</var><a class="copiable-link" href="#index-symbol_002dplist"> &para;</a></span></dt>
+<dd><p>This function returns the property list of <var class="var">symbol</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-setplist"><span class="category-def">Function: </span><span><strong class="def-name">setplist</strong> <var class="def-var-arguments">symbol plist</var><a class="copiable-link" href="#index-setplist"> &para;</a></span></dt>
+<dd><p>This function sets <var class="var">symbol</var>&rsquo;s property list to <var class="var">plist</var>.
+Normally, <var class="var">plist</var> should be a well-formed property list, but this is
+not enforced.  The return value is <var class="var">plist</var>.
+</p>
+<div class="example">
+<pre class="example-preformatted">(setplist 'foo '(a 1 b (2 3) c nil))
+     &rArr; (a 1 b (2 3) c nil)
+(symbol-plist 'foo)
+     &rArr; (a 1 b (2 3) c nil)
+</pre></div>
+
+<p>For symbols in special obarrays, which are not used for ordinary
+purposes, it may make sense to use the property list cell in a
+nonstandard fashion; in fact, the abbrev mechanism does so
+(see <a class="pxref" href="Abbrevs.html#Abbrevs">Abbrevs and Abbrev Expansion</a>).
+</p>
+<p>You could define <code class="code">put</code> in terms of <code class="code">setplist</code> and
+<code class="code">plist-put</code>, as follows:
+</p>
+<div class="example">
+<pre class="example-preformatted">(defun put (symbol prop value)
+  (setplist symbol
+            (plist-put (symbol-plist symbol) prop value)))
+</pre></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-function_002dget"><span class="category-def">Function: </span><span><strong class="def-name">function-get</strong> <var class="def-var-arguments">symbol property &amp;optional autoload</var><a class="copiable-link" href="#index-function_002dget"> &para;</a></span></dt>
+<dd><p>This function is identical to <code class="code">get</code>, except that if <var class="var">symbol</var>
+is the name of a function alias, it looks in the property list of the
+symbol naming the actual function.  See <a class="xref" href="Functions.html#Defining-Functions">Defining Functions</a>.  If the
+optional argument <var class="var">autoload</var> is non-<code class="code">nil</code>, and <var class="var">symbol</var>
+is auto-loaded, this function will try to autoload it, since
+autoloading might set <var class="var">property</var> of <var class="var">symbol</var>.  If
+<var class="var">autoload</var> is the symbol <code class="code">macro</code>, only try autoloading if
+<var class="var">symbol</var> is an auto-loaded macro.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-function_002dput"><span class="category-def">Function: </span><span><strong class="def-name">function-put</strong> <var class="def-var-arguments">function property value</var><a class="copiable-link" href="#index-function_002dput"> &para;</a></span></dt>
+<dd><p>This function sets <var class="var">property</var> of <var class="var">function</var> to <var class="var">value</var>.
+<var class="var">function</var> should be a symbol.  This function is preferred to
+calling <code class="code">put</code> for setting properties of a function, because it
+will allow us some day to implement remapping of old properties to new
+ones.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Standard-Properties">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Symbol-Plists" rel="prev">Accessing Symbol Properties</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Symbol-Properties" rel="up">Symbol Properties</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Standard-Symbol-Properties"><span>9.4.2 Standard Symbol Properties<a class="copiable-link" href="#Standard-Symbol-Properties"> &para;</a></span></h4>
+
+<p>Here, we list the symbol properties which are used for special
+purposes in Emacs.  In the following table, whenever we say &ldquo;the
+named function&rdquo;, that means the function whose name is the relevant
+symbol; similarly for &ldquo;the named variable&rdquo; etc.
+</p>
+<dl class="table">
+<dt><code class="code">:advertised-binding</code></dt>
+<dd><p>This property value specifies the preferred key binding, when showing
+documentation, for the named function.  See <a class="xref" href="Documentation.html#Keys-in-Documentation">Substituting Key Bindings in Documentation</a>.
+</p>
+</dd>
+<dt><code class="code">char-table-extra-slots</code></dt>
+<dd><p>The value, if non-<code class="code">nil</code>, specifies the number of extra slots in
+the named char-table type.  See <a class="xref" href="Sequences-Arrays-Vectors.html#Char_002dTables">Char-Tables</a>.
+</p>
+</dd>
+<dt><code class="code">customized-face</code></dt>
+<dt><code class="code">face-defface-spec</code></dt>
+<dt><code class="code">saved-face</code></dt>
+<dt><code class="code">theme-face</code></dt>
+<dd><p>These properties are used to record a face&rsquo;s standard, saved,
+customized, and themed face specs.  Do not set them directly; they are
+managed by <code class="code">defface</code> and related functions.  See <a class="xref" href="Display.html#Defining-Faces">Defining Faces</a>.
+</p>
+</dd>
+<dt><code class="code">customized-value</code></dt>
+<dt><code class="code">saved-value</code></dt>
+<dt><code class="code">standard-value</code></dt>
+<dt><code class="code">theme-value</code></dt>
+<dd><p>These properties are used to record a customizable variable&rsquo;s standard
+value, saved value, customized-but-unsaved value, and themed values.
+Do not set them directly; they are managed by <code class="code">defcustom</code> and
+related functions.  See <a class="xref" href="Customization.html#Variable-Definitions">Defining Customization Variables</a>.
+</p>
+</dd>
+<dt><code class="code">definition-name</code></dt>
+<dt><code class="code">find-function-type-alist</code></dt>
+<dd><p>These properties help find the definition of a symbol in the source
+code when it might be hard to find the definition by textual search
+of the source file, as when the symbol is defined by a macro.
+See <a class="xref" href="Functions.html#Finding-Definitions">Finding Definitions</a>.
+</p>
+</dd>
+<dt><code class="code">disabled</code></dt>
+<dd><p>If the value is non-<code class="code">nil</code>, the named function is disabled as a
+command.  See <a class="xref" href="Command-Loop.html#Disabling-Commands">Disabling Commands</a>.
+</p>
+</dd>
+<dt><code class="code">face-documentation</code></dt>
+<dd><p>The value stores the documentation string of the named face.  This is
+set automatically by <code class="code">defface</code>.  See <a class="xref" href="Display.html#Defining-Faces">Defining Faces</a>.
+</p>
+</dd>
+<dt><code class="code">history-length</code></dt>
+<dd><p>The value, if non-<code class="code">nil</code>, specifies the maximum minibuffer history
+length for the named history list variable.  See <a class="xref" href="Minibuffers.html#Minibuffer-History">Minibuffer History</a>.
+</p>
+</dd>
+<dt><a id="index-important_002dreturn_002dvalue-_0028symbol-property_0029"></a><span><code class="code">important-return-value</code><a class="copiable-link" href="#index-important_002dreturn_002dvalue-_0028symbol-property_0029"> &para;</a></span></dt>
+<dd><p>A non-<code class="code">nil</code> value makes the byte compiler warn about code that
+calls the named function without using its returned value.  This is
+useful for functions where doing so is likely to be a mistake.
+This property is normally added to a function with <code class="code">declare</code>
+(see <a class="pxref" href="Functions.html#Declare-Form">The <code class="code">declare</code> Form</a>).
+</p>
+</dd>
+<dt><code class="code">interactive-form</code></dt>
+<dd><p>The value is an interactive form for the named function.  Normally,
+you should not set this directly; use the <code class="code">interactive</code> special
+form instead.  See <a class="xref" href="Command-Loop.html#Using-Interactive">Using <code class="code">interactive</code></a>.
+</p>
+</dd>
+<dt><code class="code">interactive-only</code></dt>
+<dd><p>If the value is non-<code class="code">nil</code>, the named function should not be called
+from Lisp.  The value is an error string or the function to call
+instead.  See <a class="xref" href="Command-Loop.html#Defining-Commands">Defining Commands</a>.
+</p>
+</dd>
+<dt><code class="code">menu-alias</code></dt>
+<dd><p>If non-nil, this symbol is an alias menu entry, and its own key binding
+should not be shown.  See <a class="xref" href="Keymaps.html#Alias-Menu-Items">Alias Menu Items</a>.
+</p>
+</dd>
+<dt><code class="code">menu-enable</code></dt>
+<dd><p>The value is an expression for determining whether the named menu item
+should be enabled in menus.  See <a class="xref" href="Keymaps.html#Simple-Menu-Items">Simple Menu Items</a>.
+</p>
+</dd>
+<dt><code class="code">mode-class</code></dt>
+<dd><p>If the value is <code class="code">special</code>, the named major mode is special.
+See <a class="xref" href="Modes.html#Major-Mode-Conventions">Major Mode Conventions</a>.
+</p>
+</dd>
+<dt><code class="code">ignored-mouse-command</code></dt>
+<dt><code class="code">mouse-1-menu-command</code></dt>
+<dd><p>These properties affect how commands bound to <code class="code">down-mouse-1</code> behave.
+See <a class="xref" href="Command-Loop.html#Touchscreen-Events">Touchscreen Events</a>.
+</p>
+</dd>
+<dt><code class="code">permanent-local</code></dt>
+<dd><p>If the value is non-<code class="code">nil</code>, the named variable is a buffer-local
+variable whose value should not be reset when changing major modes.
+See <a class="xref" href="Variables.html#Creating-Buffer_002dLocal">Creating and Deleting Buffer-Local Bindings</a>.
+</p>
+</dd>
+<dt><code class="code">permanent-local-hook</code></dt>
+<dd><p>If the value is non-<code class="code">nil</code>, the named function should not be
+deleted from the local value of a hook variable when changing major
+modes.  See <a class="xref" href="Modes.html#Setting-Hooks">Setting Hooks</a>.
+</p>
+</dd>
+<dt><a id="index-pure-_0028symbol-property_0029"></a><span><code class="code">pure</code><a class="copiable-link" href="#index-pure-_0028symbol-property_0029"> &para;</a></span></dt>
+<dd><p>If the value is non-<code class="code">nil</code>, the named function is considered to be
+pure (see <a class="pxref" href="Functions.html#What-Is-a-Function">What Is a Function?</a>).  Calls with constant arguments can
+be evaluated at compile time.  This may shift run time errors to
+compile time.  This property is normally added to a function with
+<code class="code">declare</code> (see <a class="pxref" href="Functions.html#Declare-Form">The <code class="code">declare</code> Form</a>).
+</p>
+</dd>
+<dt><code class="code">risky-local-variable</code></dt>
+<dd><p>If the value is non-<code class="code">nil</code>, the named variable is considered risky
+as a file-local variable.  See <a class="xref" href="Variables.html#File-Local-Variables">File Local Variables</a>.
+</p>
+</dd>
+<dt><a id="index-safe_002dfunction-_0028symbol-property_0029"></a><span><code class="code">safe-function</code><a class="copiable-link" href="#index-safe_002dfunction-_0028symbol-property_0029"> &para;</a></span></dt>
+<dd><p>If the value is non-<code class="code">nil</code>, the named function is considered
+generally safe for evaluation.  See <a class="xref" href="Functions.html#Function-Safety">Determining whether a Function is Safe to Call</a>.
+</p>
+</dd>
+<dt><code class="code">safe-local-eval-function</code></dt>
+<dd><p>If the value is non-<code class="code">nil</code>, the named function is safe to call in
+file-local evaluation forms.  See <a class="xref" href="Variables.html#File-Local-Variables">File Local Variables</a>.
+</p>
+</dd>
+<dt><code class="code">safe-local-variable</code></dt>
+<dd><p>The value specifies a function for determining safe file-local values
+for the named variable.  See <a class="xref" href="Variables.html#File-Local-Variables">File Local Variables</a>.
+</p>
+</dd>
+<dt><a id="index-side_002deffect_002dfree-_0028symbol-property_0029"></a><span><code class="code">side-effect-free</code><a class="copiable-link" href="#index-side_002deffect_002dfree-_0028symbol-property_0029"> &para;</a></span></dt>
+<dd><p>A non-<code class="code">nil</code> value indicates that the named function is free of
+side effects (see <a class="pxref" href="Functions.html#What-Is-a-Function">What Is a Function?</a>), so the byte compiler may
+ignore a call whose value is unused.  If the property&rsquo;s value is
+<code class="code">error-free</code>, the byte compiler may even delete such unused
+calls.  In addition to byte compiler optimizations, this property is
+also used for determining function safety (see <a class="pxref" href="Functions.html#Function-Safety">Determining whether a Function is Safe to Call</a>).
+This property is normally added to a function with
+<code class="code">declare</code> (see <a class="pxref" href="Functions.html#Declare-Form">The <code class="code">declare</code> Form</a>).
+</p>
+</dd>
+<dt><code class="code">undo-inhibit-region</code></dt>
+<dd><p>If non-<code class="code">nil</code>, the named function prevents the <code class="code">undo</code> operation
+from being restricted to the active region, if <code class="code">undo</code> is invoked
+immediately after the function.  See <a class="xref" href="Text.html#Undo">Undo</a>.
+</p>
+</dd>
+<dt><code class="code">variable-documentation</code></dt>
+<dd><p>If non-<code class="code">nil</code>, this specifies the named variable&rsquo;s documentation
+string.  This is set automatically by <code class="code">defvar</code> and related
+functions.  See <a class="xref" href="Documentation.html#Documentation-Basics">Documentation Basics</a>.
+</p></dd>
+</dl>
+
+<hr>
+</div>
+</div>
+<div class="section-level-extent" id="Shorthands">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Symbols-with-Position" rel="next">Symbols with Position</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Symbol-Properties" rel="prev">Symbol Properties</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Symbols" rel="up">Symbols</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Shorthands-1"><span>9.5 Shorthands<a class="copiable-link" href="#Shorthands-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-shorthands"></a>
+<a class="index-entry-id" id="index-symbolic-shorthands"></a>
+<a class="index-entry-id" id="index-namespacing"></a>
+<a class="index-entry-id" id="index-namespaces"></a>
+
+<p>The symbol <em class="dfn">shorthands</em>, sometimes known as &ldquo;renamed symbols&rdquo;, are
+symbolic forms found in Lisp source.  They&rsquo;re just like regular
+symbolic forms, except that when the Lisp reader encounters them, it
+produces symbols which have a different and usually longer <em class="dfn">print
+name</em> (see <a class="pxref" href="#Symbol-Components">Symbol Components</a>).
+</p>
+<p>It is useful to think of shorthands as <em class="emph">abbreviating</em> the full
+names of intended symbols.  Despite this, do not confuse shorthands with the
+Abbrev system (see <a class="pxref" href="Abbrevs.html#Abbrevs">Abbrevs and Abbrev Expansion</a>).
+</p>
+<a class="index-entry-id" id="index-namespace-etiquette"></a>
+<p>Shorthands make Emacs Lisp&rsquo;s <em class="dfn">namespacing etiquette</em> easier to work
+with.  Since all symbols are stored in a single obarray
+(see <a class="pxref" href="#Creating-Symbols">Creating and Interning Symbols</a>), programmers commonly prefix each symbol
+name with the name of the library where it originates.  For example,
+the functions <code class="code">text-property-search-forward</code> and
+<code class="code">text-property-search-backward</code> both belong to the
+<samp class="file">text-property-search.el</samp> library (see <a class="pxref" href="Loading.html#Loading">Loading</a>).  By properly
+prefixing symbol names, one effectively prevents clashes between
+similarly named symbols which belong to different libraries and thus do
+different things.  However, this practice commonly originates very
+long symbols names, which are inconvenient to type and read after a
+while.  Shorthands solve these issues in a clean way.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-read_002dsymbol_002dshorthands"><span class="category-def">Variable: </span><span><strong class="def-name">read-symbol-shorthands</strong><a class="copiable-link" href="#index-read_002dsymbol_002dshorthands"> &para;</a></span></dt>
+<dd><p>This variable&rsquo;s value is an alist whose elements have the form
+<code class="code">(<var class="var">shorthand-prefix</var> . <var class="var">longhand-prefix</var>)</code>.  Each element
+instructs the Lisp reader to read every symbol form which starts with
+<var class="var">shorthand-prefix</var> as if it started with <var class="var">longhand-prefix</var>
+instead.
+</p>
+<p>This variable may only be set in file-local variables (see <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/File-Variables.html#File-Variables">Local Variables in Files</a> in <cite class="cite">The GNU Emacs Manual</cite>).
+</p></dd></dl>
+
+<p>Here&rsquo;s an example of shorthands usage in a hypothetical string
+manipulating library <samp class="file">some-nice-string-utils.el</samp>.
+</p>
+<div class="example smalllisp lisp">
+<pre class="lisp-preformatted">(defun some-nice-string-utils-split (separator s &amp;optional omit-nulls)
+  &quot;A match-data saving variant of `split-string'.&quot;
+  (save-match-data (split-string s separator omit-nulls)))
+
+(defun some-nice-string-utils-lines (s)
+  &quot;Split string S at newline characters into a list of strings.&quot;
+  (some-nice-string-utils-split &quot;\\(\r\n\\|[\n\r]\\)&quot; s))
+</pre></div>
+
+<p>As can be seen, it&rsquo;s quite tedious to read or develop this code since
+the symbol names to type are so long.  We can use shorthands to
+alleviate that.
+</p>
+<div class="example lisp">
+<pre class="lisp-preformatted">(defun snu-split (separator s &amp;optional omit-nulls)
+  &quot;A match-data saving variation on `split-string'.&quot;
+  (save-match-data (split-string s separator omit-nulls)))
+
+(defun snu-lines (s)
+  &quot;Split string S into a list of strings on newline characters.&quot;
+  (snu-split &quot;\\(\r\n\\|[\n\r]\\)&quot; s))
+
+;; Local Variables:
+;; read-symbol-shorthands: ((&quot;snu-&quot; . &quot;some-nice-string-utils-&quot;))
+;; End:
+</pre></div>
+
+<p>Even though the two excerpts look different, they are quite identical
+after the Lisp reader processes them.  Both will lead to the very same
+symbols being interned (see <a class="pxref" href="#Creating-Symbols">Creating and Interning Symbols</a>).  Thus loading or
+byte-compiling any of the two files has equivalent results.  The
+shorthands <code class="code">snu-split</code> and <code class="code">snu-lines</code> used in the second
+version are <em class="emph">not</em> interned in the obarray.  This is easily seen
+by moving point to the location where the shorthands are used and
+waiting for ElDoc (see <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Programming-Language-Doc.html#Programming-Language-Doc">Local Variables
+in Files</a> in <cite class="cite">The GNU Emacs Manual</cite>) to hint at the true full name
+of the symbol under point in the echo area.
+</p>
+<p>Since <code class="code">read-symbol-shorthands</code> is a file-local variable, it is
+possible that multiple libraries depending on
+<samp class="file">some-nice-string-utils-lines.el</samp> refer to the same symbols under
+<em class="emph">different</em> shorthands, or not using shorthands at all.  In the
+next example, the <samp class="file">my-tricks.el</samp> library refers to the symbol
+<code class="code">some-nice-string-utils-lines</code> using the <code class="code">sns-</code> prefix
+instead of <code class="code">snu-</code>.
+</p>
+<div class="example">
+<pre class="example-preformatted">(defun t-reverse-lines (s) (string-join (reverse (sns-lines s)) &quot;\n&quot;)
+
+;; Local Variables:
+;; read-symbol-shorthands: ((&quot;t-&quot; . &quot;my-tricks-&quot;)
+;;                          (&quot;sns-&quot; . &quot;some-nice-string-utils-&quot;))
+;; End:
+</pre></div>
+
+<p>Note that if you have two shorthands in the same file where one is the
+prefix of the other, the longer shorthand will be attempted first.
+This happens regardless of the order you specify shorthands in the
+local variables section of your file.
+</p>
+<div class="example">
+<pre class="example-preformatted">'(
+  t//foo ; reads to 'my-tricks--foo', not 'my-tricks-/foo'
+  t/foo  ; reads to 'my-tricks-foo'
+  )
+
+;; Local Variables:
+;; read-symbol-shorthands: ((&quot;t/&quot; . &quot;my-tricks-&quot;)
+;;                          (&quot;t//&quot; . &quot;my-tricks--&quot;))
+;; End:
+</pre></div>
+
+<ul class="mini-toc">
+<li><a href="#Exceptions">Exceptions</a></li>
+</ul>
+<div class="subsection-level-extent" id="Exceptions">
+<h4 class="subsection"><span>9.5.1 Exceptions<a class="copiable-link" href="#Exceptions"> &para;</a></span></h4>
+
+<p>There are two exceptions to rules governing Shorthand transformations:
+</p>
+<ul class="itemize mark-bullet">
+<li>Symbol forms comprised entirely of characters of
+the set &lsquo;<samp class="samp">^*+-/&lt;=&gt;_|</samp>&rsquo; are not transformed.
+For example, it&rsquo;s possible to use <code class="code">-</code> or <code class="code">/=</code> as shorthand
+prefixes, but that won&rsquo;t shadow the arithmetic <em class="emph">functions</em> of
+those names.
+
+</li><li>Symbol forms whose names start with &lsquo;<samp class="samp">#_</samp>&rsquo; are not transformed.
+</li></ul>
+
+<hr>
+</div>
+</div>
+<div class="section-level-extent" id="Symbols-with-Position">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Shorthands" rel="prev">Shorthands</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Symbols" rel="up">Symbols</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Symbols-with-Position-1"><span>9.6 Symbols with Position<a class="copiable-link" href="#Symbols-with-Position-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-symbol-with-position"></a>
+
+<a class="index-entry-id" id="index-bare-symbol"></a>
+<p>A <em class="dfn">symbol with position</em> is a symbol, called the <em class="dfn">bare symbol</em>,
+together with a nonnegative fixnum called the <em class="dfn">position</em>.
+Even though a symbol with position often acts like its bare symbol,
+it is not a symbol: instead, it is an object that has both a bare symbol
+and a position.  Because symbols with position are not symbols,
+they don&rsquo;t have entries in the obarray, though their bare symbols
+typically do (see <a class="pxref" href="#Creating-Symbols">Creating and Interning Symbols</a>).
+</p>
+<p>The byte compiler uses symbols with position,
+records in them the position of each symbol occurrence, and uses those
+positions in warning and error messages.  They shouldn&rsquo;t normally be
+used otherwise.  Doing so can cause unexpected results with basic
+Emacs functions such as <code class="code">eq</code> and <code class="code">equal</code>.
+</p>
+<p>The printed representation of a symbol with position uses the hash
+notation outlined in <a class="ref" href="Lisp-Data-Types.html#Printed-Representation">Printed Representation and Read Syntax</a>.  It looks like
+&lsquo;<samp class="samp">#&lt;symbol foo at 12345&gt;</samp>&rsquo;.  It has no read syntax.  You can cause
+just the bare symbol to be printed by binding the variable
+<code class="code">print-symbols-bare</code> to non-<code class="code">nil</code> around the print
+operation.  The byte compiler does this before writing its output to
+the compiled Lisp file.
+</p>
+<p>When the flag variable <code class="code">symbols-with-pos-enabled</code> is non-<code class="code">nil</code>,
+a symbol with position ordinarily behaves like its bare symbol.
+For example, &lsquo;<samp class="samp">(eq (position-symbol 'foo 12345) 'foo)</samp>&rsquo; yields <code class="code">t</code>,
+and <code class="code">equal</code> likewise treats a symbol with position as its bare symbol.
+</p>
+<p>When <code class="code">symbols-with-pos-enabled</code> is <code class="code">nil</code>, symbols with
+position behave as themselves, not as symbols.  For example, &lsquo;<samp class="samp">(eq
+(position-symbol 'foo 12345) 'foo)</samp>&rsquo; yields <code class="code">nil</code>, and <code class="code">equal</code>
+likewise treats a symbol with position as not equal to its bare symbol.
+</p>
+<p>Most of the time in Emacs <code class="code">symbols-with-pos-enabled</code> is
+<code class="code">nil</code>, but the byte compiler and the native compiler bind it to
+<code class="code">t</code> when they run and Emacs runs a little more slowly in this case.
+</p>
+<p>Typically, symbols with position are created by the byte compiler
+calling the reader function <code class="code">read-positioning-symbols</code>
+(see <a class="pxref" href="Read-and-Print.html#Input-Functions">Input Functions</a>).  One can also be created with the function
+<code class="code">position-symbol</code>.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-symbols_002dwith_002dpos_002denabled"><span class="category-def">Variable: </span><span><strong class="def-name">symbols-with-pos-enabled</strong><a class="copiable-link" href="#index-symbols_002dwith_002dpos_002denabled"> &para;</a></span></dt>
+<dd><p>This variable affects the behavior of symbols with position when they
+are not being printed and are not arguments to one of the functions
+defined later in this section.  When this variable is non-<code class="code">nil</code>,
+such a symbol with position behaves like its bare symbol; otherwise it
+behaves as itself, not as a symbol.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-print_002dsymbols_002dbare"><span class="category-def">Variable: </span><span><strong class="def-name">print-symbols-bare</strong><a class="copiable-link" href="#index-print_002dsymbols_002dbare"> &para;</a></span></dt>
+<dd><p>When bound to non-<code class="code">nil</code>, the Lisp printer prints only the bare
+symbol of a symbol with position, ignoring the position.
+Otherwise a symbol with position prints as itself, not as a symbol.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-symbol_002dwith_002dpos_002dp"><span class="category-def">Function: </span><span><strong class="def-name">symbol-with-pos-p</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-symbol_002dwith_002dpos_002dp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is a symbol with
+position, <code class="code">nil</code> otherwise.
+Unlike <code class="code">symbolp</code>, this function ignores <code class="code">symbols-with-pos-enabled</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-bare_002dsymbol"><span class="category-def">Function: </span><span><strong class="def-name">bare-symbol</strong> <var class="def-var-arguments">sym</var><a class="copiable-link" href="#index-bare_002dsymbol"> &para;</a></span></dt>
+<dd><p>This function returns the bare symbol of the symbol with
+position <var class="var">sym</var>, or <var class="var">sym</var> itself if it is already a symbol.
+For any other type of object, it signals an error.
+This function ignores <code class="code">symbols-with-pos-enabled</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-symbol_002dwith_002dpos_002dpos"><span class="category-def">Function: </span><span><strong class="def-name">symbol-with-pos-pos</strong> <var class="def-var-arguments">sympos</var><a class="copiable-link" href="#index-symbol_002dwith_002dpos_002dpos"> &para;</a></span></dt>
+<dd><p>This function returns the position, a nonnegative fixnum, from the symbol with
+position <var class="var">sympos</var>.  For any other type of object, it signals an error.
+This function ignores <code class="code">symbols-with-pos-enabled</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-position_002dsymbol"><span class="category-def">Function: </span><span><strong class="def-name">position-symbol</strong> <var class="def-var-arguments">sym pos</var><a class="copiable-link" href="#index-position_002dsymbol"> &para;</a></span></dt>
+<dd><p>Make a new symbol with position.  The new object&rsquo;s bare symbol is taken
+from <var class="var">sym</var>, which is either a symbol, or a symbol with position
+whose bare symbol is used.  The new object&rsquo;s position is taken from
+<var class="var">pos</var>, which is either a nonnegative fixnum, or a symbol with
+position whose position is used.
+Emacs signals an error if either argument is invalid.
+This function ignores <code class="code">symbols-with-pos-enabled</code>.
+</p></dd></dl>
+</div>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Evaluation.html#Evaluation" rel="next">Evaluation</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Hash-Tables.html#Hash-Tables" rel="prev">Hash Tables</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Emacs Lisp</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+
+
+
+</body>
+</html>

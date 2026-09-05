@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: magit-git-executable – Emacs Documentation Online</title>
+<meta name="description" content="magit-git-executable is a customizable variable defined in
+magit-git.el.
+The Git executable used by Magit on the local host.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>magit-git-executable</code></h1><p><span class="m"><code>magit-git-executable</code></span> is a <a href="/info/elisp/variable-definitions.html">customizable</a> variable defined in
+<span class="bt">magit-git.el</span>.
+<h2>Value</h2>
+<pre><code><span class="s">"git"</span>
+</code></pre>
+<h2>Documentation</h2>
+<p>The Git executable used by Magit on the local host.
+<p>On remote machines <a href="../var/magit-remote-git-executable.html"><code>magit-remote-git-executable</code></a> is used instead.
+<p>This variable was added, or its default value changed, in magit
+version 3.2.0.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-git.el</span>
+(<span class="k">defcustom</span> <span class="v">magit-git-executable</span>
+  (<span class="k">or</span> (<span class="k">and</span> (eq system-type 'windows-nt)
+           <span class="cd">;; </span><span class="c">Avoid the wrappers "cmd/git.exe" and "cmd/git.cmd",
+</span>           <span class="cd">;; </span><span class="c">which are much slower than using "bin/git.exe" directly.
+</span>           (and-let ((exec (executable-find <span class="s">"git"</span>)))
+             <span class="cd">;; </span><span class="c">Git for Windows 2.x provides cygpath so we can
+</span>             <span class="cd">;; </span><span class="c">ask it for native paths.
+</span>             (<span class="k">let*</span> ((core-exe
+                     (car (magit--early-process-lines
+                           exec <span class="s">"-c"</span>
+                           <span class="s">"alias.X=!x() { which \"$1\" | cygpath -mf -; }; x"</span>
+                           <span class="s">"X"</span> <span class="s">"git"</span>)))
+                    (hack-entry (assoc core-exe magit--git-w32-path-hack))
+                    <span class="cd">;; </span><span class="c">Running the libexec/git-core executable
+</span>                    <span class="cd">;; </span><span class="c">requires some extra PATH entries.
+</span>                    (path-hack
+                     (list (concat <span class="s">"PATH="</span>
+                                   (car (magit--early-process-lines
+                                         exec <span class="s">"-c"</span>
+                                         <span class="s">"alias.P=!cygpath -wp \"$PATH\""</span>
+                                         <span class="s">"P"</span>))))))
+               <span class="cd">;; </span><span class="c">The defcustom STANDARD expression can be
+</span>               <span class="cd">;; </span><span class="c">evaluated many times, so make sure it is
+</span>               <span class="cd">;; </span><span class="c">idempotent.
+</span>               (<span class="k">if</span> hack-entry
+                   (setcdr hack-entry path-hack)
+                 (<span class="k">push</span> (cons core-exe path-hack) magit--git-w32-path-hack))
+               core-exe)))
+      (<span class="k">and</span> (eq system-type 'darwin)
+           (executable-find <span class="s">"git"</span>))
+      <span class="s">"git"</span>)
+  <span class="doc">"The Git executable used by Magit on the local host.
+On remote machines `</span><span class="m doc">magit-remote-git-executable</span><span class="doc">' is used instead."</span>
+  <span class="bi">:package-version</span> '(magit . <span class="s">"3.2.0"</span>)
+  <span class="bi">:group</span> 'magit-process
+  <span class="bi">:type</span> 'string)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

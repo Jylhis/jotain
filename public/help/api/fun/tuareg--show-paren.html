@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg--show-paren – Emacs Documentation Online</title>
+<meta name="description" content="tuareg--show-paren is a natively compiled function defined in
+tuareg.el.
+Advice for show-paren-data-function to match comment delimiters.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg--show-paren</code></h1><p><span class="m"><code>tuareg--show-paren</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg--show-paren <a href="#:~:text="><span class="arg">ORIG-FUN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Advice for <a href="../var/show-paren-data-function.html"><code>show-paren-data-function</code></a> to match comment delimiters.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defvar</span> <span class="v">show-paren-data-function</span>)<span class="cd">; </span><span class="c">Silence the byte-compiler
+</span>
+(<span class="k">defun</span> <span class="f">tuareg--show-paren</span> (orig-fun)
+  <span class="doc">"Advice for `</span><span class="m doc">show-paren-data-function</span><span class="doc">' to match comment delimiters."</span>
+  (<span class="k">cond</span>
+   <span class="cd">;; </span><span class="c">Immediately after "*)"
+</span>   ((<span class="k">and</span> (eq (char-before) ?\))
+         (eq (char-before (1- (point))) ?*))
+    (<span class="k">let*</span> ((here-beg (- (point) 2))
+           (ppss (<span class="k">save-excursion</span> (syntax-ppss here-beg)))
+           (comment-nesting (nth 4 ppss)))
+      (<span class="k">cond</span>
+       (comment-nesting <span class="cd">; </span><span class="c">"*)" ends a comment
+</span>        (<span class="k">let*</span> ((there-beg (<span class="k">if</span> (= comment-nesting 1) (nth 8 ppss)
+                            (<span class="k">save-excursion</span> (forward-comment -1)
+                                            (point))))
+               (ofs (<span class="k">if</span> (eq (char-after (+ there-beg 2)) ?*) 3 2)))
+          (list here-beg (point) there-beg (+ there-beg ofs) nil)))
+       ((nth 3 ppss)<span class="cd">; </span><span class="c">inside a string, don't consider "*)" as a closer
+</span>        nil)
+       <span class="cd">;; </span><span class="c">Mismatch
+</span>       (t (list here-beg (point) here-beg (point) t)))))
+   <span class="cd">;; </span><span class="c">Immediately before "(*"
+</span>   ((<span class="k">and</span> (eq (char-after) ?\()
+         (eq (char-after (1+ (point))) ?*))
+    (<span class="k">save-excursion</span>
+      (<span class="k">let*</span> ((here-beg (point))
+             (ofs (<span class="k">if</span> (eq (char-after (+ here-beg 2)) ?*) 3 2))
+             (here-end (+ here-beg ofs))
+             (ppss (syntax-ppss here-end)))
+        (<span class="k">cond</span>
+         ((nth 4 ppss)<span class="cd">; </span><span class="c">"(*" starts a comment
+</span>          (<span class="k">if</span> (<span class="k">progn</span> (goto-char here-beg)
+                     (forward-comment 1))
+              (list here-beg here-end (- (point) 2) (point) nil)
+            (list here-beg here-end here-beg here-end t)))
+         ((nth 3 ppss)<span class="cd">; </span><span class="c">inside a string, don't consider "(*" as an opener
+</span>          nil)
+         <span class="cd">;; </span><span class="c">Mismatch
+</span>         (t (list here-beg here-end here-beg here-end t))))))
+   (t (funcall orig-fun))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

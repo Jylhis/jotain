@@ -1,0 +1,73 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sqlind-beginning-of-statement-1 – Emacs Documentation Online</title>
+<meta name="description" content="sqlind-beginning-of-statement-1 is a natively compiled function
+defined in sql-indent.el.
+Return the position of a block start, or nil.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sqlind-beginning-of-statement-1</code></h1><p><span class="m"><code>sqlind-beginning-of-statement-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">sql-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(sqlind-beginning-of-statement-1 <a href="#:~:text=before-,LIMIT"><span class="arg">LIMIT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the position of a block start, or nil.
+<p>But don't go before <span class="arg">LIMIT</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vgm6xb2iy00bs19rdw9z3nfi5nf8g873-emacs-packages-deps/share/emacs/site-lisp/elpa/sql-indent-1.7/sql-indent.el</span>
+(<span class="k">defun</span> <span class="f">sqlind-beginning-of-statement-1</span> (limit)
+  <span class="doc">"Return the position of a block start, or nil.
+But don't go before LIMIT."</span>
+  (<span class="k">save-excursion</span>
+    (<span class="k">catch</span> '<span class="m">done</span>
+      (<span class="k">while</span> (&gt; (point) (<span class="k">or</span> limit (point-min)))
+        (<span class="k">when</span> (re-search-backward <span class="s">";</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">:=</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\\_&lt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">declare</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">begin</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\s-+not</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?\\s-+atomic</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">cursor</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">for</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">while</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">loop</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">then</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">else</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">elsif</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">elseif</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\\$\\$"</span>
+               limit 'noerror)
+          (<span class="k">unless</span> (sqlind-in-comment-or-string (point))
+            (<span class="k">let</span> ((candidate-pos (match-end 0)))
+              (<span class="k">cond</span> ((looking-at <span class="s">")"</span>)
+                     <span class="cd">;; </span><span class="c">Skip parenthesis expressions, we don't want to find one
+</span>                     <span class="cd">;; </span><span class="c">of the keywords inside one of them and think this is a
+</span>                     <span class="cd">;; </span><span class="c">statement start.
+</span>                     (<span class="k">progn</span> (forward-char 1) (forward-sexp -1)))
+                    ((looking-at <span class="s">"cursor</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">for"</span>)
+                     (<span class="k">unless</span> (eq sql-product 'postgres)
+                       (<span class="k">throw</span> '<span class="m">done</span> (point))))
+                    ((looking-at <span class="s">"while"</span>)
+                     (<span class="k">throw</span> '<span class="m">done</span> (point)))
+                    ((looking-at <span class="s">"declare"</span>)
+                     (<span class="k">when</span> (eq sql-product 'postgres)
+                       (<span class="k">throw</span> '<span class="m">done</span> (point))))
+                    ((looking-at <span class="s">"else?if"</span>)
+                     <span class="cd">;; </span><span class="c">statement begins at the start of the keyword
+</span>                     (<span class="k">throw</span> '<span class="m">done</span> (point)))
+                    ((looking-at <span class="s">"then</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">else"</span>)
+                     <span class="cd">;; </span><span class="c">then and else start statements when they are inside
+</span>                     <span class="cd">;; </span><span class="c">blocks, not expressions.
+</span>                     (sqlind-backward-syntactic-ws)
+                     (<span class="k">when</span> (looking-at <span class="s">";"</span>)
+                       <span class="cd">;; </span><span class="c">Statement begins after the keyword
+</span>                       (<span class="k">throw</span> '<span class="m">done</span> candidate-pos)))
+                    ((looking-at <span class="s">"if"</span>)
+                     (<span class="k">when</span> (sqlind-good-if-candidate)
+                       <span class="cd">;; </span><span class="c">statement begins at the start of the keyword
+</span>                       (<span class="k">throw</span> '<span class="m">done</span> (point))))
+                    ((looking-at <span class="s">":="</span>)
+                     <span class="cd">;; </span><span class="c">assignment statements start at the assigned variable
+</span>                     (sqlind-backward-syntactic-ws)
+                     (forward-sexp -1)
+                     (<span class="k">throw</span> '<span class="m">done</span> (point)))
+                    ((looking-at <span class="s">"\\$\\$"</span>)
+                     (<span class="k">when</span> (eq sql-product 'postgres)
+                       (sqlind-forward-syntactic-ws)
+                       (<span class="k">throw</span> '<span class="m">done</span> (point))))
+                    ((sqlind-looking-at-begin-transaction)
+                     <span class="cd">;; </span><span class="c">This is a "begin transaction" call, statement begins
+</span>                     <span class="cd">;; </span><span class="c">at "begin", see #66
+</span>                     (<span class="k">throw</span> '<span class="m">done</span> (point)))
+                    ((not (sqlind-in-comment-or-string (point)))
+                     (<span class="k">throw</span> '<span class="m">done</span> candidate-pos))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

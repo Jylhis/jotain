@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: mc--cache-input-function – Emacs Documentation Online</title>
+<meta name="description" content="mc--cache-input-function is a macro defined in
+multiple-cursors-core.el.
+Advise FN-NAME to cache its value in a private variable. Cache
+is to be used by mc/execute-command-for-all-fake-cursors and
+caches will be reset by mc--reset-read-prompts. ARGS-CACHE-KEY-FN
+should transform FN-NAME's args to a unique cache-key so that
+different calls to FN-NAME during a command can return multiple
+values.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>mc--cache-input-function</code></h1><p><span class="m"><code>mc--cache-input-function</code></span> is a macro defined in
+<span class="bt">multiple-cursors-core.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">mc--cache-input-function</span> <a href="#:~:text=Advise-,FN-NAME"><span class="arg">FN-NAME</span></a> <a href="#:~:text=prompts.-,ARGS-CACHE-KEY-FN"><span class="arg">ARGS-CACHE-KEY-FN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Advise <span class="arg">FN-NAME</span> to cache its value in a private variable. Cache
+is to be used by mc/execute-command-for-all-fake-cursors and
+caches will be reset by mc--reset-read-prompts. <span class="arg">ARGS-CACHE-KEY-FN</span>
+should transform <span class="arg">FN-NAME</span>'s args to a unique cache-key so that
+different calls to <span class="arg">FN-NAME</span> during a command can return multiple
+values.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bwmgnvnjv89idk13xc843r24h4ygwjwz-emacs-packages-deps/share/emacs/site-lisp/elpa/multiple-cursors-20260419.931/multiple-cursors-core.el</span>
+(<span class="k">defmacro</span> <span class="f">mc--cache-input-function</span> (fn-name args-cache-key-fn)
+  <span class="doc">"Advise FN-NAME to cache its value in a private variable. Cache
+is to be used by mc/execute-command-for-all-fake-cursors and
+caches will be reset by mc--reset-read-prompts. ARGS-CACHE-KEY-FN
+should transform FN-NAME's args to a unique cache-key so that
+different calls to FN-NAME during a command can return multiple
+values."</span>
+  (<span class="k">let</span> ((mc-name (intern (concat <span class="s">"mc--"</span> (symbol-name fn-name)))))
+    `(<span class="k">progn</span>
+       (<span class="k">defun</span> ,mc-name (orig-fun <span class="ty">&amp;rest</span> args)
+         (<span class="k">if</span> (not (<span class="k">bound-and-true-p</span> multiple-cursors-mode))
+             (apply orig-fun args)
+           (<span class="k">let*</span> ((cache-key (cons ,(symbol-name fn-name) (,args-cache-key-fn args)))
+                  (cached-value (assoc cache-key mc--input-function-cache))
+                  (return-value (<span class="k">if</span> cached-value (cdr cached-value) (apply orig-fun args))))
+             (<span class="k">unless</span> cached-value
+               (<span class="k">push</span> (cons cache-key return-value) mc--input-function-cache))
+             return-value)))
+       (advice-add ',fn-name <span class="bi">:around</span> #',mc-name))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

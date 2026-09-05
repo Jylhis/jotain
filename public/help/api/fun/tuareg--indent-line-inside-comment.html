@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg--indent-line-inside-comment – Emacs Documentation Online</title>
+<meta name="description" content="tuareg--indent-line-inside-comment is a natively compiled function
+defined in tuareg.el.
+Indent the current line if it is inside a comment.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg--indent-line-inside-comment</code></h1><p><span class="m"><code>tuareg--indent-line-inside-comment</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg--indent-line-inside-comment)
+</code></pre>
+<h2>Documentation</h2>
+<p>Indent the current line if it is inside a comment.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg--indent-line-inside-comment</span> ()
+  <span class="doc">"Indent the current line if it is inside a comment."</span>
+  (<span class="k">let</span> ((ppss (syntax-ppss)))
+    (<span class="k">and</span> (nth 4 ppss)
+         (<span class="k">let</span> ((indent-col
+                (<span class="k">save-excursion</span>
+                  (<span class="k">let*</span> ((com-start (nth 8 ppss))
+                         (in-doc-comment
+                          (<span class="k">save-excursion</span>
+                            (goto-char com-start)
+                            (looking-at-p (<span class="k">rx</span> <span class="s">"(**"</span> (not (in <span class="s">"*"</span>))))))
+                         tag-starts-line)
+                    <span class="cd">;; </span><span class="c">Use the indentation of the previous nonempty line.
+</span>                    <span class="cd">;; </span><span class="c">If we are in a doc comment and that line
+</span>                    <span class="cd">;; </span><span class="c">starts with an @tag, and the current line
+</span>                    <span class="cd">;; </span><span class="c">doesn't, then indent to after the @tag.
+</span>                    (goto-char (max com-start (line-beginning-position)))
+                    (<span class="k">setq</span> tag-starts-line
+                          (<span class="k">and</span> in-doc-comment
+                               (looking-at-p
+                                (<span class="k">rx</span> (* (in <span class="s">" \t"</span>))
+                                    <span class="s">"@"</span> (+ lower) symbol-end))))
+                    (skip-chars-backward <span class="s">" \t\n"</span> com-start)
+                    (goto-char (max com-start (line-beginning-position)))
+                    (<span class="k">when</span> (looking-at (<span class="k">rx</span> <span class="s">"(*"</span> (* <span class="s">"*"</span>)))
+                      (goto-char (match-end 0)))
+                    (skip-chars-forward <span class="s">" \t"</span>)
+                    (<span class="k">when</span> (<span class="k">and</span> in-doc-comment
+                               (not tag-starts-line)
+                               (looking-at-p (<span class="k">rx</span> <span class="s">"@"</span> (+ lower) <span class="s">" "</span>)))
+                      (forward-char 2)))
+                  (current-column))))
+           (indent-line-to indent-col)
+           t))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

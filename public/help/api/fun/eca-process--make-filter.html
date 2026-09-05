@@ -1,0 +1,104 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-process--make-filter – Emacs Documentation Online</title>
+<meta name="description" content="eca-process--make-filter is a natively compiled function defined in
+eca-process.el.
+Return a process filter function that parse JSON-RPC from stdout.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-process--make-filter</code></h1><p><span class="m"><code>eca-process--make-filter</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-process.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-process--make-filter <a href="#:~:text=stdout.-,HANDLE-MSG"><span class="arg">HANDLE-MSG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a process filter function that parse JSON-RPC from stdout.
+<p><span class="arg">HANDLE-MSG</span> is called for each complete message parsed.
+<p>The returned closure captures parsing state across invocations so that
+messages larger than a single OS pipe read (e.g. large <span class="m"><code>write_file</code></span>
+tool calls with full diffs) are reassembled correctly.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-process.el</span>
+(<span class="k">defun</span> <span class="f">eca-process--make-filter</span> (handle-msg)
+  <span class="doc">"Return a process filter function that parse JSON-RPC from stdout.
+HANDLE-MSG is called for each complete message parsed.
+
+The returned closure captures parsing state across invocations so that
+messages larger than a single OS pipe read (e.g. large `</span><span class="m doc">write_file</span><span class="doc">'
+tool calls with full diffs) are reassembled correctly."</span>
+  (<span class="k">let</span> (<span class="cd">;; </span><span class="c">Persistent state across filter invocations:
+</span>        (leftovers nil)
+        (body-length nil)
+        (body-received 0)
+        (body nil))
+    (<span class="k">lambda</span> (_proc raw-output)
+      (<span class="k">let</span> ((gc-cons-threshold (max gc-cons-threshold eca-min-gc-cons-threshold))
+            chunk)
+        (<span class="k">setf</span> chunk (<span class="k">if</span> (s-blank? leftovers)
+                        (encode-coding-string raw-output 'utf-8-unix t)
+                      (concat leftovers (encode-coding-string raw-output 'utf-8-unix t))))
+        (<span class="k">setf</span> leftovers nil)
+        (<span class="k">let</span> (messages)
+          (<span class="k">while</span> (not (s-blank? chunk))
+            (<span class="k">if</span> (not body-length)
+                <span class="cd">;; </span><span class="c">Read headers
+</span>                (<span class="k">if-let*</span> ((body-sep-pos (string-match-p <span class="s">"\r\n\r\n"</span> chunk)))
+                    <span class="cd">;; </span><span class="c">We've got all the headers, handle them all at once:
+</span>                    (<span class="k">setf</span> body-length (<span class="k">let*</span> ((headers (mapcar #'eca-process--parse-header
+                                                              (split-string
+                                                               (substring-no-properties chunk
+                                                                                        (<span class="k">or</span> (string-match-p <span class="s">"Content-Length"</span> chunk)
+                                                                                            (<span class="w">error</span> <span class="s">"Unable to find Content-Length header"</span>))
+                                                                                        body-sep-pos)
+                                                               <span class="s">"\r\n"</span>)))
+                                             (content-length (cdr (assoc <span class="s">"Content-Length"</span> headers))))
+                                        (<span class="k">if</span> content-length
+                                            (string-to-number content-length)
+                                          <span class="cd">;; </span><span class="c">This usually means either the server or our parser is
+</span>                                          <span class="cd">;; </span><span class="c">screwed up with a previous Content-Length
+</span>                                          (<span class="w">error</span> <span class="s">"No Content-Length header"</span>)))
+                          body-received 0
+                          body nil
+                          chunk (substring-no-properties chunk (+ body-sep-pos 4)))
+
+                  <span class="cd">;; </span><span class="c">Haven't found the end of the headers yet. Save everything
+</span>                  <span class="cd">;; </span><span class="c">for when the next chunk arrives and await further input.
+</span>                  (<span class="k">setf</span> leftovers chunk
+                        chunk nil))
+              (<span class="k">let*</span> ((chunk-length (string-bytes chunk))
+                     (left-to-receive (- body-length body-received))
+                     (this-body (<span class="k">if</span> (&lt; left-to-receive chunk-length)
+                                    (<span class="k">prog1</span> (substring-no-properties chunk 0 left-to-receive)
+                                      (<span class="k">setf</span> chunk (substring-no-properties chunk left-to-receive)))
+                                  (<span class="k">prog1</span> chunk
+                                    (<span class="k">setf</span> chunk nil))))
+                     (body-bytes (string-bytes this-body)))
+                (<span class="k">push</span> this-body body)
+                (<span class="k">setf</span> body-received (+ body-received body-bytes))
+                (<span class="k">when</span> (&gt;= chunk-length left-to-receive)
+                  (<span class="k">condition-case</span> err
+                      (<span class="k">with-temp-buffer</span>
+                        (apply #'insert
+                               (nreverse
+                                (<span class="k">prog1</span> body
+                                  (<span class="k">setf</span> body-length nil
+                                        body-received 0
+                                        body nil))))
+                        (decode-coding-region (point-min)
+                                              (point-max)
+                                              'utf-8)
+                        (goto-char (point-min))
+                        (<span class="k">push</span> (<span class="k">eca-api--json-read-buffer</span>) messages))
+
+                    (<span class="w">error</span>
+                     (<span class="k">setf</span> body-length nil
+                           body-received 0
+                           body nil)
+                     (eca-warn <span class="s">"Failed to parse the following chunk:\n'''</span><span class="m s">\n%s\n</span><span class="s">'''\nwith message %s"</span>
+                               (concat leftovers raw-output)
+                               err)))))))
+          (mapc handle-msg
+                (nreverse messages)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

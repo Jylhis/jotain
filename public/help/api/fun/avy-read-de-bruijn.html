@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: avy-read-de-bruijn – Emacs Documentation Online</title>
+<meta name="description" content="avy-read-de-bruijn is a natively compiled function defined in avy.el.
+Select from LST dispatching on KEYS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>avy-read-de-bruijn</code></h1><p><span class="m"><code>avy-read-de-bruijn</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">avy.el</span>.
+<h2>Signature</h2>
+<pre><code>(avy-read-de-bruijn <a href="#:~:text=from-,LST"><span class="arg">LST</span></a> <a href="#:~:text=on-,KEYS"><span class="arg">KEYS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Select from <span class="arg">LST</span> dispatching on <span class="arg">KEYS</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w15jf1dbl3fxkx8c35ym39v09hnaxjw9-emacs-packages-deps/share/emacs/site-lisp/elpa/avy-20241101.1357/avy.el</span>
+(<span class="k">defun</span> <span class="f">avy-read-de-bruijn</span> (lst keys)
+  <span class="doc">"Select from LST dispatching on KEYS."</span>
+  <span class="cd">;; </span><span class="c">In theory, the De Bruijn sequence B(k,n) has k^n subsequences of length n
+</span>  <span class="cd">;; </span><span class="c">(the path length) usable as paths, thus that's the lower bound.  Due to
+</span>  <span class="cd">;; </span><span class="c">partially overlapping matches, not all subsequences may be usable, so it's
+</span>  <span class="cd">;; </span><span class="c">possible that the path-len must be incremented, e.g., if we're matching
+</span>  <span class="cd">;; </span><span class="c">for x and a buffer contains xaxbxcx only every second subsequence is
+</span>  <span class="cd">;; </span><span class="c">usable for the four matches.
+</span>  (<span class="k">catch</span> '<span class="m">done</span>
+    (<span class="k">let*</span> ((path-len (ceiling (log (length lst) (length keys))))
+           (alist (avy--path-alist-1 lst path-len keys)))
+      (<span class="k">while</span> (not alist)
+        (<span class="k">cl-incf</span> path-len)
+        (<span class="k">setq</span> alist (avy--path-alist-1 lst path-len keys)))
+      (<span class="k">let*</span> ((len (length (caar alist)))
+             (i 0))
+        (<span class="k">setq</span> avy-current-path <span class="s">""</span>)
+        (<span class="k">while</span> (&lt; i len)
+          (<span class="k">dolist</span> (x (reverse alist))
+            (avy--overlay-at-full (reverse (car x)) (cdr x)))
+          (<span class="k">let</span> ((char (funcall avy-translate-char-function (read-key))))
+            (avy--remove-leading-chars)
+            (<span class="k">setq</span> alist
+                  (delq nil
+                        (mapcar (<span class="k">lambda</span> (x)
+                                  (<span class="k">when</span> (eq (caar x) char)
+                                    (cons (cdr (car x)) (cdr x))))
+                                alist)))
+            (<span class="k">setq</span> avy-current-path
+                  (concat avy-current-path (string (avy--key-to-char char))))
+            (<span class="k">cl-incf</span> i)
+            (<span class="k">unless</span> alist
+              (funcall avy-handler-function char))))
+        (cdar alist)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

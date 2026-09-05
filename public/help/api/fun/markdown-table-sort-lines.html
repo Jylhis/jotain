@@ -1,0 +1,117 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-table-sort-lines – Emacs Documentation Online</title>
+<meta name="description" content="markdown-table-sort-lines is an interactive and natively compiled
+function defined in markdown-mode.el.
+Sort table lines according to the column at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-table-sort-lines</code></h1><p><span class="m"><code>markdown-table-sort-lines</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-table-sort-lines <span class="ty">&amp;optional</span> <a href="#:~:text=If-,SORTING-TYPE"><span class="arg">SORTING-TYPE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Sort table lines according to the column at point.
+<p>The position of point indicates the column to be used for
+sorting, and the range of lines is the range between the nearest
+horizontal separator lines, or the entire table of no such lines
+exist. If point is before the first column, user will be prompted
+for the sorting column. If there is an active region, the mark
+specifies the first line and the sorting column, while point
+should be in the last line to be included into the sorting.
+<p>The command then prompts for the sorting type which can be
+alphabetically or numerically. Sorting in reverse order is also
+possible.
+<p>If <span class="arg">SORTING-TYPE</span> is specified when this function is called from a
+Lisp program, no prompting will take place. <span class="arg">SORTING-TYPE</span> must be
+a character, any of (?a ?A ?n ?N) where the capital letters
+indicate that sorting should be done in reverse order.
+<h2>Key Bindings</h2>
+<p><span class="v">markdown-mode-command-map</span> <span class="key">^</span>
+<span class="v">markdown-mode-map</span> <span class="key">C-c C-c ^</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-table-sort-lines</span> (<span class="ty">&amp;optional</span> sorting-type)
+  <span class="doc">"Sort table lines according to the column at point.
+
+The position of point indicates the column to be used for
+sorting, and the range of lines is the range between the nearest
+horizontal separator lines, or the entire table of no such lines
+exist. If point is before the first column, user will be prompted
+for the sorting column. If there is an active region, the mark
+specifies the first line and the sorting column, while point
+should be in the last line to be included into the sorting.
+
+The command then prompts for the sorting type which can be
+alphabetically or numerically. Sorting in reverse order is also
+possible.
+
+If SORTING-TYPE is specified when this function is called from a
+Lisp program, no prompting will take place. SORTING-TYPE must be
+a character, any of (?a ?A ?n ?N) where the capital letters
+indicate that sorting should be done in reverse order."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">unless</span> (markdown-table-at-point-p)
+    (<span class="w">user-error</span> <span class="s">"Not at a table"</span>))
+  <span class="cd">;; </span><span class="c">Set sorting type and column used for sorting
+</span>  (<span class="k">let</span> ((column (<span class="k">let</span> ((c (markdown-table-get-column)))
+                  (<span class="k">cond</span> ((&gt; c 0) c)
+                        ((called-interactively-p 'any)
+                         (read-number <span class="s">"Use column N for sorting: "</span>))
+                        (t 1))))
+        (sorting-type
+         (<span class="k">or</span> sorting-type
+             (read-char-exclusive
+              <span class="s">"Sort type: [a]lpha [n]umeric (A/N means reversed): "</span>))))
+    (<span class="k">save-restriction</span>
+      <span class="cd">;; </span><span class="c">Narrow buffer to appropriate sorting area
+</span>      (<span class="k">if</span> (region-active-p)
+          (narrow-to-region
+           (<span class="k">save-excursion</span>
+             (<span class="k">progn</span>
+               (goto-char (region-beginning)) (line-beginning-position)))
+           (<span class="k">save-excursion</span>
+             (<span class="k">progn</span>
+               (goto-char (region-end)) (line-end-position))))
+        (<span class="k">let</span> ((start (markdown-table-begin))
+              (end (markdown-table-end)))
+          (narrow-to-region
+           (<span class="k">save-excursion</span>
+             (<span class="k">if</span> (re-search-backward
+                  markdown-table-hline-regexp start t)
+                 (line-beginning-position 2)
+               start))
+           (<span class="k">if</span> (<span class="k">save-excursion</span> (re-search-forward
+                                markdown-table-hline-regexp end t))
+               (match-beginning 0)
+             end))))
+      <span class="cd">;; </span><span class="c">Determine arguments for `</span><span class="m c">sort-subr</span><span class="c">'
+</span>      (<span class="k">let*</span> ((extract-key-from-cell
+              (<span class="k">cl-case</span> sorting-type
+                ((?a ?A) #'markdown--remove-invisible-markup) <span class="cd">;; </span><span class="c">#'identity)
+</span>                ((?n ?N) #'string-to-number)
+                (t (<span class="w">user-error</span> <span class="s">"Invalid sorting type: %c"</span> sorting-type))))
+             (predicate
+              (<span class="k">cl-case</span> sorting-type
+                ((?n ?N) #'&lt;)
+                ((?a ?A) #'string&lt;))))
+        <span class="cd">;; </span><span class="c">Sort selected area
+</span>        (goto-char (point-min))
+        (sort-subr (memq sorting-type '(?A ?N))
+                   (<span class="k">lambda</span> ()
+                     (forward-line)
+                     (<span class="k">while</span> (<span class="k">and</span> (not (eobp))
+                                 (not (looking-at
+                                       markdown-table-dline-regexp)))
+                       (forward-line)))
+                   #'end-of-line
+                   (<span class="k">lambda</span> ()
+                     (funcall extract-key-from-cell
+                              (markdown-table-get-cell column)))
+                   nil
+                   predicate)
+        (goto-char (point-min))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

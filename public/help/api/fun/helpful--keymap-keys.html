@@ -1,0 +1,87 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: helpful--keymap-keys – Emacs Documentation Online</title>
+<meta name="description" content="helpful--keymap-keys is a natively compiled function defined in
+helpful.el.
+Return all the keys and commands in KEYMAP.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>helpful--keymap-keys</code></h1><p><span class="m"><code>helpful--keymap-keys</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">helpful.el</span>.
+<h2>Signature</h2>
+<pre><code>(helpful--keymap-keys <a href="#:~:text=in-,KEYMAP"><span class="arg">KEYMAP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return all the keys and commands in <span class="arg">KEYMAP</span>.
+<p>Flattens nested keymaps and follows remapped commands.
+<p>Returns a list of pairs (KEYCODES COMMAND), where KEYCODES is a
+vector suitable for <a href="../fun/key-description.html"><code>key-description</code></a>, and COMMAND is a smbol.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/al1y9rq93c50r6aqa0749m04ilfnar06-emacs-packages-deps/share/emacs/site-lisp/elpa/helpful-20250408.334/helpful.el</span>
+(<span class="k">defun</span> <span class="f">helpful--keymap-keys</span> (keymap)
+  <span class="doc">"Return all the keys and commands in KEYMAP.
+Flattens nested keymaps and follows remapped commands.
+
+Returns a list of pairs (KEYCODES COMMAND), where KEYCODES is a
+vector suitable for `</span><span class="m doc">key-description</span><span class="doc">', and COMMAND is a smbol."</span>
+  (<span class="k">cond</span>
+   <span class="cd">;; </span><span class="c">Prefix keys.
+</span>   ((<span class="k">and</span>
+     (symbolp keymap)
+     (fboundp keymap)
+     <span class="cd">;; </span><span class="c">Prefix keys use a keymap in the function slot of a symbol.
+</span>     (keymapp (symbol-function keymap)))
+    (helpful--keymap-keys (symbol-function keymap)))
+   <span class="cd">;; </span><span class="c">Other symbols or compiled functions mean we've reached a leaf,
+</span>   <span class="cd">;; </span><span class="c">so this is a command we can call.
+</span>   ((<span class="k">or</span>
+     (symbolp keymap)
+     (functionp keymap)
+     <span class="cd">;; </span><span class="c">Strings or vectors mean a keyboard macro.
+</span>     (stringp keymap)
+     (vectorp keymap))
+    `(([] ,keymap)))
+   ((stringp (car keymap))
+    (helpful--keymap-keys (cdr keymap)))
+   <span class="cd">;; </span><span class="c">Otherwise, recurse on the keys at this level of the keymap.
+</span>   (t
+    (<span class="k">let</span> (result)
+      (<span class="k">dolist</span> (item (cdr keymap))
+        (<span class="k">cond</span>
+         ((<span class="k">and</span> (consp item)
+               (eq (car item) 'menu-bar))
+          <span class="cd">;; </span><span class="c">Skip menu bar items.
+</span>          nil)
+         <span class="cd">;; </span><span class="c">Sparse keymaps are lists.
+</span>         ((consp item)
+          (<span class="k">-let</span> [(keycode . value) item]
+            (-each (helpful--keymap-keys value)
+              (<span class="k">-lambda</span> ((keycodes command))
+                (<span class="k">push</span> (list (vconcat (vector keycode) keycodes) command)
+                      result)))))
+         <span class="cd">;; </span><span class="c">Dense keymaps are char-tables.
+</span>         ((char-table-p item)
+          (map-char-table
+           (<span class="k">lambda</span> (keycode value)
+             (-each (helpful--keymap-keys value)
+               (<span class="k">-lambda</span> ((keycodes command))
+                 (<span class="k">push</span> (list (vconcat (vector keycode) keycodes) command)
+                       result))))
+           item))))
+      <span class="cd">;; </span><span class="c">For every command `</span><span class="m c">new-func</span><span class="c">' mapped to a command `</span><span class="m c">orig-func</span><span class="c">', show `</span><span class="m c">new-func</span><span class="c">' with
+</span>      <span class="cd">;; </span><span class="c">the key sequence for `</span><span class="m c">orig-func</span><span class="c">'.
+</span>      (<span class="k">setq</span> result
+            (-map-when
+             (<span class="k">-lambda</span> ((keycodes _))
+               (<span class="k">and</span> (&gt; (length keycodes) 1)
+                    (eq (elt keycodes 0) 'remap)))
+             (<span class="k">-lambda</span> ((keycodes command))
+               (list
+                (where-is-internal (elt keycodes 1) global-map t)
+                command))
+             result))
+      <span class="cd">;; </span><span class="c">Preserve the original order of the keymap.
+</span>      (nreverse result)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

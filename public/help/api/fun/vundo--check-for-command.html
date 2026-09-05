@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vundo--check-for-command – Emacs Documentation Online</title>
+<meta name="description" content="vundo--check-for-command is a macro defined in vundo.el.
+Sanity check before running interactive commands.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vundo--check-for-command</code></h1><p><span class="m"><code>vundo--check-for-command</code></span> is a macro defined in <span class="bt">vundo.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">vundo--check-for-command</span> <span class="ty">&amp;rest</span> <a href="#:~:text=evaluate-,BODY"><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Sanity check before running interactive commands.
+<p>Do sanity check, then evaluate <span class="arg">BODY</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/7c2696v2qdrdv2vf2im8alazibi7qq0z-emacs-packages-deps/share/emacs/site-lisp/elpa/vundo-2.4.0/vundo.el</span>
+(<span class="k">defmacro</span> <span class="f">vundo--check-for-command</span> (<span class="ty">&amp;rest</span> body)
+  <span class="doc">"Sanity check before running interactive commands.
+Do sanity check, then evaluate BODY."</span>
+  (<span class="k">declare</span> (debug (<span class="ty">&amp;rest</span> form)))
+  `(<span class="k">progn</span>
+     (<span class="k">when</span> (not (derived-mode-p 'vundo-mode))
+       (<span class="w">user-error</span> <span class="s">"Not in vundo buffer"</span>))
+     (<span class="k">when</span> (not (buffer-live-p vundo--orig-buffer))
+       (<span class="k">when</span> (y-or-n-p <span class="s">"Original buffer is gone, kill vundo buffer? "</span>)
+         (kill-buffer-and-window))
+       <span class="cd">;; </span><span class="c">Non-local exit.
+</span>       (<span class="w">user-error</span> <span class="s">""</span>))
+     <span class="cd">;; </span><span class="c">If ORIG-BUFFER changed since we last synced the vundo buffer
+</span>     <span class="cd">;; </span><span class="c">(eg, user left vundo buffer and did some edit in ORIG-BUFFER
+</span>     <span class="cd">;; </span><span class="c">then comes back), refresh to catch up.
+</span>     (<span class="k">let</span> ((undo-list (buffer-local-value
+                       'buffer-undo-list vundo--orig-buffer)))
+       <span class="cd">;; </span><span class="c">1. Refresh if the beginning is not the same.
+</span>       (<span class="k">cond</span> ((not (eq (vundo--sans-nil undo-list)
+                       (vundo--sans-nil vundo--prev-undo-list)))
+              (vundo--refresh-buffer vundo--orig-buffer (current-buffer))
+              (message <span class="s">"Refresh"</span>))
+             <span class="cd">;; </span><span class="c">2. It is possible that GC trimmed the end of undo
+</span>             <span class="cd">;; </span><span class="c">list, but that doesn't affect us:
+</span>             <span class="cd">;; </span><span class="c">`</span><span class="m c">vundo--prev-mod-list</span><span class="c">' and `</span><span class="m c">vundo--prev-undo-list</span><span class="c">' are
+</span>             <span class="cd">;; </span><span class="c">still perfectly fine. Run the command normally. Of
+</span>             <span class="cd">;; </span><span class="c">course, the next time the user invokes `</span><span class="m c">vundo</span><span class="c">', the
+</span>             <span class="cd">;; </span><span class="c">new tree will reflect the trimmed undo list.
+</span>             (t ,@body)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

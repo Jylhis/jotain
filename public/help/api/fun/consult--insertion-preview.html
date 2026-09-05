@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--insertion-preview – Emacs Documentation Online</title>
+<meta name="description" content="consult--insertion-preview is a natively compiled function defined in
+consult.el.
+State function for previewing a candidate in a specific region.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--insertion-preview</code></h1><p><span class="m"><code>consult--insertion-preview</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--insertion-preview <a href="#:~:text=from-,START"><span class="arg">START</span></a> <a href="#:~:text=to-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>State function for previewing a candidate in a specific region.
+<p>The candidates are previewed in the region from <span class="arg">START</span> to <span class="arg">END</span>.  This function is
+used as the <span class="bi">:state</span> argument for <a href="../fun/consult--read.html"><code>consult--read</code></a> in the <span class="m"><code>consult-yank</code></span> family
+of functions and in <a href="../fun/consult-completion-in-region.html"><code>consult-completion-in-region</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+<span class="cd">;;;; </span><span class="c">Commands
+</span>
+<span class="cd">;;;;; </span><span class="c">Command: consult-completion-in-region
+</span>
+(<span class="k">defun</span> <span class="f">consult--insertion-preview</span> (start end)
+  <span class="doc">"State function for previewing a candidate in a specific region.
+The candidates are previewed in the region from START to END.  This function is
+used as the `</span><span class="m doc">:state</span><span class="doc">' argument for `</span><span class="m doc">consult--read</span><span class="doc">' in the `</span><span class="m doc">consult-yank</span><span class="doc">' family
+of functions and in `</span><span class="m doc">consult-completion-in-region</span><span class="doc">'."</span>
+  (<span class="k">unless</span> (<span class="k">or</span> (minibufferp)
+              <span class="cd">;; </span><span class="c">Disable preview if anything odd is going on with the markers.
+</span>              <span class="cd">;; </span><span class="c">Otherwise we get "Marker points into wrong buffer errors".  See
+</span>              <span class="cd">;; </span><span class="c">gh:minad/consult#375, where Org mode source blocks are
+</span>              <span class="cd">;; </span><span class="c">completed in a different buffer than the original buffer.  This
+</span>              <span class="cd">;; </span><span class="c">completion is probably also problematic in my Corfu completion
+</span>              <span class="cd">;; </span><span class="c">package.
+</span>              (not (eq (window-buffer) (current-buffer)))
+              (<span class="k">and</span> (markerp start) (not (eq (marker-buffer start) (current-buffer))))
+              (<span class="k">and</span> (markerp end) (not (eq (marker-buffer end) (current-buffer)))))
+    (<span class="k">let</span> (ov)
+      (<span class="k">lambda</span> (action cand)
+        (<span class="k">cond</span>
+         ((<span class="k">and</span> (not cand) ov)
+          (delete-overlay ov)
+          (<span class="k">setq</span> ov nil))
+         ((<span class="k">and</span> (eq action 'preview) cand)
+          (<span class="k">unless</span> ov
+            (<span class="k">setq</span> ov (consult--make-overlay start end
+                                            'invisible t
+                                            'window (selected-window))))
+          <span class="cd">;; </span><span class="c">Use `</span><span class="m c">add-face-text-property</span><span class="c">' on a copy of "cand in order to merge face properties
+</span>          (<span class="k">setq</span> cand (copy-sequence cand))
+          (add-face-text-property 0 (length cand) 'consult-preview-insertion t cand)
+          <span class="cd">;; </span><span class="c">Use the `</span><span class="m c">before-string</span><span class="c">' property since the overlay might be empty.
+</span>          (overlay-put ov 'before-string cand)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

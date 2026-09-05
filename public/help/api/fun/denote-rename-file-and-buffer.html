@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: denote-rename-file-and-buffer – Emacs Documentation Online</title>
+<meta name="description" content="denote-rename-file-and-buffer is a natively compiled function defined
+in denote.el.
+Rename file named OLD-NAME to NEW-NAME, updating buffer name.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>denote-rename-file-and-buffer</code></h1><p><span class="m"><code>denote-rename-file-and-buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">denote.el</span>.
+<h2>Signature</h2>
+<pre><code>(denote-rename-file-and-buffer <a href="#:~:text=named-,OLD-NAME"><span class="arg">OLD-NAME</span></a> <a href="#:~:text=to-,NEW-NAME"><span class="arg">NEW-NAME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Rename file named <span class="arg">OLD-NAME</span> to <span class="arg">NEW-NAME</span>, updating buffer name.
+<p>If the file exists on the file system, it is renamed.  This
+function may be called when creating a new note and the file does
+not exist yet.
+<p>If a buffer is visiting the file, its name is updated.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/5x9606vmybcj80x6qrajp43rma9pa1i7-emacs-packages-deps/share/emacs/site-lisp/elpa/denote-4.2.3/denote.el</span>
+(<span class="k">defun</span> <span class="f">denote-rename-file-and-buffer</span> (old-name new-name)
+  <span class="doc">"Rename file named OLD-NAME to NEW-NAME, updating buffer name.
+
+If the file exists on the file system, it is renamed.  This
+function may be called when creating a new note and the file does
+not exist yet.
+
+If a buffer is visiting the file, its name is updated."</span>
+  (<span class="k">unless</span> (string= (expand-file-name old-name) (expand-file-name new-name))
+    (<span class="k">when</span> (<span class="k">and</span> (file-regular-p old-name)
+               (file-writable-p new-name))
+      (<span class="k">cond</span>
+       ((derived-mode-p 'dired-mode)
+        (dired-rename-file old-name new-name nil))
+       <span class="cd">;; </span><span class="c">NOTE 2024-02-25: The `</span><span class="m c">vc-rename-file</span><span class="c">' requires the file to be
+</span>       <span class="cd">;; </span><span class="c">saved, but our convention is to not save the buffer after
+</span>       <span class="cd">;; </span><span class="c">changing front matter unless we absolutely have to (allows
+</span>       <span class="cd">;; </span><span class="c">users to do `</span><span class="m c">diff-buffer-with-file</span><span class="c">', for example).
+</span>       ((<span class="k">and</span> denote-save-buffers (not (buffer-modified-p)) (vc-backend old-name))
+        (vc-rename-file old-name new-name))
+       (t
+        (rename-file old-name new-name nil))))
+    (<span class="k">when-let*</span> ((buffer (find-buffer-visiting old-name)))
+      (<span class="k">with-current-buffer</span> buffer
+        (set-visited-file-name new-name nil t)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

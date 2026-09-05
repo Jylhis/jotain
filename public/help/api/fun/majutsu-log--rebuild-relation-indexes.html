@@ -1,0 +1,40 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-log--rebuild-relation-indexes – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-log--rebuild-relation-indexes is a natively compiled function
+defined in majutsu-log.el.
+Rebuild visible relation indexes from ENTRIES.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-log--rebuild-relation-indexes</code></h1><p><span class="m"><code>majutsu-log--rebuild-relation-indexes</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-log.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-log--rebuild-relation-indexes <span class="ty">&amp;optional</span> <a href="#:~:text=from-,ENTRIES"><span class="arg">ENTRIES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Rebuild visible relation indexes from <span class="arg">ENTRIES</span>.
+<p>When <span class="arg">ENTRIES</span> is nil, use <a href="../var/majutsu-log--cached-entries.html"><code>majutsu-log--cached-entries</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-log.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-log--rebuild-relation-indexes</span> (<span class="ty">&amp;optional</span> entries)
+  <span class="doc">"Rebuild visible relation indexes from ENTRIES.
+
+When ENTRIES is nil, use `</span><span class="m doc">majutsu-log--cached-entries</span><span class="doc">'."</span>
+  (<span class="k">let</span> ((entries (<span class="k">or</span> entries majutsu-log--cached-entries))
+        (entry-by-id (make-hash-table <span class="bi">:test</span> #'equal))
+        (children-by-id (make-hash-table <span class="bi">:test</span> #'equal)))
+    (<span class="k">dolist</span> (entry entries)
+      (puthash (majutsu-log--entry-id entry) entry entry-by-id))
+    (<span class="k">dolist</span> (entry entries)
+      (<span class="k">let</span> ((child-id (majutsu-log--entry-id entry)))
+        (<span class="k">dolist</span> (parent-id (plist-get entry <span class="bi">:parent-ids</span>))
+          (<span class="k">when</span> (<span class="k">and</span> (stringp parent-id)
+                     (not (string-empty-p parent-id)))
+            (puthash parent-id
+                     (append (gethash parent-id children-by-id) (list child-id))
+                     children-by-id)))))
+    (<span class="k">setq</span> majutsu-log--entry-by-id entry-by-id)
+    (<span class="k">setq</span> majutsu-log--children-by-id children-by-id)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,109 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-branch-checkout – Emacs Documentation Online</title>
+<meta name="description" content="magit-branch-checkout is an interactive and natively compiled function
+defined in magit-branch.el.
+Checkout an existing or new local branch.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-branch-checkout</code></h1><p><span class="m"><code>magit-branch-checkout</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-branch.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-branch-checkout <a href="#:~:text="><span class="arg">BRANCH</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=chosen-,START-POINT"><span class="arg">START-POINT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Checkout an existing or new local branch.
+<p>Read a branch name from the user offering all local branches and
+a subset of remote branches as candidates.  Omit remote branches
+for which a local branch by the same name exists from the list
+of candidates.  The user can also enter a completely new branch
+name.
+<p>- If the user selects an existing local branch, then check that
+<br>&nbsp;&nbsp;out.
+<p>- If the user selects a remote branch, then create and checkout
+<br>&nbsp;&nbsp;a new local branch with the same name.  Configure the selected
+<br>&nbsp;&nbsp;remote branch as push target.
+<p>- If the user enters a new branch name, then create and check
+<br>&nbsp;&nbsp;that out, after also reading the starting-point from the user.
+<p>In the latter two cases the upstream is also set.  Whether it is
+set to the chosen <span class="arg">START-POINT</span> or something else depends on the
+value of <a href="../var/magit-branch-adjust-remote-upstream-alist.html"><code>magit-branch-adjust-remote-upstream-alist</code></a>, just like
+when using <a href="../fun/magit-branch-and-checkout.html"><code>magit-branch-and-checkout</code></a>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-branch.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">magit-branch-checkout</span> (branch <span class="ty">&amp;optional</span> start-point)
+  <span class="doc">"Checkout an existing or new local branch.
+
+Read a branch name from the user offering all local branches and
+a subset of remote branches as candidates.  Omit remote branches
+for which a local branch by the same name exists from the list
+of candidates.  The user can also enter a completely new branch
+name.
+
+- If the user selects an existing local branch, then check that
+  out.
+
+- If the user selects a remote branch, then create and checkout
+  a new local branch with the same name.  Configure the selected
+  remote branch as push target.
+
+- If the user enters a new branch name, then create and check
+  that out, after also reading the starting-point from the user.
+
+In the latter two cases the upstream is also set.  Whether it is
+set to the chosen START-POINT or something else depends on the
+value of `</span><span class="m doc">magit-branch-adjust-remote-upstream-alist</span><span class="doc">', just like
+when using `</span><span class="m doc">magit-branch-and-checkout</span><span class="doc">'."</span>
+  (<span class="k">declare</span> (interactive-only magit-call-git))
+  (<span class="k">interactive</span>
+    (<span class="k">let*</span> ((current (magit-get-current-branch))
+           (local   (magit-list-local-branch-names))
+           (remote  (seq-filter (##and (string-match <span class="s">"[</span><span class="neg s">^</span><span class="s">/]+/"</span> %)
+                                       (not (member (substring % (match-end 0))
+                                                    (cons <span class="s">"HEAD"</span> local))))
+                                (magit-list-remote-branch-names)))
+           (choices (nconc (delete current local) remote))
+           (atpoint (magit-branch-at-point))
+           (choice  (magit-completing-read
+                     <span class="s">"Checkout branch"</span> choices
+                     nil nil nil 'magit-revision-history
+                     (<span class="k">or</span> (car (member atpoint choices))
+                         (<span class="k">and</span> atpoint
+                              (car (member (<span class="k">and</span> (string-match <span class="s">"[</span><span class="neg s">^</span><span class="s">/]+/"</span> atpoint)
+                                                (substring atpoint (match-end 0)))
+                                           choices)))))))
+      (<span class="k">cond</span> ((member choice remote)
+             (list (<span class="k">and</span> (string-match <span class="s">"[</span><span class="neg s">^</span><span class="s">/]+/"</span> choice)
+                        (substring choice (match-end 0)))
+                   choice))
+            ((member choice local)
+             (list choice))
+            ((list choice (magit-read-starting-point <span class="s">"Create"</span> choice))))))
+  (<span class="k">cond</span>
+    ((not start-point)
+     (magit--checkout branch (magit-branch-arguments))
+     (magit-refresh))
+    (t
+     (<span class="k">when</span> (<span class="k">and</span> (magit-anything-modified-p t)
+                (not (transient-arg-value <span class="s">"--merge"</span> (magit-branch-arguments))))
+       (<span class="w">user-error</span> <span class="s">"Cannot checkout when there are uncommitted changes"</span>))
+     (magit-run-git-async <span class="s">"checkout"</span> (magit-branch-arguments)
+                          <span class="s">"-b"</span> branch start-point)
+     (set-process-sentinel
+      magit-this-process
+      (<span class="k">lambda</span> (process event)
+        (<span class="k">when</span> (memq (process-status process) '(exit signal))
+          (magit-branch-maybe-adjust-upstream branch start-point)
+          (<span class="k">when</span> (magit-remote-branch-p start-point)
+            (<span class="k">pcase-let</span> ((`(,remote . ,remote-branch)
+                         (magit-split-branch-name start-point)))
+              (<span class="k">when</span> (<span class="k">and</span> (equal branch remote-branch)
+                         (not (equal remote (magit-get <span class="s">"remote.pushDefault"</span>))))
+                (magit-set remote <span class="s">"branch"</span> branch <span class="s">"pushRemote"</span>))))
+          (magit-process-sentinel process event)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

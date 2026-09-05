@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: cape--super-all – Emacs Documentation Online</title>
+<meta name="description" content="cape--super-all is a natively compiled function defined in cape.el.
+Compute all candidates given STR, PRED, TABLES, EXC and CACHE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>cape--super-all</code></h1><p><span class="m"><code>cape--super-all</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">cape.el</span>.
+<h2>Signature</h2>
+<pre><code>(cape--super-all <a href="#:~:text=given-,STR"><span class="arg">STR</span></a> <a href="#:~:text=STR,-,PRED"><span class="arg">PRED</span></a> <a href="#:~:text=PRED,-,TABLES"><span class="arg">TABLES</span></a> <a href="#:~:text=TABLES,-,EXC"><span class="arg">EXC</span></a> <a href="#:~:text=and-,CACHE"><span class="arg">CACHE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Compute all candidates given <span class="arg">STR</span>, <span class="arg">PRED</span>, <span class="arg">TABLES</span>, <span class="arg">EXC</span> and <span class="arg">CACHE</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4ylqcdhr31fki9yxzd4rhd2bm54ydhdn-emacs-packages-deps/share/emacs/site-lisp/elpa/cape-20260821.1208/cape.el</span>
+(<span class="k">defun</span> <span class="f">cape--super-all</span> (str pred tables exc cache)
+  <span class="doc">"Compute all candidates given STR, PRED, TABLES, EXC and CACHE."</span>
+  (<span class="k">let</span> ((ht (make-hash-table <span class="bi">:test</span> #'equal))
+        (candidates nil))
+    (<span class="k">cl-loop</span>
+     for (main table-pred table cand-plist) in tables do
+     (<span class="k">let*</span> ((pr (<span class="k">if</span> (<span class="k">and</span> table-pred pred)
+                    (<span class="k">lambda</span> (x) (<span class="k">and</span> (funcall table-pred x) (funcall pred x)))
+                  (<span class="k">or</span> table-pred pred)))
+            (md (completion-metadata <span class="s">""</span> table pr))
+            (sort (<span class="k">or</span> (completion-metadata-get md 'display-sort-function)
+                      #'identity))
+            <span class="cd">;; </span><span class="c">Always compute candidates of the main Capf
+</span>            <span class="cd">;; </span><span class="c">tables, which come first in the tables
+</span>            <span class="cd">;; </span><span class="c">list. For the :with Capfs only compute
+</span>            <span class="cd">;; </span><span class="c">candidates if we've already determined that
+</span>            <span class="cd">;; </span><span class="c">main candidates are available.
+</span>            (cands (<span class="k">when</span> (<span class="k">or</span> main (<span class="k">or</span> exc (car cache) candidates))
+                     (funcall sort (all-completions str table pr)))))
+       <span class="cd">;; </span><span class="c">Handle duplicates with a hash table.
+</span>       (<span class="k">cl-loop</span>
+        for cand in-ref cands
+        for dup = (gethash cand ht t) do
+        (<span class="k">cond</span>
+         ((eq dup t)
+          <span class="cd">;; </span><span class="c">Candidate does not yet exist.
+</span>          (puthash cand cand-plist ht))
+         ((not (equal dup cand-plist))
+          <span class="cd">;; </span><span class="c">Duplicate candidate. Candidate plist is
+</span>          <span class="cd">;; </span><span class="c">different, therefore disambiguate the
+</span>          <span class="cd">;; </span><span class="c">candidates.
+</span>          (<span class="k">setf</span> cand (propertize cand 'cape--super
+                                 (cons cand cand-plist))))))
+       (<span class="k">when</span> cands (<span class="k">push</span> cands candidates))))
+    (<span class="k">when</span> (<span class="k">or</span> (car cache) candidates)
+      (<span class="k">setf</span> candidates (apply #'nconc (nreverse candidates))
+            (car cache) ht)
+      candidates)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dirvish-kill-buffer-h – Emacs Documentation Online</title>
+<meta name="description" content="dirvish-kill-buffer-h is a natively compiled function defined in
+dirvish.el.
+Remove buffer from session's roots, clear session when roots is empty.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dirvish-kill-buffer-h</code></h1><p><span class="m"><code>dirvish-kill-buffer-h</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dirvish.el</span>.
+<h2>Signature</h2>
+<pre><code>(dirvish-kill-buffer-h)
+</code></pre>
+<h2>Documentation</h2>
+<p>Remove buffer from session's roots, clear session when roots is empty.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a7h73ip6x5m1pxn38j7f0al6n93w904q-emacs-packages-deps/share/emacs/site-lisp/elpa/dirvish-20260725.1520/dirvish.el</span>
+(<span class="k">defun</span> <span class="f">dirvish-kill-buffer-h</span> ()
+  <span class="doc">"Remove buffer from session's roots, clear session when roots is empty."</span>
+  (<span class="k">when-let*</span> ((dv (dirvish-curr)) (buf (current-buffer)))
+    (<span class="k">setf</span> (dv-roots dv) (cl-remove-if (<span class="k">lambda</span> (i) (eq (cdr i) buf)) (dv-roots dv)))
+    (<span class="k">when</span> (eq (cdr (dv-index dv)) buf) (<span class="k">setf</span> (dv-index dv) (car (dv-roots dv))))
+    (<span class="k">if</span> (dv-roots dv) <span class="cd">; </span><span class="c">killed by user in `</span><span class="m c">ibuffer</span><span class="c">' or using `</span><span class="m c">kill-current-buffer</span><span class="c">'
+</span>        (<span class="k">when-let*</span> ((win (dv-root-window dv))
+                    ((<span class="k">and</span> (window-live-p win) (window-dedicated-p win))))
+          (<span class="k">with-selected-window</span> win <span class="cd">; </span><span class="c">prevend this dedicated window get deleted
+</span>            (<span class="k">dirvish-save-dedication</span> (switch-to-buffer (cdr (dv-index dv))))))
+      (<span class="k">when-let*</span> ((layout (dv-curr-layout dv)) (wc (dv-winconf dv)))
+        (<span class="k">cond</span> ((eq buf (window-buffer (selected-window))) <span class="cd">; </span><span class="c">in a session, reset
+</span>               (set-window-configuration wc nil t))
+              (t (<span class="k">cl-loop</span> for tab in (funcall tab-bar-tabs-function)
+                          for ws = (alist-get 'ws tab)
+                          for bs = (window-state-buffers ws)
+                          if (<span class="k">or</span> (memq buf bs) (member (buffer-name buf) bs))
+                          do (<span class="k">setf</span> (alist-get 'wc tab) wc)))))
+      (mapc #'dirvish--kill-buffer (dv-preview-buffers dv))
+      (mapc #'dirvish--kill-buffer (dv-special-buffers dv))
+      (remhash (dv-id dv) dirvish--sessions))
+    (<span class="k">when</span> (memq this-command <span class="cd">; </span><span class="c">clear lingering sessions when killing manually
+</span>                '(kill-current-buffer ibuffer-do-kill-on-deletion-marks))
+      (<span class="k">cl-loop</span> for b in (buffer-list) with rs = nil
+               unless (eq b buf) <span class="cd">; </span><span class="c">this buffer is not killed yet
+</span>               if (<span class="k">with-current-buffer</span> b (derived-mode-p 'dired-mode))
+               do (<span class="k">push</span> b rs) <span class="cd">; </span><span class="c">in case there is any lingering sessions
+</span>               finally do (<span class="k">unless</span> rs (<span class="k">setq</span> dirvish--sessions (dirvish--ht)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

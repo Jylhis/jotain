@@ -1,0 +1,184 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: logview--initialize-submode – Emacs Documentation Online</title>
+<meta name="description" content="logview--initialize-submode is a natively compiled function defined in
+logview.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>logview--initialize-submode</code></h1><p><span class="m"><code>logview--initialize-submode</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">logview.el</span>.
+<h2>Signature</h2>
+<pre><code>(logview--initialize-submode <span class="arg">NAME</span> <span class="arg">DEFINITION</span> <span class="arg">STANDARD-TIMESTAMPS</span> <span class="ty">&amp;optional</span> <span class="arg">TEST-LINE</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qid656ql5mh048bd0k84vvsbc2517lh9-emacs-packages-deps/share/emacs/site-lisp/elpa/logview-20260218.2013/logview.el</span>
+<span class="cd">;; </span><span class="c">Returns non-nil if TEST-LINE is "promising".
+</span>(<span class="k">defun</span> <span class="f">logview--initialize-submode</span> (name definition standard-timestamps <span class="ty">&amp;optional</span> test-line)
+  (<span class="k">let*</span> ((format            (cdr (assq 'format    definition)))
+         (timestamp-names   (<span class="k">when</span> test-line (cdr (assq 'timestamp definition))))
+         (timestamp-options (<span class="k">if</span> timestamp-names
+                                (mapcar (<span class="k">lambda</span> (name)
+                                          (logview--get-split-alists name <span class="s">"timestamp format"</span>
+                                                                     logview-additional-timestamp-formats logview-std-timestamp-formats))
+                                        <span class="cd">;; </span><span class="c">Don't be too strict to the definition.  Many if not most users
+</span>                                        <span class="cd">;; </span><span class="c">don't go through customization interface to create it.
+</span>                                        (<span class="k">if</span> (listp timestamp-names) timestamp-names (list timestamp-names)))
+                              standard-timestamps))
+         (search-from       0)
+         (parts             (list <span class="s">"^"</span>))
+         next
+         end
+         starter terminator
+         levels
+         timestamp-at
+         cannot-match
+         features
+         have-explicit-message
+         (add-text-part (<span class="k">lambda</span> (from to)
+                          (<span class="k">push</span> (replace-regexp-in-string <span class="s">"[ \t]+"</span> <span class="s">"[ \t]+"</span> (regexp-quote (substring format from to))) parts))))
+    (<span class="k">unless</span> (<span class="k">and</span> (stringp format) (&gt; (length format) 0))
+      (<span class="w">user-error</span> <span class="s">"Invalid submode '</span><span class="m s">%s</span><span class="s">': no format string"</span> name))
+    (<span class="k">while</span> (<span class="k">setq</span> next (string-match logview--entry-part-regexp format search-from))
+      (<span class="k">when</span> (&gt; next search-from)
+        (funcall add-text-part search-from next))
+      (<span class="k">setq</span> end        (match-end 0)
+            starter    (<span class="k">when</span> (&gt; next 0)
+                         (aref format (1- next)))
+            terminator (<span class="k">when</span> (&lt; end (length format))
+                         (aref format end)))
+      (<span class="k">cond</span> ((match-beginning logview--timestamp-group)
+             (<span class="k">push</span> nil parts)
+             (<span class="k">push</span> 'timestamp features)
+             (<span class="k">setq</span> timestamp-at parts))
+            ((match-beginning logview--level-group)
+             (<span class="k">setq</span> levels (logview--get-split-alists (cdr (assq 'levels definition)) <span class="s">"level mapping"</span>
+                                                     logview-additional-level-mappings logview-std-level-mappings))
+             (<span class="k">push</span> (format <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">?%d:%s</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> logview--level-group
+                           (regexp-opt (apply #'append (mapcar (<span class="k">lambda</span> (final-level) (cdr (assq final-level levels)))
+                                                               logview--final-levels))))
+                   parts)
+             (<span class="k">push</span> 'level features))
+            ((match-beginning logview--message-group)
+             (<span class="k">unless</span> (= (match-end logview--message-group) (length format))
+               (<span class="w">user-error</span> <span class="s">"Field `</span><span class="m s">MESSAGE</span><span class="s">' can only be placed at the very end of format string"</span>))
+             (<span class="k">setq</span> have-explicit-message t))
+            (t
+             (<span class="k">dolist</span> (k (list logview--name-group logview--thread-group logview--ignored-group))
+               <span class="cd">;; </span><span class="c">See definition of `</span><span class="m c">logview--entry-part-regexp</span><span class="c">' for the meaning of 4 and 10.
+</span>               (<span class="k">let</span> ((special-regexp (match-beginning (+ k 4))))
+                 (<span class="k">when</span> (<span class="k">or</span> (match-beginning k) special-regexp)
+                   (<span class="k">push</span> (format <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">?%s:%s</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>
+                                 (<span class="k">if</span> (/= k logview--ignored-group)
+                                     (number-to-string k)
+                                   <span class="s">""</span>)
+                                 (<span class="k">cond</span> (special-regexp
+                                        (<span class="k">let</span> ((forced-regexp (match-string 10 format)))
+                                          (<span class="k">unless</span> (logview--valid-regexp-p forced-regexp)
+                                            <span class="cd">;; </span><span class="c">Ideally would also ensure that there are no catching groups,
+</span>                                            <span class="cd">;; </span><span class="c">but for this we'd need `</span><span class="m c">xr</span><span class="c">' as dependency.  Not now.
+</span>                                            (<span class="w">warn</span> <span class="s">"In format specifier `</span><span class="m s">%s</span><span class="s">': `</span><span class="m s">%s</span><span class="s">' is not a valid regexp"</span> format forced-regexp)
+                                            (<span class="k">setf</span> cannot-match t))
+                                          forced-regexp))
+                                       ((<span class="k">and</span> starter terminator
+                                             (<span class="k">or</span> (<span class="k">and</span> (= starter ?\() (= terminator ?\)))
+                                                 (<span class="k">and</span> (= starter ?\[) (= terminator ?\]))))
+                                        <span class="cd">;; </span><span class="c">See https://github.com/doublep/logview/issues/2 We allow _one_
+</span>                                        <span class="cd">;; </span><span class="c">level of nested parens inside parenthesized THREAD or NAME.
+</span>                                        <span class="cd">;; </span><span class="c">Allowing more would complicate regexp even further.  Unlimited
+</span>                                        <span class="cd">;; </span><span class="c">nesting level is not possible with regexps at all.
+</span>                                        <span class="cd">;;</span><span class="c">
+</span>                                        <span class="cd">;; </span><span class="c">'</span><span class="m c">rx-to-string</span><span class="c">' is used to avoid escaping things ourselves.
+</span>                                        (rx-to-string `(seq (* (not (any ,starter ,terminator ?\n)))
+                                                            (* ,starter (* (not (any ?\n))) ,terminator
+                                                               (* (not (any ,starter ,terminator ?\n)))))
+                                                      t))
+                                       ((<span class="k">and</span> terminator (/= terminator ? ))
+                                        (format <span class="s">"[</span><span class="neg s">^</span><span class="s">%c\n]*"</span> terminator))
+                                       (terminator
+                                        <span class="s">"[</span><span class="neg s">^</span><span class="s"> \t\n]+"</span>)
+                                       (t
+                                        <span class="s">".+"</span>)))
+                              parts)
+                        (<span class="k">push</span> (<span class="k">if</span> (= k logview--name-group) 'name 'thread) features))))))
+      (<span class="k">setq</span> search-from end))
+    (<span class="k">unless</span> cannot-match
+      (<span class="k">when</span> (&lt; search-from (length format))
+        (funcall add-text-part search-from nil))
+      <span class="cd">;; </span><span class="c">Unless `</span><span class="m c">MESSAGE</span><span class="c">' field is used explicitly, behave as if format string ends with whitespace.
+</span>      (<span class="k">unless</span> (<span class="k">or</span> have-explicit-message (string-match-p <span class="s">"[ \t]$"</span> format))
+        (<span class="k">push</span> <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[ \t]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">$</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> parts))
+      (<span class="k">setq</span> parts (nreverse parts))
+      (<span class="k">when</span> timestamp-at
+        <span class="cd">;; </span><span class="c">Speed optimization: if the submode includes a timestamp, but the test line doesn't have even two
+</span>        <span class="cd">;; </span><span class="c">digits at the expected place, don't even loop through all the timestamp options.
+</span>        (setcar timestamp-at <span class="s">".*[0-9][0-9].*"</span>)
+        (<span class="k">when</span> (<span class="k">and</span> test-line (not (string-match-p (apply #'concat parts) test-line)))
+          (<span class="k">setq</span> cannot-match t))))
+    (<span class="k">unless</span> cannot-match
+      (<span class="k">dolist</span> (timestamp-option (<span class="k">if</span> timestamp-at timestamp-options '(nil)))
+        (<span class="k">let*</span> ((timestamp-pattern (assq 'java-pattern timestamp-option))
+               (timestamp-locale  (cdr (assq 'locale timestamp-option)))
+               (timestamp-regexp  (<span class="k">if</span> timestamp-pattern
+                                      (<span class="k">condition-case</span> error
+                                          (apply #'datetime-matching-regexp 'java (cdr timestamp-pattern)
+                                                 <span class="bi">:locale</span> timestamp-locale
+                                                 (append (cdr (assq 'datetime-options timestamp-option)) logview--datetime-matching-options))
+                                        <span class="cd">;; </span><span class="c">'</span><span class="m c">datetime</span><span class="c">' doesn't mention the erroneous pattern to keep
+</span>                                        <span class="cd">;; </span><span class="c">the error message concise.  Let's do it ourselves.
+</span>                                        (<span class="w">error</span> (<span class="w">warn</span> <span class="s">"In Java timestamp pattern '</span><span class="m s">%s</span><span class="s">': %s"</span>
+                                                     (cdr timestamp-pattern) (error-message-string error))
+                                               nil))
+                                    (cdr (assq 'regexp timestamp-option)))))
+          (<span class="k">when</span> (<span class="k">or</span> timestamp-regexp (null timestamp-at))
+            (<span class="k">when</span> timestamp-at
+              (setcar timestamp-at (format <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">?%d:%s</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> logview--timestamp-group timestamp-regexp)))
+            (<span class="k">let</span> ((regexp      (apply #'concat parts))
+                  (level-index 0))
+              (<span class="k">when</span> (<span class="k">or</span> (null test-line) (string-match-p regexp test-line))
+                (<span class="k">setq</span> logview--submode-name           name
+                      logview--process-buffer-changes t
+                      logview--entry-regexp           regexp
+                      logview--submode-features       features
+                      logview--submode-level-data     nil)
+                (logview--update-mode-name)
+                (<span class="k">when</span> (memq 'level features)
+                  (<span class="k">dolist</span> (final-level logview--final-levels)
+                    (<span class="k">dolist</span> (level (cdr (assoc final-level levels)))
+                      (<span class="k">push</span> (cons level (cons level-index (cons (intern (format <span class="s">"logview-%s-entry"</span> (symbol-name final-level)))
+                                                                (intern (format <span class="s">"logview-level-%s"</span> (symbol-name final-level))))))
+                            logview--submode-level-data)
+                      (<span class="k">setq</span> level-index (1+ level-index)))))
+                (<span class="k">setq</span> logview--submode-level-faces (make-vector level-index nil))
+                (<span class="k">dolist</span> (level-data logview--submode-level-data)
+                  (aset logview--submode-level-faces (cadr level-data) (cddr level-data)))
+                (<span class="k">when</span> (memq 'timestamp features)
+                  (<span class="k">let</span> ((num-fractionals (apply #'datetime-pattern-num-second-fractionals 'java (cdr timestamp-pattern) logview--datetime-parsing-options)))
+                    (<span class="k">setf</span> logview--timestamp-difference-format-string (format <span class="s">"%%+.%df"</span> num-fractionals)
+                          logview--timestamp-gap-format-string        (format <span class="s">"%%.%df"</span> num-fractionals)))
+                  <span class="cd">;; </span><span class="c">Largely for catching errors in `</span><span class="m c">datetime</span><span class="c">'s determination of system timezone.
+</span>                  (<span class="k">setf</span> logview--submode-timestamp-parser
+                        (<span class="k">condition-case</span> error
+                            (apply #'datetime-parser-to-float 'java (cdr timestamp-pattern) <span class="bi">:locale</span> timestamp-locale <span class="bi">:timezone</span> 'system
+                                   logview--datetime-parsing-options)
+                          (<span class="w">error</span> (<span class="w">warn</span> <span class="s">"%s"</span> (error-message-string error))
+                                 (<span class="k">let</span> ((utc-parser (<span class="k">ignore-errors</span> (apply #'datetime-parser-to-float 'java (cdr timestamp-pattern) <span class="bi">:locale</span> timestamp-locale
+                                                                         logview--datetime-parsing-options))))
+                                   (<span class="k">if</span> utc-parser
+                                       (<span class="k">progn</span> (<span class="w">warn</span> <span class="s">"Using UTC for the log file instead, in hopes it will be good enough"</span>)
+                                              utc-parser)
+                                     <span class="cd">;; </span><span class="c">Only to avoid errors later.  Results will be incorrect, of course, but
+</span>                                     <span class="cd">;; </span><span class="c">at least the mode everything other than some timestamp-related
+</span>                                     <span class="cd">;; </span><span class="c">commands will work.  The cause is reported as a warning above.
+</span>                                     (<span class="k">lambda</span> (_) 0.0)))))))
+                (read-only-mode 1)
+                (<span class="k">when</span> buffer-file-name
+                  (<span class="k">pcase</span> logview-auto-revert-mode
+                    (`auto-revert-mode      (auto-revert-mode      1))
+                    (`auto-revert-tail-mode (auto-revert-tail-mode 1))))
+                (logview--refilter)
+                (<span class="k">throw</span> '<span class="m">success</span> nil))))))
+      <span class="cd">;; </span><span class="c">"Promising" line.
+</span>      t)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

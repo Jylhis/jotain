@@ -1,0 +1,91 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: denote-get-link-description – Emacs Documentation Online</title>
+<meta name="description" content="denote-get-link-description is a natively compiled function defined in
+denote.el.
+Return a link description for FILE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>denote-get-link-description</code></h1><p><span class="m"><code>denote-get-link-description</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">denote.el</span>.
+<h2>Signature</h2>
+<pre><code>(denote-get-link-description <a href="#:~:text=for-,FILE"><span class="arg">FILE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=and-,FILE-TYPE"><span class="arg">FILE-TYPE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a link description for <span class="arg">FILE</span>.
+<p>If <a href="../var/denote-link-description-format.html"><code>denote-link-description-format</code></a> is a function, call it with <span class="arg">FILE</span> and
+<span class="arg">FILE-TYPE</span> as argument.  It should return a string, representing the link
+description.
+<p>If the user option <a href="../var/denote-link-description-format.html"><code>denote-link-description-format</code></a> is a string, parse
+it to substitute any format specifiers therein with their respective
+values (see the documentation of that user option).  If the region is
+active, use it as the description.
+<p>For backward compatibility, support the scenario where the function
+assigned to <a href="../var/denote-link-description-format.html"><code>denote-link-description-format</code></a> accepts a single <span class="arg">FILE</span>
+argument.  In that case, the function takes care to find the TYPE on its
+own to return the appropriate description.
+<h2>Aliases</h2>
+<p><a href="../fun/denote--link-get-description.html"><code>denote--link-get-description</code></a> (obsolete since 4.0.0)
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/5x9606vmybcj80x6qrajp43rma9pa1i7-emacs-packages-deps/share/emacs/site-lisp/elpa/denote-4.2.3/denote.el</span>
+(<span class="k">defun</span> <span class="f">denote-get-link-description</span> (file <span class="ty">&amp;optional</span> file-type)
+  <span class="doc">"Return a link description for FILE.
+
+If `</span><span class="m doc">denote-link-description-format</span><span class="doc">' is a function, call it with FILE and
+FILE-TYPE as argument.  It should return a string, representing the link
+description.
+
+If the user option `</span><span class="m doc">denote-link-description-format</span><span class="doc">' is a string, parse
+it to substitute any format specifiers therein with their respective
+values (see the documentation of that user option).  If the region is
+active, use it as the description.
+
+For backward compatibility, support the scenario where the function
+assigned to `</span><span class="m doc">denote-link-description-format</span><span class="doc">' accepts a single FILE
+argument.  In that case, the function takes care to find the TYPE on its
+own to return the appropriate description."</span>
+  (<span class="k">cond</span>
+   ((functionp denote-link-description-format)
+    <span class="cd">;; </span><span class="c">NOTE 2025-11-23: `</span><span class="m c">denote-link-description-format</span><span class="c">' used to
+</span>    <span class="cd">;; </span><span class="c">accept a function with a single parameter.  Now we expect two
+</span>    <span class="cd">;; </span><span class="c">arguments, but must be backward compatible.
+</span>    (<span class="k">if</span> (&gt; (cdr (func-arity denote-link-description-format)) 1)
+        (funcall denote-link-description-format file file-type)
+      (display-warning 'denote <span class="s">"The `</span><span class="m s">denote-link-description-format</span><span class="s">' function is now called with FILE and FILE-TYPE"</span> <span class="bi">:warning</span>)
+      (funcall denote-link-description-format file)))
+   ((stringp denote-link-description-format)
+    (<span class="k">if-let*</span> ((region (denote--get-active-region-content)))
+        region
+      (<span class="k">let</span> ((type (<span class="k">or</span> file-type (denote-filetype-heuristics file))))
+        (string-trim
+         (format-spec denote-link-description-format
+                      (list (cons ?t (<span class="k">cond</span>
+                                      ((denote-retrieve-front-matter-title-value file (denote-filetype-heuristics file)))
+                                      ((denote-retrieve-filename-title file))
+                                      (t  <span class="s">""</span>)))
+                            (cons ?T (<span class="k">or</span> (denote-retrieve-filename-title file) <span class="s">""</span>))
+                            (cons ?i (<span class="k">or</span> (denote-retrieve-filename-identifier file) <span class="s">""</span>))
+                            <span class="cd">;; </span><span class="c">TODO 2025-04-03: Maybe we can have something like `</span><span class="m c">denote-date-format</span><span class="c">' here,
+</span>                            <span class="cd">;; </span><span class="c">but I think we are okay with a hardcoded value.
+</span>                            (cons ?I (<span class="k">or</span> (<span class="k">when-let*</span> ((id (denote-retrieve-filename-identifier file))
+                                                     (_ (denote-date-identifier-p id)))
+                                           (format-time-string <span class="s">"%A, %e %B %Y"</span> (date-to-time (denote-id-to-date id))))
+                                         <span class="s">""</span>))
+                            (cons ?D (<span class="k">cond</span>
+                                      ((denote-retrieve-front-matter-title-value file type))
+                                      ((denote-retrieve-filename-title file))
+                                      ((<span class="k">when-let*</span> ((id (denote-retrieve-filename-identifier file)))
+                                         (<span class="k">if</span> (denote-date-identifier-p id)
+                                             (format-time-string <span class="s">"%A, %e %B %Y"</span> (date-to-time (denote-id-to-date id)))
+                                           id)))
+                                      (t  <span class="s">""</span>)))
+                            (cons ?d (<span class="k">or</span> (denote-retrieve-filename-identifier file) <span class="s">""</span>))
+                            (cons ?s (<span class="k">or</span> (denote-retrieve-filename-signature file) <span class="s">""</span>))
+                            (cons ?k (<span class="k">or</span> (denote-retrieve-filename-keywords file) <span class="s">""</span>))
+                            (cons ?% <span class="s">"%"</span>))
+                      'delete)))))
+   (t
+    (<span class="w">error</span> <span class="s">"The `</span><span class="m s">denote-link-description-format</span><span class="s">' must be a function or string"</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

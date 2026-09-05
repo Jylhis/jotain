@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-cabal-enum-targets – Emacs Documentation Online</title>
+<meta name="description" content="haskell-cabal-enum-targets is a natively compiled function defined in
+haskell-cabal.el.
+Enumerate .cabal targets.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-cabal-enum-targets</code></h1><p><span class="m"><code>haskell-cabal-enum-targets</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">haskell-cabal.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-cabal-enum-targets <span class="ty">&amp;optional</span> <a href="#:~:text=targets.-,PROCESS-TYPE"><span class="arg">PROCESS-TYPE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Enumerate .cabal targets.
+<p><span class="arg">PROCESS-TYPE</span> determines the format of the returned target.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-cabal.el</span>
+(<span class="k">defun</span> <span class="f">haskell-cabal-enum-targets</span> (<span class="ty">&amp;optional</span> process-type)
+  <span class="doc">"Enumerate .cabal targets.
+PROCESS-TYPE determines the format of the returned target."</span>
+  (<span class="k">let</span> ((cabal-file (haskell-cabal-find-file))
+        (process-type (<span class="k">if</span> process-type process-type 'ghci)))
+    (<span class="k">when</span> (<span class="k">and</span> cabal-file (file-readable-p cabal-file))
+      (<span class="k">with-temp-buffer</span>
+        (insert-file-contents cabal-file)
+        (haskell-cabal-mode)
+        (goto-char (point-min))
+        (<span class="k">let</span> ((matches)
+              (package-name (haskell-cabal--get-field <span class="s">"name"</span>)))
+          (haskell-cabal-next-section)
+          (<span class="k">while</span> (not (eobp))
+            (<span class="k">if</span> (haskell-cabal-source-section-p (haskell-cabal-section))
+                (<span class="k">let*</span> ((section (haskell-cabal-section))
+                       (component-type (haskell-cabal-section-name section))
+                       (val (car (split-string
+                                  (haskell-cabal-section-value section)))))
+                  (<span class="k">if</span> (equal (downcase component-type) <span class="s">"library"</span>)
+                      (<span class="k">let</span> ((lib-target (<span class="k">if</span> (eq 'stack-ghci process-type)
+                                            (concat package-name <span class="s">":lib"</span>)
+                                          (concat <span class="s">"lib:"</span> package-name))))
+                        (<span class="k">push</span> lib-target matches))
+                    (<span class="k">push</span> (concat  (<span class="k">when</span> (eq 'stack-ghci process-type)
+                                     (concat package-name <span class="s">":"</span>))
+                                   (haskell-cabal-map-component-type component-type)
+                                   <span class="s">":"</span>
+                                   val)
+                          matches))))
+            (haskell-cabal-next-section))
+          (reverse matches))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

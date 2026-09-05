@@ -1,0 +1,132 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--async-pipeline – Emacs Documentation Online</title>
+<meta name="description" content="consult--async-pipeline is a natively compiled function defined in
+consult.el.
+Compose ASYNC pipeline.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--async-pipeline</code></h1><p><span class="m"><code>consult--async-pipeline</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--async-pipeline <span class="ty">&amp;rest</span> <a href="#:~:text=Compose-,ASYNC"><span class="arg">ASYNC</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Compose <span class="arg">ASYNC</span> pipeline.
+<p>An async function must accept a single SINK argument and return a
+function accepting a single ACTION argument.  In functional programming
+terminology, an async function is curried.
+<p>&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">lambda</span> (sink)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">lambda</span> (action)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...))
+<p>Async functions are composed with <a href="../fun/consult--async-pipeline.html"><code>consult--async-pipeline</code></a> as in the
+following example.  The data flows downwards starting with the input
+from the user.
+<p>&nbsp;&nbsp;&nbsp;&nbsp;(consult--async-pipeline
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(consult--async-min-input)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(consult--async-throttle)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(consult--async-process #'consult--man-builder)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(consult--async-transform #'consult--man-format)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(consult--async-highlight #'consult--man-builder))
+<p>Nil functions are ignored to ease building conditional pipelines.
+<p>&nbsp;&nbsp;&nbsp;&nbsp;(consult--async-pipeline
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(consult--async-min-input min-input)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(consult--async-throttle throttle debounce)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(consult--async-dynamic fun)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;transform
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">and</span> highlight (consult--async-highlight highlight)))
+<p>Async functions or pipelines can be passed as completion function to
+<a href="../fun/consult--read.html"><code>consult--read</code></a> or used as <span class="bi">:async</span> field of <a href="../fun/consult--multi.html"><code>consult--multi</code></a> sources as
+shown in these examples:
+<p>&nbsp;&nbsp;&nbsp;&nbsp;(consult--read (consult--async-pipeline ...))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;(consult--read (consult--dynamic-collection (<span class="k">lambda</span> (input) ...)))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;(consult--read (consult--process-collection #'consult--man-builder))
+<p>&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">defvar</span> <span class="v">async-source</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(list <span class="bi">:async</span> (consult--async-pipeline ...)))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">defvar</span> <span class="v">dynamic-source</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(list <span class="bi">:async</span> (consult--dynamic-collection (<span class="k">lambda</span> (input) ...))))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">defvar</span> <span class="v">command-source</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(list <span class="bi">:async</span> (consult--process-collection #'consult--man-builder)))
+<p>Incoming candidates and the action argument should be passed to the
+sink.  The action can take the following forms:
+<p>'setup   Setup the internal closure state.  Return nil.
+<br>'destroy Destroy the internal closure state.  Return nil.
+<br>'flush   Flush the list of candidates.  Return nil.
+<br>'refresh Request UI refresh.  Return nil.
+<br>'cancel  Cancel any running process.  Return nil.
+<br>nil      Return the list of candidates.
+<br>list     Append to the existing candidates list and return the whole list.
+<br>string   Update with the current user input string.  Return nil.
+<p>For the 'setup action it is guaranteed that the call originates from
+the minibuffer.  For the other actions no assumption about the context
+can be made.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+<span class="cd">;;;; </span><span class="c">Asynchronous pipeline
+</span>
+(<span class="k">defun</span> <span class="f">consult--async-pipeline</span> (<span class="ty">&amp;rest</span> async)
+  <span class="doc">"Compose ASYNC pipeline.
+
+An async function must accept a single SINK argument and return a
+function accepting a single ACTION argument.  In functional programming
+terminology, an async function is curried.
+
+    (lambda (sink)
+      (lambda (action)
+        ...))
+
+Async functions are composed with `</span><span class="m doc">consult--async-pipeline</span><span class="doc">' as in the
+following example.  The data flows downwards starting with the input
+from the user.
+
+    (consult--async-pipeline
+      (consult--async-min-input)
+      (consult--async-throttle)
+      (consult--async-process #</span><span class="bi doc">\\=</span><span class="doc">'consult--man-builder)
+      (consult--async-transform #</span><span class="bi doc">\\=</span><span class="doc">'consult--man-format)
+      (consult--async-highlight #</span><span class="bi doc">\\=</span><span class="doc">'consult--man-builder))
+
+Nil functions are ignored to ease building conditional pipelines.
+
+    (consult--async-pipeline
+     (consult--async-min-input min-input)
+     (consult--async-throttle throttle debounce)
+     (consult--async-dynamic fun)
+     transform
+     (and highlight (consult--async-highlight highlight)))
+
+Async functions or pipelines can be passed as completion function to
+`</span><span class="m doc">consult--read</span><span class="doc">' or used as `</span><span class="m doc">:async</span><span class="doc">' field of `</span><span class="m doc">consult--multi</span><span class="doc">' sources as
+shown in these examples:
+
+    (consult--read (consult--async-pipeline ...))
+    (consult--read (consult--dynamic-collection (lambda (input) ...)))
+    (consult--read (consult--process-collection #</span><span class="bi doc">\\=</span><span class="doc">'consult--man-builder))
+
+    (defvar async-source
+      (list :async (consult--async-pipeline ...)))
+    (defvar dynamic-source
+      (list :async (consult--dynamic-collection (lambda (input) ...))))
+    (defvar command-source
+      (list :async (consult--process-collection #</span><span class="bi doc">\\=</span><span class="doc">'consult--man-builder)))
+
+Incoming candidates and the action argument should be passed to the
+sink.  The action can take the following forms:
+
+</span><span class="bi doc">\\=</span><span class="doc">'setup   Setup the internal closure state.  Return nil.
+</span><span class="bi doc">\\=</span><span class="doc">'destroy Destroy the internal closure state.  Return nil.
+</span><span class="bi doc">\\=</span><span class="doc">'flush   Flush the list of candidates.  Return nil.
+</span><span class="bi doc">\\=</span><span class="doc">'refresh Request UI refresh.  Return nil.
+</span><span class="bi doc">\\=</span><span class="doc">'cancel  Cancel any running process.  Return nil.
+nil      Return the list of candidates.
+list     Append to the existing candidates list and return the whole list.
+string   Update with the current user input string.  Return nil.
+
+For the </span><span class="bi doc">\\=</span><span class="doc">'setup action it is guaranteed that the call originates from
+the minibuffer.  For the other actions no assumption about the context
+can be made."</span>
+  (<span class="k">lambda</span> (sink)
+    (seq-reduce (<span class="k">lambda</span> (s f) (funcall f s)) (delq nil (reverse async)) sink)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

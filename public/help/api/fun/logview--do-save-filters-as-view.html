@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: logview--do-save-filters-as-view – Emacs Documentation Online</title>
+<meta name="description" content="logview--do-save-filters-as-view is a natively compiled function
+defined in logview.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>logview--do-save-filters-as-view</code></h1><p><span class="m"><code>logview--do-save-filters-as-view</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">logview.el</span>.
+<h2>Signature</h2>
+<pre><code>(logview--do-save-filters-as-view <span class="arg">NAME</span> <span class="arg">GLOBAL</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qid656ql5mh048bd0k84vvsbc2517lh9-emacs-packages-deps/share/emacs/site-lisp/elpa/logview-20260218.2013/logview.el</span>
+(<span class="k">defun</span> <span class="f">logview--do-save-filters-as-view</span> (name global)
+  (<span class="k">unless</span> (caar (car logview--effective-filter))
+    (<span class="w">user-error</span> <span class="s">"There are currently no filters"</span>))
+  (<span class="k">unless</span> name
+    (<span class="k">setq</span> name (read-string <span class="s">"Save as: "</span> nil 'logview--view-name-history)))
+  (<span class="k">when</span> (= (length name) 0)
+    (<span class="w">user-error</span> <span class="s">"View name may not be empty"</span>))
+  (<span class="k">let</span> ((matches (<span class="k">lambda</span> (view)
+                   (<span class="k">and</span> (string= (plist-get view <span class="bi">:name</span>) name)
+                        (<span class="k">or</span> global (null (plist-get view <span class="bi">:submode</span>)) (string= (plist-get view <span class="bi">:submode</span>) logview--submode-name))))))
+    (<span class="k">dolist</span> (view (logview--views))
+      (<span class="k">when</span> (funcall matches view)
+        (<span class="k">unless</span> (y-or-n-p (format-message (<span class="k">if</span> global
+                                              <span class="s">"There is already a view named `</span><span class="m s">%s</span><span class="s">'. Replace it?"</span>
+                                            <span class="s">"There is already a view named `</span><span class="m s">%s</span><span class="s">' for this submode. Replace it?"</span>)
+                                          name))
+          (<span class="w">user-error</span> <span class="s">"View named `</span><span class="m s">%s</span><span class="s">' already exists; try a different name"</span> name))))
+    (<span class="k">let</span> (new-views)
+      (<span class="k">dolist</span> (view (logview--views))
+        (<span class="k">unless</span> (funcall matches view)
+          (<span class="k">push</span> view new-views)))
+      (<span class="k">push</span> (list <span class="bi">:name</span> name <span class="bi">:filters</span> logview--main-filter-text) new-views)
+      (<span class="k">unless</span> global
+        (plist-put (car new-views) <span class="bi">:submode</span> logview--submode-name))
+      (<span class="k">setq</span> logview--views             (nreverse new-views)
+            logview--views-need-saving t)
+      (logview--after-updating-view-definitions)
+      (logview--update-mode-name)
+      (message (<span class="k">if</span> global <span class="s">"Saved filters as a global view named `</span><span class="m s">%s</span><span class="s">'"</span> <span class="s">"Saved filters as a submode view named `</span><span class="m s">%s</span><span class="s">'"</span>) name))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

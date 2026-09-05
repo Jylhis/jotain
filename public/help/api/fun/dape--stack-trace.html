@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--stack-trace – Emacs Documentation Online</title>
+<meta name="description" content="dape--stack-trace is a natively compiled function defined in dape.el.
+Update stack trace in THREAD plist with NOF frames by adapter CONN.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--stack-trace</code></h1><p><span class="m"><code>dape--stack-trace</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--stack-trace <a href="#:~:text=adapter-,CONN"><span class="arg">CONN</span></a> <a href="#:~:text=in-,THREAD"><span class="arg">THREAD</span></a> <a href="#:~:text=with-,NOF"><span class="arg">NOF</span></a> <a href="#:~:text=expected-,CB"><span class="arg">CB</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update stack trace in <span class="arg">THREAD</span> plist with <span class="arg">NOF</span> frames by adapter <span class="arg">CONN</span>.
+<p>See <a href="../fun/dape-request.html"><code>dape-request</code></a> for expected <span class="arg">CB</span> signature.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--stack-trace</span> (conn thread nof cb)
+  <span class="doc">"Update stack trace in THREAD plist with NOF frames by adapter CONN.
+See `</span><span class="m doc">dape-request</span><span class="doc">' for expected CB signature."</span>
+  (<span class="k">let</span> ((current-nof (length (plist-get thread <span class="bi">:stackFrames</span>)))
+        (total-frames (plist-get thread <span class="bi">:totalFrames</span>))
+        (value-formatting-p
+         (dape--capable-p conn <span class="bi">:supportsValueFormattingOptions</span>))
+        (delayed-stack-trace-p
+         (dape--capable-p conn <span class="bi">:supportsDelayedStackTraceLoading</span>)))
+    (<span class="k">if</span> (<span class="k">or</span> (not (equal (plist-get thread <span class="bi">:status</span>) 'stopped))
+            (not (integerp (plist-get thread <span class="bi">:id</span>)))
+            (eql current-nof total-frames)
+            (<span class="k">and</span> delayed-stack-trace-p (&lt;= nof current-nof))
+            (<span class="k">and</span> (not delayed-stack-trace-p) (&gt; current-nof 0)))
+        (dape--request-continue cb)
+      (<span class="k">dape--with-request-bind</span>
+          ((<span class="ty">&amp;key</span> stackFrames totalFrames <span class="ty">&amp;allow-other-keys</span>) error)
+          (dape-request
+           conn <span class="bi">:stackTrace</span>
+           `( <span class="bi">:threadId</span> ,(plist-get thread <span class="bi">:id</span>)
+              ,@(<span class="k">when</span> delayed-stack-trace-p
+                  `( <span class="bi">:startFrame</span> ,current-nof
+                     <span class="bi">:levels</span> ,(- nof current-nof)))
+              ,@(<span class="k">when</span> (<span class="k">and</span> dape-info-stack-buffer-modules value-formatting-p)
+                  `(<span class="bi">:format</span> (<span class="bi">:module</span> t)))))
+        (<span class="k">cond</span> ((not delayed-stack-trace-p)
+               (plist-put thread <span class="bi">:stackFrames</span> (append stackFrames nil)))
+              <span class="cd">;; </span><span class="c">Sanity check delayed stack trace
+</span>              ((length= (plist-get thread <span class="bi">:stackFrames</span>) current-nof)
+               (plist-put thread <span class="bi">:stackFrames</span>
+                          (append (plist-get thread <span class="bi">:stackFrames</span>) stackFrames
+                                  nil))))
+        (plist-put thread <span class="bi">:totalFrames</span> (<span class="k">and</span> (numberp totalFrames) totalFrames))
+        (dape--request-continue cb error)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-db-insert-node-data – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-db-insert-node-data is a natively compiled function defined
+in org-roam-db.el.
+Insert node data for headline at point into the Org-roam cache.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-db-insert-node-data</code></h1><p><span class="m"><code>org-roam-db-insert-node-data</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">org-roam-db.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-db-insert-node-data)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert node data for headline at point into the Org-roam cache.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-db.el</span>
+(<span class="k">cl-defun</span> <span class="f">org-roam-db-insert-node-data</span> ()
+  <span class="doc">"Insert node data for headline at point into the Org-roam cache."</span>
+  (<span class="k">when-let*</span> ((id (org-id-get)))
+    (<span class="k">let*</span> ((file (buffer-file-name (buffer-base-buffer)))
+           (heading-components (org-heading-components))
+           (pos (point))
+           (todo (nth 2 heading-components))
+           (priority (nth 3 heading-components))
+           (level (nth 1 heading-components))
+           (scheduled (org-roam-db-get-scheduled-time))
+           (deadline (org-roam-db-get-deadline-time))
+           (title (<span class="k">or</span> (nth 4 heading-components)
+                      (<span class="k">progn</span> (lwarn 'org-roam <span class="bi">:warning</span> <span class="s">"Node in %s:%s:%s has no title, skipping..."</span>
+                                    file
+                                    (line-number-at-pos)
+                                    (1+ (- (point) (line-beginning-position))))
+                             (<span class="k">cl-return-from</span> org-roam-db-insert-node-data))))
+           (properties (org-entry-properties))
+           (olp (org-get-outline-path nil 'use-cache))
+           (title (org-link-display-format title)))
+      (org-roam-db-query!
+       (<span class="k">lambda</span> (err)
+         (lwarn 'org-roam <span class="bi">:warning</span> <span class="s">"%s for %s (%s) in %s"</span>
+                (error-message-string err)
+                title id file))
+       [<span class="bi">:insert</span> <span class="bi">:into</span> nodes
+        <span class="bi">:values</span> $v1]
+       (vector id file level pos todo priority
+               scheduled deadline title properties olp)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

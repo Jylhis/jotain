@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark--maybe-transform-candidates – Emacs Documentation Online</title>
+<meta name="description" content="embark--maybe-transform-candidates is a natively compiled function
+defined in embark.el.
+Collect candidates and see if they all transform to the same type.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark--maybe-transform-candidates</code></h1><p><span class="m"><code>embark--maybe-transform-candidates</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark--maybe-transform-candidates)
+</code></pre>
+<h2>Documentation</h2>
+<p>Collect candidates and see if they all transform to the same type.
+<p>Return a plist with keys <span class="bi">:type</span>, <span class="bi">:orig-type</span>, <span class="bi">:candidates</span>, and
+<br><span class="bi">:orig-candidates</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+(<span class="k">defun</span> <span class="f">embark--maybe-transform-candidates</span> ()
+  <span class="doc">"Collect candidates and see if they all transform to the same type.
+Return a plist with keys `</span><span class="m doc">:type</span><span class="doc">', `</span><span class="m doc">:orig-type</span><span class="doc">', `</span><span class="m doc">:candidates</span><span class="doc">', and
+`</span><span class="m doc">:orig-candidates</span><span class="doc">'."</span>
+  (<span class="k">pcase-let*</span> ((`(,type . ,candidates)
+                (run-hook-with-args-until-success 'embark-candidate-collectors))
+               (bounds (mapcar #'cdr-safe candidates)))
+    (<span class="k">setq</span> candidates
+          (mapcar (<span class="k">lambda</span> (x) (<span class="k">if</span> (consp x) (car x) x)) candidates))
+    (<span class="k">when</span> (eq type 'file)
+      (<span class="k">let</span> ((dir (embark--default-directory)))
+        (<span class="k">setq</span> candidates
+              (mapcar (<span class="k">lambda</span> (cand)
+                        (abbreviate-file-name
+                         (expand-file-name (substitute-in-file-name cand) dir)))
+                      candidates))))
+    <span class="cd">;; </span><span class="c">TODO more systematic approach to applying substitute-in-file-name
+</span>    (append
+     (list <span class="bi">:orig-type</span> type <span class="bi">:orig-candidates</span> candidates <span class="bi">:bounds</span> bounds)
+     (<span class="k">or</span> (<span class="k">when</span> candidates
+           (<span class="k">when-let*</span> ((transformer (alist-get type embark-transformer-alist)))
+             (<span class="k">pcase-let*</span> ((`(,new-type . ,first-cand)
+                           (funcall transformer type (car candidates))))
+               (<span class="k">let</span> ((new-candidates (list first-cand)))
+                 (<span class="k">when</span> (cl-every
+                        (<span class="k">lambda</span> (cand)
+                          (<span class="k">pcase-let</span> ((`(,t-type . ,t-cand)
+                                       (funcall transformer type cand)))
+                            (<span class="k">when</span> (eq t-type new-type)
+                              (<span class="k">push</span> t-cand new-candidates)
+                              t)))
+                        (cdr candidates))
+                   (list <span class="bi">:type</span> new-type
+                         <span class="bi">:candidates</span> (nreverse new-candidates)))))))
+         (list <span class="bi">:type</span> type <span class="bi">:candidates</span> candidates)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

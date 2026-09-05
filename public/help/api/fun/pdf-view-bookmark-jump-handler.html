@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-view-bookmark-jump-handler – Emacs Documentation Online</title>
+<meta name="description" content="pdf-view-bookmark-jump-handler is a natively compiled function defined
+in pdf-view.el.
+The bookmark handler-function interface for bookmark BMK.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-view-bookmark-jump-handler</code></h1><p><span class="m"><code>pdf-view-bookmark-jump-handler</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">pdf-view.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-view-bookmark-jump-handler <a href="#:~:text=bookmark-,BMK"><span class="arg">BMK</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>The bookmark handler-function interface for bookmark <span class="arg">BMK</span>.
+<p>See also <a href="../fun/pdf-view-bookmark-make-record.html"><code>pdf-view-bookmark-make-record</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-view.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">pdf-view-bookmark-jump-handler</span> (bmk)
+  <span class="doc">"The bookmark handler-function interface for bookmark BMK.
+
+See also `</span><span class="m doc">pdf-view-bookmark-make-record</span><span class="doc">'."</span>
+  (<span class="k">let*</span> ((file (bookmark-prop-get bmk 'filename))
+         (buf (<span class="k">or</span> (find-buffer-visiting file)
+                  (find-file-noselect file)))
+         (buf-chg-fns-p (boundp 'window-buffer-change-functions))
+         (hook (<span class="k">if</span> (<span class="k">and</span> buf-chg-fns-p (not (get-buffer-window buf)))
+                   'window-buffer-change-functions
+                 'bookmark-after-jump-hook))
+         (show-fn-sym (make-symbol <span class="s">"pdf-show-buffer-function"</span>)))
+    (fset show-fn-sym
+          (<span class="k">lambda</span> (<span class="ty">&amp;optional</span> win)
+            (<span class="k">when</span> (eq buf (current-buffer))
+              (<span class="k">with-selected-window</span>
+                  (<span class="k">or</span> win
+                      (get-buffer-window buf 0)
+                      (selected-window))
+                (remove-hook hook show-fn-sym buf-chg-fns-p)
+                (<span class="k">unless</span> (derived-mode-p 'pdf-view-mode)
+                  (pdf-view-mode))
+                (<span class="k">when-let</span> ((size (bookmark-prop-get
+                                  pdf-view--bookmark-to-restore 'size)))
+                  (<span class="k">setq-local</span> pdf-view-display-size size))
+                (<span class="k">when-let</span> ((slice (bookmark-prop-get
+                                   pdf-view--bookmark-to-restore 'slice)))
+                  (apply 'pdf-view-set-slice slice))
+                (<span class="k">when-let</span> ((page (bookmark-prop-get
+                                  pdf-view--bookmark-to-restore 'page))
+                           ((numberp page)))
+                  (pdf-view-goto-page page win))
+                (<span class="k">when-let</span> ((origin (bookmark-prop-get
+                                    pdf-view--bookmark-to-restore 'origin))
+                           (size (pdf-view-image-size t win)))
+                  (image-set-window-hscroll
+                   (round (/ (* (car origin) (car size))
+                             (frame-char-width))))
+                  (image-set-window-vscroll
+                   (round (/ (* (cdr origin) (cdr size))
+                             (<span class="k">if</span> pdf-view-have-image-mode-pixel-vscroll
+                                 1
+                               (frame-char-height))))))
+                (<span class="k">setq-local</span> pdf-view--bookmark-to-restore nil)))))
+    (set-buffer buf)
+    (<span class="k">setq-local</span> pdf-view--bookmark-to-restore bmk)
+    (add-hook hook show-fn-sym nil buf-chg-fns-p)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

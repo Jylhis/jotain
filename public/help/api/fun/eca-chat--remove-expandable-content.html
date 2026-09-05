@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--remove-expandable-content – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--remove-expandable-content is a natively compiled function
+defined in eca-chat-expandable.el.
+Remove the expandable block with ID from the buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--remove-expandable-content</code></h1><p><span class="m"><code>eca-chat--remove-expandable-content</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-chat-expandable.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--remove-expandable-content <a href="#:~:text=with-,ID"><span class="arg">ID</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Remove the expandable block with <span class="arg">ID</span> from the buffer.
+<p>Deletes both the label overlay and its content overlay, along with
+any text they covered, including surrounding newlines added during insertion.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-expandable.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--remove-expandable-content</span> (id)
+  <span class="doc">"Remove the expandable block with ID from the buffer.
+Deletes both the label overlay and its content overlay, along with
+any text they covered, including surrounding newlines added during insertion."</span>
+  (<span class="k">when-let*</span> ((ov-label (eca-chat--get-expandable-content id)))
+    (<span class="k">let*</span> ((ov-content (overlay-get ov-label 'eca-chat--expandable-content-ov-content))
+           <span class="cd">;; </span><span class="c">Determine the full region: from label overlay start to content overlay end
+</span>           (start (overlay-start ov-label))
+           (end (<span class="k">if</span> ov-content
+                    (overlay-end ov-content)
+                  (overlay-end ov-label)))
+           <span class="cd">;; </span><span class="c">Include preceding newline (inserted by add-expandable-content)
+</span>           (start (<span class="k">if</span> (<span class="k">and</span> (&gt; start (point-min))
+                           (eq (char-before start) ?\n))
+                      (1- start)
+                    start))
+           <span class="cd">;; </span><span class="c">Include trailing newline (inserted between label/content in
+</span>           <span class="cd">;; </span><span class="c">insert-expandable-block)
+</span>           (end (<span class="k">if</span> (<span class="k">and</span> (&lt; end (point-max))
+                         (eq (char-after end) ?\n))
+                    (1+ end)
+                  end)))
+      <span class="cd">;; </span><span class="c">Destroy any nested blocks first
+</span>      (eca-chat--destroy-nested-blocks id)
+      <span class="cd">;; </span><span class="c">Delete overlays
+</span>      (<span class="k">when</span> ov-content (delete-overlay ov-content))
+      (delete-overlay ov-label)
+      (remhash id eca-chat-expandable--id-&gt;ov)
+      <span class="cd">;; </span><span class="c">Remove the text region
+</span>      (<span class="k">let</span> ((inhibit-read-only t))
+        (delete-region start end)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: csv--jit-merge-columns – Emacs Documentation Online</title>
+<meta name="description" content="csv--jit-merge-columns is a natively compiled function defined in
+csv-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>csv--jit-merge-columns</code></h1><p><span class="m"><code>csv--jit-merge-columns</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">csv-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(csv--jit-merge-columns <span class="arg">COLUMN-WIDTHS</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mrygxsladaca2yfyr2cy0am5zm9lzddg-emacs-packages-deps/share/emacs/site-lisp/elpa/csv-mode-1.27/csv-mode.el</span>
+(<span class="k">defun</span> <span class="f">csv--jit-merge-columns</span> (column-widths)
+  <span class="cd">;; </span><span class="c">FIXME: The incremental update (delayed by jit-lock-context-time) of column
+</span>  <span class="cd">;; </span><span class="c">width is a bit jarring at times.  It's OK while scrolling or when
+</span>  <span class="cd">;; </span><span class="c">extending a column, but not right when enabling the csv-align-mode or
+</span>  <span class="cd">;; </span><span class="c">when shortening the longest field (or deleting the line containing it),
+</span>  <span class="cd">;; </span><span class="c">because in that case we have *several* cascaded updates, e.g.:
+</span>  <span class="cd">;; </span><span class="c">- Remove the line with the longest field of column N.
+</span>  <span class="cd">;; </span><span class="c">- Edit some line: this line is updated as if its field was the widest,
+</span>  <span class="cd">;;   </span><span class="c">hence its subsequent fields are too much to the left.
+</span>  <span class="cd">;; </span><span class="c">- The rest is updated starting from the first few lines (according
+</span>  <span class="cd">;;   </span><span class="c">to jit-lock-chunk-size).
+</span>  <span class="cd">;; </span><span class="c">- After the first few lines, come the next set of few lines,
+</span>  <span class="cd">;;   </span><span class="c">which may cause the previous few lines to need refresh again.
+</span>  <span class="cd">;; </span><span class="c">- etc.. until arriving again at the edited line which is re-aligned
+</span>  <span class="cd">;;   </span><span class="c">again.
+</span>  <span class="cd">;; </span><span class="c">- etc.. until the end of the windows, potentially causing yet more
+</span>  <span class="cd">;;   </span><span class="c">refreshes as we discover yet-wider fields for this column.
+</span>  (<span class="k">let</span> ((old-columns csv--jit-columns)
+        (changed nil))
+    (<span class="k">while</span> (<span class="k">and</span> old-columns column-widths)
+      (<span class="k">when</span> (<span class="k">or</span> (&gt; (caar column-widths) (caar old-columns))
+                <span class="cd">;; </span><span class="c">Apparently modification-hooks aren't run when the
+</span>                <span class="cd">;; </span><span class="c">whole text containing the overlay is deleted (e.g.
+</span>                <span class="cd">;; </span><span class="c">the whole line), so detect this case here.
+</span>                <span class="cd">;; </span><span class="c">It's a bit too late, but better than never.
+</span>                (null (overlay-buffer (cdar old-columns))))
+        (<span class="k">setq</span> changed t) <span class="cd">;; </span><span class="c">Return non-nil if some existing column changed.
+</span>        (<span class="k">pcase-let</span> ((`(,width ,beg ,end) (car column-widths)))
+          (<span class="k">setf</span> (caar old-columns) width)
+          (move-overlay (cdar old-columns) beg end)))
+      (<span class="k">setq</span> old-columns (cdr old-columns))
+      (<span class="k">setq</span> column-widths (cdr column-widths)))
+    (<span class="k">when</span> column-widths
+      <span class="cd">;; </span><span class="c">New columns appeared.
+</span>      (<span class="k">setq</span> csv--jit-columns
+            (nconc csv--jit-columns
+                   (mapcar (<span class="k">lambda</span> (x)
+                             (<span class="k">pcase-let*</span>
+                                 ((`(,width ,beg ,end) x)
+                                  (ol (make-overlay beg end)))
+                               (overlay-put ol 'csv-width t)
+                               (overlay-put ol 'evaporate t)
+                               (overlay-put ol 'modification-hooks
+                                            (list #'csv--jit-width-change))
+                               (cons width ol)))
+                           column-widths))))
+    changed))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

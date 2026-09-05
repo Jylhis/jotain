@@ -1,0 +1,198 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-procedure-apply – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-procedure-apply is a natively compiled function defined in
+combobulate-procedure.el.
+Apply PROCEDURE to NODE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-procedure-apply</code></h1><p><span class="m"><code>combobulate-procedure-apply</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">combobulate-procedure.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-procedure-apply <a href="#:~:text=Apply-,PROCEDURE"><span class="arg">PROCEDURE</span></a> <a href="#:~:text=to-,NODE"><span class="arg">NODE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply <span class="arg">PROCEDURE</span> to <span class="arg">NODE</span>.
+<p>&nbsp;&nbsp;<span class="arg">PROCEDURE</span> is a form matching the following pattern:
+<p>&nbsp;&nbsp;(<span class="bi">:activation-nodes</span> (ACTIVATION-NODE-RULES ...))
+<br>&nbsp;&nbsp;<span class="bi">:selector</span> SELECTOR-RULES)
+<p>Where ACTIVATION-NODE-RULES is a list of activation nodes, each
+of which is a form matching the following pattern:
+<p>&nbsp;&nbsp;&nbsp;(<span class="bi">:nodes</span> RULES
+<br>&nbsp;&nbsp;&nbsp;&nbsp;[<span class="bi">:position</span> POSITION-RULE]
+<br>&nbsp;&nbsp;&nbsp;&nbsp;[<span class="bi">:has-parent</span> HAS-PARENT-RULE]
+<br>&nbsp;&nbsp;&nbsp;&nbsp;[<span class="bi">:has-fields</span> FIELDS]
+<br>&nbsp;&nbsp;&nbsp;&nbsp;[<span class="bi">:has-ancestor</span> HAS-ANCESTOR-RULE])
+<p>Where RULES is one or more rules outlined in
+<a href="../fun/combobulate-procedure-expand-rules.html"><code>combobulate-procedure-expand-rules</code></a>, and POSITION-RULE is one
+of:
+<p>&nbsp;&nbsp;<a href="../fun/any.html"><code>any</code></a>, meaning point is anywhere in the node, and is the default;
+<br>&nbsp;&nbsp;<span class="m"><code>in</code></span>, that it is *not* at the beginning;
+<br>&nbsp;&nbsp;and <span class="m"><code>at</code></span>, that it must be at the exact beginning of the node.
+<p>HAS-PARENT-RULE and HAS-ANCESTOR-RULE are optional, though at
+most one can be used in an activation node rule. They each take a
+list of RULES.
+<p>HAS-PARENT-RULE checks if the immediate parent of the action node
+matches the rules, while HAS-ANCESTOR-RULE checks if any ancestor
+of the action node matches the rules.
+<p>HAS-FIELD-RULE is a list of fields the action node be considered
+to be inside of.
+<p>SELECTOR-RULES is a form matching the following pattern:
+<p>&nbsp;&nbsp;&nbsp;(<span class="bi">:choose</span> &lt;CHOICE&gt;
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;MATCHER PROPERTY&gt;)
+<p>Where &lt;MATCHER PROPERTY&gt; is one of:
+<p>&nbsp;&nbsp;&nbsp;&nbsp;:match-query &lt;QUERY-MATCHER&gt;
+<br>&nbsp;&nbsp;&nbsp;&nbsp;:match-children &lt;NODE-MATCHER&gt;
+<br>&nbsp;&nbsp;&nbsp;&nbsp;:match-siblings &lt;NODE-MATCHER&gt;
+<p>And CHOICE is either <span class="m"><code>node</code></span> or <span class="m"><code>parent</code></span> (the default), indicating whether the
+selector should operate on the action node or its matching
+parent.
+<p>NODE-MATCHER must be either <a href="../var/t.html"><code>t</code></a>, indicating all node types (but
+not anonymous nodes); or a form of the following pattern:
+<p>&nbsp;&nbsp;&nbsp;(<span class="bi">:match-rules</span> &lt;RULES|t&gt;
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:discard-rules</span> &lt;RULES|t&gt;
+<br>&nbsp;&nbsp;&nbsp;&nbsp;[<span class="bi">:anonymous</span> &lt;nil|t&gt;]
+<br>&nbsp;&nbsp;&nbsp;&nbsp;[<span class="bi">:default-mark</span> &lt;@match|@discard&gt;])
+<p>Only one of <span class="bi">:match-rules</span> or <span class="bi">:discard-rules</span> can be used in
+NODE-MATCHER. <span class="bi">:anonymous</span> is a boolean and defaults to nil, and
+<br><span class="bi">:default-mark</span> is a symbol and defaults to
+<br><span class="m"><code>@match</code></span>. <span class="bi">:default-mark</span> is the tie-breaker when a node is not
+<br>matched by <span class="bi">:match-rules</span> or <span class="bi">:discard-rules</span>.
+<p>QUERY-MATCHER must be of the form:
+<p>&nbsp;&nbsp;&nbsp;(<span class="bi">:query</span> &lt;QUERY
+<br>&nbsp;&nbsp;&nbsp;&nbsp;[<span class="bi">:engine</span> &lt;combobulate|treesitter&gt;]
+<br>&nbsp;&nbsp;&nbsp;&nbsp;[<span class="bi">:discard-rules</span> &lt;RULES&gt;])
+<p>Note that QUERY can be either Combobulate's internal query
+language to non-recursively match against <span class="arg">NODE</span>, or a regular
+tree-sitter query that recursively matches against <span class="arg">NODE</span> and any
+children of <span class="arg">NODE</span>. The <span class="bi">:engine</span> flag determines which, and it
+defaults to <a href="../fun/combobulate.html"><code>combobulate</code></a>. <span class="bi">:discard-rules</span> is a list of rules
+<br>(or <a href="../var/t.html"><code>t</code></a> indicating match everything, but not anonymous nodes).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-procedure.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-procedure-apply</span> (procedure node)
+  <span class="doc">"Apply PROCEDURE to NODE.
+
+  PROCEDURE is a form matching the following pattern:
+
+  (:activation-nodes (ACTIVATION-NODE-RULES ...))
+  :selector SELECTOR-RULES)
+
+Where ACTIVATION-NODE-RULES is a list of activation nodes, each
+of which is a form matching the following pattern:
+
+   (:nodes RULES
+    [:position POSITION-RULE]
+    [:has-parent HAS-PARENT-RULE]
+    [:has-fields FIELDS]
+    [:has-ancestor HAS-ANCESTOR-RULE])
+
+Where RULES is one or more rules outlined in
+`</span><span class="m doc">combobulate-procedure-expand-rules</span><span class="doc">', and POSITION-RULE is one
+of:
+
+  `</span><span class="m doc">any</span><span class="doc">', meaning point is anywhere in the node, and is the default;
+  `</span><span class="m doc">in</span><span class="doc">', that it is *not* at the beginning;
+  and `</span><span class="m doc">at</span><span class="doc">', that it must be at the exact beginning of the node.
+
+HAS-PARENT-RULE and HAS-ANCESTOR-RULE are optional, though at
+most one can be used in an activation node rule. They each take a
+list of RULES.
+
+HAS-PARENT-RULE checks if the immediate parent of the action node
+matches the rules, while HAS-ANCESTOR-RULE checks if any ancestor
+of the action node matches the rules.
+
+HAS-FIELD-RULE is a list of fields the action node be considered
+to be inside of.
+
+SELECTOR-RULES is a form matching the following pattern:
+
+   (:choose &lt;CHOICE&gt;
+    &lt;MATCHER PROPERTY&gt;)
+
+Where &lt;MATCHER PROPERTY&gt; is one of:
+
+    :match-query &lt;QUERY-MATCHER&gt;
+    :match-children &lt;NODE-MATCHER&gt;
+    :match-siblings &lt;NODE-MATCHER&gt;
+
+And CHOICE is either `</span><span class="m doc">node</span><span class="doc">' or `</span><span class="m doc">parent</span><span class="doc">' (the default), indicating whether the
+selector should operate on the action node or its matching
+parent.
+
+NODE-MATCHER must be either `</span><span class="m doc">t</span><span class="doc">', indicating all node types (but
+not anonymous nodes); or a form of the following pattern:
+
+   (:match-rules &lt;RULES|t&gt;
+    :discard-rules &lt;RULES|t&gt;
+    [:anonymous &lt;nil|t&gt;]
+    [:default-mark &lt;@match|@discard&gt;])
+
+Only one of `</span><span class="m doc">:match-rules</span><span class="doc">' or `</span><span class="m doc">:discard-rules</span><span class="doc">' can be used in
+NODE-MATCHER. `</span><span class="m doc">:anonymous</span><span class="doc">' is a boolean and defaults to nil, and
+`</span><span class="m doc">:default-mark</span><span class="doc">' is a symbol and defaults to
+`</span><span class="m doc">@match</span><span class="doc">'. `</span><span class="m doc">:default-mark</span><span class="doc">' is the tie-breaker when a node is not
+matched by `</span><span class="m doc">:match-rules</span><span class="doc">' or `</span><span class="m doc">:discard-rules</span><span class="doc">'.
+
+QUERY-MATCHER must be of the form:
+
+   (:query &lt;QUERY
+    [:engine &lt;combobulate|treesitter&gt;]
+    [:discard-rules &lt;RULES&gt;])
+
+Note that QUERY can be either Combobulate's internal query
+language to non-recursively match against NODE, or a regular
+tree-sitter query that recursively matches against NODE and any
+children of NODE. The `</span><span class="m doc">:engine</span><span class="doc">' flag determines which, and it
+defaults to `</span><span class="m doc">combobulate</span><span class="doc">'. `</span><span class="m doc">:discard-rules</span><span class="doc">' is a list of rules
+(or `</span><span class="m doc">t</span><span class="doc">' indicating match everything, but not anonymous nodes)."</span>
+  (combobulate-procedure-validate procedure)
+  (<span class="k">map-let</span> (<span class="bi">:activation-nodes</span> <span class="bi">:selector</span>)
+      procedure
+    (<span class="k">when-let</span> (procedure-result (combobulate-procedure-apply-activation-nodes
+                                 activation-nodes node))
+      (<span class="w">cl-assert</span> (<span class="k">and</span> (combobulate-procedure-result-p procedure-result)
+                      (combobulate-procedure-result-matched-activation procedure-result))
+                 nil <span class="s">"Expected `</span><span class="m s">combobulate-procedure-apply-activation-nodes</span><span class="s">' to return a
+ procedure result with a matched activation node"</span>)
+      (<span class="k">if</span> selector
+          (<span class="k">map-let</span> (<span class="bi">:choose</span> <span class="bi">:match-query</span> <span class="bi">:match-children</span> <span class="bi">:match-siblings</span>) selector
+            <span class="cd">;; </span><span class="c">use `</span><span class="m c">:choose</span><span class="c">' to determine whether to operate on the
+</span>            <span class="cd">;; </span><span class="c">action node or its parent
+</span>            (<span class="k">when-let</span> ((chosen-node
+                        (<span class="k">cond</span>
+                         ((equal choose 'node)
+                          (combobulate-procedure-result-action-node procedure-result))
+                         ((<span class="k">or</span> (equal choose 'parent) (null choose))
+                          (combobulate-procedure-result-parent-node procedure-result))
+                         (t (<span class="w">error</span> <span class="s">"Unknown `</span><span class="m s">:choose</span><span class="s">' specifier `</span><span class="m s">%s</span><span class="s">'"</span> choose)))))
+              (<span class="k">setf</span>
+               <span class="cd">;; </span><span class="c">store the result of the selector filter in the procedure result
+</span>               (combobulate-procedure-result-selected-nodes procedure-result)
+               (ensure-list
+                (<span class="k">cond</span>
+                 (match-query
+                  (combobulate-procedure--filter-nodes-by-query match-query chosen-node))
+                 ((<span class="k">or</span> match-siblings match-children)
+                  (combobulate-procedure--filter-nodes-by-relationship
+                   (<span class="k">or</span> match-children match-siblings)
+                   chosen-node
+                   (<span class="k">if</span> match-siblings
+                       #'combobulate-linear-siblings
+                     #'combobulate-node-children)))
+                 (t (<span class="w">error</span> <span class="s">"Invalid selector: %s"</span> selector))))
+               <span class="cd">;; </span><span class="c">acknowledge that the selector filter was used
+</span>               (combobulate-procedure-result-matched-selection procedure-result) t)))
+        <span class="cd">;; </span><span class="c">if there is no selector, then the action node is the selected node
+</span>        (<span class="k">setf</span> (combobulate-procedure-result-matched-selection procedure-result) 'n/a))
+      <span class="cd">;; </span><span class="c">do a final bit of clean-up: get all the nodes marked `</span><span class="m c">@match</span><span class="c">'
+</span>      <span class="cd">;; </span><span class="c">and also put them in the `</span><span class="m c">matched-nodes</span><span class="c">' slot and then remove
+</span>      <span class="cd">;; </span><span class="c">the mark.
+</span>      (<span class="k">setf</span> (combobulate-procedure-result-matched-nodes procedure-result)
+            (combobulate-procedure--filter-marked-nodes
+             (combobulate-procedure-result-selected-nodes procedure-result) t nil))
+      procedure-result)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

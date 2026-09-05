@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dired-async--smart-create-files – Emacs Documentation Online</title>
+<meta name="description" content="dired-async--smart-create-files is a natively compiled function
+defined in dired-async.el.
+Around advice for dired-create-files.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dired-async--smart-create-files</code></h1><p><span class="m"><code>dired-async--smart-create-files</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">dired-async.el</span>.
+<h2>Signature</h2>
+<pre><code>(dired-async--smart-create-files <a href="#:~:text="><span class="arg">OLD-FUNC</span></a> <a href="#:~:text="><span class="arg">FILE-CREATOR</span></a> <a href="#:~:text="><span class="arg">OPERATION</span></a> <a href="#:~:text="><span class="arg">FN-LIST</span></a> <a href="#:~:text="><span class="arg">NAME-CONSTRUCTOR</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">MARKER-CHAR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Around advice for <a href="../fun/dired-create-files.html"><code>dired-create-files</code></a>.
+<p>Uses async like <a href="../fun/dired-async-create-files.html"><code>dired-async-create-files</code></a> but skips certain fast
+cases if <a href="../var/dired-async-skip-fast.html"><code>dired-async-skip-fast</code></a> is non-nil.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vpxd64bbf27n3ziyqnh29vmak5xnpk2l-emacs-packages-deps/share/emacs/site-lisp/elpa/async-20260729.1431/dired-async.el</span>
+(<span class="k">defun</span> <span class="f">dired-async--smart-create-files</span> (old-func file-creator
+                                                 operation fn-list name-constructor
+                                                 <span class="ty">&amp;optional</span> marker-char)
+  <span class="doc">"Around advice for `</span><span class="m doc">dired-create-files</span><span class="doc">'.
+Uses async like `</span><span class="m doc">dired-async-create-files</span><span class="doc">' but skips certain fast
+cases if `</span><span class="m doc">dired-async-skip-fast</span><span class="doc">' is non-nil."</span>
+  (<span class="k">let</span> ((total-size 0)
+        async-list quick-list)
+    (<span class="k">if</span> (<span class="k">or</span> (eq file-creator 'backup-file)
+            (null dired-async-skip-fast))
+        (<span class="k">setq</span> async-list fn-list)
+      (<span class="k">dolist</span> (old fn-list)
+        (<span class="k">let</span> ((attrs (file-attributes old)))
+          (<span class="k">if</span> (dired-async--skip-async-p
+               file-creator old name-constructor attrs)
+              (<span class="k">progn</span>
+                (<span class="k">push</span> old quick-list)
+                (<span class="k">setq</span> total-size (+ total-size (nth 7 attrs))))
+            (<span class="k">push</span> old async-list))))
+      (<span class="k">when</span> (&gt; total-size dired-async-small-file-max)
+        (<span class="k">setq</span> async-list (append quick-list async-list)
+              quick-list nil)))
+    (<span class="k">when</span> async-list
+      (dired-async-create-files
+       file-creator operation (nreverse async-list)
+       name-constructor marker-char))
+    (<span class="k">when</span> quick-list
+      (funcall old-func file-creator operation
+               (nreverse quick-list) name-constructor marker-char))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

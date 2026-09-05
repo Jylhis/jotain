@@ -1,0 +1,102 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sops-mode – Emacs Documentation Online</title>
+<meta name="description" content="sops-mode is an interactive and natively compiled function defined in
+sops.el.
+Edit the current SOPS-encrypted file transparently.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sops-mode</code></h1><p><span class="m"><code>sops-mode</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">sops.el</span>.
+<h2>Signature</h2>
+<pre><code>(sops-mode <span class="ty">&amp;optional</span> <a href="#:~:text=if-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Edit the current SOPS-encrypted file transparently.
+<p>Decryption happens at <a href="../fun/find-file.html"><code>find-file</code></a>; encryption happens at <a href="../fun/save-buffer.html"><code>save-buffer</code></a>.
+Plaintext never reaches disk (backups and auto-save are suppressed).
+<p>This is a minor mode.  If called interactively, toggle the <span class="m"><code>sops mode</code></span>
+mode.  If the prefix argument is positive, enable the mode, and if it is
+zero or negative, disable the mode.
+<p>If called from Lisp, toggle the mode if <span class="arg">ARG</span> is <span class="m"><code>toggle</code></span>.  Enable the
+mode if <span class="arg">ARG</span> is nil, omitted, or is a positive number.  Disable the mode
+if <span class="arg">ARG</span> is a negative number.
+<p>To check whether the minor mode is enabled in the current buffer,
+evaluate the variable <a class="v" href="../var/sops-mode.html"><code>sops-mode</code>(var)</a>/<a class="f" href="../fun/sops-mode.html"><code>sops-mode</code>(fun)</a>.
+<p>The mode's hook is called both when the mode is enabled and when it is
+disabled.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qkr1smn94fw9pj8qis6r47djxqbd30ki-emacs-packages-deps/share/emacs/site-lisp/elpa/sops-20260518.350/sops.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">define-minor-mode</span> <span class="f">sops-mode</span>
+  <span class="doc">"Edit the current SOPS-encrypted file transparently.
+Decryption happens at `</span><span class="m doc">find-file</span><span class="doc">'; encryption happens at `</span><span class="m doc">save-buffer</span><span class="doc">'.
+Plaintext never reaches disk (backups and auto-save are suppressed)."</span>
+  <span class="bi">:init-value</span> nil
+  <span class="bi">:lighter</span> <span class="s">" sops"</span>
+  <span class="bi">:group</span> 'sops
+  (<span class="k">cond</span>
+   (sops-mode
+    <span class="cd">;; </span><span class="c">Refuse to enable on a buffer whose visited file isn't sops-encrypted.
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">sops--find-file-hook</span><span class="c">' and `</span><span class="m c">sops--retry-decrypt-on-revert</span><span class="c">' both
+</span>    <span class="cd">;; </span><span class="c">validate via `</span><span class="m c">sops--filestatus</span><span class="c">' + a successful decrypt before
+</span>    <span class="cd">;; </span><span class="c">reaching here, so they pre-set `</span><span class="m c">sops--state</span><span class="c">' to signal "trust me".
+</span>    <span class="cd">;; </span><span class="c">This guard catches manual `M-x sops-mode' on a regular buffer,
+</span>    <span class="cd">;; </span><span class="c">which would otherwise install encrypt-on-save hooks that fail at
+</span>    <span class="cd">;; </span><span class="c">save time -- and the disable branch's modified-buffer guardrail
+</span>    <span class="cd">;; </span><span class="c">would then trap the user with no clean escape.
+</span>    (<span class="k">unless</span> sops--state
+      (<span class="k">unless</span> (<span class="k">and</span> buffer-file-name
+                   (not (file-remote-p buffer-file-name))
+                   (sops--filestatus buffer-file-name))
+        (<span class="k">setq</span> sops-mode nil)
+        (<span class="w">user-error</span> <span class="s">"sops-mode: %s is not a sops-encrypted file"</span>
+                    (<span class="k">or</span> buffer-file-name <span class="s">"this buffer"</span>)))
+      (<span class="k">setq</span> sops--state (sops-state-create <span class="bi">:status</span> 'decrypted)))
+    (<span class="k">setq-local</span> make-backup-files nil)
+    (<span class="k">setq-local</span> buffer-auto-save-file-name nil)
+    (<span class="k">setq-local</span> revert-buffer-function #'sops--revert-buffer)
+    (add-hook 'write-contents-functions #'sops--write-contents-function nil t)
+    <span class="cd">;; </span><span class="c">External writes (magit discard, git checkout, sops -e from CLI) update
+</span>    <span class="cd">;; </span><span class="c">the file behind our back.  auto-revert-mode picks them up and calls
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">revert-buffer-function</span><span class="c">' (= `</span><span class="m c">sops--revert-buffer</span><span class="c">') so the user sees
+</span>    <span class="cd">;; </span><span class="c">the new ciphertext re-decrypted instead of a stale buffer + the
+</span>    <span class="cd">;; </span><span class="c">"really edit?" prompt.  Defaults to file-notify (kqueue/inotify) when
+</span>    <span class="cd">;; </span><span class="c">available, falling back to polling.  See test/sops-test.el for why
+</span>    <span class="cd">;; </span><span class="c">batch tests force polling (the interactive main loop drains queued
+</span>    <span class="cd">;; </span><span class="c">events between commands; batch does not, and that deadlocks the next
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">sops--run</span><span class="c">').
+</span>    (auto-revert-mode 1)
+    <span class="cd">;; </span><span class="c">Inhibit apheleia (and any future formatters that respect this var
+</span>    <span class="cd">;; </span><span class="c">convention).  Two reasons: (1) apheleia's before-save formatter runs
+</span>    <span class="cd">;; </span><span class="c">before our `</span><span class="m c">write-contents-functions</span><span class="c">' hook and can hang the save flow
+</span>    <span class="cd">;; </span><span class="c">before sops is even reached; (2) reformatting decrypted plaintext
+</span>    <span class="cd">;; </span><span class="c">before encrypt would change the ciphertext on every save, producing
+</span>    <span class="cd">;; </span><span class="c">meaningless `git diff' churn even on no-op edits.  apheleia documents
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">apheleia-inhibit</span><span class="c">' as its buffer-local opt-out.
+</span>    (<span class="k">setq-local</span> apheleia-inhibit t)
+    <span class="cd">;; </span><span class="c">Lazy-install the global major-mode-change restoration hook.  Doing
+</span>    <span class="cd">;; </span><span class="c">this on first `</span><span class="m c">sops-mode</span><span class="c">' enable rather than at package load keeps
+</span>    <span class="cd">;; </span><span class="c">`(require </span><span class="bi c">\\=</span><span class="c">'sops)' free of global side effects -- users who load
+</span>    <span class="cd">;; </span><span class="c">sops.el but never visit a SOPS file pay no per-buffer hook cost.
+</span>    (<span class="k">unless</span> sops--restore-hook-installed
+      (add-hook 'after-change-major-mode-hook
+                #'sops--restore-after-major-mode-change)
+      (<span class="k">setq</span> sops--restore-hook-installed t)))
+   (t
+    (<span class="k">when</span> (buffer-modified-p)
+      (<span class="k">setq</span> sops-mode 1)  <span class="cd">; </span><span class="c">revert the toggle
+</span>      (<span class="w">user-error</span>
+       <span class="s">"Sops: buffer modified; revert-buffer first or use M-x read-only-mode"</span>))
+    (auto-revert-mode -1)
+    (kill-local-variable 'make-backup-files)
+    (kill-local-variable 'buffer-auto-save-file-name)
+    (kill-local-variable 'revert-buffer-function)
+    (kill-local-variable 'apheleia-inhibit)
+    (remove-hook 'write-contents-functions #'sops--write-contents-function t)
+    (<span class="k">setq</span> sops--state nil))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

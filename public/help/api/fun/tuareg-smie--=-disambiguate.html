@@ -1,0 +1,80 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg-smie--=-disambiguate – Emacs Documentation Online</title>
+<meta name="description" content="tuareg-smie--=-disambiguate is a natively compiled function defined in
+tuareg.el.
+Return which kind of &quot;=&quot; we've just found.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg-smie--=-disambiguate</code></h1><p><span class="m"><code>tuareg-smie--=-disambiguate</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg-smie--=-disambiguate)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return which kind of "=" we've just found.
+<p>Point is not moved and should be right in front of the equality.
+Return values can be
+<br>&nbsp;&nbsp;"f=" for field definition,
+<br>&nbsp;&nbsp;"d=" for a normal definition,
+<br>&nbsp;&nbsp;"c=" for a type equality constraint, and
+<br>&nbsp;&nbsp;"=…" for an equality test.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg-smie--=-disambiguate</span> ()
+  <span class="doc">"Return which kind of \"=\" we've just found.
+Point is not moved and should be right in front of the equality.
+Return values can be
+  \"f=\" for field definition,
+  \"d=\" for a normal definition,
+  \"c=\" for a type equality constraint, and
+  \"=…\" for an equality test."</span>
+  (<span class="k">save-excursion</span>
+    (<span class="k">let*</span> ((pos (point))
+           (telltale '(<span class="s">"type"</span> <span class="s">"let"</span> <span class="s">"module"</span> <span class="s">"class"</span> <span class="s">"and"</span> <span class="s">"external"</span>
+                       <span class="s">"val"</span> <span class="s">"method"</span> <span class="s">"="</span> <span class="s">":="</span>
+                       <span class="s">"if"</span> <span class="s">"then"</span> <span class="s">"else"</span> <span class="s">"-&gt;"</span> <span class="s">";"</span> ))
+           (nearest (tuareg-smie--search-backward telltale)))
+      (<span class="k">cond</span>
+       ((<span class="k">and</span> (member nearest '(<span class="s">"{"</span> <span class="s">";"</span>))
+             (<span class="k">let</span> ((field t))
+               (<span class="k">while</span>
+                   (<span class="k">let</span> ((x (tuareg-smie--forward-token)))
+                     (<span class="k">and</span> (&lt; (point) pos)
+                          (<span class="k">cond</span>
+                           ((zerop (length x)) (<span class="k">setq</span> field nil))
+                           ((memq (char-syntax (aref x 0)) '(?w ?_)))
+                           ((member x '(<span class="s">"."</span> <span class="s">";"</span>)))
+                           (t (<span class="k">setq</span> field nil))))))
+               field))
+        <span class="s">"f="</span>)
+       ((<span class="k">progn</span>
+          (<span class="k">while</span> (<span class="k">and</span> (equal nearest <span class="s">"-&gt;"</span>)
+                      (<span class="k">save-excursion</span>
+                        (forward-char 2)
+                        (equal (tuareg-smie-backward-token) <span class="s">"t-&gt;"</span>)))
+            (<span class="k">setq</span> nearest (tuareg-smie--search-backward telltale)))
+          nil))
+       ((<span class="k">and</span> (member nearest '(<span class="s">"="</span> <span class="s">":="</span>))
+             (member (tuareg-smie--search-backward telltale)
+                     '(<span class="s">"type"</span> <span class="s">"module"</span>)))
+        <span class="cd">;; </span><span class="c">Second equality in "type t = M.t = C" or after mod-constraint
+</span>        <span class="s">"d="</span>)
+       ((not (member nearest '(<span class="s">"type"</span> <span class="s">"let"</span> <span class="s">"module"</span> <span class="s">"class"</span> <span class="s">"and"</span>
+                               <span class="s">"external"</span> <span class="s">"val"</span> <span class="s">"method"</span>)))
+        <span class="s">"=…"</span>)
+       ((<span class="k">and</span> (member nearest '(<span class="s">"type"</span> <span class="s">"module"</span>))
+             <span class="cd">;; </span><span class="c">Maybe a module's type equality constraint?
+</span>             (<span class="k">or</span> (member (tuareg-smie--backward-token) '(<span class="s">"with"</span> <span class="s">"and"</span>))
+                 <span class="cd">;; </span><span class="c">Or maybe an alias as part of a definition?
+</span>                 (<span class="k">and</span> (equal nearest <span class="s">"type"</span>)
+                      (goto-char (1+ pos)) <span class="cd">;</span><span class="c">"1+" to skip the `</span><span class="m c">=</span><span class="c">' itself!
+</span>                      (<span class="k">let</span> ((tok (tuareg-smie--search-forward
+                                  (cons <span class="s">"="</span> (mapcar #'car
+                                                    tuareg-smie-grammar)))))
+                        (equal tok <span class="s">"="</span>)))))
+        <span class="s">"c="</span>)
+       (t <span class="s">"d="</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

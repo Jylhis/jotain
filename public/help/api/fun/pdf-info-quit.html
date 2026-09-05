@@ -1,0 +1,41 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-info-quit – Emacs Documentation Online</title>
+<meta name="description" content="pdf-info-quit is a natively compiled function defined in pdf-info.el.
+Quit the epdfinfo server.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-info-quit</code></h1><p><span class="m"><code>pdf-info-quit</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">pdf-info.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-info-quit <span class="ty">&amp;optional</span> <a href="#:~:text=Unless-,TIMEOUT"><span class="arg">TIMEOUT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Quit the epdfinfo server.
+<p>This blocks until all outstanding requests are answered.  Unless
+<span class="arg">TIMEOUT</span> is non-nil, in which case we wait at most <span class="arg">TIMEOUT</span> seconds
+before killing the server.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-info.el</span>
+(<span class="k">defun</span> <span class="f">pdf-info-quit</span> (<span class="ty">&amp;optional</span> timeout)
+  <span class="doc">"Quit the epdfinfo server.
+
+This blocks until all outstanding requests are answered.  Unless
+TIMEOUT is non-nil, in which case we wait at most TIMEOUT seconds
+before killing the server."</span>
+  (<span class="w">cl-check-type</span> timeout (<span class="k">or</span> null number))
+  (<span class="k">when</span> (pdf-info-running-p)
+    (<span class="k">let</span> ((pdf-info-asynchronous
+           (<span class="k">if</span> timeout (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> _))
+             pdf-info-asynchronous)))
+      (pdf-info-query 'quit)
+      (<span class="k">when</span> timeout
+        (<span class="k">setq</span> timeout (+ (float-time) (max 0 timeout)))
+        (<span class="k">while</span> (<span class="k">and</span> (pdf-info-running-p)
+                    (&gt; timeout (float-time)))
+          (accept-process-output (pdf-info-process) 0.5 nil t)))))
+  (<span class="k">when</span> (processp (pdf-info-process))
+    (tq-close pdf-info--queue))
+  (<span class="k">setq</span> pdf-info--queue nil))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,68 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: logview--do-append-log-file-tail – Emacs Documentation Online</title>
+<meta name="description" content="logview--do-append-log-file-tail is a natively compiled function
+defined in logview.el.
+Perform the work of logview-append-log-file-tail.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>logview--do-append-log-file-tail</code></h1><p><span class="m"><code>logview--do-append-log-file-tail</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">logview.el</span>.
+<h2>Signature</h2>
+<pre><code>(logview--do-append-log-file-tail <span class="ty">&amp;optional</span> <a href="#:~:text=If-,NO-ERRORS"><span class="arg">NO-ERRORS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Perform the work of <a href="../fun/logview-append-log-file-tail.html"><code>logview-append-log-file-tail</code></a>.
+<p>If <span class="arg">NO-ERRORS</span> is non-nil and the file has changed in a non-growing
+way, returns nil rather than barking.  In case of success, always
+returns non-nil.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qid656ql5mh048bd0k84vvsbc2517lh9-emacs-packages-deps/share/emacs/site-lisp/elpa/logview-20260218.2013/logview.el</span>
+(<span class="k">defun</span> <span class="f">logview--do-append-log-file-tail</span> (<span class="ty">&amp;optional</span> no-errors)
+  <span class="doc">"Perform the work of `</span><span class="m doc">logview-append-log-file-tail</span><span class="doc">'.
+If NO-ERRORS is non-nil and the file has changed in a non-growing
+way, returns nil rather than barking.  In case of success, always
+returns non-nil."</span>
+  (<span class="k">logview--std-temporarily-widening</span>   <span class="cd">;</span><span class="c">FIXME: `</span><span class="m c">logview--temporarily-widening</span><span class="c">'?
+</span>    (<span class="k">let*</span> ((buffer             (current-buffer))
+           (file               buffer-file-name)
+           (reassurance-chars  (min (max logview-reassurance-chars 0)
+                                    (buffer-size)))
+           (compare-from       (- (point-max) reassurance-chars))
+           (current-text       (buffer-substring-no-properties
+                                compare-from (point-max)))
+           (compare-from-bytes (bufferpos-to-filepos compare-from)))
+      (<span class="k">with-temp-buffer</span>
+        <span class="cd">;; </span><span class="c">As of Emacs 30 this fails when trying to read past the end of the
+</span>        <span class="cd">;; </span><span class="c">file (in earlier Emacs versions it works, but doesn't insert
+</span>        <span class="cd">;; </span><span class="c">anything).  Don't care to report anything to Emacs-devel (maybe it's
+</span>        <span class="cd">;; </span><span class="c">even intentional in this case, don't know), just work with either
+</span>        <span class="cd">;; </span><span class="c">behavior by suppressing all errors.
+</span>        (<span class="k">ignore-errors</span> (insert-file-contents file nil compare-from-bytes nil))
+        (<span class="k">let</span> ((temporary      (current-buffer))
+              (temporary-boundary (+ reassurance-chars (point-min)))
+              (temporary-size (buffer-size)))
+          (<span class="k">if</span> (<span class="k">and</span> (&gt;= temporary-size reassurance-chars)
+                   (string= (buffer-substring-no-properties
+                             (point-min) temporary-boundary)
+                            current-text))
+              (<span class="k">if</span> (= temporary-size reassurance-chars)
+                  (message <span class="s">"Backing file %s hasn't grown"</span> file)
+                (<span class="k">with-current-buffer</span> buffer
+                  (<span class="k">let</span> ((was-modified      (buffer-modified-p))
+                        (inhibit-read-only t)
+                        <span class="cd">;; </span><span class="c">This is to avoid unnecessary confirmation about
+</span>                        <span class="cd">;; </span><span class="c">modifying a buffer with externally changed file.
+</span>                        (buffer-file-name  nil))
+                    (<span class="k">save-excursion</span>
+                      (goto-char (point-max))
+                      <span class="cd">;; </span><span class="c">FIXME: Why `</span><span class="m c">-no-properties</span><span class="c">'?
+</span>                      (insert-buffer-substring-no-properties
+                       temporary temporary-boundary nil))
+                    (restore-buffer-modified-p was-modified))
+                  (message <span class="s">"Appended the tail of file %s"</span> file)))
+            (<span class="k">unless</span> no-errors
+              (<span class="w">user-error</span> <span class="s">"Buffer contents doesn't match the head of %s anymore"</span> file))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

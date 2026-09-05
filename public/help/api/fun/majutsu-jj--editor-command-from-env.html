@@ -1,0 +1,45 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-jj--editor-command-from-env – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-jj--editor-command-from-env is a natively compiled function
+defined in majutsu-jj.el.
+Return with-editor command words from majutsu-with-editor-envvar.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-jj--editor-command-from-env</code></h1><p><span class="m"><code>majutsu-jj--editor-command-from-env</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-jj.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-jj--editor-command-from-env)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return with-editor command words from <a href="../var/majutsu-with-editor-envvar.html"><code>majutsu-with-editor-envvar</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-jj.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-jj--editor-command-from-env</span> ()
+  <span class="doc">"Return with-editor command words from `</span><span class="m doc">majutsu-with-editor-envvar</span><span class="doc">'."</span>
+  (<span class="k">let</span> ((raw (getenv majutsu-with-editor-envvar)))
+    (<span class="k">unless</span> (<span class="k">and</span> raw (not (equal raw <span class="s">""</span>)))
+      (<span class="w">user-error</span> <span class="s">"Missing %s in process environment"</span> majutsu-with-editor-envvar))
+    (<span class="k">condition-case</span> err
+        (<span class="k">let</span> ((words
+               <span class="cd">;; </span><span class="c">`</span><span class="m c">split-string-shell-command</span><span class="c">' can mis-parse with-editor's
+</span>               <span class="cd">;; </span><span class="c">sleeping editor and yield only ("wait" "$sleep").
+</span>               <span class="cd">;; </span><span class="c">Detect `PROGRAM -c '</span><span class="m c">SCRIPT</span><span class="c">'' forms directly and preserve
+</span>               <span class="cd">;; </span><span class="c">the script as a single argument.
+</span>               (<span class="k">or</span> (<span class="k">and</span> (string-match <span class="s">"\\`</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s">[:space:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">[[:space:]]+-c[[:space:]]+'"</span> raw)
+                        (<span class="k">let</span> ((program (match-string 1 raw))
+                              (start (match-end 0)))
+                          (<span class="k">when</span> (<span class="k">and</span> (&lt;= start (length raw))
+                                     (string-suffix-p <span class="s">"'"</span> raw))
+                            (list program <span class="s">"-c"</span> (substring raw start -1)))))
+                   (split-string-shell-command raw))))
+          (<span class="k">unless</span> words
+            (<span class="w">user-error</span> <span class="s">"%s is empty"</span> majutsu-with-editor-envvar))
+          words)
+      (<span class="w">error</span>
+       (<span class="w">user-error</span> <span class="s">"Failed to parse %s: %s"</span>
+                   majutsu-with-editor-envvar
+                   (error-message-string err))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

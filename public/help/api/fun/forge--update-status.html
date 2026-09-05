@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--update-status – Emacs Documentation Online</title>
+<meta name="description" content="forge--update-status is a byte-compiled function defined in
+forge-github.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--update-status</code></h1><p><span class="m"><code>forge--update-status</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in
+<span class="bt">forge-github.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--update-status <span class="ty">&amp;rest</span> <span class="arg">ARGS</span>)
+</code></pre>
+<h2>Implementations</h2>
+<p>(forge--update-status (REPO forge-github-repository) TOPIC DATA BUMP INITIAL-PULL) in `<span class="bt">forge-github.el</span>'.
+<p>Undocumented
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-github.el</span>
+(<span class="k">cl-defmethod</span> <span class="f">forge--update-status</span> ((repo forge-github-repository)
+                                    topic data bump initial-pull)
+  (<span class="k">let-alist</span> data
+    (<span class="k">let</span> ((updated (<span class="k">or</span> .updatedAt .createdAt))
+          (current-status (<span class="k">oref</span> topic status)))
+      (<span class="k">if</span> (forge-discussion-p topic)
+          <span class="cd">;; </span><span class="c">Discussions lack `</span><span class="m c">isReadByViewer</span><span class="c">', so we have to use a
+</span>          <span class="cd">;; </span><span class="c">heuristic, which is even worse than what we use for other
+</span>          <span class="cd">;; </span><span class="c">topic types.  Except during the repository's initial pull,
+</span>          <span class="cd">;; </span><span class="c">all new discussions start out as `</span><span class="m c">unread</span><span class="c">'.
+</span>          <span class="cd">;;</span><span class="c">
+</span>          <span class="cd">;; </span><span class="c">If we pull a discussion after the user mutated it, setting
+</span>          <span class="cd">;; </span><span class="c">the status to `</span><span class="m c">unread</span><span class="c">' is highly undesirable (since they made
+</span>          <span class="cd">;; </span><span class="c">the mutation, they have already "read" it), yet that is what
+</span>          <span class="cd">;; </span><span class="c">we do here.  However, the callback used by the discussion
+</span>          <span class="cd">;; </span><span class="c">method of `</span><span class="m c">forge--pull-topic</span><span class="c">', afterwards resets the status
+</span>          <span class="cd">;; </span><span class="c">to the previous value.
+</span>          <span class="cd">;;</span><span class="c">
+</span>          <span class="cd">;; </span><span class="c">Of course it is possible that we pull other changes by other
+</span>          <span class="cd">;; </span><span class="c">people at the same time, but we have no (reasonable) way of
+</span>          <span class="cd">;; </span><span class="c">knowing that.  So in that case too the status sadly doesn't
+</span>          <span class="cd">;; </span><span class="c">end up as `</span><span class="m c">unread</span><span class="c">'.
+</span>          <span class="cd">;;</span><span class="c">
+</span>          <span class="cd">;; </span><span class="c">The callback kludge is not needed for all mutations.  Some
+</span>          <span class="cd">;; </span><span class="c">mutations (e.g., setting labels) do not cause `</span><span class="m c">updated_at</span><span class="c">'
+</span>          <span class="cd">;; </span><span class="c">to be bumped; this second defect cancels out the first.
+</span>          (<span class="k">cond</span> (initial-pull
+                 (<span class="k">oset</span> topic status 'done))
+                ((null current-status)
+                 (<span class="k">oset</span> topic status 'unread))
+                ((string&gt; updated (<span class="k">oref</span> topic updated))
+                 (<span class="k">oset</span> topic status 'unread)))
+        (<span class="k">cond</span> ((not .isReadByViewer)
+               (<span class="k">oset</span> topic status 'unread))
+              (initial-pull
+               (<span class="k">oset</span> topic status 'done))
+              ((null current-status)
+               (<span class="k">oset</span> topic status 'pending))
+              ((string&gt; updated (<span class="k">oref</span> topic updated))
+               (<span class="k">oset</span> topic status 'pending))))
+      (<span class="k">oset</span> topic updated updated)
+      (<span class="k">when</span> bump
+        (<span class="k">let*</span> ((slot (<span class="k">cl-typecase</span> topic
+                       (forge-discussion 'discussions-until)
+                       (forge-issue      'issues-until)
+                       (forge-pullreq    'pullreqs-until)))
+               (until (eieio-oref repo slot)))
+          (<span class="k">when</span> (<span class="k">or</span> (not until) (string&gt; updated until))
+            (eieio-oset repo slot updated)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

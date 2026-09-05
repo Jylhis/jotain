@@ -1,0 +1,84 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--async-dynamic – Emacs Documentation Online</title>
+<meta name="description" content="consult--async-dynamic is a natively compiled function defined in
+consult.el.
+Dynamic computation of candidates.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--async-dynamic</code></h1><p><span class="m"><code>consult--async-dynamic</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--async-dynamic <a href="#:~:text=candidates.-,FUN"><span class="arg">FUN</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=returned.-,RESTART"><span class="arg">RESTART</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Dynamic computation of candidates.
+<p><span class="arg">FUN</span> computes the candidates.  It takes either a single input argument or
+an input argument and a callback function, if computed candidates should
+be updated incrementally.  The callback function must not be called
+after <span class="arg">FUN</span> has returned.
+<span class="arg">RESTART</span> is the time after which an interrupted computation should be
+restarted and defaults to <a href="../var/consult-async-input-debounce.html"><code>consult-async-input-debounce</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--async-dynamic</span> (fun <span class="ty">&amp;optional</span> restart)
+  <span class="doc">"Dynamic computation of candidates.
+FUN computes the candidates.  It takes either a single input argument or
+an input argument and a callback function, if computed candidates should
+be updated incrementally.  The callback function must not be called
+after FUN has returned.
+RESTART is the time after which an interrupted computation should be
+restarted and defaults to `</span><span class="m doc">consult-async-input-debounce</span><span class="doc">'."</span>
+  (<span class="k">setq</span> restart (<span class="k">or</span> restart consult-async-input-debounce))
+  (<span class="k">when</span> (equal (func-arity fun) '(1 . 1))
+    (<span class="k">let</span> ((orig fun))
+      (<span class="k">setq</span> fun (<span class="k">lambda</span> (input callback)
+                  (funcall callback (funcall orig input))))))
+  (<span class="k">lambda</span> (sink)
+    (<span class="k">let</span> ((timer (timer-create)) (current nil) (compute nil))
+      (<span class="k">setq</span> compute
+            (<span class="k">lambda</span> (input)
+              (cancel-timer timer)
+              (funcall sink [indicator running])
+              (redisplay)
+              (<span class="k">let*</span> ((state 'init)
+                     (killed
+                      (<span class="k">while-no-input</span>
+                        (funcall
+                         fun input
+                         (<span class="k">lambda</span> (response)
+                           (<span class="k">when</span> (eq state 'done)
+                             (<span class="w">error</span> <span class="s">"consult--async-dynamic: Callback called too late"</span>))
+                           (<span class="k">let</span> (throw-on-input)
+                             (<span class="k">when</span> (eq state 'init)
+                               (funcall sink 'flush)
+                               (<span class="k">setq</span> state 'running))
+                             (<span class="k">when</span> response
+                               (funcall sink response)
+                               <span class="cd">;; </span><span class="c">Accept process input such that timers
+</span>                               <span class="cd">;; </span><span class="c">trigger and refresh the completion UI.
+</span>                               (accept-process-output)))))
+                        (<span class="k">setq</span> current input
+                              state 'done)
+                        nil)))
+                (funcall sink `[indicator ,(<span class="k">if</span> killed 'killed 'finished)])
+                (funcall sink 'refresh)
+                <span class="cd">;; </span><span class="c">If the computation was killed, restart it after a while.
+</span>                <span class="cd">;; </span><span class="c">This happens when the point is moved.  Then the input does
+</span>                <span class="cd">;; </span><span class="c">not change and the computation is not restarted otherwise.
+</span>                (<span class="k">when</span> (<span class="k">and</span> killed (not (memq timer timer-list)))
+                  (timer-set-function timer compute (list input))
+                  (timer-set-time timer (timer-relative-time nil restart))
+                  (timer-activate timer)))))
+      (<span class="k">lambda</span> (action)
+        (<span class="k">prog1</span> (funcall sink action)
+          (<span class="k">pcase</span> action
+            ((<span class="k">or</span> 'cancel 'destroy) (cancel-timer timer))
+            ((pred stringp)
+             (<span class="k">if</span> (not (equal action current))
+                 (funcall compute action)
+               (cancel-timer timer)
+               (funcall sink [indicator finished])))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

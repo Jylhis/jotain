@@ -1,0 +1,185 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: mcp--process-filter – Emacs Documentation Online</title>
+<meta name="description" content="mcp--process-filter is a natively compiled function defined in mcp.el.
+Called when new data STRING has arrived for PROC.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>mcp--process-filter</code></h1><p><span class="m"><code>mcp--process-filter</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(mcp--process-filter <a href="#:~:text=for-,PROC"><span class="arg">PROC</span></a> <a href="#:~:text=data-,STRING"><span class="arg">STRING</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Called when new data <span class="arg">STRING</span> has arrived for <span class="arg">PROC</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a854ba0xan3il3xqm2sx95la5018xp8i-emacs-packages-deps/share/emacs/site-lisp/elpa/mcp-20260615.940/mcp.el</span>
+(<span class="k">cl-defun</span> <span class="f">mcp--process-filter</span> (proc string)
+  <span class="doc">"Called when new data STRING has arrived for PROC."</span>
+  (<span class="k">when</span> mcp--in-process-filter
+    <span class="cd">;; </span><span class="c">Problematic recursive process filters may happen if
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">jsonrpc-connection-receive</span><span class="c">', called by us, eventually calls
+</span>    <span class="cd">;; </span><span class="c">client code which calls `</span><span class="m c">process-send-string</span><span class="c">' (which see) to,
+</span>    <span class="cd">;; </span><span class="c">say send a follow-up message.  If that happens to writes enough
+</span>    <span class="cd">;; </span><span class="c">bytes for pending output to be received, we will lose JSONRPC
+</span>    <span class="cd">;; </span><span class="c">messages.  In that case, remove recursiveness by re-scheduling
+</span>    <span class="cd">;; </span><span class="c">ourselves to run from within a timer as soon as possible
+</span>    <span class="cd">;; </span><span class="c">(bug#60088)
+</span>    (run-at-time 0 nil #'mcp--process-filter proc string)
+    (<span class="k">cl-return-from</span> mcp--process-filter))
+  (<span class="k">when</span> (buffer-live-p (process-buffer proc))
+    (<span class="k">with-current-buffer</span> (process-buffer proc)
+      (<span class="k">let*</span> ((conn (process-get proc 'jsonrpc-connection))
+             (type (mcp--connection-type conn))
+             (queue (<span class="k">or</span> (process-get proc 'jsonrpc-mqueue) nil))
+             (buf (<span class="k">or</span> (process-get proc 'jsonrpc-pending)
+                      (plist-get (process-put
+                                  proc 'jsonrpc-pending
+                                  (generate-new-buffer
+                                   (format <span class="s">" *mcp-%s-jsonrpc-pending*"</span> (jsonrpc-name conn))
+                                   'inhibit-hooks))
+                                 'jsonrpc-pending)))
+             (message-rest-size (<span class="k">or</span> (process-get proc 'jsonrpc-message-rest-size)
+                                    0))
+             (data (<span class="k">if</span> (equal type 'stdio)
+                       (<span class="k">with-current-buffer</span> buf
+                         (goto-char (point-max))
+                         (insert string)
+                         (buffer-string))
+                     string))
+             (parsed-messages nil)
+             (separator (<span class="k">if</span> (equal type 'stdio)
+                            <span class="s">"\n"</span>
+                          (<span class="k">if</span> (mcp--sse conn)
+                              <span class="s">"\r\n\r\n"</span>
+                            <span class="s">"\n\n"</span>)))
+             (data-blocks (split-string data separator)))
+        (<span class="k">dolist</span> (data-block data-blocks)
+          (<span class="k">let</span> ((data-block (string-trim data-block)))
+            (<span class="k">unless</span> (string-empty-p data-block)
+              (<span class="k">pcase</span> type
+                ('http
+                 (<span class="k">if</span> (string-prefix-p <span class="s">"HTTP"</span> data-block)
+                     (<span class="k">if-let*</span> ((headers (mcp--parse-http-header data-block))
+                               (response-code (plist-get headers <span class="bi">:response-code</span>))
+                               (content-type (plist-get headers <span class="bi">:content-type</span>))
+                               (content-type (<span class="k">or</span> (car (split-string content-type <span class="s">";"</span> t)) <span class="s">""</span>)))
+                         (<span class="k">when</span> (<span class="k">or</span> (not (string= response-code <span class="s">"200"</span>))
+                                   (not (string-match <span class="s">"text/event-stream"</span> content-type)))
+                           <span class="cd">;; </span><span class="c">sse not connect success
+</span>                           (message <span class="s">"sse not connect, return code: %s"</span> response-code))
+                       <span class="cd">;; </span><span class="c">can't parse headers
+</span>                       (message <span class="s">"can't parse headers: %s"</span> data-block))
+                   (<span class="k">if</span> (= 0 message-rest-size)
+                       (<span class="k">let*</span> ((data-line (split-string data-block <span class="s">"\n"</span>))
+                              (data-size-line (cl-first data-line))
+                              (event-line (cl-second data-line))
+                              (id-line (<span class="k">when-let*</span> ((id-line (cl-third data-line)))
+                                         (<span class="k">if</span> (string-prefix-p <span class="s">"id"</span> id-line)
+                                             id-line)))
+                              (data-body (<span class="k">if</span> id-line
+                                             (cl-fourth data-line)
+                                           (cl-third data-line)))
+                              (data (<span class="k">when</span> data-body
+                                      (string-trim (substring data-body 6)))))
+                         (<span class="k">when-let*</span> ((event-line event-line)
+                                     (data-size (string-to-number (string-trim data-size-line)
+                                                                  16))
+                                     (event-type (<span class="k">if</span> (string-prefix-p <span class="s">": ping"</span> event-line)
+                                                     'ping
+                                                   (intern (string-trim (substring event-line 6)))))
+                                     (body-size (<span class="k">let</span> ((len 0))
+                                                  (<span class="k">dolist</span> (i (cdr data-line)) (<span class="k">setq</span> len (+ len (length i))))
+                                                  (+ len (length (cdr data-line)) -1)))
+                                     (rest-size (- data-size
+                                                   2 <span class="cd">; </span><span class="c">\r\n after data-size
+</span>                                                   <span class="cd">;; </span><span class="c">only sse need add 2
+</span>                                                   (<span class="k">if</span> (mcp--sse conn)
+                                                       2 <span class="cd">; </span><span class="c">\r\n after the last data-line
+</span>                                                     0)
+                                                   body-size)))
+                           (<span class="k">pcase</span> event-type
+                             ('endpoint
+                              (<span class="k">let*</span> ((endpoint (<span class="k">if</span> (string-match <span class="s">"http://[</span><span class="neg s">^</span><span class="s">/]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">/[</span><span class="neg s">^</span><span class="s">[:space:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> data)
+                                                   (match-string 1 data)
+                                                 data)))
+                                (<span class="k">unless</span> (mcp--endpoint conn)
+                                  (<span class="k">setf</span> (mcp--endpoint conn) endpoint)
+                                  (mcp--send-initial-message conn))))
+                             ('message
+                              (<span class="k">if</span> (&gt;= 0 rest-size)
+                                  (<span class="k">push</span> data
+                                        parsed-messages)
+                                (process-put proc 'jsonrpc-message-rest-size rest-size)
+                                (<span class="k">with-current-buffer</span> buf
+                                  (goto-char (point-max))
+                                  (insert data))))
+                             (_))))
+                     (<span class="k">let*</span> ((data-block-size (length data-block))
+                            (new-message-rest-size (- message-rest-size data-block-size)))
+                       (process-put proc 'jsonrpc-message-rest-size new-message-rest-size)
+                       (<span class="k">with-current-buffer</span> buf
+                         (goto-char (point-max))
+                         (insert (string-trim data-block))
+                         (<span class="k">when</span> (= 0 new-message-rest-size)
+                           (<span class="k">push</span> (buffer-string)
+                                 parsed-messages)
+                           (erase-buffer)))))))
+                ('stdio
+                 (<span class="k">push</span> data-block parsed-messages))))))
+
+        (<span class="k">setq</span> parsed-messages (nreverse parsed-messages))
+
+        (<span class="k">when</span> (equal type 'stdio)
+          (<span class="k">with-current-buffer</span> buf (erase-buffer)))
+        <span class="cd">;; </span><span class="c">Add messages to MQUEUE
+</span>        (<span class="k">dolist</span> (msg parsed-messages)
+          (<span class="k">let</span> ((json nil)
+                (json-str (<span class="k">with-current-buffer</span> buf
+                            (<span class="k">if</span> (= (point-min) (point-max))
+                                msg
+                              (goto-char (point-max))
+                              (insert msg)
+                              (buffer-string)))))
+            (<span class="k">condition-case-unless-debug</span> err
+                (<span class="k">when</span> (stringp json-str)
+                  (<span class="k">setq</span> json
+                        (json-parse-string (decode-coding-string json-str 'utf-8)
+                                           <span class="bi">:object-type</span> 'plist
+                                           <span class="bi">:null-object</span> nil
+                                           <span class="bi">:false-object</span> <span class="bi">:json-false</span>)))
+              (json-parse-error
+               <span class="cd">;; </span><span class="c">parse error and not because of incomplete json
+</span>               (jsonrpc--warn <span class="s">"Invalid JSON: %s\t %s"</span> (cdr err) json-str))
+              (json-end-of-file
+               <span class="cd">;; </span><span class="c">Save remaining data to pending for next processing
+</span>               (<span class="k">with-current-buffer</span> buf
+                 (goto-char (point-max))
+                 (insert json-str)
+                 (process-put proc 'jsonrpc-pending buf))))
+            (<span class="k">when</span> json
+              (<span class="k">when</span> (equal type 'stdio)
+                (<span class="k">with-current-buffer</span> buf (erase-buffer)))
+              (<span class="k">when</span> (listp json)
+                (<span class="k">setq</span> json (plist-put json <span class="bi">:jsonrpc-json</span> json-str))
+                (<span class="k">push</span> json queue)))))
+
+        <span class="cd">;; </span><span class="c">Save updated queue
+</span>        (process-put proc 'jsonrpc-mqueue queue)
+
+        <span class="cd">;; </span><span class="c">Dispatch messages in timer
+</span>        (<span class="k">cl-loop</span> with time = (current-time)
+                 for msg = (<span class="k">pop</span> queue) while msg
+                 do (<span class="k">let</span> ((timer (timer-create)))
+                      (timer-set-time timer time)
+                      (timer-set-function timer
+                                          (<span class="k">lambda</span> (conn msg)
+                                            (<span class="k">with-temp-buffer</span>
+                                              (jsonrpc-connection-receive conn msg)))
+                                          (list conn msg))
+                      (timer-activate timer)))
+
+        <span class="cd">;; </span><span class="c">Save final queue (might have been consumed by timer pop)
+</span>        (process-put proc 'jsonrpc-mqueue queue)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

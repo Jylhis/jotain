@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-rewrite--add-text – Emacs Documentation Online</title>
+<meta name="description" content="eca-rewrite--add-text is a natively compiled function defined in
+eca-rewrite.el.
+Add TEXT as the rewritten content to overlay OV.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-rewrite--add-text</code></h1><p><span class="m"><code>eca-rewrite--add-text</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-rewrite.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-rewrite--add-text <a href="#:~:text=overlay-,OV"><span class="arg">OV</span></a> <a href="#:~:text=Add-,TEXT"><span class="arg">TEXT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Add <span class="arg">TEXT</span> as the rewritten content to overlay <span class="arg">OV</span>.
+<p>This replaces the overlay preview entirely with the accumulated new text,
+so shorter rewrites don't leave leftover original text in the overlay.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-rewrite.el</span>
+(<span class="k">defun</span> <span class="f">eca-rewrite--add-text</span> (ov text)
+  <span class="doc">"Add TEXT as the rewritten content to overlay OV.
+This replaces the overlay preview entirely with the accumulated new text,
+so shorter rewrites don't leave leftover original text in the overlay."</span>
+  (<span class="k">let*</span> ((ov-buf (overlay-buffer ov))
+         (temp-buf (overlay-get ov 'eca-rewrite--temp-buffer))
+         (mode (<span class="k">and</span> ov-buf (buffer-local-value 'major-mode ov-buf)))
+         (acc (concat (overlay-get ov 'eca-rewrite--new-text-acc) text)))
+    (overlay-put ov 'eca-rewrite--new-text-acc acc)
+    (<span class="k">with-current-buffer</span> ov-buf
+      (<span class="k">when</span> show-paren-mode
+        (<span class="k">setq</span> eca-rewrite--restore-paren-mode-after-clean t)
+        (show-paren-local-mode -1)))
+    (<span class="k">with-current-buffer</span> temp-buf
+      (<span class="k">let</span> ((inhibit-read-only t)
+            (inhibit-modification-hooks t))
+        (erase-buffer)
+        (insert acc)
+        (<span class="k">when</span> mode
+          (<span class="k">delay-mode-hooks</span> (funcall mode)))
+        (font-lock-ensure))
+      (<span class="k">let</span> ((plain (buffer-substring-no-properties (point-min) (point-max)))
+            (propertized (buffer-substring (point-min) (point-max))))
+        (overlay-put ov 'eca-rewrite--new-text plain)
+        <span class="cd">;; </span><span class="c">Move the highlight to the display string so show-paren-mode
+</span>        <span class="cd">;; </span><span class="c">overlays on buffer text don't repaint the whole overlay.
+</span>        (<span class="k">let</span> ((disp (copy-sequence propertized)))
+          <span class="cd">;; </span><span class="c">Keep a base version (syntax faces only) to compose with our faces.
+</span>          (overlay-put ov 'eca-rewrite--display-base disp)
+          <span class="cd">;; </span><span class="c">Initial (non-hover) display uses the normal highlight face.
+</span>          (<span class="k">let</span> ((initial (copy-sequence disp)))
+            (add-face-text-property 0 (length initial) 'eca-rewrite-overlay-face 'append initial)
+            (overlay-put ov 'display initial)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

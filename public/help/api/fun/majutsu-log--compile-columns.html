@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-log--compile-columns – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-log--compile-columns is a natively compiled function defined
+in majutsu-log.el.
+Compile COLUMNS (or majutsu-log-commit-columns) into a jj template string.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-log--compile-columns</code></h1><p><span class="m"><code>majutsu-log--compile-columns</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">majutsu-log.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-log--compile-columns <span class="ty">&amp;optional</span> <a href="#:~:text=Compile-,COLUMNS"><span class="arg">COLUMNS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Compile <span class="arg">COLUMNS</span> (or <a href="../var/majutsu-log-commit-columns.html"><code>majutsu-log-commit-columns</code></a>) into a jj template string.
+<p>Returns a plist with :template, :columns, and :module-columns.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-log.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-log--compile-columns</span> (<span class="ty">&amp;optional</span> columns)
+  <span class="doc">"Compile COLUMNS (or `</span><span class="m doc">majutsu-log-commit-columns</span><span class="doc">') into a jj template string.
+Returns a plist with :template, :columns, and :module-columns."</span>
+  (<span class="k">let*</span> ((normalized (mapcar #'majutsu-log--normalize-column-spec
+                             (<span class="k">or</span> columns majutsu-log-commit-columns)))
+         (complete (majutsu-log--assign-column-instances
+                    (majutsu-log--ensure-required-columns normalized)))
+         (module-columns
+          (mapcar (<span class="k">lambda</span> (module)
+                    (cons module
+                          (seq-filter (<span class="k">lambda</span> (c)
+                                        (eq (plist-get c <span class="bi">:module</span>) module))
+                                      complete)))
+                  majutsu-log--module-order))
+         (heading-form
+          (majutsu-log--build-module-template-form
+           (mapcar (<span class="k">lambda</span> (c)
+                     (majutsu-log--column-template (plist-get c <span class="bi">:field</span>)))
+                   (alist-get 'heading module-columns nil nil #'eq))))
+         (tail-form
+          (majutsu-log--build-module-template-form
+           (mapcar (<span class="k">lambda</span> (c)
+                     (majutsu-log--column-template (plist-get c <span class="bi">:field</span>)))
+                   (alist-get 'tail module-columns nil nil #'eq))))
+         (body-form
+          (majutsu-log--build-module-template-form
+           (mapcar (<span class="k">lambda</span> (c)
+                     (majutsu-log--column-template (plist-get c <span class="bi">:field</span>)))
+                   (alist-get 'body module-columns nil nil #'eq))))
+         (meta-form
+          (majutsu-log--build-module-template-form
+           (mapcar (<span class="k">lambda</span> (c)
+                     (majutsu-log--column-template (plist-get c <span class="bi">:field</span>)))
+                   (alist-get 'metadata module-columns nil nil #'eq))))
+         (compiled
+          (<span class="k">majutsu-tpl</span>
+           `[<span class="bi">:concat</span>
+             ,majutsu-log--entry-start-token
+             ,heading-form
+             ,majutsu-log--entry-tail-token
+             ,tail-form
+             ,majutsu-log--entry-body-token
+             ,body-form
+             ,majutsu-log--entry-meta-token
+             ,meta-form
+             ,majutsu-log--entry-end-token
+             <span class="s">"\n"</span>])))
+    (list <span class="bi">:template</span> compiled
+          <span class="bi">:columns</span> complete
+          <span class="bi">:module-columns</span> module-columns)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,92 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel-mode-flymake – Emacs Documentation Online</title>
+<meta name="description" content="bazel-mode-flymake is a natively compiled function defined in
+bazel.el.
+Flymake backend function for &#8216;bazel-mode&#8217;.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel-mode-flymake</code></h1><p><span class="m"><code>bazel-mode-flymake</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel-mode-flymake <a href="#:~:text=Use-,REPORT-FN"><span class="arg">REPORT-FN</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text="><span class="arg">KEYS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Flymake backend function for ‘bazel-mode’.
+<p>Use <span class="arg">REPORT-FN</span> to report linter warnings found by Buildifier.  See
+URL
+<br>‘https://github.com/bazelbuild/buildtools/blob/master/buildifier/README.md’
+<br>for how to install Buildifier.  The function ‘bazel-mode’ adds
+this function to ‘flymake-diagnostic-functions’.  See Info node
+<br><a href="/info/Flymake/backend-functions.html">(Flymake) Backend functions</a> for details about Flymake
+<br>backends.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel-mode-flymake</span> (report-fn <span class="ty">&amp;rest</span> _keys)
+  <span class="doc">"Flymake backend function for ‘</span><span class="m doc">bazel-mode</span><span class="doc">’.
+Use REPORT-FN to report linter warnings found by Buildifier.  See
+URL
+‘</span><span class="m doc">https://github.com/bazelbuild/buildtools/blob/master/buildifier/README.md</span><span class="doc">’
+for how to install Buildifier.  The function ‘</span><span class="m doc">bazel-mode</span><span class="doc">’ adds
+this function to ‘</span><span class="m doc">flymake-diagnostic-functions</span><span class="doc">’.  See Info node
+‘(Flymake) Backend functions’ for details about Flymake
+backends."</span>
+  (<span class="w">cl-check-type</span> report-fn function)
+  (<span class="k">when-let*</span> ((process bazel--flymake-process))
+    <span class="cd">;; </span><span class="c">The order here is important: ‘</span><span class="m c">delete-process</span><span class="c">’ will trigger the sentinel,
+</span>    <span class="cd">;; </span><span class="c">and then ‘</span><span class="m c">bazel--flymake-process</span><span class="c">’ already has to be nil to avoid an
+</span>    <span class="cd">;; </span><span class="c">obsolete report.
+</span>    (<span class="k">setq</span> bazel--flymake-process nil)
+    (delete-process process))
+  (<span class="k">let*</span> ((non-essential t)
+         (command `(,bazel-buildifier-command
+                    ,@(bazel--buildifier-file-flags bazel--buildifier-type
+                                                    buffer-file-name)
+                    <span class="s">"-mode=check"</span> <span class="s">"-format=json"</span> <span class="s">"-lint=warn"</span>))
+         (input-buffer (current-buffer))
+         (output-buffer (generate-new-buffer
+                         (format <span class="s">" *Buildifier output for %s*"</span> (buffer-name))))
+         (error-buffer (generate-new-buffer
+                        (format <span class="s">" *Buildifier errors for %s*"</span> (buffer-name))))
+         (sentinel
+          (<span class="k">lambda</span> (process event)
+            (<span class="k">let</span> ((success (string-equal event <span class="s">"finished\n"</span>)))
+              <span class="cd">;; </span><span class="c">First, make sure that the buffer to be linted is still alive.
+</span>              (<span class="k">when</span> (buffer-live-p input-buffer)
+                (<span class="k">with-current-buffer</span> input-buffer
+                  <span class="cd">;; </span><span class="c">Don’t report anything if a new process has already been
+</span>                  <span class="cd">;; </span><span class="c">started.
+</span>                  (<span class="k">when</span> (eq bazel--flymake-process process)
+                    <span class="cd">;; </span><span class="c">Report even in case of failure so that Flymake doesn’t
+</span>                    <span class="cd">;; </span><span class="c">treat the backend as continuously running.
+</span>                    (funcall report-fn
+                             (<span class="k">and</span> success
+                                  (bazel--make-diagnostics output-buffer)))
+                    (<span class="k">setq</span> bazel--flymake-process nil))))
+              (<span class="k">if</span> success
+                  (<span class="k">progn</span> (kill-buffer output-buffer)
+                         (kill-buffer error-buffer))
+                (<span class="k">flymake-log</span> <span class="bi">:warning</span>
+                             (concat <span class="s">"Buildifier process failed; "</span>
+                                     <span class="s">"see buffers ‘</span><span class="m s">%s</span><span class="s">’ and ‘</span><span class="m s">%s</span><span class="s">’ for details"</span>)
+                             output-buffer error-buffer)))))
+         <span class="cd">;; </span><span class="c">We always start a local process, even if visiting a remote
+</span>         <span class="cd">;; </span><span class="c">filename.  If Buildifier is installed locally, the reports should
+</span>         <span class="cd">;; </span><span class="c">match well enough.  Starting a remote process via Tramp tends to be
+</span>         <span class="cd">;; </span><span class="c">way too slow to run interactively.
+</span>         (process (make-process <span class="bi">:name</span> (format <span class="s">"Buildifier for %s"</span> (buffer-name))
+                                <span class="bi">:buffer</span> output-buffer
+                                <span class="bi">:command</span> command
+                                <span class="bi">:coding</span> '(utf-8-unix . utf-8-unix)
+                                <span class="bi">:connection-type</span> 'pipe
+                                <span class="bi">:noquery</span> t
+                                <span class="bi">:sentinel</span> sentinel
+                                <span class="bi">:stderr</span> error-buffer)))
+    (<span class="k">setq</span> bazel--flymake-process process)
+    (<span class="k">without-restriction</span>
+      (process-send-region process (point-min) (point-max)))
+    (process-send-eof process))
+  nil)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

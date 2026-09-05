@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-appear--hide-invisible – Emacs Documentation Online</title>
+<meta name="description" content="org-appear--hide-invisible is a natively compiled function defined in
+org-appear.el.
+Silently add invisible property to invisible parts of element ELEM.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-appear--hide-invisible</code></h1><p><span class="m"><code>org-appear--hide-invisible</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">org-appear.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-appear--hide-invisible <a href="#:~:text=element-,ELEM"><span class="arg">ELEM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Silently add invisible property to invisible parts of element <span class="arg">ELEM</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/h68d0k7qg0i0kn245ckyaf2x4scf8f79-emacs-packages-deps/share/emacs/site-lisp/elpa/org-appear-20260716.2120/org-appear.el</span>
+(<span class="k">defun</span> <span class="f">org-appear--hide-invisible</span> (elem)
+  <span class="doc">"Silently add invisible property to invisible parts of element ELEM."</span>
+  (<span class="k">let*</span> ((elem-at-point (org-appear--parse-elem elem))
+	 (elem-type (car elem))
+	 (start (plist-get elem-at-point <span class="bi">:start</span>))
+	 (end (plist-get elem-at-point <span class="bi">:end</span>))
+	 (visible-start (plist-get elem-at-point <span class="bi">:visible-start</span>))
+	 (visible-end (plist-get elem-at-point <span class="bi">:visible-end</span>)))
+    (<span class="k">when</span> elem-at-point
+      (<span class="k">when</span> (<span class="k">and</span> (eq org-appear-autolinks 'just-brackets)
+		 (eq elem-type 'link))
+	(<span class="k">setq</span> start (1- visible-start))
+	(<span class="k">setq</span> end (1+ visible-end)))
+      (<span class="k">with-silent-modifications</span>
+	(<span class="k">cond</span> ((eq elem-type 'entity)
+	       (compose-region start end (org-element-property <span class="bi">:utf-8</span> elem))
+	       (font-lock-flush start end))
+	      ((memq elem-type '(keyword latex-fragment latex-environment))
+	       (font-lock-flush start end))
+	      ((<span class="k">and</span> (<span class="k">featurep</span> '<span class="m">org-fold</span>)
+		    (eq elem-type 'link)
+		    (eq org-fold-core-style 'text-properties))
+	       (put-text-property start
+				  visible-start
+				  (org-fold-core--property-symbol-get-create 'org-link)
+				  'org-link)
+	       (put-text-property visible-end
+				  end
+				  (org-fold-core--property-symbol-get-create 'org-link)
+				  'org-link))
+	      (t
+	       (put-text-property start visible-start 'invisible 'org-link)
+	       (put-text-property visible-end end 'invisible 'org-link)
+	       (font-lock-flush start end))))
+      <span class="cd">;; </span><span class="c">Call `</span><span class="m c">font-lock-ensure</span><span class="c">' after flushing to prevent `</span><span class="m c">jit-lock-mode</span><span class="c">'
+</span>      <span class="cd">;; </span><span class="c">from refontifying the next element entered
+</span>      (font-lock-ensure start end))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

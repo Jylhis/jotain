@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: jinx--load-module – Emacs Documentation Online</title>
+<meta name="description" content="jinx--load-module is a natively compiled function defined in jinx.el.
+Compile and load dynamic module.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>jinx--load-module</code></h1><p><span class="m"><code>jinx--load-module</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">jinx.el</span>.
+<h2>Signature</h2>
+<pre><code>(jinx--load-module)
+</code></pre>
+<h2>Documentation</h2>
+<p>Compile and load dynamic module.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a84p94snryc55wrv02kbf63qv5yqsxl8-emacs-packages-deps/share/emacs/site-lisp/elpa/jinx-20260813.954/jinx.el</span>
+(<span class="k">defun</span> <span class="f">jinx--load-module</span> ()
+  <span class="doc">"Compile and load dynamic module."</span>
+  (<span class="k">unless</span> (fboundp #'jinx--mod-dict)
+    (<span class="k">unless</span> module-file-suffix
+      (<span class="w">error</span> <span class="s">"Jinx: Dynamic modules are not supported"</span>))
+    (<span class="k">let*</span> ((mod-name (file-name-with-extension <span class="s">"jinx-mod"</span> module-file-suffix))
+           (mod-file (locate-library mod-name t)))
+      (<span class="k">unless</span> mod-file
+        (<span class="k">let*</span> ((cc (<span class="k">or</span> (getenv <span class="s">"CC"</span>)
+                       (seq-find #'executable-find '(<span class="s">"gcc"</span> <span class="s">"clang"</span> <span class="s">"cc"</span>))
+                       (<span class="w">error</span> <span class="s">"Jinx: No C compiler found"</span>)))
+               (c-name (file-name-with-extension mod-name <span class="s">".c"</span>))
+               (default-directory (file-name-directory
+                                   (<span class="k">or</span> (locate-library c-name t)
+                                       (<span class="w">error</span> <span class="s">"Jinx: %s not found"</span> c-name))))
+               (command nil)
+               (inhibit-read-only t))
+          (<span class="k">with-current-buffer</span> (get-buffer-create <span class="s">"*jinx module compilation*"</span>)
+            (erase-buffer)
+            (compilation-mode)
+            (insert (format <span class="s">"Jinx: Compiling %s\n"</span> mod-name))
+            (<span class="k">setq</span> command
+                  `(,cc ,@jinx--compile-flags <span class="s">"-o"</span> ,mod-name ,c-name
+                        ,@(split-string-and-unquote
+                           (<span class="k">condition-case</span> nil
+                               (car (process-lines <span class="s">"pkg-config"</span> <span class="s">"--cflags"</span> <span class="s">"--libs"</span> <span class="s">"enchant-2"</span>))
+                             (<span class="w">error</span>
+                              (insert <span class="s">"Jinx: pkgconf or pkg-config not found\n"</span>)
+                              <span class="s">"-I/usr/include/enchant-2 -I/usr/local/include/enchant-2 -L/usr/local/lib -lenchant-2"</span>)))))
+            (insert (string-join command <span class="s">" "</span>) <span class="s">"\n"</span>)
+            (<span class="k">if</span> (equal 0 (apply #'call-process (car command) nil (current-buffer) t (cdr command)))
+                (insert (message <span class="s">"Jinx: %s compiled successfully"</span> mod-name))
+              (<span class="k">let</span> ((msg (format <span class="s">"Jinx: Compilation of %s failed"</span> mod-name)))
+                (insert msg)
+                (pop-to-buffer (current-buffer))
+                (<span class="w">error</span> msg))))
+          (<span class="k">setq</span> mod-file (expand-file-name mod-name))))
+      <span class="cd">;; </span><span class="c">Initialize Mac spell checker to avoid dead lock (gh:minad/jinx#91).
+</span>      (<span class="k">when</span> (<span class="k">and</span> (eq window-system 'mac) (fboundp 'mac-do-applescript))
+        (mac-do-applescript
+         <span class="s">"use framework \"AppKit\"
+          set spellChecker to current application's NSSpellChecker's sharedSpellChecker()"</span>))
+      (module-load mod-file))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

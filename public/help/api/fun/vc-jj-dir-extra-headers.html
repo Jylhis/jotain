@@ -1,0 +1,112 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vc-jj-dir-extra-headers – Emacs Documentation Online</title>
+<meta name="description" content="vc-jj-dir-extra-headers is a natively compiled function defined in
+vc-jj.el.
+Return extra headers for vc-dir when executed inside DIR.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vc-jj-dir-extra-headers</code></h1><p><span class="m"><code>vc-jj-dir-extra-headers</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">vc-jj.el</span>.
+<h2>Signature</h2>
+<pre><code>(vc-jj-dir-extra-headers <a href="#:~:text=inside-,DIR"><span class="arg">DIR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return extra headers for <a href="../fun/vc-dir.html"><code>vc-dir</code></a> when executed inside <span class="arg">DIR</span>.
+<p>Always add headers for the first line of the description, the change ID,
+and the git commit ID of the current change.  If the current change is
+named by one or more bookmarks, also add a Bookmarks header.  If the
+current change is conflicted, divergent, hidden or immutable, also add a
+Status header.  (We do not check for emptiness of the current change
+since the user can see that via the list of files below the headers
+anyway.)
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/smb5w83hp9nz5jm5ish4kf6mshmmif86-emacs-packages-deps/share/emacs/site-lisp/elpa/vc-jj-0.5/vc-jj.el</span>
+<span class="cd">;;;; </span><span class="c">dir-extra-headers
+</span>
+(<span class="k">defun</span> <span class="f">vc-jj-dir-extra-headers</span> (dir)
+  <span class="doc">"Return extra headers for `</span><span class="m doc">vc-dir</span><span class="doc">' when executed inside DIR.
+
+Always add headers for the first line of the description, the change ID,
+and the git commit ID of the current change.  If the current change is
+named by one or more bookmarks, also add a Bookmarks header.  If the
+current change is conflicted, divergent, hidden or immutable, also add a
+Status header.  (We do not check for emptiness of the current change
+since the user can see that via the list of files below the headers
+anyway.)"</span>
+  (<span class="k">cl-destructuring-bind</span>
+      <span class="cd">;; </span><span class="c">We have some fixed lines for the current changeset, then at
+</span>      <span class="cd">;; </span><span class="c">the end 5 lines for each parent
+</span>      ( change-id change-id-short commit-id commit-id-short
+        description bookmarks conflict divergent hidden immutable
+        <span class="ty">&amp;rest</span> parent-info)
+      (<span class="k">let</span> ((default-directory (file-name-as-directory dir)))
+        (vc-jj--process-lines <span class="s">"log"</span> <span class="s">"--no-graph"</span> <span class="s">"-r"</span> <span class="s">"@"</span> <span class="s">"-T"</span>
+                              <span class="s">"concat(
+self.change_id().short(8), \"\\n\",
+self.change_id().shortest(), \"\\n\",
+self.commit_id().short(8), \"\\n\",
+self.commit_id().shortest(), \"\\n\",
+description.first_line(), \"\\n\",
+bookmarks.join(\",\"), \"\\n\",
+self.conflict(), \"\\n\",
+self.divergent(), \"\\n\",
+self.hidden(), \"\\n\",
+self.immutable(), \"\\n\",
+parents.map(|c| concat(
+  c.change_id().short(8), \"\\n\",
+  c.change_id().shortest(), \"\\n\",
+  c.commit_id().short(8), \"\\n\",
+  c.commit_id().shortest(), \"\\n\",
+  c.description().first_line(), \"\\n\"
+)))"</span>))
+    (<span class="k">cl-labels</span>
+        ((str (string <span class="ty">&amp;optional</span> face prefix)
+           <span class="cd">;; </span><span class="c">format a string
+</span>           (<span class="k">cond</span> ((not face) (propertize string 'face 'vc-dir-header-value))
+                 ((not prefix) (propertize string 'face face))
+                 (t (concat (propertize prefix 'face 'vc-dir-header-value)
+                            (propertize string 'face face)))))
+         (info (key description change-id change-id-prefix commit-id commit-id-prefix)
+           <span class="cd">;; </span><span class="c">format a changeset info line
+</span>           (<span class="k">let</span> ((change-id-suffix (substring change-id (length change-id-prefix)))
+                 (commit-id-suffix (substring commit-id (length commit-id-prefix))))
+             (concat
+              (str (format <span class="s">"% -11s: "</span> key) 'vc-dir-header)
+              <span class="cd">;; </span><span class="c">There's no vc-dir-header-value-emphasis or similar
+</span>              <span class="cd">;; </span><span class="c">face, so we re-use vc-dir-status-up-to-date to render
+</span>              <span class="cd">;; </span><span class="c">the unique prefix
+</span>              <span class="s">" "</span>
+              (str change-id-suffix 'vc-dir-status-ignored change-id-prefix)
+              <span class="s">" "</span>
+              (str commit-id-suffix 'vc-dir-status-ignored commit-id-prefix)
+              <span class="s">" "</span>
+              (<span class="k">if</span> (string-empty-p description)
+                  (str <span class="s">"(no description set)"</span>)
+                (str description))))))
+      (<span class="k">let</span> ((status (concat
+                     (<span class="k">and</span> (string= conflict <span class="s">"true"</span>) <span class="s">"(conflict)"</span>)
+                     (<span class="k">and</span> (string= divergent <span class="s">"true"</span>) <span class="s">"(divergent)"</span>)
+                     (<span class="k">and</span> (string= hidden <span class="s">"true"</span>) <span class="s">"(hidden)"</span>)
+                     (<span class="k">and</span> (string= immutable <span class="s">"true"</span>) <span class="s">"(immutable)"</span>)))
+            (parent-keys (<span class="k">cl-loop</span>
+                          for (change-id change-id-short commit-id commit-id-short description)
+                          in (seq-partition parent-info 5)
+                          collect (info <span class="s">"Parent"</span> description
+                                        change-id change-id-short
+                                        commit-id commit-id-short))))
+        (string-join
+         (seq-remove
+          <span class="cd">;; </span><span class="c">Remove NIL entries because we get empty lines otherwise
+</span>          #'null
+          (cl-list*
+           (info <span class="s">"Changeset"</span> description change-id change-id-short commit-id commit-id-short)
+           (<span class="k">unless</span> (string= bookmarks <span class="s">""</span>)
+             (concat (str <span class="s">"Bookmarks  : "</span> 'vc-dir-header) (str bookmarks)))
+           (<span class="k">unless</span> (string= status <span class="s">""</span>)
+             (concat (str <span class="s">"Status     : "</span> 'vc-dir-header) (str status 'vc-dir-status-warning)))
+           parent-keys))
+         <span class="s">"\n"</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: meson-completion-at-point-function – Emacs Documentation Online</title>
+<meta name="description" content="meson-completion-at-point-function is a natively compiled function
+defined in meson-mode.el.
+Return possible completion candidates.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>meson-completion-at-point-function</code></h1><p><span class="m"><code>meson-completion-at-point-function</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">meson-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(meson-completion-at-point-function)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return possible completion candidates.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ajn730848zmcji1jjy9y0s8x1mck32q9-emacs-packages-deps/share/emacs/site-lisp/elpa/meson-mode-20240601.1647/meson-mode.el</span>
+<span class="cd">;;; </span><span class="c">Completion
+</span>
+(<span class="k">defun</span> <span class="f">meson-completion-at-point-function</span> ()
+  <span class="doc">"Return possible completion candidates."</span>
+  (<span class="k">save-excursion</span>
+    (<span class="k">let*</span> ((end (<span class="k">progn</span> (skip-syntax-forward <span class="s">"w_"</span>)
+		       (point)))
+	   (start (<span class="k">progn</span> (skip-syntax-backward <span class="s">"w_"</span>)
+			 (point)))
+	   (ppss (syntax-ppss)))
+      (<span class="k">cond</span>
+       ((<span class="k">or</span> (nth 3 ppss)		<span class="cd">; </span><span class="c">inside string
+</span>	    (nth 4 ppss))		<span class="cd">; </span><span class="c">inside comment
+</span>	nil) <span class="cd">; </span><span class="c">nothing to complete
+</span>
+       <span class="cd">;; </span><span class="c">kwargs
+</span>       ((<span class="k">and</span> (&gt; (nth 0 ppss) 0)		<span class="cd">; </span><span class="c">inside parentheses
+</span>	     (eq (char-after (nth 1 ppss)) ?\()) <span class="cd">; </span><span class="c">rounded parentheses
+</span>	(goto-char (nth 1 ppss))
+	(<span class="k">let</span> ((kwargs (cl-some (<span class="k">lambda</span> (x)
+				 (<span class="k">when</span> (looking-back (concat (car x) (<span class="k">rx</span> (zero-or-more (any <span class="s">" "</span> <span class="s">"\t"</span>))))
+						     (line-beginning-position))
+				   (cdr x)))
+			       meson-kwargs)))
+	  <span class="cd">;; </span><span class="c">complete mathing kwargs as well as built-in
+</span>	  <span class="cd">;; </span><span class="c">variables/functions
+</span>	  (list start end (append kwargs meson-builtin-vars
+				  (mapcar 'car meson-builtin-functions)))))
+
+       <span class="cd">;; </span><span class="c">methods
+</span>       ((eq (char-before) ?.)
+	(<span class="k">let</span> ((methods (cl-some
+			(<span class="k">lambda</span> (x)
+			  (<span class="k">when</span> (looking-back (car x) (line-beginning-position))
+			    (cdr x)))
+			meson-methods)))
+	  (list start end methods)))
+       <span class="cd">;; </span><span class="c">global things
+</span>       (t
+        (list start end (append meson-keywords meson-builtin-vars
+				(mapcar 'car meson-builtin-functions))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

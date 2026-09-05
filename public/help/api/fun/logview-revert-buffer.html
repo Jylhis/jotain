@@ -1,0 +1,67 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: logview-revert-buffer – Emacs Documentation Online</title>
+<meta name="description" content="logview-revert-buffer is an interactive and natively compiled function
+defined in logview.el.
+Revert the buffer preserving active filters.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>logview-revert-buffer</code></h1><p><span class="m"><code>logview-revert-buffer</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">logview.el</span>.
+<h2>Signature</h2>
+<pre><code>(logview-revert-buffer)
+</code></pre>
+<h2>Documentation</h2>
+<p>Revert the buffer preserving active filters.
+<p>This command won't ask for confirmation unless the buffer is
+modified.
+<p>This can be seen as an alternative to <a href="../fun/auto-revert-mode.html"><code>auto-revert-mode</code></a>: instead
+of automatic reverting you ask for it explicitly.  It should be
+as simple as typing \&lt;logview-mode-map&gt;<kbd>M-x logview-revert-buffer</kbd> (<a href="../fun/logview-revert-buffer.html"><code>logview-revert-buffer</code></a>), as no confirmations are asked.
+<p>If the buffer is narrowed and its contents got changed in the
+beginning (see <a href="../var/logview-reassurance-chars.html"><code>logview-reassurance-chars</code></a>), for example due to
+log rotation, this function also widens it.  Narrowing
+restrictions most likely wouldn't make any sense with new text.
+<h2>Key Bindings</h2>
+<p><span class="v">logview-mode-map</span> <span class="key">X</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qid656ql5mh048bd0k84vvsbc2517lh9-emacs-packages-deps/share/emacs/site-lisp/elpa/logview-20260218.2013/logview.el</span>
+(<span class="k">defun</span> <span class="f">logview-revert-buffer</span> ()
+  <span class="doc">"Revert the buffer preserving active filters.
+This command won't ask for confirmation unless the buffer is
+modified.
+
+This can be seen as an alternative to `</span><span class="m doc">auto-revert-mode</span><span class="doc">': instead
+of automatic reverting you ask for it explicitly.  It should be
+as simple as typing `\\&lt;</span><span class="v doc">logview-mode-map</span><span class="doc">&gt;\\[</span><span class="m doc">logview-revert-buffer</span><span class="doc">]', as no confirmations are asked.
+
+If the buffer is narrowed and its contents got changed in the
+beginning (see `</span><span class="m doc">logview-reassurance-chars</span><span class="doc">'), for example due to
+log rotation, this function also widens it.  Narrowing
+restrictions most likely wouldn't make any sense with new text."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let*</span> ((narrowed             (buffer-narrowed-p))
+         (reassurance-chars    (max logview-reassurance-chars 1))
+         (first-characters     (<span class="k">when</span> narrowed
+                                 (<span class="k">logview--temporarily-widening</span>
+                                  (buffer-substring-no-properties
+                                   (point-min)
+                                   (min (point-max) reassurance-chars)))))
+         (revert-without-query (<span class="k">when</span> buffer-file-name (list (regexp-quote buffer-file-name))))
+         (was-read-only        buffer-read-only))
+    (revert-buffer nil nil t)
+    <span class="cd">;; </span><span class="c">Apparently '</span><span class="m c">revert-buffer</span><span class="c">' resets this.
+</span>    (read-only-mode (<span class="k">if</span> was-read-only 1 0))
+    (<span class="k">if</span> narrowed
+        (<span class="k">let</span> ((same-contents (<span class="k">logview--temporarily-widening</span>
+                              (string= (buffer-substring-no-properties
+                                        (point-min) (min (point-max) reassurance-chars))
+                                       first-characters))))
+          (<span class="k">if</span> same-contents
+              (message <span class="s">"Reverted the buffer; kept the narrowing as the start contents is the same"</span>)
+            (logview-widen)
+            (message <span class="s">"Reverted the buffer; widened it as narrowing is likely obsolete with new contents"</span>)))
+      (message <span class="s">"Reverted the buffer"</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

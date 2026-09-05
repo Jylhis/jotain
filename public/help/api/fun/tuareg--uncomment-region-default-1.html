@@ -1,0 +1,130 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg--uncomment-region-default-1 – Emacs Documentation Online</title>
+<meta name="description" content="tuareg--uncomment-region-default-1 is a natively compiled function
+defined in tuareg-compat.el.
+Uncomment each line in the BEG .. END region.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg--uncomment-region-default-1</code></h1><p><span class="m"><code>tuareg--uncomment-region-default-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">tuareg-compat.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg--uncomment-region-default-1 <a href="#:~:text=the-,BEG"><span class="arg">BEG</span></a> <a href="#:~:text=BEG ..-,END"><span class="arg">END</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=prefix-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Uncomment each line in the <span class="arg">BEG</span> .. <span class="arg">END</span> region.
+<p>The numeric prefix <span class="arg">ARG</span> can specify a number of chars to remove from the
+comment delimiters.
+This function is the default value of <a href="../var/uncomment-region-function.html"><code>uncomment-region-function</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg-compat.el</span>
+<span class="cd">;; </span><span class="c">Emacs 27
+</span>(<span class="k">defun</span> <span class="f">tuareg--uncomment-region-default-1</span> (beg end <span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Uncomment each line in the BEG .. END region.
+The numeric prefix ARG can specify a number of chars to remove from the
+comment delimiters.
+This function is the default value of `</span><span class="m doc">uncomment-region-function</span><span class="doc">'."</span>
+  (goto-char beg)
+  (<span class="k">setq</span> end (copy-marker end))
+  (<span class="k">let*</span> ((numarg (prefix-numeric-value arg))
+	 (ccs comment-continue)
+	 (srei (<span class="k">or</span> (comment-padright ccs 're)
+                   (<span class="k">and</span> (stringp comment-continue) comment-continue)))
+	 (csre (comment-padright comment-start 're))
+	 (sre (<span class="k">and</span> srei (concat <span class="s">"^\\s-*?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">"</span> srei <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)))
+	 spt)
+    (<span class="k">while</span> (<span class="k">and</span> (&lt; (point) end)
+		(<span class="k">setq</span> spt (comment-search-forward end t)))
+      (<span class="k">let</span> ((ipt (point))
+	    <span class="cd">;; </span><span class="c">Find the end of the comment.
+</span>	    (ept (<span class="k">progn</span>
+		   (goto-char spt)
+		   (<span class="k">unless</span> (<span class="k">or</span> (comment-forward)
+			       <span class="cd">;; </span><span class="c">Allow non-terminated comments.
+</span>			       (eobp))
+		     (<span class="w">error</span> <span class="s">"Can't find the comment end"</span>))
+		   (point)))
+	    (box nil)
+	    (box-equal nil))	   <span class="cd">;</span><span class="c">Whether we might be using `</span><span class="m c">=</span><span class="c">' for boxes.
+</span>	(<span class="k">save-restriction</span>
+	  (narrow-to-region spt ept)
+
+	  <span class="cd">;; </span><span class="c">Remove the comment-start.
+</span>	  (goto-char ipt)
+	  (skip-syntax-backward <span class="s">" "</span>)
+	  <span class="cd">;; </span><span class="c">A box-comment starts with a looong comment-start marker.
+</span>	  (<span class="k">when</span> (<span class="k">and</span> (<span class="k">or</span> (<span class="k">and</span> (= (- (point) (point-min)) 1)
+			      (<span class="k">setq</span> box-equal t)
+			      (looking-at <span class="s">"=\\{7\\}"</span>)
+			      (not (eq (char-before (point-max)) ?\n))
+			      (skip-chars-forward <span class="s">"="</span>))
+			 (&gt; (- (point) (point-min) (length comment-start)) 7))
+		     (&gt; (count-lines (point-min) (point-max)) 2))
+	    (<span class="k">setq</span> box t))
+	  <span class="cd">;; </span><span class="c">Skip the padding.  Padding can come from comment-padding and/or
+</span>	  <span class="cd">;; </span><span class="c">from comment-start, so we first check comment-start.
+</span>	  (<span class="k">if</span> (<span class="k">or</span> (<span class="k">save-excursion</span> (goto-char (point-min)) (looking-at csre))
+		  (looking-at (regexp-quote comment-padding)))
+	      (goto-char (match-end 0)))
+	  (<span class="k">when</span> (<span class="k">and</span> sre (looking-at (concat <span class="s">"\\s-*\n\\s-*"</span> srei)))
+	    (goto-char (match-end 0)))
+	  (<span class="k">if</span> (null arg) (delete-region (point-min) (point))
+            (<span class="k">let</span> ((opoint (point-marker)))
+              (skip-syntax-backward <span class="s">" "</span>)
+              (delete-char (- numarg))
+              (<span class="k">unless</span> (<span class="k">and</span> (not (bobp))
+                           (<span class="k">save-excursion</span> (goto-char (point-min))
+                                           (looking-at comment-start-skip)))
+                <span class="cd">;; </span><span class="c">If there's something left but it doesn't look like
+</span>                <span class="cd">;; </span><span class="c">a comment-start any more, just remove it.
+</span>                (delete-region (point-min) opoint))))
+
+	  <span class="cd">;; </span><span class="c">Remove the end-comment (and leading padding and such).
+</span>	  (goto-char (point-max)) (comment-enter-backward)
+	  <span class="cd">;; </span><span class="c">Check for special `</span><span class="m c">=</span><span class="c">' used sometimes in comment-box.
+</span>	  (<span class="k">when</span> (<span class="k">and</span> box-equal (not (eq (char-before (point-max)) ?\n)))
+	    (<span class="k">let</span> ((pos (point)))
+	      <span class="cd">;; </span><span class="c">skip `</span><span class="m c">=</span><span class="c">' but only if there are at least 7.
+</span>	      (<span class="k">when</span> (&gt; (skip-chars-backward <span class="s">"="</span>) -7) (goto-char pos))))
+	  (<span class="k">unless</span> (looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\n</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\\s-</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">*\\'"</span>)
+	    (<span class="k">when</span> (<span class="k">and</span> (bolp) (not (bobp))) (backward-char))
+	    (<span class="k">if</span> (null arg) (delete-region (point) (point-max))
+	      (skip-syntax-forward <span class="s">" "</span>)
+	      (delete-char numarg)
+	      (<span class="k">unless</span> (<span class="k">or</span> (eobp) (looking-at comment-end-skip))
+		<span class="cd">;; </span><span class="c">If there's something left but it doesn't look like
+</span>		<span class="cd">;; </span><span class="c">a comment-end any more, just remove it.
+</span>		(delete-region (point) (point-max)))))
+
+	  <span class="cd">;; </span><span class="c">Unquote any nested end-comment.
+</span>	  (comment-quote-nested comment-start comment-end t)
+
+	  <span class="cd">;; </span><span class="c">Eliminate continuation markers as well.
+</span>	  (<span class="k">when</span> sre
+	    (<span class="k">let*</span> ((cce (comment-string-reverse (<span class="k">or</span> comment-continue
+						    comment-start)))
+		   (erei (<span class="k">and</span> box (comment-padleft cce 're)))
+		   (ere (<span class="k">and</span> erei (concat <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">"</span> erei <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\s-*$"</span>))))
+	      (goto-char (point-min))
+	      (<span class="k">while</span> (<span class="k">progn</span>
+		       (<span class="k">if</span> (<span class="k">and</span> ere (re-search-forward
+				     ere (line-end-position) t))
+			   (replace-match <span class="s">""</span> t t nil (<span class="k">if</span> (match-end 2) 2 1))
+			 (<span class="k">setq</span> ere nil))
+		       (forward-line 1)
+		       (re-search-forward sre (line-end-position) t))
+		(replace-match <span class="s">""</span> t t nil (<span class="k">if</span> (match-end 2) 2 1)))))
+	  <span class="cd">;; </span><span class="c">Go to the end for the next comment.
+</span>	  (goto-char (point-max)))
+        <span class="cd">;; </span><span class="c">Remove any obtrusive spaces left preceding a tab at `</span><span class="m c">spt</span><span class="c">'.
+</span>        (<span class="k">when</span> (<span class="k">and</span> (eq (char-after spt) ?\t) (eq (char-before spt) ? )
+                   (&gt; tab-width 0))
+          (<span class="k">save-excursion</span>
+            (goto-char spt)
+            (<span class="k">let*</span> ((fcol (current-column))
+                   (slim (- (point) (mod fcol tab-width))))
+              (delete-char (- (skip-chars-backward <span class="s">" "</span> slim)))))))))
+  (set-marker end nil))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

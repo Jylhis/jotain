@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: consult--convert-regexp-table – Emacs Documentation Online</title>
+<meta name="description" content="consult--convert-regexp-table is a variable defined in consult.el.
+Regexp conversion table.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>consult--convert-regexp-table</code></h1><p><span class="m"><code>consult--convert-regexp-table</code></span> is a variable defined in <span class="bt">consult.el</span>.
+<h2>Value</h2>
+<pre><code>(("\\&lt;" . "\\b") ("\\&gt;" . "\\b") ("\\_&lt;" . "\\b") ("\\_&gt;" . "\\b")
+ ("\\s-" . "[ \\n\\t\\r]") ("\\S-" . "[^ \\n\\t\\r]")
+ ("\\sw" . "[a-zA-Z0-9]") ("\\Sw" . "[^a-zA-Z0-0]")
+ ("\\s_" . "[a-zA-Z0-9_-]") ("\\S_" . "[^a-zA-Z0-0_-]") ("\\`" . "^")
+ ("\\'" . "$") ("*" . "\\*") ("+" . "\\+") ("?" . "\\?")
+ ("\\(*" . "(\\*") ("\\(+" . "(\\+") ("\\(?" . "(\\?")
+ ("\\(?:*" . "(?:\\*") ("\\(?:+" . "(?:\\+") ("\\(?:?" . "(?:\\?")
+ ("\\|*" . "|\\*") ("\\|+" . "|\\+") ("\\|?" . "|\\?") ("^*" . "^\\*")
+ ("^+" . "^\\+") ("^?" . "^\\?") ("\\|" . "|") ("|" . "\\|")
+ ("\\(" . "(") ("(" . "\\(") ("\\)" . ")") (")" . "\\)") ("\\{" . "{")
+ ("{" . "\\{") ("\\}" . "}") ("}" . "\\}"))
+</code></pre>
+<h2>Documentation</h2>
+<p>Regexp conversion table.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defconst</span> <span class="v">consult--convert-regexp-table</span>
+  (append
+   <span class="cd">;; </span><span class="c">For simplicity, treat word beginning/end as word boundaries,
+</span>   <span class="cd">;; </span><span class="c">since PCRE does not make this distinction.  Usually the
+</span>   <span class="cd">;; </span><span class="c">context determines if \b is the beginning or the end.
+</span>   '((<span class="s">"\\&lt;"</span> . <span class="s">"\\b"</span>) (<span class="s">"\\&gt;"</span> . <span class="s">"\\b"</span>)
+     (<span class="s">"\\_&lt;"</span> . <span class="s">"\\b"</span>) (<span class="s">"\\_&gt;"</span> . <span class="s">"\\b"</span>)
+     (<span class="s">"\\s-"</span> . <span class="s">"[ \\n\\t\\r]"</span>) (<span class="s">"\\S-"</span> . <span class="s">"[</span><span class="neg s">^</span><span class="s"> \\n\\t\\r]"</span>)
+     (<span class="s">"\\sw"</span> . <span class="s">"[a-zA-Z0-9]"</span>) (<span class="s">"\\Sw"</span> . <span class="s">"[</span><span class="neg s">^</span><span class="s">a-zA-Z0-0]"</span>)
+     (<span class="s">"\\s_"</span> . <span class="s">"[a-zA-Z0-9_-]"</span>) (<span class="s">"\\S_"</span> . <span class="s">"[</span><span class="neg s">^</span><span class="s">a-zA-Z0-0_-]"</span>))
+   <span class="cd">;; </span><span class="c">Treat \` and \' as beginning and end of line.  This is more
+</span>   <span class="cd">;; </span><span class="c">widely supported and makes sense for line-based commands.
+</span>   '((<span class="s">"\\`"</span> . <span class="s">"^"</span>) (<span class="s">"\\'"</span> . <span class="s">"$"</span>))
+   <span class="cd">;; </span><span class="c">Historical: Unescaped *, +, ? are supported at the beginning
+</span>   (mapcan (<span class="k">lambda</span> (x)
+             (mapcar (<span class="k">lambda</span> (y)
+                       (cons (concat x y)
+                             (concat (string-remove-prefix <span class="s">"\\"</span> x) <span class="s">"\\"</span> y)))
+                     '(<span class="s">"*"</span> <span class="s">"+"</span> <span class="s">"?"</span>)))
+           '(<span class="s">""</span> <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">"</span> <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">"</span> <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">"</span> <span class="s">"^"</span>))
+   <span class="cd">;; </span><span class="c">Different escaping
+</span>   (mapcan (<span class="k">lambda</span> (x) `(,x (,(cdr x) . ,(car x))))
+           '((<span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">"</span> . <span class="s">"|"</span>)
+             (<span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">"</span> . <span class="s">"("</span>) (<span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> . <span class="s">")"</span>)
+             (<span class="s">"\\{"</span> . <span class="s">"{"</span>) (<span class="s">"\\}"</span> . <span class="s">"}"</span>))))
+  <span class="doc">"Regexp conversion table."</span>)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

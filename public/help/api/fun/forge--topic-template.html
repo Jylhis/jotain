@@ -1,0 +1,43 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--topic-template – Emacs Documentation Online</title>
+<meta name="description" content="forge--topic-template is a natively compiled function defined in
+forge-topic.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--topic-template</code></h1><p><span class="m"><code>forge--topic-template</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">forge-topic.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--topic-template <span class="arg">REPO</span> <span class="arg">CLASS</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-topic.el</span>
+<span class="cd">;;; </span><span class="c">Templates
+</span>
+(<span class="k">defun</span> <span class="f">forge--topic-template</span> (repo class)
+  (<span class="k">unless</span> repo
+    (<span class="k">setq</span> repo (forge-get-repository <span class="bi">:tracked</span>)))
+  (<span class="k">let*</span> ((templates (forge--topic-templates repo class))
+         (template
+          (<span class="k">if</span> (cdr templates)
+              (<span class="k">let</span> ((c (magit-completing-read
+                        (<span class="k">pcase</span> class
+                          ('forge-issue   <span class="s">"Select issue template"</span>)
+                          ('forge-pullreq <span class="s">"Select pull-request template"</span>))
+                        (mapcar (##alist-get 'prompt %) templates)
+                        nil t)))
+                (seq-find (##equal (alist-get 'prompt %) c) templates))
+            (car templates))))
+    (<span class="k">if-let</span> ((url (alist-get 'url template)))
+        (<span class="k">if</span> (string-match (forge--format repo <span class="s">"\
+\\`https://%h/[</span><span class="neg s">^</span><span class="s">/]+/[</span><span class="neg s">^</span><span class="s">/]+/discussions</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">/categories/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?"</span>)
+                          url)
+            `((type . forge-discussion)
+              (category . ,(<span class="k">or</span> (match-string 1 url)
+                               (forge-read-topic-category
+                                nil <span class="s">"Category for new discussion"</span>))))
+          `((type . redirect) ,@template))
+      `((type . ,class) ,@template))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

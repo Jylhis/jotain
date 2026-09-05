@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: logview--do-next-timestamp-gap – Emacs Documentation Online</title>
+<meta name="description" content="logview--do-next-timestamp-gap is a natively compiled function defined
+in logview.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>logview--do-next-timestamp-gap</code></h1><p><span class="m"><code>logview--do-next-timestamp-gap</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">logview.el</span>.
+<h2>Signature</h2>
+<pre><code>(logview--do-next-timestamp-gap <span class="arg">N</span> <span class="arg">SAME-THREAD-ONLY</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qid656ql5mh048bd0k84vvsbc2517lh9-emacs-packages-deps/share/emacs/site-lisp/elpa/logview-20260218.2013/logview.el</span>
+(<span class="k">defun</span> <span class="f">logview--do-next-timestamp-gap</span> (n same-thread-only)
+  (logview--assert 'timestamp)
+  (<span class="k">when</span> same-thread-only
+    (logview--assert 'thread))
+  (<span class="k">unless</span> n
+    (<span class="k">setq</span> n 1))
+  (<span class="k">logview--std-temporarily-widening</span>
+    (<span class="k">logview--locate-current-entry</span> started-at-entry started-at
+      (<span class="k">let</span> ((thread (<span class="k">when</span> same-thread-only
+                      (logview--entry-group started-at-entry started-at logview--thread-group))))
+        (<span class="k">when</span> (&lt; n 0)
+          (logview--forward-entry -1 (<span class="k">when</span> thread
+                                       (<span class="k">lambda</span> (entry start)
+                                         (string-equal (logview--entry-group entry start logview--thread-group) thread)))))
+        (<span class="k">logview--locate-current-entry</span> entry start
+          (<span class="k">let</span> ((remaining (logview--forward-entry n (logview--entry-timestamp-gap-validator entry start thread)))
+                (success   (<span class="k">when</span> logview--last-found-large-gap
+                             (format <span class="s">"Gap to the previous entry%s is %s s"</span>
+                                     (<span class="k">if</span> same-thread-only <span class="s">" of this thread"</span> <span class="s">""</span>)
+                                     (format logview--timestamp-gap-format-string logview--last-found-large-gap))))
+                (failure   (format <span class="s">"No more large enough (%s s or more) gaps in timestamps%s"</span>
+                                   (logview--target-gap-length) (<span class="k">if</span> same-thread-only <span class="s">" in this thread"</span> <span class="s">""</span>))))
+            (<span class="k">when</span> (&lt; n 0)
+              (<span class="k">if</span> (= remaining n)
+                  (goto-char (logview--entry-message-start started-at-entry started-at))
+                (logview--forward-entry 1)))
+            (logview--maybe-pulse-current-entry 'timestamp-gap)
+            (<span class="k">cond</span> ((= n 0))
+                  ((= remaining n)
+                   (<span class="w">user-error</span> <span class="s">"%s"</span> failure))
+                  ((= remaining 0)
+                   (message <span class="s">"%s"</span> success))
+                  (t
+                   (<span class="w">user-error</span> <span class="s">"%s; %s"</span> success (downcase failure))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

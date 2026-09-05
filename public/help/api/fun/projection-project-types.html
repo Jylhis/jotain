@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: projection-project-types – Emacs Documentation Online</title>
+<meta name="description" content="projection-project-types is a natively compiled function defined in
+projection-core-match.el.
+Determine all project types matching ROOT-DIR.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>projection-project-types</code></h1><p><span class="m"><code>projection-project-types</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">projection-core-match.el</span>.
+<h2>Signature</h2>
+<pre><code>(projection-project-types <a href="#:~:text=matching-,ROOT-DIR"><span class="arg">ROOT-DIR</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=With-,MUST-MATCH"><span class="arg">MUST-MATCH</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Determine all project types matching <span class="arg">ROOT-DIR</span>.
+<p>With <span class="arg">MUST-MATCH</span> an error will be raised if no project types could be matched.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kqajmnl5vwqnlsg3vcmlj2d28ylc2n0n-emacs-packages-deps/share/emacs/site-lisp/elpa/projection-20260614.1822/projection-core-match.el</span>
+(<span class="k">defun</span> <span class="f">projection-project-types</span> (root-dir <span class="ty">&amp;optional</span> must-match)
+  <span class="doc">"Determine all project types matching ROOT-DIR.
+With MUST-MATCH an error will be raised if no project types could be matched."</span>
+  (<span class="k">let</span> ((matching-types
+         (<span class="k">or</span>
+          (<span class="k">when-let*</span> ((types (projection--cache-get root-dir 'types)))
+            (mapcar #'projection--name-to-type types))
+
+          (<span class="k">when-let*</span> ((project-types (projection--match-project-types root-dir)))
+            (projection--cache-put root-dir 'types
+                                   (mapcar #'projection-type--name project-types))
+            project-types))))
+
+    <span class="cd">;; </span><span class="c">Ensure the default project-type is the first entry in the collection
+</span>    <span class="cd">;; </span><span class="c">of matching types. This is so any functions relying on this result can
+</span>    <span class="cd">;; </span><span class="c">expect on the invariant of (car types) == default-type.
+</span>    (<span class="k">when-let*</span> ((default-type (projection-project-type root-dir)))
+      (<span class="k">when</span> (<span class="k">and</span>
+             (not (eq default-type projection-default-type))
+             (not (eq default-type (car matching-types))))
+        (<span class="k">setq</span> matching-types (append (list default-type)
+                                     (delq default-type matching-types)))))
+
+    <span class="cd">;; </span><span class="c">Ensure the locally overridden project-type is in the collection of matching
+</span>    <span class="cd">;; </span><span class="c">types. It doesn't necessarily have to be the primary type since you can
+</span>    <span class="cd">;; </span><span class="c">override it after the fact but it should always be in the list.
+</span>    (<span class="k">when-let*</span> ((local-primary-project-type
+               (<span class="k">when</span> projection-primary-project-type
+                 (projection--name-to-type projection-primary-project-type))))
+      (<span class="k">unless</span> (member local-primary-project-type matching-types)
+        (<span class="k">setq</span> matching-types (append (list (car matching-types)
+                                           local-primary-project-type)
+                                     (cdr matching-types)))))
+
+    (<span class="k">or</span>
+     matching-types
+
+     (<span class="k">when</span> (<span class="k">and</span> must-match
+                (not projection-default-type))
+       (<span class="w">error</span> <span class="s">"Could not determine any project types for %s"</span> root-dir))
+
+     (list projection-default-type))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

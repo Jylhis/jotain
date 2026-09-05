@@ -1,0 +1,76 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel – Emacs Documentation Online</title>
+<meta name="description" content="gptel is an interactive and natively compiled function defined in
+gptel.el.
+Switch to or start a chat session with NAME.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel</code></h1><p><span class="m"><code>gptel</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel <a href="#:~:text=with-,NAME"><span class="arg">NAME</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=for-,KEY"><span class="arg">KEY</span></a> <a href="#:~:text=the-,INITIAL"><span class="arg">INITIAL</span></a> <a href="#:~:text=to.-,INTERACTIVEP"><span class="arg">INTERACTIVEP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Switch to or start a chat session with <span class="arg">NAME</span>.
+<p>Ask for <span class="arg">KEY</span> if required by the chat backend.
+<p>If region is active, use it as the <span class="arg">INITIAL</span> prompt.  Returns the
+buffer created or switched to.
+<p><span class="arg">INTERACTIVEP</span> is t when gptel is called interactively.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">gptel</span> (name <span class="ty">&amp;optional</span> _key initial interactivep)
+  <span class="doc">"Switch to or start a chat session with NAME.
+
+Ask for KEY if required by the chat backend.
+
+If region is active, use it as the INITIAL prompt.  Returns the
+buffer created or switched to.
+
+INTERACTIVEP is t when gptel is called interactively."</span>
+  (<span class="k">interactive</span>
+   (<span class="k">let*</span> ((backend (default-value 'gptel-backend))
+          (backend-name
+           (format <span class="s">"*%s*"</span> (<span class="k">if</span> backend (gptel-backend-name backend) <span class="s">"gptel"</span>))))
+     (list (read-buffer
+            <span class="s">"Create or choose gptel buffer: "</span>
+            backend-name nil            <span class="cd">; </span><span class="c">DEFAULT and REQUIRE-MATCH
+</span>            (<span class="k">lambda</span> (b)                 <span class="cd">; </span><span class="c">PREDICATE
+</span>              <span class="cd">;; </span><span class="c">NOTE: buffer check is required (#450)
+</span>              (<span class="k">and-let*</span> ((buf (get-buffer (<span class="k">or</span> (car-safe b) b))))
+                (buffer-local-value 'gptel-mode buf))))
+           (<span class="k">condition-case</span> nil
+               (gptel--get-api-key
+                (gptel-backend-key backend))
+             ((<span class="w">error</span> user-error)
+              (<span class="k">setq</span> gptel-api-key
+                    (read-passwd
+                     (format <span class="s">"%s API key: "</span> backend-name)))))
+           (<span class="k">and</span> (use-region-p) (buffer-substring (region-beginning)
+                                                 (region-end)))
+           t)))
+  (<span class="k">with-current-buffer</span> (get-buffer-create name)
+    (<span class="k">cond</span>                               <span class="cd">;</span><span class="c">Set major mode
+</span>     ((eq major-mode gptel-default-mode))
+     ((eq gptel-default-mode 'text-mode)
+      (text-mode)
+      (visual-line-mode 1))
+     (t (funcall gptel-default-mode)))
+    (gptel--sanitize-model <span class="bi">:backend</span> (default-value 'gptel-backend)
+                           <span class="bi">:model</span> (default-value 'gptel-model)
+                           <span class="bi">:shoosh</span> nil)
+    (<span class="k">unless</span> gptel-mode (gptel-mode 1))
+    (goto-char (point-max))
+    (skip-chars-backward <span class="s">"\t\r\n"</span>)
+    (<span class="k">if</span> (bobp) (insert (<span class="k">or</span> initial (gptel-prompt-prefix-string))))
+    (<span class="k">when</span> interactivep
+      (display-buffer (current-buffer) gptel-display-buffer-action)
+      (message <span class="s">"Send your query with %s!"</span>
+               (substitute-command-keys <span class="s">"\\[</span><span class="m s">gptel-send</span><span class="s">]"</span>)))
+    (current-buffer)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

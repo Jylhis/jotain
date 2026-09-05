@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-util-required-hscroll – Emacs Documentation Online</title>
+<meta name="description" content="pdf-util-required-hscroll is a natively compiled function defined in
+pdf-util.el.
+Return the amount of scrolling necessary, to make image EDGES visible.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-util-required-hscroll</code></h1><p><span class="m"><code>pdf-util-required-hscroll</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">pdf-util.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-util-required-hscroll <a href="#:~:text=image-,EDGES"><span class="arg">EDGES</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=Unless-,EAGER-P"><span class="arg">EAGER-P</span></a> <a href="#:~:text=Keep-,CONTEXT-PIXEL"><span class="arg">CONTEXT-PIXEL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the amount of scrolling necessary, to make image <span class="arg">EDGES</span> visible.
+<p>Scroll as little as necessary.  Unless <span class="arg">EAGER-P</span> is non-nil, in
+which case scroll as much as possible.
+<p>Keep <span class="arg">CONTEXT-PIXEL</span> pixel of the image visible at the bottom and
+top of the window.  <span class="arg">CONTEXT-PIXEL</span> defaults to 0.
+<p>Return the required hscroll in columns or nil, if scrolling is not
+needed.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-util.el</span>
+(<span class="k">defun</span> <span class="f">pdf-util-required-hscroll</span> (edges <span class="ty">&amp;optional</span> eager-p context-pixel)
+  <span class="doc">"Return the amount of scrolling necessary, to make image EDGES visible.
+
+Scroll as little as necessary.  Unless EAGER-P is non-nil, in
+which case scroll as much as possible.
+
+Keep CONTEXT-PIXEL pixel of the image visible at the bottom and
+top of the window.  CONTEXT-PIXEL defaults to 0.
+
+Return the required hscroll in columns or nil, if scrolling is not
+needed."</span>
+
+  (pdf-util-assert-pdf-window)
+  (<span class="k">unless</span> context-pixel
+    (<span class="k">setq</span> context-pixel 0))
+  (<span class="k">let*</span> ((win (window-inside-pixel-edges))
+         (image-width (car (pdf-view-image-size t)))
+         (image-left (* (frame-char-width)
+                        (window-hscroll)))
+         (edges (pdf-util-translate
+                 edges
+                 (pdf-view-image-offset) t)))
+    (<span class="k">pdf-util-with-edges</span> (win edges)
+      (<span class="k">let*</span> ((edges-left (- edges-left context-pixel))
+             (edges-right (+ edges-right context-pixel)))
+        (<span class="k">if</span> (&lt; edges-left image-left)
+            (round (/ (max 0 (<span class="k">if</span> eager-p
+                                 (- edges-right win-width)
+                               edges-left))
+                      (frame-char-width)))
+          (<span class="k">if</span> (&gt; (min image-width
+                      edges-right)
+                 (+ image-left win-width))
+              (round (/ (min (- image-width win-width)
+                             (<span class="k">if</span> eager-p
+                                 edges-left
+                               (- edges-right win-width)))
+                        (frame-char-width)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

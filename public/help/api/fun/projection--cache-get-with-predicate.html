@@ -1,0 +1,79 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: projection--cache-get-with-predicate – Emacs Documentation Online</title>
+<meta name="description" content="projection--cache-get-with-predicate is a natively compiled function
+defined in projection-core-cache.el.
+Get a value from the projection cache and reset it if stale.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>projection--cache-get-with-predicate</code></h1><p><span class="m"><code>projection--cache-get-with-predicate</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">projection-core-cache.el</span>.
+<h2>Signature</h2>
+<pre><code>(projection--cache-get-with-predicate <a href="#:~:text=current-,PROJECT"><span class="arg">PROJECT</span></a> <a href="#:~:text=for-,KEY"><span class="arg">KEY</span></a> <a href="#:~:text=the-,PREDICATE"><span class="arg">PREDICATE</span></a> <a href="#:~:text=Otherwise-,BODY"><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Get a value from the <span class="m"><code>projection</code></span> cache and reset it if stale.
+<p>This is a helper function to both retrieve and set a cache entry for <span class="arg">KEY</span> in
+the current <span class="arg">PROJECT</span>. If a cache entry for <span class="arg">KEY</span> exists in the current project
+and its newer than the <span class="arg">PREDICATE</span> value then it will be returned. Otherwise
+<span class="arg">BODY</span> will be called to determine a new value and it will be saved alongside
+<span class="arg">PREDICATE</span> for a later retrieval.
+<p><span class="arg">PREDICATE</span> should be a comparable value that will change when the value
+in the cache is stale. For example <span class="arg">PREDICATE</span> could be the modification
+time of a file used by <span class="arg">BODY</span>. If the file is unchanged the cache is up to
+date. If the FILE is modified <span class="arg">PREDICATE</span> will be updated and the CACHE is
+stale. <span class="arg">PREDICATE</span> can be set to nil to never cache the result and always
+call <span class="arg">BODY</span>. It can instead be set to t to always cache. <span class="arg">PREDICATE</span> can also
+be a function that is supplied a plist containing a :value and :stamp
+field and should return one of the aforementioned <span class="arg">PREDICATE</span> values.
+<p><span class="arg">PROJECT</span> is an optional argument. When set to nil calling this function is
+essentially the same as just calling <span class="arg">BODY</span> directly.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kqajmnl5vwqnlsg3vcmlj2d28ylc2n0n-emacs-packages-deps/share/emacs/site-lisp/elpa/projection-20260614.1822/projection-core-cache.el</span>
+(<span class="k">defun</span> <span class="f">projection--cache-get-with-predicate</span> (project key predicate body)
+  <span class="doc">"Get a value from the `</span><span class="m doc">projection</span><span class="doc">' cache and reset it if stale.
+This is a helper function to both retrieve and set a cache entry for KEY in
+the current PROJECT. If a cache entry for KEY exists in the current project
+and its newer than the PREDICATE value then it will be returned. Otherwise
+BODY will be called to determine a new value and it will be saved alongside
+PREDICATE for a later retrieval.
+
+PREDICATE should be a comparable value that will change when the value
+in the cache is stale. For example PREDICATE could be the modification
+time of a file used by BODY. If the file is unchanged the cache is up to
+date. If the FILE is modified PREDICATE will be updated and the CACHE is
+stale. PREDICATE can be set to nil to never cache the result and always
+call BODY. It can instead be set to t to always cache. PREDICATE can also
+be a function that is supplied a plist containing a :value and :stamp
+field and should return one of the aforementioned PREDICATE values.
+
+PROJECT is an optional argument. When set to nil calling this function is
+essentially the same as just calling BODY directly."</span>
+  (<span class="k">let</span> ((cached-entry (<span class="k">when</span> project
+                        (projection--cache-get project key))))
+    (<span class="k">when</span> cached-entry
+      (<span class="w">cl-assert</span> (projection--cache-get-with-predicate-cached-p cached-entry)
+                 'show-args <span class="s">"cache-get-with-predicate called on cache entry with \
+value not set by cache-get-with-predicate"</span>))
+    (<span class="k">when</span> (functionp predicate)
+      (<span class="k">setq</span> predicate
+            (<span class="k">if</span> cached-entry
+                (funcall predicate
+                         (list <span class="bi">:value</span> (projection--cache-get-with-predicate-value cached-entry)
+                               <span class="bi">:stamp</span> (projection--cache-get-with-predicate-stamp cached-entry)))
+              (projection--cache-now))))
+
+    (<span class="k">if</span> (<span class="k">and</span> cached-entry
+             (<span class="k">if</span> (<span class="k">and</span> (numberp predicate)
+                      (numberp (projection--cache-get-with-predicate-stamp cached-entry)))
+                 (&lt;= predicate (projection--cache-get-with-predicate-stamp cached-entry))
+               predicate))
+        (projection--cache-get-with-predicate-value cached-entry)
+      (<span class="k">let</span> ((resolved-value (funcall body)))
+        (<span class="k">when</span> (<span class="k">and</span> project predicate resolved-value)
+          (projection--cache-put
+           project key (projection--cache-get-with-predicate-create predicate resolved-value)))
+        resolved-value))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

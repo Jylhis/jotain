@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--get-forge-host – Emacs Documentation Online</title>
+<meta name="description" content="forge--get-forge-host is a natively compiled function defined in
+forge-core.el.
+Return forge-alist entry matching HOST.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--get-forge-host</code></h1><p><span class="m"><code>forge--get-forge-host</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">forge-core.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--get-forge-host <a href="#:~:text=matching-,HOST"><span class="arg">HOST</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=optional-,DEMAND"><span class="arg">DEMAND</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return <a href="../var/forge-alist.html"><code>forge-alist</code></a> entry matching <span class="arg">HOST</span>.
+<p>Entries have the form (GITHOST APIHOST WEBHOST CLASS).
+<p>- If <span class="arg">HOST</span> matches a GITHOST, return the corresponding entry.
+<br>- Else, if <span class="arg">HOST</span> is an ssh alias and the canonical hostname matches a
+<br>&nbsp;&nbsp;GITHOST, return the corresponding entry.
+<br>- Finally, if <span class="arg">HOST</span> matches a WEBHOST, return the corresponding entry.
+<p>If no entry matches, return nil, or signal an error if optional <span class="arg">DEMAND</span>
+is non-nil.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-core.el</span>
+(<span class="k">defun</span> <span class="f">forge--get-forge-host</span> (host <span class="ty">&amp;optional</span> demand)
+  <span class="doc">"Return `</span><span class="m doc">forge-alist</span><span class="doc">' entry matching HOST.
+
+Entries have the form (GITHOST APIHOST WEBHOST CLASS).
+
+- If HOST matches a GITHOST, return the corresponding entry.
+- Else, if HOST is an ssh alias and the canonical hostname matches a
+  GITHOST, return the corresponding entry.
+- Finally, if HOST matches a WEBHOST, return the corresponding entry.
+
+If no entry matches, return nil, or signal an error if optional DEMAND
+is non-nil."</span>
+  (<span class="k">or</span> (assoc host forge-alist)
+      (assoc (seq-some (##and (string-prefix-p <span class="s">"hostname"</span> %)
+                              (substring % 9))
+                       (<span class="k">ignore-error</span> file-missing
+                         (process-lines-ignore-status <span class="s">"ssh"</span> <span class="s">"-G"</span> host)))
+             forge-alist)
+      (car (cl-member host forge-alist <span class="bi">:test</span> #'equal <span class="bi">:key</span> #'caddr))
+      (<span class="k">and</span> demand
+           (<span class="w">error</span> <span class="s">"No entry for \"%s\" in `</span><span class="m s">forge-alist</span><span class="s">'"</span> host))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

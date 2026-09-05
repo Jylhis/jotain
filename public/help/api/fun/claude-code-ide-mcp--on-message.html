@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp--on-message – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp--on-message is a natively compiled function
+defined in claude-code-ide-mcp.el.
+Handle incoming WebSocket message from WS in FRAME.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp--on-message</code></h1><p><span class="m"><code>claude-code-ide-mcp--on-message</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide-mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp--on-message <a href="#:~:text=from-,WS"><span class="arg">WS</span></a> <a href="#:~:text=in-,FRAME"><span class="arg">FRAME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle incoming WebSocket message from <span class="arg">WS</span> in <span class="arg">FRAME</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp--on-message</span> (ws frame)
+  <span class="doc">"Handle incoming WebSocket message from WS in FRAME."</span>
+  (<span class="k">claude-code-ide-debug</span> <span class="s">"=== Received WebSocket frame ==="</span>)
+
+  <span class="cd">;; </span><span class="c">Check if frame is actually a frame struct
+</span>  <span class="cd">;; </span><span class="c">In some edge cases, the websocket library might pass something else
+</span>  (<span class="k">condition-case</span> err
+      (<span class="k">progn</span>
+        <span class="cd">;; </span><span class="c">Try to get the opcode - this will fail if frame is not a proper struct
+</span>        (<span class="k">claude-code-ide-debug</span> <span class="s">"Frame opcode: %s"</span> (websocket-frame-opcode frame))
+
+        <span class="cd">;; </span><span class="c">Find the session for this websocket
+</span>        (<span class="k">let</span> ((session (claude-code-ide-mcp--find-session-by-websocket ws)))
+          (<span class="k">if</span> session
+              (<span class="k">progn</span>
+                (<span class="k">let*</span> ((text (websocket-frame-text frame))
+                       (message (<span class="k">condition-case</span> err
+                                    (json-read-from-string text)
+                                  (<span class="w">error</span>
+                                   (<span class="k">claude-code-ide-debug</span> <span class="s">"JSON parse error: %s"</span> err)
+                                   (<span class="k">claude-code-ide-debug</span> <span class="s">"Raw text: %s"</span> text)
+                                   (<span class="k">claude-code-ide-debug</span> <span class="s">"Failed to parse JSON: %s"</span> err)
+                                   nil))))
+                  (<span class="k">claude-code-ide-debug</span> <span class="s">"Received: %s"</span> text)
+                  (<span class="k">claude-code-ide-debug</span> <span class="s">"MCP received: %s"</span> text)
+                  (<span class="k">when</span> message
+                    (claude-code-ide-mcp--handle-message message session))))
+            (<span class="k">claude-code-ide-debug</span> <span class="s">"Warning: Could not find session for WebSocket message"</span>))))
+    (<span class="w">error</span>
+     <span class="cd">;; </span><span class="c">If we get an error accessing frame properties, log it and continue
+</span>     (<span class="k">claude-code-ide-debug</span> <span class="s">"Error processing WebSocket frame: %s"</span> err)
+     (<span class="k">claude-code-ide-debug</span> <span class="s">"Frame type: %s, Frame value: %S"</span> (type-of frame) frame)
+     <span class="cd">;; </span><span class="c">If frame is a string, it might be raw text data
+</span>     (<span class="k">when</span> (stringp frame)
+       (<span class="k">claude-code-ide-debug</span> <span class="s">"Received raw string instead of frame: %s"</span> frame))
+     <span class="cd">;; </span><span class="c">Don't crash the connection, just skip this message
+</span>     nil)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

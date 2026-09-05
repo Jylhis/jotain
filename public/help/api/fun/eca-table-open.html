@@ -1,0 +1,72 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-table-open – Emacs Documentation Online</title>
+<meta name="description" content="eca-table-open is an interactive and natively compiled function
+defined in eca-table.el.
+Open the markdown table at point (or clicked) in a dedicated buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-table-open</code></h1><p><span class="m"><code>eca-table-open</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-table.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-table-open <span class="ty">&amp;optional</span> <a href="#:~:text=modified.-,EVENT"><span class="arg">EVENT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Open the markdown table at point (or clicked) in a dedicated buffer.
+<p>The table is shown aligned in a <span class="m"><code>*eca-table*</code></span> buffer with
+<a href="../var/truncate-lines.html"><code>truncate-lines</code></a> enabled, so horizontal scrolling keeps the header
+aligned with the body and you can search or copy the whole table
+freely.  The chat buffer is not modified.  <span class="arg">EVENT</span>, when non-nil, is
+the mouse click on the action bar.
+<h2>Key Bindings</h2>
+<p><span class="v">eca-table-actions-map</span> <span class="key">o</span>
+<span class="v">eca-table-open-map</span> <span class="key">o</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-table.el</span>
+(<span class="k">defun</span> <span class="f">eca-table-open</span> (<span class="ty">&amp;optional</span> event)
+  <span class="doc">"Open the markdown table at point (or clicked) in a dedicated buffer.
+The table is shown aligned in a `</span><span class="m doc">*eca-table*</span><span class="doc">' buffer with
+`</span><span class="m doc">truncate-lines</span><span class="doc">' enabled, so horizontal scrolling keeps the header
+aligned with the body and you can search or copy the whole table
+freely.  The chat buffer is not modified.  EVENT, when non-nil, is
+the mouse click on the action bar."</span>
+  (<span class="k">interactive</span> (list last-command-event))
+  (<span class="k">let</span> ((pos (<span class="k">if</span> (mouse-event-p event)
+                 (posn-point (event-start event))
+               (point)))
+        (beg nil)
+        (end nil))
+    (<span class="k">save-excursion</span>
+      (<span class="k">when</span> pos (goto-char pos))
+      (<span class="k">let</span> ((ov (seq-find (<span class="k">lambda</span> (o) (overlay-get o 'eca-table-action))
+                          (overlays-at (point)))))
+        (<span class="k">cond</span>
+         (ov (<span class="k">setq</span> beg (overlay-start ov) end (overlay-end ov)))
+         ((markdown-table-at-point-p)
+          (<span class="k">setq</span> beg (markdown-table-begin) end (markdown-table-end))))))
+    (<span class="k">unless</span> (<span class="k">and</span> beg end)
+      (<span class="w">user-error</span> <span class="s">"Point is not on a markdown table"</span>))
+    (<span class="k">let</span> ((text (buffer-substring-no-properties beg end))
+          (buf (get-buffer-create <span class="s">"*eca-table*"</span>)))
+      (<span class="k">with-current-buffer</span> buf
+        (<span class="k">let</span> ((inhibit-read-only t))
+          (erase-buffer)
+          (gfm-mode)
+          (<span class="k">setq-local</span> markdown-hide-markup t)
+          (eca-table--apply-markdown-markup-visibility)
+          (<span class="k">setq-local</span> markdown-fontify-code-blocks-natively t)
+          (face-remap-add-relative 'markdown-table-face '(<span class="bi">:inherit</span> fixed-pitch))
+          (insert text)
+          (<span class="k">unless</span> (bolp) (insert <span class="s">"\n"</span>))
+          (goto-char (point-min))
+          (<span class="k">when</span> (markdown-table-at-point-p)
+            (markdown-table-align)
+            (eca-table--align-at-point))
+          (font-lock-ensure)
+          (goto-char (point-min)))
+        (<span class="k">setq-local</span> truncate-lines t)
+        (<span class="k">setq</span> buffer-read-only t))
+      (pop-to-buffer buf))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

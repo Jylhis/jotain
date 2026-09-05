@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dirvish--create-parent-buffer – Emacs Documentation Online</title>
+<meta name="description" content="dirvish--create-parent-buffer is a natively compiled function defined
+in dirvish.el.
+Create parent buffer at DIR in DV selecting file INDEX.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dirvish--create-parent-buffer</code></h1><p><span class="m"><code>dirvish--create-parent-buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">dirvish.el</span>.
+<h2>Signature</h2>
+<pre><code>(dirvish--create-parent-buffer <a href="#:~:text=in-,DV"><span class="arg">DV</span></a> <a href="#:~:text=at-,DIR"><span class="arg">DIR</span></a> <a href="#:~:text=file-,INDEX"><span class="arg">INDEX</span></a> <a href="#:~:text=INDEX.-,LEVEL"><span class="arg">LEVEL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create parent buffer at <span class="arg">DIR</span> in <span class="arg">DV</span> selecting file <span class="arg">INDEX</span>.
+<p><span class="arg">LEVEL</span> is the depth of current window.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a7h73ip6x5m1pxn38j7f0al6n93w904q-emacs-packages-deps/share/emacs/site-lisp/elpa/dirvish-20260725.1520/dirvish.el</span>
+(<span class="k">defun</span> <span class="f">dirvish--create-parent-buffer</span> (dv dir index level)
+  <span class="doc">"Create parent buffer at DIR in DV selecting file INDEX.
+LEVEL is the depth of current window."</span>
+  (<span class="k">let*</span> ((index (directory-file-name index))
+         (buf (dirvish--special-buffer (format <span class="s">"parent-%s"</span> level) dv t))
+         (str (<span class="k">or</span> (gethash dir (dv-parent-hash dv))
+                  (<span class="k">let</span> ((flags dired-actual-switches))
+                    (<span class="k">with-temp-buffer</span> (dired-insert-directory dir flags)
+                                      (buffer-string)))))
+         (attrs (mapcar #'car (dv-attributes dv)))
+         (icon (<span class="k">cond</span> ((memq 'all-the-icons attrs) '(all-the-icons))
+                     ((memq 'nerd-icons attrs) '(nerd-icons))
+                     ((memq 'vscode-icon attrs) '(vscode-icon)))))
+    (<span class="k">cl-pushnew</span> buf (dv-special-buffers dv))
+    (<span class="k">with-current-buffer</span> buf
+      (dirvish-directory-view-mode)
+      (<span class="k">dirvish-prop</span> <span class="bi">:dv</span> (dv-id dv))
+      (<span class="k">dirvish-prop</span> <span class="bi">:remote</span> (file-remote-p dir))
+      (<span class="k">dirvish-prop</span> <span class="bi">:sudo</span> <span class="cd">; </span><span class="c">copy this from root avoids requiring tramp
+</span>        (<span class="k">with-current-buffer</span> (cdr (dv-index dv)) (<span class="k">dirvish-prop</span> <span class="bi">:sudo</span>)))
+      (puthash dir str (dv-parent-hash dv))
+      (<span class="k">let</span> (buffer-read-only) (erase-buffer) (<span class="k">save-excursion</span> (insert str)))
+      (<span class="k">setq-local</span> dired-subdir-alist (list (cons dir (point-min-marker))))
+      (dired-goto-file-1 (file-name-nondirectory index) index (point-max))
+      (dirvish--maybe-toggle-cursor '(box . 0)) <span class="cd">; </span><span class="c">always hide cursor in parents
+</span>      (<span class="k">dirvish-prop</span> <span class="bi">:attrs</span> (dirvish--attrs-expand icon)) buf)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

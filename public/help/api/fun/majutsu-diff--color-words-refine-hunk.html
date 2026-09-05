@@ -1,0 +1,118 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-diff--color-words-refine-hunk – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-diff--color-words-refine-hunk is a natively compiled function
+defined in majutsu-diff.el.
+Apply word-level refinement to a color-words SECTION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-diff--color-words-refine-hunk</code></h1><p><span class="m"><code>majutsu-diff--color-words-refine-hunk</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-diff--color-words-refine-hunk <a href="#:~:text=words-,SECTION"><span class="arg">SECTION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply word-level refinement to a color-words <span class="arg">SECTION</span>.
+<p>Walk the hunk body to find colored word spans (identified by debug
+labels when available, otherwise ANSI-derived <span class="m"><code>font-lock-face</code></span>) and
+create three kinds of overlays:
+<p>1. <span class="m"><code>smerge--refine-region</code></span> overlays covering the full extent of each
+<br>&nbsp;&nbsp;&nbsp;removed/added block.  These carry <span class="m"><code>cursor-sensor-functions</code></span> with
+<br>&nbsp;&nbsp;&nbsp;<a href="../fun/majutsu-diff--color-words-shadow-cursor.html"><code>majutsu-diff--color-words-shadow-cursor</code></a> (NOT the smerge version,
+<br>&nbsp;&nbsp;&nbsp;which assumes separated geometry).
+<p>2. <span class="m"><code>diff-mode fine</code></span> overlays on non-token spans, cross-linked via
+<br>&nbsp;&nbsp;&nbsp;<span class="m"><code>smerge--refine-other</code></span> as anchors for precise shadow-cursor mapping.
+<p>3. Token overlays on underlined spans with <span class="m"><code>diff-refine-removed</code></span>/
+<br>&nbsp;&nbsp;&nbsp;<span class="m"><code>diff-refine-added</code></span> faces.  When available, token spans come from
+<br>&nbsp;&nbsp;&nbsp;jj <span class="m"><code>--color=debug</code></span> labels (exactly matching jj's inline tokenization);
+<br>&nbsp;&nbsp;&nbsp;otherwise fall back to ANSI face spans.
+<p>This trusts jj's own word-level diff: underlined = unique to one
+side, non-underlined colored = shared context within a change.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-diff.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-diff--color-words-refine-hunk</span> (section)
+  <span class="doc">"Apply word-level refinement to a color-words SECTION.
+Walk the hunk body to find colored word spans (identified by debug
+labels when available, otherwise ANSI-derived `</span><span class="m doc">font-lock-face</span><span class="doc">') and
+create three kinds of overlays:
+
+1. `</span><span class="m doc">smerge--refine-region</span><span class="doc">' overlays covering the full extent of each
+   removed/added block.  These carry `</span><span class="m doc">cursor-sensor-functions</span><span class="doc">' with
+   `</span><span class="m doc">majutsu-diff--color-words-shadow-cursor</span><span class="doc">' (NOT the smerge version,
+   which assumes separated geometry).
+
+2. `diff-mode fine' overlays on non-token spans, cross-linked via
+   `</span><span class="m doc">smerge--refine-other</span><span class="doc">' as anchors for precise shadow-cursor mapping.
+
+3. Token overlays on underlined spans with `</span><span class="m doc">diff-refine-removed</span><span class="doc">'/
+   `</span><span class="m doc">diff-refine-added</span><span class="doc">' faces.  When available, token spans come from
+   jj `</span><span class="m doc">--color=debug</span><span class="doc">' labels (exactly matching jj's inline tokenization);
+   otherwise fall back to ANSI face spans.
+
+This trusts jj's own word-level diff: underlined = unique to one
+side, non-underlined colored = shared context within a change."</span>
+  (<span class="k">require</span> '<span class="m">majutsu-color-words</span>)
+  (<span class="k">require</span> '<span class="m">smerge-mode</span>)
+  (<span class="k">let*</span> ((beg (<span class="k">oref</span> section content))
+         (end (<span class="k">oref</span> section end))
+         <span class="cd">;; </span><span class="c">Prefer debug-labeled spans when available; otherwise use ANSI faces.
+</span>         (debug-spans (majutsu-color-words--collect-debug-change-spans beg end))
+         (ansi-spans (majutsu-color-words--collect-change-spans beg end))
+         (change-spans (<span class="k">or</span> debug-spans ansi-spans))
+         (region-pairs (majutsu-color-words--group-change-pairs change-spans))
+         <span class="cd">;; </span><span class="c">For token overlays, prefer explicit debug token labels because
+</span>         <span class="cd">;; </span><span class="c">they mirror jj's rendered token stream exactly.
+</span>         (debug-token-spans (majutsu-color-words--collect-debug-token-spans beg end))
+         (token-pairs (<span class="k">if</span> debug-token-spans
+                          (majutsu-color-words--group-change-pairs debug-token-spans)
+                        region-pairs)))
+
+    (<span class="k">dolist</span> (pair region-pairs)
+      (<span class="k">pcase-let</span> ((`(,rbeg ,rend ,abeg ,aend ,r-ul ,a-ul ,r-non ,a-non) pair))
+        <span class="cd">;; </span><span class="c">1. Region overlays for shadow cursor activation.
+</span>        (<span class="k">let</span> (r-region a-region)
+          (<span class="k">when</span> rbeg
+            (<span class="k">setq</span> r-region (make-overlay rbeg rend nil 'front-advance))
+            (overlay-put r-region 'evaporate t)
+            (overlay-put r-region 'diff-mode 'fine)
+            (overlay-put r-region 'smerge--refine-region t)
+            (overlay-put r-region 'majutsu-color-words-non-token r-non)
+            (overlay-put r-region 'majutsu-color-words-token-anchors
+                         (majutsu-diff--color-words--token-anchors r-ul r-non))
+            (overlay-put r-region 'cursor-sensor-functions
+                         '(majutsu-diff--color-words-shadow-cursor)))
+          (<span class="k">when</span> abeg
+            (<span class="k">setq</span> a-region (make-overlay abeg aend nil 'front-advance))
+            (overlay-put a-region 'evaporate t)
+            (overlay-put a-region 'diff-mode 'fine)
+            (overlay-put a-region 'smerge--refine-region t)
+            (overlay-put a-region 'majutsu-color-words-non-token a-non)
+            (overlay-put a-region 'majutsu-color-words-token-anchors
+                         (majutsu-diff--color-words--token-anchors a-ul a-non))
+            (overlay-put a-region 'cursor-sensor-functions
+                         '(majutsu-diff--color-words-shadow-cursor)))
+          (<span class="k">when</span> (<span class="k">and</span> r-region a-region)
+            (overlay-put r-region 'majutsu-color-words-region-other a-region)
+            (overlay-put a-region 'majutsu-color-words-region-other r-region)))))
+
+    (<span class="k">dolist</span> (pair token-pairs)
+      (<span class="k">pcase-let</span> ((`(,_rbeg ,_rend ,_abeg ,_aend ,r-ul ,a-ul ,_r-non ,_a-non) pair))
+        <span class="cd">;; </span><span class="c">2. Token overlays on underlined spans — visual refinement only.
+</span>        (<span class="k">dolist</span> (span r-ul)
+          (<span class="k">let</span> ((ol (make-overlay (car span) (cdr span))))
+            (overlay-put ol 'diff-mode 'fine)
+            (overlay-put ol 'evaporate t)
+            (overlay-put ol 'face 'diff-refine-removed)
+            (overlay-put ol 'majutsu-color-words-token t)))
+        (<span class="k">dolist</span> (span a-ul)
+          (<span class="k">let</span> ((ol (make-overlay (car span) (cdr span))))
+            (overlay-put ol 'diff-mode 'fine)
+            (overlay-put ol 'evaporate t)
+            (overlay-put ol 'face 'diff-refine-added)
+            (overlay-put ol 'majutsu-color-words-token t)))))
+    <span class="cd">;; </span><span class="c">Enable cursor-sensor-mode for shadow cursor.
+</span>    (<span class="k">when</span> (<span class="k">bound-and-true-p</span> smerge-refine-shadow-cursor)
+      (cursor-sensor-mode 1))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

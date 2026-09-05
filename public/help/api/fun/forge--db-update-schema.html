@@ -1,0 +1,171 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--db-update-schema – Emacs Documentation Online</title>
+<meta name="description" content="forge--db-update-schema is a natively compiled function defined in
+forge-db.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--db-update-schema</code></h1><p><span class="m"><code>forge--db-update-schema</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">forge-db.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--db-update-schema <span class="arg">DB</span> <span class="arg">VERSION</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-db.el</span>
+(<span class="k">defun</span> <span class="f">forge--db-update-schema</span> (db version)
+  (<span class="k">cl-macrolet</span>
+      ((up (to <span class="ty">&amp;rest</span> body)
+         `(<span class="k">when</span> (= (1+ version) ,to)
+            (message <span class="s">"Upgrading Forge database from version %s to %s..."</span>
+                     version ,to)
+            ,@body
+            (closql--db-set-version db ,to)
+            (message <span class="s">"Upgrading Forge database from version %s to %s...done"</span>
+                     version ,to)
+            (<span class="k">setq</span> version ,to))))
+    (up 3
+        (emacsql db [<span class="bi">:create-table</span> pullreq-review-request $S1]
+                 (cdr (assq 'pullreq-review-request forge--db-table-schemata))))
+    (up 4
+        (emacsql db [<span class="bi">:drop-table</span> notification])
+        (<span class="k">pcase-dolist</span> (`(,table . ,schema) forge--db-table-schemata)
+          (<span class="k">when</span> (memq table '(notification
+                              mark issue-mark pullreq-mark))
+            (emacsql db [<span class="bi">:create-table</span> $i1 $S2] table schema)))
+        (emacsql db [<span class="bi">:alter-table</span> issue   <span class="bi">:add-column</span> marks <span class="bi">:default</span> $s1] 'eieio-unbound)
+        (emacsql db [<span class="bi">:alter-table</span> pullreq <span class="bi">:add-column</span> marks <span class="bi">:default</span> $s1] 'eieio-unbound))
+    (up 5
+        (emacsql db [<span class="bi">:alter-table</span> repository <span class="bi">:add-column</span> selective-p <span class="bi">:default</span> nil]))
+    (up 6
+        (emacsql db [<span class="bi">:alter-table</span> repository <span class="bi">:add-column</span> worktree <span class="bi">:default</span> nil]))
+    (up 7
+        (emacsql db [<span class="bi">:alter-table</span> issue   <span class="bi">:add-column</span> note <span class="bi">:default</span> nil])
+        (emacsql db [<span class="bi">:alter-table</span> pullreq <span class="bi">:add-column</span> note <span class="bi">:default</span> nil])
+        (emacsql db [<span class="bi">:create-table</span> milestone $S1]
+                 (cdr (assq 'milestone forge--db-table-schemata)))
+        (emacsql db [<span class="bi">:alter-table</span> repository <span class="bi">:add-column</span> milestones <span class="bi">:default</span> $s1]
+                 'eieio-unbound)
+        (<span class="k">pcase-dolist</span> (`(,repo-id ,issue-id ,milestone)
+                       (emacsql db [<span class="bi">:select</span> [repository id milestone]
+                                    <span class="bi">:from</span> issue
+                                    <span class="bi">:where</span> (notnull milestone)]))
+          (<span class="k">unless</span> (stringp milestone)
+            (<span class="k">oset</span> (forge-get-issue issue-id) milestone
+                  (forge--object-id repo-id (cdar milestone)))))
+        (<span class="k">pcase-dolist</span> (`(,repo-id ,pullreq-id ,milestone)
+                       (emacsql db [<span class="bi">:select</span> [repository id milestone]
+                                    <span class="bi">:from</span> pullreq
+                                    <span class="bi">:where</span> (notnull milestone)]))
+          (<span class="k">unless</span> (stringp milestone)
+            (<span class="k">oset</span> (forge-get-pullreq pullreq-id) milestone
+                  (forge--object-id repo-id (cdar milestone))))))
+    (up 8
+        (emacsql db [<span class="bi">:alter-table</span> pullreq <span class="bi">:add-column</span> base-rev <span class="bi">:default</span> nil])
+        (emacsql db [<span class="bi">:alter-table</span> pullreq <span class="bi">:add-column</span> head-rev <span class="bi">:default</span> nil])
+        (emacsql db [<span class="bi">:alter-table</span> pullreq <span class="bi">:add-column</span> draft-p  <span class="bi">:default</span> nil]))
+    (up 9
+        (emacsql db [<span class="bi">:alter-table</span> pullreq <span class="bi">:add-column</span> their-id <span class="bi">:default</span> nil])
+        (emacsql db [<span class="bi">:alter-table</span> issue   <span class="bi">:add-column</span> their-id <span class="bi">:default</span> nil]))
+    (up 10
+        (emacsql db [<span class="bi">:alter-table</span> pullreq <span class="bi">:add-column</span> slug <span class="bi">:default</span> nil])
+        (emacsql db [<span class="bi">:alter-table</span> issue   <span class="bi">:add-column</span> slug <span class="bi">:default</span> nil])
+        (<span class="k">pcase-dolist</span> (`(,id ,number ,type)
+                       (emacsql
+                        db
+                        [<span class="bi">:select</span> [pullreq:id pullreq:number repository:class]
+                         <span class="bi">:from</span> pullreq
+                         <span class="bi">:join</span> repository
+                         <span class="bi">:on</span> (= pullreq:repository repository:id)]))
+          (<span class="k">let</span> ((gitlabp (memq type
+                               (append (closql-where-class-in
+                                        'forge-gitlab-repository--eieio-childp)
+                                       nil))))
+            (emacsql db [<span class="bi">:update</span> pullreq <span class="bi">:set</span> (= slug $s1) <span class="bi">:where</span> (= id $s2)]
+                     (format <span class="s">"%s%s"</span> (<span class="k">if</span> gitlabp <span class="s">"!"</span> <span class="s">"#"</span>) number)
+                     id)))
+        (<span class="k">pcase-dolist</span> (`(,id ,number)
+                       (emacsql db [<span class="bi">:select</span> [id number] <span class="bi">:from</span> issue]))
+          (emacsql db [<span class="bi">:update</span> issue <span class="bi">:set</span> (= slug $s1) <span class="bi">:where</span> (= id $s2)]
+                   (format <span class="s">"#%s"</span> number)
+                   id)))
+    (up 11
+        (emacsql db [<span class="bi">:drop-table</span> notification])
+        (emacsql db [<span class="bi">:create-table</span> notification $S1]
+                 (cdr (assq 'notification forge--db-table-schemata)))
+        (emacsql db [<span class="bi">:alter-table</span> pullreq <span class="bi">:rename-column</span> unread-p <span class="bi">:to</span> status])
+        (emacsql db [<span class="bi">:alter-table</span> issue   <span class="bi">:rename-column</span> unread-p <span class="bi">:to</span> status])
+        (emacsql db [<span class="bi">:alter-table</span> pullreq <span class="bi">:add-column</span> saved-p <span class="bi">:default</span> nil])
+        (emacsql db [<span class="bi">:alter-table</span> issue   <span class="bi">:add-column</span> saved-p <span class="bi">:default</span> nil]))
+    (up 12
+        (emacsql db [<span class="bi">:drop-table</span> notification])
+        (emacsql db [<span class="bi">:create-table</span> notification $S1]
+                 (cdr (assq 'notification forge--db-table-schemata)))
+        (<span class="k">dolist</span> (id (emacsql db [<span class="bi">:select</span> id <span class="bi">:from</span> issue <span class="bi">:where</span> (= state 'closed)]))
+          (emacsql db [<span class="bi">:update</span> issue <span class="bi">:set</span> (= state 'completed) <span class="bi">:where</span> (= id $s1)]
+                   id))
+        (<span class="k">dolist</span> (id (emacsql db [<span class="bi">:select</span> id <span class="bi">:from</span> issue <span class="bi">:where</span> (isnull status)]))
+          (emacsql db [<span class="bi">:update</span> issue <span class="bi">:set</span> (= state 'done) <span class="bi">:where</span> (= id $s1)]
+                   id))
+        (<span class="k">dolist</span> (id (emacsql db [<span class="bi">:select</span> id <span class="bi">:from</span> pullreq <span class="bi">:where</span> (= state 'closed)]))
+          (emacsql db [<span class="bi">:update</span> pullreq <span class="bi">:set</span> (= state 'rejected) <span class="bi">:where</span> (= id $s1)]
+                   id))
+        (<span class="k">dolist</span> (id (emacsql db [<span class="bi">:select</span> id <span class="bi">:from</span> pullreq <span class="bi">:where</span> (isnull status)]))
+          (emacsql db [<span class="bi">:update</span> pullreq <span class="bi">:set</span> (= state 'done) <span class="bi">:where</span> (= id $s1)]
+                   id))
+        (emacsql db [<span class="bi">:alter-table</span> repository <span class="bi">:add-column</span> issues-until <span class="bi">:default</span> nil])
+        (emacsql db [<span class="bi">:alter-table</span> repository <span class="bi">:add-column</span> pullreqs-until <span class="bi">:default</span> nil]))
+    (up 13
+        (<span class="k">dolist</span> (id (emacsql db [<span class="bi">:select</span> id <span class="bi">:from</span> repository
+                                 <span class="bi">:where</span> (isnull issues-until)]))
+          (emacsql
+           db [<span class="bi">:update</span> repository <span class="bi">:set</span> (= issues-until $s1) <span class="bi">:where</span> (= id $s2)]
+           (forge-sql1 [<span class="bi">:select</span> [updated] <span class="bi">:from</span> issue
+                        <span class="bi">:where</span> (= repository $s1)
+                        <span class="bi">:order-by</span> [(desc updated)]
+                        <span class="bi">:limit</span> 1]
+                       id)
+           id))
+        (<span class="k">dolist</span> (id (emacsql db [<span class="bi">:select</span> id <span class="bi">:from</span> repository
+                                 <span class="bi">:where</span> (isnull pullreqs-until)]))
+          (emacsql
+           db [<span class="bi">:update</span> repository <span class="bi">:set</span> (= pullreqs-until $s1) <span class="bi">:where</span> (= id $s2)]
+           (forge-sql1 [<span class="bi">:select</span> [updated] <span class="bi">:from</span> pullreq
+                        <span class="bi">:where</span> (= repository $s1)
+                        <span class="bi">:order-by</span> [(desc updated)]
+                        <span class="bi">:limit</span> 1]
+                       id)
+           id))
+        (emacsql db [<span class="bi">:alter-table</span> repository <span class="bi">:rename-column</span> sparse-p <span class="bi">:to</span> condition])
+        (<span class="k">pcase-dolist</span> (`(,id ,not-tracked)
+                       (emacsql db [<span class="bi">:select</span> [id condition] <span class="bi">:from</span> repository]))
+          (emacsql
+           db [<span class="bi">:update</span> repository <span class="bi">:set</span> (= condition $s1) <span class="bi">:where</span> (= id $s2)]
+           (<span class="k">if</span> not-tracked <span class="bi">:known</span> <span class="bi">:tracked</span>)
+           id)))
+    (up 14
+        (emacsql db [<span class="bi">:alter-table</span> repository <span class="bi">:add-column</span> teams <span class="bi">:default</span> nil]))
+    (up 15
+        (emacsql db [<span class="bi">:create-table</span> discussion $S1]
+                 (cdr (assq 'discussion forge--db-table-schemata)))
+        (emacsql db [<span class="bi">:create-table</span> discussion-category $S1]
+                 (cdr (assq 'discussion-category forge--db-table-schemata)))
+        (emacsql db [<span class="bi">:create-table</span> discussion-label $S1]
+                 (cdr (assq 'discussion-label forge--db-table-schemata)))
+        (emacsql db [<span class="bi">:create-table</span> discussion-mark $S1]
+                 (cdr (assq 'discussion-mark forge--db-table-schemata)))
+        (emacsql db [<span class="bi">:create-table</span> discussion-post $S1]
+                 (cdr (assq 'discussion-post forge--db-table-schemata)))
+        (emacsql db [<span class="bi">:create-table</span> discussion-reply $S1]
+                 (cdr (assq 'discussion-reply forge--db-table-schemata)))
+        (emacsql db [<span class="bi">:alter-table</span> repository <span class="bi">:add-column</span> discussion-categories
+                     <span class="bi">:default</span> 'eieio-unbound])
+        (emacsql db [<span class="bi">:alter-table</span> repository <span class="bi">:add-column</span> discussions
+                     <span class="bi">:default</span> 'eieio-unbound])
+        (emacsql db [<span class="bi">:alter-table</span> repository <span class="bi">:add-column</span> discussions-p
+                     <span class="bi">:default</span> nil])
+        (emacsql db [<span class="bi">:alter-table</span> repository <span class="bi">:add-column</span> discussions-until
+                     <span class="bi">:default</span> nil]))
+    ))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: mc/mark-more-like-this – Emacs Documentation Online</title>
+<meta name="description" content="mc/mark-more-like-this is a natively compiled function defined in
+mc-mark-more.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>mc/mark-more-like-this</code></h1><p><span class="m"><code>mc/mark-more-like-this</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">mc-mark-more.el</span>.
+<h2>Signature</h2>
+<pre><code>(mc/mark-more-like-this <span class="arg">SKIP-LAST</span> <span class="arg">DIRECTION</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bwmgnvnjv89idk13xc843r24h4ygwjwz-emacs-packages-deps/share/emacs/site-lisp/elpa/multiple-cursors-20260419.931/mc-mark-more.el</span>
+(<span class="k">defun</span> <span class="f">mc/mark-more-like-this</span> (skip-last direction)
+  (<span class="k">let</span> ((case-fold-search nil)
+        (re (regexp-opt (mc/region-strings) mc/enclose-search-term))
+        (point-out-of-order (<span class="k">cl-ecase</span> direction
+                              (forwards       (&lt; (point) (mark)))
+                              (backwards (not (&lt; (point) (mark))))))
+        (furthest-cursor (<span class="k">cl-ecase</span> direction
+                           (forwards  (mc/furthest-cursor-after-point))
+                           (backwards (mc/furthest-cursor-before-point))))
+        (start-char (<span class="k">cl-ecase</span> direction
+                      (forwards  (mc/furthest-region-end))
+                      (backwards (mc/first-region-start))))
+        (search-function (<span class="k">cl-ecase</span> direction
+                           (forwards  'search-forward-regexp)
+                           (backwards 'search-backward-regexp)))
+        (match-point-getter (<span class="k">cl-ecase</span> direction
+                              (forwards 'match-beginning)
+                              (backwards 'match-end))))
+    (<span class="k">if</span> (<span class="k">and</span> skip-last (not furthest-cursor))
+        (<span class="w">error</span> <span class="s">"No cursors to be skipped"</span>)
+      (<span class="k">mc/save-excursion</span>
+       (goto-char start-char)
+       (<span class="k">when</span> skip-last
+         (mc/remove-fake-cursor furthest-cursor))
+       (<span class="k">if</span> (funcall search-function re nil t)
+           (<span class="k">progn</span>
+             (push-mark (funcall match-point-getter 0))
+             (<span class="k">when</span> point-out-of-order
+               (exchange-point-and-mark))
+             (mc/create-fake-cursor-at-point))
+         (<span class="w">user-error</span> <span class="s">"no more matches found."</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

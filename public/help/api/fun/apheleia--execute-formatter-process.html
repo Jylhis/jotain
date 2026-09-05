@@ -1,0 +1,160 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apheleia--execute-formatter-process – Emacs Documentation Online</title>
+<meta name="description" content="apheleia--execute-formatter-process is a natively compiled function
+defined in apheleia-formatters.el.
+Wrapper for make-process that behaves a bit more nicely.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apheleia--execute-formatter-process</code></h1><p><span class="m"><code>apheleia--execute-formatter-process</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">apheleia-formatters.el</span>.
+<h2>Signature</h2>
+<pre><code>(apheleia--execute-formatter-process <span class="ty">&amp;key</span> <a href="#:~:text=nicely.-,CTX"><span class="arg">CTX</span></a> <a href="#:~:text=context).-,CALLBACK"><span class="arg">CALLBACK</span></a> <a href="#:~:text=succeeds).-,ENSURE"><span class="arg">ENSURE</span></a> <a href="#:~:text=not.-,EXIT-STATUS"><span class="arg">EXIT-STATUS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Wrapper for <a href="../fun/make-process.html"><code>make-process</code></a> that behaves a bit more nicely.
+<p><span class="arg">CTX</span> is a formatter process context (see
+<a class="v" href="../var/apheleia-formatter--context.html"><code>apheleia-formatter--context</code>(var)</a>/<a class="f" href="../fun/apheleia-formatter--context.html"><code>apheleia-formatter--context</code>(fun)</a>). <span class="arg">CALLBACK</span> is invoked with two
+arguments. The first is an error or nil. The second is the buffer
+containing the text from stdout, when the process terminates (if
+it succeeds). <span class="arg">ENSURE</span> is a callback that's invoked whether the
+process exited successfully or not. <span class="arg">EXIT-STATUS</span> is a function
+which is called with the exit status of the command; it should
+return non-nil to indicate that the command succeeded. If
+<span class="arg">EXIT-STATUS</span> is omitted, then the command succeeds provided that
+its exit status is 0.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbykkl13khzh84lv9vw1bf1vijzg30fr-emacs-packages-deps/share/emacs/site-lisp/elpa/apheleia-20260817.2331/apheleia-formatters.el</span>
+(<span class="k">cl-defun</span> <span class="f">apheleia--execute-formatter-process</span>
+    (<span class="ty">&amp;key</span> ctx callback ensure exit-status)
+  <span class="doc">"Wrapper for `</span><span class="m doc">make-process</span><span class="doc">' that behaves a bit more nicely.
+CTX is a formatter process context (see
+`</span><span class="m doc">apheleia-formatter--context</span><span class="doc">'). CALLBACK is invoked with two
+arguments. The first is an error or nil. The second is the buffer
+containing the text from stdout, when the process terminates (if
+it succeeds). ENSURE is a callback that's invoked whether the
+process exited successfully or not. EXIT-STATUS is a function
+which is called with the exit status of the command; it should
+return non-nil to indicate that the command succeeded. If
+EXIT-STATUS is omitted, then the command succeeds provided that
+its exit status is 0."</span>
+  (apheleia--log
+   'process <span class="s">"Trying to execute formatter process %s with %S"</span>
+   (apheleia-formatter--name ctx)
+   `(,(apheleia-formatter--arg1 ctx)
+     ,@(apheleia-formatter--argv ctx)))
+  (<span class="k">when</span> (process-live-p apheleia--current-process)
+    (apheleia--log
+     'process <span class="s">"Interrupting an existing process %S"</span> apheleia--current-process)
+    (message <span class="s">"Interrupting %s"</span> apheleia--current-process)
+    (process-put apheleia--current-process <span class="bi">:interrupted</span> t)
+    (interrupt-process apheleia--current-process)
+    (accept-process-output apheleia--current-process 0.1 nil 'just-this-one)
+    (<span class="k">when</span> (process-live-p apheleia--current-process)
+      (kill-process apheleia--current-process)))
+  (<span class="k">let*</span> ((name (file-name-nondirectory (apheleia-formatter--arg1 ctx)))
+         (stdout (generate-new-buffer
+                  (format <span class="s">" *apheleia-%s-stdout*"</span> name)))
+         (stderr (generate-new-buffer
+                  (format <span class="s">" *apheleia-%s-stderr*"</span> name)))
+         (log-name (apheleia-log--buffer-name name)))
+    (<span class="k">condition-case-unless-debug</span> e
+        (<span class="k">progn</span>
+          (<span class="k">setq</span> apheleia--current-process
+                (funcall
+                 (<span class="k">if</span> (apheleia-formatter--remote ctx)
+                     #'apheleia--call-process
+                   #'apheleia--make-process)
+                 <span class="bi">:name</span> (format <span class="s">"apheleia-%s"</span> name)
+                 <span class="bi">:stdin</span> (apheleia-formatter--stdin ctx)
+                 <span class="bi">:stdout</span> stdout
+                 <span class="bi">:stderr</span> stderr
+                 <span class="bi">:command</span> `(,(apheleia-formatter--arg1 ctx)
+                            ,@(apheleia-formatter--argv ctx))
+                 <span class="bi">:remote</span> (apheleia-formatter--remote ctx)
+                 <span class="bi">:connection-type</span> 'pipe
+                 <span class="bi">:noquery</span> t
+                 <span class="bi">:callback</span>
+                 (<span class="k">lambda</span> (proc-exit-status proc-interrupted)
+                   (apheleia--log
+                    'process
+                    <span class="s">"Process %s exited with status %S%s"</span>
+                    name
+                    proc-exit-status
+                    (<span class="k">if</span> proc-interrupted
+                        <span class="s">" (interrupted)"</span>
+                      <span class="s">" (not interrupted)"</span>))
+                   (<span class="k">setf</span> (apheleia-formatter--exit-status ctx)
+                         proc-exit-status)
+                   (<span class="k">let</span> ((exit-ok (<span class="k">and</span>
+                                   (not proc-interrupted)
+                                   (<span class="k">or</span>
+                                    (funcall
+                                     (<span class="k">or</span> exit-status #'zerop)
+                                     (apheleia-formatter--exit-status ctx))
+                                    (apheleia-script--formatter-not-available-p
+                                     ctx
+                                     (<span class="k">with-current-buffer</span> stderr
+                                       (string-trim (buffer-string))))))))
+                     <span class="cd">;; </span><span class="c">Append standard-error from current formatter
+</span>                     <span class="cd">;; </span><span class="c">to log buffer when
+</span>                     <span class="cd">;; </span><span class="c">`</span><span class="m c">apheleia-log-only-errors</span><span class="c">' is nil or the
+</span>                     <span class="cd">;; </span><span class="c">formatter failed. Every process output is
+</span>                     <span class="cd">;; </span><span class="c">delimited by a line-feed character.
+</span>                     (<span class="k">unless</span> (<span class="k">and</span> exit-ok apheleia-log-only-errors)
+                       (apheleia-log--formatter-result
+                        ctx
+                        log-name
+                        exit-ok
+                        (buffer-local-value 'default-directory stdout)
+                        (<span class="k">with-current-buffer</span> stderr
+                          (string-trim (buffer-string)))))
+                     (<span class="k">when</span> (apheleia-formatter--name ctx)
+                       (apheleia--log
+                        'hook
+                        <span class="s">"Invoking apheleia-formatter-exited-hook"</span>)
+                       (run-hook-with-args
+                        'apheleia-formatter-exited-hook
+                        <span class="bi">:formatter</span> (apheleia-formatter--name ctx)
+                        <span class="bi">:error</span> (not exit-ok)
+                        <span class="bi">:log</span> (get-buffer log-name)))
+                     (<span class="k">unwind-protect</span>
+                         (<span class="k">if</span> exit-ok
+                             (funcall callback nil stdout)
+                           (<span class="k">let</span> ((errmsg
+                                  (format
+                                   (concat
+                                    <span class="s">"Failed to run %s: exit status %s "</span>
+                                    <span class="s">"(see %s %s)"</span>)
+                                   (apheleia-formatter--arg1 ctx)
+                                   proc-exit-status
+                                   (<span class="k">if</span> (string-prefix-p <span class="s">" "</span> log-name)
+                                       <span class="s">"hidden buffer"</span>
+                                     <span class="s">"buffer"</span>)
+                                   (string-trim log-name))))
+                             (message <span class="s">"%s"</span> errmsg)
+                             (<span class="k">when</span> noninteractive
+                               (message
+                                <span class="s">"%s"</span>
+                                (concat
+                                 <span class="s">"(log buffer shown"</span>
+                                 <span class="s">" below in batch mode)\n"</span>
+                                 (<span class="k">with-current-buffer</span> log-name
+                                   (buffer-string)))))
+                             (funcall
+                              callback (cons 'error errmsg) nil)))
+                       (<span class="k">when</span> ensure
+                         (funcall ensure))
+                       (<span class="k">ignore-errors</span>
+                         (kill-buffer stdout))
+                       (<span class="k">ignore-errors</span>
+                         (kill-buffer stderr))))))))
+      (<span class="w">error</span>
+       (<span class="k">ignore-errors</span>
+         (kill-buffer stdout))
+       (<span class="k">ignore-errors</span>
+         (kill-buffer stderr))
+       (message <span class="s">"Failed to run %s: %s"</span> name (error-message-string e))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

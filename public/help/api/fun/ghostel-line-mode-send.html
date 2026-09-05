@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel-line-mode-send – Emacs Documentation Online</title>
+<meta name="description" content="ghostel-line-mode-send is an interactive and natively compiled
+function defined in ghostel-line-mode.el.
+Send the current in-progress input line to the shell.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel-line-mode-send</code></h1><p><span class="m"><code>ghostel-line-mode-send</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">ghostel-line-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel-line-mode-send)
+</code></pre>
+<h2>Documentation</h2>
+<p>Send the current in-progress input line to the shell.
+<p>Deletes the local input, writes it to the PTY, then submits Return.
+<p>The encoded Return matters for TUI apps that distinguish a literal
+newline (Shift-Enter) from submit (e.g. claude-code, pi).  Shells
+accept the same CR as <span class="m"><code>accept-line</code></span>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-line-mode.el</span>
+(<span class="k">defun</span> <span class="f">ghostel-line-mode-send</span> ()
+  <span class="doc">"Send the current in-progress input line to the shell.
+Deletes the local input, writes it to the PTY, then submits Return.
+
+The encoded Return matters for TUI apps that distinguish a literal
+newline (Shift-Enter) from submit (e.g. claude-code, pi).  Shells
+accept the same CR as `</span><span class="m doc">accept-line</span><span class="doc">'."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">unless</span> (eq ghostel--input-mode 'line)
+    (<span class="w">user-error</span> <span class="s">"Not in line mode"</span>))
+  (<span class="k">let</span> ((input (ghostel--line-mode-input-text)))
+    (ghostel--line-mode-delete-input)
+    (<span class="k">when</span> (<span class="k">and</span> (&gt; (length input) 0)
+               (<span class="k">or</span> (null ghostel--line-mode-history)
+                   (not (string= input (car ghostel--line-mode-history)))))
+      (<span class="k">push</span> input ghostel--line-mode-history)
+      (<span class="k">when</span> (&gt; (length ghostel--line-mode-history)
+               ghostel-line-mode-history-size)
+        (setcdr (nthcdr (1- ghostel-line-mode-history-size)
+                        ghostel--line-mode-history)
+                nil)))
+    (<span class="k">setq</span> ghostel--line-mode-history-index nil)
+    <span class="cd">;; </span><span class="c">Erase any prefix the shell already had in its readline buffer
+</span>    <span class="cd">;; </span><span class="c">(adopted on line-mode entry) before sending — otherwise the
+</span>    <span class="cd">;; </span><span class="c">shell would concatenate ours after that prefix and echo a
+</span>    <span class="cd">;; </span><span class="c">duplicated line.
+</span>    (ghostel--line-mode-clear-shell-readline)
+    (<span class="k">when</span> (&gt; (length input) 0)
+      (ghostel--write-pty ghostel--term input))
+    (ghostel--send-encoded <span class="s">"return"</span> <span class="s">""</span>)
+    <span class="cd">;; </span><span class="c">Drop this line's undo history so the next line starts clean.
+</span>    (<span class="k">setq</span> buffer-undo-list nil)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

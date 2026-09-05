@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-start-process – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-start-process is a natively compiled function defined in
+majutsu-process.el.
+Start PROGRAM asynchronously, preparing for refresh, and return the process.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-start-process</code></h1><p><span class="m"><code>majutsu-start-process</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-process.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-start-process <a href="#:~:text=Start-,PROGRAM"><span class="arg">PROGRAM</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">INPUT</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text="><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Start <span class="arg">PROGRAM</span> asynchronously, preparing for refresh, and return the process.
+<p><span class="arg">PROGRAM</span> is started using <a href="../fun/start-file-process.html"><code>start-file-process</code></a> and then setup to use
+<a href="../fun/majutsu--process-sentinel.html"><code>majutsu--process-sentinel</code></a> and <a href="../fun/majutsu--process-filter.html"><code>majutsu--process-filter</code></a>.  After the
+process terminates, the sentinel refreshes the buffer that was current
+when this function was called (if still alive), as well as the
+repository's log buffer (see <a href="../fun/majutsu-refresh.html"><code>majutsu-refresh</code></a>).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-process.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-start-process</span> (program <span class="ty">&amp;optional</span> input <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Start PROGRAM asynchronously, preparing for refresh, and return the process.
+
+PROGRAM is started using `</span><span class="m doc">start-file-process</span><span class="doc">' and then setup to use
+`</span><span class="m doc">majutsu--process-sentinel</span><span class="doc">' and `</span><span class="m doc">majutsu--process-filter</span><span class="doc">'.  After the
+process terminates, the sentinel refreshes the buffer that was current
+when this function was called (if still alive), as well as the
+repository's log buffer (see `</span><span class="m doc">majutsu-refresh</span><span class="doc">')."</span>
+  (<span class="k">let*</span> ((args (flatten-tree args))
+         (pwd default-directory)
+         (process-buf (<span class="k">let</span> ((default-directory pwd))
+                        (majutsu-process-buffer t)))
+         (root (<span class="k">with-current-buffer</span> process-buf default-directory))
+         (section (<span class="k">with-current-buffer</span> process-buf
+                    (<span class="k">prog1</span> (majutsu--process-insert-section pwd program args nil nil)
+                      (backward-char 1))))
+         (process (<span class="k">let</span> ((process-environment (majutsu-process-environment args))
+                        (default-process-coding-system '(utf-8-unix . utf-8-unix)))
+                    (apply #'start-file-process (file-name-nondirectory program)
+                           process-buf program args))))
+    (majutsu--process-setup process section root #'majutsu--process-sentinel)
+    (<span class="k">when</span> input
+      (<span class="k">with-current-buffer</span> input
+        (process-send-region process (point-min) (point-max))
+        (process-send-eof process)))
+    (majutsu--process-display-buffer process)
+    process))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

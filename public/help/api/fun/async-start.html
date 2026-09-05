@@ -1,0 +1,155 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: async-start – Emacs Documentation Online</title>
+<meta name="description" content="async-start is a natively compiled function defined in async.el.
+Execute START-FUNC (often a lambda) in a subordinate Emacs process.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>async-start</code></h1><p><span class="m"><code>async-start</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">async.el</span>.
+<h2>Signature</h2>
+<pre><code>(async-start <a href="#:~:text=Execute-,START-FUNC"><span class="arg">START-FUNC</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=to-,FINISH-FUNC"><span class="arg">FINISH-FUNC</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Execute <span class="arg">START-FUNC</span> (often a lambda) in a subordinate Emacs process.
+<p>When done, the return value is passed to <span class="arg">FINISH-FUNC</span>.  Example:
+<p>&nbsp;&nbsp;&nbsp;&nbsp;(async-start
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cd">;; </span><span class="c">What to do in the child process
+</span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">lambda</span> ()
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(message <span class="s">"This is a test"</span>)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(sleep-for 3)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;222)
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;; What to do when it finishes
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">lambda</span> (result)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(message <span class="s">"Async process done, result should be 222: %s"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;result)))
+<p>If you call <a href="../fun/async-send.html"><code>async-send</code></a> from a child process, the message will
+be also passed to the <span class="arg">FINISH-FUNC</span>.  You can test RESULT to see if
+it is a message by using <a href="../fun/async-message-p.html"><code>async-message-p</code></a>.  If nil, it means
+this is the final result.  Example of the <span class="arg">FINISH-FUNC</span>:
+<p>&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">lambda</span> (result)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">if</span> (async-message-p result)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(message <span class="s">"Received a message from child process: %s"</span> result)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(message <span class="s">"Async process done, result: %s"</span> result)))
+<p>If <span class="arg">FINISH-FUNC</span> is nil or missing, a future is returned that can
+be inspected using <a href="../fun/async-get.html"><code>async-get</code></a>, blocking until the value is
+ready.  Example:
+<p>&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">let</span> ((proc (async-start
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cd">;; </span><span class="c">What to do in the child process
+</span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">lambda</span> ()
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(message <span class="s">"This is a test"</span>)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(sleep-for 3)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;222))))
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(message <span class="s">"I'm going to do some work here"</span>) <span class="cd">;; </span><span class="c">....</span>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(message <span class="s">"Waiting on async process, result should be 222: %s"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(async-get proc)))
+<p>If you don't want to use a callback, and you don't care about any
+return value from the child process, pass the <a href="../fun/ignore.html"><code>ignore</code></a> symbol as
+the second argument (if you don't, and never call <a href="../fun/async-get.html"><code>async-get</code></a>, it
+will leave *emacs* process buffers hanging around):
+<p>&nbsp;&nbsp;&nbsp;&nbsp;(async-start
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">lambda</span> ()
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(delete-file <span class="s">"a remote file on a slow link"</span> nil))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'ignore)
+<p>Special case:
+If the output of <span class="arg">START-FUNC</span> is a string with properties
+e.g. (buffer-string) RESULT will be transformed in a list where the
+car is the string itself (without props) and the cdr the rest of
+properties, this allows using in <span class="arg">FINISH-FUNC</span> the string without
+properties and then apply the properties in cdr to this string (if
+needed).
+Properties handling special objects like markers are returned as
+list to allow restoring them later.
+See &lt;<a href="https://github.com/jwiegley/emacs-async/issues/145">https://github.com/jwiegley/emacs-async/issues/145</a>&gt; for more infos.
+<p>Note: Even when <span class="arg">FINISH-FUNC</span> is present, a future is still
+returned except that it yields no value (since the value is
+passed to <span class="arg">FINISH-FUNC</span>).  Call <a href="../fun/async-get.html"><code>async-get</code></a> on such a future always
+returns nil.  It can still be useful, however, as an argument to
+<a href="../fun/async-ready.html"><code>async-ready</code></a> or <a href="../fun/async-wait.html"><code>async-wait</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vpxd64bbf27n3ziyqnh29vmak5xnpk2l-emacs-packages-deps/share/emacs/site-lisp/elpa/async-20260729.1431/async.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">async-start</span> (start-func <span class="ty">&amp;optional</span> finish-func)
+  <span class="doc">"Execute START-FUNC (often a lambda) in a subordinate Emacs process.
+When done, the return value is passed to FINISH-FUNC.  Example:
+
+    (async-start
+       ;; What to do in the child process
+       (lambda ()
+         (message \"This is a test\")
+         (sleep-for 3)
+         222)
+
+       ;; What to do when it finishes
+       (lambda (result)
+         (message \"Async process done, result should be 222: %s\"
+                  result)))
+
+If you call `</span><span class="m doc">async-send</span><span class="doc">' from a child process, the message will
+be also passed to the FINISH-FUNC.  You can test RESULT to see if
+it is a message by using `</span><span class="m doc">async-message-p</span><span class="doc">'.  If nil, it means
+this is the final result.  Example of the FINISH-FUNC:
+
+    (lambda (result)
+      (if (async-message-p result)
+          (message \"Received a message from child process: %s\" result)
+        (message \"Async process done, result: %s\" result)))
+
+If FINISH-FUNC is nil or missing, a future is returned that can
+be inspected using `</span><span class="m doc">async-get</span><span class="doc">', blocking until the value is
+ready.  Example:
+
+    (let ((proc (async-start
+                   ;; What to do in the child process
+                   (lambda ()
+                     (message \"This is a test\")
+                     (sleep-for 3)
+                     222))))
+
+        (message \"I'm going to do some work here\") ;; ....
+
+        (message \"Waiting on async process, result should be 222: %s\"
+                 (async-get proc)))
+
+If you don't want to use a callback, and you don't care about any
+return value from the child process, pass the `</span><span class="m doc">ignore</span><span class="doc">' symbol as
+the second argument (if you don't, and never call `</span><span class="m doc">async-get</span><span class="doc">', it
+will leave *emacs* process buffers hanging around):
+
+    (async-start
+     (lambda ()
+       (delete-file \"a remote file on a slow link\" nil))
+     </span><span class="bi doc">\\=</span><span class="doc">'ignore)
+
+Special case:
+If the output of START-FUNC is a string with properties
+e.g. (buffer-string) RESULT will be transformed in a list where the
+car is the string itself (without props) and the cdr the rest of
+properties, this allows using in FINISH-FUNC the string without
+properties and then apply the properties in cdr to this string (if
+needed).
+Properties handling special objects like markers are returned as
+list to allow restoring them later.
+See &lt;https://github.com/jwiegley/emacs-async/issues/145&gt; for more infos.
+
+Note: Even when FINISH-FUNC is present, a future is still
+returned except that it yields no value (since the value is
+passed to FINISH-FUNC).  Call `</span><span class="m doc">async-get</span><span class="doc">' on such a future always
+returns nil.  It can still be useful, however, as an argument to
+`</span><span class="m doc">async-ready</span><span class="doc">' or `</span><span class="m doc">async-wait</span><span class="doc">'."</span>
+  (<span class="k">let</span> ((sexp start-func)
+        <span class="cd">;; </span><span class="c">Subordinate Emacs will send text encoded in utf-8-emacs-unix.
+</span>        (coding-system-for-read 'utf-8-emacs-unix))
+    (<span class="k">setq</span> async--procvar
+          (apply 'async-start-process
+                 <span class="s">"emacs"</span> (file-truename
+                          (expand-file-name invocation-name
+                                            invocation-directory))
+                 finish-func
+                 (async--emacs-program-args (<span class="k">if</span> (not async-send-over-pipe) sexp))))
+
+    (<span class="k">if</span> async-send-over-pipe
+        (async--transmit-sexp async--procvar (list 'quote sexp)))
+    async--procvar))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

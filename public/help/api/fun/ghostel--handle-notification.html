@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--handle-notification – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--handle-notification is a natively compiled function defined
+in ghostel.el.
+Dispatch TITLE and BODY to ghostel-notification-function.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--handle-notification</code></h1><p><span class="m"><code>ghostel--handle-notification</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--handle-notification <a href="#:~:text=Dispatch-,TITLE"><span class="arg">TITLE</span></a> <a href="#:~:text=and-,BODY"><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Dispatch <span class="arg">TITLE</span> and <span class="arg">BODY</span> to <a href="../var/ghostel-notification-function.html"><code>ghostel-notification-function</code></a>.
+<p>Called synchronously from the native VT parser; the user handler
+is invoked off the callpath via <a href="../fun/run-at-time.html"><code>run-at-time</code></a> so a slow backend
+<br>(DBus, osascript, etc.) can't stall terminal output.  The
+<br>originating ghostel buffer is made current for the handler, so
+<a href="../fun/buffer-name.html"><code>buffer-name</code></a> etc. report the terminal buffer and not whatever was
+current when the timer happened to fire.  Errors in the handler
+are caught and logged — an unhandled error in a timer callback
+does not crash the process filter, but it does produce a backtrace
+in batch runs.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--handle-notification</span> (title body)
+  <span class="doc">"Dispatch TITLE and BODY to `</span><span class="m doc">ghostel-notification-function</span><span class="doc">'.
+Called synchronously from the native VT parser; the user handler
+is invoked off the callpath via `</span><span class="m doc">run-at-time</span><span class="doc">' so a slow backend
+\(DBus, osascript, etc.) can't stall terminal output.  The
+originating ghostel buffer is made current for the handler, so
+`</span><span class="m doc">buffer-name</span><span class="doc">' etc. report the terminal buffer and not whatever was
+current when the timer happened to fire.  Errors in the handler
+are caught and logged — an unhandled error in a timer callback
+does not crash the process filter, but it does produce a backtrace
+in batch runs."</span>
+  (<span class="k">when</span> ghostel-notification-function
+    (<span class="k">let</span> ((buf (current-buffer))
+          (fn ghostel-notification-function))
+      (run-at-time
+       0 nil
+       (<span class="k">lambda</span> ()
+         (<span class="k">when</span> (buffer-live-p buf)
+           (<span class="k">with-current-buffer</span> buf
+             <span class="cd">;; </span><span class="c">Only `</span><span class="m c">error</span><span class="c">' is caught here — `</span><span class="m c">quit</span><span class="c">' (C-g) is allowed
+</span>             <span class="cd">;; </span><span class="c">to propagate so a user can interrupt a hung handler.
+</span>             <span class="cd">;; </span><span class="c">Emacs' timer machinery swallows a propagated quit.
+</span>             (<span class="k">condition-case</span> err
+                 (funcall fn title body)
+               (<span class="w">error</span>
+                (message <span class="s">"ghostel: notification handler error: %s"</span>
+                         (error-message-string err)))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

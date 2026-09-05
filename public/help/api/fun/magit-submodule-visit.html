@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-submodule-visit – Emacs Documentation Online</title>
+<meta name="description" content="magit-submodule-visit is an interactive and natively compiled function
+defined in magit-submodule.el.
+Visit MODULE by calling magit-status on it.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-submodule-visit</code></h1><p><span class="m"><code>magit-submodule-visit</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-submodule.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-submodule-visit <a href="#:~:text=Visit-,MODULE"><span class="arg">MODULE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">OTHER-WINDOW</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Visit <span class="arg">MODULE</span> by calling <a href="../fun/magit-status.html"><code>magit-status</code></a> on it.
+<p>Offer to initialize <span class="arg">MODULE</span> if it's not checked out yet.
+With a prefix argument, visit in another window.
+<h2>Key Bindings</h2>
+<p><span class="v">magit-module-section-map</span> <span class="key">C-&lt;return&gt;</span>
+<span class="v">magit-module-section-map</span> <span class="key">C-j</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-submodule.el</span>
+(<span class="k">defun</span> <span class="f">magit-submodule-visit</span> (module <span class="ty">&amp;optional</span> other-window)
+  <span class="doc">"Visit MODULE by calling `</span><span class="m doc">magit-status</span><span class="doc">' on it.
+Offer to initialize MODULE if it's not checked out yet.
+With a prefix argument, visit in another window."</span>
+  (<span class="k">interactive</span> (list (<span class="k">or</span> (magit-section-value-if 'module)
+                         (magit-read-module-path <span class="s">"Visit module"</span>))
+                     current-prefix-arg))
+  (<span class="k">magit-with-toplevel</span>
+    (<span class="k">let</span> ((path (expand-file-name module)))
+      (<span class="k">cond</span>
+        ((file-exists-p (expand-file-name <span class="s">".git"</span> module))
+         (magit-diff-visit-directory path other-window))
+        ((y-or-n-p (format <span class="s">"Initialize submodule '</span><span class="m s">%s</span><span class="s">' first?"</span> module))
+         (magit-run-git-async <span class="s">"submodule"</span> <span class="s">"update"</span> <span class="s">"--init"</span> <span class="s">"--"</span> module)
+         (set-process-sentinel
+          magit-this-process
+          (<span class="k">lambda</span> (process event)
+            (<span class="k">let</span> ((magit-process-raise-error t))
+              (magit-process-sentinel process event))
+            (<span class="k">when</span> (<span class="k">and</span> (eq (process-status      process) 'exit)
+                       (=  (process-exit-status process) 0))
+              (magit-diff-visit-directory path other-window)))))
+        ((file-exists-p path)
+         (dired-jump other-window (concat path <span class="s">"/."</span>)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

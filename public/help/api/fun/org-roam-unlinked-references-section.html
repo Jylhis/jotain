@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-unlinked-references-section – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-unlinked-references-section is a natively compiled function
+defined in org-roam-mode.el.
+The unlinked references section for NODE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-unlinked-references-section</code></h1><p><span class="m"><code>org-roam-unlinked-references-section</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">org-roam-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-unlinked-references-section <a href="#:~:text=for-,NODE"><span class="arg">NODE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>The unlinked references section for <span class="arg">NODE</span>.
+<p>References from FILE are excluded.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-mode.el</span>
+(<span class="k">defun</span> <span class="f">org-roam-unlinked-references-section</span> (node)
+  <span class="doc">"The unlinked references section for NODE.
+References from FILE are excluded."</span>
+  (<span class="k">when</span> (<span class="k">and</span> (executable-find <span class="s">"rg"</span>)
+             (org-roam-node-title node)
+             (not (string-match <span class="s">"PCRE2 is not available"</span>
+                                (shell-command-to-string <span class="s">"rg --pcre2-version"</span>))))
+    (<span class="k">let*</span> ((titles (cons (org-roam-node-title node)
+                         (org-roam-node-aliases node)))
+           <span class="cd">;; </span><span class="c">Create temp file for the regex pattern
+</span>           (temp-file (make-temp-file <span class="s">"org-roam-rg-pattern-"</span>))
+           (rg-command (org-roam-unlinked-references--rg-command titles temp-file)))
+      <span class="cd">;; </span><span class="c">Use unwind-protect to ensure temp file cleanup even if errors occur
+</span>      (<span class="k">unwind-protect</span>
+          (<span class="k">let*</span> ((results (split-string (shell-command-to-string rg-command) <span class="s">"\n"</span>))
+                 f row col match)
+            (<span class="k">magit-insert-section</span> (unlinked-references)
+              (magit-insert-heading <span class="s">"Unlinked References:"</span>)
+              (<span class="k">dolist</span> (line results)
+                (<span class="k">save-match-data</span>
+                  (<span class="k">when</span> (string-match org-roam-unlinked-references-result-re line)
+                    (<span class="k">setq</span> f (match-string 1 line)
+                          row (string-to-number (match-string 2 line))
+                          col (string-to-number (match-string 3 line))
+                          match (match-string 4 line))
+                    (<span class="k">when</span> (<span class="k">and</span> match
+                               (not (file-equal-p (org-roam-node-file node) f))
+                               (member (downcase match) (mapcar #'downcase titles)))
+                      (<span class="k">magit-insert-section</span> section (org-roam-grep-section)
+                        (<span class="k">oset</span> section file f)
+                        (<span class="k">oset</span> section row row)
+                        (<span class="k">oset</span> section col col)
+                        (insert (propertize (format <span class="s">"%s:%s:%s"</span>
+                                                    (truncate-string-to-width (file-name-base f) 15 nil nil t)
+                                                    row col) <span class="w">'font-lock-face 'org-roam-dim)</span>
+                                <span class="s">" "</span>
+                                (org-roam-fontify-like-in-org-mode
+                                 (org-roam-unlinked-references-preview-line f row))
+                                <span class="s">"\n"</span>))))))
+              (insert ?\n)))
+        <span class="cd">;; </span><span class="c">Clean up temp file - this runs even if an error occurs above
+</span>        (delete-file temp-file)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

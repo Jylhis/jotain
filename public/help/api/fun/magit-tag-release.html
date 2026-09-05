@@ -1,0 +1,102 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-tag-release – Emacs Documentation Online</title>
+<meta name="description" content="magit-tag-release is an interactive and natively compiled function
+defined in magit-tag.el.
+Create a release tag for HEAD.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-tag-release</code></h1><p><span class="m"><code>magit-tag-release</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-tag.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-tag-release <a href="#:~:text="><span class="arg">TAG</span></a> <a href="#:~:text="><span class="arg">MSG</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create a release tag for <span class="m"><code>HEAD</code></span>.
+<p>Assume that release tags match <a href="../var/magit-release-tag-regexp.html"><code>magit-release-tag-regexp</code></a>.
+<p>If <span class="m"><code>HEAD</code></span>s message matches <a href="../var/magit-release-commit-regexp.html"><code>magit-release-commit-regexp</code></a>, then
+base the tag on the version string specified by that.  Otherwise
+prompt for the name of the new tag using the highest existing
+tag as initial input and leaving it to the user to increment the
+desired part of the version string.
+<p>When creating an annotated tag, prepare a message based on the message
+of the highest existing tag, provided that contains the corresponding
+version string, and substituting the new version string for that.  If
+that is not the case, propose a message using a reasonable format.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-tag.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">magit-tag-release</span> (tag msg <span class="ty">&amp;optional</span> args)
+  <span class="doc">"Create a release tag for `</span><span class="m doc">HEAD</span><span class="doc">'.
+
+Assume that release tags match `</span><span class="m doc">magit-release-tag-regexp</span><span class="doc">'.
+
+If `</span><span class="m doc">HEAD</span><span class="doc">'s message matches `</span><span class="m doc">magit-release-commit-regexp</span><span class="doc">', then
+base the tag on the version string specified by that.  Otherwise
+prompt for the name of the new tag using the highest existing
+tag as initial input and leaving it to the user to increment the
+desired part of the version string.
+
+When creating an annotated tag, prepare a message based on the message
+of the highest existing tag, provided that contains the corresponding
+version string, and substituting the new version string for that.  If
+that is not the case, propose a message using a reasonable format."</span>
+  (<span class="k">interactive</span>
+    (<span class="k">save-match-data</span>
+      (<span class="k">pcase-let*</span>
+          ((args (magit-tag-arguments))
+           (`(,pver ,ptag ,pmsg) (car (magit--list-releases)))
+           (msg (magit-rev-format <span class="s">"%s"</span>))
+           (ver (<span class="k">and</span> (string-match magit-release-commit-regexp msg)
+                     (match-str 1 msg)))
+           (_   (<span class="k">and</span> (not ver)
+                     (<span class="k">require</span> (<span class="k">quote</span> sisyphus) nil t)
+                     (string-match magit-release-commit-regexp
+                                   (magit-rev-format <span class="s">"%s"</span> ptag))
+                     (<span class="w">user-error</span> <span class="s">"Use `</span><span class="m s">sisyphus-create-release</span><span class="s">' first"</span>)))
+           (tag (<span class="k">cond</span>
+                  ((not ptag)
+                   <span class="cd">;; </span><span class="c">Force the user to review the message used for the
+</span>                   <span class="cd">;; </span><span class="c">initial release tag, in case they do not like the
+</span>                   <span class="cd">;; </span><span class="c">default format.
+</span>                   (<span class="k">cl-pushnew</span> <span class="s">"--edit"</span> args <span class="bi">:test</span> #'equal)
+                   (read-string <span class="s">"Create first release tag: "</span>
+                                (<span class="k">if</span> (<span class="k">and</span> ver (string-match-p <span class="s">"\\`[0-9]"</span> ver))
+                                    (concat <span class="s">"v"</span> ver)
+                                  ver)))
+                  (ver
+                   (concat (<span class="k">and</span> (string-match magit-release-tag-regexp ptag)
+                                (match-str 1 ptag))
+                           ver))
+                  ((read-string (format <span class="s">"Create release tag (previous was %s): "</span>
+                                        ptag)
+                                ptag))))
+           (ver (<span class="k">and</span> (string-match magit-release-tag-regexp tag)
+                     (match-str 2 tag))))
+        (list tag
+              (<span class="k">and</span> (seq-some (apply-partially
+                              #'string-match-p
+                              <span class="s">"\\`--</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">annotate</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">local-user</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">sign</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+                             args)
+                   (<span class="k">cond</span> ((<span class="k">and</span> pver (string-match (regexp-quote pver) pmsg))
+                          (replace-match ver t t pmsg))
+                         ((<span class="k">and</span> ptag (string-match (regexp-quote ptag) pmsg))
+                          (replace-match tag t t pmsg))
+                         ((format <span class="s">"%s %s"</span>
+                                  (capitalize
+                                   (file-name-nondirectory
+                                    (directory-file-name (magit-toplevel))))
+                                  ver))))
+              args))))
+  (magit-run-git-with-editor <span class="s">"tag"</span> args (<span class="k">and</span> msg (list <span class="s">"-m"</span> msg)) tag)
+  (set-process-sentinel
+   magit-this-process
+   (<span class="k">lambda</span> (process event)
+     (<span class="k">when</span> (memq (process-status process) '(exit signal))
+       (magit-process-sentinel process event)
+       (magit-refs-setup-buffer <span class="s">"HEAD"</span> (magit-show-refs-arguments))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: kkp--terminal-teardown – Emacs Documentation Online</title>
+<meta name="description" content="kkp--terminal-teardown is a natively compiled function defined in
+kkp.el.
+Run procedures to disable KKP in TERMINAL.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>kkp--terminal-teardown</code></h1><p><span class="m"><code>kkp--terminal-teardown</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">kkp.el</span>.
+<h2>Signature</h2>
+<pre><code>(kkp--terminal-teardown <a href="#:~:text=in-,TERMINAL"><span class="arg">TERMINAL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run procedures to disable KKP in <span class="arg">TERMINAL</span>.
+<p>A dead <span class="arg">TERMINAL</span> can be neither queried nor written to: reading its
+parameters or sending the disable sequence signals an error (e.g.
+<span class="m"><code>wrong-type-argument terminal-live-p</code></span>).  This happens when
+<a href="../var/delete-terminal-functions.html"><code>delete-terminal-functions</code></a> runs the teardown once the terminal is
+already gone (see <a href="../fun/kkp--pre-delete-frame.html"><code>kkp--pre-delete-frame</code></a>).  Any such error is caught and
+ignored, since a dead terminal needs no teardown.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/m2b3xmgxg24a6yvrhn2hs2kx62d820n5-emacs-packages-deps/share/emacs/site-lisp/elpa/kkp-20260706.858/kkp.el</span>
+(<span class="k">defun</span> <span class="f">kkp--terminal-teardown</span> (terminal)
+  <span class="doc">"Run procedures to disable KKP in TERMINAL.
+A dead TERMINAL can be neither queried nor written to: reading its
+parameters or sending the disable sequence signals an error (e.g.
+`wrong-type-argument terminal-live-p').  This happens when
+`</span><span class="m doc">delete-terminal-functions</span><span class="doc">' runs the teardown once the terminal is
+already gone (see `</span><span class="m doc">kkp--pre-delete-frame</span><span class="doc">').  Any such error is caught and
+ignored, since a dead terminal needs no teardown."</span>
+  (<span class="k">condition-case</span> err
+      (<span class="k">progn</span>
+        (kkp--verbose <span class="s">"teardown in terminal (live=%s, was active=%s)"</span>
+                      (terminal-live-p terminal)
+                      (kkp--active-p terminal))
+        (<span class="k">when</span>
+            (<span class="k">and</span>
+             (terminal-live-p terminal)
+             (kkp--active-p terminal))
+          (kkp--verbose <span class="s">"disabling KKP: sending &lt;u, restoring keymaps"</span>)
+          (kkp-teardown-function-keys terminal)
+          (send-string-to-terminal (kkp--csi-escape <span class="s">"&lt;u"</span>) terminal)
+
+          (<span class="k">dolist</span> (frame (frames-on-display-list terminal))
+            (<span class="k">with-selected-frame</span> frame
+              (normal-erase-is-backspace-mode (kkp--state-previous-normal-erase (kkp--terminal-state terminal)))
+              (<span class="k">dolist</span> (prefix kkp--key-prefixes)
+                (<span class="k">compat-call</span> define-key input-decode-map (kkp--csi-escape (string prefix)) nil t))
+              (run-hooks 'kkp-terminal-teardown-complete-hook))))
+        <span class="cd">;; </span><span class="c">Mark the terminal inactive.  Either we just tore it down, or it is not
+</span>        <span class="cd">;; </span><span class="c">live anyway and should not be considered active.
+</span>        (<span class="k">let</span> ((state (kkp--terminal-state terminal)))
+          (<span class="k">when</span> state
+            (<span class="k">setf</span> (kkp--state-enhancements state) nil))))
+    (<span class="w">error</span>
+     (kkp--verbose <span class="s">"teardown skipped (terminal likely dead): %s"</span>
+                   (error-message-string err)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

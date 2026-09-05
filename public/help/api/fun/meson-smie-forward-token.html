@@ -1,0 +1,70 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: meson-smie-forward-token – Emacs Documentation Online</title>
+<meta name="description" content="meson-smie-forward-token is a natively compiled function defined in
+meson-mode.el.
+Move forward by one lexer token.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>meson-smie-forward-token</code></h1><p><span class="m"><code>meson-smie-forward-token</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">meson-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(meson-smie-forward-token)
+</code></pre>
+<h2>Documentation</h2>
+<p>Move forward by one lexer token.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ajn730848zmcji1jjy9y0s8x1mck32q9-emacs-packages-deps/share/emacs/site-lisp/elpa/meson-mode-20240601.1647/meson-mode.el</span>
+(<span class="k">defun</span> <span class="f">meson-smie-forward-token</span> ()
+  <span class="doc">"Move forward by one lexer token."</span>
+  (<span class="k">let</span> ((token 'unknown))
+    (<span class="k">while</span> (eq token 'unknown)
+      (<span class="k">let</span> ((ppss (syntax-ppss)))
+	<span class="cd">;; </span><span class="c">When inside or at start of a comment, goto end of line so
+</span>	<span class="cd">;; </span><span class="c">that we can still return "eol" token there.
+</span>	(<span class="k">when</span> (<span class="k">or</span> (nth 4 ppss)
+		  (<span class="k">and</span> (not (nth 3 ppss)) <span class="cd">; </span><span class="c">not inside string
+</span>		       (looking-at-p <span class="s">"#"</span>)))
+	  (end-of-line)
+	  (<span class="k">setq</span> ppss (syntax-ppss)))	<span class="cd">; </span><span class="c">update ppss after move
+</span>	<span class="cd">;; </span><span class="c">Determine token but do not move behind it
+</span>	(<span class="k">setq</span> token
+	      (<span class="k">cond</span>
+	       <span class="cd">;; </span><span class="c">Let syntactic parser handle parentheses (even inside
+</span>	       <span class="cd">;; </span><span class="c">strings - this ensures that parentheses are NOT
+</span>	       <span class="cd">;; </span><span class="c">indented inside strings according to meson
+</span>	       <span class="cd">;; </span><span class="c">indentation rules)
+</span>	       ((looking-at (<span class="k">rx</span> (<span class="k">or</span> (syntax open-parenthesis)
+				    (syntax close-parenthesis))))
+		<span class="s">""</span>)
+	       <span class="cd">;; </span><span class="c">After handling parentheses (inside strings), we can
+</span>	       <span class="cd">;; </span><span class="c">handle strings
+</span>	       ((<span class="k">or</span> (<span class="k">when</span> (nth 3 ppss)		<span class="cd">; </span><span class="c">If inside string
+</span>		      (goto-char (nth 8 ppss))	<span class="cd">; </span><span class="c">goto beginning
+</span>		      nil)
+		    (looking-at meson-string-regexp)) <span class="cd">; </span><span class="c">Match the whole string
+</span>		<span class="s">"string"</span>)
+	       ((looking-at meson-keywords-regexp) (match-string-no-properties 0))
+	       ((cl-some (<span class="k">lambda</span> (spec) (<span class="k">when</span> (looking-at (cdr spec)) (car spec)))
+			 meson-token-spec))
+	       ((looking-at meson-literate-tokens-regexp)
+		(match-string-no-properties 0))))
+	<span class="cd">;; </span><span class="c">Remember token end (except for parentheses)
+</span>	(<span class="k">let</span> ((after-token (<span class="k">when</span> (&lt; 0 (length token)) (match-end 0))))
+	  <span class="cd">;; </span><span class="c">Skip certain tokens
+</span>	  (<span class="k">when</span> (<span class="k">or</span> (equal token <span class="s">"ignore"</span>)
+		    (equal token <span class="s">"eol_cont"</span>)
+		    (<span class="k">and</span> (equal token <span class="s">"eol"</span>)	<span class="cd">; </span><span class="c">Skip EOL when:
+</span>			 (<span class="k">or</span> (&gt; (nth 0 ppss) 0) <span class="cd">; </span><span class="c">- inside parentheses
+</span>			     (<span class="k">and</span> (looking-back	<span class="cd">; </span><span class="c">- after operator but not inside comments
+</span>				   meson-literate-tokens-regexp
+				   (- (point) meson-literate-tokens-max-length))
+				  (not (nth 4 ppss)))
+			     (meson--comment-bolp ppss)))) <span class="cd">; </span><span class="c">- at empty line
+</span>	    (<span class="k">setq</span> token 'unknown))
+	  (<span class="k">when</span> after-token
+	    (goto-char after-token)))))
+    token))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: hl-todo-flymake – Emacs Documentation Online</title>
+<meta name="description" content="hl-todo-flymake is a natively compiled function defined in hl-todo.el.
+Flymake backend for hl-todo-mode.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>hl-todo-flymake</code></h1><p><span class="m"><code>hl-todo-flymake</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">hl-todo.el</span>.
+<h2>Signature</h2>
+<pre><code>(hl-todo-flymake <a href="#:~:text=to-,REPORT-FN"><span class="arg">REPORT-FN</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text="><span class="arg">PLIST</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Flymake backend for <a class="v" href="../var/hl-todo-mode.html"><code>hl-todo-mode</code>(var)</a>/<a class="f" href="../fun/hl-todo-mode.html"><code>hl-todo-mode</code>(fun)</a>.
+<p>Diagnostics are reported to <span class="arg">REPORT-FN</span>.  Use <a href="../fun/add-hook.html"><code>add-hook</code></a> to
+register this function in <a href="../var/flymake-diagnostic-functions.html"><code>flymake-diagnostic-functions</code></a> before
+enabling <a href="../fun/flymake-mode.html"><code>flymake-mode</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qpi14jchz4rd13fyys79w0acswf9phnl-emacs-packages-deps/share/emacs/site-lisp/elpa/hl-todo-20260601.1508/hl-todo.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">hl-todo-flymake</span> (report-fn <span class="ty">&amp;rest</span> _plist)
+  <span class="doc">"Flymake backend for `</span><span class="m doc">hl-todo-mode</span><span class="doc">'.
+Diagnostics are reported to REPORT-FN.  Use `</span><span class="m doc">add-hook</span><span class="doc">' to
+register this function in `</span><span class="m doc">flymake-diagnostic-functions</span><span class="doc">' before
+enabling `</span><span class="m doc">flymake-mode</span><span class="doc">'."</span>
+  (<span class="k">let</span> ((diags nil)
+        (buf (current-buffer))
+        (comment (concat (regexp-quote comment-start) <span class="s">"\\s-+"</span>)))
+    (<span class="k">when</span> hl-todo-mode
+      (<span class="k">save-excursion</span>
+        (<span class="k">save-restriction</span>
+          (<span class="k">save-match-data</span>
+            (goto-char (point-min))
+            (<span class="k">while</span> (hl-todo--search)
+              (<span class="k">let</span> ((keyword (match-string 1))
+                    (beg (match-beginning 0))
+                    (end (pos-eol))
+                    (bol (pos-bol)))
+                <span class="cd">;; </span><span class="c">Take whole line when keyword is not at the start of comment.
+</span>                (<span class="k">save-excursion</span>
+                  (goto-char beg)
+                  (<span class="k">unless</span> (looking-back comment bol)
+                    (goto-char bol)
+                    <span class="cd">;; </span><span class="c">Skip whitespace at the beginning of line.
+</span>                    (<span class="k">when</span> (<span class="k">and</span> (not (looking-at-p <span class="s">"\\S-"</span>))
+                               (re-search-forward <span class="s">"\\S-"</span> beg t))
+                      (forward-char -1))
+                    <span class="cd">;; </span><span class="c">Skip comment.
+</span>                    (re-search-forward comment beg t)
+                    (<span class="k">setq</span> beg (point))))
+                (<span class="k">push</span> (hl-todo-make-flymake-diagnostic
+                       buf beg end (buffer-substring-no-properties beg end)
+                       keyword)
+                      diags)))))))
+    (funcall report-fn (nreverse diags))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

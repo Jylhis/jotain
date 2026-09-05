@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp-treesit--format-tree – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp-treesit--format-tree is a natively compiled
+function defined in claude-code-ide-emacs-tools.el.
+Format NODE and its children as a tree string.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp-treesit--format-tree</code></h1><p><span class="m"><code>claude-code-ide-mcp-treesit--format-tree</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">claude-code-ide-emacs-tools.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp-treesit--format-tree <a href="#:~:text=Format-,NODE"><span class="arg">NODE</span></a> <a href="#:~:text=string.-,LEVEL"><span class="arg">LEVEL</span></a> <a href="#:~:text=level.-,MAX-DEPTH"><span class="arg">MAX-DEPTH</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Format <span class="arg">NODE</span> and its children as a tree string.
+<p><span class="arg">LEVEL</span> is the current indentation level.
+<span class="arg">MAX-DEPTH</span> is the maximum depth to traverse.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-emacs-tools.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp-treesit--format-tree</span> (node level max-depth)
+  <span class="doc">"Format NODE and its children as a tree string.
+LEVEL is the current indentation level.
+MAX-DEPTH is the maximum depth to traverse."</span>
+  (<span class="k">if</span> (<span class="k">or</span> (not node) (&gt;= level max-depth))
+      <span class="s">""</span>
+    (<span class="k">let*</span> ((indent (make-string (* level 2) ?\s))
+           (type (treesit-node-type node))
+           (named (<span class="k">if</span> (treesit-node-check node 'named) <span class="s">" (named)"</span> <span class="s">""</span>))
+           (start (treesit-node-start node))
+           (end (treesit-node-end node))
+           (field-name (treesit-node-field-name node))
+           (field-str (<span class="k">if</span> field-name (format <span class="s">" [%s]"</span> field-name) <span class="s">""</span>))
+           (text (treesit-node-text node t))
+           (text-preview (<span class="k">if</span> (<span class="k">and</span> (&lt; (length text) 40)
+                                  (not (string-match-p <span class="s">"\n"</span> text)))
+                             (format <span class="s">" \"%s\""</span> text)
+                           <span class="s">""</span>))
+           (result (format <span class="s">"%s%s%s%s (%d-%d)%s\n"</span>
+                           indent type named field-str
+                           start end text-preview))
+           (child-count (treesit-node-child-count node)))
+      <span class="cd">;; </span><span class="c">Add children
+</span>      (<span class="k">dotimes</span> (i child-count)
+        (<span class="k">when-let</span> ((child (treesit-node-child node i)))
+          (<span class="k">setq</span> result (concat result
+                               (claude-code-ide-mcp-treesit--format-tree
+                                child (1+ level) max-depth)))))
+      result)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

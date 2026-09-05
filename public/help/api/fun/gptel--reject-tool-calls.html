@@ -1,0 +1,44 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--reject-tool-calls – Emacs Documentation Online</title>
+<meta name="description" content="gptel--reject-tool-calls is an interactive and natively compiled
+function defined in gptel.el.
+Cancel pending tool-calls.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--reject-tool-calls</code></h1><p><span class="m"><code>gptel--reject-tool-calls</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--reject-tool-calls <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">TOOL-CALLS</span></a> <a href="#:~:text=calls.-,OV"><span class="arg">OV</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Cancel pending tool-calls.
+<p><span class="arg">OV</span> is the tool call dispatch overlay.
+<h2>Key Bindings</h2>
+<p><span class="v">gptel-tool-call-actions-map</span> <span class="key">C-c C-k</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--reject-tool-calls</span> (<span class="ty">&amp;optional</span> _tool-calls ov)
+  <span class="doc">"Cancel pending tool-calls.
+
+OV is the tool call dispatch overlay."</span>
+  (<span class="k">interactive</span> (<span class="k">pcase-let</span> ((`(,resp . ,o) (get-char-property-and-overlay
+                                           (point) 'gptel-tool)))
+                 (list resp o)))
+  (gptel--update-status <span class="s">" Tools cancelled"</span> 'error)
+  (message (substitute-command-keys
+            <span class="s">"Tool calls canceled.  \\[</span><span class="m s">gptel-menu</span><span class="s">] to continue them!"</span>))
+  (<span class="k">when</span> (<span class="k">and</span> (overlayp ov) (overlay-buffer ov))
+    (<span class="k">with-current-buffer</span> (overlay-buffer ov)
+      (<span class="k">when-let*</span> ((preview-handles (overlay-get ov 'previews)))
+        (<span class="k">dolist</span> (func-to-handle preview-handles)
+          (<span class="k">when</span> (car func-to-handle) (apply func-to-handle))))
+      (<span class="k">dolist</span> (prompt-ov (overlay-get ov 'prompt))
+        (<span class="k">when-let*</span> (((overlay-buffer prompt-ov))
+                    (inhibit-read-only t))
+          (delete-region (overlay-start prompt-ov)
+                         (overlay-end prompt-ov)))))
+    (delete-overlay ov)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

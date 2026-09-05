@@ -1,0 +1,85 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--jump-preview – Emacs Documentation Online</title>
+<meta name="description" content="consult--jump-preview is a natively compiled function defined in
+consult.el.
+The preview function used if selecting from a list of candidate positions.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--jump-preview</code></h1><p><span class="m"><code>consult--jump-preview</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--jump-preview)
+</code></pre>
+<h2>Documentation</h2>
+<p>The preview function used if selecting from a list of candidate positions.
+<p>The function can be used as the <span class="bi">:state</span> argument of <a href="../fun/consult--read.html"><code>consult--read</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--jump-preview</span> ()
+  <span class="doc">"The preview function used if selecting from a list of candidate positions.
+The function can be used as the `</span><span class="m doc">:state</span><span class="doc">' argument of `</span><span class="m doc">consult--read</span><span class="doc">'."</span>
+  (<span class="k">let</span> (restore)
+    (<span class="k">lambda</span> (action cand)
+      (<span class="k">when</span> (eq action 'preview)
+        (mapc #'funcall restore)
+        (<span class="k">setq</span> restore nil)
+        <span class="cd">;; </span><span class="c">TODO Better buffer preview support
+</span>        <span class="cd">;; </span><span class="c">1. Use consult--buffer-preview instead of consult--jump-ensure-buffer
+</span>        <span class="cd">;; </span><span class="c">2. Remove function consult--jump-ensure-buffer
+</span>        <span class="cd">;; </span><span class="c">3. Remove consult-buffer-other-* from consult-customize-alist
+</span>        (<span class="k">when-let*</span> ((pos (<span class="k">or</span> (car-safe cand) cand)) <span class="cd">;; </span><span class="c">Candidate can be previewed
+</span>                    ((consult--jump-ensure-buffer pos)))
+          (<span class="k">let</span> ((saved-min (point-min-marker))
+                (saved-max (point-max-marker))
+                (saved-pos (point-marker)))
+            (set-marker-insertion-type saved-max t) <span class="cd">;; </span><span class="c">Grow when text is inserted
+</span>            (<span class="k">push</span> (<span class="k">lambda</span> ()
+                    (<span class="k">when-let*</span> ((buf (marker-buffer saved-pos)))
+                      (<span class="k">with-current-buffer</span> buf
+                        (narrow-to-region saved-min saved-max)
+                        (goto-char saved-pos)
+                        (set-marker saved-pos nil)
+                        (set-marker saved-min nil)
+                        (set-marker saved-max nil))))
+                  restore))
+          (<span class="k">unless</span> (= (goto-char pos) (point)) <span class="cd">;; </span><span class="c">Widen if jump failed
+</span>            (widen)
+            (goto-char pos))
+          (<span class="k">setq</span> restore (nconc (consult--invisible-open-temporarily) restore))
+          <span class="cd">;; </span><span class="c">Ensure that cursor is properly previewed (gh:minad/consult#764)
+</span>          (<span class="k">unless</span> (eq cursor-in-non-selected-windows 'box)
+            (<span class="k">let</span> ((orig cursor-in-non-selected-windows)
+                  (buf (current-buffer)))
+              (<span class="k">push</span>
+               (<span class="k">if</span> (local-variable-p 'cursor-in-non-selected-windows)
+                   (<span class="k">lambda</span> ()
+                     (<span class="k">when</span> (buffer-live-p buf)
+                       (<span class="k">with-current-buffer</span> buf
+                         (<span class="k">setq-local</span> cursor-in-non-selected-windows orig))))
+                 (<span class="k">lambda</span> ()
+                   (<span class="k">when</span> (buffer-live-p buf)
+                     (<span class="k">with-current-buffer</span> buf
+                       (kill-local-variable 'cursor-in-non-selected-windows)))))
+               restore)
+              (<span class="k">setq-local</span> cursor-in-non-selected-windows 'box)))
+          <span class="cd">;; </span><span class="c">Match previews
+</span>          (<span class="k">let</span> ((overlays
+                 (list (<span class="k">save-excursion</span>
+                         (<span class="k">let</span> ((vbeg (<span class="k">progn</span> (beginning-of-visual-line) (point)))
+                               (vend (<span class="k">progn</span> (end-of-visual-line) (point)))
+                               (end (pos-eol)))
+                           (consult--make-overlay vbeg (<span class="k">if</span> (= vend end) (1+ end) vend)
+                                                  'category 'consult-preview-line-overlay
+                                                  'window (selected-window)))))))
+            (<span class="k">dolist</span> (match (cdr-safe cand))
+              (<span class="k">push</span> (consult--make-overlay (+ (point) (car match))
+                                           (+ (point) (cdr match))
+                                           'category 'consult-preview-match-overlay
+                                           'window (selected-window))
+                    overlays))
+            (<span class="k">push</span> (<span class="k">lambda</span> () (mapc #'delete-overlay overlays)) restore))
+          (run-hooks 'consult-after-jump-hook))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

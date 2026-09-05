@@ -1,0 +1,153 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-branch-delete – Emacs Documentation Online</title>
+<meta name="description" content="magit-branch-delete is an interactive and natively compiled function
+defined in magit-branch.el.
+Delete one or multiple branches.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-branch-delete</code></h1><p><span class="m"><code>magit-branch-delete</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-branch.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-branch-delete <a href="#:~:text="><span class="arg">BRANCHES</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">FORCE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Delete one or multiple branches.
+<p>If the region marks multiple branches, then offer to delete
+those, otherwise prompt for a single branch to be deleted,
+defaulting to the branch at point.
+<p>Require confirmation when deleting branches is dangerous in some
+way.  Option <a href="../var/magit-no-confirm.html"><code>magit-no-confirm</code></a> can be customized to not require
+confirmation in certain cases.  See its docstring to learn why
+confirmation is required by default in certain cases or if a
+prompt is confusing.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-branch.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">magit-branch-delete</span> (branches <span class="ty">&amp;optional</span> force)
+  <span class="doc">"Delete one or multiple branches.
+
+If the region marks multiple branches, then offer to delete
+those, otherwise prompt for a single branch to be deleted,
+defaulting to the branch at point.
+
+Require confirmation when deleting branches is dangerous in some
+way.  Option `</span><span class="m doc">magit-no-confirm</span><span class="doc">' can be customized to not require
+confirmation in certain cases.  See its docstring to learn why
+confirmation is required by default in certain cases or if a
+prompt is confusing."</span>
+  <span class="cd">;; </span><span class="c">One would expect this to be a command as simple as, for example,
+</span>  <span class="cd">;; </span><span class="c">`</span><span class="m c">magit-branch-rename</span><span class="c">'; but it turns out everyone wants to squeeze
+</span>  <span class="cd">;; </span><span class="c">a bit of extra functionality into this one, including myself.
+</span>  (<span class="k">interactive</span>
+    (<span class="k">let</span> ((branches (magit-region-values 'branch t))
+          (force current-prefix-arg))
+      (<span class="k">if</span> (length&gt; branches 1)
+          (magit-confirm t nil <span class="s">"Delete %d branches"</span> nil branches)
+        (<span class="k">setq</span> branches
+              (list (magit-read-branch-prefer-other
+                     (<span class="k">if</span> force <span class="s">"Force delete branch"</span> <span class="s">"Delete branch"</span>)))))
+      (<span class="k">cond-let</span>
+        (force)
+        [[unmerged (seq-remove #'magit-branch-merged-p branches)]]
+        ((magit-confirm 'delete-unmerged-branch
+           <span class="s">"Delete unmerged branch %s"</span>
+           <span class="s">"Delete %d unmerged branches"</span>
+           'noabort unmerged)
+         (<span class="k">setq</span> force branches))
+        ((<span class="k">setq</span> branches (cl-set-difference branches unmerged <span class="bi">:test</span> #'equal)))
+        ((<span class="w">user-error</span> <span class="s">"Abort"</span>)))
+      (list branches force)))
+  (<span class="k">let</span> ((refs (mapcar #'magit-ref-fullname branches)))
+    <span class="cd">;; </span><span class="c">If a member of refs is nil, that means that
+</span>    <span class="cd">;; </span><span class="c">the respective branch name is ambiguous.
+</span>    (<span class="k">when-let</span> ((ambiguous (seq-filter #'null refs)))
+      (<span class="w">user-error</span>
+       <span class="s">"%s ambiguous; please cleanup using git directly"</span>
+       (<span class="k">let</span> ((len (length ambiguous)))
+         (<span class="k">cond</span>
+           ((= len 1)
+            (format <span class="s">"%s is"</span> (seq-find #'magit-ref-ambiguous-p branches)))
+           ((= len (length refs))
+            (format <span class="s">"These %s names are"</span> len))
+           ((format <span class="s">"%s of these names are"</span> len))))))
+    (<span class="k">cond</span>
+      ((string-match <span class="s">"^refs/remotes/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s">/]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> (car refs))
+       (<span class="k">let*</span> ((remote (match-str 1 (car refs)))
+              (offset (1+ (length remote))))
+         (<span class="k">cond</span>
+           ((magit-confirm 'delete-branch-on-remote
+              (list <span class="s">"Deleting local %s.  Also delete on %s"</span>
+                    (magit-ref-fullname (car branches))
+                    remote)
+              (list <span class="s">"Deleting %d local refs.  Also delete on %s"</span>
+                    (length refs)
+                    remote)
+              'noabort refs)
+            <span class="cd">;; </span><span class="c">The ref may actually point at another rev on the remote,
+</span>            <span class="cd">;; </span><span class="c">but this is better than nothing.
+</span>            (<span class="k">dolist</span> (ref refs)
+              (message <span class="s">"Delete %s (was %s)"</span> ref
+                       (magit-rev-parse <span class="s">"--short"</span> ref)))
+            <span class="cd">;; </span><span class="c">Assume the branches actually still exist on the remote.
+</span>            (magit-run-git-async
+             <span class="s">"push"</span> <span class="s">"--delete"</span>
+             (<span class="k">and</span> (<span class="k">or</span> force magit-branch-delete-never-verify) <span class="s">"--no-verify"</span>)
+             remote
+             (mapcar (##concat <span class="s">"refs/heads/"</span> (substring % offset)) branches))
+            <span class="cd">;; </span><span class="c">If that is not the case, then this deletes the tracking branches.
+</span>            (set-process-sentinel
+             magit-this-process
+             (apply-partially #'magit-delete-remote-branch-sentinel remote refs)))
+           (t
+            (<span class="k">dolist</span> (ref refs)
+              (message <span class="s">"Delete %s (was %s)"</span> ref
+                       (magit-rev-parse <span class="s">"--short"</span> ref))
+              (magit-call-git <span class="s">"update-ref"</span> <span class="s">"-d"</span> ref))
+            (magit-refresh)))))
+      ((length&gt; branches 1)
+       (<span class="k">setq</span> branches (delete (magit-get-current-branch) branches))
+       (mapc #'magit-branch-maybe-delete-pr-remote branches)
+       (mapc #'magit-branch-unset-pushRemote branches)
+       (magit-run-git <span class="s">"branch"</span> (<span class="k">if</span> force <span class="s">"-D"</span> <span class="s">"-d"</span>) branches))
+      (t <span class="cd">; </span><span class="c">And now for something completely different.
+</span>       (<span class="k">let*</span> ((branch (car branches))
+              (prompt (format <span class="s">"Branch %s is checked out.  "</span> branch))
+              (target (magit-get-indirect-upstream-branch branch t)))
+         (<span class="k">when</span> (equal branch (magit-get-current-branch))
+           (<span class="k">when</span> (<span class="k">or</span> (equal branch target)
+                     (not target))
+             (<span class="k">setq</span> target (magit-main-branch)))
+           (<span class="k">pcase</span> (<span class="k">if</span> (<span class="k">or</span> (equal branch target)
+                          (not target))
+                      (<span class="k">magit-read-char-case</span> prompt nil
+                        (?d <span class="s">"[d]etach HEAD &amp; delete"</span> 'detach)
+                        (?a <span class="s">"[a]bort"</span>                'abort))
+                    (<span class="k">magit-read-char-case</span> prompt nil
+                      (?d <span class="s">"[d]etach HEAD &amp; delete"</span> 'detach)
+                      (?c (format <span class="s">"[c]heckout %s &amp; delete"</span> target) 'target)
+                      (?a <span class="s">"[a]bort"</span> 'abort)))
+             (`detach (<span class="k">unless</span> (<span class="k">or</span> (equal force '(4))
+                                  (member branch force)
+                                  (magit-branch-merged-p branch t))
+                        (magit-confirm 'delete-unmerged-branch
+                          <span class="s">"Delete unmerged branch %s"</span> <span class="s">""</span>
+                          nil (list branch)))
+                      (magit-call-git <span class="s">"checkout"</span> <span class="s">"--detach"</span>))
+             (`target (<span class="k">unless</span> (<span class="k">or</span> (equal force '(4))
+                                  (member branch force)
+                                  (magit-branch-merged-p branch target))
+                        (magit-confirm 'delete-unmerged-branch
+                          <span class="s">"Delete unmerged branch %s"</span> <span class="s">""</span>
+                          nil (list branch)))
+                      (magit-call-git <span class="s">"checkout"</span> target))
+             (`abort  (<span class="w">user-error</span> <span class="s">"Abort"</span>)))
+           (<span class="k">setq</span> force t))
+         (magit-branch-maybe-delete-pr-remote branch)
+         (magit-branch-unset-pushRemote branch)
+         (magit-run-git <span class="s">"branch"</span> (<span class="k">if</span> force <span class="s">"-D"</span> <span class="s">"-d"</span>) branch))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

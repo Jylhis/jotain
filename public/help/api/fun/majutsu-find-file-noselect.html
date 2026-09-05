@@ -1,0 +1,70 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-find-file-noselect – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-find-file-noselect is a natively compiled function defined in
+majutsu-file.el.
+Read FILE from REV into a buffer and return the buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-find-file-noselect</code></h1><p><span class="m"><code>majutsu-find-file-noselect</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-file.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-find-file-noselect <a href="#:~:text=from-,REV"><span class="arg">REV</span></a> <a href="#:~:text=Read-,FILE"><span class="arg">FILE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=nil-,REVERT"><span class="arg">REVERT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Read <span class="arg">FILE</span> from <span class="arg">REV</span> into a buffer and return the buffer.
+<p><span class="arg">REV</span> is a revset, or nil to visit the file directly from the filesystem.
+<span class="arg">FILE</span> may be absolute, or relative to the repository root.
+Non-nil <span class="arg">REVERT</span> means to revert the buffer.  If <span class="m"><code>ask-revert</code></span>, then
+only after asking.  A non-nil value for <span class="arg">REVERT</span> is ignored if <span class="arg">REV</span> is nil.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-file.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-find-file-noselect</span> (rev file <span class="ty">&amp;optional</span> revert)
+  <span class="doc">"Read FILE from REV into a buffer and return the buffer.
+REV is a revset, or nil to visit the file directly from the filesystem.
+FILE may be absolute, or relative to the repository root.
+Non-nil REVERT means to revert the buffer.  If `</span><span class="m doc">ask-revert</span><span class="doc">', then
+only after asking.  A non-nil value for REVERT is ignored if REV is nil."</span>
+  (<span class="k">let*</span> ((root (majutsu-file--root))
+         (file-abs (<span class="k">if</span> (file-name-absolute-p file)
+                       file
+                     (expand-file-name file root)))
+         (file-rel (file-relative-name file-abs root))
+         (defdir (file-name-directory file-abs)))
+    (<span class="k">when</span> (<span class="k">and</span> rev (not (file-in-directory-p file-abs root)))
+      (<span class="w">user-error</span> <span class="s">"File is outside repository: %s"</span> file))
+    (<span class="k">if</span> (null rev)
+        <span class="cd">;; </span><span class="c">Visit filesystem file directly
+</span>        (<span class="k">progn</span>
+          (<span class="k">unless</span> (file-exists-p file-abs)
+            (<span class="w">user-error</span> <span class="s">"File no longer exists: %s"</span> file-abs))
+          (find-file-noselect file-abs))
+      <span class="cd">;; </span><span class="c">Visit blob from revision
+</span>      (<span class="k">let*</span> ((rev-info (<span class="k">or</span> (majutsu-file--resolve-single-rev-info rev)
+                           (<span class="w">user-error</span> <span class="s">"Revset does not resolve to a single revision"</span>)))
+             (resolved (plist-get rev-info <span class="bi">:change-id</span>))
+             (commit-id (plist-get rev-info <span class="bi">:commit-id</span>))
+             (short-rev (majutsu-file--short-id resolved))
+             (buf-name (majutsu-file--buffer-name short-rev file-rel))
+             (buffer (get-buffer-create buf-name)))
+        (<span class="k">with-current-buffer</span> buffer
+          (<span class="k">when</span> (<span class="k">or</span> revert
+                    (eq revert 'ask-revert)
+                    (not majutsu-buffer-blob-path))
+            (<span class="k">when</span> (<span class="k">or</span> (not (eq revert 'ask-revert))
+                      (y-or-n-p (format <span class="s">"%s already exists; revert it? "</span>
+                                        (buffer-name))))
+              (<span class="k">setq</span> majutsu-buffer-blob-root root)
+              (<span class="k">setq</span> majutsu-buffer-blob-revset rev)
+              (<span class="k">setq</span> majutsu-buffer-blob-revision resolved)
+              (<span class="k">setq</span> majutsu-buffer-blob-change-id resolved)
+              (<span class="k">setq</span> majutsu-buffer-blob-commit-id commit-id)
+              (<span class="k">setq</span> majutsu-buffer-blob-path file-rel)
+              (<span class="k">setq</span> default-directory (<span class="k">if</span> (file-exists-p defdir) defdir root))
+              (<span class="k">setq-local</span> revert-buffer-function #'majutsu-file-revert-buffer)
+              (majutsu-file-revert-buffer nil t)
+              (run-hooks 'majutsu-find-file-hook))))
+        buffer))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-insert-stashes – Emacs Documentation Online</title>
+<meta name="description" content="magit-insert-stashes is a natively compiled function defined in
+magit-stash.el.
+Insert stashes section showing reflog for &quot;refs/stash&quot;.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-insert-stashes</code></h1><p><span class="m"><code>magit-insert-stashes</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-stash.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-insert-stashes <span class="ty">&amp;optional</span> (<a href="#:~:text=optional-,REF"><span class="arg">REF</span></a> <span class="s">"refs/stash"</span>) (<a href="#:~:text=optional-,HEADING"><span class="arg">HEADING</span></a> <span class="s">"Stashes:"</span>))
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert <span class="m"><code>stashes</code></span> section showing reflog for "refs/stash".
+<p>If optional <span class="arg">REF</span> is non-nil, show reflog for that instead.
+If optional <span class="arg">HEADING</span> is non-nil, use that as section heading
+instead of "Stashes:".
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-stash.el</span>
+(<span class="k">cl-defun</span> <span class="f">magit-insert-stashes</span> (<span class="ty">&amp;optional</span> (ref   <span class="s">"refs/stash"</span>)
+                                          (heading <span class="s">"Stashes:"</span>))
+  <span class="doc">"Insert `</span><span class="m doc">stashes</span><span class="doc">' section showing reflog for \"refs/stash\".
+If optional REF is non-nil, show reflog for that instead.
+If optional HEADING is non-nil, use that as section heading
+instead of \"Stashes:\"."</span>
+  (<span class="k">let</span> ((verified (magit-rev-verify ref))
+        (autostash (magit-rebase--get-state-lines <span class="s">"autostash"</span>)))
+    (<span class="k">when</span> (<span class="k">or</span> autostash verified)
+      (<span class="k">magit-insert-section</span> (stashes ref)
+        (<span class="k">magit-insert-heading</span> heading)
+        (<span class="k">when</span> autostash
+          (<span class="k">pcase-let</span> ((`(,author ,date ,msg)
+                       (split-string
+                        (car (magit-git-lines
+                              <span class="s">"show"</span> <span class="s">"-q"</span> <span class="s">"--format=%aN%x00%at%x00%s"</span>
+                              autostash))
+                        <span class="s">"\0"</span>)))
+            (<span class="k">magit-insert-section</span> (stash autostash)
+              (insert (propertize <span class="s">"AUTOSTASH"</span> 'font-lock-face 'magit-hash))
+              (insert <span class="s">" "</span> msg <span class="s">"\n"</span>)
+              (magit-log-format-margin autostash author date))))
+        (<span class="k">if</span> verified
+            (magit-git-wash (apply-partially #'magit-log-wash-log 'stash)
+              <span class="s">"reflog"</span> <span class="s">"--format=%gd%x00%aN%x00%at%x00%gs"</span> ref)
+          (insert ?\n)
+          (magit-make-margin-overlay))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

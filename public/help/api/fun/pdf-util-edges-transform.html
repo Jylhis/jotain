@@ -1,0 +1,77 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-util-edges-transform – Emacs Documentation Online</title>
+<meta name="description" content="pdf-util-edges-transform is a natively compiled function defined in
+pdf-util.el.
+Translate ELTS according to REGION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-util-edges-transform</code></h1><p><span class="m"><code>pdf-util-edges-transform</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">pdf-util.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-util-edges-transform <a href="#:~:text=to-,REGION"><span class="arg">REGION</span></a> <a href="#:~:text=Translate-,ELTS"><span class="arg">ELTS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=if-,TO-REGION-P"><span class="arg">TO-REGION-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Translate <span class="arg">ELTS</span> according to <span class="arg">REGION</span>.
+<p><span class="arg">ELTS</span> may be one edges list or a position or a list thereof.
+Translate each from region coordinates to (0 0 1 1) or the
+opposite, if <span class="arg">TO-REGION-P</span> is non-nil.  All coordinates should be
+relative.
+<p>Returns the translated list of elements or the single one
+depending on the input.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-util.el</span>
+(<span class="k">defun</span> <span class="f">pdf-util-edges-transform</span> (region elts <span class="ty">&amp;optional</span> to-region-p)
+  <span class="doc">"Translate ELTS according to REGION.
+
+ELTS may be one edges list or a position or a list thereof.
+Translate each from region coordinates to (0 0 1 1) or the
+opposite, if TO-REGION-P is non-nil.  All coordinates should be
+relative.
+
+Returns the translated list of elements or the single one
+depending on the input."</span>
+
+  (<span class="k">when</span> elts
+    (<span class="k">let</span> ((have-list-p (consp (car-safe elts))))
+      (<span class="k">unless</span> have-list-p
+        (<span class="k">setq</span> elts (list elts)))
+      (<span class="k">let</span> ((result
+             (<span class="k">if</span> (null region)
+                 elts
+               (mapcar (<span class="k">lambda</span> (edges)
+                         (<span class="k">let</span> ((have-pos-p (numberp (cdr edges))))
+                           (<span class="k">when</span> have-pos-p
+                             (<span class="k">setq</span> edges (list (car edges) (cdr edges)
+                                               (car edges) (cdr edges))))
+                           (<span class="k">pdf-util-with-edges</span> (edges region)
+                             (<span class="k">let</span> ((newedges
+                                    (mapcar (<span class="k">lambda</span> (n)
+                                              (min 1.0 (max 0.0 n)))
+                                            (<span class="k">if</span> to-region-p
+                                                `(,(/ (- edges-left region-left)
+                                                      region-width)
+                                                  ,(/ (- edges-top region-top)
+                                                      region-height)
+                                                  ,(/ (- edges-right region-left)
+                                                      region-width)
+                                                  ,(/ (- edges-bot region-top)
+                                                      region-height))
+                                              `(,(+ (* edges-left region-width)
+                                                    region-left)
+                                                ,(+ (* edges-top region-height)
+                                                    region-top)
+                                                ,(+ (* edges-right region-width)
+                                                    region-left)
+                                                ,(+ (* edges-bot region-height)
+                                                    region-top))))))
+                               (<span class="k">if</span> have-pos-p
+                                   (cons (car newedges) (cadr newedges))
+                                 newedges)))))
+                       elts))))
+        (<span class="k">if</span> have-list-p
+            result
+          (car result))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

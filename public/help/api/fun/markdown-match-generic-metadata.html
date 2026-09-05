@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-match-generic-metadata – Emacs Documentation Online</title>
+<meta name="description" content="markdown-match-generic-metadata is a natively compiled function
+defined in markdown-mode.el.
+Match metadata declarations specified by REGEXP from point to LAST.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-match-generic-metadata</code></h1><p><span class="m"><code>markdown-match-generic-metadata</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-match-generic-metadata <a href="#:~:text=by-,REGEXP"><span class="arg">REGEXP</span></a> <a href="#:~:text=to-,LAST"><span class="arg">LAST</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Match metadata declarations specified by <span class="arg">REGEXP</span> from point to <span class="arg">LAST</span>.
+<p>These declarations must appear inside a metadata block that begins at
+the beginning of the buffer and ends with a blank line (or the end of
+the buffer).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-match-generic-metadata</span> (regexp last)
+  <span class="doc">"Match metadata declarations specified by REGEXP from point to LAST.
+These declarations must appear inside a metadata block that begins at
+the beginning of the buffer and ends with a blank line (or the end of
+the buffer)."</span>
+  (<span class="k">let*</span> ((first (point))
+         (end-re <span class="s">"\n[ \t]*\n</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\n\\'</span><span class="rx-gr-bs m s">\\</span><span class="rx-gr m s">|</span><span class="m s">\\</span><span class="s">'"</span>)
+         (block-begin (goto-char 1))
+         (block-end (re-search-forward end-re nil t)))
+    (<span class="k">if</span> (<span class="k">and</span> block-end (&gt; first block-end))
+        <span class="cd">;; </span><span class="c">Don't match declarations if there is no metadata block or if
+</span>        <span class="cd">;; </span><span class="c">the point is beyond the block.  Move point to point-max to
+</span>        <span class="cd">;; </span><span class="c">prevent additional searches and return return nil since nothing
+</span>        <span class="cd">;; </span><span class="c">was found.
+</span>        (<span class="k">progn</span> (goto-char (point-max)) nil)
+      <span class="cd">;; </span><span class="c">If a block was found that begins before LAST and ends after
+</span>      <span class="cd">;; </span><span class="c">point, search for declarations inside it.  If the starting is
+</span>      <span class="cd">;; </span><span class="c">before the beginning of the block, start there. Otherwise,
+</span>      <span class="cd">;; </span><span class="c">move back to FIRST.
+</span>      (goto-char (<span class="k">if</span> (&lt; first block-begin) block-begin first))
+      (<span class="k">if</span> (<span class="k">and</span> (re-search-forward regexp (min last block-end) t)
+               (markdown-metadata-line-p (point) regexp))
+          <span class="cd">;; </span><span class="c">If a metadata declaration is found, set match-data and return t.
+</span>          (<span class="k">let</span> ((key-beginning (match-beginning 1))
+                (key-end (match-end 1))
+                (markup-begin (match-beginning 2))
+                (markup-end (match-end 2))
+                (value-beginning (match-beginning 3)))
+            (set-match-data (list key-beginning (point) <span class="cd">; </span><span class="c">complete metadata
+</span>                                  key-beginning key-end <span class="cd">; </span><span class="c">key
+</span>                                  markup-begin markup-end <span class="cd">; </span><span class="c">markup
+</span>                                  value-beginning (point))) <span class="cd">; </span><span class="c">value
+</span>            t)
+        <span class="cd">;; </span><span class="c">Otherwise, move the point to last and return nil
+</span>        (goto-char last)
+        nil))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

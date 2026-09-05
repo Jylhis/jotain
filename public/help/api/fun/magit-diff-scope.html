@@ -1,0 +1,78 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-diff-scope – Emacs Documentation Online</title>
+<meta name="description" content="magit-diff-scope is a natively compiled function defined in
+magit-diff.el.
+Return the diff scope of SECTION or the selected section(s).">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-diff-scope</code></h1><p><span class="m"><code>magit-diff-scope</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-diff-scope <span class="ty">&amp;optional</span> (<a href="#:~:text=of-,SECTION"><span class="arg">SECTION</span></a> nil SSECTION) <a href="#:~:text=optional-,STRICT"><span class="arg">STRICT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the diff scope of <span class="arg">SECTION</span> or the selected section(s).
+<p>A diff's "scope" describes what part of a diff is selected, it is
+a symbol, one of <span class="m"><code>region</code></span>, <span class="m"><code>hunk</code></span>, <span class="m"><code>hunks</code></span>, <span class="m"><code>file</code></span>, <span class="m"><code>files</code></span>, or
+<a href="../fun/list.html"><code>list</code></a>.  Do not confuse this with the diff "type", as returned by
+<a href="../fun/magit-diff-type.html"><code>magit-diff-type</code></a>.
+<p>If optional <span class="arg">SECTION</span> is non-nil, then return the scope of that,
+ignoring the sections selected by the region.  Otherwise return
+the scope of the current section, or if the region is active and
+selects a valid group of diff related sections, the type of these
+sections, i.e., <span class="m"><code>hunks</code></span> or <span class="m"><code>files</code></span>.  If <span class="arg">SECTION</span>, or if that is nil
+the current section, is a <span class="m"><code>hunk</code></span> section; and the region region
+starts and ends inside the body of a that section, then the type
+is <span class="m"><code>region</code></span>.  If the region is empty after a mouse click, then
+<span class="m"><code>hunk</code></span> is returned instead of <span class="m"><code>region</code></span>.
+<p>If optional <span class="arg">STRICT</span> is non-nil, then return nil if the diff type of
+the section at point is <span class="m"><code>untracked</code></span> or the section at point is not
+actually a <a href="../fun/diff.html"><code>diff</code></a> but a <span class="m"><code>diffstat</code></span> section.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-diff.el</span>
+(<span class="k">cl-defun</span> <span class="f">magit-diff-scope</span> (<span class="ty">&amp;optional</span> (section nil ssection) strict)
+  <span class="doc">"Return the diff scope of SECTION or the selected section(s).
+
+A diff's \"scope\" describes what part of a diff is selected, it is
+a symbol, one of `</span><span class="m doc">region</span><span class="doc">', `</span><span class="m doc">hunk</span><span class="doc">', `</span><span class="m doc">hunks</span><span class="doc">', `</span><span class="m doc">file</span><span class="doc">', `</span><span class="m doc">files</span><span class="doc">', or
+`</span><span class="m doc">list</span><span class="doc">'.  Do not confuse this with the diff \"type\", as returned by
+`</span><span class="m doc">magit-diff-type</span><span class="doc">'.
+
+If optional SECTION is non-nil, then return the scope of that,
+ignoring the sections selected by the region.  Otherwise return
+the scope of the current section, or if the region is active and
+selects a valid group of diff related sections, the type of these
+sections, i.e., `</span><span class="m doc">hunks</span><span class="doc">' or `</span><span class="m doc">files</span><span class="doc">'.  If SECTION, or if that is nil
+the current section, is a `</span><span class="m doc">hunk</span><span class="doc">' section; and the region region
+starts and ends inside the body of a that section, then the type
+is `</span><span class="m doc">region</span><span class="doc">'.  If the region is empty after a mouse click, then
+`</span><span class="m doc">hunk</span><span class="doc">' is returned instead of `</span><span class="m doc">region</span><span class="doc">'.
+
+If optional STRICT is non-nil, then return nil if the diff type of
+the section at point is `</span><span class="m doc">untracked</span><span class="doc">' or the section at point is not
+actually a `</span><span class="m doc">diff</span><span class="doc">' but a `</span><span class="m doc">diffstat</span><span class="doc">' section."</span>
+  (<span class="k">let</span> ((siblings (<span class="k">and</span> (not ssection) (magit-region-sections nil t))))
+    (<span class="k">setq</span> section (<span class="k">or</span> section (car siblings) (magit-current-section)))
+    (<span class="k">when</span> (<span class="k">and</span> section
+               (<span class="k">or</span> (not strict)
+                   (<span class="k">and</span> (not (eq (magit-diff-type section) 'untracked))
+                        (not (eq (and$ (<span class="k">oref</span> section parent)
+                                       (<span class="k">oref</span> $ type))
+                                 'diffstat)))))
+      (<span class="k">pcase</span> (list (<span class="k">oref</span> section type)
+                   (<span class="k">and</span> siblings t)
+                   (magit-diff-use-hunk-region-p)
+                   ssection)
+        (`(hunk   nil   t  ,_)
+         (<span class="k">if</span> (magit-section-internal-region-p section) 'region 'hunk))
+        ('(hunk     t   t nil) 'hunks)
+        (`(hunk    ,_  ,_  ,_) 'hunk)
+        ('(file     t   t nil) 'files)
+        (`(file    ,_  ,_  ,_) 'file)
+        ('(module   t   t nil) 'files)
+        (`(module  ,_  ,_  ,_) 'file)
+        (`(,(<span class="k">or</span> 'staged 'unstaged 'untracked) nil ,_ ,_) 'list)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

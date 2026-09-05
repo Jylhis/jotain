@@ -1,0 +1,42 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-unlinked-references--rg-command – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-unlinked-references--rg-command is a natively compiled
+function defined in org-roam-mode.el.
+Return the ripgrep command searching for TITLES using TEMP-FILE for pattern.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-unlinked-references--rg-command</code></h1><p><span class="m"><code>org-roam-unlinked-references--rg-command</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">org-roam-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-unlinked-references--rg-command <a href="#:~:text=for-,TITLES"><span class="arg">TITLES</span></a> <a href="#:~:text=using-,TEMP-FILE"><span class="arg">TEMP-FILE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the ripgrep command searching for <span class="arg">TITLES</span> using <span class="arg">TEMP-FILE</span> for pattern.
+<p>This avoids shell escaping issues by writing the pattern to a file instead
+of passing it directly through the shell command line.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-mode.el</span>
+(<span class="k">defun</span> <span class="f">org-roam-unlinked-references--rg-command</span> (titles temp-file)
+  <span class="doc">"Return the ripgrep command searching for TITLES using TEMP-FILE for pattern.
+This avoids shell escaping issues by writing the pattern to a file instead
+of passing it directly through the shell command line."</span>
+  <span class="cd">;; </span><span class="c">Write pattern to temp file to avoid shell escaping issues with quotes,
+</span>  <span class="cd">;; </span><span class="c">spaces, and other special characters in titles
+</span>  (<span class="k">with-temp-file</span> temp-file
+    (insert <span class="s">"\\[([</span><span class="neg s">^</span><span class="s">[]]++|(?R))*\\]"</span>
+            (mapconcat (<span class="k">lambda</span> (title)
+                         <span class="cd">;; </span><span class="c">Use regexp-quote instead of shell-quote-argument
+</span>                         <span class="cd">;; </span><span class="c">since we're writing a regex pattern, not a shell argument
+</span>                         (format <span class="s">"|(\\b%s\\b)"</span> (regexp-quote title)))
+                       titles <span class="s">""</span>)))
+
+  (concat <span class="s">"rg --follow --only-matching --vimgrep --pcre2 --ignore-case "</span>
+          (mapconcat (<span class="k">lambda</span> (glob) (concat <span class="s">"--glob "</span> glob))
+                     (org-roam--list-files-search-globs org-roam-file-extensions)
+                     <span class="s">" "</span>)
+          <span class="s">" --file "</span> (shell-quote-argument temp-file) <span class="s">" "</span>
+          (shell-quote-argument (expand-file-name org-roam-directory))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

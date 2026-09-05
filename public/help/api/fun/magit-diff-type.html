@@ -1,0 +1,99 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-diff-type – Emacs Documentation Online</title>
+<meta name="description" content="magit-diff-type is a natively compiled function defined in
+magit-diff.el.
+Return the diff type of SECTION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-diff-type</code></h1><p><span class="m"><code>magit-diff-type</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-diff-type <span class="ty">&amp;optional</span> <a href="#:~:text=of-,SECTION"><span class="arg">SECTION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the diff type of <span class="arg">SECTION</span>.
+<p>The returned type is one of the symbols <span class="m"><code>staged</code></span>, <span class="m"><code>unstaged</code></span>,
+<span class="m"><code>committed</code></span>, or <a href="../fun/undefined.html"><code>undefined</code></a>.  This type serves a similar purpose
+as the general type common to all sections (which is stored in
+the <span class="m"><code>type</code></span> slot of the corresponding <a class="v" href="../var/magit-section.html"><code>magit-section</code>(var)</a>/<a class="f" href="../fun/magit-section.html"><code>magit-section</code>(fun)</a> struct) but
+takes additional information into account.  When the <span class="arg">SECTION</span>
+isn't related to diffs and the buffer containing it also isn't
+a diff-only buffer, then return nil.
+<p>Currently the type can also be one of <span class="m"><code>tracked</code></span> and <span class="m"><code>untracked</code></span>
+but these values are not handled explicitly everywhere they
+should be and a possible fix could be to just return nil here.
+<p>The section has to be a <a href="../fun/diff.html"><code>diff</code></a> or <span class="m"><code>hunk</code></span> section, or a section
+whose children are of type <a href="../fun/diff.html"><code>diff</code></a>.  If optional <span class="arg">SECTION</span> is nil,
+return the diff type for the current section.  In buffers whose
+major mode is <a href="../fun/magit-diff-mode.html"><code>magit-diff-mode</code></a> <span class="arg">SECTION</span> is ignored and the type
+is determined using other means.  In <a href="../fun/magit-revision-mode.html"><code>magit-revision-mode</code></a>
+buffers the type is always <span class="m"><code>committed</code></span>.
+<p>Do not confuse this with <a href="../fun/magit-diff-scope.html"><code>magit-diff-scope</code></a> (which see).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-diff.el</span>
+<span class="cd">;;; </span><span class="c">Diff Information
+</span>
+(<span class="k">defun</span> <span class="f">magit-diff-type</span> (<span class="ty">&amp;optional</span> section)
+  <span class="doc">"Return the diff type of SECTION.
+
+The returned type is one of the symbols `</span><span class="m doc">staged</span><span class="doc">', `</span><span class="m doc">unstaged</span><span class="doc">',
+`</span><span class="m doc">committed</span><span class="doc">', or `</span><span class="m doc">undefined</span><span class="doc">'.  This type serves a similar purpose
+as the general type common to all sections (which is stored in
+the `</span><span class="m doc">type</span><span class="doc">' slot of the corresponding `</span><span class="m doc">magit-section</span><span class="doc">' struct) but
+takes additional information into account.  When the SECTION
+isn't related to diffs and the buffer containing it also isn't
+a diff-only buffer, then return nil.
+
+Currently the type can also be one of `</span><span class="m doc">tracked</span><span class="doc">' and `</span><span class="m doc">untracked</span><span class="doc">'
+but these values are not handled explicitly everywhere they
+should be and a possible fix could be to just return nil here.
+
+The section has to be a `</span><span class="m doc">diff</span><span class="doc">' or `</span><span class="m doc">hunk</span><span class="doc">' section, or a section
+whose children are of type `</span><span class="m doc">diff</span><span class="doc">'.  If optional SECTION is nil,
+return the diff type for the current section.  In buffers whose
+major mode is `</span><span class="m doc">magit-diff-mode</span><span class="doc">' SECTION is ignored and the type
+is determined using other means.  In `</span><span class="m doc">magit-revision-mode</span><span class="doc">'
+buffers the type is always `</span><span class="m doc">committed</span><span class="doc">'.
+
+Do not confuse this with `</span><span class="m doc">magit-diff-scope</span><span class="doc">' (which see)."</span>
+  (<span class="k">when-let</span> ((section (<span class="k">or</span> section (magit-current-section))))
+    (<span class="k">cond</span> ((derived-mode-p 'magit-revision-mode 'magit-stash-mode) 'committed)
+          ((derived-mode-p 'magit-diff-mode)
+           (<span class="k">cond</span>
+             (magit-buffer-diff-type)
+             ((equal magit-buffer-diff-typearg <span class="s">"--no-index"</span>)
+              'undefined)
+             ((not magit-buffer-diff-range)
+              'undefined)
+             ((string-search <span class="s">"."</span> magit-buffer-diff-range)
+              'committed)
+             ((magit-rev-head-p magit-buffer-diff-range)
+              (<span class="k">if</span> (equal magit-buffer-diff-typearg <span class="s">"--cached"</span>)
+                  'staged
+                'unstaged))
+             ('committed)))
+          ((derived-mode-p 'magit-status-mode)
+           (<span class="k">pcase</span> (<span class="k">oref</span> section type)
+             ((<span class="k">and</span> type (<span class="k">or</span> 'staged 'unstaged 'tracked 'untracked))
+              type)
+             ((<span class="k">or</span> 'file 'module)
+              (<span class="k">let*</span> ((parent (<span class="k">oref</span> section parent))
+                     (type   (<span class="k">oref</span> parent type)))
+                (<span class="k">if</span> (memq type '(file module))
+                    (magit-diff-type parent)
+                  type)))
+             ('hunk (<span class="k">thread-first</span> section
+                      (<span class="k">oref</span> parent)
+                      (<span class="k">oref</span> parent)
+                      (<span class="k">oref</span> type)))))
+          ((derived-mode-p 'magit-log-mode)
+           (<span class="k">if</span> (<span class="k">or</span> (<span class="k">and</span> (magit-section-match 'commit section)
+                        (<span class="k">oref</span> section children))
+                   (magit-section-match [* file commit] section))
+               'committed
+             'undefined))
+          ('undefined))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

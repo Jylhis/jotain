@@ -1,0 +1,45 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-revert-arguments – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-revert-arguments is a natively compiled function defined in
+majutsu-revert.el.
+Return the current revert arguments.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-revert-arguments</code></h1><p><span class="m"><code>majutsu-revert-arguments</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-revert.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-revert-arguments)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the current revert arguments.
+<p>If inside the transient, return transient args unchanged.
+Otherwise, if point is on a revision and args are missing source or
+destination, fill with --revisions and --insert-after defaults.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-revert.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-revert-arguments</span> ()
+  <span class="doc">"Return the current revert arguments.
+If inside the transient, return transient args unchanged.
+Otherwise, if point is on a revision and args are missing source or
+destination, fill with --revisions and --insert-after defaults."</span>
+  (<span class="k">let*</span> ((inside-transient (eq transient-current-command 'majutsu-revert))
+         (args (<span class="k">if</span> inside-transient
+                   (transient-args 'majutsu-revert)
+                 '())))
+    (<span class="k">unless</span> inside-transient
+      (<span class="k">when-let*</span> ((rev (magit-section-value-if 'jj-commit)))
+        (<span class="k">unless</span> (seq-some (<span class="k">lambda</span> (arg)
+                            (string-prefix-p <span class="s">"--revisions="</span> arg))
+                          args)
+          (<span class="k">setq</span> args (append args (list (concat <span class="s">"--revisions="</span> rev)))))
+        (<span class="k">unless</span> (seq-some (<span class="k">lambda</span> (arg)
+                            (<span class="k">or</span> (string-prefix-p <span class="s">"--onto="</span> arg)
+                                (string-prefix-p <span class="s">"--insert-after="</span> arg)
+                                (string-prefix-p <span class="s">"--insert-before="</span> arg)))
+                          args)
+          (<span class="k">setq</span> args (append args (list (concat <span class="s">"--insert-after="</span> rev)))))))
+    args))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

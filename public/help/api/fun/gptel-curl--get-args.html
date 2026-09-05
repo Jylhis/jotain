@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-curl--get-args – Emacs Documentation Online</title>
+<meta name="description" content="gptel-curl--get-args is a natively compiled function defined in
+gptel-request.el.
+Produce list of arguments for calling Curl.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-curl--get-args</code></h1><p><span class="m"><code>gptel-curl--get-args</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-curl--get-args <a href="#:~:text=Curl.-,INFO"><span class="arg">INFO</span></a> <a href="#:~:text=data,-,UUID"><span class="arg">UUID</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Produce list of arguments for calling Curl.
+<p><span class="arg">INFO</span> contains the request data, <span class="arg">UUID</span> is a unique identifier.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+(<span class="k">defun</span> <span class="f">gptel-curl--get-args</span> (info uuid)
+  <span class="doc">"Produce list of arguments for calling Curl.
+
+INFO contains the request data, UUID is a unique identifier."</span>
+  (<span class="k">let*</span> (<span class="cd">;; </span><span class="c">We have to let-bind the following three since their dynamic
+</span>         <span class="cd">;; </span><span class="c">values are used for key lookup and url resolution
+</span>         (gptel-backend (plist-get info <span class="bi">:backend</span>))
+         (gptel-model (plist-get info <span class="bi">:model</span>))
+         (gptel-stream (plist-get info <span class="bi">:stream</span>))
+         (url (<span class="k">let</span> ((backend-url (gptel-backend-url gptel-backend)))
+                (<span class="k">gptel--maybe-funcall</span> backend-url info)))
+         (data (plist-get info <span class="bi">:data</span>))
+         (data-json (decode-coding-string (<span class="k">gptel--json-encode</span> data) 'utf-8 t)))
+    (<span class="k">when</span> gptel-log-level
+      (gptel--log data-json <span class="s">"request body"</span>))
+    (append
+     (gptel-curl--get-config-args info)
+     (<span class="k">cl-loop</span>
+      for (key . val) in
+      (append '((<span class="s">"Content-Type"</span> . <span class="s">"application/json"</span>))
+              (<span class="k">when-let*</span> ((header (gptel-backend-header gptel-backend)))
+                (<span class="k">gptel--maybe-funcall</span> header info)))
+      collect (format <span class="s">"-H%s: %s"</span> key val))
+     (list (format <span class="s">"-w(%s . %%{size_header})"</span> uuid))
+     (list (format <span class="s">"-d%s"</span> data-json))
+     (<span class="k">when</span> (not (string-empty-p gptel-proxy))
+       (list <span class="s">"--proxy"</span> gptel-proxy
+             <span class="s">"--proxy-negotiate"</span>
+             <span class="s">"--proxy-user"</span> <span class="s">":"</span>))
+     (list url))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

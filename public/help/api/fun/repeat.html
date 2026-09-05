@@ -1,0 +1,139 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: repeat – Emacs Documentation Online</title>
+<meta name="description" content="repeat is an autoloaded, interactive and natively compiled function
+defined in repeat.el.gz.
+Repeat most recently executed command.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>repeat</code></h1><p><span class="m"><code>repeat</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a>, <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <a href="../src/repeat.el.html">repeat.el.gz</a>.
+<h2>Signature</h2>
+<pre><code>(repeat <a href="#:~:text=If-,REPEAT-ARG"><span class="arg">REPEAT-ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Repeat most recently executed command.
+<p>If <span class="arg">REPEAT-ARG</span> is non-nil (interactively, with a prefix argument),
+supply a prefix argument to that command.  Otherwise, give the
+command the same prefix argument it was given before, if any.
+<p>If this command is invoked by a multi-character key sequence, it
+can then be repeated by repeating the final character of that
+sequence.  This behavior can be modified by the global variable
+<a href="../var/repeat-on-final-keystroke.html"><code>repeat-on-final-keystroke</code></a>.
+<p><a href="../fun/repeat.html"><code>repeat</code></a> ignores commands bound to input events.  Hence the term
+<br>"most recently executed command" shall be read as "most
+<br>recently executed command not bound to an input event".
+<p><a href="/info/emacs/repeating.html#index-repeat">View in manual</a>
+<p>Probably introduced at or before Emacs version <a href="../etc/NEWS.20.html">20.3</a>.
+<h2>Key Bindings</h2>
+<p><span class="v">ctl-x-map</span> <span class="key">z</span>
+<span class="v">global-map</span> <span class="key">C-x z</span>
+<span class="v">help-quick-use-map</span> <span class="key">C-x z</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><a href="../src/repeat.el.html">/usr/src/emacs/lisp/repeat.el.gz</a>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">repeat</span> (repeat-arg)
+  <span class="doc">"Repeat most recently executed command.
+If REPEAT-ARG is non-nil (interactively, with a prefix argument),
+supply a prefix argument to that command.  Otherwise, give the
+command the same prefix argument it was given before, if any.
+
+If this command is invoked by a multi-character key sequence, it
+can then be repeated by repeating the final character of that
+sequence.  This behavior can be modified by the global variable
+`</span><span class="m doc">repeat-on-final-keystroke</span><span class="doc">'.
+
+`</span><span class="m doc">repeat</span><span class="doc">' ignores commands bound to input events.  Hence the term
+\"most recently executed command\" shall be read as \"most
+recently executed command not bound to an input event\"."</span>
+  <span class="cd">;; </span><span class="c">The most recently executed command could be anything, so surprises could
+</span>  <span class="cd">;; </span><span class="c">result if it were re-executed in a context where new dynamically
+</span>  <span class="cd">;; </span><span class="c">localized variables were shadowing global variables in a `</span><span class="m c">let</span><span class="c">' clause in
+</span>  <span class="cd">;; </span><span class="c">here.  (Remember that GNU Emacs 19 is dynamically localized.)
+</span>  <span class="cd">;; </span><span class="c">To avoid that, I tried the `</span><span class="m c">lexical-let</span><span class="c">' of the Common Lisp extensions,
+</span>  <span class="cd">;; </span><span class="c">but that entails a very noticeable performance hit, so instead I use the
+</span>  <span class="cd">;; </span><span class="c">"repeat-" prefix, reserved by this package, for *local* variables that
+</span>  <span class="cd">;; </span><span class="c">might be visible to re-executed commands, including this function's arg.
+</span>  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">when</span> (eq last-repeatable-command 'repeat)
+    (<span class="k">setq</span> last-repeatable-command repeat-previous-repeated-command))
+  (<span class="k">cond</span>
+   ((null last-repeatable-command)
+    (<span class="w">error</span> <span class="s">"There is nothing to repeat"</span>))
+   ((eq last-repeatable-command 'mode-exit)
+    (<span class="w">error</span> <span class="s">"`</span><span class="m s">last-repeatable-command</span><span class="s">' is `</span><span class="m s">mode-exit</span><span class="s">' and can't be repeated"</span>))
+   ((memq last-repeatable-command repeat-too-dangerous)
+    (<span class="w">error</span> <span class="s">"Command %S too dangerous to repeat automatically"</span>
+	   last-repeatable-command)))
+  (<span class="k">setq</span> this-command last-repeatable-command
+	repeat-previous-repeated-command last-repeatable-command
+        repeat-num-input-keys-at-repeat num-input-keys)
+  (<span class="k">when</span> (null repeat-arg)
+    (<span class="k">setq</span> repeat-arg last-prefix-arg))
+  <span class="cd">;; </span><span class="c">Now determine whether to loop on repeated taps of the final character
+</span>  <span class="cd">;; </span><span class="c">of the key sequence that invoked repeat.  The Emacs global
+</span>  <span class="cd">;; </span><span class="c">last-command-event contains the final character now, but may not still
+</span>  <span class="cd">;; </span><span class="c">contain it after the previous command is repeated, so the character
+</span>  <span class="cd">;; </span><span class="c">needs to be saved.
+</span>  (<span class="k">let</span> ((repeat-repeat-char
+         (<span class="k">if</span> (eq repeat-on-final-keystroke t)
+	     last-command-event
+           <span class="cd">;; </span><span class="c">Allow only specified final keystrokes.
+</span>           (car (memq last-command-event
+                      (listify-key-sequence
+                       repeat-on-final-keystroke))))))
+    (<span class="k">if</span> (eq last-repeatable-command (caar command-history))
+        (<span class="k">let</span> ((repeat-command (car command-history)))
+          (repeat-message <span class="s">"Repeating %S"</span> repeat-command)
+          (eval repeat-command))
+      (<span class="k">if</span> (null repeat-arg)
+          (repeat-message <span class="s">"Repeating command %S"</span> last-repeatable-command)
+        (<span class="k">setq</span> current-prefix-arg repeat-arg)
+        (repeat-message
+	 <span class="s">"Repeating command %S %S"</span> repeat-arg last-repeatable-command))
+      (<span class="k">when</span> (eq last-repeatable-command 'self-insert-command)
+        <span class="cd">;; </span><span class="c">We used to use a much more complex code to try and figure out
+</span>        <span class="cd">;; </span><span class="c">what key was used to run that self-insert-command:
+</span>        <span class="cd">;; </span><span class="c">(if (&lt;= (- num-input-keys
+</span>        <span class="cd">;;            </span><span class="c">repeat-num-input-keys-at-self-insert)
+</span>        <span class="cd">;;         </span><span class="c">1)
+</span>        <span class="cd">;;     </span><span class="c">repeat-last-self-insert
+</span>        <span class="cd">;;   </span><span class="c">(let ((range (nth 1 buffer-undo-list)))
+</span>        <span class="cd">;;     </span><span class="c">(condition-case nil
+</span>        <span class="cd">;;         </span><span class="c">(setq repeat-last-self-insert
+</span>        <span class="cd">;;               </span><span class="c">(buffer-substring (car range)
+</span>        <span class="cd">;;                                 </span><span class="c">(cdr range)))
+</span>        <span class="cd">;;       </span><span class="c">(error (error "%s %s %s"  ;Danger, Will Robinson!
+</span>        <span class="cd">;;                     </span><span class="c">"repeat can't intuit what you"
+</span>        <span class="cd">;;                     </span><span class="c">"inserted before auto-fill"
+</span>        <span class="cd">;;                     </span><span class="c">"clobbered it, sorry")))))
+</span>        (<span class="k">setq</span> last-command-event (char-before)))
+      (<span class="k">let</span> ((indirect (indirect-function last-repeatable-command)))
+        (<span class="k">if</span> (<span class="k">or</span> (stringp indirect)
+                (vectorp indirect))
+            <span class="cd">;; </span><span class="c">Bind last-repeatable-command so that executing the macro does
+</span>            <span class="cd">;; </span><span class="c">not alter it.
+</span>            (<span class="k">let</span> ((last-repeatable-command last-repeatable-command))
+              (execute-kbd-macro last-repeatable-command))
+          (call-interactively last-repeatable-command))))
+    (<span class="k">when</span> repeat-repeat-char
+      (set-transient-map
+       (<span class="k">let</span> ((map (make-sparse-keymap)))
+         (define-key map (vector repeat-repeat-char)
+           (<span class="k">if</span> (null repeat-message-function) 'repeat
+             <span class="cd">;; </span><span class="c">If repeat-message-function is let-bound, preserve it for the
+</span>             <span class="cd">;; </span><span class="c">next "iterations of the loop".
+</span>             (<span class="k">let</span> ((fun repeat-message-function))
+               (<span class="k">lambda</span> ()
+                 (<span class="k">interactive</span>)
+                 (<span class="k">let</span> ((repeat-message-function fun))
+                   (<span class="k">setq</span> this-command 'repeat)
+		   <span class="cd">;; </span><span class="c">Beware: messing with `</span><span class="m c">real-this-command</span><span class="c">' is *bad*, but we
+</span>		   <span class="cd">;; </span><span class="c">need it so `</span><span class="m c">last-repeatable-command</span><span class="c">' can be recognized
+</span>		   <span class="cd">;; </span><span class="c">later (bug#12232).
+</span>                   (<span class="k">setq</span> real-this-command 'repeat)
+                   (call-interactively 'repeat))))))
+         map)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

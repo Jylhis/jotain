@@ -1,0 +1,116 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-token-html-indentation – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-token-html-indentation is a natively compiled function
+defined in web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-token-html-indentation</code></h1><p><span class="m"><code>web-mode-token-html-indentation</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-token-html-indentation <span class="arg">POS</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-token-html-indentation</span> (pos)
+  (<span class="k">save-excursion</span>
+    (<span class="k">let</span> (beg (continue t) end level map offset regexp tag val void (css-beg 0))
+      (goto-char pos)
+      <span class="cd">;;</span><span class="c">(message "pos=%S" pos)
+</span>      (<span class="k">setq</span> beg (web-mode-part-token-beginning-position pos))
+      (<span class="k">save-excursion</span>
+        (<span class="k">when</span> (<span class="k">and</span> (&gt; (- pos beg) 5)
+                   (re-search-backward <span class="s">"&lt;/?[a-zA-Z0-9]+"</span> beg t)
+                   (string= <span class="s">"&lt;style"</span> (downcase (match-string-no-properties 0))))
+          (<span class="k">setq</span> css-beg (point))
+          )
+        )
+      <span class="cd">;;</span><span class="c">(message "beg=%S" beg)
+</span>      (<span class="k">cond</span>
+        ((eq (char-after pos) ?\`)
+         (<span class="k">setq</span> offset (web-mode-indentation-at-pos beg)))
+        ((web-mode-looking-back <span class="s">"`[ \n\t]*"</span> pos)
+         (<span class="k">setq</span> offset (+ (web-mode-indentation-at-pos beg) web-mode-markup-indent-offset)))
+        ((looking-at <span class="s">"&lt;/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[a-zA-Z0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+         (<span class="k">setq</span> tag (match-string-no-properties 1)
+               regexp (concat <span class="s">"&lt;/?"</span> tag)
+               level -1)
+         (<span class="k">while</span> (<span class="k">and</span> continue (re-search-backward regexp beg t))
+           (<span class="k">cond</span>
+             ((eq (aref (match-string-no-properties 0) 1) ?\/)
+              (<span class="k">setq</span> level (1- level)))
+             (t
+              (<span class="k">setq</span> level (1+ level)))
+             ) <span class="cd">;</span><span class="c">cond
+</span>           (<span class="k">when</span> (= level 0)
+             (<span class="k">setq</span> continue nil
+                   offset (current-indentation)))
+           ) <span class="cd">;</span><span class="c">while
+</span>         )
+        ((&gt; css-beg 0)
+         <span class="cd">;;</span><span class="c">(message "CSS")
+</span>         (<span class="k">cond</span>
+           ((member (char-after) '(?\) ?\} ?\]))
+            (web-mode-go (web-mode-token-opening-paren-position pos (+ css-beg 8) <span class="s">""</span>))
+            (<span class="k">setq</span> offset (current-indentation))
+            )
+           ((<span class="k">setq</span> level (web-mode-bracket-level pos (+ css-beg 8)))
+            (<span class="k">setq</span> offset (+ level web-mode-css-indent-offset))
+            )
+           (t
+            (<span class="k">setq</span> offset (+ (web-mode-indentation-at-pos css-beg) web-mode-style-padding))
+            ) <span class="cd">;</span><span class="c">t
+</span>           )
+         )
+        ((looking-at <span class="s">"[a-zA-Z-]+[ ]?="</span>)
+         (re-search-backward <span class="s">"&lt;[a-zA-Z]+[ ]*"</span> beg t)
+         (<span class="k">setq</span> offset (+ (current-column) (length (match-string-no-properties 0))))
+         )
+        ((looking-at-p <span class="s">"/&gt;"</span>)
+         (search-backward <span class="s">"&lt;"</span> beg t)
+         (<span class="k">setq</span> offset (current-column))
+         )
+        (t
+         (<span class="k">setq</span> regexp <span class="s">"&lt;/?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[a-zA-Z0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+         <span class="cd">;;</span><span class="c">(message "point=%S" (point))
+</span>         (<span class="k">while</span> (<span class="k">and</span> continue (re-search-backward regexp beg t))
+           (<span class="k">setq</span> tag (downcase (match-string-no-properties 1))
+                 end nil
+                 void nil)
+           (<span class="k">cond</span>
+             ((eq (aref (match-string-no-properties 0) 1) ?/)
+              (<span class="k">setq</span> end t))
+             ((web-mode-element-is-void tag)
+              (<span class="k">setq</span> void t))
+             (t
+              (<span class="k">save-excursion</span>
+                (<span class="k">when</span> (<span class="k">and</span> (search-forward <span class="s">"&gt;"</span> pos t) (eq (char-before (1- (point))) ?\/))
+                  (<span class="k">setq</span> void t))
+                ) <span class="cd">;</span><span class="c">save-excursion
+</span>              ) <span class="cd">;</span><span class="c">t
+</span>             ) <span class="cd">;</span><span class="c">cond
+</span>           (<span class="k">unless</span> void
+             (<span class="k">setq</span> val (<span class="k">or</span> (lax-plist-get map tag) 0))
+             (<span class="k">setq</span> val (<span class="k">if</span> end (1- val) (1+ val)))
+             (<span class="k">setq</span> map (lax-plist-put map tag val))
+             <span class="cd">;;</span><span class="c">(message "val=%S tag=%S end=%S | %S" val tag end (plist-get map tag))
+</span>             (<span class="k">setq</span> continue (not (&gt; val 0)))
+             ) <span class="cd">;</span><span class="c">unless
+</span>                                        <span class="cd">;</span><span class="c">(message "pos=%S tag=%S val=%S end=%S void=%S" (point) tag val end void)
+</span>           ) <span class="cd">;</span><span class="c">while
+</span>         (<span class="k">cond</span>
+           ((&gt; val 0)
+            <span class="cd">;;</span><span class="c">(message "point=%S" (point))
+</span>            <span class="cd">;;</span><span class="c">(goto-char (1+ beg))
+</span>            <span class="cd">;;</span><span class="c">(forward-char)
+</span>            <span class="cd">;;</span><span class="c">(re-search-forward "[[:space:]]*")
+</span>            (<span class="k">setq</span> offset (+ (current-indentation) web-mode-markup-indent-offset)))
+           (t
+            (<span class="k">setq</span> offset (current-indentation)))
+           )
+         ) <span class="cd">;</span><span class="c">t
+</span>        ) <span class="cd">;</span><span class="c">cond
+</span>      offset)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

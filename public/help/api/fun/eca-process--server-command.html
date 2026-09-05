@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-process--server-command – Emacs Documentation Online</title>
+<meta name="description" content="eca-process--server-command is a natively compiled function defined in
+eca-process.el.
+Return the command to start server.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-process--server-command</code></h1><p><span class="m"><code>eca-process--server-command</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-process.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-process--server-command)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the command to start server.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-process.el</span>
+(<span class="k">defun</span> <span class="f">eca-process--server-command</span> ()
+  <span class="doc">"Return the command to start server."</span>
+  (<span class="k">let</span> ((system-command (executable-find <span class="s">"eca"</span> (file-remote-p default-directory))))
+    (<span class="k">cond</span>
+     (eca-custom-command (list <span class="bi">:decision</span> 'custom
+                               <span class="bi">:command</span> eca-custom-command))
+
+     (system-command
+      (list <span class="bi">:decision</span> 'system
+            <span class="bi">:command</span> (list system-command <span class="s">"server"</span>)))
+
+     ((file-remote-p default-directory)
+      (list <span class="bi">:decision</span> 'error-download
+            <span class="bi">:message</span> <span class="s">"ECA not found on remote host. Install `eca` on the remote PATH or set `eca-custom-command` to the remote binary path. ECA does not auto-install over TRAMP."</span>))
+
+     ((<span class="k">and</span> (not (f-exists? eca-server-install-path))
+           (not (eca-process--get-latest-server-version)))
+      (list <span class="bi">:decision</span> 'error-download
+            <span class="bi">:message</span> <span class="s">"Could not fetch latest version of eca. Please check your internet connection and try again. You can also download eca manually and set the path via eca-custom-command variable"</span>))
+
+     ((f-exists? eca-server-install-path)
+      (<span class="k">let</span> ((current (eca-process--get-current-server-version))
+            (latest (eca-process--get-latest-server-version)))
+        (<span class="k">if</span> (<span class="k">or</span> (null latest) <span class="cd">;; </span><span class="c">cannot check for updates, use installed binary.
+</span>                (<span class="k">and</span> current (not (string-version-lessp current latest))))
+            (list <span class="bi">:decision</span> 'already-installed
+                  <span class="bi">:command</span> (list eca-server-install-path <span class="s">"server"</span>))
+          <span class="cd">;; </span><span class="c">Outdated, or version file missing (e.g. interrupted
+</span>          <span class="cd">;; </span><span class="c">update): reinstall to get back to a known version.
+</span>          (list <span class="bi">:decision</span> 'download
+                <span class="bi">:latest-version</span> latest
+                <span class="bi">:command</span> (list eca-server-install-path <span class="s">"server"</span>)))))
+
+     (t (list <span class="bi">:decision</span> 'download
+              <span class="bi">:latest-version</span> (eca-process--get-latest-server-version)
+              <span class="bi">:command</span> (list eca-server-install-path <span class="s">"server"</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

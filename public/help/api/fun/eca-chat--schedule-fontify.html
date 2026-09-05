@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--schedule-fontify – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--schedule-fontify is a natively compiled function defined in
+eca-chat.el.
+Schedule a deferred font-lock-ensure for the current chat buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--schedule-fontify</code></h1><p><span class="m"><code>eca-chat--schedule-fontify</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--schedule-fontify)
+</code></pre>
+<h2>Documentation</h2>
+<p>Schedule a deferred <a href="../fun/font-lock-ensure.html"><code>font-lock-ensure</code></a> for the current chat buffer.
+<p>Cancels any previously scheduled timer.  Does nothing when
+<a href="../var/eca-chat-fontify-debounce-interval.html"><code>eca-chat-fontify-debounce-interval</code></a> is nil, letting jit-lock cover
+visible-area fontification and relying on the final ensure at
+end-of-stream for correctness.
+<p>The scoped region runs from <a href="../var/eca-chat--last-user-message-pos.html"><code>eca-chat--last-user-message-pos</code></a> (the
+start of the current turn) to <a href="../fun/point-max.html"><code>point-max</code></a>, so cost is bounded by
+the new turn instead of the full chat history.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--schedule-fontify</span> ()
+  <span class="doc">"Schedule a deferred `</span><span class="m doc">font-lock-ensure</span><span class="doc">' for the current chat buffer.
+Cancels any previously scheduled timer.  Does nothing when
+`</span><span class="m doc">eca-chat-fontify-debounce-interval</span><span class="doc">' is nil, letting jit-lock cover
+visible-area fontification and relying on the final ensure at
+end-of-stream for correctness.
+
+The scoped region runs from `</span><span class="m doc">eca-chat--last-user-message-pos</span><span class="doc">' (the
+start of the current turn) to `</span><span class="m doc">point-max</span><span class="doc">', so cost is bounded by
+the new turn instead of the full chat history."</span>
+  (<span class="k">when</span> (timerp eca-chat--fontify-timer)
+    (cancel-timer eca-chat--fontify-timer))
+  (<span class="k">setq</span> eca-chat--fontify-timer nil)
+  (<span class="k">when</span> (numberp eca-chat-fontify-debounce-interval)
+    (<span class="k">let</span> ((buf (current-buffer)))
+      (<span class="k">setq</span> eca-chat--fontify-timer
+            (run-with-idle-timer
+             eca-chat-fontify-debounce-interval nil
+             (<span class="k">lambda</span> ()
+               (<span class="k">when</span> (buffer-live-p buf)
+                 (<span class="k">with-current-buffer</span> buf
+                   (<span class="k">setq</span> eca-chat--fontify-timer nil)
+                   (eca-chat--font-lock-ensure
+                    (<span class="k">or</span> eca-chat--last-user-message-pos (point-min))
+                    (point-max))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

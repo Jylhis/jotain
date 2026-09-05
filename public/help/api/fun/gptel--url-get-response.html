@@ -1,0 +1,115 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--url-get-response – Emacs Documentation Online</title>
+<meta name="description" content="gptel--url-get-response is a natively compiled function defined in
+gptel-request.el.
+Fetch response to prompt in state FSM from the LLM.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--url-get-response</code></h1><p><span class="m"><code>gptel--url-get-response</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--url-get-response <a href="#:~:text=state-,FSM"><span class="arg">FSM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Fetch response to prompt in state <span class="arg">FSM</span> from the LLM.
+<p><span class="arg">FSM</span> is the state machine driving this request.  Its INFO slot
+contains the data required for setting up the request.  INFO is a
+plist with the following keys, among others:
+<br>- :data     (the data being sent)
+<br>- :buffer   (the gptel buffer)
+<br>- :position (marker at which to insert the response).
+<br>- :callback (optional, the request callback)
+<p>Call CALLBACK with the response and INFO afterwards.  If omitted
+the response is inserted into the current buffer after point.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+<span class="cd">;;; </span><span class="c">url-retrieve response handling
+</span>(<span class="k">defun</span> <span class="f">gptel--url-get-response</span> (fsm)
+  <span class="doc">"Fetch response to prompt in state FSM from the LLM.
+
+FSM is the state machine driving this request.  Its INFO slot
+contains the data required for setting up the request.  INFO is a
+plist with the following keys, among others:
+- :data     (the data being sent)
+- :buffer   (the gptel buffer)
+- :position (marker at which to insert the response).
+- :callback (optional, the request callback)
+
+Call CALLBACK with the response and INFO afterwards.  If omitted
+the response is inserted into the current buffer after point."</span>
+  (<span class="k">let*</span> ((inhibit-message t)
+         (message-log-max nil)
+         (url-request-method <span class="s">"POST"</span>)
+         (info (gptel-fsm-info fsm))
+         <span class="cd">;; </span><span class="c">We have to let-bind the following two since their dynamic
+</span>         <span class="cd">;; </span><span class="c">values are used for key lookup and url resolution
+</span>         (gptel-backend (plist-get info <span class="bi">:backend</span>))
+         (gptel-model (plist-get info <span class="bi">:model</span>))
+         (url-request-extra-headers
+          (append '((<span class="s">"Content-Type"</span> . <span class="s">"application/json"</span>))
+                  (<span class="k">when-let*</span> ((header (gptel-backend-header gptel-backend)))
+                    (<span class="k">gptel--maybe-funcall</span> header info))))
+         (callback (<span class="k">or</span> (plist-get info <span class="bi">:callback</span>) <span class="cd">;</span><span class="c">if not the first run
+</span>                       #'gptel--insert-response)) <span class="cd">;</span><span class="c">default callback
+</span>         <span class="cd">;; </span><span class="c">NOTE: We don't need the decode-coding-string dance here since we
+</span>         <span class="cd">;; </span><span class="c">don't pass it to the OS environment and Curl.
+</span>         (url-request-data
+          (<span class="k">gptel--json-encode</span> (plist-get info <span class="bi">:data</span>))))
+    (<span class="k">when</span> (<span class="k">with-current-buffer</span> (plist-get info <span class="bi">:buffer</span>)
+            (<span class="k">and</span> (derived-mode-p 'org-mode)
+                 gptel-org-convert-response))
+      (plist-put info <span class="bi">:transformer</span> #'gptel--convert-markdown-&gt;org))
+    (plist-put info <span class="bi">:callback</span> callback)
+    (<span class="k">when</span> gptel-log-level               <span class="cd">;</span><span class="c">logging
+</span>      (<span class="k">when</span> (eq gptel-log-level 'debug)
+        (gptel--log (<span class="k">gptel--json-encode</span>
+                     (mapcar (<span class="k">lambda</span> (pair) (cons (intern (car pair)) (cdr pair)))
+                             url-request-extra-headers))
+                    <span class="s">"request headers"</span>))
+      (gptel--log url-request-data <span class="s">"request body"</span>))
+    (<span class="k">let</span> ((proc-buf
+           (url-retrieve (<span class="k">let</span> ((backend-url (gptel-backend-url gptel-backend)))
+                           (<span class="k">gptel--maybe-funcall</span> backend-url info))
+                         (<span class="k">lambda</span> (_)
+                           (set-buffer-multibyte t)
+                           (set-buffer-file-coding-system 'utf-8-unix)
+                           (<span class="k">pcase-let</span> ((`(,response ,http-status ,http-msg ,error)
+                                        (gptel--url-parse-response
+                                         (plist-get info <span class="bi">:backend</span>) info))
+                                       (buf (current-buffer)))
+                             (plist-put info <span class="bi">:http-status</span> http-status)
+                             (plist-put info <span class="bi">:status</span> http-msg)
+                             (gptel--fsm-transition fsm) <span class="cd">;</span><span class="c">WAIT -&gt; TYPE
+</span>                             (<span class="k">when</span> error (plist-put info <span class="bi">:error</span> error))
+                             (<span class="k">when</span> response <span class="cd">;</span><span class="c">Look for a reasoning block
+</span>                               (<span class="k">if</span> (string-match-p <span class="s">"^\\s-*&lt;think&gt;"</span> response)
+                                   (<span class="k">when-let*</span> ((idx (string-search <span class="s">"&lt;/think&gt;"</span> response)))
+                                     (<span class="k">with-demoted-errors</span> <span class="s">"gptel callback error: %S"</span>
+                                       (funcall callback
+                                                (cons 'reasoning
+                                                      (substring response nil (+ idx 8)))
+                                                info))
+                                     (<span class="k">setq</span> response (string-trim-left
+                                                     (substring response (+ idx 8)))))
+                                 (<span class="k">when-let*</span> ((reasoning (plist-get info <span class="bi">:reasoning</span>))
+                                             ((stringp reasoning)))
+                                   (funcall callback (cons 'reasoning reasoning) info))))
+                             (<span class="k">when</span> (<span class="k">or</span> response (not (member http-status '(<span class="s">"200"</span> <span class="s">"100"</span>))))
+                               (<span class="k">with-demoted-errors</span> <span class="s">"gptel callback error: %S"</span>
+                                 (funcall callback response info)))
+                             (gptel--fsm-transition fsm) <span class="cd">;</span><span class="c">TYPE -&gt; next
+</span>                             (<span class="k">setf</span> (alist-get buf gptel--request-alist nil 'remove) nil)
+                             (kill-buffer buf)))
+                         nil t nil)))
+      <span class="cd">;; </span><span class="c">TODO: Add transformer here.
+</span>      (<span class="k">setf</span> (alist-get proc-buf gptel--request-alist)
+            (cons fsm
+                  #'(<span class="k">lambda</span> ()
+                      (plist-put info <span class="bi">:callback</span> #'ignore)
+                      (<span class="k">let</span> (kill-buffer-query-functions)
+                        <span class="cd">;;</span><span class="c">Can't stop url-retrieve process
+</span>                        (kill-buffer proc-buf))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

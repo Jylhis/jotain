@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-forward-block – Emacs Documentation Online</title>
+<meta name="description" content="markdown-forward-block is an interactive and natively compiled
+function defined in markdown-mode.el.
+Move forward to the next end of a Markdown block.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-forward-block</code></h1><p><span class="m"><code>markdown-forward-block</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-forward-block <span class="ty">&amp;optional</span> <a href="#:~:text=argument-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Move forward to the next end of a Markdown block.
+<p>Moves across complete code blocks, list items, and blockquotes,
+but otherwise stops at blank lines, headers, and horizontal
+rules.  With argument <span class="arg">ARG</span>, do it <span class="arg">ARG</span> times; a negative argument
+<span class="arg">ARG</span> = -N means move backward N blocks.
+<h2>Key Bindings</h2>
+<p><span class="v">markdown-mode-map</span> <span class="key">C-M-}</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-forward-block</span> (<span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Move forward to the next end of a Markdown block.
+Moves across complete code blocks, list items, and blockquotes,
+but otherwise stops at blank lines, headers, and horizontal
+rules.  With argument ARG, do it ARG times; a negative argument
+ARG = -N means move backward N blocks."</span>
+  (<span class="k">interactive</span> <span class="s">"^p"</span>)
+  (<span class="k">or</span> arg (<span class="k">setq</span> arg 1))
+  (<span class="k">if</span> (&lt; arg 0)
+      (markdown-backward-block (- arg))
+    (<span class="k">dotimes</span> (_ arg)
+      <span class="cd">;; </span><span class="c">Skip over whitespace in between blocks when moving forward.
+</span>      (<span class="k">if</span> (markdown-cur-line-blank-p)
+          (skip-syntax-forward <span class="s">"-"</span>)
+        (beginning-of-line))
+      <span class="cd">;; </span><span class="c">Proceed forward based on the type of block.
+</span>      (<span class="k">cond</span>
+       <span class="cd">;; </span><span class="c">Code blocks
+</span>       ((markdown-code-block-at-point-p)
+        (forward-line)
+        (<span class="k">while</span> (<span class="k">and</span> (markdown-code-block-at-point-p) (not (eobp)))
+          (forward-line)))
+       <span class="cd">;; </span><span class="c">Headings
+</span>       ((looking-at markdown-regex-header)
+        (goto-char (<span class="k">or</span> (match-end 4) (match-end 2) (match-end 3)))
+        (forward-line))
+       <span class="cd">;; </span><span class="c">Horizontal rules
+</span>       ((looking-at markdown-regex-hr)
+        (forward-line))
+       <span class="cd">;; </span><span class="c">Blockquotes
+</span>       ((looking-at markdown-regex-blockquote)
+        (forward-line)
+        (<span class="k">while</span> (<span class="k">and</span> (looking-at markdown-regex-blockquote) (not (eobp)))
+          (forward-line)))
+       <span class="cd">;; </span><span class="c">List items
+</span>       ((markdown-cur-list-item-bounds)
+        (markdown-end-of-list)
+        (forward-line))
+       <span class="cd">;; </span><span class="c">Other
+</span>       (t (markdown-forward-paragraph))))
+    (skip-syntax-backward <span class="s">"-"</span>)
+    (<span class="k">unless</span> (eobp)
+      (forward-char 1))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

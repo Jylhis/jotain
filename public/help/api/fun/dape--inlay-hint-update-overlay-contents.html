@@ -1,0 +1,82 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--inlay-hint-update-overlay-contents – Emacs Documentation Online</title>
+<meta name="description" content="dape--inlay-hint-update-overlay-contents is a natively compiled
+function defined in dape.el.
+Update overlay after-string variables in SCOPES.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--inlay-hint-update-overlay-contents</code></h1><p><span class="m"><code>dape--inlay-hint-update-overlay-contents</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--inlay-hint-update-overlay-contents <a href="#:~:text=in-,SCOPES"><span class="arg">SCOPES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update overlay after-string variables in <span class="arg">SCOPES</span>.
+<p>This is a helper function for <a href="../fun/dape-inlay-hints-update.html"><code>dape-inlay-hints-update</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--inlay-hint-update-overlay-contents</span> (scopes)
+  <span class="doc">"Update overlay after-string variables in SCOPES.
+This is a helper function for `</span><span class="m doc">dape-inlay-hints-update</span><span class="doc">'."</span>
+  <span class="cd">;; </span><span class="c">1. Update each overlay's symbol list with (NAME VALUE UPDATED-P)
+</span>  (<span class="k">cl-loop</span>
+   with all-symbols =
+   (<span class="k">cl-loop</span> for overlay in dape--inlay-hint-overlays
+            when (overlayp overlay)
+            append (overlay-get overlay 'dape-symbols))
+   for scope in (reverse scopes) do
+   (<span class="k">cl-loop</span> for variable in (plist-get scope <span class="bi">:variables</span>)
+            for value = (plist-get variable <span class="bi">:value</span>)
+            for name = (plist-get variable <span class="bi">:name</span>) do
+            (<span class="k">cl-loop</span> for symbol-entry in all-symbols
+                     for (hint-name previous-value) = symbol-entry
+                     for updated-p = (<span class="k">and</span> previous-value
+                                          (not (equal previous-value value)))
+                     when (equal name hint-name) do
+                     (setcdr symbol-entry `(,value ,updated-p)))))
+  <span class="cd">;; </span><span class="c">2. Format and display the overlays after-string's
+</span>  (<span class="k">cl-loop</span>
+   for overlay in dape--inlay-hint-overlays
+   when (overlayp overlay) do
+   (<span class="k">cl-loop</span>
+    with symbols = (overlay-get overlay 'dape-symbols)
+    for (symbol-name value updated-p) in symbols
+    when value collect
+    (concat
+     <span class="cd">;; </span><span class="c">Variable name with interactive properties
+</span>     (propertize
+      (format <span class="s">"%s :"</span> symbol-name)
+      'face 'dape-inlay-hint-face
+      'mouse-face 'highlight
+      'keymap
+      (<span class="k">let</span> ((keymap (make-sparse-keymap))
+            (captured-symbol symbol-name))
+        (define-key keymap [mouse-1]
+                    (<span class="k">lambda</span> ()
+                      (<span class="k">interactive</span>)
+                      (dape-watch-dwim captured-symbol nil 'only-add 'display)))
+        keymap)
+      'help-echo
+      (format <span class="s">"mouse-1: add `</span><span class="m s">%s</span><span class="s">' to watch"</span> symbol-name))
+     <span class="s">" "</span>
+     <span class="cd">;; </span><span class="c">..and value, truncating if necessary
+</span>     (propertize
+      (truncate-string-to-width
+       (substring value 0 (string-match-p <span class="s">"\n"</span> value))
+       dape-inlay-hints-variable-name-max nil nil t)
+      'help-echo value
+      'face (<span class="k">if</span> updated-p
+                'dape-inlay-hint-highlight-face
+              'dape-inlay-hint-face)))
+    into formatted-strings
+    <span class="cd">;; </span><span class="c">Set after-string to display hint
+</span>    finally do
+    (<span class="k">when</span> formatted-strings
+      (<span class="k">thread-last</span> (mapconcat #'identity formatted-strings
+                              dape--inlay-hint-seperator)
+                   (format <span class="s">"  %s"</span>)
+                   (overlay-put overlay 'after-string))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

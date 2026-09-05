@@ -1,0 +1,92 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: avy--overlay-at-full – Emacs Documentation Online</title>
+<meta name="description" content="avy--overlay-at-full is a natively compiled function defined in
+avy.el.
+Create an overlay with PATH at LEAF.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>avy--overlay-at-full</code></h1><p><span class="m"><code>avy--overlay-at-full</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">avy.el</span>.
+<h2>Signature</h2>
+<pre><code>(avy--overlay-at-full <a href="#:~:text=with-,PATH"><span class="arg">PATH</span></a> <a href="#:~:text=at-,LEAF"><span class="arg">LEAF</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create an overlay with <span class="arg">PATH</span> at <span class="arg">LEAF</span>.
+<p><span class="arg">PATH</span> is a list of keys from tree root to <span class="arg">LEAF</span>.
+<span class="arg">LEAF</span> is normally ((BEG . END) . WND).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w15jf1dbl3fxkx8c35ym39v09hnaxjw9-emacs-packages-deps/share/emacs/site-lisp/elpa/avy-20241101.1357/avy.el</span>
+(<span class="k">defun</span> <span class="f">avy--overlay-at-full</span> (path leaf)
+  <span class="doc">"Create an overlay with PATH at LEAF.
+PATH is a list of keys from tree root to LEAF.
+LEAF is normally ((BEG . END) . WND)."</span>
+  (<span class="k">let*</span> ((path (mapcar #'avy--key-to-char path))
+         (str (propertize
+               (apply #'string (reverse path))
+               'face 'avy-lead-face))
+         (len (length path))
+         (beg (avy-candidate-beg leaf))
+         (wnd (cdr leaf))
+         end)
+    (<span class="k">dotimes</span> (i len)
+      (set-text-properties i (1+ i)
+                           `(face ,(nth i avy-lead-faces))
+                           str))
+    (<span class="k">when</span> (eq avy-style 'de-bruijn)
+      (<span class="k">setq</span> str (concat
+                 (propertize avy-current-path
+                             'face 'avy-lead-face-1)
+                 str))
+      (<span class="k">setq</span> len (length str)))
+    (<span class="k">with-selected-window</span> wnd
+      (<span class="k">save-excursion</span>
+        (goto-char beg)
+        (<span class="k">let*</span> ((lep (<span class="k">if</span> (<span class="k">bound-and-true-p</span> visual-line-mode)
+                        (<span class="k">save-excursion</span>
+                          (end-of-visual-line)
+                          (point))
+                      (line-end-position)))
+               <span class="cd">;; </span><span class="c">`</span><span class="m c">end-of-visual-line</span><span class="c">' is bugged sometimes
+</span>               (lep (<span class="k">if</span> (&lt; lep beg)
+                        (line-end-position)
+                      lep))
+               (len-and-str (avy--update-offset-and-str len str lep)))
+          (<span class="k">setq</span> len (car len-and-str))
+          (<span class="k">setq</span> str (cdr len-and-str))
+          (<span class="k">setq</span> end (<span class="k">if</span> (= beg lep)
+                        (1+ beg)
+                      (min (+ beg
+                              (<span class="k">if</span> (eq (char-after) ?\t)
+                                  1
+                                len))
+                           lep)))
+          (<span class="k">when</span> (<span class="k">and</span> (<span class="k">bound-and-true-p</span> visual-line-mode)
+                     (&gt; len (- end beg))
+                     (not (eq lep beg)))
+            (<span class="k">setq</span> len (- end beg))
+            (<span class="k">let</span> ((old-str (apply #'string (reverse path))))
+              (<span class="k">setq</span> str
+                    (substring
+                     (propertize
+                      old-str
+                      'face
+                      (<span class="k">if</span> (= (length old-str) 1)
+                          'avy-lead-face
+                        'avy-lead-face-0))
+                     0 len)))))))
+    (avy--overlay
+     str beg end wnd
+     (<span class="k">lambda</span> (str old-str)
+       (<span class="k">cond</span> ((string= old-str <span class="s">"\n"</span>)
+              (concat str <span class="s">"\n"</span>))
+             ((string= old-str <span class="s">"\t"</span>)
+              (concat str (make-string (max (- tab-width len) 0) ?\ )))
+             (t
+              <span class="cd">;; </span><span class="c">add padding for wide-width character
+</span>              (<span class="k">if</span> (eq (string-width old-str) 2)
+                  (concat str <span class="s">" "</span>)
+                str)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,198 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-mcp--render-server-details – Emacs Documentation Online</title>
+<meta name="description" content="eca-mcp--render-server-details is a natively compiled function defined
+in eca-mcp.el.
+Render MCP server details for SESSION into BUFFER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-mcp--render-server-details</code></h1><p><span class="m"><code>eca-mcp--render-server-details</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-mcp--render-server-details <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=into-,BUFFER"><span class="arg">BUFFER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Render MCP server details for <span class="arg">SESSION</span> into <span class="arg">BUFFER</span>.
+<p>Works with both standalone and settings panel buffers.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-mcp.el</span>
+(<span class="k">defun</span> <span class="f">eca-mcp--render-server-details</span> (session buffer)
+  <span class="doc">"Render MCP server details for SESSION into BUFFER.
+Works with both standalone and settings panel buffers."</span>
+  (<span class="k">when</span> (buffer-live-p buffer)
+    (<span class="k">with-current-buffer</span> buffer
+      (<span class="k">let</span> ((inhibit-read-only t)
+            (keymap (<span class="k">or</span> (current-local-map)
+                        eca-settings-mode-map))
+            (saved-pos (point)))
+        (erase-buffer)
+        (insert <span class="s">"\n"</span>)
+        (insert (propertize <span class="s">"All MCP servers configured in ECA"</span> 'font-lock-face 'eca-settings-heading))
+        (insert <span class="s">"\n\n"</span>)
+        (<span class="k">if</span> eca-mcp--add-form-state
+            (eca-mcp--render-add-form session keymap)
+          (insert (eca-buttonize
+                   keymap
+                   (propertize <span class="s">"[+ Add MCP server]"</span>
+                               'font-lock-face 'eca-mcp-details-button-face)
+                   (<span class="k">lambda</span> () (eca-mcp--open-add-form session)))
+                  <span class="s">"\n\n"</span>))
+        (<span class="k">seq-doseq</span> (server (-sort  (<span class="k">lambda</span> (a b)
+                                     (string-lessp (plist-get a <span class="bi">:name</span>)
+                                                   (plist-get b <span class="bi">:name</span>)))
+                                   (eca-vals (eca--session-tool-servers session))))
+          (<span class="k">-let</span> (((<span class="ty">&amp;plist</span> <span class="bi">:name</span> name <span class="bi">:command</span> command <span class="bi">:args</span> args
+                          <span class="bi">:status</span> status <span class="bi">:tools</span> tools) <span class="w">server))</span>
+            (insert (propertize (eca-mcp--status-emoji status)
+                                'eca-mcp-status status
+                                'face (eca-mcp--status-face status)
+                                'help-echo status))
+            (insert <span class="s">" "</span>)
+            (insert (propertize name 'font-lock-face 'bold))
+            (insert <span class="s">"   "</span>)
+            (<span class="k">cond</span>
+             ((<span class="k">and</span> eca-mcp--confirming-remove
+                   (string= name eca-mcp--confirming-remove))
+              (insert (propertize <span class="s">"Remove? "</span> 'font-lock-face 'warning))
+              (insert (eca-buttonize
+                       keymap
+                       (propertize <span class="s">"[Yes]"</span>
+                                   'font-lock-face 'eca-mcp-details-button-stop-face)
+                       (<span class="k">lambda</span> () (eca-mcp--submit-remove-server session name))))
+              (insert <span class="s">" "</span>)
+              (insert (eca-buttonize
+                       keymap
+                       (propertize <span class="s">"[Cancel]"</span>
+                                   'font-lock-face 'eca-mcp-details-button-face)
+                       (<span class="k">lambda</span> () (eca-mcp--cancel-confirm-remove session)))))
+             (t
+              (<span class="k">pcase</span> status
+              (<span class="s">"requires-auth"</span>
+               (insert (eca-buttonize
+                        keymap
+                        (propertize <span class="s">"connect"</span>
+                                    'font-lock-face 'eca-mcp-details-button-face)
+                        (<span class="k">lambda</span> ()
+                          (eca-mcp--notify-server-action
+                           session server 'connect)))))
+              ((<span class="k">or</span> <span class="s">"running"</span> <span class="s">"starting"</span>)
+               (insert (eca-buttonize
+                        keymap
+                        (propertize <span class="s">"stop"</span>
+                                    'font-lock-face 'eca-mcp-details-button-stop-face)
+                        (<span class="k">lambda</span> ()
+                          (eca-mcp--notify-server-action
+                           session server 'stop))))
+               (<span class="k">if</span> (plist-get server <span class="bi">:disabled</span>)
+                   (insert <span class="s">" "</span>
+                           (eca-buttonize
+                            keymap
+                            (propertize <span class="s">"enable"</span>
+                                        'font-lock-face 'eca-mcp-details-button-enable-face)
+                            (<span class="k">lambda</span> () (eca-api-notify session
+                                                        <span class="bi">:method</span> <span class="s">"mcp/enableServer"</span>
+                                                        <span class="bi">:params</span> (list <span class="bi">:name</span> name)))))
+                 (insert <span class="s">" "</span>
+                         (eca-buttonize
+                          keymap
+                          (propertize <span class="s">"disable"</span>
+                                      'font-lock-face 'eca-mcp-details-button-disable-face)
+                          (<span class="k">lambda</span> () (eca-api-notify session
+                                                      <span class="bi">:method</span> <span class="s">"mcp/disableServer"</span>
+                                                      <span class="bi">:params</span> (list <span class="bi">:name</span> name))))))
+               (<span class="k">when</span> (plist-get server <span class="bi">:hasAuth</span>)
+                 (insert <span class="s">" "</span>
+                         (eca-buttonize
+                          keymap
+                          (propertize <span class="s">"logout"</span>
+                                      'font-lock-face 'eca-mcp-details-button-logout-face)
+                          (<span class="k">lambda</span> () (eca-api-notify session
+                                                      <span class="bi">:method</span> <span class="s">"mcp/logoutServer"</span>
+                                                      <span class="bi">:params</span> (list <span class="bi">:name</span> name)))))))
+              (<span class="s">"disabled"</span>
+               (insert (eca-buttonize
+                        keymap
+                        (propertize <span class="s">"start"</span>
+                                    'font-lock-face 'eca-mcp-details-button-face)
+                        (<span class="k">lambda</span> ()
+                          (eca-mcp--notify-server-action
+                           session server 'start))))
+               (insert <span class="s">" "</span>
+                       (eca-buttonize
+                        keymap
+                        (propertize <span class="s">"enable"</span>
+                                    'font-lock-face 'eca-mcp-details-button-enable-face)
+                        (<span class="k">lambda</span> () (eca-api-notify session
+                                                    <span class="bi">:method</span> <span class="s">"mcp/enableServer"</span>
+                                                    <span class="bi">:params</span> (list <span class="bi">:name</span> name))))))
+              (_
+               (insert (eca-buttonize
+                        keymap
+                        (propertize <span class="s">"start"</span>
+                                    'font-lock-face 'eca-mcp-details-button-face)
+                        (<span class="k">lambda</span> ()
+                          (eca-mcp--notify-server-action
+                           session server 'start))))
+               (<span class="k">when</span> (plist-get server <span class="bi">:disabled</span>)
+                 (insert <span class="s">" "</span>
+                         (eca-buttonize
+                          keymap
+                          (propertize <span class="s">"enable"</span>
+                                      'font-lock-face 'eca-mcp-details-button-enable-face)
+                          (<span class="k">lambda</span> () (eca-api-notify session
+                                                      <span class="bi">:method</span> <span class="s">"mcp/enableServer"</span>
+                                                      <span class="bi">:params</span> (list <span class="bi">:name</span> name))))))))
+              (<span class="k">unless</span> (string= name <span class="s">"ECA"</span>)
+                (insert <span class="s">" "</span>
+                        (eca-buttonize
+                         keymap
+                         (propertize <span class="s">"remove"</span>
+                                     'font-lock-face 'eca-mcp-details-button-stop-face)
+                         (<span class="k">lambda</span> () (eca-mcp--request-confirm-remove session name)))))))
+            (insert <span class="s">"\n"</span>)
+            (<span class="k">if</span> (seq-empty-p tools)
+                (insert (propertize <span class="s">"No tools available"</span> 'font-lock-face font-lock-doc-face))
+              (<span class="k">progn</span>
+                (insert (propertize <span class="s">"Tools: "</span> 'font-lock-face font-lock-doc-face))
+                (<span class="k">seq-doseq</span> (tool tools)
+                  (insert (propertize (plist-get tool <span class="bi">:name</span>)
+                                      'eca-mcp-tool tool
+                                      'font-lock-face (<span class="k">if</span> (plist-get tool <span class="bi">:disabled</span>)
+                                                          'eca-mcp-details-tool-disabled-face
+                                                        'eca-mcp-details-tool-face)) <span class="w s">" "</span><span class="w">))))</span>
+            (<span class="k">when-let*</span> ((prompts (plist-get server <span class="bi">:prompts</span>))
+                        (_ (not (seq-empty-p prompts))))
+              (insert <span class="s">"\n"</span>)
+              (insert (propertize <span class="s">"Prompts: "</span> 'font-lock-face font-lock-doc-face))
+              (<span class="k">seq-doseq</span> (prompt prompts)
+                (insert (propertize (plist-get prompt <span class="bi">:name</span>)
+                                    'font-lock-face 'eca-mcp-details-tool-face) <span class="w s">" "</span><span class="w">)))</span>
+            (<span class="k">when-let*</span> ((resources (plist-get server <span class="bi">:resources</span>))
+                        (_ (not (seq-empty-p resources))))
+              (insert <span class="s">"\n"</span>)
+              (insert (propertize <span class="s">"Resources: "</span> 'font-lock-face font-lock-doc-face))
+              (<span class="k">seq-doseq</span> (resource resources)
+                (insert (propertize (plist-get resource <span class="bi">:name</span>)
+                                    'font-lock-face 'eca-mcp-details-tool-face) <span class="w s">" "</span><span class="w">)))</span>
+            (<span class="k">when</span> command
+              (insert <span class="s">"\n"</span>)
+              (insert (propertize <span class="s">"Command: "</span> 'font-lock-face font-lock-doc-face))
+              (insert (propertize (concat command <span class="s">" "</span> (string-join args <span class="s">" "</span>))
+                                 'font-lock-face 'eca-mcp-details-command-value-face)))
+            (<span class="k">when-let*</span> ((url (plist-get server <span class="bi">:url</span>)))
+              (insert <span class="s">"\n"</span>)
+              (insert (propertize <span class="s">"URL: "</span> 'font-lock-face font-lock-doc-face))
+              (insert (propertize url
+                                 'font-lock-face 'eca-mcp-details-command-value-face)))
+            (<span class="k">when</span> (string= <span class="s">"failed"</span> status)
+              (insert <span class="s">"\n"</span>)
+              (insert (propertize (format <span class="s">"Failed to start, check %s for details"</span>
+                                          (buttonize
+                                           <span class="s">"eca stderr buffer"</span>
+                                           (<span class="k">lambda</span>(_) (eca-process-show-stderr session))))
+                                  'font-lock-face 'error))))
+          (insert <span class="s">"\n\n"</span>))
+        (goto-char (min saved-pos (point-max)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,76 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: mc/execute-this-command-for-all-cursors-1 – Emacs Documentation Online</title>
+<meta name="description" content="mc/execute-this-command-for-all-cursors-1 is a natively compiled
+function defined in multiple-cursors-core.el.
+Used with post-command-hook to execute supported commands for all cursors.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>mc/execute-this-command-for-all-cursors-1</code></h1><p><span class="m"><code>mc/execute-this-command-for-all-cursors-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">multiple-cursors-core.el</span>.
+<h2>Signature</h2>
+<pre><code>(mc/execute-this-command-for-all-cursors-1)
+</code></pre>
+<h2>Documentation</h2>
+<p>Used with post-command-hook to execute supported commands for all cursors.
+<p>It uses two lists of commands to know what to do: the run-once
+list and the run-for-all list. If a command is in neither of these lists,
+it will prompt for the proper action and then save that preference.
+<p>Some commands are so unsupported that they are even prevented for
+the original cursor, to inform about the lack of support.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bwmgnvnjv89idk13xc843r24h4ygwjwz-emacs-packages-deps/share/emacs/site-lisp/elpa/multiple-cursors-20260419.931/multiple-cursors-core.el</span>
+(<span class="k">defun</span> <span class="f">mc/execute-this-command-for-all-cursors-1</span> ()
+  <span class="doc">"Used with post-command-hook to execute supported commands for all cursors.
+
+It uses two lists of commands to know what to do: the run-once
+list and the run-for-all list. If a command is in neither of these lists,
+it will prompt for the proper action and then save that preference.
+
+Some commands are so unsupported that they are even prevented for
+the original cursor, to inform about the lack of support."</span>
+  (<span class="k">unless</span> mc--executing-command-for-fake-cursor
+
+    (<span class="k">if</span> (eq 1 (mc/num-cursors)) <span class="cd">;; </span><span class="c">no fake cursors? disable mc-mode
+</span>        (mc/disable-multiple-cursors-mode)
+      (<span class="k">when</span> this-original-command
+        (<span class="k">let</span> ((original-command (<span class="k">or</span> mc--this-command
+                                    (command-remapping this-original-command)
+                                    this-original-command)))
+
+          <span class="cd">;; </span><span class="c">skip keyboard macros, since they will generate actual commands that are
+</span>          <span class="cd">;; </span><span class="c">also run in the command loop - we'll handle those later instead.
+</span>          (<span class="k">when</span> (functionp original-command)
+
+            <span class="cd">;; </span><span class="c">if it's a lambda, we can't know if it's supported or not
+</span>            <span class="cd">;; </span><span class="c">- so go ahead and assume it's ok, because we're just optimistic like that
+</span>            (<span class="k">if</span> (<span class="k">or</span> (not (symbolp original-command))
+                    <span class="cd">;; </span><span class="c">lambda registered by smartrep
+</span>                    (string-prefix-p <span class="s">"("</span> (symbol-name original-command)))
+                (mc/execute-command-for-all-fake-cursors original-command)
+
+              <span class="cd">;; </span><span class="c">smartrep `</span><span class="m c">intern</span><span class="c">'s commands into own obarray to help
+</span>              <span class="cd">;; </span><span class="c">`</span><span class="m c">describe-bindings</span><span class="c">'.  So, let's re-`</span><span class="m c">intern</span><span class="c">' here to
+</span>              <span class="cd">;; </span><span class="c">make the command comparable by `</span><span class="m c">eq</span><span class="c">'.
+</span>              (<span class="k">setq</span> original-command (intern (symbol-name original-command)))
+
+              <span class="cd">;; </span><span class="c">otherwise it's a symbol, and we can be more thorough
+</span>              (<span class="k">if</span> (get original-command 'mc--unsupported)
+                  (message <span class="s">"%S is not supported with multiple cursors%s"</span>
+                           original-command
+                           (get original-command 'mc--unsupported))
+
+                <span class="cd">;; </span><span class="c">lazy-load the user's list file
+</span>                (mc/load-lists)
+
+                (<span class="k">when</span> (<span class="k">and</span> original-command
+                           (not (memq original-command mc--default-cmds-to-run-once))
+                           (not (memq original-command mc/cmds-to-run-once))
+                           (<span class="k">or</span> mc/always-run-for-all
+                               (memq original-command mc--default-cmds-to-run-for-all)
+                               (memq original-command mc/cmds-to-run-for-all)
+                               (mc/prompt-for-inclusion-in-whitelist original-command)))
+                  (mc/execute-command-for-all-fake-cursors original-command))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

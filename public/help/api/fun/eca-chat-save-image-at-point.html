@@ -1,0 +1,72 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat-save-image-at-point – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat-save-image-at-point is an interactive and natively compiled
+function defined in eca-chat-image.el.
+Save the inline image at point (or last image) to a file.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat-save-image-at-point</code></h1><p><span class="m"><code>eca-chat-save-image-at-point</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">eca-chat-image.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat-save-image-at-point <span class="ty">&amp;optional</span> <a href="#:~:text=nil-,OVERLAY"><span class="arg">OVERLAY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Save the inline image at point (or last image) to a file.
+<p>Looks up the image overlay at point and falls back to the last
+image overlay in the buffer when none is found.  When called with
+non-nil <span class="arg">OVERLAY</span>, save that overlay's image directly (used by the
+per-overlay keymap so a click saves the clicked image regardless
+of where point currently sits).
+<p>Prompts for a destination using <a href="../var/eca-chat-save-image-directory.html"><code>eca-chat-save-image-directory</code></a>
+and <a href="../var/eca-chat-save-image-filename-format.html"><code>eca-chat-save-image-filename-format</code></a> for the default path.
+Creates parent directories as needed.  Writes the original bytes
+verbatim — display zoom does not affect the saved file.
+<h2>Key Bindings</h2>
+<p><span class="v">eca-chat-mode-map</span> <span class="key">C-c C-z s</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-image.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat-save-image-at-point</span> (<span class="ty">&amp;optional</span> overlay)
+  <span class="doc">"Save the inline image at point (or last image) to a file.
+Looks up the image overlay at point and falls back to the last
+image overlay in the buffer when none is found.  When called with
+non-nil OVERLAY, save that overlay's image directly (used by the
+per-overlay keymap so a click saves the clicked image regardless
+of where point currently sits).
+
+Prompts for a destination using `</span><span class="m doc">eca-chat-save-image-directory</span><span class="doc">'
+and `</span><span class="m doc">eca-chat-save-image-filename-format</span><span class="doc">' for the default path.
+Creates parent directories as needed.  Writes the original bytes
+verbatim — display zoom does not affect the saved file."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((ov (<span class="k">or</span> overlay
+                (eca-chat--image-overlay-at-point)
+                (eca-chat--last-image-overlay))))
+    (<span class="k">cond</span>
+     ((null ov)
+      (eca-warn <span class="s">"No image at point or in this chat"</span>))
+     (t
+      (<span class="k">let*</span> ((image (overlay-get ov 'display))
+             (data (<span class="k">and</span> (consp image) (eq (car image) 'image)
+                        (image-property image <span class="bi">:data</span>)))
+             (media-type (overlay-get ov 'eca-chat-image-media-type)))
+        (<span class="k">cond</span>
+         ((not data)
+          (eca-warn <span class="s">"Image overlay has no inline data to save"</span>))
+         (t
+          (<span class="k">let*</span> ((dir (eca-chat--default-save-image-dir))
+                 (default-name
+                  (eca-chat--default-save-image-filename media-type))
+                 (target (read-file-name <span class="s">"Save image to: "</span>
+                                         dir nil nil default-name)))
+            (<span class="k">when</span> (<span class="k">and</span> target (not (string-empty-p target)))
+              (<span class="k">let</span> ((parent (file-name-directory
+                             (expand-file-name target))))
+                (<span class="k">when</span> (<span class="k">and</span> parent (not (file-directory-p parent)))
+                  (make-directory parent t)))
+              (<span class="k">let</span> ((coding-system-for-write 'no-conversion))
+                (write-region data nil target nil 'nomessage))
+              (eca-info <span class="s">"Saved image to %s"</span> target))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

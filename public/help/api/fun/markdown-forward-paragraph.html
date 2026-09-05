@@ -1,0 +1,75 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-forward-paragraph – Emacs Documentation Online</title>
+<meta name="description" content="markdown-forward-paragraph is an interactive and natively compiled
+function defined in markdown-mode.el.
+Move forward to the next end of a paragraph.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-forward-paragraph</code></h1><p><span class="m"><code>markdown-forward-paragraph</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-forward-paragraph <span class="ty">&amp;optional</span> <a href="#:~:text=argument-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Move forward to the next end of a paragraph.
+<p>With argument <span class="arg">ARG</span>, do it <span class="arg">ARG</span> times; a negative argument <span class="arg">ARG</span> = -N
+means move backward N blocks.
+<h2>Key Bindings</h2>
+<p><span class="v">gfm-mode-map</span> <span class="key">C-&lt;down&gt;</span>
+<span class="v">gfm-mode-map</span> <span class="key">M-}</span>
+<span class="v">markdown-mode-map</span> <span class="key">C-&lt;down&gt;</span>
+<span class="v">markdown-mode-map</span> <span class="key">M-}</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-forward-paragraph</span> (<span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Move forward to the next end of a paragraph.
+With argument ARG, do it ARG times; a negative argument ARG = -N
+means move backward N blocks."</span>
+  (<span class="k">interactive</span> <span class="s">"^p"</span>)
+  (<span class="k">or</span> arg (<span class="k">setq</span> arg 1))
+  (<span class="k">if</span> (&lt; arg 0)
+      (markdown-backward-paragraph (- arg))
+    (<span class="k">dotimes</span> (_ arg)
+      <span class="cd">;; </span><span class="c">Skip whitespace in between paragraphs.
+</span>      (<span class="k">when</span> (markdown-cur-line-blank-p)
+        (skip-syntax-forward <span class="s">"-"</span>)
+        (beginning-of-line))
+      <span class="cd">;; </span><span class="c">Proceed forward based on the type of block.
+</span>      (<span class="k">let</span> (bounds skip)
+        (<span class="k">cond</span>
+         <span class="cd">;; </span><span class="c">Blockquotes
+</span>         ((looking-at markdown-regex-blockquote)
+          <span class="cd">;; </span><span class="c">Skip over blank lines inside blockquotes.
+</span>          (<span class="k">while</span> (<span class="k">and</span> (not (eobp))
+                      (looking-at markdown-regex-blockquote)
+                      (= (length (match-string 3)) 0))
+            (forward-line))
+          <span class="cd">;; </span><span class="c">Move to end of quoted text block
+</span>          (<span class="k">while</span> (<span class="k">and</span> (not (eobp))
+                      (looking-at markdown-regex-blockquote)
+                      (&gt; (length (match-string 3)) 0)) <span class="cd">;; </span><span class="c">not blank
+</span>            (forward-line)))
+         <span class="cd">;; </span><span class="c">List items
+</span>         ((<span class="k">and</span> (markdown-cur-list-item-bounds)
+               (<span class="k">setq</span> bounds (markdown-next-list-item-bounds)))
+          (goto-char (nth 0 bounds)))
+         <span class="cd">;; </span><span class="c">Other
+</span>         (t
+          (forward-line)
+          (<span class="k">while</span> (<span class="k">and</span> (not (eobp))
+                      (not skip)
+                      (not (markdown-cur-line-blank-p))
+                      (not (looking-at markdown-regex-blockquote))
+                      (not (markdown-range-properties-exist
+                            (line-beginning-position) (line-end-position)
+                            '(markdown-gfm-block-begin
+                              markdown-tilde-fence-begin))))
+            (<span class="k">setq</span> skip (markdown-range-properties-exist
+                        (line-beginning-position) (line-end-position)
+                        '(markdown-gfm-block-end
+                          markdown-tilde-fence-end)))
+            (forward-line))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

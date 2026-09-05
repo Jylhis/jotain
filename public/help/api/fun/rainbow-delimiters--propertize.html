@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: rainbow-delimiters--propertize – Emacs Documentation Online</title>
+<meta name="description" content="rainbow-delimiters--propertize is a natively compiled function defined
+in rainbow-delimiters.el.
+Highlight delimiters in region between point and END.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>rainbow-delimiters--propertize</code></h1><p><span class="m"><code>rainbow-delimiters--propertize</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">rainbow-delimiters.el</span>.
+<h2>Signature</h2>
+<pre><code>(rainbow-delimiters--propertize <a href="#:~:text=and-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Highlight delimiters in region between point and <span class="arg">END</span>.
+<p>Used by font-lock for dynamic highlighting.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/srxs2gcf596b8iq8i51j7j6f4aw0k6lm-emacs-packages-deps/share/emacs/site-lisp/elpa/rainbow-delimiters-20210515.1254/rainbow-delimiters.el</span>
+<span class="cd">;; </span><span class="c">Main function called by font-lock.
+</span>(<span class="k">defun</span> <span class="f">rainbow-delimiters--propertize</span> (end)
+  <span class="doc">"Highlight delimiters in region between point and END.
+
+Used by font-lock for dynamic highlighting."</span>
+  (<span class="k">when</span> (<span class="k">bound-and-true-p</span> mmm-current-submode)
+    <span class="cd">;; </span><span class="c">`</span><span class="m c">mmm-mode</span><span class="c">' is weird and apparently needs this hack, because otherwise we
+</span>    <span class="cd">;; </span><span class="c">may end up thinking matched parentheses are mismatched.
+</span>    (widen))
+  (<span class="k">let*</span> ((last-ppss-pos (point))
+         (ppss (syntax-ppss)))
+    (<span class="k">while</span> (&gt; end (<span class="k">progn</span> (skip-syntax-forward <span class="s">"^()"</span> end)
+                         (point)))
+      (<span class="k">let*</span> ((delim-pos (point))
+             (delim-syntax (syntax-after delim-pos)))
+        (<span class="k">setq</span> ppss (parse-partial-sexp last-ppss-pos delim-pos nil nil ppss))
+        (<span class="k">setq</span> last-ppss-pos delim-pos)
+        <span class="cd">;; </span><span class="c">`</span><span class="m c">skip-syntax-forward</span><span class="c">' leaves the point at the delimiter, move past
+</span>        <span class="cd">;; </span><span class="c">it.
+</span>        (forward-char)
+        (<span class="k">let</span> ((delim-syntax-code (car delim-syntax)))
+          (<span class="k">cond</span>
+           ((rainbow-delimiters--char-ineligible-p delim-pos ppss delim-syntax-code)
+            nil)
+           ((= 4 (logand #xFFFF delim-syntax-code))
+            <span class="cd">;; </span><span class="c">The (1+ ...) is needed because `</span><span class="m c">parse-partial-sexp</span><span class="c">' returns the
+</span>            <span class="cd">;; </span><span class="c">depth at the opening delimiter, not in the block being started.
+</span>            (rainbow-delimiters--apply-color delim-pos (1+ (nth 0 ppss)) t))
+           (t
+            <span class="cd">;; </span><span class="c">Not an opening delimiter, so it's a closing delimiter.
+</span>            (<span class="k">let</span> ((matches-p (eq (cdr delim-syntax) (char-after (nth 1 ppss)))))
+              (rainbow-delimiters--apply-color delim-pos (nth 0 ppss) matches-p))))))))
+  <span class="cd">;; </span><span class="c">We already fontified the delimiters, tell font-lock there's nothing more
+</span>  <span class="cd">;; </span><span class="c">to do.
+</span>  nil)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

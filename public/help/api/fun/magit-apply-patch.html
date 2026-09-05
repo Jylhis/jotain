@@ -1,0 +1,43 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-apply-patch – Emacs Documentation Online</title>
+<meta name="description" content="magit-apply-patch is a natively compiled function defined in
+magit-apply.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-apply-patch</code></h1><p><span class="m"><code>magit-apply-patch</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-apply.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-apply-patch <span class="arg">SECTION:S</span> <span class="arg">ARGS</span> <span class="arg">PATCH</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-apply.el</span>
+(<span class="k">defun</span> <span class="f">magit-apply-patch</span> (section:s args patch)
+  (<span class="k">let*</span> ((files (<span class="k">if</span> (atom section:s)
+                    (list (<span class="k">oref</span> section:s value))
+                  (mapcar (##oref % value) section:s)))
+         (command (symbol-name this-command))
+         (command (<span class="k">if</span> (<span class="k">and</span> command (string-match <span class="s">"^magit-</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s">-]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> command))
+                      (match-str 1 command)
+                    <span class="s">"apply"</span>))
+         (context (magit-diff-get-context))
+         (ignore-context (magit-diff-ignore-any-space-p)))
+    (<span class="k">unless</span> (magit-diff-context-p)
+      (<span class="w">user-error</span> <span class="s">"Not enough context to apply patch.  Increase the context"</span>))
+    (<span class="k">unless</span> magit-inhibit-refresh
+      (magit-run-before-change-functions files command))
+    (<span class="k">if</span> (eq this-command 'magit-copy-diff-as-kill)
+        (kill-new patch)
+      (<span class="k">with-temp-buffer</span>
+        (insert patch)
+        (<span class="k">let</span> ((magit-inhibit-refresh t))
+          (magit-run-git-with-input
+           <span class="s">"apply"</span> args <span class="s">"-p0"</span>
+           (<span class="k">if</span> ignore-context <span class="s">"-C0"</span> (format <span class="s">"-C%s"</span> context))
+           <span class="s">"--ignore-space-change"</span> <span class="s">"-"</span>)))
+      (<span class="k">unless</span> magit-inhibit-refresh
+        (magit-run-after-apply-functions files command)
+        (magit-refresh)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

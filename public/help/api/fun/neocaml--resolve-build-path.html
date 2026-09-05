@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: neocaml--resolve-build-path – Emacs Documentation Online</title>
+<meta name="description" content="neocaml--resolve-build-path is a natively compiled function defined in
+neocaml.el.
+Resolve FILE out of a _build directory, if applicable.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>neocaml--resolve-build-path</code></h1><p><span class="m"><code>neocaml--resolve-build-path</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">neocaml.el</span>.
+<h2>Signature</h2>
+<pre><code>(neocaml--resolve-build-path <a href="#:~:text=Resolve-,FILE"><span class="arg">FILE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Resolve <span class="arg">FILE</span> out of a <span class="m"><code>_build</code></span> directory, if applicable.
+<p>For dune-style paths like <span class="m"><code>_build/default/lib/foo.ml</code></span>, strip
+<br><span class="m"><code>_build/&lt;context&gt;/</code></span> and return <span class="m"><code>&lt;project-root&gt;/lib/foo.ml</code></span>.
+<br>For ocamlbuild-style <span class="m"><code>_build/lib/foo.ml</code></span>, strip <span class="m"><code>_build/</code></span> only.
+Return nil if <span class="arg">FILE</span> is not under <span class="m"><code>_build</code></span> or the resolved file
+does not exist.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/6yvzbjq5ljnchx97n8s5w91crk1nh47b-emacs-packages-deps/share/emacs/site-lisp/elpa/neocaml-20260710.532/neocaml.el</span>
+<span class="cd">;;;; </span><span class="c">_build directory awareness
+</span>
+(<span class="k">defun</span> <span class="f">neocaml--resolve-build-path</span> (file)
+  <span class="doc">"Resolve FILE out of a `</span><span class="m doc">_build</span><span class="doc">' directory, if applicable.
+For dune-style paths like `</span><span class="m doc">_build/default/lib/foo.ml</span><span class="doc">', strip
+`</span><span class="m doc">_build/&lt;context&gt;/</span><span class="doc">' and return `</span><span class="m doc">&lt;project-root&gt;/lib/foo.ml</span><span class="doc">'.
+For ocamlbuild-style `</span><span class="m doc">_build/lib/foo.ml</span><span class="doc">', strip `</span><span class="m doc">_build/</span><span class="doc">' only.
+Return nil if FILE is not under `</span><span class="m doc">_build</span><span class="doc">' or the resolved file
+does not exist."</span>
+  (<span class="k">when-let*</span> ((pos (string-search <span class="s">"/_build/"</span> file))
+              (root (substring file 0 pos))
+              (rest (substring file (+ pos 8))) <span class="cd">;; </span><span class="c">skip "/_build/"
+</span>              (components (split-string rest <span class="s">"/"</span> t)))
+    (<span class="k">let*</span> (<span class="cd">;; </span><span class="c">Dune: skip first component (context dir like "default")
+</span>           (dune-path (<span class="k">when</span> (cdr components)
+                        (concat root <span class="s">"/"</span> (string-join (cdr components) <span class="s">"/"</span>))))
+           <span class="cd">;; </span><span class="c">Ocamlbuild: keep everything after _build/
+</span>           (ocamlbuild-path (concat root <span class="s">"/"</span> rest)))
+      (<span class="k">cond</span>
+       ((<span class="k">and</span> dune-path (file-readable-p dune-path)) dune-path)
+       ((file-readable-p ocamlbuild-path) ocamlbuild-path)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

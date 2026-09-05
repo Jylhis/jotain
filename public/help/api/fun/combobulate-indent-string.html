@@ -1,0 +1,82 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-indent-string – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-indent-string is a natively compiled function defined in
+combobulate-manipulation.el.
+Indent TEXT specifically for the first and rest of the lines.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-indent-string</code></h1><p><span class="m"><code>combobulate-indent-string</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">combobulate-manipulation.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-indent-string <a href="#:~:text=Indent-,TEXT"><span class="arg">TEXT</span></a> <span class="ty">&amp;key</span> (<a href="#:~:text=lines.-,FIRST-LINE-OPERATION"><span class="arg">FIRST-LINE-OPERATION</span></a> nil) (<a href="#:~:text=absolute.-,FIRST-LINE-AMOUNT"><span class="arg">FIRST-LINE-AMOUNT</span></a> 0) (<a href="#:~:text=to.-,REST-LINES-OPERATION"><span class="arg">REST-LINES-OPERATION</span></a> nil) (<a href="#:~:text=well.-,REST-LINES-AMOUNT"><span class="arg">REST-LINES-AMOUNT</span></a> 0))
+</code></pre>
+<h2>Documentation</h2>
+<p>Indent <span class="arg">TEXT</span> specifically for the first and rest of the lines.
+<p><span class="arg">FIRST-LINE-OPERATION</span> is the operation to perform on the first
+line of <span class="arg">TEXT</span>. It can be <span class="m"><code>add</code></span>, <span class="m"><code>subtract</code></span>, or <span class="m"><code>absolute</code></span>.
+<p><span class="arg">FIRST-LINE-AMOUNT</span> is the amount to add, subtract, or set the
+first line's indentation to.
+<p><span class="arg">REST-LINES-OPERATION</span> is the operation to perform on the rest of
+the lines of <span class="arg">TEXT</span>. It can be <span class="m"><code>relative</code></span>, <span class="m"><code>add</code></span>, <span class="m"><code>subtract</code></span>, or
+<span class="m"><code>absolute</code></span>. <span class="m"><code>relative</code></span> means that the indentation of the rest of
+the lines is relative to the first line's *changed*
+indentation. In other words, if the first line's indentation is
+changed by 2 spaces, then the rest of the lines' indentation will
+be changed by 2 spaces (in the same direction) as well.
+<p><span class="arg">REST-LINES-AMOUNT</span> is the amount to add, subtract, or set the rest
+of the lines' indentation to. It cannot be used with <span class="m"><code>relative</code></span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-manipulation.el</span>
+(<span class="k">cl-defun</span> <span class="f">combobulate-indent-string</span> (text <span class="ty">&amp;key</span> (first-line-operation nil)
+                                          (first-line-amount 0)
+                                          (rest-lines-operation nil)
+                                          (rest-lines-amount 0))
+  <span class="doc">"Indent TEXT specifically for the first and rest of the lines.
+
+FIRST-LINE-OPERATION is the operation to perform on the first
+line of TEXT. It can be `</span><span class="m doc">add</span><span class="doc">', `</span><span class="m doc">subtract</span><span class="doc">', or `</span><span class="m doc">absolute</span><span class="doc">'.
+
+FIRST-LINE-AMOUNT is the amount to add, subtract, or set the
+first line's indentation to.
+
+REST-LINES-OPERATION is the operation to perform on the rest of
+the lines of TEXT. It can be `</span><span class="m doc">relative</span><span class="doc">', `</span><span class="m doc">add</span><span class="doc">', `</span><span class="m doc">subtract</span><span class="doc">', or
+`</span><span class="m doc">absolute</span><span class="doc">'. `</span><span class="m doc">relative</span><span class="doc">' means that the indentation of the rest of
+the lines is relative to the first line's *changed*
+indentation. In other words, if the first line's indentation is
+changed by 2 spaces, then the rest of the lines' indentation will
+be changed by 2 spaces (in the same direction) as well.
+
+REST-LINES-AMOUNT is the amount to add, subtract, or set the rest
+of the lines' indentation to. It cannot be used with `</span><span class="m doc">relative</span><span class="doc">'."</span>
+  (<span class="w">cl-assert</span> (member first-line-operation '(add subtract absolute relative nil)))
+  (<span class="w">cl-assert</span> (member rest-lines-operation '(relative add subtract absolute nil)))
+  <span class="cd">;; </span><span class="c">`</span><span class="m c">rest-lines-amount</span><span class="c">'  cannot be used with `</span><span class="m c">relative</span><span class="c">'.
+</span>  (<span class="w">cl-assert</span> (<span class="k">or</span> (not (eq rest-lines-operation 'relative))
+                 (<span class="k">and</span> (eq rest-lines-operation 'relative)
+                      (eq rest-lines-amount 0))))
+  (<span class="k">let*</span> ((lines (split-string text <span class="s">"\n"</span>))
+         <span class="cd">;; </span><span class="c">indentation of the first line before we modify it
+</span>         (first-line-indentation (combobulate-indent-string--count-whitespace (car lines)))
+         (first-line (<span class="k">if</span> first-line-operation
+                         (combobulate-indent-string-1
+                          (car lines)
+                          (<span class="k">if</span> (equal first-line-operation 'relative) 'subtract first-line-operation)
+                          (<span class="k">if</span> (equal first-line-operation 'relative)
+                              (- first-line-indentation first-line-amount)
+                            first-line-amount))
+                       (car lines)))
+         (new-first-line-indentation (combobulate-indent-string--count-whitespace first-line))
+         (rest-lines (<span class="k">if</span> rest-lines-operation
+                         (mapcar (<span class="k">lambda</span> (line)
+                                   (<span class="k">if</span> (eq rest-lines-operation 'relative)
+                                       (combobulate-indent-string-1 line 'add (- new-first-line-indentation
+                                                                                 first-line-indentation))
+                                     (combobulate-indent-string-1 line rest-lines-operation rest-lines-amount)))
+                                 (cdr lines))
+                       (cdr lines))))
+    (string-join (cons first-line rest-lines) <span class="s">"\n"</span>)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--transform-apply-preset – Emacs Documentation Online</title>
+<meta name="description" content="gptel--transform-apply-preset is a natively compiled function defined
+in gptel.el.
+Apply a gptel preset to the buffer depending on the prompt.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--transform-apply-preset</code></h1><p><span class="m"><code>gptel--transform-apply-preset</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--transform-apply-preset <a href="#:~:text="><span class="arg">FSM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply a gptel preset to the buffer depending on the prompt.
+<p>If the last user prompt includes @foo, the preset foo is applied.
+Before applying the preset, "@foo" is removed from the prompt and
+point is placed at its position.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+<span class="cd">;;;; </span><span class="c">Presets in-buffer UI
+</span>(<span class="k">defun</span> <span class="f">gptel--transform-apply-preset</span> (_fsm)
+  <span class="doc">"Apply a gptel preset to the buffer depending on the prompt.
+
+If the last user prompt includes @foo, the preset foo is applied.
+Before applying the preset, \"@foo\" is removed from the prompt and
+point is placed at its position."</span>
+  (<span class="k">when</span> gptel--known-presets
+    (text-property-search-backward 'gptel nil t)
+    (<span class="k">while</span> (re-search-forward <span class="s">"@</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s">[:space:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;"</span> nil t)
+      <span class="cd">;; </span><span class="c">The following convoluted check is because re-search is much faster if
+</span>      <span class="cd">;; </span><span class="c">the search pattern begins with a non-whitespace char.
+</span>      (<span class="k">when</span> (<span class="k">or</span> (= (match-beginning 0) (point-min))
+                (memq (char-syntax (char-before (match-beginning 0))) '(32 62)))
+        (<span class="k">when-let*</span> ((name (match-string 1))
+                    (preset (<span class="k">or</span> (gptel-get-preset (intern-soft name))
+                                (gptel-get-preset name))))
+          (delete-region (match-beginning 0) (match-end 0))
+          <span class="cd">;; </span><span class="c">Point must be after @foo when the preset is applied to allow for
+</span>          <span class="cd">;; </span><span class="c">more advanced transformations.
+</span>          (gptel--apply-preset preset
+                               (<span class="k">lambda</span> (sym val)
+                                 (set (make-local-variable sym) val))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

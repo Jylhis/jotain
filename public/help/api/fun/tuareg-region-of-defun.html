@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg-region-of-defun – Emacs Documentation Online</title>
+<meta name="description" content="tuareg-region-of-defun is a natively compiled function defined in
+tuareg.el.
+Return a couple (BEGIN . END) for the OCaml phrase around POS,
+including comments after the phrase.  In case of error, move the
+point at the beginning of the error and return nil.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg-region-of-defun</code></h1><p><span class="m"><code>tuareg-region-of-defun</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg-region-of-defun <span class="ty">&amp;optional</span> <a href="#:~:text=around-,POS"><span class="arg">POS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a couple (BEGIN . END) for the OCaml phrase around <span class="arg">POS</span>,
+including comments after the phrase.  In case of error, move the
+point at the beginning of the error and return <a href="../var/nil.html"><code>nil</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg-region-of-defun</span> (<span class="ty">&amp;optional</span> pos)
+  <span class="doc">"Return a couple (BEGIN . END) for the OCaml phrase around POS,
+including comments after the phrase.  In case of error, move the
+point at the beginning of the error and return `</span><span class="m doc">nil</span><span class="doc">'."</span>
+  (<span class="k">let</span> ((complete-phrase t)
+        begin end)
+    (<span class="k">save-excursion</span>
+      (<span class="k">if</span> pos (goto-char pos))
+      <span class="cd">;; </span><span class="c">If the beginning of the defun was an "and", try again until we
+</span>      <span class="cd">;; </span><span class="c">get to the start of the phrase.
+</span>      (<span class="k">while</span> (equal (tuareg-backward-beginning-of-defun t) <span class="s">"and"</span>)
+        (forward-char -1))
+      (<span class="k">setq</span> begin (point))
+      <span class="cd">;; </span><span class="c">Go all the way to the end of the phrase (not just the defun,
+</span>      <span class="cd">;; </span><span class="c">which could end at an "and").
+</span>      (<span class="k">let</span> ((head (tuareg-smie-forward-token)))
+        (<span class="k">unless</span> (member head '(<span class="s">"type"</span> <span class="s">"d-let"</span> <span class="s">"let"</span> <span class="s">"and"</span> <span class="s">"exception"</span> <span class="s">"module"</span>
+                               <span class="s">"class"</span> <span class="s">"val"</span> <span class="s">"external"</span> <span class="s">"open"</span>))
+          <span class="cd">;; </span><span class="c">Expression phrase.
+</span>          (goto-char begin)))
+      (smie-forward-sexp <span class="s">";;"</span>)
+      (tuareg--skip-forward-comments-semicolon)
+      (<span class="k">setq</span> end (point))
+      <span class="cd">;; </span><span class="c">Check if we were not stuck (after POS) because the phrase was
+</span>      <span class="cd">;; </span><span class="c">not well parenthesized.
+</span>      (<span class="k">when</span> (<span class="k">and</span> complete-phrase (&lt; (point) (point-max)))
+        (smie-forward-sexp 'halfsexp)
+        (<span class="k">when</span> (= end (point))<span class="cd">; </span><span class="c">did not move
+</span>          (<span class="k">setq</span> complete-phrase nil))))
+    (<span class="k">if</span> complete-phrase
+        (cons begin end)
+      (goto-char end)
+      nil)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-log-select – Emacs Documentation Online</title>
+<meta name="description" content="magit-log-select is a natively compiled function defined in
+magit-log.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-log-select</code></h1><p><span class="m"><code>magit-log-select</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-log.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-log-select <span class="arg">PICK</span> <span class="ty">&amp;optional</span> <span class="arg">MSG</span> <span class="arg">QUIT</span> <span class="arg">BRANCH</span> <span class="arg">ARGS</span> <span class="arg">INITIAL</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-log.el</span>
+(<span class="k">defun</span> <span class="f">magit-log-select</span> (pick <span class="ty">&amp;optional</span> msg quit branch args initial)
+  (<span class="k">declare</span> (indent defun))
+  (<span class="k">unless</span> initial
+    (<span class="k">setq</span> initial (magit-commit-at-point)))
+  (magit-log-select-setup-buffer
+   (<span class="k">or</span> branch (magit-get-current-branch) <span class="s">"HEAD"</span>)
+   (append args
+           (car (magit-log--get-value 'magit-log-select-mode 'direct))))
+  (<span class="k">if</span> initial
+      (magit-log-goto-commit-section initial)
+    (while-let* ((rev (magit-section-value-if 'commit))
+                 (_(string-match-p <span class="s">"\\`</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">squash!</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">fixup!</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">amend!</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>
+                                   (magit-rev-format <span class="s">"%s"</span> rev)))
+                 (section (magit-current-section))
+                 (next (car (magit-section-siblings section 'next))))
+      (magit-section-goto next)))
+  (<span class="k">setq</span> magit-log-select-pick-function pick)
+  (<span class="k">setq</span> magit-log-select-quit-function quit)
+  (<span class="k">when</span> magit-log-select-show-usage
+    (<span class="k">let</span> ((pick (propertize (substitute-command-keys
+                             <span class="s">"\\[</span><span class="m s">magit-log-select-pick</span><span class="s">]"</span>)
+                            'font-lock-face
+                            'magit-header-line-key))
+          (quit (propertize (substitute-command-keys
+                             <span class="s">"\\[</span><span class="m s">magit-log-select-quit</span><span class="s">]"</span>)
+                            'font-lock-face
+                            'magit-header-line-key)))
+      (<span class="k">setq</span> msg (format-spec
+                 (<span class="k">if</span> msg
+                     (<span class="k">if</span> (string-suffix-p <span class="s">","</span> msg)
+                         (concat msg <span class="s">" or %q to abort"</span>)
+                       msg)
+                   <span class="s">"Type %p to select commit at point, or %q to abort"</span>)
+                 `((?p . ,pick)
+                   (?q . ,quit)))))
+    (magit--add-face-text-property
+     0 (length msg) 'magit-header-line-log-select t msg)
+    (<span class="k">when</span> (memq magit-log-select-show-usage '(both header-line))
+      (magit-set-header-line-format msg))
+    (<span class="k">when</span> (memq magit-log-select-show-usage '(both echo-area))
+      (message <span class="s">"%s"</span> (substring-no-properties msg)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

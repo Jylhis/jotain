@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vc-jj-log-view-bookmark-rename – Emacs Documentation Online</title>
+<meta name="description" content="vc-jj-log-view-bookmark-rename is an interactive and natively compiled
+function defined in vc-jj.el.
+Rename a bookmark pointing to the revision at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vc-jj-log-view-bookmark-rename</code></h1><p><span class="m"><code>vc-jj-log-view-bookmark-rename</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">vc-jj.el</span>.
+<h2>Signature</h2>
+<pre><code>(vc-jj-log-view-bookmark-rename)
+</code></pre>
+<h2>Documentation</h2>
+<p>Rename a bookmark pointing to the revision at point.
+<p>When called in a <a href="../fun/vc-jj-log-view-mode.html"><code>vc-jj-log-view-mode</code></a> buffer, rename the bookmark
+pointing to the revision at point.  If there are multiple bookmarks
+pointing to the revision, prompt the user to one of these bookmarks to
+rename.
+<h2>Key Bindings</h2>
+<p><span class="v">vc-jj-log-view-mode-map</span> <span class="key">b r</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/smb5w83hp9nz5jm5ish4kf6mshmmif86-emacs-packages-deps/share/emacs/site-lisp/elpa/vc-jj-0.5/vc-jj.el</span>
+(<span class="k">defun</span> <span class="f">vc-jj-log-view-bookmark-rename</span> ()
+  <span class="doc">"Rename a bookmark pointing to the revision at point.
+When called in a `</span><span class="m doc">vc-jj-log-view-mode</span><span class="doc">' buffer, rename the bookmark
+pointing to the revision at point.  If there are multiple bookmarks
+pointing to the revision, prompt the user to one of these bookmarks to
+rename."</span>
+  (<span class="k">interactive</span> nil vc-jj-log-view-mode)
+  (<span class="k">when</span> (derived-mode-p 'vc-jj-log-view-mode)
+    (<span class="k">let*</span> ((target-rev (log-view-current-tag))
+           (bookmarks-at-rev
+            (<span class="k">or</span> (vc-jj--process-lines <span class="s">"bookmark"</span> <span class="s">"list"</span> <span class="s">"-r"</span> target-rev
+                                      <span class="s">"-T"</span> <span class="s">"if(!self.remote(), self.name() ++ \"\n\")"</span>)
+                <span class="cd">;; </span><span class="c">FIXME(KrisB 2025-12-09): Is there a more
+</span>                <span class="cd">;; </span><span class="c">idiomatic/cleaner way to exit with a message than a
+</span>                <span class="cd">;; </span><span class="c">`</span><span class="m c">user-error</span><span class="c">' in the middle of a let binding?
+</span>                (<span class="w">user-error</span> <span class="s">"No bookmarks at %s"</span>
+                            (propertize
+                             (vc-jj--command-parseable <span class="s">"show"</span> <span class="s">"--no-patch"</span>
+                                                       <span class="s">"-r"</span> target-rev
+                                                       <span class="s">"-T"</span> <span class="s">"change_id.shortest()"</span>)
+                             'face 'log-view-message))))
+           (bookmark-old
+            (<span class="k">if</span> (= 1 (length bookmarks-at-rev))
+                (car bookmarks-at-rev)
+              (completing-read <span class="s">"Which bookmark to rename? "</span> bookmarks-at-rev)))
+           (bookmark-new
+            (read-string (format-prompt <span class="s">"Rename %s to"</span> nil bookmark-old))))
+      (vc-jj--command-dispatched nil 0 nil <span class="s">"bookmark"</span> <span class="s">"rename"</span> bookmark-old bookmark-new
+                                 <span class="s">"--quiet"</span>)
+      (revert-buffer))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

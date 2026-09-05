@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-util-do-events – Emacs Documentation Online</title>
+<meta name="description" content="pdf-util-do-events is a macro defined in pdf-util.el.
+Read EVENTs while CONDITION executing BODY.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-util-do-events</code></h1><p><span class="m"><code>pdf-util-do-events</code></span> is a macro defined in <span class="bt">pdf-util.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">pdf-util-do-events</span> <a href="#:~:text="><span class="arg">EVENT-RESOLUTION-UNREAD-P</span></a> <a href="#:~:text=while-,CONDITION"><span class="arg">CONDITION</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=executing-,BODY"><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Read EVENTs while <span class="arg">CONDITION</span> executing <span class="arg">BODY</span>.
+<p>Process at most 1/RESOLUTION events per second.  If UNREAD-p is
+non-nil, unread the final non-processed event.
+<p>(FN (EVENT RESOLUTION &amp;optional UNREAD-p) <span class="arg">CONDITION</span> &amp;rest <span class="arg">BODY</span>)
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-util.el</span>
+(<span class="k">defmacro</span> <span class="f">pdf-util-do-events</span> (event-resolution-unread-p condition <span class="ty">&amp;rest</span> body)
+  <span class="doc">"Read EVENTs while CONDITION executing BODY.
+
+Process at most 1/RESOLUTION events per second.  If UNREAD-p is
+non-nil, unread the final non-processed event.
+
+\(FN (EVENT RESOLUTION &amp;optional UNREAD-p) CONDITION &amp;rest BODY</span><span class="w doc">\</span><span class="doc">)"</span>
+  (<span class="k">declare</span> (indent 2) (debug ((symbolp form <span class="ty">&amp;optional</span> form) form body)))
+  (<span class="k">cl-destructuring-bind</span> (event resolution <span class="ty">&amp;optional</span> unread-p)
+      event-resolution-unread-p
+    (<span class="k">let</span> ((*seconds (make-symbol <span class="s">"seconds"</span>))
+          (*timestamp (make-symbol <span class="s">"timestamp"</span>))
+          (*clock (make-symbol <span class="s">"clock"</span>))
+          (*unread-p (make-symbol <span class="s">"unread-p"</span>))
+          (*resolution (make-symbol <span class="s">"resolution"</span>)))
+      `(<span class="k">let*</span> ((,*unread-p ,unread-p)
+              (,*resolution ,resolution)
+              (,*seconds 0)
+              (,*timestamp (float-time))
+              (,*clock (<span class="k">lambda</span> (<span class="ty">&amp;optional</span> secs)
+                         (<span class="k">when</span> secs
+                           (<span class="k">setq</span> ,*seconds secs
+                                 ,*timestamp (float-time)))
+                         (- (+ ,*timestamp ,*seconds)
+                            (float-time))))
+              (,event (read-event)))
+         (<span class="k">while</span> ,condition
+           (<span class="k">when</span> (&lt;= (funcall ,*clock) 0)
+             (<span class="k">progn</span> ,@body)
+             (<span class="k">setq</span> ,event nil)
+             (funcall ,*clock ,*resolution))
+           (<span class="k">setq</span> ,event
+                 (<span class="k">or</span> (read-event nil nil
+                                 (<span class="k">and</span> ,event
+                                      (max 0 (funcall ,*clock))))
+                     ,event)))
+         (<span class="k">when</span> (<span class="k">and</span> ,*unread-p ,event)
+           (<span class="k">setq</span> unread-command-events
+                 (append unread-command-events
+                         (list ,event))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

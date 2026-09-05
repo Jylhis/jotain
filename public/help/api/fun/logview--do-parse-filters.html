@@ -1,0 +1,124 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: logview--do-parse-filters – Emacs Documentation Online</title>
+<meta name="description" content="logview--do-parse-filters is a natively compiled function defined in
+logview.el.
+Parse given FILTERS and optional THREAD-NARROWING-FILTERS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>logview--do-parse-filters</code></h1><p><span class="m"><code>logview--do-parse-filters</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">logview.el</span>.
+<h2>Signature</h2>
+<pre><code>(logview--do-parse-filters <a href="#:~:text=given-,FILTERS"><span class="arg">FILTERS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=optional-,THREAD-NARROWING-FILTERS"><span class="arg">THREAD-NARROWING-FILTERS</span></a> <a href="#:~:text="><span class="arg">HEADER-FILTER-KEY</span></a> <a href="#:~:text=FILTERS.-,TO-RESET-IN-MAIN-FILTERS"><span class="arg">TO-RESET-IN-MAIN-FILTERS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse given <span class="arg">FILTERS</span> and optional <span class="arg">THREAD-NARROWING-FILTERS</span>.
+<p><span class="arg">TO-RESET-IN-MAIN-FILTERS</span> may be a list of strings like "a+" of
+filter types to discard.
+<p>Returns
+<p>&nbsp;&nbsp;&nbsp;&nbsp;(((MAIN-FILTER-TEXT . THREAD-NARROWING-FILTER-TEXT) . KEY)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;. VALIDATOR-FN)
+<p>or nil if there are no filters.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qid656ql5mh048bd0k84vvsbc2517lh9-emacs-packages-deps/share/emacs/site-lisp/elpa/logview-20260218.2013/logview.el</span>
+(<span class="k">defun</span> <span class="f">logview--do-parse-filters</span> (filters <span class="ty">&amp;optional</span> thread-narrowing-filters header-filter-key to-reset-in-main-filters)
+  <span class="doc">"Parse given FILTERS and optional THREAD-NARROWING-FILTERS.
+TO-RESET-IN-MAIN-FILTERS may be a list of strings like \"a+\" of
+filter types to discard.
+
+Returns
+
+    (((MAIN-FILTER-TEXT . THREAD-NARROWING-FILTER-TEXT) . KEY)
+     . VALIDATOR-FN)
+
+or nil if there are no filters."</span>
+  (<span class="k">let</span> (non-discarded-lines-main
+        non-discarded-lines-narrowing
+        min-shown-level
+        min-always-shown-level
+        include-name-regexps
+        exclude-name-regexps
+        include-thread-regexps
+        exclude-thread-regexps
+        include-thread-regexps-narrowing
+        exclude-thread-regexps-narrowing
+        include-message-regexps
+        exclude-message-regexps)
+    (<span class="k">dolist</span> (main '(t nil))
+      (<span class="k">let</span> ((pass-filters (<span class="k">if</span> main filters thread-narrowing-filters)))
+        (<span class="k">when</span> (&gt; (length pass-filters) 0)
+          (logview--iterate-filter-text-lines
+           pass-filters
+           (<span class="k">lambda</span> (type line-begin begin end)
+             (<span class="k">let</span> ((filter-line       (not (member type '(<span class="s">"#"</span> <span class="s">""</span> nil))))
+                   (reset-this-filter (<span class="k">and</span> main (member type to-reset-in-main-filters))))
+               (<span class="k">when</span> reset-this-filter
+                 (delete-region begin (point)))
+               (<span class="k">when</span> (<span class="k">and</span> (not (<span class="k">and</span> filter-line reset-this-filter)) (<span class="k">or</span> (<span class="k">if</span> main non-discarded-lines-main non-discarded-lines-narrowing) (not (equal type <span class="s">""</span>))))
+                 (<span class="k">push</span> (buffer-substring-no-properties line-begin (point)) (<span class="k">if</span> main non-discarded-lines-main non-discarded-lines-narrowing)))
+               (<span class="k">when</span> (<span class="k">and</span> filter-line (not reset-this-filter))
+                 (<span class="k">cond</span> ((string= type <span class="s">"lv"</span>)
+                        (<span class="k">setq</span> min-shown-level (buffer-substring-no-properties begin end)))
+                       ((string= type <span class="s">"LV"</span>)
+                        (<span class="k">setq</span> min-always-shown-level (buffer-substring-no-properties begin end)))
+                       (t
+                        (<span class="k">let</span> ((regexp (logview--filter-regexp begin end)))
+                          (<span class="k">when</span> (logview--valid-regexp-p regexp)
+                            (<span class="k">if</span> main
+                                (<span class="k">pcase</span> type
+                                  (<span class="s">"a+"</span> (<span class="k">push</span> regexp include-name-regexps))
+                                  (<span class="s">"a-"</span> (<span class="k">push</span> regexp exclude-name-regexps))
+                                  (<span class="s">"t+"</span> (<span class="k">push</span> regexp include-thread-regexps))
+                                  (<span class="s">"t-"</span> (<span class="k">push</span> regexp exclude-thread-regexps))
+                                  (<span class="s">"m+"</span> (<span class="k">push</span> regexp include-message-regexps))
+                                  (<span class="s">"m-"</span> (<span class="k">push</span> regexp exclude-message-regexps)))
+                              (<span class="k">pcase</span> type
+                                (<span class="s">"t+"</span> (<span class="k">push</span> regexp include-thread-regexps-narrowing))
+                                (<span class="s">"t-"</span> (<span class="k">push</span> regexp exclude-thread-regexps-narrowing)))))))))
+               t))))))
+    (<span class="k">setq</span> min-shown-level                  (<span class="k">unless</span> (equal min-shown-level (caar logview--submode-level-data))
+                                             (cadr (assoc min-shown-level logview--submode-level-data)))
+          min-always-shown-level           (cadr (assoc min-always-shown-level logview--submode-level-data))
+          include-name-regexps             (logview--standardize-regexp-options include-name-regexps)
+          exclude-name-regexps             (logview--standardize-regexp-options exclude-name-regexps)
+          include-thread-regexps           (logview--standardize-regexp-options include-thread-regexps)
+          exclude-thread-regexps           (logview--standardize-regexp-options exclude-thread-regexps)
+          include-thread-regexps-narrowing (logview--standardize-regexp-options include-thread-regexps-narrowing)
+          exclude-thread-regexps-narrowing (logview--standardize-regexp-options exclude-thread-regexps-narrowing)
+          include-message-regexps          (logview--standardize-regexp-options include-message-regexps)
+          exclude-message-regexps          (logview--standardize-regexp-options exclude-message-regexps))
+    <span class="cd">;; </span><span class="c">Deliberately not checking `</span><span class="m c">min-always-shown-level</span><span class="c">': it has no effect without other
+</span>    <span class="cd">;; </span><span class="c">filters.
+</span>    (<span class="k">when</span> (<span class="k">or</span> min-shown-level
+              include-name-regexps exclude-name-regexps
+              include-thread-regexps exclude-thread-regexps include-thread-regexps-narrowing exclude-thread-regexps-narrowing
+              include-message-regexps exclude-message-regexps
+              header-filter-key)
+      (cons (list (cons (<span class="k">when</span> non-discarded-lines-main      (apply #'concat (nreverse non-discarded-lines-main)))
+                        (<span class="k">when</span> non-discarded-lines-narrowing (apply #'concat (nreverse non-discarded-lines-narrowing))))
+                  min-shown-level min-always-shown-level include-name-regexps exclude-name-regexps
+                  include-thread-regexps exclude-thread-regexps include-thread-regexps-narrowing exclude-thread-regexps-narrowing
+                  include-message-regexps exclude-message-regexps
+                  header-filter-key)
+            (<span class="k">let</span> ((level-form (<span class="k">if</span> (<span class="k">and</span> min-shown-level min-always-shown-level) 'level '(logview--entry-level entry)))
+                  clauses)
+              (<span class="k">when</span> min-shown-level
+                (<span class="k">push</span> `(&lt;= ,level-form ,min-shown-level) clauses))
+              <span class="cd">;; </span><span class="c">FIXME: Try to optimize for speed better.  Currently order is fixed like
+</span>              <span class="cd">;;        </span><span class="c">this: thread narrowing, name filters, normal thread filters,
+</span>              <span class="cd">;;        </span><span class="c">message filters.
+</span>              (<span class="k">push</span> (logview--build-validator-regexp-clause include-thread-regexps-narrowing exclude-thread-regexps-narrowing logview--thread-group)  clauses)
+              (<span class="k">push</span> (logview--build-validator-regexp-clause include-name-regexps             exclude-name-regexps             logview--name-group)    clauses)
+              (<span class="k">push</span> (logview--build-validator-regexp-clause include-thread-regexps           exclude-thread-regexps           logview--thread-group)  clauses)
+              (<span class="k">push</span> (logview--build-validator-regexp-clause include-message-regexps          exclude-message-regexps          logview--message-group) clauses)
+              (<span class="k">when</span> (<span class="k">setf</span> clauses (delq nil clauses))
+                (<span class="k">let</span> ((validator (<span class="k">if</span> (cdr clauses) `(<span class="k">and</span> ,@(nreverse clauses)) (car clauses))))
+                  (<span class="k">when</span> min-always-shown-level
+                    (<span class="k">setq</span> validator `(<span class="k">or</span> (&lt;= ,level-form ,min-always-shown-level) ,validator)))
+                  (<span class="k">when</span> (eq level-form 'level)
+                    (<span class="k">setq</span> validator `(<span class="k">let</span> ((level (logview--entry-level entry))) ,validator)))
+                  <span class="cd">;; </span><span class="c">Here `</span><span class="m c">eval</span><span class="c">' is used to translate the lambda into a closure.
+</span>                  (byte-compile (eval `(<span class="k">lambda</span> (entry start) (ignore start) ,validator) t)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

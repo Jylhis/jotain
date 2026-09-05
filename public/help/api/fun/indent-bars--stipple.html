@@ -1,0 +1,117 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: indent-bars--stipple – Emacs Documentation Online</title>
+<meta name="description" content="indent-bars--stipple is a natively compiled function defined in
+indent-bars.el.
+Calculate stipple bitmap pattern for char width W and height H.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>indent-bars--stipple</code></h1><p><span class="m"><code>indent-bars--stipple</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">indent-bars.el</span>.
+<h2>Signature</h2>
+<pre><code>(indent-bars--stipple <a href="#:~:text=width-,W"><span class="arg">W</span></a> <a href="#:~:text=height-,H"><span class="arg">H</span></a> <a href="#:~:text=H.-,ROT"><span class="arg">ROT</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,STYLE"><span class="arg">STYLE</span></a> <a href="#:~:text=FRAC,-,WIDTH-FRAC"><span class="arg">WIDTH-FRAC</span></a> <a href="#:~:text=unless-,PAD-FRAC"><span class="arg">PAD-FRAC</span></a> <a href="#:~:text=FRAC,-,PATTERN"><span class="arg">PATTERN</span></a> <a href="#:~:text=or-,ZIGZAG"><span class="arg">ZIGZAG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Calculate stipple bitmap pattern for char width <span class="arg">W</span> and height <span class="arg">H</span>.
+<p><span class="arg">ROT</span> is the number of bits to rotate the pattern around to the
+right (with wrap).
+<p>Uses configuration variables <a href="../var/indent-bars-width-frac.html"><code>indent-bars-width-frac</code></a>,
+<a href="../var/indent-bars-pad-frac.html"><code>indent-bars-pad-frac</code></a>, <a href="../var/indent-bars-pattern.html"><code>indent-bars-pattern</code></a>, and
+<a href="../var/indent-bars-zigzag.html"><code>indent-bars-zigzag</code></a>, unless <span class="arg">PAD-FRAC</span>, <span class="arg">WIDTH-FRAC</span>, <span class="arg">PATTERN</span>,
+and/or <span class="arg">ZIGZAG</span> are set (the latter overriding the config
+variables, which see).  If <span class="arg">STYLE</span> is set, use config variables
+appropriate for that style.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kmdsnipwffgk5c0fs4785bhqa9fl17c5-emacs-packages-deps/share/emacs/site-lisp/elpa/indent-bars-1.0.1/indent-bars.el</span>
+<span class="cd">;; </span><span class="c">** Notes on the stipples:
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">indent-bars by default uses a selectively-revealed stipple pattern
+</span><span class="cd">;; </span><span class="c">with a width equivalent to the (presumed fixed) width of individual
+</span><span class="cd">;; </span><span class="c">characters to efficiently draw bars.  A stipple pattern is drawn as
+</span><span class="cd">;; </span><span class="c">a fixed repeating bit pattern, with its lowest bits and earlier
+</span><span class="cd">;; </span><span class="c">bytes leftmost.  It is drawn with respect to the *entire frame*,
+</span><span class="cd">;; </span><span class="c">with its first bit aligned with the first (leftmost) frame pixel.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Turning on :stipple for a character merely "opens a window" on that
+</span><span class="cd">;; </span><span class="c">frame-filling, repeating stipple pattern.  Since the pattern starts
+</span><span class="cd">;; </span><span class="c">outside the body (in literally the first frame pixel, typically
+</span><span class="cd">;; </span><span class="c">within the fringe), you must consider the shift between the first
+</span><span class="cd">;; </span><span class="c">pixel of a window character and the first pixel of the repeating
+</span><span class="cd">;; </span><span class="c">stipple block at that pixel position or above:
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;;     </span><span class="c">|&lt;-frame edge |&lt;---buffer/window edge
+</span><span class="cd">;;     </span><span class="c">|&lt;--w--&gt;|&lt;--w--&gt;|&lt;--w--&gt;|     w = pattern width
+</span><span class="cd">;;     </span><span class="c">| marg+fringe |&lt;-chr-&gt;|     chr = character width = w
+</span><span class="cd">;;             </span><span class="c">|&lt;-g-&gt;|               g = gutter offset of chr start, g&lt;w
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Or, when the character width exceeds the margin/fringe offset:
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;;     </span><span class="c">|&lt;-frame edge |&lt;---buffer/window edge
+</span><span class="cd">;;     </span><span class="c">|&lt;--------w--------&gt;|&lt;---------w--------&gt;|
+</span><span class="cd">;;     </span><span class="c">| marg+fringe |&lt;-------chr-------&gt;|
+</span><span class="cd">;;     </span><span class="c">|&lt;-----g-----&gt;|
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">So g = (mod marg+fringe w).
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">When the block/zigzag/whatever stipple pattern is made, to align
+</span><span class="cd">;; </span><span class="c">with characters, it must be shifted up (= right) by g bits, with
+</span><span class="cd">;; </span><span class="c">carry over (wrap) around w=space-width bits (i.e the width of the
+</span><span class="cd">;; </span><span class="c">bitmap in pixels).  The byte/bit pattern is first-lowest-leftmost.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Note that different windows may have different g values
+</span><span class="cd">;; </span><span class="c">(e.g. left/right), which means the same bitmap cannot work for the
+</span><span class="cd">;; </span><span class="c">buffer in both windows.  In practice that means that all stipple
+</span><span class="cd">;; </span><span class="c">face attributes must be set via filtered face remaps, with the
+</span><span class="cd">;; </span><span class="c">filter set to match the pattern size (width and height) as well as
+</span><span class="cd">;; </span><span class="c">gutter offset "rot" value in that window, which we combine into a
+</span><span class="cd">;; </span><span class="c">single integer.
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">Note: a bug in Emacs &lt;29 means `</span><span class="m c">face-remapping-alist</span><span class="c">' is
+</span><span class="cd">;; </span><span class="c">unintentionally shared between indirect and master buffers.  Fixed
+</span><span class="cd">;; </span><span class="c">in Emacs 29.
+</span>
+(<span class="k">defun</span> <span class="f">indent-bars--stipple</span> (w h rot <span class="ty">&amp;optional</span> style
+			       width-frac pad-frac pattern zigzag)
+  <span class="doc">"Calculate stipple bitmap pattern for char width W and height H.
+ROT is the number of bits to rotate the pattern around to the
+right (with wrap).
+
+Uses configuration variables `</span><span class="m doc">indent-bars-width-frac</span><span class="doc">',
+`</span><span class="m doc">indent-bars-pad-frac</span><span class="doc">', `</span><span class="m doc">indent-bars-pattern</span><span class="doc">', and
+`</span><span class="m doc">indent-bars-zigzag</span><span class="doc">', unless PAD-FRAC, WIDTH-FRAC, PATTERN,
+and/or ZIGZAG are set (the latter overriding the config
+variables, which see).  If STYLE is set, use config variables
+appropriate for that style."</span>
+  (<span class="k">unless</span> (<span class="k">or</span> (not (display-graphic-p)) indent-bars-prefer-character)
+    (<span class="k">let*</span> ((rowbytes (/ (+ w 7) 8))
+	   (pattern (<span class="k">or</span> pattern (indent-bars--style style <span class="s">"pattern"</span>)))
+	   (pat (<span class="k">if</span> (&lt; h (length pattern)) (substring pattern 0 h) pattern))
+	   (plen (max (length pat) 1))
+	   (chunk (/ (float h) plen))
+	   (small (floor chunk))
+	   (large (ceiling chunk))
+	   (pad-frac (<span class="k">or</span> pad-frac (indent-bars--style style <span class="s">"pad-frac"</span>)))
+	   (pad (round (* w pad-frac)))
+	   (zigzag (<span class="k">or</span> zigzag (indent-bars--style style <span class="s">"zigzag"</span>)))
+	   (zz (<span class="k">if</span> zigzag (round (* w zigzag)) 0))
+	   (zeroes (make-string rowbytes ?\0))
+	   (width-frac (<span class="k">or</span> width-frac (indent-bars--style style <span class="s">"width-frac"</span>)))
+	   (dlist (<span class="k">if</span> (<span class="k">and</span> (= plen 1) (not (string= pat <span class="s">" "</span>))) <span class="cd">; </span><span class="c">solid bar
+</span>		      (list (indent-bars--row-data w pad rot width-frac)) <span class="cd">; </span><span class="c">one row
+</span>		    (<span class="k">cl-loop</span> for last-fill-char = nil then x
+			     for x across pat
+			     for n = small then (<span class="k">if</span> (<span class="k">and</span> (/= x ?\s) (= n small))
+						    large
+						  small)
+			     for zoff = zz then (<span class="k">if</span> (<span class="k">and</span> last-fill-char
+							 (/= x ?\s)
+							 (/= x last-fill-char))
+						    (- zoff) zoff)
+			     for row = (<span class="k">if</span> (= x ?\s) zeroes
+					 (indent-bars--row-data w (+ pad zoff)
+								rot width-frac))
+			     append (<span class="k">cl-loop</span> repeat n collect row)))))
+      (list w (length dlist) (string-join dlist)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

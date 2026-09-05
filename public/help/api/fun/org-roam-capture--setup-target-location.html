@@ -1,0 +1,123 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-capture--setup-target-location – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-capture--setup-target-location is a natively compiled
+function defined in org-roam-capture.el.
+Initialize the buffer, and goto the location of the new capture.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-capture--setup-target-location</code></h1><p><span class="m"><code>org-roam-capture--setup-target-location</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">org-roam-capture.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-capture--setup-target-location)
+</code></pre>
+<h2>Documentation</h2>
+<p>Initialize the buffer, and goto the location of the new capture.
+<p>Return the ID of the location.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-capture.el</span>
+(<span class="k">defun</span> <span class="f">org-roam-capture--setup-target-location</span> ()
+  <span class="doc">"Initialize the buffer, and goto the location of the new capture.
+Return the ID of the location."</span>
+  (<span class="k">let</span> (p new-file-p)
+    (<span class="k">pcase</span> (org-roam-capture--get-target)
+      (`(file ,path)
+       (<span class="k">setq</span> path (org-roam-capture--target-truepath path)
+             new-file-p (org-roam-capture--new-file-p path))
+       (<span class="k">when</span> new-file-p (org-roam-capture--put <span class="bi">:new-file</span> path))
+       (set-buffer (org-capture-target-buffer path))
+       (widen)
+       (<span class="k">setq</span> p (goto-char (point-min))))
+      (`(file+olp ,path ,olp)
+       (<span class="k">setq</span> path (org-roam-capture--target-truepath path)
+             new-file-p (org-roam-capture--new-file-p path))
+       (<span class="k">when</span> new-file-p (org-roam-capture--put <span class="bi">:new-file</span> path))
+       (set-buffer (org-capture-target-buffer path))
+       (<span class="k">setq</span> p (point-min))
+       (<span class="k">let</span> ((m (org-roam-capture-find-or-create-olp olp)))
+         (goto-char m))
+       (widen))
+      (`(file+head ,path ,head)
+       (<span class="k">setq</span> path (org-roam-capture--target-truepath path)
+             new-file-p (org-roam-capture--new-file-p path))
+       (set-buffer (org-capture-target-buffer path))
+       (<span class="k">when</span> new-file-p
+         (org-roam-capture--put <span class="bi">:new-file</span> path)
+         (insert (org-roam-capture--fill-template head 'ensure-newline)))
+       (widen)
+       (<span class="k">setq</span> p (goto-char (point-min))))
+      (`(file+head+olp ,path ,head ,olp)
+       (<span class="k">setq</span> path (org-roam-capture--target-truepath path)
+             new-file-p (org-roam-capture--new-file-p path))
+       (set-buffer (org-capture-target-buffer path))
+       (widen)
+       (<span class="k">when</span> new-file-p
+         (org-roam-capture--put <span class="bi">:new-file</span> path)
+         (insert (org-roam-capture--fill-template head 'ensure-newline)))
+       (<span class="k">setq</span> p (point-min))
+       (<span class="k">let</span> ((m (org-roam-capture-find-or-create-olp olp)))
+         (goto-char m)))
+      (`(file+datetree ,path ,tree-type)
+       (<span class="k">setq</span> path (org-roam-capture--target-truepath path))
+       (<span class="k">require</span> '<span class="m">org-datetree</span>)
+       (widen)
+       (set-buffer (org-capture-target-buffer path))
+       (<span class="k">unless</span> (file-exists-p path)
+         (org-roam-capture--put <span class="bi">:new-file</span> path))
+       (funcall
+        (<span class="k">pcase</span> tree-type
+          (`week #'org-datetree-find-iso-week-create)
+          (`month #'org-datetree-find-month-create)
+          (_ #'org-datetree-find-date-create))
+        (calendar-gregorian-from-absolute
+         (<span class="k">cond</span>
+          (org-overriding-default-time
+           <span class="cd">;; </span><span class="c">Use the overriding default time.
+</span>           (time-to-days org-overriding-default-time))
+          ((org-capture-get <span class="bi">:default-time</span>)
+           (time-to-days (org-capture-get <span class="bi">:default-time</span>)))
+          ((org-capture-get <span class="bi">:time-prompt</span>)
+           <span class="cd">;; </span><span class="c">Prompt for date.  Bind `</span><span class="m c">org-end-time-was-given</span><span class="c">' so
+</span>           <span class="cd">;; </span><span class="c">that `</span><span class="m c">org-read-date-analyze</span><span class="c">' handles the time range
+</span>           <span class="cd">;; </span><span class="c">case and returns `</span><span class="m c">prompt-time</span><span class="c">' with the start value.
+</span>           (<span class="k">let*</span> ((org-time-was-given nil)
+                  (org-end-time-was-given nil)
+                  (prompt-time (org-read-date
+                                nil t nil <span class="s">"Date for tree entry:"</span>)))
+             (org-capture-put
+              <span class="bi">:default-time</span>
+              (<span class="k">if</span> (<span class="k">or</span> org-time-was-given
+                      (= (time-to-days prompt-time) (org-today)))
+                  prompt-time
+                <span class="cd">;; </span><span class="c">Use 00:00 when no time is given for another
+</span>                <span class="cd">;; </span><span class="c">date than today?
+</span>                (apply #'encode-time 0 0
+                       org-extend-today-until
+                       (cl-cdddr (decode-time prompt-time)))))
+             (time-to-days prompt-time)))
+          (t
+           <span class="cd">;; </span><span class="c">Current date, possibly corrected for late night
+</span>           <span class="cd">;; </span><span class="c">workers.
+</span>           (org-today)))))
+       (<span class="k">setq</span> p (point)))
+      (`(node ,title-or-id)
+       <span class="cd">;; </span><span class="c">first try to get ID, then try to get title/alias
+</span>       (<span class="k">let</span> ((node (<span class="k">or</span> (org-roam-node-from-id title-or-id)
+                       (org-roam-node-from-title-or-alias title-or-id)
+                       (<span class="w">user-error</span> <span class="s">"No node with title or id \"%s\""</span> title-or-id))))
+         (set-buffer (org-capture-target-buffer (org-roam-node-file node)))
+         (goto-char (org-roam-node-point node))
+         (<span class="k">setq</span> p (org-roam-node-point node)))))
+    <span class="cd">;; </span><span class="c">Setup `</span><span class="m c">org-id</span><span class="c">' for the current capture target and return it back to the
+</span>    <span class="cd">;; </span><span class="c">caller.
+</span>    (<span class="k">save-excursion</span>
+      (goto-char p)
+      (<span class="k">if-let*</span> ((id (org-entry-get p <span class="s">"ID"</span>)))
+          (<span class="k">setf</span> (org-roam-node-id org-roam-capture--node) id)
+        (org-entry-put p <span class="s">"ID"</span> (org-roam-node-id org-roam-capture--node)))
+      (<span class="k">prog1</span>
+          (org-id-get)
+        (run-hooks 'org-roam-capture-new-node-hook)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

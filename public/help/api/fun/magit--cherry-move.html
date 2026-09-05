@@ -1,0 +1,68 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit--cherry-move – Emacs Documentation Online</title>
+<meta name="description" content="magit--cherry-move is a natively compiled function defined in
+magit-sequence.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit--cherry-move</code></h1><p><span class="m"><code>magit--cherry-move</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-sequence.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit--cherry-move <span class="arg">COMMITS</span> <span class="arg">SRC</span> <span class="arg">DST</span> <span class="arg">ARGS</span> <span class="ty">&amp;optional</span> <span class="arg">START-POINT</span> <span class="arg">CHECKOUT-DST</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-sequence.el</span>
+(<span class="k">defun</span> <span class="f">magit--cherry-move</span> (commits src dst args
+                                   <span class="ty">&amp;optional</span> start-point checkout-dst)
+  (<span class="k">let</span> ((current (magit-get-current-branch)))
+    (<span class="k">unless</span> (magit-branch-p dst)
+      (<span class="k">let</span> ((magit-process-raise-error t))
+        (magit-call-git <span class="s">"branch"</span> dst start-point))
+      (when$ (magit-get-indirect-upstream-branch start-point)
+        (magit-call-git <span class="s">"branch"</span> <span class="s">"--set-upstream-to"</span> $ dst)))
+    (<span class="k">unless</span> (equal dst current)
+      (<span class="k">let</span> ((magit-process-raise-error t))
+        (magit-call-git <span class="s">"checkout"</span> dst)))
+    (<span class="k">if</span> (not src) <span class="cd">; </span><span class="c">harvest only
+</span>        (magit--cherry-pick commits args)
+      (<span class="k">let</span> ((tip (car (last commits)))
+            (keep (concat (car commits) <span class="s">"^"</span>)))
+        (magit--cherry-pick commits args)
+        (set-process-sentinel
+         magit-this-process
+         (<span class="k">lambda</span> (process event)
+           (<span class="k">when</span> (memq (process-status process) '(exit signal))
+             (<span class="k">if</span> (&gt; (process-exit-status process) 0)
+                 (magit-process-sentinel process event)
+               (process-put process 'inhibit-refresh t)
+               (magit-process-sentinel process event)
+               (<span class="k">cond</span>
+                 ((magit-rev-equal tip src)
+                  (magit-call-git <span class="s">"update-ref"</span>
+                                  <span class="s">"-m"</span> (format <span class="s">"reset: moving to %s"</span> keep)
+                                  (magit-ref-fullname src)
+                                  keep tip)
+                  (<span class="k">if</span> (not checkout-dst)
+                      (magit-run-git <span class="s">"checkout"</span> src)
+                    (magit-refresh)))
+                 (t
+                  (magit-git <span class="s">"checkout"</span> src)
+                  (<span class="k">with-environment-variables</span>
+                      ((<span class="s">"GIT_SEQUENCE_EDITOR"</span>
+                        (format <span class="s">"%s -i -ne '/^pick (%s)/ or print'"</span>
+                                magit-perl-executable
+                                (mapconcat #'magit-rev-abbrev commits <span class="s">"|"</span>))))
+                    (magit-run-git-sequencer <span class="s">"rebase"</span> <span class="s">"-i"</span> keep))
+                  (<span class="k">when</span> checkout-dst
+                    (set-process-sentinel
+                     magit-this-process
+                     (<span class="k">lambda</span> (process event)
+                       (<span class="k">when</span> (memq (process-status process) '(exit signal))
+                         (<span class="k">if</span> (&gt; (process-exit-status process) 0)
+                             (magit-process-sentinel process event)
+                           (process-put process 'inhibit-refresh t)
+                           (magit-process-sentinel process event)
+                           (magit-run-git <span class="s">"checkout"</span> dst))))))))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: projection-multi-embark--set-command-wrapper – Emacs Documentation Online</title>
+<meta name="description" content="projection-multi-embark--set-command-wrapper is a macro defined in
+projection-multi-embark.el.
+Define embark commands for setting project commands for TYPE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>projection-multi-embark--set-command-wrapper</code></h1><p><span class="m"><code>projection-multi-embark--set-command-wrapper</code></span> is a macro defined in
+<span class="bt">projection-multi-embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">projection-multi-embark--set-command-wrapper</span> <a href="#:~:text=for-,TYPE"><span class="arg">TYPE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Define embark commands for setting project commands for <span class="arg">TYPE</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/50ajc68213wg7if0q3gkyqyf88p2wcx0-emacs-packages-deps/share/emacs/site-lisp/elpa/projection-multi-embark-20241107.2107/projection-multi-embark.el</span>
+(<span class="k">defmacro</span> <span class="f">projection-multi-embark--set-command-wrapper</span> (type)
+  <span class="doc">"Define embark commands for setting project commands for TYPE."</span>
+  (<span class="k">let</span> ((func-name (intern (concat <span class="s">"projection-multi-embark-set-"</span> (symbol-name type) <span class="s">"-command-dwim"</span>)))
+        (raw-func-name (intern (concat <span class="s">"projection-multi-embark-set-"</span> (symbol-name type) <span class="s">"-command"</span>)))
+        (default-func-name (intern (concat <span class="s">"projection-commands-set-"</span> (symbol-name type) <span class="s">"-command"</span>)))
+        (projection-multi-embark--custom-property 'projection-set-command-callback))
+    `(<span class="k">progn</span>
+       (<span class="k">defun</span> ,func-name (command <span class="ty">&amp;optional</span> set-raw)
+         ,(format <span class="s">"Set %s command for the current project to COMMAND intelligently.
+Command should be a shell command string. As a special case COMMAND if
+having a property `</span><span class="m s">%s</span><span class="s">'
+will have that property called with key-args of :type, :command and :project.
+For convenience all other text-properties of COMMAND will be passed as keyword
+arguments to the special property.
+
+Pass SET-RAW to always set `</span><span class="m s">%s</span><span class="s">' command to COMMAND directly."</span>
+                  type projection-multi-embark--custom-property type)
+         (<span class="k">let</span> ((project (projection--current-project)))
+           (<span class="k">if-let*</span> ((should-not-set-raw (not set-raw))
+                     (command-is-string (stringp command))
+                     (set-command-property
+                      (get-text-property 0 ',projection-multi-embark--custom-property command)))
+               (apply set-command-property
+                      (append
+                       (list <span class="bi">:type</span> ',type
+                             <span class="bi">:command</span> command
+                             <span class="bi">:project</span> project)
+                       (<span class="k">cl-loop</span> for prop being the elements of (text-properties-at 0 command)
+                                using (index i)
+                                when (eq (% i 2) 0)
+                                collect (intern (concat <span class="s">":"</span> (symbol-name prop)))
+                                else
+                                collect prop)))
+             (funcall #',default-func-name command project))))
+
+       (<span class="k">defun</span> ,raw-func-name (command)
+         ,(format <span class="s">"Set %s command for the current project to COMMAND."</span>
+                  type)
+         (,func-name command 'set-raw)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

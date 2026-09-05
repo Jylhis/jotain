@@ -1,0 +1,44 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: wgrep-apply-change – Emacs Documentation Online</title>
+<meta name="description" content="wgrep-apply-change is a natively compiled function defined in
+wgrep.el.
+The changes in the *grep* buffer are applied to the file.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>wgrep-apply-change</code></h1><p><span class="m"><code>wgrep-apply-change</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">wgrep.el</span>.
+<h2>Signature</h2>
+<pre><code>(wgrep-apply-change <a href="#:~:text="><span class="arg">MARKER</span></a> <a href="#:~:text="><span class="arg">OLD</span></a> <a href="#:~:text=file.-,NEW"><span class="arg">NEW</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>The changes in the *grep* buffer are applied to the file.
+<p><span class="arg">NEW</span> may be nil this means deleting whole line.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/jh0vggyzz4qppa1npcrzxy9a9bgj60hg-emacs-packages-deps/share/emacs/site-lisp/elpa/wgrep-20230203.1214/wgrep.el</span>
+(<span class="k">defun</span> <span class="f">wgrep-apply-change</span> (marker old new)
+  <span class="doc">"The changes in the *grep* buffer are applied to the file.
+NEW may be nil this means deleting whole line."</span>
+  (<span class="k">let</span> ((coding buffer-file-coding-system))
+    (goto-char marker)
+    <span class="cd">;; </span><span class="c">check BOM
+</span>    (<span class="k">when</span> (<span class="k">and</span> (= (point-min-marker) marker)
+               coding
+               (coding-system-get coding <span class="bi">:bom</span>))
+      (<span class="k">setq</span> old (wgrep-string-replace-bom old coding))
+      (<span class="k">when</span> new
+        (<span class="k">setq</span> new (wgrep-string-replace-bom new coding))))
+    <span class="cd">;; </span><span class="c">Check buffer line was modified after execute grep.
+</span>    (<span class="k">unless</span> (string= old
+                     (buffer-substring-no-properties
+                      (line-beginning-position) (line-end-position)))
+      (<span class="w">signal</span> 'wgrep-error (list <span class="s">"Buffer was changed after grep."</span>)))
+    (<span class="k">cond</span>
+     (new
+      (wgrep-replace-to-new-line new))
+     (t
+      <span class="cd">;; </span><span class="c">new nil means flush whole line.
+</span>      (wgrep-flush-whole-line)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

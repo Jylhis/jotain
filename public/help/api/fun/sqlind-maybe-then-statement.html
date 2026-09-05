@@ -1,0 +1,96 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sqlind-maybe-then-statement – Emacs Documentation Online</title>
+<meta name="description" content="sqlind-maybe-then-statement is a natively compiled function defined in
+sql-indent.el.
+Find the corresponding start block for a &quot;then&quot; statement.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sqlind-maybe-then-statement</code></h1><p><span class="m"><code>sqlind-maybe-then-statement</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">sql-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(sqlind-maybe-then-statement)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find the corresponding start block for a "then" statement.
+<p>When (point) is on a "then" statement, find the corresponding
+start of the block and report its syntax.  This code will skip
+over nested statements to determine the actual start.
+<p>Only keywords in program code are matched, not the ones inside
+expressions.
+<p>See also <a href="../fun/sqlind-beginning-of-block.html"><code>sqlind-beginning-of-block</code></a>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vgm6xb2iy00bs19rdw9z3nfi5nf8g873-emacs-packages-deps/share/emacs/site-lisp/elpa/sql-indent-1.7/sql-indent.el</span>
+(<span class="k">defun</span> <span class="f">sqlind-maybe-then-statement</span> ()
+  <span class="doc">"Find the corresponding start block for a \"then\" statement.
+When (point) is on a \"then\" statement, find the corresponding
+start of the block and report its syntax.  This code will skip
+over nested statements to determine the actual start.
+
+Only keywords in program code are matched, not the ones inside
+expressions.
+
+See also `</span><span class="m doc">sqlind-beginning-of-block</span><span class="doc">'"</span>
+  (<span class="k">when</span> (looking-at <span class="s">"then"</span>)
+    (<span class="k">prog1</span> t                            <span class="cd">; </span><span class="c">make sure we return t
+</span>      (<span class="k">let</span> ((start-pos (point)))
+
+	<span class="cd">;; </span><span class="c">a then keyword at the begining of a line is a block start
+</span>	(<span class="k">when</span> (null sqlind-end-stmt-stack)
+	  (<span class="k">save-excursion</span>
+	    (back-to-indentation)
+	    (<span class="k">when</span> (eq (point) start-pos)
+	      (<span class="k">throw</span> '<span class="m">finished</span> (list 'in-block 'then <span class="s">""</span>)))))
+
+	<span class="cd">;; </span><span class="c">if it is not at the beginning of a line, the beginning of
+</span>	<span class="cd">;; </span><span class="c">the statement is the block start
+</span>	(<span class="k">ignore-errors</span> (forward-char -1))
+	(sqlind-beginning-of-statement)
+	<span class="cd">;; </span><span class="c">a then keyword only starts a block when it is part of an
+</span>	<span class="cd">;; </span><span class="c">if, case/when or exception statement
+</span>	(<span class="k">cond</span>
+	  ((looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">&lt;&lt;[a-z0-9_]+&gt;&gt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[ \t\n\r\f]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">els</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;"</span>)
+	   (<span class="k">let</span> ((if-label (sqlind-match-string 1))
+		 (if-kind (intern (sqlind-match-string 2)))) <span class="cd">; </span><span class="c">can be if or elsif
+</span>	     (<span class="k">setq</span> if-label (<span class="k">if</span> if-label (substring if-label 2 -2) <span class="s">""</span>))
+	     (<span class="k">if</span> (null sqlind-end-stmt-stack)
+		 (<span class="k">throw</span> '<span class="m">finished</span> (list 'in-block if-kind if-label))
+		 <span class="cd">;; </span><span class="c">"if" blocks (but not "elsif" blocks) need to be
+</span>		 <span class="cd">;; </span><span class="c">ended with "end if"
+</span>		 (<span class="k">when</span> (eq if-kind 'if)
+		   (<span class="k">cl-destructuring-bind</span> (pos kind label)
+		       (<span class="k">pop</span> sqlind-end-stmt-stack)
+		     (<span class="k">unless</span> (<span class="k">and</span> (eq kind 'if)
+				  (sqlind-labels-match label if-label))
+		       (<span class="k">throw</span> '<span class="m">finished</span>
+			 (list 'syntax-error
+			       <span class="s">"bad closing for if block"</span> (point) pos))))))))
+	  ((looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">&lt;&lt;[a-z0-9_]+&gt;&gt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[ \t\n\r\f]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">case\\_&gt;"</span>)
+	   <span class="cd">;; </span><span class="c">find the nearest when block, but only if there are no
+</span>	   <span class="cd">;; </span><span class="c">end statements in the stack
+</span>	   (<span class="k">let</span> ((case-label (sqlind-match-string 1)))
+	     (<span class="k">setq</span> case-label
+		   (<span class="k">if</span> case-label (substring case-label 2 -2) <span class="s">""</span>))
+	     (<span class="k">if</span> (null sqlind-end-stmt-stack)
+                 (<span class="k">save-excursion</span>
+                   (<span class="k">when</span> (sqlind-search-backward start-pos <span class="s">"\\_&lt;when\\_&gt;"</span> (point))
+                     (<span class="k">throw</span> '<span class="m">finished</span> (list 'in-block 'case case-label))))
+		 <span class="cd">;; </span><span class="c">else
+</span>		 (<span class="k">cl-destructuring-bind</span> (pos kind label)
+		     (<span class="k">pop</span> sqlind-end-stmt-stack)
+		   (<span class="k">unless</span> (<span class="k">and</span> (eq kind 'case)
+				(sqlind-labels-match label case-label))
+		     (<span class="k">throw</span> '<span class="m">finished</span>
+		       (list 'syntax-error
+			     <span class="s">"bad closing for case block"</span> (point) pos)))))))
+	  ((looking-at <span class="s">"exception\\_&gt;"</span>)
+	   <span class="cd">;; </span><span class="c">an exception statement is a block start only if we have
+</span>	   <span class="cd">;; </span><span class="c">no end statements in the stack
+</span>	   (<span class="k">when</span> (null sqlind-end-stmt-stack)
+	     (<span class="k">throw</span> '<span class="m">finished</span> (list 'in-block 'exception <span class="s">""</span>))))
+          (t                       <span class="cd">; </span><span class="c">restore position if we didn't do anything
+</span>           (goto-char start-pos)
+           nil))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

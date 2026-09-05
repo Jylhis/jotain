@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-diff--paint-hunk-whitespace – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-diff--paint-hunk-whitespace is a natively compiled function
+defined in majutsu-diff.el.
+Paint tabs and trailing whitespace between START and END for FILE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-diff--paint-hunk-whitespace</code></h1><p><span class="m"><code>majutsu-diff--paint-hunk-whitespace</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-diff--paint-hunk-whitespace <a href="#:~:text=between-,START"><span class="arg">START</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a> <a href="#:~:text=for-,FILE"><span class="arg">FILE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Paint tabs and trailing whitespace between <span class="arg">START</span> and <span class="arg">END</span> for <span class="arg">FILE</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-diff.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-diff--paint-hunk-whitespace</span> (start end file)
+  <span class="doc">"Paint tabs and trailing whitespace between START and END for FILE."</span>
+  (<span class="k">when</span> (<span class="k">and</span> majutsu-diff-paint-whitespace
+             (<span class="k">or</span> (not majutsu-diff-whitespace-max-chars)
+                 (&lt;= (- end start) majutsu-diff-whitespace-max-chars)))
+    (<span class="k">let</span> ((tabw (majutsu-diff--tab-width file)))
+      (<span class="k">save-excursion</span>
+        (goto-char start)
+        (<span class="k">while</span> (&lt; (point) end)
+          (<span class="k">let</span> ((bol (line-beginning-position))
+                (eol (line-end-position)))
+            <span class="cd">;; </span><span class="c">Skip the diff marker column when checking trailing whitespace so
+</span>            <span class="cd">;; </span><span class="c">blank diff lines like "+" or " " don't light up.
+</span>            (<span class="k">when</span> (<span class="k">and</span> majutsu-diff-highlight-trailing
+                       (&lt; bol eol))
+              (<span class="k">save-excursion</span>
+                (goto-char (min eol (1+ bol)))
+                (<span class="k">when</span> (re-search-forward <span class="s">"[ \t]+$"</span> eol t)
+                  (<span class="k">let</span> ((ov (make-overlay (match-beginning 0) (match-end 0) nil t)))
+                    (overlay-put ov 'font-lock-face 'magit-diff-whitespace-warning)
+                    (overlay-put ov 'evaporate t)
+                    (overlay-put ov 'priority 2)))))
+            <span class="cd">;; </span><span class="c">Paint tabs by giving them display width.
+</span>            (goto-char bol)
+            (<span class="k">while</span> (search-forward <span class="s">"\t"</span> eol t)
+              (put-text-property (1- (point)) (point)
+                                 'display (list (list 'space <span class="bi">:width</span> tabw)))))
+          <span class="cd">;; </span><span class="c">Paint tabs by giving them display width.
+</span>          (forward-line 1))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

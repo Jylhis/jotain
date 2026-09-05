@@ -1,0 +1,88 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: denote--get-final-components-for-rewrite – Emacs Documentation Online</title>
+<meta name="description" content="denote--get-final-components-for-rewrite is a natively compiled
+function defined in denote.el.
+Return the final components to handle by a front matter rewrite operation.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>denote--get-final-components-for-rewrite</code></h1><p><span class="m"><code>denote--get-final-components-for-rewrite</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">denote.el</span>.
+<h2>Signature</h2>
+<pre><code>(denote--get-final-components-for-rewrite <a href="#:~:text=to-,COMPONENTS-IN-FILE"><span class="arg">COMPONENTS-IN-FILE</span></a> <a href="#:~:text=operation.-,COMPONENTS-IN-TEMPLATE"><span class="arg">COMPONENTS-IN-TEMPLATE</span></a> <a href="#:~:text=operation.-,COMPONENTS-TO-ADD"><span class="arg">COMPONENTS-TO-ADD</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the final components to handle by a front matter rewrite operation.
+<p><span class="arg">COMPONENTS-TO-ADD</span> is the list of components that have to be added to
+<span class="arg">COMPONENTS-IN-FILE</span> to build the list of components that will need to be
+handled during a front matter rewrite operation.
+<p><span class="arg">COMPONENTS-IN-TEMPLATE</span> is the list of components in a front matter
+template.  They are used to determine how the <span class="arg">COMPONENTS-TO-ADD</span> are
+added to <span class="arg">COMPONENTS-IN-FILE</span>.
+<p>Example:
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;file = (title signature)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;template = (title keywords date id signature)
+<p>The date line is missing from the file.  From the template, we find out
+that it needs to be added *after* a keywords line.  Since we don't have
+one in the file, we keep looking for a line to add it *after* and find a
+title line.  Had we not found the title line in the file, we would have
+searched for a line to insert it *before*.  We would have inserted the
+date line before the signature line, for example.
+<p>This is repeated until all missing components are added.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/5x9606vmybcj80x6qrajp43rma9pa1i7-emacs-packages-deps/share/emacs/site-lisp/elpa/denote-4.2.3/denote.el</span>
+(<span class="k">defun</span> <span class="f">denote--get-final-components-for-rewrite</span> (components-in-file components-in-template components-to-add)
+  <span class="doc">"Return the final components to handle by a front matter rewrite operation.
+
+COMPONENTS-TO-ADD is the list of components that have to be added to
+COMPONENTS-IN-FILE to build the list of components that will need to be
+handled during a front matter rewrite operation.
+
+COMPONENTS-IN-TEMPLATE is the list of components in a front matter
+template.  They are used to determine how the COMPONENTS-TO-ADD are
+added to COMPONENTS-IN-FILE.
+
+Example:
+          file = (title signature)
+      template = (title keywords date id signature)
+
+The date line is missing from the file.  From the template, we find out
+that it needs to be added *after* a keywords line.  Since we don't have
+one in the file, we keep looking for a line to add it *after* and find a
+title line.  Had we not found the title line in the file, we would have
+searched for a line to insert it *before*.  We would have inserted the
+date line before the signature line, for example.
+
+This is repeated until all missing components are added."</span>
+  (<span class="k">let</span> ((final-components (copy-sequence components-in-file)))
+    (<span class="k">dolist</span> (component components-to-add)
+      (<span class="k">if-let*</span> ((previous-components-in-template
+                 (seq-take-while (<span class="k">lambda</span> (x) (not (eq x component))) components-in-template))
+                (first-previous-component-in-file
+                 (seq-find (<span class="k">lambda</span> (x) (memq x final-components)) (reverse previous-components-in-template))))
+          <span class="cd">;; </span><span class="c">Insert after the existing element.
+</span>          (<span class="k">let</span> ((sublist final-components))
+            (<span class="k">while</span> sublist
+              (<span class="k">if</span> (not (eq (car sublist) first-previous-component-in-file))
+                  (<span class="k">setq</span> sublist (cdr sublist))
+                (<span class="k">push</span> component (cdr sublist))
+                (<span class="k">setq</span> sublist nil))))
+        (<span class="k">let*</span> ((next-components-in-template
+                (cdr (seq-drop-while (<span class="k">lambda</span> (x) (not (eq x component))) components-in-template)))
+               (first-next-component-in-file
+                (seq-find (<span class="k">lambda</span> (x) (memq x final-components)) next-components-in-template)))
+          <span class="cd">;; </span><span class="c">Insert before the existing element.  The intention is to
+</span>          <span class="cd">;; </span><span class="c">modify final-components, but it does not work when push
+</span>          <span class="cd">;; </span><span class="c">is called on sublist on the first iteration of the loop.
+</span>          (<span class="k">if</span> (eq (car final-components) first-next-component-in-file)
+              (<span class="k">push</span> component final-components)
+            (<span class="k">let</span> ((sublist final-components))
+              (<span class="k">while</span> sublist
+                (<span class="k">if</span> (not (eq (car sublist) first-next-component-in-file))
+                    (<span class="k">setq</span> sublist (cdr sublist))
+                  (<span class="k">push</span> component sublist)
+                  (<span class="k">setq</span> sublist nil))))))))
+    final-components))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Manual,
+updated for Emacs version 31.1.
+
+Copyright © 1985-2026 Free Software Foundation, Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "The GNU Manifesto," "Distribution" and
+"GNU GENERAL PUBLIC LICENSE," with the Front-Cover Texts being "A GNU
+Manual," and with the Back-Cover Texts as in (a) below.  A copy of the
+license is included in the section entitled "GNU Free Documentation
+License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Registers (GNU Emacs Manual)</title>
+
+<meta name="description" content="Registers (GNU Emacs Manual)">
+<meta name="keywords" content="Registers (GNU Emacs Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Display.html#Display" rel="next" title="Display">
+<link href="Killing.html#Killing" rel="prev" title="Killing">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+kbd.kbd {font-style: oblique}
+kbd.key {font-style: normal}
+span:hover a.copiable-link {visibility: visible}
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Registers">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Display.html#Display" rel="next">Controlling the Display</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Killing.html#Killing" rel="prev">Killing and Moving Text</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">The Emacs Editor</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h2 class="chapter" id="Registers-1"><span>15 Registers<a class="copiable-link" href="#Registers-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-registers"></a>
+
+<p>Emacs <em class="dfn">registers</em> are compartments where you can save text,
+rectangles, positions, and other things for later use.  Once you save
+text or a rectangle in a register, you can copy it into the buffer
+once or many times; once you save a position in a register, you can
+jump back to that position once or many times.
+</p>
+<p>Each register has a name that consists of a single character, which
+we will denote by <var class="var">r</var>; <var class="var">r</var> can be a letter (such as &lsquo;<samp class="samp">a</samp>&rsquo;)
+or a number (such as &lsquo;<samp class="samp">1</samp>&rsquo;); case matters, so register &lsquo;<samp class="samp">a</samp>&rsquo; is
+not the same as register &lsquo;<samp class="samp">A</samp>&rsquo;.  You can also set a register in
+non-alphanumeric characters, for instance &lsquo;<samp class="samp">C-d</samp>&rsquo; by using for
+example <kbd class="key">C-q</kbd> &lsquo;<samp class="samp">C-d</samp>&rsquo;.
+</p>
+<a class="index-entry-id" id="index-view_002dregister"></a>
+<p>A register can store a position, a piece of text, a rectangle, a
+number, a window or frame configuration, a buffer name, or a file
+name, but only one thing at any given time.  Whatever you store in a
+register remains there until you store something else in that
+register.  To see what register <var class="var">r</var> contains, use <kbd class="kbd">M-x
+view-register</kbd>:
+</p>
+<dl class="table">
+<dt><kbd class="kbd">M-x view-register <kbd class="key">RET</kbd> <var class="var">r</var></kbd></dt>
+<dd><p>Display a description of what register <var class="var">r</var> contains.
+</p></dd>
+</dl>
+
+
+<a class="index-entry-id" id="index-preview-of-registers"></a>
+<a class="index-entry-id" id="index-register_002duse_002dpreview"></a>
+<p>All of the commands that prompt for a register will by default
+display a preview window that lists the existing registers (if there
+are any) and their current values, after a short delay.  This and
+other aspects of prompting for a register can be customized by setting
+the value of <code class="code">register-use-preview</code>, which can have the following
+values:
+</p>
+<dl class="table">
+<dt><a id="index-register_002dpreview_002ddelay"></a><span><code class="code">traditional</code><a class="copiable-link" href="#index-register_002dpreview_002ddelay"> &para;</a></span></dt>
+<dd><p>With this value, which is the default, Emacs behaves like it did in
+all the versions before Emacs 29: it shows a preview of existing registers
+after a delay, and lets you overwrite the values of existing registers
+by typing a single character, the name of the register.  The preview
+appears after the delay determined by the customizable variable
+<code class="code">register-preview-delay</code>, which specifies the delay in seconds;
+setting it to <code class="code">nil</code> disables the preview (but you can still
+explicitly request a preview window by pressing <kbd class="kbd">C-h</kbd> or
+<kbd class="key">F1</kbd> when Emacs prompts for a register).
+</p>
+</dd>
+<dt><code class="code">t</code></dt>
+<dd><p>This value requests a more flexible preview of existing registers.
+The preview appears immediately when Emacs prompts for a register
+(thus <code class="code">register-preview-delay</code> has no effect), and the preview
+window provides navigation: by using <kbd class="kbd">C-n</kbd> and <kbd class="kbd">C-p</kbd> (or the
+<kbd class="kbd"><kbd class="key">UP</kbd></kbd> and <kbd class="kbd"><kbd class="key">DOWN</kbd></kbd> arrow keys), you can move between
+the registers in the preview window.  To overwrite the value of an
+existing registers in this mode, you need to type <kbd class="key">RET</kbd> after
+selecting the register by navigation or typing its name.
+</p>
+<p>In addition, the registers shown by the preview are filtered according
+to the command that popped the preview: for example, the preview shown
+by <code class="code">insert-register</code> will only show registers whose values can be
+inserted into the buffer, omitting registers which hold window
+configurations, positions, and other un-insertable values.
+</p>
+</dd>
+<dt><code class="code">insist</code></dt>
+<dd><p>This value is like <code class="code">t</code>, but in addition you can press the same
+key as the name of register one more time to exit the minibuffer,
+instead of pressing <kbd class="key">RET</kbd>.
+</p>
+</dd>
+<dt><code class="code">nil</code></dt>
+<dd><p>This value requests behavior similar to <code class="code">traditional</code>, but the
+preview is shown without delay, and is filtered according to the
+command.
+</p>
+</dd>
+<dt><code class="code">never</code></dt>
+<dd><p>This value is like <code class="code">nil</code>, but it disables the preview.
+</p></dd>
+</dl>
+
+<p><em class="dfn">Bookmarks</em> record files and positions in them, so you can
+return to those positions when you look at the file again.  Bookmarks
+are similar in spirit to registers, so they are also documented in
+this chapter.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Position-Registers">Saving Positions in Registers</a></li>
+<li><a href="#Text-Registers">Saving Text in Registers</a></li>
+<li><a href="#Rectangle-Registers">Saving Rectangles in Registers</a></li>
+<li><a href="#Configuration-Registers">Saving Window and Frame Configurations in Registers</a></li>
+<li><a href="#Number-Registers">Keeping Numbers in Registers</a></li>
+<li><a href="#File-and-Buffer-Registers">Keeping File and Buffer Names in Registers</a></li>
+<li><a href="#Keyboard-Macro-Registers">Keyboard Macro Registers</a></li>
+<li><a href="#Bookmarks">Bookmarks</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Position-Registers">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Text-Registers" rel="next">Saving Text in Registers</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Registers" rel="up">Registers</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Saving-Positions-in-Registers"><span>15.1 Saving Positions in Registers<a class="copiable-link" href="#Saving-Positions-in-Registers"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-saving-position-in-a-register"></a>
+
+<dl class="table">
+<dt><kbd class="kbd">C-x r <kbd class="key">SPC</kbd> <var class="var">r</var></kbd></dt>
+<dd><p>Record the position of point and the current buffer in register
+<var class="var">r</var> (<code class="code">point-to-register</code>).
+</p></dd>
+<dt><kbd class="kbd">C-x r j <var class="var">r</var></kbd></dt>
+<dd><p>Jump to the position and buffer saved in register <var class="var">r</var>
+(<code class="code">jump-to-register</code>).
+</p></dd>
+</dl>
+
+<a class="index-entry-id" id="index-C_002dx-r-SPC"></a>
+<a class="index-entry-id" id="index-point_002dto_002dregister"></a>
+<p>Typing <kbd class="kbd">C-x r <kbd class="key">SPC</kbd></kbd> (<code class="code">point-to-register</code>), followed by
+a character <kbd class="kbd"><var class="var">r</var></kbd>, saves both the position of point and the
+current buffer in register <var class="var">r</var>.  The register retains this
+information until you store something else in it.
+</p>
+<a class="index-entry-id" id="index-C_002dx-r-j"></a>
+<a class="index-entry-id" id="index-jump_002dto_002dregister"></a>
+<p>The command <kbd class="kbd">C-x r j <var class="var">r</var></kbd> switches to the buffer recorded in
+register <var class="var">r</var>, pushes a mark, and moves point to the recorded
+position.  (The mark is not pushed if point was already at the
+recorded position, or in successive calls to the command.)  The
+contents of the register are not changed, so you can jump to the saved
+position any number of times.
+</p>
+<p>If you use <kbd class="kbd">C-x r j</kbd> to go to a saved position, but the buffer it
+was saved from has been killed, <kbd class="kbd">C-x r j</kbd> tries to create the buffer
+again by visiting the same file.  Of course, this works only for buffers
+that were visiting files.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Text-Registers">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Rectangle-Registers" rel="next">Saving Rectangles in Registers</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Position-Registers" rel="prev">Saving Positions in Registers</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Registers" rel="up">Registers</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Saving-Text-in-Registers"><span>15.2 Saving Text in Registers<a class="copiable-link" href="#Saving-Text-in-Registers"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-saving-text-in-a-register"></a>
+
+<p>When you want to insert a copy of the same piece of text several
+times, it may be inconvenient to yank it from the kill ring, since each
+subsequent kill moves that entry further down the ring.  An alternative
+is to store the text in a register and later retrieve it.
+</p>
+<dl class="table">
+<dt><kbd class="kbd">C-x r s <var class="var">r</var></kbd></dt>
+<dd><p>Copy region into register <var class="var">r</var> (<code class="code">copy-to-register</code>).
+</p></dd>
+<dt><kbd class="kbd">C-x r i <var class="var">r</var></kbd></dt>
+<dd><p>Insert text from register <var class="var">r</var> (<code class="code">insert-register</code>).
+</p></dd>
+<dt><kbd class="kbd">M-x append-to-register <kbd class="key">RET</kbd> <var class="var">r</var></kbd></dt>
+<dd><p>Append region to text in register <var class="var">r</var>.
+</p>
+<p>When register <var class="var">r</var> contains text, you can use <kbd class="kbd">C-x r +</kbd>
+(<code class="code">increment-register</code>) to append to that register.  Note that
+command <kbd class="kbd">C-x r +</kbd> behaves differently if <var class="var">r</var> contains a
+number.  See <a class="xref" href="#Number-Registers">Keeping Numbers in Registers</a>.
+</p>
+</dd>
+<dt><kbd class="kbd">M-x prepend-to-register <kbd class="key">RET</kbd> <var class="var">r</var></kbd></dt>
+<dd><p>Prepend region to text in register <var class="var">r</var>.
+</p></dd>
+</dl>
+
+<a class="index-entry-id" id="index-C_002dx-r-s"></a>
+<a class="index-entry-id" id="index-copy_002dto_002dregister"></a>
+<p><kbd class="kbd">C-x r s <var class="var">r</var></kbd> stores a copy of the text of the region into
+the register named <var class="var">r</var>.  If the mark is inactive, Emacs first
+reactivates the mark where it was last set.  The mark is deactivated
+at the end of this command.  See <a class="xref" href="Mark.html#Mark">The Mark and the Region</a>.  <kbd class="kbd">C-u C-x r s <var class="var">r</var></kbd>,
+the same command with a prefix argument, copies the text into register
+<var class="var">r</var> and deletes the text from the buffer as well; you can think of
+this as moving the region text into the register.
+</p>
+<a class="index-entry-id" id="index-append_002dto_002dregister"></a>
+<a class="index-entry-id" id="index-prepend_002dto_002dregister"></a>
+<p><kbd class="kbd">M-x append-to-register <kbd class="key">RET</kbd> <var class="var">r</var></kbd> appends the copy of
+the text in the region to the text already stored in the register
+named <var class="var">r</var>.  If invoked with a prefix argument, it deletes the
+region after appending it to the register.  The command
+<code class="code">prepend-to-register</code> is similar, except that it <em class="emph">prepends</em>
+the region text to the text in the register instead of
+<em class="emph">appending</em> it.
+</p>
+<a class="index-entry-id" id="index-register_002dseparator"></a>
+<p>When you are collecting text using <code class="code">append-to-register</code> and
+<code class="code">prepend-to-register</code>, you may want to separate individual
+collected pieces using a separator.  In that case, configure a
+<code class="code">register-separator</code> and store the separator text in to that
+register.  For example, to get double newlines as text separator
+during the collection process, you can use the following setting.
+</p>
+<div class="example">
+<pre class="example-preformatted">(setq register-separator ?+)
+(set-register register-separator &quot;\n\n&quot;)
+</pre></div>
+
+<a class="index-entry-id" id="index-C_002dx-r-i"></a>
+<a class="index-entry-id" id="index-insert_002dregister"></a>
+<p><kbd class="kbd">C-x r i <var class="var">r</var></kbd> inserts in the buffer the text from register
+<var class="var">r</var>.  Normally it leaves point after the text and sets the mark
+before, without activating it.  With a prefix argument, it instead
+puts point before the text and the mark after.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Rectangle-Registers">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Configuration-Registers" rel="next">Saving Window and Frame Configurations in Registers</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Text-Registers" rel="prev">Saving Text in Registers</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Registers" rel="up">Registers</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Saving-Rectangles-in-Registers"><span>15.3 Saving Rectangles in Registers<a class="copiable-link" href="#Saving-Rectangles-in-Registers"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-saving-rectangle-in-a-register"></a>
+
+<p>A register can contain a rectangle instead of linear text.
+See <a class="xref" href="Killing.html#Rectangles">Rectangles</a>, for basic information on how to specify a rectangle
+in the buffer.
+</p>
+<dl class="table">
+<dt><a class="index-entry-id" id="index-C_002dx-r-r"></a>
+<a id="index-copy_002drectangle_002dto_002dregister"></a><span><kbd class="kbd">C-x r r <var class="var">r</var></kbd><a class="copiable-link" href="#index-copy_002drectangle_002dto_002dregister"> &para;</a></span></dt>
+<dd><p>Copy the region-rectangle into register <var class="var">r</var>
+(<code class="code">copy-rectangle-to-register</code>).  With prefix argument, delete it as
+well.
+</p></dd>
+<dt><kbd class="kbd">C-x r i <var class="var">r</var></kbd></dt>
+<dd><p>Insert the rectangle stored in register <var class="var">r</var> (if it contains a
+rectangle) (<code class="code">insert-register</code>).
+</p></dd>
+</dl>
+
+<p>The <kbd class="kbd">C-x r i <var class="var">r</var></kbd> (<code class="code">insert-register</code>) command,
+previously documented in <a class="ref" href="#Text-Registers">Saving Text in Registers</a>, inserts a rectangle
+rather than a text string, if the register contains a rectangle.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Configuration-Registers">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Number-Registers" rel="next">Keeping Numbers in Registers</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Rectangle-Registers" rel="prev">Saving Rectangles in Registers</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Registers" rel="up">Registers</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Saving-Window-and-Frame-Configurations-in-Registers"><span>15.4 Saving Window and Frame Configurations in Registers<a class="copiable-link" href="#Saving-Window-and-Frame-Configurations-in-Registers"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-saving-window-configuration-in-a-register"></a>
+<a class="index-entry-id" id="index-saving-frame-configuration-in-a-register"></a>
+<a class="index-entry-id" id="index-frameset_002c-saving-in-a-register"></a>
+
+<a class="index-entry-id" id="index-window_002dconfiguration_002dto_002dregister"></a>
+<a class="index-entry-id" id="index-frameset_002dto_002dregister"></a>
+<a class="index-entry-id" id="index-C_002dx-r-w"></a>
+<a class="index-entry-id" id="index-C_002dx-r-f"></a>
+<p>You can save the window configuration of the selected frame in a
+register, or even the configuration of all windows in all frames, and
+restore the configuration later.  See <a class="xref" href="Windows.html#Window-Convenience">Convenience Features for Window Handling</a>, for
+information about window configurations.
+</p>
+<dl class="table">
+<dt><kbd class="kbd">C-x r w <var class="var">r</var></kbd></dt>
+<dd><p>Save the state of the selected frame&rsquo;s windows in register <var class="var">r</var>
+(<code class="code">window-configuration-to-register</code>).
+<a class="index-entry-id" id="index-frameset"></a>
+</p></dd>
+<dt><kbd class="kbd">C-x r f <var class="var">r</var></kbd></dt>
+<dd><p>Save the state of all frames, including all their windows (a.k.a.
+<em class="dfn">frameset</em>), in register <var class="var">r</var> (<code class="code">frameset-to-register</code>).
+</p></dd>
+</dl>
+
+<p>Use <kbd class="kbd">C-x r j <var class="var">r</var></kbd> to restore a window or frame configuration.
+This is the same command used to restore a cursor position.  When you
+restore a frame configuration, any existing frames not included in the
+configuration become invisible.  If you wish to delete these frames
+instead, use <kbd class="kbd">C-u C-x r j <var class="var">r</var></kbd>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Number-Registers">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#File-and-Buffer-Registers" rel="next">Keeping File and Buffer Names in Registers</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Configuration-Registers" rel="prev">Saving Window and Frame Configurations in Registers</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Registers" rel="up">Registers</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Keeping-Numbers-in-Registers"><span>15.5 Keeping Numbers in Registers<a class="copiable-link" href="#Keeping-Numbers-in-Registers"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-saving-number-in-a-register"></a>
+
+<p>There are commands to store a number in a register, to insert
+the number in the buffer in decimal, and to increment it.  These commands
+can be useful in keyboard macros (see <a class="pxref" href="Keyboard-Macros.html#Keyboard-Macros">Keyboard Macros</a>).
+</p>
+<dl class="table">
+<dt><a class="index-entry-id" id="index-number_002dto_002dregister"></a>
+<a id="index-C_002dx-r-n"></a><span><kbd class="kbd">C-u <var class="var">number</var> C-x r n <var class="var">r</var></kbd><a class="copiable-link" href="#index-C_002dx-r-n"> &para;</a></span></dt>
+<dd><p>Store <var class="var">number</var> into register <var class="var">r</var> (<code class="code">number-to-register</code>).
+</p></dd>
+<dt><a class="index-entry-id" id="index-increment_002dregister"></a>
+<a id="index-C_002dx-r-_002b"></a><span><kbd class="kbd">C-u <var class="var">number</var> C-x r + <var class="var">r</var></kbd><a class="copiable-link" href="#index-C_002dx-r-_002b"> &para;</a></span></dt>
+<dd><p>If <var class="var">r</var> contains a number, increment the number in that register by
+<var class="var">number</var>.  Note that command <kbd class="kbd">C-x r +</kbd>
+(<code class="code">increment-register</code>) behaves differently if <var class="var">r</var> contains
+text.  See <a class="xref" href="#Text-Registers">Saving Text in Registers</a>.
+</p></dd>
+<dt><kbd class="kbd">C-x r i <var class="var">r</var></kbd></dt>
+<dd><p>Insert the number from register <var class="var">r</var> into the buffer.
+</p></dd>
+</dl>
+
+<p><kbd class="kbd">C-x r i</kbd> is the same command used to insert any other sort of
+register contents into the buffer.  <kbd class="kbd">C-x r +</kbd> with no numeric
+argument increments the register value by 1; <kbd class="kbd">C-x r n</kbd> with no
+numeric argument stores zero in the register.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="File-and-Buffer-Registers">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Keyboard-Macro-Registers" rel="next">Keyboard Macro Registers</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Number-Registers" rel="prev">Keeping Numbers in Registers</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Registers" rel="up">Registers</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Keeping-File-and-Buffer-Names-in-Registers"><span>15.6 Keeping File and Buffer Names in Registers<a class="copiable-link" href="#Keeping-File-and-Buffer-Names-in-Registers"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-saving-file-name-in-a-register"></a>
+<a class="index-entry-id" id="index-saving-buffer-name-in-a-register"></a>
+
+<dl class="table">
+<dt><kbd class="kbd">C-x r F <var class="var">r</var></kbd></dt>
+<dd><p>Store the currently visited file or directory in register
+<var class="var">r</var> (<code class="code">file-to-register</code>).
+</p></dd>
+<dt><kbd class="kbd">C-x r B <var class="var">r</var></kbd></dt>
+<dd><p>Store the currently visited buffer in register
+<var class="var">r</var> (<code class="code">buffer-to-register</code>).
+</p></dd>
+</dl>
+
+<p>If you visit certain files or buffers frequently, you can visit them
+more conveniently if you put their names in registers.
+</p>
+<a class="index-entry-id" id="index-C_002dx-r-F"></a>
+<a class="index-entry-id" id="index-file_002dto_002dregister"></a>
+<p>Typing <kbd class="kbd">C-x r F</kbd> (<code class="code">file-to-register</code>), followed by a
+character <kbd class="kbd"><var class="var">r</var></kbd>, saves a reference to the currently visited file
+in register <var class="var">r</var>.  You can then visit the file using
+<code class="code">jump-to-register</code> by typing <kbd class="kbd">C-x r j</kbd> <var class="var">r</var>. With a prefix
+argument, <code class="code">file-to-register</code> prompts for a file name to store in
+the register.
+</p>
+<a class="index-entry-id" id="index-C_002dx-r-B"></a>
+<a class="index-entry-id" id="index-buffer_002dto_002dregister"></a>
+<p>Typing <kbd class="kbd">C-x r B</kbd> (<code class="code">buffer-to-register</code>), followed by a
+character <kbd class="kbd"><var class="var">r</var></kbd>, saves a reference to the currently visited buffer
+in register <var class="var">r</var>.  You can then revisit the buffer using
+<code class="code">jump-to-register</code>. With a prefix argument, <code class="code">buffer-to-register</code>
+prompts for a buffer name to store in the register.
+</p>
+<p>If you store a buffer name which is visiting a file in a
+register, and the buffer is then closed, the register is automatically
+converted to a file reference, allowing you to quickly re-open the
+closed file.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Keyboard-Macro-Registers">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Bookmarks" rel="next">Bookmarks</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#File-and-Buffer-Registers" rel="prev">Keeping File and Buffer Names in Registers</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Registers" rel="up">Registers</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Keyboard-Macro-Registers-1"><span>15.7 Keyboard Macro Registers<a class="copiable-link" href="#Keyboard-Macro-Registers-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-saving-keyboard-macro-in-a-register"></a>
+<a class="index-entry-id" id="index-keyboard-macros_002c-in-registers"></a>
+
+<a class="index-entry-id" id="index-C_002dx-C_002dk-x"></a>
+<a class="index-entry-id" id="index-kmacro_002dto_002dregister"></a>
+<p>If you need to execute a keyboard macro (see <a class="pxref" href="Keyboard-Macros.html#Keyboard-Macros">Keyboard Macros</a>)
+frequently, it is more convenient to put it in a register or save it
+(see <a class="pxref" href="Keyboard-Macros.html#Save-Keyboard-Macro">Naming and Saving Keyboard Macros</a>).  <kbd class="kbd">C-x C-k x <var class="var">r</var></kbd>
+(<code class="code">kmacro-to-register</code>) stores the last keyboard macro in register
+<var class="var">r</var>.
+</p>
+<p>To execute the keyboard macro in register <var class="var">r</var>, type <kbd class="kbd">C-x r j
+<var class="var">r</var></kbd>.  (This is the same command used to jump to a position or
+restore a frameset.)
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Bookmarks">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Keyboard-Macro-Registers" rel="prev">Keyboard Macro Registers</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Registers" rel="up">Registers</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Bookmarks-1"><span>15.8 Bookmarks<a class="copiable-link" href="#Bookmarks-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-bookmarks"></a>
+
+<p><em class="dfn">Bookmarks</em> are somewhat like registers in that they record
+positions you can jump to.  Unlike registers, they have long names, and
+they persist automatically from one Emacs session to the next.  The
+prototypical use of bookmarks is to record where you were reading in
+various files.
+</p>
+<dl class="table">
+<dt><kbd class="kbd">C-x r m <kbd class="key">RET</kbd></kbd></dt>
+<dd><p>Set the bookmark for the visited file, at point.
+</p>
+</dd>
+<dt><kbd class="kbd">C-x r m <var class="var">bookmark</var> <kbd class="key">RET</kbd></kbd></dt>
+<dd><p>Set the bookmark named <var class="var">bookmark</var> at point (<code class="code">bookmark-set</code>).
+</p>
+</dd>
+<dt><kbd class="kbd">C-x r M <var class="var">bookmark</var> <kbd class="key">RET</kbd></kbd></dt>
+<dd><p>Like <kbd class="kbd">C-x r m</kbd>, but don&rsquo;t overwrite an existing bookmark.
+</p>
+</dd>
+<dt><kbd class="kbd">C-x r b <var class="var">bookmark</var> <kbd class="key">RET</kbd></kbd></dt>
+<dd><p>Jump to the bookmark named <var class="var">bookmark</var> (<code class="code">bookmark-jump</code>).
+</p>
+</dd>
+<dt><kbd class="kbd">C-x r l</kbd></dt>
+<dd><p>List all bookmarks (<code class="code">list-bookmarks</code>).
+</p>
+</dd>
+<dt><kbd class="kbd">M-x bookmark-save</kbd></dt>
+<dd><p>Save all the current bookmark values in the default bookmark file.
+</p></dd>
+</dl>
+
+<a class="index-entry-id" id="index-C_002dx-r-m"></a>
+<a class="index-entry-id" id="index-bookmark_002dset"></a>
+<a class="index-entry-id" id="index-C_002dx-r-b"></a>
+<a class="index-entry-id" id="index-bookmark_002djump"></a>
+<p>To record the current position in the visited file, use the command
+<kbd class="kbd">C-x r m</kbd>, which sets a bookmark using the visited file name as
+the default for the bookmark name.  If you name each bookmark after
+the file it points to, then you can conveniently revisit any of those
+files with <kbd class="kbd">C-x r b</kbd> (<code class="code">bookmark-jump</code>), and move to the
+position of the bookmark at the same time.
+</p>
+<a class="index-entry-id" id="index-bookmark_002dfringe_002dmark"></a>
+<p>In addition to recording the current position, on graphical displays
+<kbd class="kbd">C-x r m</kbd> places a special image on the left fringe
+(see <a class="pxref" href="Display.html#Fringes">Window Fringes</a>) of the screen line corresponding to the recorded
+position, to indicate that there&rsquo;s a bookmark there.  This can be
+controlled by the user option <code class="code">bookmark-fringe-mark</code>: customize
+it to <code class="code">nil</code> to disable the fringe mark.  The default value is
+<code class="code">bookmark-mark</code>, which is the bitmap used for this purpose.  When
+you later use <kbd class="kbd">C-x r b</kbd> to jump back to the bookmark, the fringe
+mark will be again shown on the fringe.
+</p>
+<a class="index-entry-id" id="index-C_002dx-r-M"></a>
+<a class="index-entry-id" id="index-bookmark_002dset_002dno_002doverwrite"></a>
+<p>The command <kbd class="kbd">C-x r M</kbd> (<code class="code">bookmark-set-no-overwrite</code>) works
+like <kbd class="kbd">C-x&nbsp;r&nbsp;m</kbd><!-- /@w -->, but it signals an error if the specified
+bookmark already exists, instead of overwriting it.
+</p>
+<a class="index-entry-id" id="index-C_002dx-r-l"></a>
+<a class="index-entry-id" id="index-list_002dbookmarks"></a>
+<p>To display a list of all your bookmarks in a separate buffer, type
+<kbd class="kbd">C-x r l</kbd> (<code class="code">list-bookmarks</code>).  If you switch to that buffer,
+you can use it to edit your bookmark definitions or annotate the
+bookmarks.  Type <kbd class="kbd">C-h m</kbd> in the bookmark buffer for more
+information about its special editing commands.
+</p>
+<a class="index-entry-id" id="index-bookmark_002dsave"></a>
+<p>When you kill Emacs, Emacs saves your bookmarks, if
+you have changed any bookmark values.  You can also save the bookmarks
+at any time with the <kbd class="kbd">M-x bookmark-save</kbd> command.  Bookmarks are
+saved to the file <samp class="file">~/.emacs.d/bookmarks</samp> (for compatibility with
+older versions of Emacs, if you have a file named <samp class="file">~/.emacs.bmk</samp>,
+that is used instead).  The bookmark commands load your default
+bookmark file automatically.  This saving and loading is how bookmarks
+persist from one Emacs session to the next.
+</p>
+<a class="index-entry-id" id="index-bookmark_002dsave_002dflag"></a>
+<p>If you set the variable <code class="code">bookmark-save-flag</code> to 1, each command
+that sets a bookmark will also save your bookmarks; this way, you
+don&rsquo;t lose any bookmark values even if Emacs crashes.  The value, if
+a number, says how many bookmark modifications should go by between
+saving.  If you set this variable to <code class="code">nil</code>, Emacs only
+saves bookmarks if you explicitly use <kbd class="kbd">M-x bookmark-save</kbd>.
+</p>
+<a class="index-entry-id" id="index-bookmark_002ddefault_002dfile"></a>
+<p>The variable <code class="code">bookmark-default-file</code> specifies the file in
+which to save bookmarks by default.
+</p>
+<a class="index-entry-id" id="index-bookmark_002duse_002dannotations"></a>
+<a class="index-entry-id" id="index-bookmark-annotations"></a>
+<p>If you set the variable <code class="code">bookmark-use-annotations</code> to <code class="code">t</code>,
+setting a bookmark will query for an annotation.  If a bookmark has an
+annotation, it is automatically shown in a separate window when you
+jump to the bookmark.
+</p>
+<a class="index-entry-id" id="index-bookmark_002dsearch_002dsize"></a>
+<p>Bookmark position values are saved with surrounding context, so that
+<code class="code">bookmark-jump</code> can find the proper position even if the file is
+modified slightly.  The variable <code class="code">bookmark-search-size</code> says how
+many characters of context to record on each side of the bookmark&rsquo;s
+position.  (In buffers that are visiting encrypted files, no context
+is saved in the bookmarks file no matter the value of this variable.)
+</p>
+<p>Here are some additional commands for working with bookmarks:
+</p>
+<dl class="table">
+<dt><a id="index-bookmark_002dload"></a><span><kbd class="kbd">M-x bookmark-load <kbd class="key">RET</kbd> <var class="var">filename</var> <kbd class="key">RET</kbd></kbd><a class="copiable-link" href="#index-bookmark_002dload"> &para;</a></span></dt>
+<dd><p>Load a file named <var class="var">filename</var> that contains a list of bookmark
+values.  You can use this command, as well as <code class="code">bookmark-write</code>, to
+work with other files of bookmark values in addition to your default
+bookmark file.
+</p>
+</dd>
+<dt><a id="index-bookmark_002dwrite"></a><span><kbd class="kbd">M-x bookmark-write <kbd class="key">RET</kbd> <var class="var">filename</var> <kbd class="key">RET</kbd></kbd><a class="copiable-link" href="#index-bookmark_002dwrite"> &para;</a></span></dt>
+<dd><p>Save all the current bookmark values in the file <var class="var">filename</var>.
+</p>
+</dd>
+<dt><a id="index-bookmark_002ddelete"></a><span><kbd class="kbd">M-x bookmark-delete <kbd class="key">RET</kbd> <var class="var">bookmark</var> <kbd class="key">RET</kbd></kbd><a class="copiable-link" href="#index-bookmark_002ddelete"> &para;</a></span></dt>
+<dd><p>Delete the bookmark named <var class="var">bookmark</var>.
+</p>
+</dd>
+<dt><a id="index-bookmark_002dinsert_002dlocation"></a><span><kbd class="kbd">M-x bookmark-insert-location <kbd class="key">RET</kbd> <var class="var">bookmark</var> <kbd class="key">RET</kbd></kbd><a class="copiable-link" href="#index-bookmark_002dinsert_002dlocation"> &para;</a></span></dt>
+<dd><p>Insert in the buffer the name of the file that bookmark <var class="var">bookmark</var>
+points to.
+</p>
+</dd>
+<dt><a id="index-bookmark_002dinsert"></a><span><kbd class="kbd">M-x bookmark-insert <kbd class="key">RET</kbd> <var class="var">bookmark</var> <kbd class="key">RET</kbd></kbd><a class="copiable-link" href="#index-bookmark_002dinsert"> &para;</a></span></dt>
+<dd><p>Insert in the buffer the <em class="emph">contents</em> of the file that bookmark
+<var class="var">bookmark</var> points to.
+</p></dd>
+</dl>
+
+</div>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Display.html#Display" rel="next">Controlling the Display</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Killing.html#Killing" rel="prev">Killing and Moving Text</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">The Emacs Editor</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+
+
+
+</body>
+</html>

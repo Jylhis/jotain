@@ -1,0 +1,99 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--repl-completion-at-point – Emacs Documentation Online</title>
+<meta name="description" content="dape--repl-completion-at-point is a natively compiled function defined
+in dape.el.
+Completion at point function for dape-repl-mode.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--repl-completion-at-point</code></h1><p><span class="m"><code>dape--repl-completion-at-point</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--repl-completion-at-point)
+</code></pre>
+<h2>Documentation</h2>
+<p>Completion at point function for <a href="../fun/dape-repl-mode.html"><code>dape-repl-mode</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--repl-completion-at-point</span> ()
+  <span class="doc">"Completion at point function for `</span><span class="m doc">dape-repl-mode</span><span class="doc">'."</span>
+  (<span class="k">when-let*</span> ((conn (<span class="k">or</span> (dape--live-connection 'stopped t)
+                        (dape--live-connection 'last t)))
+              ((dape--capable-p conn <span class="bi">:supportsCompletionsRequest</span>)))
+    (<span class="k">let*</span> ((line-start (comint-line-beginning-position))
+           (str (buffer-substring-no-properties line-start (point-max)))
+           (column (1+ (- (point) line-start)))
+           (bounds (<span class="k">or</span> (bounds-of-thing-at-point 'word)
+                       (cons (point) (point))))
+           (trigger-chars
+            (<span class="k">or</span> (<span class="k">thread-first</span> conn
+                              (dape--capabilities)
+                              <span class="cd">;; </span><span class="c">completionTriggerCharacters is an
+</span>                              <span class="cd">;; </span><span class="c">unofficial array of string to trigger
+</span>                              <span class="cd">;; </span><span class="c">completion on.
+</span>                              (plist-get <span class="bi">:completionTriggerCharacters</span>)
+                              (append nil))
+                '(<span class="s">"."</span>)))
+           (collection
+            (<span class="k">when</span> (<span class="k">and</span> (derived-mode-p 'dape-repl-mode)
+                       <span class="cd">;; </span><span class="c">Add `</span><span class="m c">dape-repl-commands</span><span class="c">' if completion
+</span>                       <span class="cd">;; </span><span class="c">starts at beginning of prompt line.
+</span>                       (eql (comint-line-beginning-position) (car bounds)))
+              (<span class="k">cl-loop</span>
+               with alist = (append dape-repl-commands
+                                    (<span class="k">when</span> dape-repl-use-shorthand
+                                      (dape--repl-shorthand-alist)))
+               for (name . cmd) in alist
+               for anno = (propertize (symbol-name cmd)
+                                      'face 'font-lock-builtin-face)
+               collect `( ,name . ,(concat <span class="s">" "</span> anno)))))
+           done)
+      (<span class="k">dape--with-request-bind</span>
+          ((<span class="ty">&amp;key</span> targets <span class="ty">&amp;allow-other-keys</span>) _error)
+          (dape-request
+           conn <span class="bi">:completions</span>
+           `( <span class="bi">:text</span> ,str
+              <span class="bi">:column</span> ,column
+              ,@(<span class="k">when</span> (dape--stopped-threads conn)
+                  `(<span class="bi">:frameId</span>
+                    ,(plist-get (dape--current-stack-frame conn) <span class="bi">:id</span>)))))
+        (<span class="k">setf</span> collection
+              (append
+               collection
+               (mapcar
+                (<span class="k">lambda</span> (target)
+                  (cons
+                   (substring
+                    (<span class="k">or</span> (plist-get target <span class="bi">:text</span>) (plist-get target <span class="bi">:label</span>))
+                    (<span class="k">when-let*</span> ((start (plist-get target <span class="bi">:start</span>))
+                                (offset (- (car bounds) line-start))
+                                <span class="cd">;; </span><span class="c">XXX Assume server sends both start
+</span>                                <span class="cd">;; </span><span class="c">and length (vscode convention) or
+</span>                                <span class="cd">;; </span><span class="c">bail.  Seems successful in
+</span>                                <span class="cd">;; </span><span class="c">identifying misbehaving servers
+</span>                                <span class="cd">;; </span><span class="c">(e.g. jdtls).
+</span>                                ((plist-get target <span class="bi">:length</span>))
+                                ((&lt; start offset)))
+                      <span class="cd">;; </span><span class="c">XXX Adapter gets line but Emacs completion is
+</span>                      <span class="cd">;; </span><span class="c">given `</span><span class="m c">word</span><span class="c">' bounds, cut prefix off candidate
+</span>                      <span class="cd">;; </span><span class="c">such that it matches the bounds.
+</span>                      (- offset start)))
+                   (concat
+                    (<span class="k">when-let*</span> ((type (plist-get target <span class="bi">:type</span>)))
+                      (concat <span class="s">" "</span> (propertize type 'face 'font-lock-type-face)))
+                    (<span class="k">when-let*</span> ((detail (plist-get target <span class="bi">:detail</span>)))
+                      (concat <span class="s">" "</span> (propertize detail 'face 'font-lock-doc-face))))))
+                targets))
+              done t))
+      (<span class="k">while-no-input</span>
+        (<span class="k">while</span> (not done) (accept-process-output nil 0 1)))
+      (list (car bounds) (cdr bounds) collection
+            <span class="bi">:annotation-function</span>
+            (<span class="k">lambda</span> (str) (cdr (assoc (substring-no-properties str) collection)))
+            <span class="bi">:company-prefix-length</span>
+            (<span class="k">save-excursion</span>
+              (goto-char (car bounds))
+              (looking-back (regexp-opt trigger-chars) line-start))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

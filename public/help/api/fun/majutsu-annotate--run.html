@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-annotate--run – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-annotate--run is a natively compiled function defined in
+majutsu-annotate.el.
+Run annotation for REVISION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-annotate--run</code></h1><p><span class="m"><code>majutsu-annotate--run</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-annotate.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-annotate--run <a href="#:~:text=for-,REVISION"><span class="arg">REVISION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run annotation for <span class="arg">REVISION</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-annotate.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-annotate--run</span> (revision)
+  <span class="doc">"Run annotation for REVISION."</span>
+  (<span class="k">let*</span> ((root (majutsu-toplevel))
+         (file (<span class="k">or</span> (<span class="k">and</span> (<span class="k">bound-and-true-p</span> majutsu-buffer-blob-path)
+                        majutsu-buffer-blob-path)
+                   (file-relative-name buffer-file-name root)))
+         (rev (<span class="k">or</span> revision
+                  (<span class="k">and</span> (<span class="k">bound-and-true-p</span> majutsu-buffer-blob-revision)
+                       majutsu-buffer-blob-revision)
+                  <span class="s">"@"</span>))
+         (default-directory root))
+    (message <span class="s">"Annotating..."</span>)
+    (<span class="k">let</span> ((output (<span class="k">with-temp-buffer</span>
+                    (<span class="k">majutsu--with-no-color</span>
+                      (majutsu-jj-insert <span class="s">"file"</span> <span class="s">"annotate"</span>
+                                         <span class="s">"-r"</span> rev
+                                         <span class="s">"-T"</span> majutsu-annotate--template
+                                         file))
+                    (buffer-string))))
+      (<span class="k">when</span> (string-empty-p output)
+        (<span class="w">user-error</span> <span class="s">"No annotation output"</span>))
+      (<span class="k">unless</span> majutsu-annotate-mode
+        (majutsu-annotate-mode 1))
+      (<span class="k">setq</span> majutsu-annotate-cache (make-hash-table <span class="bi">:test</span> #'equal))
+      (majutsu-annotate--remove-overlays)
+      (<span class="k">let</span> ((chunks (majutsu-annotate--parse-output output)))
+        (majutsu-annotate--make-overlays chunks)
+        (<span class="k">when</span> majutsu-annotate-read-only
+          (majutsu-annotate-read-only-mode 1))
+        (message <span class="s">"Annotating...done"</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

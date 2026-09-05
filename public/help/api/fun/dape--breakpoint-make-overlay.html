@@ -1,0 +1,75 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--breakpoint-make-overlay – Emacs Documentation Online</title>
+<meta name="description" content="dape--breakpoint-make-overlay is a natively compiled function defined
+in dape.el.
+Create and set overlay for BREAKPOINT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--breakpoint-make-overlay</code></h1><p><span class="m"><code>dape--breakpoint-make-overlay</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--breakpoint-make-overlay <a href="#:~:text=for-,BREAKPOINT"><span class="arg">BREAKPOINT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create and set overlay for <span class="arg">BREAKPOINT</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--breakpoint-make-overlay</span> (breakpoint)
+  <span class="doc">"Create and set overlay for BREAKPOINT."</span>
+  (add-hook 'kill-buffer-hook #'dape--breakpoint-buffer-kill-hook nil t)
+  (<span class="k">let</span> ((ov (apply #'make-overlay (dape--overlay-region)))
+        (disabled-face (<span class="k">when</span> (dape--breakpoint-disabled breakpoint)
+                         'shadow)))
+    (overlay-put ov 'modification-hooks '(dape--breakpoint-freeze))
+    (overlay-put ov 'category 'dape-breakpoint)
+    (overlay-put ov 'window t)
+    (<span class="k">cl-flet</span> ((make-after-string (label face mouse-1-help mouse-1-def)
+                (concat <span class="s">" "</span>
+                        (propertize
+                         (format <span class="s">"%s: %s"</span> label
+                                 (dape--source-breakpoint-value breakpoint))
+                         'face face
+                         'mouse-face 'highlight
+                         'help-echo (format <span class="s">"mouse-1: %s"</span> mouse-1-help)
+                         'keymap (<span class="k">let</span> ((map (make-sparse-keymap)))
+                                   (define-key map [mouse-1] mouse-1-def)
+                                   map)))))
+      (<span class="k">pcase</span> (dape--source-breakpoint-type breakpoint)
+        ('log
+         (overlay-put ov 'after-string
+                      (make-after-string
+                       <span class="s">"Log"</span>
+                       (<span class="k">or</span> disabled-face 'dape-log-face)
+                       <span class="s">"edit log message"</span>
+                       #'dape-mouse-breakpoint-log)))
+        ('expression
+         (overlay-put ov 'after-string
+                      (make-after-string
+                       <span class="s">"Cond"</span>
+                       (<span class="k">or</span> disabled-face 'dape-expression-face)
+                       <span class="s">"edit break condition"</span>
+                       #'dape-mouse-breakpoint-expression)))
+        ('hits
+         (overlay-put ov 'after-string
+                      (make-after-string
+                       <span class="s">"Hits"</span>
+                       (<span class="k">or</span> disabled-face 'dape-hits-face)
+                       <span class="s">"edit break hit condition"</span>
+                       #'dape-mouse-breakpoint-hits)))
+        ('until
+         (overlay-put ov 'before-string
+                      (dape--indicator
+                       dape-breakpoint-margin-string
+                       'breakpoint
+                       'dape-breakpoint-until-face)))
+        (_
+         (overlay-put ov 'before-string
+                      (dape--indicator
+                       dape-breakpoint-margin-string
+                       'breakpoint
+                       (<span class="k">or</span> disabled-face 'dape-breakpoint-face))))))
+    (<span class="k">setf</span> (dape--source-breakpoint-location breakpoint) ov)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

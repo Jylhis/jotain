@@ -1,0 +1,96 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: projection--declare-project-type-option – Emacs Documentation Online</title>
+<meta name="description" content="projection--declare-project-type-option is a macro defined in
+projection-core-type.el.
+Helper to declare boilerplate for OPTION in project-type PROJECT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>projection--declare-project-type-option</code></h1><p><span class="m"><code>projection--declare-project-type-option</code></span> is a macro defined in
+<span class="bt">projection-core-type.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">projection--declare-project-type-option</span> <a href="#:~:text=for-,OPTION"><span class="arg">OPTION</span></a> <span class="ty">&amp;key</span> <a href="#:~:text=type-,PROJECT"><span class="arg">PROJECT</span></a> <a href="#:~:text=OPTION.-,OPTIONS"><span class="arg">OPTIONS</span></a> <a href="#:~:text=option.-,DEFAULT"><span class="arg">DEFAULT</span></a> <a href="#:~:text=value.-,CATEGORY"><span class="arg">CATEGORY</span></a> <a href="#:~:text=and-,TITLE"><span class="arg">TITLE</span></a> <a href="#:~:text=var.-,CUSTOM-GROUP"><span class="arg">CUSTOM-GROUP</span></a> <a href="#:~:text=GROUP,-,CUSTOM-TYPE"><span class="arg">CUSTOM-TYPE</span></a> <a href="#:~:text=and-,CUSTOM-DOCSTRING"><span class="arg">CUSTOM-DOCSTRING</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Helper to declare boilerplate for <span class="arg">OPTION</span> in project-type <span class="arg">PROJECT</span>.
+<p>This function will declare a defcustom, interactive setter and non-interactive
+getter for <span class="arg">OPTION</span>. <span class="arg">OPTIONS</span> is the set of available values for the option.
+<span class="arg">DEFAULT</span> is a eval-form for the default value. <span class="arg">CATEGORY</span> and <span class="arg">TITLE</span> have the same
+semantics as they do in <a href="../fun/projection--declare-cache-var.html"><code>projection--declare-cache-var</code></a>. <span class="arg">CUSTOM-GROUP</span>,
+<span class="arg">CUSTOM-TYPE</span>,and <span class="arg">CUSTOM-DOCSTRING</span> are attached to the defcustom.
+<p>The end result of this macro invocation is a custom variable called
+PROJECT-OPTION, a getter called PROJECT--OPTION, and a setter called
+PROJECT-set-OPTION.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kqajmnl5vwqnlsg3vcmlj2d28ylc2n0n-emacs-packages-deps/share/emacs/site-lisp/elpa/projection-20260614.1822/projection-core-type.el</span>
+(<span class="k">cl-defmacro</span> <span class="f">projection--declare-project-type-option</span>
+    (option <span class="ty">&amp;key</span> project options default category title
+            custom-group custom-type custom-docstring)
+  <span class="doc">"Helper to declare boilerplate for OPTION in project-type PROJECT.
+This function will declare a defcustom, interactive setter and non-interactive
+getter for OPTION. OPTIONS is the set of available values for the option.
+DEFAULT is a eval-form for the default value. CATEGORY and TITLE have the same
+semantics as they do in `</span><span class="m doc">projection--declare-cache-var</span><span class="doc">'. CUSTOM-GROUP,
+CUSTOM-TYPE,and CUSTOM-DOCSTRING are attached to the defcustom.
+
+The end result of this macro invocation is a custom variable called
+PROJECT-OPTION, a getter called PROJECT--OPTION, and a setter called
+PROJECT-set-OPTION."</span>
+  (<span class="k">declare</span> (indent defun))
+  (<span class="k">setq</span> option (eval option) category (eval category) title (eval title) project (eval project))
+
+  (<span class="k">when</span> (equal custom-type 'boolean)
+    (<span class="w">cl-assert</span> (not options) nil <span class="s">"Cannot supply options for boolean variable."</span>))
+
+  (<span class="k">let</span> ((cache-var (intern (concat (symbol-name project) <span class="s">"-"</span> (symbol-name option))))
+        (history-var (intern (concat (symbol-name project) <span class="s">"--"</span> (symbol-name option) <span class="s">"-history"</span>)))
+        (set-func-var (intern (concat (symbol-name project) <span class="s">"-set-"</span> (symbol-name option))))
+        (get-func-var (intern (concat (symbol-name project) <span class="s">"--"</span> (symbol-name option)))))
+    `(<span class="k">progn</span>
+       (<span class="k">defcustom</span> ,cache-var ,default
+         ,custom-docstring
+         <span class="bi">:type</span> ,custom-type
+         <span class="bi">:group</span> ,custom-group)
+
+       (<span class="k">defvar</span> ,history-var nil
+         ,(format <span class="s">"History variable for `</span><span class="m s">%s</span><span class="s">'."</span> set-func-var))
+
+       (<span class="k">defun</span> ,set-func-var (project value)
+         ,(format <span class="s">"Set `</span><span class="m s">%s</span><span class="s">' for the current project."</span> cache-var)
+         (<span class="k">interactive</span>
+          (<span class="k">let*</span> ((project (projection--current-project))
+                 (options
+                  (seq-uniq
+                   (append (ensure-list (,get-func-var project)) ,options)
+                   #'string-equal))
+                 (prompt (projection--prompt ,(format <span class="s">"Set %s: "</span> title) project))
+                 (value
+                  (<span class="k">if</span> (equal ,custom-type 'boolean)
+                      (y-or-n-p prompt)
+                    (completing-read
+                     prompt options nil nil nil (<span class="k">quote</span> ,history-var))))
+                 (value (<span class="k">if</span> (<span class="k">and</span> (stringp value) (string-empty-p value))
+                            nil
+                          value)))
+            (list project value)))
+         (projection--cache-put project (<span class="k">quote</span> ,cache-var) value))
+
+       (projection--declare-cache-var
+         (<span class="k">quote</span> ,cache-var)
+         <span class="bi">:title</span> ,title
+         <span class="bi">:category</span> ,category
+         <span class="bi">:description</span> ,(format <span class="s">"The %s for this project"</span> title)
+         <span class="bi">:hide</span> t)
+
+       (<span class="k">defun</span> ,get-func-var (<span class="ty">&amp;optional</span> project)
+         ,(format <span class="s">"Fetch the value of `</span><span class="m s">%s</span><span class="s">' for PROJECT.
+PROJECT will default to the current project when not set."</span>
+                  cache-var)
+         (<span class="k">or</span>
+          (<span class="k">when-let*</span> ((project (<span class="k">or</span> project
+                                   (projection--current-project 'no-error))))
+            (projection--cache-get project (<span class="k">quote</span> ,cache-var)))
+          ,cache-var)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

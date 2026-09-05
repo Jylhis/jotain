@@ -1,0 +1,92 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-insert-gfm-code-block – Emacs Documentation Online</title>
+<meta name="description" content="markdown-insert-gfm-code-block is an interactive and natively compiled
+function defined in markdown-mode.el.
+Insert GFM code block for language LANG.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-insert-gfm-code-block</code></h1><p><span class="m"><code>markdown-insert-gfm-code-block</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-insert-gfm-code-block <span class="ty">&amp;optional</span> <a href="#:~:text=language-,LANG"><span class="arg">LANG</span></a> <a href="#:~:text=When-,EDIT"><span class="arg">EDIT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert GFM code block for language <span class="arg">LANG</span>.
+<p>If <span class="arg">LANG</span> is nil, the language will be queried from user.  If a
+region is active, wrap this region with the markup instead.  If
+the region boundaries are not on empty lines, these are added
+automatically in order to have the correct markup.  When <span class="arg">EDIT</span> is
+non-nil (e.g., when <kbd>C-u</kbd> (<a href="../fun/universal-argument.html"><code>universal-argument</code></a>) is given), edit the
+code block in an indirect buffer after insertion.
+<h2>Key Bindings</h2>
+<p><span class="v">markdown-mode-map</span> <span class="key">C-c C-s C</span>
+<span class="v">markdown-mode-style-map</span> <span class="key">C</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-insert-gfm-code-block</span> (<span class="ty">&amp;optional</span> lang edit)
+  <span class="doc">"Insert GFM code block for language LANG.
+If LANG is nil, the language will be queried from user.  If a
+region is active, wrap this region with the markup instead.  If
+the region boundaries are not on empty lines, these are added
+automatically in order to have the correct markup.  When EDIT is
+non-nil (e.g., when \\[</span><span class="m doc">universal-argument</span><span class="doc">] is given), edit the
+code block in an indirect buffer after insertion."</span>
+  (<span class="k">interactive</span>
+   (list (<span class="k">let</span> ((completion-ignore-case nil))
+           (<span class="k">condition-case</span> nil
+               (markdown-clean-language-string
+                (completing-read
+                 <span class="s">"Programming language: "</span>
+                 (markdown-gfm-get-corpus)
+                 nil 'confirm (car markdown-gfm-used-languages)
+                 'markdown-gfm-language-history))
+             (quit <span class="s">""</span>)))
+         current-prefix-arg))
+  (<span class="k">unless</span> (string= lang <span class="s">""</span>) (markdown-gfm-add-used-language lang))
+  (<span class="k">when</span> (<span class="k">and</span> (&gt; (length lang) 0)
+             (not markdown-code-block-braces))
+    (<span class="k">setq</span> lang (concat (make-string markdown-spaces-after-code-fence ?\s)
+                       lang)))
+  (<span class="k">let</span> ((gfm-open-brace (<span class="k">if</span> markdown-code-block-braces <span class="s">"{"</span> <span class="s">""</span>))
+        (gfm-close-brace (<span class="k">if</span> markdown-code-block-braces <span class="s">"}"</span> <span class="s">""</span>)))
+    (<span class="k">if</span> (use-region-p)
+        (<span class="k">let*</span> ((b (region-beginning)) (e (region-end)) end
+               (indent (<span class="k">progn</span> (goto-char b) (current-indentation))))
+          (goto-char e)
+          <span class="cd">;; </span><span class="c">if we're on a blank line, don't newline, otherwise the ```
+</span>          <span class="cd">;; </span><span class="c">should go on its own line
+</span>          (<span class="k">unless</span> (looking-back <span class="s">"\n"</span> nil)
+            (newline))
+          (indent-to indent)
+          (insert <span class="s">"```"</span>)
+          (markdown-ensure-blank-line-after)
+          (<span class="k">setq</span> end (point))
+          (goto-char b)
+          <span class="cd">;; </span><span class="c">if we're on a blank line, insert the quotes here, otherwise
+</span>          <span class="cd">;; </span><span class="c">add a new line first
+</span>          (<span class="k">unless</span> (looking-at-p <span class="s">"\n"</span>)
+            (newline)
+            (forward-line -1))
+          (markdown-ensure-blank-line-before)
+          (indent-to indent)
+          (insert <span class="s">"```"</span> gfm-open-brace lang gfm-close-brace)
+          (markdown-syntax-propertize-fenced-block-constructs (line-beginning-position) end))
+      (<span class="k">let</span> ((indent (current-indentation))
+            start-bol)
+        (delete-horizontal-space <span class="bi">:backward-only</span>)
+        (markdown-ensure-blank-line-before)
+        (indent-to indent)
+        (<span class="k">setq</span> start-bol (line-beginning-position))
+        (insert <span class="s">"```"</span> gfm-open-brace lang gfm-close-brace <span class="s">"\n"</span>)
+        (indent-to indent)
+        (<span class="k">unless</span> edit (insert ?\n))
+        (indent-to indent)
+        (insert <span class="s">"```"</span>)
+        (markdown-ensure-blank-line-after)
+        (markdown-syntax-propertize-fenced-block-constructs start-bol (point)))
+      (end-of-line 0)
+      (<span class="k">when</span> edit (markdown-edit-code-block)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

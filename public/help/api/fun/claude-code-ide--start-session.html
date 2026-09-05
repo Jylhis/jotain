@@ -1,0 +1,128 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide--start-session – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide--start-session is a natively compiled function defined
+in claude-code-ide.el.
+Start a Claude Code session for the current project.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide--start-session</code></h1><p><span class="m"><code>claude-code-ide--start-session</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">claude-code-ide.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide--start-session <span class="ty">&amp;optional</span> <a href="#:~:text=If-,CONTINUE"><span class="arg">CONTINUE</span></a> <a href="#:~:text=If-,RESUME"><span class="arg">RESUME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Start a Claude Code session for the current project.
+<p>If <span class="arg">CONTINUE</span> is non-nil, start Claude with the -c (continue) flag.
+If <span class="arg">RESUME</span> is non-nil, start Claude with the -r (resume) flag.
+<p>This function handles:
+<br>- CLI availability checking
+<br>- Dead process cleanup
+<br>- Existing session detection and window toggling
+<br>- New session creation with MCP server setup
+<br>- Process and buffer lifecycle management
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide--start-session</span> (<span class="ty">&amp;optional</span> continue resume)
+  <span class="doc">"Start a Claude Code session for the current project.
+If CONTINUE is non-nil, start Claude with the -c (continue) flag.
+If RESUME is non-nil, start Claude with the -r (resume) flag.
+
+This function handles:
+- CLI availability checking
+- Dead process cleanup
+- Existing session detection and window toggling
+- New session creation with MCP server setup
+- Process and buffer lifecycle management"</span>
+  (<span class="k">unless</span> (claude-code-ide--ensure-cli)
+    (<span class="w">user-error</span> <span class="s">"Claude Code CLI not available.  Please install it and ensure it's in PATH"</span>))
+
+  <span class="cd">;; </span><span class="c">Clean up any dead processes first
+</span>  (claude-code-ide--cleanup-dead-processes)
+
+  (<span class="k">let*</span> ((working-dir (claude-code-ide--get-working-directory))
+         (buffer-name (claude-code-ide--get-buffer-name))
+         (existing-buffer (get-buffer buffer-name))
+         (existing-process (claude-code-ide--get-process working-dir)))
+
+    <span class="cd">;; </span><span class="c">If buffer exists and process is alive, toggle the window
+</span>    (<span class="k">if</span> (<span class="k">and</span> existing-buffer
+             (buffer-live-p existing-buffer)
+             existing-process)
+        (claude-code-ide--toggle-existing-window existing-buffer working-dir)
+      <span class="cd">;; </span><span class="c">Ensure the selected terminal backend is available before starting MCP
+</span>      (claude-code-ide--terminal-ensure-backend)
+      <span class="cd">;; </span><span class="c">Start MCP server with project directory
+</span>      (<span class="k">let</span> ((port nil)
+            (session-id (format <span class="s">"claude-%s-%s"</span>
+                                (file-name-nondirectory (directory-file-name working-dir))
+                                (format-time-string <span class="s">"%Y%m%d-%H%M%S"</span>))))
+        (<span class="k">condition-case</span> err
+            (<span class="k">progn</span>
+              <span class="cd">;; </span><span class="c">Start MCP server
+</span>              (<span class="k">setq</span> port (claude-code-ide-mcp-start working-dir))
+              <span class="cd">;; </span><span class="c">Create new terminal session
+</span>              (<span class="k">let*</span> ((buffer-and-process (claude-code-ide--create-terminal-session
+                                          buffer-name working-dir port continue resume session-id))
+                     (buffer (car buffer-and-process))
+                     (process (cdr buffer-and-process)))
+                <span class="cd">;; </span><span class="c">Notify MCP tools server about new session with session info
+</span>                (claude-code-ide-mcp-server-session-started session-id working-dir buffer)
+                (claude-code-ide--set-process process working-dir)
+                <span class="cd">;; </span><span class="c">Store session ID for cleanup
+</span>                (puthash working-dir session-id claude-code-ide--session-ids)
+                <span class="cd">;; </span><span class="c">Set up process sentinel to clean up when Claude exits
+</span>                (set-process-sentinel process
+                                      (<span class="k">lambda</span> (_proc event)
+                                        <span class="cd">;; </span><span class="c">Check for abnormal exit with error code
+</span>                                        (<span class="k">when</span> (string-match <span class="s">"exited abnormally with code </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> event)
+                                          (<span class="k">let</span> ((exit-code (match-string 1 event)))
+                                            (<span class="k">claude-code-ide-debug</span> <span class="s">"Claude process exited with code %s, event: %s"</span>
+                                                                   exit-code event)
+                                            (message <span class="s">"Claude exited with error code %s"</span> exit-code)))
+                                        (<span class="k">when</span> (<span class="k">or</span> (string-match <span class="s">"finished"</span> event)
+                                                  (string-match <span class="s">"exited"</span> event)
+                                                  (string-match <span class="s">"killed"</span> event)
+                                                  (string-match <span class="s">"terminated"</span> event))
+                                          (claude-code-ide--cleanup-on-exit working-dir))))
+                <span class="cd">;; </span><span class="c">Also add buffer kill hook as a backup
+</span>                (<span class="k">with-current-buffer</span> buffer
+                  (add-hook 'kill-buffer-hook
+                            (<span class="k">lambda</span> ()
+                              (claude-code-ide--cleanup-on-exit working-dir))
+                            nil t)
+                  <span class="cd">;; </span><span class="c">Set up terminal keybindings
+</span>                  (claude-code-ide--setup-terminal-keybindings)
+                  <span class="cd">;; </span><span class="c">Add terminal-specific exit hooks
+</span>                  (<span class="k">cond</span>
+                   ((eq claude-code-ide-terminal-backend 'vterm)
+                    <span class="cd">;; </span><span class="c">Add vterm exit hook to ensure buffer is killed when process exits
+</span>                    <span class="cd">;; </span><span class="c">vterm runs Claude directly, no shell involved
+</span>                    (add-hook 'vterm-exit-functions
+                              (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> _)
+                                (<span class="k">when</span> (buffer-live-p buffer)
+                                  (kill-buffer buffer)))
+                              nil t))
+                   ((eq claude-code-ide-terminal-backend 'eat)
+                    <span class="cd">;; </span><span class="c">eat uses kill-buffer-on-exit variable
+</span>                    (<span class="k">setq-local</span> eat-kill-buffer-on-exit t))))
+                <span class="cd">;; </span><span class="c">Stabilization period for terminal layout initialization
+</span>                (sleep-for claude-code-ide-terminal-initialization-delay)
+                <span class="cd">;; </span><span class="c">Display the buffer in a side window
+</span>                (claude-code-ide--display-buffer-in-side-window buffer)
+                (claude-code-ide-log <span class="s">"Claude Code %sstarted in %s with MCP on port %d%s"</span>
+                                     (<span class="k">cond</span> (continue <span class="s">"continued and "</span>)
+                                           (resume <span class="s">"resumed and "</span>)
+                                           (t <span class="s">""</span>))
+                                     (file-name-nondirectory (directory-file-name working-dir))
+                                     port
+                                     (<span class="k">if</span> claude-code-ide-cli-debug <span class="s">" (debug mode enabled)"</span> <span class="s">""</span>))))
+          (<span class="w">error</span>
+           <span class="cd">;; </span><span class="c">Terminal session creation failed - clean up MCP server
+</span>           (<span class="k">when</span> port
+             (claude-code-ide-mcp-stop-session working-dir))
+           <span class="cd">;; </span><span class="c">Re-signal the error with improved message
+</span>           (<span class="w">signal</span> (car err) (cdr err))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

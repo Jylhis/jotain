@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: avy--path-alist-1 – Emacs Documentation Online</title>
+<meta name="description" content="avy--path-alist-1 is a natively compiled function defined in avy.el.
+Build a De Bruin sequence from LST.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>avy--path-alist-1</code></h1><p><span class="m"><code>avy--path-alist-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">avy.el</span>.
+<h2>Signature</h2>
+<pre><code>(avy--path-alist-1 <a href="#:~:text=from-,LST"><span class="arg">LST</span></a> <a href="#:~:text=LST.-,SEQ-LEN"><span class="arg">SEQ-LEN</span></a> <a href="#:~:text=of-,KEYS"><span class="arg">KEYS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Build a De Bruin sequence from <span class="arg">LST</span>.
+<p><span class="arg">SEQ-LEN</span> is how many elements of <span class="arg">KEYS</span> it takes to identify a match.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w15jf1dbl3fxkx8c35ym39v09hnaxjw9-emacs-packages-deps/share/emacs/site-lisp/elpa/avy-20241101.1357/avy.el</span>
+(<span class="k">defun</span> <span class="f">avy--path-alist-1</span> (lst seq-len keys)
+  <span class="doc">"Build a De Bruin sequence from LST.
+SEQ-LEN is how many elements of KEYS it takes to identify a match."</span>
+  (<span class="k">let</span> ((db-seq (avy--de-bruijn keys seq-len))
+        prev-pos prev-seq prev-win path-alist)
+    <span class="cd">;; </span><span class="c">The De Bruijn seq is cyclic, so append the seq-len - 1 first chars to
+</span>    <span class="cd">;; </span><span class="c">the end.
+</span>    (<span class="k">setq</span> db-seq (nconc db-seq (cl-subseq db-seq 0 (1- seq-len))))
+    (<span class="k">cl-labels</span> ((subseq-and-pop ()
+                  (<span class="k">when</span> (nth (1- seq-len) db-seq)
+                    (<span class="k">prog1</span> (cl-subseq db-seq 0 seq-len)
+                      (<span class="k">pop</span> db-seq)))))
+      (<span class="k">while</span> lst
+        (<span class="k">let*</span> ((cur (car lst))
+               (pos (<span class="k">cond</span>
+                      <span class="cd">;; </span><span class="c">ace-window has matches of the form (pos . wnd)
+</span>                      ((integerp (car cur)) (car cur))
+                      <span class="cd">;; </span><span class="c">avy-jump have form ((start . end) . wnd)
+</span>                      ((consp (car cur)) (caar cur))
+                      (t (<span class="w">error</span> <span class="s">"Unexpected match representation: %s"</span> cur))))
+               (win (cdr cur))
+               (path (<span class="k">if</span> prev-pos
+                         (<span class="k">let</span> ((diff (<span class="k">if</span> (eq win prev-win)
+                                         (- pos prev-pos)
+                                       0)))
+                           (<span class="k">when</span> (<span class="k">and</span> (&gt; diff 0) (&lt; diff seq-len))
+                             (<span class="k">while</span> (<span class="k">and</span> (nth (1- seq-len) db-seq)
+                                         (not
+                                          (eq 0
+                                              (cl-search
+                                               (cl-subseq prev-seq diff)
+                                               (cl-subseq db-seq 0 seq-len)))))
+                               (<span class="k">pop</span> db-seq)))
+                           (subseq-and-pop))
+                       (subseq-and-pop))))
+          (<span class="k">if</span> (not path)
+              (<span class="k">setq</span> lst nil
+                    path-alist nil)
+            (<span class="k">push</span> (cons path (car lst)) path-alist)
+            (<span class="k">setq</span> prev-pos pos
+                  prev-seq path
+                  prev-win win
+                  lst (cdr lst))))))
+    (nreverse path-alist)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

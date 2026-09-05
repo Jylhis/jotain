@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gnuplot--syntax-propertize – Emacs Documentation Online</title>
+<meta name="description" content="gnuplot--syntax-propertize is a natively compiled function defined in
+gnuplot.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gnuplot--syntax-propertize</code></h1><p><span class="m"><code>gnuplot--syntax-propertize</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gnuplot.el</span>.
+<h2>Signature</h2>
+<pre><code>(gnuplot--syntax-propertize <span class="arg">START</span> <span class="arg">END</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/2zm7pyv0fhyszazmqzf4kn1y6kaaizg4-emacs-packages-deps/share/emacs/site-lisp/elpa/gnuplot-20260623.1111/gnuplot.el</span>
+<span class="cd">;; </span><span class="c">Some corner cases in Gnuplot's comment and string syntax are
+</span><span class="cd">;; </span><span class="c">difficult to handle accurately using Emacs's built-in syntax tables
+</span><span class="cd">;; </span><span class="c">and parser:
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">- strings can continue over several lines, but only by using a
+</span><span class="cd">;;   </span><span class="c">backslash to escape the newline
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">- double-quoted strings can contain escaped quotes, \", and escaped
+</span><span class="cd">;;   </span><span class="c">backslashes, \\; but in single-quoted strings the quote is
+</span><span class="cd">;;   </span><span class="c">escaped by doubling it, '', and backslash is only special at
+</span><span class="cd">;;   </span><span class="c">end-of-line
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">- either type of string can end at newline without needing a
+</span><span class="cd">;; </span><span class="c">- closing delimiter
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">- comments continue over continuation lines
+</span><span class="cd">;;</span><span class="c">
+</span><span class="cd">;; </span><span class="c">The following syntax-propertize rules should accurately mark string
+</span><span class="cd">;; </span><span class="c">and comment boundaries using the "generic string fence" and
+</span><span class="cd">;; </span><span class="c">"generic comment fence" syntax properties.
+</span>(<span class="k">defalias</span> '<span class="f">gnuplot--syntax-propertize</span>
+  (<span class="k">syntax-propertize-rules</span>
+   <span class="cd">;; </span><span class="c">Double quoted strings
+</span>   ((<span class="k">rx</span>
+     (group <span class="s">"\""</span>)
+     (* (<span class="k">or</span> (seq <span class="s">"\\"</span> anything)
+            (not (any <span class="s">"\""</span> <span class="s">"\n"</span>))))
+     (group (<span class="k">or</span> <span class="s">"\""</span> <span class="s">"\n"</span> buffer-end)))
+    (1 <span class="s">"|"</span>) (2 <span class="s">"|"</span>))
+
+   <span class="cd">;; </span><span class="c">Single quoted strings
+</span>   ((<span class="k">rx</span>
+     (group <span class="s">"'"</span>)
+     (* (<span class="k">or</span> (seq <span class="s">"\\"</span> <span class="s">"\n"</span>)
+            <span class="s">"''"</span>
+            (not (any <span class="s">"'"</span> <span class="s">"\n"</span>))))
+     (group (<span class="k">or</span> <span class="s">"'"</span> <span class="s">"\n"</span> buffer-end)))
+    (1 <span class="s">"|"</span>) (2 <span class="s">"|"</span>))
+
+   <span class="cd">;; </span><span class="c">Comments
+</span>   ((<span class="k">rx</span>
+     (group <span class="s">"#"</span>)
+     (* (<span class="k">or</span> (seq <span class="s">"\\"</span> <span class="s">"\n"</span>)
+            any))
+     (<span class="k">or</span> (group <span class="s">"\n"</span>) buffer-end))
+    (1 <span class="s">"!"</span>) (2 <span class="s">"!"</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

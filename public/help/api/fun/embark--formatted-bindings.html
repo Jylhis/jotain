@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark--formatted-bindings – Emacs Documentation Online</title>
+<meta name="description" content="embark--formatted-bindings is a natively compiled function defined in
+embark.el.
+Return the formatted keybinding of KEYMAP.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark--formatted-bindings</code></h1><p><span class="m"><code>embark--formatted-bindings</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark--formatted-bindings <a href="#:~:text=of-,KEYMAP"><span class="arg">KEYMAP</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,NESTED"><span class="arg">NESTED</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the formatted keybinding of <span class="arg">KEYMAP</span>.
+<p>The keybindings are returned in their order of appearance.
+If <span class="arg">NESTED</span> is non-nil subkeymaps are not flattened.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+(<span class="k">defun</span> <span class="f">embark--formatted-bindings</span> (keymap <span class="ty">&amp;optional</span> nested)
+  <span class="doc">"Return the formatted keybinding of KEYMAP.
+The keybindings are returned in their order of appearance.
+If NESTED is non-nil subkeymaps are not flattened."</span>
+  (<span class="k">let*</span> ((commands
+          (<span class="k">cl-loop</span> for (key . def) in (embark--all-bindings keymap nested)
+                   for name = (embark--command-name def)
+                   for cmd = (keymap--menu-item-binding def)
+                   unless (memq cmd '(nil embark-keymap-help
+                                      negative-argument digit-argument))
+                   collect (list name cmd key
+                                 (concat
+                                  (<span class="k">if</span> (eq (car-safe def) 'menu-item)
+                                      <span class="s">"menu-item"</span>
+                                    (key-description key))))))
+         (width (<span class="k">cl-loop</span> for (_name _cmd _key desc) in commands
+                         maximize (length desc)))
+         (default)
+         (candidates
+          (<span class="k">cl-loop</span> for item in commands
+                   for (name cmd key desc) = item
+                   for desc-rep =
+                   (concat
+                    (propertize desc 'face 'embark-keybinding)
+                    (<span class="k">and</span> (embark--action-repeatable-p cmd)
+                         embark-keybinding-repeat))
+                   for formatted =
+                   (propertize
+                    (concat desc-rep
+                            (make-string (- width (length desc-rep) -1) ?\s)
+                            name)
+                    'embark-command cmd)
+                   when (equal key [13])
+                   do (<span class="k">setq</span> default formatted)
+                   collect (cons formatted item))))
+    (cons candidates default)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

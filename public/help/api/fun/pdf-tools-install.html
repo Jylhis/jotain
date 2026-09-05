@@ -1,0 +1,100 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-tools-install – Emacs Documentation Online</title>
+<meta name="description" content="pdf-tools-install is an interactive and natively compiled function
+defined in pdf-tools.el.
+Install PDF-Tools in all current and future PDF buffers.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-tools-install</code></h1><p><span class="m"><code>pdf-tools-install</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">pdf-tools.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-tools-install <span class="ty">&amp;optional</span> <a href="#:~:text=if-,NO-QUERY-P"><span class="arg">NO-QUERY-P</span></a> <a href="#:~:text=if-,SKIP-DEPENDENCIES-P"><span class="arg">SKIP-DEPENDENCIES-P</span></a> <a href="#:~:text=if-,NO-ERROR-P"><span class="arg">NO-ERROR-P</span></a> <a href="#:~:text=if-,FORCE-DEPENDENCIES-P"><span class="arg">FORCE-DEPENDENCIES-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Install PDF-Tools in all current and future PDF buffers.
+<p>If the <a href="../var/pdf-info-epdfinfo-program.html"><code>pdf-info-epdfinfo-program</code></a> is not running or does not
+appear to be working, attempt to rebuild it.  If this build
+succeeded, continue with the activation of the package.
+Otherwise fail silently, i.e. no error is signaled.
+<p>Build the program (if necessary) without asking first, if
+<span class="arg">NO-QUERY-P</span> is non-nil.
+<p>Don't attempt to install system packages, if <span class="arg">SKIP-DEPENDENCIES-P</span>
+is non-nil.
+<p>Do not signal an error in case the build failed, if <span class="arg">NO-ERROR-P</span> is
+non-nil.
+<p>Attempt to install system packages (even if it is deemed
+unnecessary), if <span class="arg">FORCE-DEPENDENCIES-P</span> is non-nil.
+<p>Note that <span class="arg">SKIP-DEPENDENCIES-P</span> and <span class="arg">FORCE-DEPENDENCIES-P</span> are
+mutually exclusive.
+<p>Note further, that you can influence the installation directory
+by setting <a href="../var/pdf-info-epdfinfo-program.html"><code>pdf-info-epdfinfo-program</code></a> to an appropriate
+value (e.g. ~/bin/epdfinfo) before calling this function.
+<p>See <a href="../fun/pdf-view-mode.html"><code>pdf-view-mode</code></a> and <a href="../var/pdf-tools-enabled-modes.html"><code>pdf-tools-enabled-modes</code></a>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-tools.el</span>
+<span class="cd">;; </span><span class="c">* ================================================================== *
+</span><span class="cd">;; </span><span class="c">* Initialization
+</span><span class="cd">;; </span><span class="c">* ================================================================== *
+</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">pdf-tools-install</span> (<span class="ty">&amp;optional</span> no-query-p skip-dependencies-p
+                                    no-error-p force-dependencies-p)
+  <span class="doc">"Install PDF-Tools in all current and future PDF buffers.
+
+If the `</span><span class="m doc">pdf-info-epdfinfo-program</span><span class="doc">' is not running or does not
+appear to be working, attempt to rebuild it.  If this build
+succeeded, continue with the activation of the package.
+Otherwise fail silently, i.e. no error is signaled.
+
+Build the program (if necessary) without asking first, if
+NO-QUERY-P is non-nil.
+
+Don't attempt to install system packages, if SKIP-DEPENDENCIES-P
+is non-nil.
+
+Do not signal an error in case the build failed, if NO-ERROR-P is
+non-nil.
+
+Attempt to install system packages (even if it is deemed
+unnecessary), if FORCE-DEPENDENCIES-P is non-nil.
+
+Note that SKIP-DEPENDENCIES-P and FORCE-DEPENDENCIES-P are
+mutually exclusive.
+
+Note further, that you can influence the installation directory
+by setting `</span><span class="m doc">pdf-info-epdfinfo-program</span><span class="doc">' to an appropriate
+value (e.g. ~/bin/epdfinfo) before calling this function.
+
+See `</span><span class="m doc">pdf-view-mode</span><span class="doc">' and `</span><span class="m doc">pdf-tools-enabled-modes</span><span class="doc">'."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">if</span> (<span class="k">or</span> (pdf-info-running-p)
+          (<span class="k">ignore-errors</span> (pdf-info-check-epdfinfo) t))
+      (pdf-tools-install-noverify)
+    (<span class="k">let</span> ((target-directory
+           (<span class="k">or</span> (<span class="k">and</span> (stringp pdf-info-epdfinfo-program)
+                    (file-name-directory
+                     pdf-info-epdfinfo-program))
+               pdf-tools-directory)))
+      (<span class="k">if</span> (<span class="k">or</span> no-query-p
+              (y-or-n-p <span class="s">"Need to (re)build the epdfinfo program, do it now ?"</span>))
+          (pdf-tools-build-server
+           target-directory
+           skip-dependencies-p
+           force-dependencies-p
+           (<span class="k">lambda</span> (executable)
+             (<span class="k">let</span> ((msg (format
+                         <span class="s">"Building the PDF Tools server %s"</span>
+                         (<span class="k">if</span> executable <span class="s">"succeeded"</span> <span class="s">"failed"</span>))))
+               (<span class="k">if</span> (not executable)
+                   (funcall (<span class="k">if</span> no-error-p #'message #'error) <span class="s">"%s"</span> msg)
+                 (message <span class="s">"%s"</span> msg)
+                 (<span class="k">setq</span> pdf-info-epdfinfo-program executable)
+                 (<span class="k">let</span> ((pdf-info-restart-process-p t))
+                   (pdf-tools-install-noverify))))))
+        (message <span class="s">"PDF Tools not activated"</span>)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

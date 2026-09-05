@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat-load-older-history – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat-load-older-history is an interactive and natively compiled
+function defined in eca-chat.el.
+Load and prepend the previous (older) page of this chat's history.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat-load-older-history</code></h1><p><span class="m"><code>eca-chat-load-older-history</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat-load-older-history)
+</code></pre>
+<h2>Documentation</h2>
+<p>Load and prepend the previous (older) page of this chat's history.
+<h2>Key Bindings</h2>
+<p><span class="v">eca-chat-mode-map</span> <span class="key">C-c C-S-o</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat-load-older-history</span> ()
+  <span class="doc">"Load and prepend the previous (older) page of this chat's history."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((session (eca-session))
+        (buffer (current-buffer))
+        (chat-id eca-chat--id))
+    (<span class="k">cond</span>
+     ((not eca-chat--history-before-cursor)
+      (message <span class="s">"No older messages to load."</span>))
+     (eca-chat--history-loading
+      (message <span class="s">"Already loading older messages…"</span>))
+     (t
+      (<span class="k">setq-local</span> eca-chat--history-loading t)
+      (eca-api-request-async
+       session
+       <span class="bi">:method</span> <span class="s">"chat/history"</span>
+       <span class="bi">:params</span> (append (list <span class="bi">:chatId</span> chat-id
+                             <span class="bi">:before</span> eca-chat--history-before-cursor)
+                       (<span class="k">when</span> eca-chat-history-page-size
+                         (list <span class="bi">:limit</span> eca-chat-history-page-size)))
+       <span class="bi">:success-callback</span>
+       (<span class="k">lambda</span> (res)
+         (<span class="k">when</span> (buffer-live-p buffer)
+           (<span class="k">eca-chat--with-current-buffer</span> buffer
+             (<span class="k">setq-local</span> eca-chat--history-loading nil)
+             (<span class="k">if-let*</span> ((err (plist-get res <span class="bi">:error</span>)))
+                 (<span class="k">if</span> (string= (plist-get err <span class="bi">:code</span>) <span class="s">"cursor_expired"</span>)
+                     (message <span class="s">"Chat history changed; reopen the chat to continue paging."</span>)
+                   (message <span class="s">"Failed to load older messages: %s"</span> (plist-get err <span class="bi">:message</span>)))
+               (<span class="k">progn</span>
+                 (eca-chat--render-history-contents session buffer (append (plist-get res <span class="bi">:contents</span>) nil))
+                 (eca-chat--apply-history-meta (plist-get res <span class="bi">:meta</span>))
+                 (eca-chat--refresh-load-older-control)
+                 (eca-chat--protect-non-prompt))))))
+       <span class="bi">:error-callback</span>
+       (<span class="k">lambda</span> (err)
+         (<span class="k">when</span> (buffer-live-p buffer)
+           (<span class="k">eca-chat--with-current-buffer</span> buffer
+             (<span class="k">setq-local</span> eca-chat--history-loading nil)
+             (message <span class="s">"Failed to load older messages: %s"</span> err)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,74 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-procedure-apply-activation-nodes – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-procedure-apply-activation-nodes is a natively compiled
+function defined in combobulate-procedure.el.
+Apply ACTIVATION-NODES to NODE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-procedure-apply-activation-nodes</code></h1><p><span class="m"><code>combobulate-procedure-apply-activation-nodes</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">combobulate-procedure.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-procedure-apply-activation-nodes <a href="#:~:text=Apply-,ACTIVATION-NODES"><span class="arg">ACTIVATION-NODES</span></a> <a href="#:~:text="><span class="arg">ACTION-NODE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply <span class="arg">ACTIVATION-NODES</span> to NODE.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-procedure.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-procedure-apply-activation-nodes</span> (activation-nodes action-node)
+  <span class="doc">"Apply ACTIVATION-NODES to NODE."</span>
+  (<span class="k">let</span> ((result (combobulate-procedure-result-create
+                 <span class="bi">:activation-node</span> nil
+                 <span class="bi">:action-node</span> action-node
+                 <span class="bi">:parent-node</span> nil
+                 <span class="bi">:matched-activation</span> nil
+                 <span class="bi">:selected-nodes</span> nil
+                 <span class="bi">:matched-selection</span> nil)))
+    (<span class="k">catch</span> '<span class="m">done</span>
+      (<span class="k">dolist</span> (activation-node activation-nodes)
+        (<span class="k">map-let</span> (<span class="bi">:nodes</span> <span class="bi">:position</span> <span class="bi">:has-parent</span> <span class="bi">:has-ancestor</span> <span class="bi">:has-fields</span>)
+            activation-node
+          <span class="cd">;; </span><span class="c">Expand the rules in `</span><span class="m c">:nodes</span><span class="c">' and determine if any of them match
+</span>          (<span class="k">let</span> ((action-node-type (combobulate-node-type action-node))
+                (expanded-nodes (combobulate-procedure-expand-rules nodes))
+                (parent-node))
+            (<span class="k">when</span> (<span class="k">and</span>
+                   <span class="cd">;; </span><span class="c">action-node-type must be one of the expanded rules
+</span>                   (member action-node-type expanded-nodes)
+                   <span class="cd">;; </span><span class="c">Position should be at the start of the node;
+</span>                   <span class="cd">;; </span><span class="c">inside the node, but not at the end nor the
+</span>                   <span class="cd">;; </span><span class="c">beginning; or either.
+</span>                   (<span class="k">cond</span>
+                    ((<span class="k">or</span> (eq position 'any) (null position))
+                     (<span class="k">or</span> (combobulate-point-at-beginning-of-node-p action-node)
+                         (combobulate-point-in-node-range-p action-node)))
+                    ((eq position 'in)
+                     (<span class="k">and</span> (combobulate-point-in-node-range-p action-node)
+                          <span class="cd">;; </span><span class="c">`</span><span class="m c">combobulate-point-in-node-range-p</span><span class="c">' is non-nil if
+</span>                          <span class="cd">;; </span><span class="c">we're at the start of the node, but that is
+</span>                          <span class="cd">;; </span><span class="c">not allowed here.
+</span>                          (not (combobulate-point-at-beginning-of-node-p action-node))))
+                    ((eq position 'at)
+                     (combobulate-point-at-beginning-of-node-p action-node))
+                    (t (<span class="w">error</span> <span class="s">"Unknown `</span><span class="m s">:position</span><span class="s">' specifier `</span><span class="m s">%s</span><span class="s">'"</span> position)))
+                   (<span class="k">or</span> (<span class="k">and</span> has-fields (combobulate-procedure-apply-has-field has-fields action-node))
+                       (not has-fields))
+                   <span class="cd">;; </span><span class="c">If `</span><span class="m c">:has-parent</span><span class="c">' or `</span><span class="m c">:has-ancestor</span><span class="c">' is
+</span>                   <span class="cd">;; </span><span class="c">specified, then check the parents of the
+</span>                   <span class="cd">;; </span><span class="c">action node.
+</span>                   (<span class="k">or</span> (<span class="k">and</span> has-parent
+                            (<span class="k">setq</span> parent-node (combobulate-procedure-apply-has-parent
+                                               has-parent action-node)))
+                       (<span class="k">and</span> has-ancestor
+                            (<span class="k">setq</span> parent-node (combobulate-procedure-apply-has-ancestor
+                                               has-ancestor action-node)))
+                       <span class="cd">;; </span><span class="c">If none of the :has-* conditions are specified,
+</span>                       <span class="cd">;; </span><span class="c">then we can just continue.
+</span>                       (not (<span class="k">or</span> has-parent has-ancestor))))
+              (<span class="k">setf</span> (combobulate-procedure-result-activation-node result) activation-node
+                    (combobulate-procedure-result-parent-node result) parent-node
+                    (combobulate-procedure-result-matched-activation result) t)
+              (<span class="k">throw</span> '<span class="m">done</span> result))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

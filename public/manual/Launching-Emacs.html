@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- Jotain - a GNU Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer.
+
+Copyright © Markus Jylhänkangas. -->
+<title>Launching Emacs (Jotain Emacs Configuration)</title>
+
+<meta name="description" content="Launching Emacs (Jotain Emacs Configuration)">
+<meta name="keywords" content="Launching Emacs (Jotain Emacs Configuration)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Devenv-Integration.html" rel="next" title="Devenv Integration">
+<link href="Package-Reference.html" rel="prev" title="Package Reference">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+span:hover a.copiable-link {visibility: visible}
+ul.mark-bullet {list-style-type: disc}
+</style>
+<link rel="stylesheet" type="text/css" href="manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Launching-Emacs">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Devenv-Integration.html" rel="next">Devenv Integration</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Package-Reference.html" rel="prev">Package Reference</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+<h2 class="chapter" id="Launching-Emacs-1"><span>11 Launching Emacs<a class="copiable-link" href="#Launching-Emacs-1"> &para;</a></span></h2>
+
+<blockquote class="quotation">
+<p><strong class="strong">Current state:</strong> the devenv shell provides tooling only &mdash; there is no <code class="code">emacs</code> binary in it (see the top-of-file note in <code class="code">devenv.nix</code>). The direct-launch recipes (<code class="code">just run</code>, <code class="code">just debug</code>, <code class="code">just tty</code>, <code class="code">just daemon</code>, <code class="code">just client</code>, <code class="code">just client-tty</code>, <code class="code">just quick</code>) are <code class="code">[DISABLED]</code> stubs that print a notice and exit 0. The supported launch path is <strong class="strong"><code class="code">just run-built</code></strong>: build Emacs via Nix, then launch it with this configuration. Other docs pages that mention launching point back at this note.
+</p></blockquote>
+<p>Jotain supports three launch patterns. Pick the one that matches the task &mdash; they&rsquo;re complementary, not alternatives.
+</p>
+<ul class="mini-toc">
+<li><a href="#One_002dshot">One-shot</a></li>
+<li><a href="#Daemon-_002b-client">Daemon + client</a></li>
+<li><a href="#Quick-edit-_0028_002dQ-_002dnw_0029">Quick edit (<code class="code">-Q -nw</code>)</a></li>
+<li><a href="#Which-one-to-use">Which one to use</a></li>
+</ul>
+<div class="section-level-extent" id="One_002dshot">
+<h3 class="section"><span>11.1 One-shot<a class="copiable-link" href="#One_002dshot"> &para;</a></span></h3>
+<p>A fresh <code class="code">emacs</code> process every time. Loads the full Jotain config; pays package-init cost on every launch.
+</p>
+<pre class="verbatim">just run-built            # build for this platform, then launch result/bin/emacs
+just run-built-debug      # same, with --debug-init and debug-on-error
+</pre>
+<p><code class="code">just run-built</code> auto-detects the platform, builds the full distribution (<code class="code">just build</code>; on aarch64-linux the full terminal-only distribution via <code class="code">just build-nox-full</code>), and launches <code class="code">./result/bin/emacs --init-directory=&lt;repo&gt;</code>, so it never touches <code class="code">~/.emacs.d</code>. The first invocation pays a <code class="code">nix build</code> (usually a binary-cache pull); reruns launch straight from <code class="code">./result</code>.
+</p>
+<p>Best for sanity checks and trying out config changes. Avoid for day-to-day editing &mdash; the startup cost adds up.
+</p>
+</div>
+<div class="section-level-extent" id="Daemon-_002b-client">
+<h3 class="section"><span>11.2 Daemon + client<a class="copiable-link" href="#Daemon-_002b-client"> &para;</a></span></h3>
+<p>Start Emacs once as a server; reuse it via lightweight clients. The first frame is slow; every frame after is instant.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#In-the-repo-_0028development_0029">In the repo (development)</a></li>
+<li><a href="#As-an-installed-user-_0028home_002dmanager_0029">As an installed user (home-manager)</a></li>
+<li><a href="#Shell-aliases">Shell aliases</a></li>
+<li><a href="#Managing-the-daemon-_0028jotctl_0029">Managing the daemon (<code class="code">jotctl</code>)</a></li>
+</ul>
+<div class="subsection-level-extent" id="In-the-repo-_0028development_0029">
+<h4 class="subsection"><span>11.2.1 In the repo (development)<a class="copiable-link" href="#In-the-repo-_0028development_0029"> &para;</a></span></h4>
+<p>The <code class="code">just daemon</code> / <code class="code">just client</code> / <code class="code">just client-tty</code> recipes are disabled (no Emacs in the dev shell &mdash; see the note above). The manual equivalent uses the Nix-built binary:
+</p>
+<pre class="verbatim">just build          # or let a previous `just run-built` leave ./result behind
+./result/bin/emacs --fg-daemon --init-directory=&quot;$PWD&quot;   # foreground daemon
+./result/bin/emacsclient -c                              # graphical client frame
+./result/bin/emacsclient -t                              # terminal client frame
+</pre>
+<p>The daemon blocks; run it in another terminal (or under <code class="code">tmux</code>) and connect with <code class="code">emacsclient</code> from elsewhere. Launching with <code class="code">--init-directory=&lt;repo&gt;</code> keeps it isolated from <code class="code">~/.emacs.d</code>.
+</p>
+<p>Stop the daemon with <code class="code">C-c</code> in its terminal, or from any client:
+</p>
+<pre class="verbatim">./result/bin/emacsclient -e '(kill-emacs)'
+</pre>
+</div>
+<div class="subsection-level-extent" id="As-an-installed-user-_0028home_002dmanager_0029">
+<h4 class="subsection"><span>11.2.2 As an installed user (home-manager)<a class="copiable-link" href="#As-an-installed-user-_0028home_002dmanager_0029"> &para;</a></span></h4>
+<p>The <code class="code">services.jotain</code> module ships:
+</p>
+<ul class="itemize mark-bullet">
+<li>A systemd user service (Linux) or launchd agent (macOS) that runs <code class="code">emacs --fg-daemon</code>. Enabled via <code class="code">services.jotain.startWithUserSession</code>.
+</li><li><code class="code">jotain-editor</code> &mdash; <code class="code">emacsclient --tty</code> with a <code class="code">-nw</code> fallback. Set as <code class="code">$EDITOR</code> when <code class="code">services.jotain.defaultEditor = true</code>.
+</li><li><code class="code">jotain-visual</code> &mdash; <code class="code">emacsclient --create-frame</code>. Set as <code class="code">$VISUAL</code>.
+</li><li><code class="code">jotctl {start|stop|status|restart|logs}</code> &mdash; manage the daemon itself (wraps <code class="code">launchctl</code> on macOS, the <code class="code">jotain</code> systemd user service on Linux). Always on <code class="code">PATH</code> when the module is enabled.
+</li><li>A <code class="code">.desktop</code> entry (<code class="code">jotain-client.desktop</code>) for launching a GUI client from your application menu, enabled by <code class="code">services.jotain.client.enable</code>.
+</li></ul>
+
+<p>See <em class="emph">Module Options</em> in the appendix for the full option reference.
+</p>
+</div>
+<div class="subsection-level-extent" id="Shell-aliases">
+<h4 class="subsection"><span>11.2.3 Shell aliases<a class="copiable-link" href="#Shell-aliases"> &para;</a></span></h4>
+<p>Inspired by <a class="uref" href="https://rahuljuliato.com/posts/launching-emacs-terminal">Rahul Juliato&rsquo;s launching-emacs-terminal post</a>, the module can install short aliases for the daemon and clients:
+</p>
+<pre class="verbatim">services.jotain = {
+  enable = true;
+  shellAliases.enable = true;
+  # shellAliases.prefix = &quot;j&quot;;   # for &quot;jemd&quot;/&quot;jem&quot;/&quot;jemg&quot;
+};
+</pre>
+<table class="multitable">
+<thead><tr><th>Alias</th><th>Expands to</th></tr></thead>
+<tbody><tr><td><code class="code">emd</code></td><td><code class="code">emacs --fg-daemon</code> (wrapped)</td></tr>
+<tr><td><code class="code">em</code></td><td><code class="code">jotain-editor</code> (<code class="code">emacsclient --tty</code>)</td></tr>
+<tr><td><code class="code">emg</code></td><td><code class="code">jotain-visual</code> (<code class="code">emacsclient -c</code>)</td></tr>
+</tbody>
+</table>
+
+<p>The aliases are written to <code class="code">programs.bash.shellAliases</code>, <code class="code">programs.zsh.shellAliases</code>, and <code class="code">programs.fish.shellAliases</code> &mdash; pick up whichever shell home-manager already manages.
+</p>
+</div>
+<div class="subsection-level-extent" id="Managing-the-daemon-_0028jotctl_0029">
+<h4 class="subsection"><span>11.2.4 Managing the daemon (<code class="code">jotctl</code>)<a class="copiable-link" href="#Managing-the-daemon-_0028jotctl_0029"> &para;</a></span></h4>
+<p><code class="code">emd</code> starts a <em class="emph">foreground</em> daemon; to manage the supervised daemon (the launchd agent on macOS, the <code class="code">jotain</code> systemd user service on Linux) use <code class="code">jotctl</code>, which is always on <code class="code">PATH</code> when the module is enabled &mdash; independent of <code class="code">shellAliases.enable</code>:
+</p>
+<table class="multitable">
+<thead><tr><th>Command</th><th>macOS (launchd)</th><th>Linux (systemd &ndash;user)</th></tr></thead>
+<tbody><tr><td><code class="code">jotctl status</code></td><td><code class="code">launchctl print &hellip;</code> (default)</td><td><code class="code">systemctl --user status jotain</code></td></tr>
+<tr><td><code class="code">jotctl start</code></td><td><code class="code">launchctl bootstrap</code> / kickstart</td><td><code class="code">systemctl --user start jotain</code></td></tr>
+<tr><td><code class="code">jotctl stop</code></td><td><code class="code">launchctl bootout</code></td><td><code class="code">systemctl --user stop jotain</code></td></tr>
+<tr><td><code class="code">jotctl restart</code></td><td><code class="code">launchctl kickstart -k</code></td><td><code class="code">systemctl --user restart jotain</code></td></tr>
+<tr><td><code class="code">jotctl logs</code></td><td>launchd state + note¹</td><td><code class="code">journalctl --user -u jotain -f</code></td></tr>
+</tbody>
+</table>
+
+<p>¹ The launchd agent sets no <code class="code">StandardOutPath</code>, so macOS doesn&rsquo;t capture the daemon&rsquo;s stdout; <code class="code">jotctl logs</code> prints the launchd state instead.
+</p>
+</div>
+</div>
+<div class="section-level-extent" id="Quick-edit-_0028_002dQ-_002dnw_0029">
+<h3 class="section"><span>11.3 Quick edit (<code class="code">-Q -nw</code>)<a class="copiable-link" href="#Quick-edit-_0028_002dQ-_002dnw_0029"> &para;</a></span></h3>
+<p>When you need a stripped-down Emacs &mdash; editing <code class="code">/etc/hosts</code> over SSH, fixing a typo in a 200 MB log file, demonstrating something with no muscle-memory key bindings &mdash; bypass Jotain entirely (the <code class="code">just quick</code> recipe is disabled; use any <code class="code">emacs</code> on the host, or the Nix-built one):
+</p>
+<pre class="verbatim">./result/bin/emacs -Q -nw --eval &quot;(load-theme 'wombat t)&quot;
+</pre>
+<p>This is the pattern <a class="uref" href="https://rahuljuliato.com/posts/basic-emacs-alias">Rahul Juliato describes in basic-emacs-alias</a>. <code class="code">-Q</code> skips <code class="code">early-init.el</code>, <code class="code">init.el</code>, site-lisp, and <code class="code">~/.emacs.d/</code>; <code class="code">-nw</code> keeps it in the current terminal; the wombat theme line is the one concession to readability on dark terminals.
+</p>
+<p>To get the same effect anywhere, add an alias to your shell:
+</p>
+<pre class="verbatim">alias eq='emacs -Q -nw --eval &quot;(load-theme '\''wombat t)&quot;'
+</pre>
+</div>
+<div class="section-level-extent" id="Which-one-to-use">
+<h3 class="section"><span>11.4 Which one to use<a class="copiable-link" href="#Which-one-to-use"> &para;</a></span></h3>
+<table class="multitable">
+<thead><tr><th>Situation</th><th>Use</th></tr></thead>
+<tbody><tr><td>First-time setup, sanity checks</td><td><code class="code">just run-built</code></td></tr>
+<tr><td>Day-to-day editing, fast frame opens</td><td>daemon + <code class="code">em</code>/<code class="code">emg</code></td></tr>
+<tr><td>Sysadmin SSH session, ad-hoc edit</td><td><code class="code">emacs -Q -nw</code> alias</td></tr>
+<tr><td>Debugging a config regression</td><td><code class="code">just run-built-debug</code></td></tr>
+</tbody>
+</table>
+
+</div>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Devenv-Integration.html" rel="next">Devenv Integration</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Package-Reference.html" rel="prev">Package Reference</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+
+
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--save-preset – Emacs Documentation Online</title>
+<meta name="description" content="gptel--save-preset is an interactive and natively compiled function
+defined in gptel.el.
+Save gptel's current settings as a preset with NAME.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--save-preset</code></h1><p><span class="m"><code>gptel--save-preset</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--save-preset <a href="#:~:text=with-,NAME"><span class="arg">NAME</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=symbol.-,DESCRIPTION"><span class="arg">DESCRIPTION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Save gptel's current settings as a preset with <span class="arg">NAME</span>.
+<p><span class="arg">NAME</span> must be a symbol.  <span class="arg">DESCRIPTION</span> is added if provided.  In addition
+to registering the preset, elisp code to do the same is copied to the
+<a href="../var/kill-ring.html"><code>kill-ring</code></a>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--save-preset</span> (name <span class="ty">&amp;optional</span> description)
+  <span class="doc">"Save gptel's current settings as a preset with NAME.
+
+NAME must be a symbol.  DESCRIPTION is added if provided.  In addition
+to registering the preset, elisp code to do the same is copied to the
+`</span><span class="m doc">kill-ring</span><span class="doc">'."</span>
+  (<span class="k">interactive</span>
+   (list (intern (completing-read <span class="s">"Save gptel settings to (existing or new) preset: "</span>
+                                  gptel--known-presets))
+         (read-string <span class="s">"Description (optional): "</span>)))
+  (<span class="k">let</span> ((preset-code
+         `(gptel-make-preset ',name
+           <span class="bi">:description</span> ,(<span class="k">when</span> (<span class="k">and</span> description
+                                (not (string-blank-p description)))
+                          description)
+           <span class="bi">:backend</span> ,(gptel-backend-name gptel-backend)
+           <span class="bi">:model</span> ',gptel-model
+           <span class="bi">:system</span> ,(<span class="k">if-let*</span> ((directive (car-safe (rassoc gptel-system-prompt
+                                                           gptel-directives))))
+                         `',directive
+                      gptel-system-prompt)
+           <span class="bi">:tools</span> ',(mapcar #'gptel-tool-name gptel-tools)
+           <span class="bi">:stream</span> ,gptel-stream
+           <span class="bi">:temperature</span> ,gptel-temperature
+           <span class="bi">:max-tokens</span> ,gptel-max-tokens
+           <span class="bi">:use-context</span> ',gptel-use-context
+           <span class="bi">:track-media</span> ,gptel-track-media
+           <span class="bi">:include-reasoning</span> ,(<span class="k">let</span> ((reasoning gptel-include-reasoning))
+                                   (<span class="k">if</span> (eq reasoning 'ignore)
+                                       ''ignore reasoning)))))
+    (kill-new (pp-to-string preset-code))
+    (eval preset-code)
+    (message <span class="s">"Preset %s saved. (Lisp expression for preset saved to kill-ring)"</span>
+             (propertize (symbol-name name) 'face 'highlight))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

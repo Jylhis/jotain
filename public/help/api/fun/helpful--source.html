@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: helpful--source – Emacs Documentation Online</title>
+<meta name="description" content="helpful--source is a natively compiled function defined in helpful.el.
+Return the source code of SYM.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>helpful--source</code></h1><p><span class="m"><code>helpful--source</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">helpful.el</span>.
+<h2>Signature</h2>
+<pre><code>(helpful--source <a href="#:~:text=of-,SYM"><span class="arg">SYM</span></a> <a href="#:~:text="><span class="arg">CALLABLE-P</span></a> <a href="#:~:text="><span class="arg">BUF</span></a> <a href="#:~:text="><span class="arg">POS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the source code of <span class="arg">SYM</span>.
+<p>If the source code cannot be found, return the sexp used.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/al1y9rq93c50r6aqa0749m04ilfnar06-emacs-packages-deps/share/emacs/site-lisp/elpa/helpful-20250408.334/helpful.el</span>
+(<span class="k">defun</span> <span class="f">helpful--source</span> (sym callable-p buf pos)
+  <span class="doc">"Return the source code of SYM.
+If the source code cannot be found, return the sexp used."</span>
+  (<span class="k">catch</span> '<span class="m">source</span>
+    (<span class="k">unless</span> (symbolp sym)
+      (<span class="k">throw</span> '<span class="m">source</span> sym))
+
+    (<span class="k">let</span> ((source nil))
+      (<span class="k">when</span> (<span class="k">and</span> buf pos)
+        (<span class="k">with-current-buffer</span> buf
+          (<span class="k">save-excursion</span>
+            (<span class="k">save-restriction</span>
+              (goto-char pos)
+
+              (<span class="k">if</span> (<span class="k">and</span> (helpful--primitive-p sym callable-p)
+                       (not callable-p))
+                  <span class="cd">;; </span><span class="c">For variables defined in .c files, only show the
+</span>                  <span class="cd">;; </span><span class="c">DEFVAR expression rather than the huge containing
+</span>                  <span class="cd">;; </span><span class="c">function.
+</span>                  (<span class="k">progn</span>
+                    (<span class="k">setq</span> pos (line-beginning-position))
+                    <span class="cd">;; </span><span class="c">HACK Use the elisp syntax table even though the file is a
+</span>                    <span class="cd">;; </span><span class="c">C file. This is a temporary workaround for issue #329.
+</span>                    (<span class="k">with-syntax-table</span> emacs-lisp-mode-syntax-table
+                      (forward-list))
+                    (forward-char)
+                    (narrow-to-region pos (point)))
+                <span class="cd">;; </span><span class="c">Narrow to the top-level definition.
+</span>                (<span class="k">let</span> ((parse-sexp-ignore-comments t))
+                  (narrow-to-defun t)))
+
+              <span class="cd">;; </span><span class="c">If there was a preceding comment, POS will be
+</span>              <span class="cd">;; </span><span class="c">after that comment. Move the position to include that comment.
+</span>              (<span class="k">setq</span> pos (point-min))
+
+              (<span class="k">setq</span> source (buffer-substring-no-properties (point-min) (point-max))))))
+        (<span class="k">setq</span> source (s-trim-right source))
+        (<span class="k">when</span> (<span class="k">and</span> source (buffer-file-name buf))
+          (<span class="k">setq</span> source (propertize source
+                                   'helpful-path (buffer-file-name buf)
+                                   'helpful-pos pos
+                                   'helpful-pos-is-start t)))
+        (<span class="k">throw</span> '<span class="m">source</span> source)))
+
+    (<span class="k">when</span> callable-p
+      <span class="cd">;; </span><span class="c">Could not find source -- probably defined interactively, or via
+</span>      <span class="cd">;; </span><span class="c">a macro, or file has changed.
+</span>      <span class="cd">;; </span><span class="c">TODO: verify that the source hasn't changed before showing.
+</span>      <span class="cd">;; </span><span class="c">TODO: offer to download C sources for current version.
+</span>      (<span class="k">throw</span> '<span class="m">source</span> (indirect-function sym)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

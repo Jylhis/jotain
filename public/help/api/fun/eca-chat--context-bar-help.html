@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--context-bar-help – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--context-bar-help is a natively compiled function defined in
+eca-chat.el.
+Build the help-echo legend for the context bar from BREAKDOWN.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--context-bar-help</code></h1><p><span class="m"><code>eca-chat--context-bar-help</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--context-bar-help <a href="#:~:text=from-,BREAKDOWN"><span class="arg">BREAKDOWN</span></a> <a href="#:~:text=BREAKDOWN.-,USED"><span class="arg">USED</span></a> <a href="#:~:text=USED,-,FREE"><span class="arg">FREE</span></a> <a href="#:~:text=and-,LIMIT"><span class="arg">LIMIT</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=category.-,COMPACT-PCT"><span class="arg">COMPACT-PCT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Build the help-echo legend for the context bar from <span class="arg">BREAKDOWN</span>.
+<p><span class="arg">USED</span>, <span class="arg">FREE</span> and <span class="arg">LIMIT</span> are the aggregate token counts.  Each line is
+prefixed with a colored swatch matching the bar so the colors map to
+their category.  <span class="arg">COMPACT-PCT</span>, when set, notes the auto-compaction
+threshold percentage.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--context-bar-help</span> (breakdown used free limit <span class="ty">&amp;optional</span> compact-pct)
+  <span class="doc">"Build the help-echo legend for the context bar from BREAKDOWN.
+USED, FREE and LIMIT are the aggregate token counts.  Each line is
+prefixed with a colored swatch matching the bar so the colors map to
+their category.  COMPACT-PCT, when set, notes the auto-compaction
+threshold percentage."</span>
+  (<span class="k">let*</span> ((nf #'eca-chat--number-&gt;friendly-number)
+         <span class="cd">;; </span><span class="c">Prefer the server-provided emoji swatch (consistent with the
+</span>         <span class="cd">;; </span><span class="c">/context text); fall back to a colored block for older servers.
+</span>         (swatch (<span class="k">lambda</span> (emoji spec)
+                   (<span class="k">or</span> emoji (propertize <span class="s">"█"</span> 'face spec))))
+         (head (<span class="k">if</span> (<span class="k">and</span> limit (&gt; limit 0))
+                   (format <span class="s">"Context: %s / %s (%d%%)"</span>
+                           (funcall nf used) (funcall nf limit)
+                           (round (* 100 (/ (float used) limit))))
+                 (format <span class="s">"Context: %s used"</span> (funcall nf used))))
+         (rows (mapconcat
+                (<span class="k">lambda</span> (cat)
+                  (format <span class="s">" %s %s: %s"</span>
+                          (funcall swatch (plist-get cat <span class="bi">:emoji</span>)
+                                   (eca-chat--context-category-face-spec cat))
+                          (plist-get cat <span class="bi">:name</span>)
+                          (funcall nf (<span class="k">or</span> (plist-get cat <span class="bi">:tokens</span>) 0))))
+                (append (plist-get breakdown <span class="bi">:categories</span>) nil)
+                <span class="s">"\n"</span>)))
+    (concat head <span class="s">"\n"</span> rows
+            (<span class="k">when</span> (<span class="k">and</span> free (&gt; free 0))
+              (format <span class="s">"\n %s Free space: %s"</span>
+                      (funcall swatch (plist-get breakdown <span class="bi">:freeEmoji</span>)
+                               (eca-chat--context-free-face-spec breakdown))
+                      (funcall nf free)))
+            (<span class="k">when</span> (<span class="k">and</span> compact-pct (numberp compact-pct) (&gt; compact-pct 0))
+              (format <span class="s">"\nAuto-compaction at %s%%"</span>
+                      (<span class="k">if</span> (= compact-pct (round compact-pct))
+                          (number-to-string (round compact-pct))
+                        (format <span class="s">"%.1f"</span> compact-pct))))
+            <span class="s">"\n\nClick to run /context"</span>)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,78 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--ediff – Emacs Documentation Online</title>
+<meta name="description" content="gptel--ediff is an interactive and natively compiled function defined
+in gptel.el.
+Ediff response at point against previous gptel responses.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--ediff</code></h1><p><span class="m"><code>gptel--ediff</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--ediff <span class="ty">&amp;optional</span> <a href="#:~:text=prefix-,ARG"><span class="arg">ARG</span></a> <a href="#:~:text=use-,BOUNDS-FUNC"><span class="arg">BOUNDS-FUNC</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Ediff response at point against previous gptel responses.
+<p>If prefix <span class="arg">ARG</span> is non-nil, select the previous response to ediff
+against interactively.
+<p>If specified, use <span class="arg">BOUNDS-FUNC</span> to compute the bounds of the
+response at point.  This can be used to include additional
+context for the ediff session.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--ediff</span> (<span class="ty">&amp;optional</span> arg bounds-func)
+  <span class="doc">"Ediff response at point against previous gptel responses.
+
+If prefix ARG is non-nil, select the previous response to ediff
+against interactively.
+
+If specified, use BOUNDS-FUNC to compute the bounds of the
+response at point.  This can be used to include additional
+context for the ediff session."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">when</span> (gptel--at-response-history-p)
+    (<span class="k">pcase-let*</span> ((`(,beg . ,end) (funcall (<span class="k">or</span> bounds-func #'gptel--get-response-bounds)))
+                 (prev-response
+                  (<span class="k">if</span> arg
+                      (completing-read <span class="s">"Choose response variant to diff against: "</span>
+                                       (get-char-property (point) 'gptel-history)
+                                       nil t)
+                    (car-safe (get-char-property (point) 'gptel-history))))
+                 (buffer-mode major-mode)
+                 (bufname (buffer-name))
+                 (`(,new-buf ,new-beg ,new-end)
+                  (<span class="k">with-current-buffer</span>
+                      (get-buffer-create (concat bufname <span class="s">"-PREVIOUS-*"</span>))
+                    (<span class="k">let</span> ((inhibit-read-only t))
+                      (erase-buffer)
+                      (<span class="k">delay-mode-hooks</span> (funcall buffer-mode))
+                      (visual-line-mode)
+                      (insert prev-response)
+                      (goto-char (point-min))
+                      (list (current-buffer) (point-min) (point-max))))))
+      (<span class="k">unless</span> prev-response (<span class="w">user-error</span> <span class="s">"gptel response is additive: no changes to ediff"</span>))
+      (<span class="k">require</span> '<span class="m">ediff</span>)
+      (<span class="k">letrec</span> ((cwc (current-window-configuration))
+               (gptel--ediff-restore
+                (<span class="k">lambda</span> ()
+                  (<span class="k">when</span> (window-configuration-p cwc)
+                    (set-window-configuration cwc))
+                  (kill-buffer (get-buffer (concat bufname <span class="s">"-PREVIOUS-*"</span>)))
+                  (kill-buffer (get-buffer (concat bufname <span class="s">"-CURRENT-*"</span>)))
+                  (remove-hook 'ediff-quit-hook gptel--ediff-restore))))
+        (add-hook 'ediff-quit-hook gptel--ediff-restore)
+        (apply
+         #'ediff-regions-internal
+         (get-buffer (ediff-make-cloned-buffer (current-buffer) <span class="s">"-CURRENT-*"</span>))
+         beg end new-buf new-beg new-end
+         nil
+         (list 'ediff-regions-wordwise 'word-wise nil)
+         <span class="cd">;; </span><span class="c">(if (transient-arg-value "-w" args)
+</span>         <span class="cd">;;     </span><span class="c">(list 'ediff-regions-wordwise 'word-wise nil)
+</span>         <span class="cd">;;   </span><span class="c">(list 'ediff-regions-linewise nil nil))
+</span>         )))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

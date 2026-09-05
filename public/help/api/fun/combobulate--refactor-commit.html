@@ -1,0 +1,68 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate--refactor-commit – Emacs Documentation Online</title>
+<meta name="description" content="combobulate--refactor-commit is a natively compiled function defined
+in combobulate-manipulation.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate--refactor-commit</code></h1><p><span class="m"><code>combobulate--refactor-commit</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">combobulate-manipulation.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate--refactor-commit <span class="arg">OV</span> <span class="ty">&amp;optional</span> <span class="arg">DESTROY-OVERLAY</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-manipulation.el</span>
+(<span class="k">defun</span> <span class="f">combobulate--refactor-commit</span> (ov <span class="ty">&amp;optional</span> destroy-overlay)
+  (<span class="k">if-let</span> ((actions (overlay-get ov 'combobulate-refactor-actions)))
+      (<span class="k">let*</span> ((buf (overlay-buffer ov))
+             (ov-start (overlay-start ov))
+             (ov-end (overlay-end ov)))
+        (<span class="k">when</span> buf
+          (<span class="k">dolist</span> (action actions)
+            (<span class="k">when</span> combobulate-debug
+              (princ (format <span class="s">"action: %s (ov %s)\n"</span> action ov)))
+            (<span class="k">pcase</span> action
+              (`(copy-region ,target-var)
+               (<span class="k">push</span> (buffer-substring-no-properties
+                      (max (point-min) ov-start)
+                      (min (point-max) (<span class="k">save-excursion</span>
+                                         (goto-char ov-end)
+                                         (<span class="k">cond</span>
+                                          ((looking-at <span class="s">"\n"</span>) (1+ ov-end))
+                                          ((looking-at <span class="s">" "</span>) (+
+                                                             (- (match-end 0)
+                                                                (match-beginning 0))
+                                                             ov-end))
+                                          (t ov-end)))))
+                     (symbol-value target-var)))
+              (`(move ,beg ,end ,position)
+               (<span class="k">let</span> ((pos position)
+                     (trailing-newlines (combobulate-count-lines-ahead end)))
+                 (<span class="k">save-excursion</span>
+                   (goto-char position)
+                   (combobulate--place-node-or-text
+                    position
+                    (<span class="k">prog1</span> (combobulate--delete-text beg end t t)
+                      (goto-char pos))
+                    nil
+                    (&gt; trailing-newlines 1)))))
+              ('(delete-region)
+               <span class="cd">;; </span><span class="c">detect single-char overlays with newlines.
+</span>               (<span class="k">unless</span> (string-blank-p (buffer-substring ov-start ov-end))
+                 (delete-region ov-start ov-end)))
+              (`(indent ,pt ,baseline-column)
+               (combobulate-indent-region ov-start ov-end pt baseline-column))
+              ('(set-point)
+               (goto-char ov-start))
+              (`(field . ,_))
+              <span class="cd">;; </span><span class="c">do nothing - their action is part of the overlay
+</span>              ('(highlighted))
+              ('(labelled))
+              ('(cursor))
+              (_ (<span class="w">error</span> <span class="s">"Unknown refactor commit action `</span><span class="m s">%s</span><span class="s">'"</span> action)))))
+        (<span class="k">when</span> destroy-overlay
+          (delete-overlay ov)))
+    (<span class="w">error</span> <span class="s">"Overlay `</span><span class="m s">%s</span><span class="s">' does not have a `</span><span class="m s">combobulate-refactor-action</span><span class="s">'s property"</span> ov)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

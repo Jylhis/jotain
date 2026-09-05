@@ -1,0 +1,114 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel-finish-compilation – Emacs Documentation Online</title>
+<meta name="description" content="bazel-finish-compilation is a natively compiled function defined in
+bazel.el.
+Parse Bazel build output in BUFFER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel-finish-compilation</code></h1><p><span class="m"><code>bazel-finish-compilation</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel-finish-compilation <a href="#:~:text=in-,BUFFER"><span class="arg">BUFFER</span></a> <a href="#:~:text=Buildozer.-,MESSAGE"><span class="arg">MESSAGE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse Bazel build output in <span class="arg">BUFFER</span>.
+<p>If the option ‘bazel-display-coverage’ is non-nil and there are
+references to coverage results in <span class="arg">BUFFER</span>, attempt to display the
+line coverage status in buffers that are visiting files with
+coverage information.  If the option ‘bazel-fix-visibility’ is
+non-nil, attempt to add missing target visibility attributes
+using Buildozer.  <span class="arg">MESSAGE</span> is the status message for the Bazel
+process exit; "finished\\n" if Bazel completed successfully.
+This function is suitable for ‘compilation-finish-functions’.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel-finish-compilation</span> (buffer message)
+  <span class="doc">"Parse Bazel build output in BUFFER.
+If the option ‘</span><span class="m doc">bazel-display-coverage</span><span class="doc">’ is non-nil and there are
+references to coverage results in BUFFER, attempt to display the
+line coverage status in buffers that are visiting files with
+coverage information.  If the option ‘</span><span class="m doc">bazel-fix-visibility</span><span class="doc">’ is
+non-nil, attempt to add missing target visibility attributes
+using Buildozer.  MESSAGE is the status message for the Bazel
+process exit; \"finished\\n\" if Bazel completed successfully.
+This function is suitable for ‘</span><span class="m doc">compilation-finish-functions</span><span class="doc">’."</span>
+  (<span class="w">cl-check-type</span> buffer buffer)
+  (<span class="w">cl-check-type</span> message string)
+  (<span class="k">when</span> (<span class="k">and</span> bazel-display-coverage (buffer-live-p buffer)
+             (string-equal message <span class="s">"finished\n"</span>))
+    (<span class="k">with-current-buffer</span> buffer
+      (<span class="k">let</span> ((case-fold-search (file-name-case-insensitive-p default-directory))
+            (search-spaces-regexp nil)
+            (remote (file-remote-p default-directory))
+            (files ()))
+        (<span class="k">when</span> (<span class="k">or</span> (not remote) (eq bazel-display-coverage t))
+          <span class="cd">;; </span><span class="c">First collect potential coverage files.  If there are none (typical
+</span>          <span class="cd">;; </span><span class="c">case), we don’t have to hit the filesystem.
+</span>          (<span class="k">save-excursion</span>
+            (goto-char (point-min))
+            <span class="cd">;; </span><span class="c">Parse Bazel output.  It’s supposed to be stable and easy to
+</span>            <span class="cd">;; </span><span class="c">parse, cf. https://bazel.build/run/scripts#parsing-output.  We
+</span>            <span class="cd">;; </span><span class="c">assume that coverage instrumentation files are always called
+</span>            <span class="cd">;; </span><span class="c">“coverage.dat”.
+</span>            (<span class="k">while</span> (re-search-forward
+                    (<span class="k">rx</span> bol <span class="s">"  "</span> (group ?/ (+ nonl) <span class="s">"/coverage.dat"</span>) eol)
+                    nil t)
+              (<span class="k">let</span> ((file (match-string-no-properties 1)))
+                <span class="cd">;; </span><span class="c">The coverage files are external filenames, so quote them (to
+</span>                <span class="cd">;; </span><span class="c">avoid clashes with filename handlers) and make them remote if
+</span>                <span class="cd">;; </span><span class="c">necessary.
+</span>                (<span class="k">push</span> (concat remote (file-name-quote file)) files)))))
+        (<span class="k">when</span> files
+          <span class="cd">;; </span><span class="c">Only continue if we’re in a Bazel repository.
+</span>          (<span class="k">when-let*</span> ((root (bazel--repository-root default-directory)))
+            <span class="cd">;; </span><span class="c">COVERAGE maps buffers to hashtables that in turn map line numbers
+</span>            <span class="cd">;; </span><span class="c">to ‘</span><span class="m c">bazel--coverage</span><span class="c">’ structures.  We first collect coverage
+</span>            <span class="cd">;; </span><span class="c">information into this hashtable to correctly deal with duplicate
+</span>            <span class="cd">;; </span><span class="c">file sections.
+</span>            (<span class="k">let</span> ((coverage (make-hash-table <span class="bi">:test</span> #'eq)))
+              (<span class="k">dolist</span> (file files)
+                (<span class="k">with-temp-buffer</span>
+                  <span class="cd">;; </span><span class="c">Don’t bail out if the coverage file can’t be read.  Maybe
+</span>                  <span class="cd">;; </span><span class="c">it has already been garbage-collected.
+</span>                  (<span class="k">when</span> (<span class="k">ignore-error</span> file-missing (insert-file-contents file))
+                    (bazel--parse-coverage root coverage))))
+              (maphash #'bazel--display-coverage coverage)))))))
+  (<span class="k">when</span> (<span class="k">and</span> bazel-fix-visibility (string-prefix-p <span class="s">"exited abnormally"</span> message))
+    (<span class="k">with-current-buffer</span> buffer
+      (<span class="k">let</span> ((case-fold-search nil)
+            (search-spaces-regexp nil)
+            (infos ())
+            (ask (eq bazel-fix-visibility 'ask)))
+        (<span class="k">save-excursion</span>
+          <span class="cd">;; </span><span class="c">First search for error messages concerning visibility.  If there
+</span>          <span class="cd">;; </span><span class="c">are none (typical case), we don’t have to hit the filesystem.
+</span>          (goto-char (point-min))
+          (<span class="k">while</span> (re-search-forward
+                  (<span class="k">rx</span> bol <span class="s">"ERROR: "</span> (+ (any alnum ?/ ?- ?. ?_)) ?:
+                      (+ digit) ?: (+ digit) <span class="s">": "</span>
+                      (group
+                       (+ nonl) <span class="s">"Visibility error:\n"</span>
+                       <span class="s">"target '"</span>
+                       (group (+ (any <span class="s">"a-z"</span> <span class="s">"A-Z"</span> <span class="s">"0-9"</span>
+                                      ?- <span class="s">"!%@^_` #$&amp;()*+,;&lt;=&gt;?[]{|}~/.:"</span>)))
+                       <span class="s">"' is not visible from\n"</span>
+                       <span class="s">"target '"</span>
+                       (group (+ (any <span class="s">"a-z"</span> <span class="s">"A-Z"</span> <span class="s">"0-9"</span>
+                                      ?- <span class="s">"!%@^_` #$&amp;()*+,;&lt;=&gt;?[]{|}~/.:"</span>)))
+                       <span class="s">"'"</span> eol))
+                  nil t)
+            (<span class="k">push</span> (list (match-string-no-properties 3)
+                        (match-string-no-properties 2)
+                        (match-beginning 1)
+                        (match-end 1))
+                  infos)))
+        (<span class="k">when</span> infos
+          <span class="cd">;; </span><span class="c">Only continue if we’re in a Bazel repository.
+</span>          (<span class="k">when-let*</span> ((root (bazel--repository-root default-directory)))
+            (<span class="k">pcase-dolist</span> (`(,source ,dest ,begin ,end) (nreverse infos))
+              (bazel--add-visibility root source dest begin end ask)))))))
+  nil)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

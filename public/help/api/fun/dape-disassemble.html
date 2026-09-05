@@ -1,0 +1,103 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape-disassemble – Emacs Documentation Online</title>
+<meta name="description" content="dape-disassemble is an interactive and natively compiled function
+defined in dape.el.
+View disassemble of instructions at ADDRESS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape-disassemble</code></h1><p><span class="m"><code>dape-disassemble</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape-disassemble <a href="#:~:text=at-,ADDRESS"><span class="arg">ADDRESS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,DISPLAY-P"><span class="arg">DISPLAY-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>View disassemble of instructions at <span class="arg">ADDRESS</span>.
+<p>If <span class="arg">DISPLAY-P</span> is non-nil, display buffer.
+<h2>Key Bindings</h2>
+<p><span class="v">ctl-x-map</span> <span class="key">C-a M</span>
+<span class="v">dape-global-map</span> <span class="key">M</span>
+<span class="v">global-map</span> <span class="key">C-x C-a M</span>
+<span class="v">help-quick-use-map</span> <span class="key">C-x C-a M</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape-disassemble</span> (address <span class="ty">&amp;optional</span> display-p)
+  <span class="doc">"View disassemble of instructions at ADDRESS.
+If DISPLAY-P is non-nil, display buffer."</span>
+  (<span class="k">interactive</span>
+   (list
+    (<span class="k">let</span> ((default
+           `(,@(<span class="k">when-let*</span> ((number (thing-at-point 'number)))
+                 (list (format <span class="s">"0x%08x"</span> number)))
+             ,@(<span class="k">when-let*</span> ((conn (dape--live-connection 'stopped t))
+                           (address (plist-get (dape--current-stack-frame conn)
+                                               <span class="bi">:instructionPointerReference</span>)))
+                 (list address)))))
+      (string-trim
+       (read-string (format-prompt <span class="s">"Disassemble at address"</span> default) nil nil
+                    default)))
+    t))
+  (<span class="k">if-let*</span> ((conn (dape--live-connection 'stopped))
+            ((not (dape--capable-p conn <span class="bi">:supportsDisassembleRequest</span>))))
+      (<span class="w">user-error</span> <span class="s">"Adapter does not support disassemble"</span>)
+    (<span class="k">dape--with-request-bind</span>
+        ((<span class="ty">&amp;key</span> ((<span class="bi">:instructions</span> instructions)) <span class="ty">&amp;allow-other-keys</span>) _)
+        (dape-request conn <span class="bi">:disassemble</span>
+                      `( <span class="bi">:memoryReference</span> ,address
+                         <span class="bi">:instructionCount</span> 100
+                         <span class="bi">:offset</span> 0
+                         <span class="bi">:instructionOffset</span> -50
+                         <span class="bi">:resolveSymbols</span> t))
+      (<span class="k">cl-flet</span> ((address-to-int (address)
+                  (string-to-number (substring address 2) 16)))
+        (<span class="k">with-current-buffer</span> (get-buffer-create <span class="s">"*dape-disassemble*"</span>)
+          (dape-disassemble-mode)
+          (erase-buffer)
+          (<span class="k">cl-loop</span>
+           with last-symbol with last-location
+           with ps =
+           (address-to-int (plist-get (dape--current-stack-frame conn)
+                                      <span class="bi">:instructionPointerReference</span>))
+           with source = (plist-get (dape--current-stack-frame conn) <span class="bi">:source</span>)
+           with line = (plist-get (dape--current-stack-frame conn) <span class="bi">:line</span>)
+           for instruction across instructions
+           for address = (address-to-int (plist-get instruction <span class="bi">:address</span>))
+           for current-instruction-p = (equal address ps)
+           for location =
+           (<span class="k">setq</span> last-location
+                 <span class="cd">;; </span><span class="c">Forward fill all location if missing as per spec
+</span>                 (<span class="k">or</span> (plist-get instruction <span class="bi">:location</span>) last-location))
+           for current-line-p =
+           (<span class="k">and</span> (equal location source)
+                (equal (plist-get instruction <span class="bi">:line</span>) line))
+           do
+           (<span class="k">when-let*</span> ((symbol (plist-get instruction <span class="bi">:symbol</span>))
+                       ((not (equal last-symbol symbol))))
+             (insert
+              (concat <span class="s">"; "</span> (<span class="k">setq</span> last-symbol symbol) <span class="s">" of "</span>
+                      (<span class="k">thread-first</span> instruction
+                                    (plist-get <span class="bi">:location</span>)
+                                    (plist-get <span class="bi">:name</span>)))
+              <span class="s">":\n"</span>))
+           (<span class="k">when</span> current-instruction-p
+             (move-marker dape--disassemble-overlay-arrow (point)))
+           (insert
+            (propertize
+             (format <span class="s">"%s:\t%s\n"</span>
+                     (plist-get instruction <span class="bi">:address</span>)
+                     (plist-get instruction <span class="bi">:instruction</span>))
+             'line-prefix
+             (<span class="k">when</span> current-line-p
+               (dape--indicator <span class="s">"|"</span> 'vertical-bar nil))
+             'dape--disassemble-instruction instruction)))
+          (<span class="k">setq-local</span> revert-buffer-function
+                      (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> _) (dape-disassemble address)))
+          (<span class="k">when</span> (<span class="k">or</span> display-p (marker-position dape--disassemble-overlay-arrow))
+            (select-window (dape--display-buffer (current-buffer))))
+          (goto-char (<span class="k">or</span> (marker-position dape--disassemble-overlay-arrow)
+                         (point-min)))
+          (<span class="k">when</span> (marker-position dape--disassemble-overlay-arrow)
+            (run-hooks 'dape-display-source-hook)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

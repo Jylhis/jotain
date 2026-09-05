@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb-elisp-completion-at-point – Emacs Documentation Online</title>
+<meta name="description" content="verb-elisp-completion-at-point is a natively compiled function defined
+in verb.el.
+Completion at point function for Lisp code tags.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb-elisp-completion-at-point</code></h1><p><span class="m"><code>verb-elisp-completion-at-point</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">verb.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb-elisp-completion-at-point)
+</code></pre>
+<h2>Documentation</h2>
+<p>Completion at point function for Lisp code tags.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb.el</span>
+(<span class="k">defun</span> <span class="f">verb-elisp-completion-at-point</span> ()
+  <span class="doc">"Completion at point function for Lisp code tags."</span>
+  (<span class="k">when-let</span> (<span class="cd">;; </span><span class="c">Get the contents inside the code tag: {{&lt;content&gt;}}.
+</span>             (beg (<span class="k">save-excursion</span>
+                    (<span class="k">when</span> (search-backward (car verb-code-tag-delimiters)
+                                           (line-beginning-position) t)
+                      (match-end 0))))
+             (end (<span class="k">save-excursion</span>
+                    (<span class="k">when</span> (search-forward (cdr verb-code-tag-delimiters)
+                                          (line-end-position) t)
+                      (match-beginning 0)))))
+    <span class="cd">;; </span><span class="c">Set up the buffer where we'll run `</span><span class="m c">elisp-completion-at-point</span><span class="c">'.
+</span>    (<span class="k">unless</span> verb--elisp-completion-buffer
+      (<span class="k">setq</span> verb--elisp-completion-buffer
+            (get-buffer-create <span class="s">" *verb-elisp-completion*"</span>)))
+    <span class="cd">;; </span><span class="c">Copy the contents of the code tag to the empty buffer, run
+</span>    <span class="cd">;; </span><span class="c">completion there.
+</span>    (<span class="k">let*</span> ((code (buffer-substring-no-properties beg end))
+           (point-offset (1+ (- (point) beg)))
+           (completions (<span class="k">with-current-buffer</span> verb--elisp-completion-buffer
+                          (erase-buffer)
+                          (insert code)
+                          (goto-char point-offset)
+                          (elisp-completion-at-point))))
+      <span class="cd">;; </span><span class="c">The beginning/end positions will belong to the other buffer, add
+</span>      <span class="cd">;; </span><span class="c">`</span><span class="m c">beg</span><span class="c">' so that they make sense on the original one.
+</span>      (<span class="k">when</span> completions
+        (append (list (+ (nth 0 completions) beg -1)
+                      (+ (nth 1 completions) beg -1))
+                (cddr completions))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

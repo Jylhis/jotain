@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult-line-multi – Emacs Documentation Online</title>
+<meta name="description" content="consult-line-multi is an interactive and natively compiled function
+defined in consult.el.
+Search for a matching line in multiple buffers.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult-line-multi</code></h1><p><span class="m"><code>consult-line-multi</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult-line-multi <a href="#:~:text=argument-,QUERY"><span class="arg">QUERY</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=Optional-,INITIAL"><span class="arg">INITIAL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Search for a matching line in multiple buffers.
+<p>By default search across all project buffers.  If the prefix
+argument <span class="arg">QUERY</span> is non-nil, all buffers are searched.  Optional
+<span class="arg">INITIAL</span> input can be provided.  The symbol at point and the last
+<a href="../var/isearch-string.html"><code>isearch-string</code></a> is added to the future history.  In order to
+search a subset of buffers, <span class="arg">QUERY</span> can be set to a plist according
+to <a href="../fun/consult--buffer-query.html"><code>consult--buffer-query</code></a>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">consult-line-multi</span> (query <span class="ty">&amp;optional</span> initial)
+  <span class="doc">"Search for a matching line in multiple buffers.
+
+By default search across all project buffers.  If the prefix
+argument QUERY is non-nil, all buffers are searched.  Optional
+INITIAL input can be provided.  The symbol at point and the last
+`</span><span class="m doc">isearch-string</span><span class="doc">' is added to the future history.  In order to
+search a subset of buffers, QUERY can be set to a plist according
+to `</span><span class="m doc">consult--buffer-query</span><span class="doc">'."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">unless</span> (keywordp (car-safe query))
+    (<span class="k">setq</span> query (list <span class="bi">:sort</span> 'alpha-current <span class="bi">:directory</span> (<span class="k">and</span> (not query) 'project))))
+  (<span class="k">pcase-let*</span> ((`(,prompt . ,buffers) (consult--buffer-query-prompt <span class="s">"Go to line"</span> query))
+               (collection (consult--dynamic-collection
+                               (apply-partially #'consult--line-multi-candidates
+                                                buffers))))
+    (consult--read
+     collection
+     <span class="bi">:prompt</span> prompt
+     <span class="bi">:annotate</span> (consult--line-fontify)
+     <span class="bi">:category</span> 'consult-location
+     <span class="bi">:sort</span> nil
+     <span class="bi">:require-match</span> t
+     <span class="cd">;; </span><span class="c">Always add last Isearch string to future history
+</span>     <span class="bi">:add-history</span> (delq nil (list (thing-at-point 'symbol) isearch-string))
+     <span class="bi">:history</span> '(<span class="bi">:input</span> consult--line-multi-history)
+     <span class="bi">:lookup</span> #'consult--line-multi-match
+     <span class="cd">;; </span><span class="c">Add `</span><span class="m c">isearch-string</span><span class="c">' as initial input if starting from Isearch
+</span>     <span class="bi">:initial</span> (<span class="k">or</span> initial
+                  (<span class="k">and</span> isearch-mode
+                       (<span class="k">prog1</span> isearch-string (isearch-done))))
+     <span class="bi">:state</span> (consult--location-state (<span class="k">lambda</span> () (funcall collection nil)))
+     <span class="bi">:group</span> #'consult--line-multi-group)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

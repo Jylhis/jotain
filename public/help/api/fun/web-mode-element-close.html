@@ -1,0 +1,78 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-element-close – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-element-close is an interactive and natively compiled
+function defined in web-mode.el.
+Close html element.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-element-close</code></h1><p><span class="m"><code>web-mode-element-close</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-element-close)
+</code></pre>
+<h2>Documentation</h2>
+<p>Close html element.
+<h2>Key Bindings</h2>
+<p><span class="v">web-mode-map</span> <span class="key">C-c C-e /</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-element-close</span> ()
+  <span class="doc">"Close html element."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> (jmp epp ins tag)
+
+    (<span class="k">if</span> (<span class="k">and</span> (eq (char-before) ?\&gt;)
+             (web-mode-element-is-void (get-text-property (1- (point)) 'tag-name)))
+        (<span class="k">unless</span> (eq (char-before (1- (point))) ?\/)
+          (backward-char)
+          (insert <span class="s">"/"</span>)
+          (forward-char))
+        (<span class="k">setq</span> epp (web-mode-element-parent-position)))
+
+    <span class="cd">;;</span><span class="c">(message "epp=%S" epp)
+</span>    (<span class="k">when</span> epp
+      (<span class="k">setq</span> tag (get-text-property epp 'tag-name))
+      (<span class="k">setq</span> tag (web-mode-element-tag-name epp))
+      <span class="cd">;;</span><span class="c">(message "tag=%S %c" tag (char-before))
+</span>      (<span class="k">cond</span>
+        ((<span class="k">or</span> (null tag) (web-mode-element-is-void tag))
+         (<span class="k">setq</span> epp nil))
+        ((looking-back <span class="s">"&lt;/"</span> (point-min))
+         (<span class="k">setq</span> ins tag))
+        ((looking-back <span class="s">"&lt;"</span> (point-min))
+         (<span class="k">setq</span> ins (concat <span class="s">"/"</span> tag)))
+        (t
+         <span class="cd">;;</span><span class="c">auto-close-style = 2
+</span>         <span class="cd">;;</span><span class="c">(message "%S %c" (point) (char-after))
+</span>         (<span class="k">when</span> (<span class="k">and</span> (looking-at-p <span class="s">"[[:alpha:]]"</span>) (&gt; (length tag) 4))
+           (<span class="k">dolist</span> (elt '(<span class="s">"div"</span> <span class="s">"span"</span> <span class="s">"strong"</span> <span class="s">"pre"</span> <span class="s">"li"</span>))
+             (<span class="k">when</span> (<span class="k">and</span> (string-match-p (concat <span class="s">"^"</span> elt) tag) (not (string= tag elt)))
+               (<span class="k">setq</span> tag elt)
+               (put-text-property epp (point) 'tag-name tag))
+             )
+           ) <span class="cd">;</span><span class="c">when
+</span>         (<span class="k">if</span> (web-mode-element-is-void (get-text-property (point) 'tag-name))
+             (<span class="k">setq</span> ins nil
+                   epp nil)
+             (<span class="k">setq</span> ins (concat <span class="s">"&lt;/"</span> tag)))
+         )
+        ) <span class="cd">;</span><span class="c">cond
+</span>      (<span class="k">when</span> ins
+        (<span class="k">unless</span> (looking-at-p <span class="s">"[ ]*&gt;"</span>)
+          (<span class="k">setq</span> ins (concat ins <span class="s">"&gt;"</span>)))
+        (insert ins)
+        (<span class="k">setq</span> tag (downcase tag))
+        (<span class="k">save-excursion</span>
+          (search-backward <span class="s">"&lt;"</span>)
+          (<span class="k">setq</span> jmp (<span class="k">and</span> (eq (char-before) ?\&gt;)
+                         (string= (get-text-property (1- (point)) 'tag-name) tag)))
+          (<span class="k">if</span> jmp (<span class="k">setq</span> jmp (point)))
+          ) <span class="cd">;</span><span class="c">save-excursion
+</span>        (<span class="k">if</span> jmp (goto-char jmp))
+        ) <span class="cd">;</span><span class="c">when not ins
+</span>      ) <span class="cd">;</span><span class="c">when epp
+</span>    epp))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

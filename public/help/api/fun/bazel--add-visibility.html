@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--add-visibility – Emacs Documentation Online</title>
+<meta name="description" content="bazel--add-visibility is a natively compiled function defined in
+bazel.el.
+Make SOURCE visible to DESTINATION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--add-visibility</code></h1><p><span class="m"><code>bazel--add-visibility</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--add-visibility <a href="#:~:text=labels.-,ROOT"><span class="arg">ROOT</span></a> <a href="#:~:text=Make-,SOURCE"><span class="arg">SOURCE</span></a> <a href="#:~:text=to-,DESTINATION"><span class="arg">DESTINATION</span></a> <a href="#:~:text=between-,BEGIN"><span class="arg">BEGIN</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a> <a href="#:~:text=If-,ASK"><span class="arg">ASK</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Make <span class="arg">SOURCE</span> visible to <span class="arg">DESTINATION</span>.
+<p><span class="arg">SOURCE</span> and <span class="arg">DESTINATION</span> should be absolute Bazel labels.  <span class="arg">ROOT</span>
+identifies the root directory of the current repository.  The
+current buffer should contain Bazel compilation outputs.  If <span class="arg">ASK</span>
+is non-nil, prompt the user first using ‘y-or-n-p’, and
+temporarily highlight the region between <span class="arg">BEGIN</span> and <span class="arg">END</span> in the
+current buffer.  Use Buildozer (the ‘bazel-buildozer-command’) to
+change the visibility of the affected BUILD file.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--add-visibility</span> (root source destination begin end ask)
+  <span class="doc">"Make SOURCE visible to DESTINATION.
+SOURCE and DESTINATION should be absolute Bazel labels.  ROOT
+identifies the root directory of the current repository.  The
+current buffer should contain Bazel compilation outputs.  If ASK
+is non-nil, prompt the user first using ‘</span><span class="m doc">y-or-n-p</span><span class="doc">’, and
+temporarily highlight the region between BEGIN and END in the
+current buffer.  Use Buildozer (the ‘</span><span class="m doc">bazel-buildozer-command</span><span class="doc">’) to
+change the visibility of the affected BUILD file."</span>
+  (<span class="w">cl-check-type</span> root string)
+  (<span class="w">cl-check-type</span> source string)
+  (<span class="w">cl-check-type</span> destination string)
+  (<span class="w">cl-check-type</span> begin natnum)
+  (<span class="w">cl-check-type</span> end natnum)
+  (<span class="k">pcase</span> (bazel--parse-label source)
+    (`(,src-repository ,(<span class="k">and</span> (pred stringp) src-package) ,_)
+     (<span class="k">pcase</span> (bazel--parse-label destination)
+       (`(,(<span class="k">and</span> (<span class="k">or</span> 'nil <span class="s">""</span>) dest-repository)
+          ,(<span class="k">and</span> (pred stringp) dest-package) ,_)
+        (<span class="k">let</span> ((value (bazel--canonical src-repository src-package <span class="s">"__pkg__"</span>)))
+          (<span class="k">when</span> (<span class="k">or</span> (not ask)
+                    (<span class="k">progn</span>
+                      (pulse-momentary-highlight-region begin end)
+                      (y-or-n-p (format-message <span class="s">"Make %s visible to %s? "</span>
+                                                value destination))))
+            <span class="cd">;; </span><span class="c">We need to save the BUILD file first so that Buildozer doesn’t
+</span>            <span class="cd">;; </span><span class="c">stomp over unsaved changes.
+</span>            (bazel--save-build-file root dest-repository dest-package)
+            (<span class="k">let</span> ((output (get-buffer-create <span class="s">"*Buildozer*"</span>))
+                  (command `(,@bazel-buildozer-command
+                             <span class="s">"--"</span> ,(concat <span class="s">"add visibility "</span> value)
+                             ,destination)))
+              (<span class="k">if</span> (eq 0 (apply #'process-file
+                               (car command) nil output nil (cdr command)))
+                  (message <span class="s">"Made %s visible to %s"</span> value destination)
+                (temp-buffer-window-show output)))))))))
+  nil)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

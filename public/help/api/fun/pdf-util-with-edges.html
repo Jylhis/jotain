@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-util-with-edges – Emacs Documentation Online</title>
+<meta name="description" content="pdf-util-with-edges is a macro defined in pdf-util.el.
+Provide some convenient macros for the edges in LIST-OF-EDGES.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-util-with-edges</code></h1><p><span class="m"><code>pdf-util-with-edges</code></span> is a macro defined in <span class="bt">pdf-util.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">pdf-util-with-edges</span> <a href="#:~:text=in-,LIST-OF-EDGES"><span class="arg">LIST-OF-EDGES</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=Inside-,BODY"><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Provide some convenient macros for the edges in <span class="arg">LIST-OF-EDGES</span>.
+<p><span class="arg">LIST-OF-EDGES</span> should be a list of variables (X ...), each one
+holding a list of edges. Inside <span class="arg">BODY</span> the symbols X-left, X-top,
+X-right, X-bot, X-width and X-height expand to their respective
+values.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-util.el</span>
+(<span class="k">defmacro</span> <span class="f">pdf-util-with-edges</span> (list-of-edges <span class="ty">&amp;rest</span> body)
+  <span class="doc">"Provide some convenient macros for the edges in LIST-OF-EDGES.
+
+LIST-OF-EDGES should be a list of variables </span><span class="w doc">\</span><span class="doc">(X ...</span><span class="w doc">\</span><span class="doc">), each one
+holding a list of edges. Inside BODY the symbols X-left, X-top,
+X-right, X-bot, X-width and X-height expand to their respective
+values."</span>
+
+  (<span class="k">declare</span> (indent 1) (debug (sexp <span class="ty">&amp;rest</span> form)))
+  (<span class="k">unless</span> (cl-every 'symbolp list-of-edges)
+    (<span class="w">error</span> <span class="s">"Argument should be a list of symbols"</span>))
+  (<span class="k">let</span> ((list-of-syms
+         (mapcar (<span class="k">lambda</span> (edge)
+                   (cons edge (mapcar
+                               (<span class="k">lambda</span> (kind)
+                                 (intern (format <span class="s">"%s-%s"</span> edge kind)))
+                               '(left top right bot width height))))
+                 list-of-edges)))
+    (macroexpand-all
+     `(<span class="k">cl-symbol-macrolet</span>
+          ,(apply #'nconc
+                  (mapcar
+                   (<span class="k">lambda</span> (edge-syms)
+                     (<span class="k">let</span> ((edge (nth 0 edge-syms))
+                           (syms (cdr edge-syms)))
+                       `((,(<span class="k">pop</span> syms) (nth 0 ,edge))
+                         (,(<span class="k">pop</span> syms) (nth 1 ,edge))
+                         (,(<span class="k">pop</span> syms) (nth 2 ,edge))
+                         (,(<span class="k">pop</span> syms) (nth 3 ,edge))
+                         (,(<span class="k">pop</span> syms) (- (nth 2 ,edge)
+                                         (nth 0 ,edge)))
+                         (,(<span class="k">pop</span> syms) (- (nth 3 ,edge)
+                                         (nth 1 ,edge))))))
+                   list-of-syms))
+        ,@body))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

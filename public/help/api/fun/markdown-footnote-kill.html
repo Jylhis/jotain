@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-footnote-kill – Emacs Documentation Online</title>
+<meta name="description" content="markdown-footnote-kill is an interactive and natively compiled
+function defined in markdown-mode.el.
+Kill the footnote at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-footnote-kill</code></h1><p><span class="m"><code>markdown-footnote-kill</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-footnote-kill)
+</code></pre>
+<h2>Documentation</h2>
+<p>Kill the footnote at point.
+<p>The footnote text is killed (and added to the kill ring), the
+footnote marker is deleted.  Point has to be either at the
+footnote marker or in the footnote text.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-footnote-kill</span> ()
+  <span class="doc">"Kill the footnote at point.
+The footnote text is killed (and added to the kill ring), the
+footnote marker is deleted.  Point has to be either at the
+footnote marker or in the footnote text."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((marker-pos nil)
+        (skip-deleting-marker nil)
+        (starting-footnote-text-positions
+         (markdown-footnote-text-positions)))
+    (<span class="k">when</span> starting-footnote-text-positions
+      <span class="cd">;; </span><span class="c">We're starting in footnote text, so mark our return position and jump
+</span>      <span class="cd">;; </span><span class="c">to the marker if possible.
+</span>      (<span class="k">let</span> ((marker-pos (markdown-footnote-find-marker
+                         (cl-first starting-footnote-text-positions))))
+        (<span class="k">if</span> marker-pos
+            (goto-char (1- marker-pos))
+          <span class="cd">;; </span><span class="c">If there isn't a marker, we still want to kill the text.
+</span>          (<span class="k">setq</span> skip-deleting-marker t))))
+    <span class="cd">;; </span><span class="c">Either we didn't start in the text, or we started in the text and jumped
+</span>    <span class="cd">;; </span><span class="c">to the marker. We want to assume we're at the marker now and error if
+</span>    <span class="cd">;; </span><span class="c">we're not.
+</span>    (<span class="k">unless</span> skip-deleting-marker
+      (<span class="k">let</span> ((marker (markdown-footnote-delete-marker)))
+        (<span class="k">unless</span> marker
+          (<span class="w">error</span> <span class="s">"Not at a footnote"</span>))
+        <span class="cd">;; </span><span class="c">Even if we knew the text position before, it changed when we deleted
+</span>        <span class="cd">;; </span><span class="c">the label.
+</span>        (<span class="k">setq</span> marker-pos (cl-second marker))
+        (<span class="k">let</span> ((new-text-pos (markdown-footnote-find-text (cl-first marker))))
+          (<span class="k">unless</span> new-text-pos
+            (<span class="w">error</span> <span class="s">"No text for footnote `</span><span class="m s">%s</span><span class="s">'"</span> (cl-first marker)))
+          (goto-char new-text-pos))))
+    (<span class="k">let</span> ((pos (markdown-footnote-kill-text)))
+      (goto-char (<span class="k">if</span> starting-footnote-text-positions
+                     pos
+                   marker-pos)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

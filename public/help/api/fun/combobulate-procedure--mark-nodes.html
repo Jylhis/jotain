@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-procedure--mark-nodes – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-procedure--mark-nodes is a natively compiled function
+defined in combobulate-procedure.el.
+Mark NODES with MATCH-TYPES and DISCARD-TYPES.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-procedure--mark-nodes</code></h1><p><span class="m"><code>combobulate-procedure--mark-nodes</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">combobulate-procedure.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-procedure--mark-nodes <a href="#:~:text=Mark-,NODES"><span class="arg">NODES</span></a> <span class="ty">&amp;key</span> <a href="#:~:text=with-,MATCH-TYPES"><span class="arg">MATCH-TYPES</span></a> <a href="#:~:text=and-,DISCARD-TYPES"><span class="arg">DISCARD-TYPES</span></a> (<a href="#:~:text=with-,DEFAULT-MARK"><span class="arg">DEFAULT-MARK</span></a> '@match) (<a href="#:~:text="><span class="arg">KEEP-ANONYMOUS</span></a> nil) (<a href="#:~:text=and-,OVERWRITE"><span class="arg">OVERWRITE</span></a> nil))
+</code></pre>
+<h2>Documentation</h2>
+<p>Mark <span class="arg">NODES</span> with <span class="arg">MATCH-TYPES</span> and <span class="arg">DISCARD-TYPES</span>.
+<p><span class="arg">MATCH-TYPES</span> and <span class="arg">DISCARD-TYPES</span> are lists of node types to match or
+discard, respectively.
+<p>If a node type is not in either list, it is marked with
+<span class="arg">DEFAULT-MARK</span>.
+<p>If the <span class="arg">NODES</span> are already marked, and <span class="arg">OVERWRITE</span> is non-nil, then
+overwrite the existing marks.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-procedure.el</span>
+(<span class="k">cl-defun</span> <span class="f">combobulate-procedure--mark-nodes</span> (nodes <span class="ty">&amp;key</span> match-types discard-types
+                                                   (default-mark '@match)
+                                                   (keep-anonymous nil)
+                                                   (overwrite nil))
+  <span class="doc">"Mark NODES with MATCH-TYPES and DISCARD-TYPES.
+
+MATCH-TYPES and DISCARD-TYPES are lists of node types to match or
+discard, respectively.
+
+If a node type is not in either list, it is marked with
+DEFAULT-MARK.
+
+If the NODES are already marked, and OVERWRITE is non-nil, then
+overwrite the existing marks."</span>
+  <span class="cd">;; </span><span class="c">The shorthand variable, `</span><span class="m c">procedure-discard-rules</span><span class="c">', contains rules
+</span>  <span class="cd">;; </span><span class="c">we must add to the discard types check. This is usually just
+</span>  <span class="cd">;; </span><span class="c">`</span><span class="m c">comment</span><span class="c">' as line-comments trip up tree-sitter, but other
+</span>  <span class="cd">;; </span><span class="c">languages may introduce their own rules.
+</span>  <span class="cd">;;</span><span class="c">
+</span>  <span class="cd">;; </span><span class="c">However, if the user specifically ASKS for a discard type, then
+</span>  <span class="cd">;; </span><span class="c">we should respect that and not discard it.
+</span>  (<span class="k">when</span> combobulate-procedure-apply-shared-discard-rules
+    (<span class="k">setq</span> discard-types (append discard-types
+                                (combobulate-procedure-expand-rules
+                                 (<span class="k">combobulate-read</span> procedure-discard-rules))))
+    (<span class="k">when</span> match-types (<span class="k">setq</span> discard-types (seq-difference match-types discard-types))))
+  (<span class="k">let</span> ((marked-nodes))
+    (<span class="k">pcase-dolist</span> ((<span class="k">or</span> `(,existing-mark . ,node) node) nodes)
+      (<span class="k">let</span> ((type (combobulate-node-type node)))
+        (<span class="k">push</span>
+         (cons (<span class="k">if</span> (<span class="k">and</span> existing-mark (not overwrite))
+                   existing-mark
+                 (<span class="k">cond</span>
+                  ((<span class="k">or</span> (member type match-types)
+                       (<span class="k">and</span> (combobulate-node-anonymous-p node)
+                            keep-anonymous))
+                   '@match)
+                  ((member type discard-types) '@discard)
+                  (existing-mark existing-mark)
+                  (t default-mark)))
+               node)
+         marked-nodes)))
+    (reverse marked-nodes)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

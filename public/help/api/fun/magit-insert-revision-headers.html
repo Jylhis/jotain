@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-insert-revision-headers – Emacs Documentation Online</title>
+<meta name="description" content="magit-insert-revision-headers is a natively compiled function defined
+in magit-diff.el.
+Insert headers about the commit into a revision buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-insert-revision-headers</code></h1><p><span class="m"><code>magit-insert-revision-headers</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">magit-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-insert-revision-headers)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert headers about the commit into a revision buffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-diff.el</span>
+(<span class="k">defun</span> <span class="f">magit-insert-revision-headers</span> ()
+  <span class="doc">"Insert headers about the commit into a revision buffer."</span>
+  (<span class="k">magit-insert-section</span> (headers)
+    (<span class="k">magit-insert-heading</span> nil
+      (and$ (magit-rev-format <span class="s">"%D"</span> magit-buffer-revision <span class="s">"--decorate=full"</span>)
+            (concat (magit-format-ref-labels $) <span class="s">" "</span>))
+      (propertize
+       (magit-rev-parse (magit--rev-dereference magit-buffer-revision))
+       'font-lock-face 'magit-hash))
+    (<span class="k">let</span> ((beg (point)))
+      (magit-rev-insert-format magit-revision-headers-format
+                               magit-buffer-revision)
+      (magit-insert-revision-gravatars magit-buffer-revision beg))
+    (<span class="k">when</span> magit-revision-insert-related-refs
+      (<span class="k">when</span> (magit-revision-insert-related-refs-display-p 'parents)
+        (<span class="k">dolist</span> (parent (magit-commit-parents magit-buffer-revision))
+          (<span class="k">magit-insert-section</span> (commit parent)
+            (<span class="k">let</span> ((line (magit-rev-format <span class="s">"%h %s"</span> parent)))
+              (string-match <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s"> ]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> line)
+              (<span class="k">magit-bind-match-strings</span> (hash msg) line
+                (insert <span class="s">"Parent:     "</span>)
+                (insert (propertize hash 'font-lock-face 'magit-hash))
+                (insert <span class="s">" "</span> msg <span class="s">"\n"</span>))))))
+      (<span class="k">when</span> (magit-revision-insert-related-refs-display-p 'merged)
+        (magit--insert-related-refs
+         magit-buffer-revision <span class="s">"--merged"</span> <span class="s">"Merged"</span>
+         (eq magit-revision-insert-related-refs 'all)))
+      (<span class="k">when</span> (magit-revision-insert-related-refs-display-p 'contained)
+        (magit--insert-related-refs
+         magit-buffer-revision <span class="s">"--contains"</span> <span class="s">"Contained"</span>
+         (memq magit-revision-insert-related-refs '(all mixed))))
+      (<span class="k">when-let</span> ((_(magit-revision-insert-related-refs-display-p 'follows))
+                 (follows (magit-get-current-tag magit-buffer-revision t)))
+        (<span class="k">let</span> ((tag (car  follows))
+              (cnt (cadr follows)))
+          (<span class="k">magit-insert-section</span> (tag tag)
+            (insert
+             (format <span class="s">"Follows:    %s (%s)\n"</span>
+                     (propertize tag 'font-lock-face 'magit-tag)
+                     (propertize (number-to-string cnt)
+                                 'font-lock-face 'magit-branch-local))))))
+      (<span class="k">when-let</span> ((_(magit-revision-insert-related-refs-display-p 'precedes))
+                 (precedes (magit-get-next-tag magit-buffer-revision t)))
+        (<span class="k">let</span> ((tag (car  precedes))
+              (cnt (cadr precedes)))
+          (<span class="k">magit-insert-section</span> (tag tag)
+            (insert (format <span class="s">"Precedes:   %s (%s)\n"</span>
+                            (propertize tag 'font-lock-face 'magit-tag)
+                            (propertize (number-to-string cnt)
+                                        'font-lock-face 'magit-tag))))))
+      (insert ?\n))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

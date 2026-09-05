@@ -1,0 +1,41 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--ghub-update-notifications – Emacs Documentation Online</title>
+<meta name="description" content="forge--ghub-update-notifications is a natively compiled function
+defined in forge-github.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--ghub-update-notifications</code></h1><p><span class="m"><code>forge--ghub-update-notifications</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">forge-github.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--ghub-update-notifications <span class="arg">NOTIFS</span> <span class="arg">TOPICS</span> <span class="arg">INITIAL-PULL</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-github.el</span>
+(<span class="k">defun</span> <span class="f">forge--ghub-update-notifications</span> (notifs topics initial-pull)
+  (<span class="k">closql-with-transaction</span> (forge-db)
+    (<span class="k">pcase-dolist</span> (`(,alias ,id ,_query ,repo ,type ,data) notifs)
+      (<span class="k">let-alist</span> data
+        (<span class="k">when-let*</span>
+            ((topic-data (cdr (cadr (assq alias topics))))
+             (topic (funcall (<span class="k">pcase-exhaustive</span> type
+                               ('discussion #'forge--update-discussion)
+                               ('issue      #'forge--update-issue)
+                               ('pullreq    #'forge--update-pullreq))
+                             repo topic-data nil initial-pull))
+             (notif (<span class="k">or</span> (forge-get-notification id)
+                        (closql-insert (forge-db)
+                                       (forge-notification
+                                        <span class="bi">:id</span>           id
+                                        <span class="bi">:thread-id</span>    .id
+                                        <span class="bi">:repository</span>   (<span class="k">oref</span> repo id)
+                                        <span class="bi">:type</span>         type
+                                        <span class="bi">:topic</span>        (<span class="k">oref</span> topic id)
+                                        <span class="bi">:url</span>          .subject.url)))))
+          (<span class="k">oset</span> notif title     .subject.title)
+          (<span class="k">oset</span> notif reason    (intern (downcase .reason)))
+          (<span class="k">oset</span> notif last-read .last_read_at)
+          (<span class="k">oset</span> notif updated   .updated_at))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: expreg--filter-regions – Emacs Documentation Online</title>
+<meta name="description" content="expreg--filter-regions is a natively compiled function defined in
+expreg.el.
+Filter out invalid regions in REGIONS regarding ORIG.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>expreg--filter-regions</code></h1><p><span class="m"><code>expreg--filter-regions</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">expreg.el</span>.
+<h2>Signature</h2>
+<pre><code>(expreg--filter-regions <a href="#:~:text=in-,REGIONS"><span class="arg">REGIONS</span></a> <a href="#:~:text=regarding-,ORIG"><span class="arg">ORIG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Filter out invalid regions in <span class="arg">REGIONS</span> regarding <span class="arg">ORIG</span>.
+<p><span class="arg">ORIG</span> is the current position. Each region is (BEG . END).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ryq27wm6zz42wjg7mgw3mayap8817nnz-emacs-packages-deps/share/emacs/site-lisp/elpa/expreg-1.4.1/expreg.el</span>
+(<span class="k">defun</span> <span class="f">expreg--filter-regions</span> (regions orig)
+  <span class="doc">"Filter out invalid regions in REGIONS regarding ORIG.
+ORIG is the current position. Each region is (BEG . END)."</span>
+  (<span class="k">let</span> (orig-at-beg-of-something
+        orig-at-end-of-something)
+
+    (<span class="k">setq</span> regions (seq-filter
+                   (<span class="k">lambda</span> (region)
+                     (expreg--valid-p region orig))
+                   regions))
+
+    <span class="cd">;; </span><span class="c">It is important that this runs after the first filter.
+</span>    <span class="cd">;; </span><span class="c">‘</span><span class="m c">orig-at-beg/end-of-something</span><span class="c">’ is t means there are some REGION
+</span>    <span class="cd">;; </span><span class="c">that starts/ends at ORIG.
+</span>    (<span class="k">dolist</span> (region regions)
+      (<span class="k">when</span> (eq (cadr region) orig)
+        (<span class="k">setq</span> orig-at-beg-of-something t))
+      (<span class="k">when</span> (eq (cddr region) orig)
+        (<span class="k">setq</span> orig-at-end-of-something t)))
+
+    <span class="cd">;; </span><span class="c">If there are regions that start at ORIG, filter out
+</span>    <span class="cd">;; </span><span class="c">regions that ends at ORIG.
+</span>    (<span class="k">setq</span> regions (cl-remove-if
+                   (<span class="k">lambda</span> (region)
+                     (<span class="k">and</span> orig-at-beg-of-something
+                          (eq (cddr region) orig)))
+                   regions))
+
+    <span class="cd">;; </span><span class="c">OTOH, if there are regions that ends at ORIG, filter out
+</span>    <span class="cd">;; </span><span class="c">regions that starts AFTER ORIGN, eg, special cases in
+</span>    <span class="cd">;; </span><span class="c">‘</span><span class="m c">expreg--list-at-point</span><span class="c">’.
+</span>    (<span class="k">setq</span> regions (cl-remove-if
+                   (<span class="k">lambda</span> (region)
+                     (<span class="k">and</span> orig-at-end-of-something
+                          (&gt; (cadr region) orig)))
+                   regions))
+    regions))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

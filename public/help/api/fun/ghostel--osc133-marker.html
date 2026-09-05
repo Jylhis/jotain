@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--osc133-marker – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--osc133-marker is a natively compiled function defined in
+ghostel-prompt.el.
+Handle an OSC 133 semantic prompt marker from the Zig module.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--osc133-marker</code></h1><p><span class="m"><code>ghostel--osc133-marker</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel-prompt.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--osc133-marker <a href="#:~:text=module.-,TYPE"><span class="arg">TYPE</span></a> <a href="#:~:text=P.-,PARAM"><span class="arg">PARAM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle an OSC 133 semantic prompt marker from the Zig module.
+<p><span class="arg">TYPE</span> is a single character string: A, B, C, D, or P.
+<span class="arg">PARAM</span> is the exit status string for type D, or nil.
+Note: the <span class="m"><code>ghostel-prompt</code></span> text property is applied by the native
+render loop (which queries libghostty's per-row semantic state),
+not here.  This handler only tracks prompt positions and exit status.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-prompt.el</span>
+<span class="cd">;;; </span><span class="c">Prompt navigation (OSC 133)
+</span>
+(<span class="k">defun</span> <span class="f">ghostel--osc133-marker</span> (type param)
+  <span class="doc">"Handle an OSC 133 semantic prompt marker from the Zig module.
+TYPE is a single character string: A, B, C, D, or P.
+PARAM is the exit status string for type D, or nil.
+Note: the `</span><span class="m doc">ghostel-prompt</span><span class="doc">' text property is applied by the native
+render loop (which queries libghostty's per-row semantic state),
+not here.  This handler only tracks prompt positions and exit status."</span>
+  (<span class="k">pcase</span> type
+    ((<span class="k">or</span> <span class="s">"A"</span> <span class="s">"P"</span>)
+     <span class="cd">;; </span><span class="c">Prompt start — record line number.  P is the explicit
+</span>     <span class="cd">;; </span><span class="c">prompt-start marker (no fresh-line side effect); both mark
+</span>     <span class="cd">;; </span><span class="c">a navigable prompt position.
+</span>     (<span class="k">push</span> (cons (count-lines (point-min) (point-max)) nil)
+           ghostel--prompt-positions))
+    (<span class="s">"C"</span>
+     <span class="cd">;; </span><span class="c">Command output start — notify `</span><span class="m c">ghostel-command-start-functions</span><span class="c">'.
+</span>     (ghostel--run-hook-safely 'ghostel-command-start-functions
+                               (current-buffer))
+     (<span class="k">setq</span> ghostel--command-running t))
+    (<span class="s">"D"</span>
+     <span class="cd">;; </span><span class="c">Command finished — store exit status on the most recent entry
+</span>     <span class="cd">;; </span><span class="c">and notify `</span><span class="m c">ghostel-command-finish-functions</span><span class="c">'.
+</span>     (<span class="k">let</span> ((exit (<span class="k">and</span> param (string-to-number param))))
+       (<span class="k">when</span> (<span class="k">and</span> ghostel--prompt-positions param)
+         (setcdr (car ghostel--prompt-positions) exit))
+       (ghostel--run-hook-safely 'ghostel-command-finish-functions
+                                 (current-buffer) exit))
+     (<span class="k">setq</span> ghostel--command-running nil))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

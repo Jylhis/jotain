@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apheleia--log – Emacs Documentation Online</title>
+<meta name="description" content="apheleia--log is a natively compiled function defined in
+apheleia-log.el.
+Log diagnostic message to apheleia-debug-info-buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apheleia--log</code></h1><p><span class="m"><code>apheleia--log</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">apheleia-log.el</span>.
+<h2>Signature</h2>
+<pre><code>(apheleia--log <a href="#:~:text=nothing.-,CATEGORY"><span class="arg">CATEGORY</span></a> <a href="#:~:text=output.-,MESSAGE"><span class="arg">MESSAGE</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=and-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Log diagnostic message to <a href="../var/apheleia-debug-info-buffer.html"><code>apheleia-debug-info-buffer</code></a>.
+<p>If <a href="../var/apheleia-log-debug-info.html"><code>apheleia-log-debug-info</code></a> is nil, this does nothing. <span class="arg">CATEGORY</span>
+is a symbol that can help in filtering the resulting log output.
+<span class="arg">MESSAGE</span> and <span class="arg">ARGS</span> are interpreted as in <a href="../fun/message.html"><code>message</code></a>, except that any
+of <span class="arg">ARGS</span> can also be a function of no arguments which will be
+invoked to get the real value. This is helpful because the
+function won't be evaluated if logging is disabled. Only lambda
+functions are accepted, to avoid symbols being interpreted as
+callables by accident.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbykkl13khzh84lv9vw1bf1vijzg30fr-emacs-packages-deps/share/emacs/site-lisp/elpa/apheleia-20260817.2331/apheleia-log.el</span>
+<span class="cd">;; </span><span class="c">Cribbed this from myself in straight.el
+</span>(<span class="k">defun</span> <span class="f">apheleia--log</span> (category message <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Log diagnostic message to `</span><span class="m doc">apheleia-debug-info-buffer</span><span class="doc">'.
+If `</span><span class="m doc">apheleia-log-debug-info</span><span class="doc">' is nil, this does nothing. CATEGORY
+is a symbol that can help in filtering the resulting log output.
+MESSAGE and ARGS are interpreted as in `</span><span class="m doc">message</span><span class="doc">', except that any
+of ARGS can also be a function of no arguments which will be
+invoked to get the real value. This is helpful because the
+function won't be evaluated if logging is disabled. Only lambda
+functions are accepted, to avoid symbols being interpreted as
+callables by accident."</span>
+  (<span class="k">when</span> apheleia-log-debug-info
+    (<span class="k">with-current-buffer</span> (get-buffer-create apheleia-debug-info-buffer)
+      (<span class="k">unless</span> (derived-mode-p 'special-mode) (special-mode))
+      (<span class="k">save-excursion</span>
+        (goto-char (point-max))
+        (<span class="k">let</span> ((inhibit-read-only t)
+              (body nil))
+          (<span class="k">condition-case</span> err
+              (<span class="k">let</span> ((args (mapcar
+                           (<span class="k">lambda</span> (arg)
+                             (<span class="k">if</span> (<span class="k">and</span> (listp arg)
+                                      (functionp arg))
+                                 (funcall arg)
+                               arg))
+                           args)))
+                (<span class="k">setq</span> body (apply #'format message args)))
+            (<span class="w">error</span> (<span class="k">setq</span> body (format <span class="s">"Got error formatting log line %S: %s"</span>
+                                      message
+                                      (error-message-string err)))))
+          (<span class="k">let</span> ((msg
+                 (format
+                  <span class="s">"%s &lt;%S&gt;: %s"</span>
+                  (format-time-string <span class="s">"%Y-%m-%d %H:%M:%S.%3N"</span> (current-time))
+                  category body)))
+            (insert msg <span class="s">"\n"</span>)
+            (<span class="k">when</span> noninteractive
+              (message <span class="s">"%s"</span> msg))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

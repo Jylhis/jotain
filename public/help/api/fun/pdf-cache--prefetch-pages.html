@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-cache--prefetch-pages – Emacs Documentation Online</title>
+<meta name="description" content="pdf-cache--prefetch-pages is a natively compiled function defined in
+pdf-cache.el.
+Internal function to prefetch pages and store them in the cache.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-cache--prefetch-pages</code></h1><p><span class="m"><code>pdf-cache--prefetch-pages</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">pdf-cache.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-cache--prefetch-pages <a href="#:~:text=cache.-,WINDOW"><span class="arg">WINDOW</span></a> <a href="#:~:text=and-,IMAGE-WIDTH"><span class="arg">IMAGE-WIDTH</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Internal function to prefetch pages and store them in the cache.
+<p><span class="arg">WINDOW</span> and <span class="arg">IMAGE-WIDTH</span> decide the page and scale of the final image.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-cache.el</span>
+(<span class="k">defun</span> <span class="f">pdf-cache--prefetch-pages</span> (window image-width)
+  <span class="doc">"Internal function to prefetch pages and store them in the cache.
+
+WINDOW and IMAGE-WIDTH decide the page and scale of the final image."</span>
+  (<span class="k">when</span> (<span class="k">and</span> (eq window (selected-window))
+             (pdf-util-pdf-buffer-p))
+    (<span class="k">let</span> ((page (<span class="k">pop</span> pdf-cache--prefetch-pages)))
+      (<span class="k">while</span> (<span class="k">and</span> page
+                  (pdf-cache-lookup-image
+                   page
+                   image-width
+                   (<span class="k">if</span> pdf-view-use-scaling
+                       (* 2 image-width)
+                     image-width)))
+        (<span class="k">setq</span> page (<span class="k">pop</span> pdf-cache--prefetch-pages)))
+      (<span class="k">pdf-util-debug</span>
+        (<span class="k">when</span> (null page)
+          (message  <span class="s">"Prefetching done."</span>)))
+      (<span class="k">when</span> page
+        (<span class="k">let*</span> ((buffer (current-buffer))
+               (pdf-info-asynchronous
+                (<span class="k">lambda</span> (status data)
+                  (<span class="k">when</span> (<span class="k">and</span> (null status)
+                             (eq window
+                                 (selected-window))
+                             (eq buffer (window-buffer)))
+                    (<span class="k">with-current-buffer</span> (window-buffer)
+                      (<span class="k">when</span> (derived-mode-p 'pdf-view-mode)
+                        (pdf-cache-put-image
+                         page image-width data)
+                        (image-size (pdf-view-create-page page))
+                        (<span class="k">pdf-util-debug</span>
+                          (message <span class="s">"Prefetched page %s."</span> page))
+                        (pdf-cache--prefetch-pages window image-width)))))))
+          (<span class="k">condition-case</span> err
+              (pdf-info-renderpage page image-width)
+            (<span class="w">error</span>
+             (pdf-cache-prefetch-minor-mode -1)
+             (<span class="w">signal</span> (car err) (cdr err)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

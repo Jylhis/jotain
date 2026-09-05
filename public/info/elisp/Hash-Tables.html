@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.1.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Hash Tables (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Hash Tables (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Hash Tables (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Symbols.html#Symbols" rel="next" title="Symbols">
+<link href="Records.html#Records" rel="prev" title="Records">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+dt.def-line {font-size: 1rem}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold}
+ul.mark-bullet {list-style-type: disc}
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Hash-Tables">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Symbols.html#Symbols" rel="next">Symbols</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Records.html#Records" rel="prev">Records</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Emacs Lisp</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h2 class="chapter" id="Hash-Tables-1"><span>8 Hash Tables<a class="copiable-link" href="#Hash-Tables-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-hash-tables"></a>
+<a class="index-entry-id" id="index-lookup-tables"></a>
+
+<p>A hash table is a very fast kind of lookup table, somewhat like an
+alist (see <a class="pxref" href="Lists.html#Association-Lists">Association Lists</a>) in that it maps keys to
+corresponding values.  It differs from an alist in these ways:
+</p>
+<ul class="itemize mark-bullet">
+<li>Lookup in a hash table is extremely fast for large tables&mdash;in fact, the
+time required is essentially <em class="emph">independent</em> of how many elements are
+stored in the table.  For smaller tables (a few tens of elements)
+alists may still be faster because hash tables have a more-or-less
+constant overhead.
+
+</li><li>The correspondences in a hash table are in no particular order.
+
+</li><li>There is no way to share structure between two hash tables,
+the way two alists can share a common tail.
+</li></ul>
+
+<p>Emacs Lisp provides a general-purpose hash table data type, along
+with a series of functions for operating on them.  Hash tables have a
+special printed representation, which consists of &lsquo;<samp class="samp">#s</samp>&rsquo; followed
+by a list specifying the hash table properties and contents.
+See <a class="xref" href="#Creating-Hash">Creating Hash Tables</a>.
+(Hash notation, the initial &lsquo;<samp class="samp">#</samp>&rsquo; character used in the printed
+representations of objects with no read representation, has nothing to
+do with hash tables.  See <a class="xref" href="Lisp-Data-Types.html#Printed-Representation">Printed Representation and Read Syntax</a>.)
+</p>
+<p>Obarrays are also a kind of hash table, but they are a different type
+of object and are used only for recording interned symbols
+(see <a class="pxref" href="Symbols.html#Creating-Symbols">Creating and Interning Symbols</a>).
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Creating-Hash">Creating Hash Tables</a></li>
+<li><a href="#Hash-Access">Hash Table Access</a></li>
+<li><a href="#Defining-Hash">Defining Hash Comparisons</a></li>
+<li><a href="#Other-Hash">Other Hash Table Functions</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Creating-Hash">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Hash-Access" rel="next">Hash Table Access</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Hash-Tables" rel="up">Hash Tables</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Creating-Hash-Tables"><span>8.1 Creating Hash Tables<a class="copiable-link" href="#Creating-Hash-Tables"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-creating-hash-tables"></a>
+
+<p>The principal function for creating a hash table is
+<code class="code">make-hash-table</code>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dhash_002dtable"><span class="category-def">Function: </span><span><strong class="def-name">make-hash-table</strong> <var class="def-var-arguments">&amp;rest keyword-args</var><a class="copiable-link" href="#index-make_002dhash_002dtable"> &para;</a></span></dt>
+<dd><p>This function creates a new hash table according to the specified
+arguments.  The arguments should consist of alternating keywords
+(particular symbols recognized specially) and values corresponding to
+them.
+</p>
+<p>Several keywords make sense in <code class="code">make-hash-table</code>, but the only two
+that you really need to know about are <code class="code">:test</code> and <code class="code">:weakness</code>.
+</p>
+<dl class="table">
+<dt><code class="code">:test <var class="var">test</var></code></dt>
+<dd><p>This specifies the method of key lookup for this hash table.  The
+default is <code class="code">eql</code>; <code class="code">eq</code> and <code class="code">equal</code> are other
+alternatives:
+</p>
+<dl class="table">
+<dt><code class="code">eql</code></dt>
+<dd><p>Keys which are numbers are the same if they are <code class="code">equal</code>, that
+is, if they are equal in value and either both are integers or both
+are floating point; otherwise, two distinct objects are never
+the same.
+</p>
+</dd>
+<dt><code class="code">eq</code></dt>
+<dd><p>Any two distinct Lisp objects are different as keys.
+</p>
+</dd>
+<dt><code class="code">equal</code></dt>
+<dd><p>Two Lisp objects are the same, as keys, if they are equal
+according to <code class="code">equal</code>.
+</p></dd>
+</dl>
+
+<p>You can use <code class="code">define-hash-table-test</code> (see <a class="pxref" href="#Defining-Hash">Defining Hash Comparisons</a>) to
+define additional possibilities for <var class="var">test</var>.
+</p>
+</dd>
+<dt><code class="code">:weakness <var class="var">weak</var></code></dt>
+<dd><p>The weakness of a hash table specifies whether the presence of a key or
+value in the hash table preserves it from garbage collection.
+</p>
+<p>The value, <var class="var">weak</var>, must be one of <code class="code">nil</code>, <code class="code">key</code>,
+<code class="code">value</code>, <code class="code">key-or-value</code>, <code class="code">key-and-value</code>, or <code class="code">t</code>
+which is an alias for <code class="code">key-and-value</code>.  If <var class="var">weak</var> is <code class="code">key</code>
+then the hash table does not prevent its keys from being collected as
+garbage (if they are not referenced anywhere else); if a particular key
+does get collected, the corresponding association is removed from the
+hash table.
+</p>
+<p>If <var class="var">weak</var> is <code class="code">value</code>, then the hash table does not prevent
+values from being collected as garbage (if they are not referenced
+anywhere else); if a particular value does get collected, the
+corresponding association is removed from the hash table.
+</p>
+<p>If <var class="var">weak</var> is <code class="code">key-and-value</code> or <code class="code">t</code>, both the key and
+the value must be live in order to preserve the association.  Thus,
+the hash table does not protect either keys or values from garbage
+collection; if either one is collected as garbage, that removes the
+association.
+</p>
+<p>If <var class="var">weak</var> is <code class="code">key-or-value</code>, either the key or
+the value can preserve the association.  Thus, associations are
+removed from the hash table when both their key and value would be
+collected as garbage (if not for references from weak hash tables).
+</p>
+<p>The default for <var class="var">weak</var> is <code class="code">nil</code>, so that all keys and values
+referenced in the hash table are preserved from garbage collection.
+</p>
+</dd>
+<dt><code class="code">:size <var class="var">size</var></code></dt>
+<dd><p>This specifies a hint for how many associations you plan to store in the
+hash table.  If you know the approximate number, you can make things a
+little more efficient by specifying it this way but since the hash
+table memory is managed automatically, the gain in speed is rarely
+significant.
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p>You can also create a hash table using the printed representation
+for hash tables.  The Lisp reader can read this printed
+representation, provided each element in the specified hash table has
+a valid read syntax (see <a class="pxref" href="Lisp-Data-Types.html#Printed-Representation">Printed Representation and Read Syntax</a>).  For instance,
+the following specifies a hash table containing the keys
+<code class="code">key1</code> and <code class="code">key2</code> (both symbols) associated with <code class="code">val1</code>
+(a symbol) and <code class="code">300</code> (a number) respectively.
+</p>
+<div class="example">
+<pre class="example-preformatted">#s(hash-table data (key1 val1 key2 300))
+</pre></div>
+
+<p>Note, however, that when using this in Emacs Lisp code, it&rsquo;s
+undefined whether this creates a new hash table or not.  If you want
+to create a new hash table, you should always use
+<code class="code">make-hash-table</code> (see <a class="pxref" href="Evaluation.html#Self_002dEvaluating-Forms">Self-Evaluating Forms</a>).
+</p>
+<p>The printed representation for a hash table consists of &lsquo;<samp class="samp">#s</samp>&rsquo;
+followed by a list beginning with &lsquo;<samp class="samp">hash-table</samp>&rsquo;.  The rest of the
+list should consist of zero or more property-value pairs specifying
+the hash table&rsquo;s properties and initial contents.  The properties and
+values are read literally.  Valid property names are <code class="code">test</code>,
+<code class="code">weakness</code> and <code class="code">data</code>.  The <code class="code">data</code> property
+should be a list of key-value pairs for the initial contents; the
+other properties have the same meanings as the matching
+<code class="code">make-hash-table</code> keywords (<code class="code">:test</code> and <code class="code">:weakness</code>),
+described above.
+</p>
+<p>Note that you cannot specify a hash table whose initial contents
+include objects that have no read syntax, such as buffers and frames.
+Such objects may be added to the hash table after it is created.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Hash-Access">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Defining-Hash" rel="next">Defining Hash Comparisons</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Creating-Hash" rel="prev">Creating Hash Tables</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Hash-Tables" rel="up">Hash Tables</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Hash-Table-Access"><span>8.2 Hash Table Access<a class="copiable-link" href="#Hash-Table-Access"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-accessing-hash-tables"></a>
+<a class="index-entry-id" id="index-hash-table-access"></a>
+
+<p>This section describes the functions for accessing and storing
+associations in a hash table.  In general, any Lisp object can be used
+as a hash key, unless the comparison method imposes limits.  Any Lisp
+object can also be used as the value.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-gethash"><span class="category-def">Function: </span><span><strong class="def-name">gethash</strong> <var class="def-var-arguments">key table &amp;optional default</var><a class="copiable-link" href="#index-gethash"> &para;</a></span></dt>
+<dd><p>This function looks up <var class="var">key</var> in <var class="var">table</var>, and returns its
+associated <var class="var">value</var>&mdash;or <var class="var">default</var>, if <var class="var">key</var> has no
+association in <var class="var">table</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-puthash"><span class="category-def">Function: </span><span><strong class="def-name">puthash</strong> <var class="def-var-arguments">key value table</var><a class="copiable-link" href="#index-puthash"> &para;</a></span></dt>
+<dd><p>This function enters an association for <var class="var">key</var> in <var class="var">table</var>, with
+value <var class="var">value</var>.  If <var class="var">key</var> already has an association in
+<var class="var">table</var>, <var class="var">value</var> replaces the old associated value.  This
+function always returns <var class="var">value</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-remhash"><span class="category-def">Function: </span><span><strong class="def-name">remhash</strong> <var class="def-var-arguments">key table</var><a class="copiable-link" href="#index-remhash"> &para;</a></span></dt>
+<dd><p>This function removes the association for <var class="var">key</var> from <var class="var">table</var>, if
+there is one.  If <var class="var">key</var> has no association, <code class="code">remhash</code> does
+nothing.
+</p>
+<p><b class="b">Common Lisp note:</b> In Common Lisp, <code class="code">remhash</code> returns
+non-<code class="code">nil</code> if it actually removed an association and <code class="code">nil</code>
+otherwise.  In Emacs Lisp, <code class="code">remhash</code> always returns <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-clrhash"><span class="category-def">Function: </span><span><strong class="def-name">clrhash</strong> <var class="def-var-arguments">table</var><a class="copiable-link" href="#index-clrhash"> &para;</a></span></dt>
+<dd><p>This function removes all the associations from hash table <var class="var">table</var>,
+so that it becomes empty.  This is also called <em class="dfn">clearing</em> the hash
+table.  <code class="code">clrhash</code> returns the empty <var class="var">table</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-maphash"><span class="category-def">Function: </span><span><strong class="def-name">maphash</strong> <var class="def-var-arguments">function table</var><a class="copiable-link" href="#index-maphash"> &para;</a></span></dt>
+<dd><a class="anchor" id="Definition-of-maphash"></a><p>This function calls <var class="var">function</var> once for each of the associations in
+<var class="var">table</var>.  The function <var class="var">function</var> should accept two
+arguments&mdash;a <var class="var">key</var> listed in <var class="var">table</var>, and its associated
+<var class="var">value</var>.  <code class="code">maphash</code> returns <code class="code">nil</code>.
+</p>
+<p><var class="var">function</var> is allowed to call <code class="code">puthash</code> to set a new value
+for <var class="var">key</var> and <code class="code">remhash</code> to remove <var class="var">key</var>, but should not
+add, remove or modify other associations in <var class="var">table</var>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Defining-Hash">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Other-Hash" rel="next">Other Hash Table Functions</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Hash-Access" rel="prev">Hash Table Access</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Hash-Tables" rel="up">Hash Tables</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Defining-Hash-Comparisons"><span>8.3 Defining Hash Comparisons<a class="copiable-link" href="#Defining-Hash-Comparisons"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-hash-code"></a>
+<a class="index-entry-id" id="index-define-hash-comparisons"></a>
+
+<p>You can define new methods of key lookup by means of
+<code class="code">define-hash-table-test</code>.  In order to use this feature, you need
+to understand how hash tables work, and what a <em class="dfn">hash code</em> means.
+</p>
+<p>You can think of a hash table conceptually as a large array of many
+slots, each capable of holding one association.  To look up a key,
+<code class="code">gethash</code> first computes an integer, the hash code, from the key.
+It can reduce this integer modulo the length of the array, to produce an
+index in the array.  Then it looks in that slot, and if necessary in
+other nearby slots, to see if it has found the key being sought.
+</p>
+<p>Thus, to define a new method of key lookup, you need to specify both a
+function to compute the hash code from a key, and a function to compare
+two keys directly.  The two functions should be consistent with each
+other: that is, two keys&rsquo; hash codes should be the same if the keys
+compare as equal.  Also, since the two functions can be called at any
+time (such as by the garbage collector), the functions should be free
+of side effects and should return quickly, and their behavior should
+depend on only on properties of the keys that do not change.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-define_002dhash_002dtable_002dtest"><span class="category-def">Function: </span><span><strong class="def-name">define-hash-table-test</strong> <var class="def-var-arguments">name test-fn hash-fn</var><a class="copiable-link" href="#index-define_002dhash_002dtable_002dtest"> &para;</a></span></dt>
+<dd><p>This function defines a new hash table test, named <var class="var">name</var>.
+</p>
+<p>After defining <var class="var">name</var> in this way, you can use it as the <var class="var">test</var>
+argument in <code class="code">make-hash-table</code>.  When you do that, the hash table
+will use <var class="var">test-fn</var> to compare key values, and <var class="var">hash-fn</var> to compute
+a hash code from a key value.
+</p>
+<p>The function <var class="var">test-fn</var> should accept two arguments, two keys, and
+return non-<code class="code">nil</code> if they are considered the same.
+</p>
+<p>The function <var class="var">hash-fn</var> should accept one argument, a key, and return
+an integer that is the hash code of that key.  For good results, the
+function should use the whole range of fixnums for hash codes,
+including negative fixnums.
+</p>
+<p>The specified functions are stored in the property list of <var class="var">name</var>
+under the property <code class="code">hash-table-test</code>; the property value&rsquo;s form is
+<code class="code">(<var class="var">test-fn</var> <var class="var">hash-fn</var>)</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-sxhash_002dequal"><span class="category-def">Function: </span><span><strong class="def-name">sxhash-equal</strong> <var class="def-var-arguments">obj</var><a class="copiable-link" href="#index-sxhash_002dequal"> &para;</a></span></dt>
+<dd><p>This function returns a hash code for Lisp object <var class="var">obj</var>.
+This is an integer that reflects the contents of <var class="var">obj</var>
+and the other Lisp objects it points to.
+</p>
+<p>If two objects <var class="var">obj1</var> and <var class="var">obj2</var> are <code class="code">equal</code>, then
+<code class="code">(sxhash-equal <var class="var">obj1</var>)</code> and <code class="code">(sxhash-equal <var class="var">obj2</var>)</code>
+are the same integer.
+</p>
+<p>If the two objects are not <code class="code">equal</code>, the values returned by
+<code class="code">sxhash-equal</code> are usually different, but not always.
+<code class="code">sxhash-equal</code> is designed to be reasonably fast (since it&rsquo;s used
+for indexing hash tables) so it won&rsquo;t recurse deeply into nested
+structures.  In addition; once in a rare while, by luck, you will
+encounter two distinct-looking simple objects that give the same
+result from <code class="code">sxhash-equal</code>.  So you can&rsquo;t, in general, use
+<code class="code">sxhash-equal</code> to check whether an object has changed.
+</p>
+<p><b class="b">Common Lisp note:</b> In Common Lisp a similar function is called
+<code class="code">sxhash</code>.  Emacs provides this name as a compatibility alias for
+<code class="code">sxhash-equal</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-sxhash_002deq"><span class="category-def">Function: </span><span><strong class="def-name">sxhash-eq</strong> <var class="def-var-arguments">obj</var><a class="copiable-link" href="#index-sxhash_002deq"> &para;</a></span></dt>
+<dd><p>This function returns a hash code for Lisp object <var class="var">obj</var>.  Its
+result reflects identity of <var class="var">obj</var>, but not its contents.
+</p>
+<p>If two objects <var class="var">obj1</var> and <var class="var">obj2</var> are <code class="code">eq</code>, then
+<code class="code">(sxhash-eq <var class="var">obj1</var>)</code> and <code class="code">(sxhash-eq <var class="var">obj2</var>)</code> are
+the same integer.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-sxhash_002deql"><span class="category-def">Function: </span><span><strong class="def-name">sxhash-eql</strong> <var class="def-var-arguments">obj</var><a class="copiable-link" href="#index-sxhash_002deql"> &para;</a></span></dt>
+<dd><p>This function returns a hash code for Lisp object <var class="var">obj</var> suitable for
+<code class="code">eql</code> comparison.  In other words, it reflects identity of
+<var class="var">obj</var> except for the case where the object is a bignum or a float
+number, in which case a hash code is generated for the value.
+</p>
+<p>If two objects <var class="var">obj1</var> and <var class="var">obj2</var> are <code class="code">eql</code>, then
+<code class="code">(sxhash-eql <var class="var">obj1</var>)</code> and <code class="code">(sxhash-eql <var class="var">obj2</var>)</code> are
+the same integer.
+</p></dd></dl>
+
+<p>This example creates a hash table whose keys are strings that are
+compared case-insensitively.
+</p>
+<div class="example">
+<pre class="example-preformatted">(defun string-hash-ignore-case (a)
+  (sxhash-equal (upcase a)))
+
+(define-hash-table-test 'ignore-case
+  'string-equal-ignore-case 'string-hash-ignore-case)
+
+(make-hash-table :test 'ignore-case)
+</pre></div>
+
+<p>Here is how you could define a hash table test equivalent to the
+predefined test value <code class="code">equal</code>.  The keys can be any Lisp object,
+and equal-looking objects are considered the same key.
+</p>
+<div class="example">
+<pre class="example-preformatted">(define-hash-table-test 'contents-hash 'equal 'sxhash-equal)
+
+(make-hash-table :test 'contents-hash)
+</pre></div>
+
+<p>Lisp programs should <em class="emph">not</em> rely on hash codes being preserved
+between Emacs sessions, as the implementation of the hash functions
+uses some details of the object storage that can change between
+sessions and between different architectures.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Other-Hash">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Defining-Hash" rel="prev">Defining Hash Comparisons</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Hash-Tables" rel="up">Hash Tables</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Other-Hash-Table-Functions"><span>8.4 Other Hash Table Functions<a class="copiable-link" href="#Other-Hash-Table-Functions"> &para;</a></span></h3>
+
+<p>Here are some other functions for working with hash tables.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-hash_002dtable_002dp"><span class="category-def">Function: </span><span><strong class="def-name">hash-table-p</strong> <var class="def-var-arguments">table</var><a class="copiable-link" href="#index-hash_002dtable_002dp"> &para;</a></span></dt>
+<dd><p>This returns non-<code class="code">nil</code> if <var class="var">table</var> is a hash table object.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-copy_002dhash_002dtable"><span class="category-def">Function: </span><span><strong class="def-name">copy-hash-table</strong> <var class="def-var-arguments">table</var><a class="copiable-link" href="#index-copy_002dhash_002dtable"> &para;</a></span></dt>
+<dd><p>This function creates and returns a copy of <var class="var">table</var>.  Only the table
+itself is copied&mdash;the keys and values are shared.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-hash_002dtable_002dcount"><span class="category-def">Function: </span><span><strong class="def-name">hash-table-count</strong> <var class="def-var-arguments">table</var><a class="copiable-link" href="#index-hash_002dtable_002dcount"> &para;</a></span></dt>
+<dd><p>This function returns the actual number of entries in <var class="var">table</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-hash_002dtable_002dcontains_002dp"><span class="category-def">Function: </span><span><strong class="def-name">hash-table-contains-p</strong> <var class="def-var-arguments">key table</var><a class="copiable-link" href="#index-hash_002dtable_002dcontains_002dp"> &para;</a></span></dt>
+<dd><p>This returns non-<code class="code">nil</code> if there is an association for <var class="var">key</var> in
+<var class="var">table</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-hash_002dtable_002dtest"><span class="category-def">Function: </span><span><strong class="def-name">hash-table-test</strong> <var class="def-var-arguments">table</var><a class="copiable-link" href="#index-hash_002dtable_002dtest"> &para;</a></span></dt>
+<dd><p>This returns the <var class="var">test</var> value that was given when <var class="var">table</var> was
+created, to specify how to hash and compare keys.  See
+<code class="code">make-hash-table</code> (see <a class="pxref" href="#Creating-Hash">Creating Hash Tables</a>).
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-hash_002dtable_002dweakness"><span class="category-def">Function: </span><span><strong class="def-name">hash-table-weakness</strong> <var class="def-var-arguments">table</var><a class="copiable-link" href="#index-hash_002dtable_002dweakness"> &para;</a></span></dt>
+<dd><p>This function returns the <var class="var">weak</var> value that was specified for hash
+table <var class="var">table</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-hash_002dtable_002dsize"><span class="category-def">Function: </span><span><strong class="def-name">hash-table-size</strong> <var class="def-var-arguments">table</var><a class="copiable-link" href="#index-hash_002dtable_002dsize"> &para;</a></span></dt>
+<dd><p>This returns the current allocation size of <var class="var">table</var>.  Since hash table
+allocation is managed automatically, this is rarely of interest.
+</p></dd></dl>
+</div>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Symbols.html#Symbols" rel="next">Symbols</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Records.html#Records" rel="prev">Records</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Emacs Lisp</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+
+
+
+</body>
+</html>

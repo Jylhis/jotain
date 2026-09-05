@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: exec-path-from-shell-getenvs – Emacs Documentation Online</title>
+<meta name="description" content="exec-path-from-shell-getenvs is a natively compiled function defined
+in exec-path-from-shell.el.
+Get the environment variables with NAMES from the user's shell.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>exec-path-from-shell-getenvs</code></h1><p><span class="m"><code>exec-path-from-shell-getenvs</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">exec-path-from-shell.el</span>.
+<h2>Signature</h2>
+<pre><code>(exec-path-from-shell-getenvs <a href="#:~:text=with-,NAMES"><span class="arg">NAMES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Get the environment variables with <span class="arg">NAMES</span> from the user's shell.
+<p>Execute the shell according to <a href="../var/exec-path-from-shell-arguments.html"><code>exec-path-from-shell-arguments</code></a>.
+The result is a list of (NAME . VALUE) pairs.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lzrv36jn1gafnd9x3mmwlizw57dr87rp-emacs-packages-deps/share/emacs/site-lisp/elpa/exec-path-from-shell-20260423.1833/exec-path-from-shell.el</span>
+(<span class="k">defun</span> <span class="f">exec-path-from-shell-getenvs</span> (names)
+  <span class="doc">"Get the environment variables with NAMES from the user's shell.
+
+Execute the shell according to `</span><span class="m doc">exec-path-from-shell-arguments</span><span class="doc">'.
+The result is a list of (NAME . VALUE) pairs."</span>
+  (<span class="k">when</span> (file-remote-p default-directory)
+    (<span class="w">error</span> <span class="s">"You cannot run exec-path-from-shell from a remote buffer (Tramp, etc.)"</span>))
+  (<span class="k">if</span> (exec-path-from-shell--nushell-p (exec-path-from-shell--shell))
+      (exec-path-from-shell-getenvs--nushell names)
+    (<span class="k">let*</span> ((random-default (md5 (format <span class="s">"%s%s%s"</span> (emacs-pid) (random) (current-time))))
+           (dollar-names (mapcar (<span class="k">lambda</span> (n) (format <span class="s">"${%s-%s}"</span> n random-default)) names))
+           (values (split-string (exec-path-from-shell-printf
+                                  (mapconcat #'identity (make-list (length names) <span class="s">"%s"</span>) <span class="s">"\\000"</span>)
+                                  dollar-names) <span class="w s">"\0"</span><span class="w">)))</span>
+      (<span class="k">let</span> (result)
+        (<span class="k">while</span> names
+          (<span class="k">prog1</span>
+              (<span class="k">let</span> ((value (car values)))
+                (<span class="k">push</span> (cons (car names)
+                            (<span class="k">unless</span> (string-equal random-default value)
+                              value))
+                      result))
+            (<span class="k">setq</span> values (cdr values)
+                  names (cdr names))))
+        result))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,91 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: marginalia--variable-value – Emacs Documentation Online</title>
+<meta name="description" content="marginalia--variable-value is a natively compiled function defined in
+marginalia.el.
+Return the variable value of SYM as string.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>marginalia--variable-value</code></h1><p><span class="m"><code>marginalia--variable-value</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">marginalia.el</span>.
+<h2>Signature</h2>
+<pre><code>(marginalia--variable-value <a href="#:~:text=of-,SYM"><span class="arg">SYM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the variable value of <span class="arg">SYM</span> as string.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ckv423l2dy50bfwsy6xzdz7l2a9ah46b-emacs-packages-deps/share/emacs/site-lisp/elpa/marginalia-20260831.1055/marginalia.el</span>
+(<span class="k">defun</span> <span class="f">marginalia--variable-value</span> (sym)
+  <span class="doc">"Return the variable value of SYM as string."</span>
+  (<span class="k">cond</span>
+   ((not (boundp sym))
+    (propertize <span class="s">"#&lt;unbound&gt;"</span> 'face 'marginalia-null))
+   ((<span class="k">and</span> marginalia-censor-variables
+         (<span class="k">let</span> ((name (symbol-name sym))
+               case-fold-search)
+           (<span class="k">cl-loop</span> for r in marginalia-censor-variables
+                    thereis (<span class="k">if</span> (symbolp r)
+                                (eq r sym)
+                              (string-match-p r name)))))
+    (propertize <span class="s">"*****"</span>
+                'face 'marginalia-null
+                'help-echo <span class="s">"Hidden due to `</span><span class="m s">marginalia-censor-variables</span><span class="s">'"</span>))
+   (t
+    (<span class="k">let</span> ((val (symbol-value sym)))
+      (<span class="k">pcase</span> val
+        ('nil (propertize <span class="s">"nil"</span> 'face 'marginalia-null))
+        ('t (propertize <span class="s">"t"</span> 'face 'marginalia-true))
+        ((pred keymapp) (propertize <span class="s">"#&lt;keymap&gt;"</span> 'face 'marginalia-value))
+        ((pred bool-vector-p) (propertize <span class="s">"#&lt;bool-vector&gt;"</span> 'face 'marginalia-value))
+        ((pred hash-table-p) (propertize <span class="s">"#&lt;hash-table&gt;"</span> 'face 'marginalia-value))
+        ((pred syntax-table-p) (propertize <span class="s">"#&lt;syntax-table&gt;"</span> 'face 'marginalia-value))
+        <span class="cd">;; </span><span class="c">Emacs bug#53988: abbrev-table-p throws an error
+</span>        ((guard (<span class="k">static-if</span> (&lt; emacs-major-version 30)
+                    (<span class="k">and</span> (vectorp val) (<span class="k">ignore-errors</span> (abbrev-table-p val)))
+                  (abbrev-table-p val)))
+         (propertize <span class="s">"#&lt;abbrev-table&gt;"</span> 'face 'marginalia-value))
+        ((pred char-table-p) (propertize <span class="s">"#&lt;char-table&gt;"</span> 'face 'marginalia-value))
+        <span class="cd">;; </span><span class="c">Callable objects or object closures (OClosures)
+</span>        ((guard (oclosure-type val))
+         (format (propertize <span class="s">"#&lt;oclosure %s&gt;"</span> 'face 'marginalia-function) (oclosure-type val)))
+        ((pred byte-code-function-p) (propertize <span class="s">"#&lt;byte-code-function&gt;"</span> 'face 'marginalia-function))
+        ((<span class="k">and</span> (pred functionp) (pred symbolp))
+         <span class="cd">;; </span><span class="c">We are not consistent here, values are generally printed
+</span>         <span class="cd">;; </span><span class="c">unquoted. But we make an exception for function symbols to visually
+</span>         <span class="cd">;; </span><span class="c">distinguish them from symbols.  I am not entirely happy with this,
+</span>         <span class="cd">;; </span><span class="c">but we should not add quotation to every type.
+</span>         (format (propertize <span class="s">"#'%s"</span> 'face 'marginalia-function) val))
+        ((pred recordp) (format (propertize <span class="s">"#&lt;record %s&gt;"</span> 'face 'marginalia-value) (type-of val)))
+        ((pred symbolp) (propertize (symbol-name val) 'face 'marginalia-symbol))
+        ((pred numberp)
+         (propertize (number-to-string val)
+                     'face 'marginalia-number
+                     'help-echo (<span class="k">and</span> (integerp val)
+                                     (format <span class="s">"%d, #o%o, #x%x%s"</span> val val val
+                                             (<span class="k">if</span> (characterp val) (format <span class="s">", ?%c"</span> val) <span class="s">""</span>)))))
+        (_ (<span class="k">let</span> ((print-escape-newlines t)
+                 (print-escape-control-characters t)
+                 <span class="cd">;;</span><span class="c">(print-escape-multibyte t)
+</span>                 (print-level 3)
+                 (print-length marginalia-field-width))
+             (propertize
+              (replace-regexp-in-string
+               <span class="cd">;; </span><span class="c">`</span><span class="m c">print-escape-control-characters</span><span class="c">' does not escape Unicode control characters.
+</span>               <span class="s">"[\x0-\x1F\x7f-\x9f\x061c\x200e\x200f\x202a-\x202e\x2066-\x2069]"</span>
+               (<span class="k">lambda</span> (x) (format <span class="s">"\\x%x"</span> (string-to-char x)))
+               (prin1-to-string
+                (<span class="k">if</span> (stringp val)
+                    <span class="cd">;; </span><span class="c">Get rid of string properties to save some of the precious space
+</span>                    (substring-no-properties
+                     val 0
+                     (min (length val) marginalia-field-width))
+                  val))
+               'fixedcase 'literal)
+              'face
+              (<span class="k">cond</span>
+               ((listp val) 'marginalia-list)
+               ((stringp val) 'marginalia-string)
+               (t 'marginalia-value))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

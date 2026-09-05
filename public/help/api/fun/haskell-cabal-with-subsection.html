@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-cabal-with-subsection – Emacs Documentation Online</title>
+<meta name="description" content="haskell-cabal-with-subsection is a macro defined in haskell-cabal.el.
+Copy subsection data into a temporary buffer, save indentation
+and execute FORMS">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-cabal-with-subsection</code></h1><p><span class="m"><code>haskell-cabal-with-subsection</code></span> is a macro defined in <span class="bt">haskell-cabal.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">haskell-cabal-with-subsection</span> <a href="#:~:text="><span class="arg">SUBSECTION</span></a> <a href="#:~:text=If-,REPLACE"><span class="arg">REPLACE</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text="><span class="arg">FUNS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Copy subsection data into a temporary buffer, save indentation
+and execute FORMS
+<p>If <span class="arg">REPLACE</span> is non-nil the subsection data is replaced with the
+resulting buffer-content
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-cabal.el</span>
+(<span class="k">defmacro</span> <span class="f">haskell-cabal-with-subsection</span> (subsection replace <span class="ty">&amp;rest</span> funs)
+  <span class="doc">"Copy subsection data into a temporary buffer, save indentation
+and execute FORMS
+
+If REPLACE is non-nil the subsection data is replaced with the
+resulting buffer-content"</span>
+  (<span class="k">let</span> ((section (make-symbol <span class="s">"section"</span>))
+        (beg (make-symbol <span class="s">"beg"</span>))
+        (end (make-symbol <span class="s">"end"</span>))
+        (start-col (make-symbol <span class="s">"start-col"</span>))
+        (section-data (make-symbol <span class="s">"section-data"</span>)))
+    `(<span class="k">let*</span> ((,section ,subsection)
+            (,beg (plist-get ,section <span class="bi">:beginning</span>))
+            (,end (plist-get ,section <span class="bi">:end</span>))
+            (,start-col (plist-get ,section <span class="bi">:data-start-column</span>))
+            (,section-data (buffer-substring ,beg ,end)))
+       (<span class="k">save-excursion</span>
+         (<span class="k">prog1</span>
+             (<span class="k">with-temp-buffer</span>
+               (<span class="k">setq</span> indent-tabs-mode nil)
+               (indent-to ,start-col)
+               (insert ,section-data)
+               (goto-char (point-min))
+               (<span class="k">prog1</span>
+                   (<span class="k">progn</span> (<span class="k">haskell-cabal-save-indentation</span> ,@funs))
+                 (goto-char (point-min))
+                 (<span class="k">when</span> (looking-at (format <span class="s">"[ ]\\{0,%d\\}"</span> (1+ ,start-col)))
+                     (replace-match <span class="s">""</span>))
+
+                 (<span class="k">setq</span> ,section-data (buffer-substring (point-min) (point-max)))))
+           ,@(<span class="k">when</span> replace
+               `((delete-region ,beg ,end)
+                 (goto-char ,beg)
+                 (insert ,section-data))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

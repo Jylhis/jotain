@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: logview-filter-edit--do – Emacs Documentation Online</title>
+<meta name="description" content="logview-filter-edit--do is a natively compiled function defined in
+logview.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>logview-filter-edit--do</code></h1><p><span class="m"><code>logview-filter-edit--do</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">logview.el</span>.
+<h2>Signature</h2>
+<pre><code>(logview-filter-edit--do <span class="arg">PROCESS-FILTERS</span> <span class="arg">QUIT</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qid656ql5mh048bd0k84vvsbc2517lh9-emacs-packages-deps/share/emacs/site-lisp/elpa/logview-20260218.2013/logview.el</span>
+(<span class="k">defun</span> <span class="f">logview-filter-edit--do</span> (process-filters quit)
+  (<span class="k">let*</span> ((mode    logview-filter-edit--mode)
+         (parent  logview-filter-edit--parent-buffer)
+         (windows logview-filter-edit--window-configuration)
+         filters-changed)
+    (<span class="k">when</span> quit
+      (<span class="k">with-current-buffer</span> parent
+        (<span class="k">when</span> logview--preview-filter-text
+          (<span class="k">setf</span> logview--preview-filter-text nil
+                filters-changed              t))))
+    (<span class="k">when</span> process-filters
+      (<span class="k">if</span> (eq mode 'views)
+          (<span class="k">let</span> ((new-views (<span class="k">save-excursion</span>
+                             (goto-char (point-min))
+                             (logview--parse-view-definitions t))))
+            (<span class="k">setf</span> logview--views
+                  (<span class="k">if</span> logview-filter-edit--editing-views-for-submode
+                      (<span class="k">let</span> ((combined-views (nreverse new-views)))
+                        (<span class="k">dolist</span> (view (logview--views))
+                          (<span class="k">unless</span> (equal (plist-get view <span class="bi">:submode</span>) logview-filter-edit--editing-views-for-submode)
+                            (<span class="k">push</span> view combined-views)))
+                        (nreverse combined-views))
+                    new-views))
+            (<span class="k">setf</span> logview--views-need-saving t)
+            (logview--after-updating-view-definitions)
+            (<span class="k">with-current-buffer</span> parent
+              (logview--update-mode-name)))
+        (<span class="k">let</span> ((filters      (buffer-substring-no-properties
+                             (point-min) (point-max)))
+              (hint-comment (logview-filter-edit--hint-comment)))
+            (<span class="k">when</span> (string-prefix-p hint-comment filters)
+              (<span class="k">setf</span> filters (substring filters (length hint-comment))))
+            (<span class="k">with-current-buffer</span> parent
+              (<span class="k">if</span> (eq process-filters 'preview)
+                  (<span class="k">setf</span> logview--preview-filter-text `(,(eq mode 'main-filters) . ,filters))
+                (<span class="k">setf</span> (<span class="k">if</span> (eq mode 'main-filters) logview--main-filter-text logview--thread-narrowing-filter-text) filters))
+              (<span class="k">setf</span> filters-changed t)))))
+    (<span class="k">when</span> filters-changed
+      (<span class="k">with-current-buffer</span> parent
+        (logview--parse-filters)))
+    (<span class="k">when</span> quit
+      (kill-buffer)
+      (switch-to-buffer parent)
+      (set-window-configuration windows))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

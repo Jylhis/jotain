@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: mcp--parse-http-header – Emacs Documentation Online</title>
+<meta name="description" content="mcp--parse-http-header is a natively compiled function defined in
+mcp.el.
+Parse HTTP response headers into a plist.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>mcp--parse-http-header</code></h1><p><span class="m"><code>mcp--parse-http-header</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(mcp--parse-http-header <a href="#:~:text=plist.-,HEADERS"><span class="arg">HEADERS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse HTTP response headers into a plist.
+<p><span class="arg">HEADERS</span> is a string containing the raw HTTP response headers.
+Returns a plist where each header field is a keyword (e.g. :content-type)
+with its corresponding value.
+<p>Example:
+<br>&nbsp;&nbsp;(mcp--parse-http-header <span class="s">"Content-Type: text/html\\r\\nServer: nginx\\r\\n"</span>)
+<br>&nbsp;&nbsp;=&gt; (<span class="bi">:content-type</span> <span class="s">"text/html"</span> <span class="bi">:server</span> <span class="s">"nginx"</span>)
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a854ba0xan3il3xqm2sx95la5018xp8i-emacs-packages-deps/share/emacs/site-lisp/elpa/mcp-20260615.940/mcp.el</span>
+(<span class="k">defun</span> <span class="f">mcp--parse-http-header</span> (headers)
+  <span class="doc">"Parse HTTP response headers into a plist.
+
+HEADERS is a string containing the raw HTTP response headers.
+Returns a plist where each header field is a keyword (e.g. :content-type)
+with its corresponding value.
+
+Example:
+  (mcp--parse-http-header \"Content-Type: text/html\\r\\nServer: nginx\\r\\n\")
+  =&gt; (:content-type \"text/html\" :server \"nginx\")"</span>
+  (<span class="k">when-let*</span> ((header-lines (split-string headers <span class="s">"\n"</span>))
+              (status-line (car header-lines))
+              (res (split-string status-line <span class="s">" "</span>))
+              (status-code (elt res 1)))
+    (plist-put (apply #'append
+                      (mapcar (<span class="k">lambda</span> (line)
+                                (<span class="k">when-let*</span> ((line (string-trim line))
+                                            (search-sep-pos (string-search <span class="s">":"</span> line)))
+                                  (list (intern
+                                         (concat <span class="s">":"</span>
+                                                 (downcase
+                                                  (string-trim
+                                                   (substring line 0 search-sep-pos)))))
+                                        (string-trim
+                                         (substring line
+                                                    (+ search-sep-pos 1))))))
+                              (cdr header-lines)))
+               <span class="bi">:response-code</span>
+               status-code)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

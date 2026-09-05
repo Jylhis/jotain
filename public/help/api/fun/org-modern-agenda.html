@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-modern-agenda – Emacs Documentation Online</title>
+<meta name="description" content="org-modern-agenda is a natively compiled function defined in
+org-modern.el.
+Finalize Org agenda highlighting.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-modern-agenda</code></h1><p><span class="m"><code>org-modern-agenda</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">org-modern.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-modern-agenda)
+</code></pre>
+<h2>Documentation</h2>
+<p>Finalize Org agenda highlighting.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/c2c3l8drcnybmya5zjrxb6fifrfpi1c0-emacs-packages-deps/share/emacs/site-lisp/elpa/org-modern-20260722.1411/org-modern.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">org-modern-agenda</span> ()
+  <span class="doc">"Finalize Org agenda highlighting."</span>
+  (remove-from-invisibility-spec 'org-modern)
+  (add-to-invisibility-spec 'org-modern) <span class="cd">;; </span><span class="c">Not idempotent?!
+</span>  (add-hook 'pre-redisplay-functions #'org-modern--pre-redisplay nil 'local)
+  (<span class="k">setq-local</span> face-remapping-alist (copy-tree face-remapping-alist))
+  (maphash (<span class="k">lambda</span> (face _spec)
+             (<span class="k">when</span> (string-prefix-p <span class="s">"org-habit-"</span> (symbol-name face))
+               (<span class="k">setf</span> (alist-get face face-remapping-alist nil 'remove)
+                     (<span class="k">and</span> org-modern-label-border `(org-modern-habit ,face)))))
+           face--new-frame-defaults)
+  (<span class="k">save-excursion</span>
+    (<span class="k">save-match-data</span>
+      (<span class="k">let</span> (case-fold-search)
+        (<span class="k">when</span> org-modern-todo
+          (goto-char (point-min))
+          (<span class="k">while</span> (&lt; (point) (point-max))
+            (<span class="k">when-let*</span> ((org-not-done-regexp (get-text-property (point) 'org-not-done-regexp))
+                        (re (get-text-property (point) 'org-todo-regexp))
+                        (re (concat <span class="s">"[: ]"</span> re <span class="s">" "</span>))
+                        ((re-search-forward re (pos-eol) 'noerror)))
+              (org-modern--todo))
+            (goto-char (min (1+ (pos-eol)) (point-max)))))
+        (<span class="k">when</span> org-modern-tag
+          (goto-char (point-min))
+          (<span class="k">let</span> ((re (concat <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">:</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">"</span> org-tag-re <span class="s">"::?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">[ \t]*$"</span>)))
+            (<span class="k">while</span> (re-search-forward re nil 'noerror)
+              (org-modern--tag))))
+        (<span class="k">when</span> org-modern-priority
+          (goto-char (point-min))
+          (<span class="k">while</span> (re-search-forward <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\[#.\\]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> nil 'noerror)
+            <span class="cd">;; </span><span class="c">For some reason the org-agenda-fontify-priorities adds overlays?!
+</span>            (<span class="k">when-let*</span> ((ov (overlays-at (match-beginning 0))))
+              (overlay-put (car ov) 'face nil))
+            (org-modern--priority)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

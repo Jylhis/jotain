@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg-eval-phrase – Emacs Documentation Online</title>
+<meta name="description" content="tuareg-eval-phrase is an interactive and natively compiled function
+defined in tuareg.el.
+Eval the surrounding OCaml phrase (or block) in the OCaml REPL.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg-eval-phrase</code></h1><p><span class="m"><code>tuareg-eval-phrase</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg-eval-phrase)
+</code></pre>
+<h2>Documentation</h2>
+<p>Eval the surrounding OCaml phrase (or block) in the OCaml REPL.
+<p>If the region is active, evaluate all phrases intersecting the region.
+<h2>Key Bindings</h2>
+<p><span class="v">tuareg-mode-map</span> <span class="key">C-M-x</span>
+<span class="v">tuareg-mode-map</span> <span class="key">C-c C-e</span>
+<span class="v">tuareg-mode-map</span> <span class="key">C-x C-e</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg-eval-phrase</span> ()
+  <span class="doc">"Eval the surrounding OCaml phrase (or block) in the OCaml REPL.
+If the region is active, evaluate all phrases intersecting the region."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((opoint (point))
+        start end)
+    (<span class="k">cond</span>
+     ((region-active-p)
+      (<span class="k">let</span> ((rbeg (region-beginning))
+            (rend (region-end)))
+        (<span class="k">setq</span> start rbeg)
+        (<span class="k">setq</span> end rend)
+        <span class="cd">;; </span><span class="c">Extend the region at the endpoints if they are in a phrase.
+</span>        (<span class="k">save-excursion</span>
+          (<span class="k">dolist</span> (pos (list rbeg rend))
+            (goto-char pos)
+            (<span class="k">let*</span> ((phrase (tuareg-discover-phrase))
+                   (beg-phrase (car phrase))
+                   (end-phrase (cadr phrase)))
+              (<span class="k">when</span> (<span class="k">and</span> phrase
+                         (&gt; end-phrase rbeg)
+                         (&lt; beg-phrase rend))
+                <span class="cd">;; </span><span class="c">A phrase intersects the region; extend.
+</span>                (<span class="k">setq</span> start (min start beg-phrase))
+                (<span class="k">setq</span> end (max end end-phrase))))))))
+     (t
+      (<span class="k">let</span> ((phrase (tuareg-discover-phrase)))
+        (<span class="k">unless</span> phrase
+          (<span class="w">user-error</span> <span class="s">"Expression after the point is not well braced"</span>))
+        (<span class="k">setq</span> start (car phrase))
+        (<span class="k">setq</span> end (cadr phrase)))))
+    (tuareg-interactive--send-region start end)
+    (<span class="k">if</span> tuareg-skip-after-eval-phrase
+        (<span class="k">progn</span>
+          (<span class="k">when</span> (region-active-p)
+            <span class="cd">;; </span><span class="c">We are moving point and the user probably doesn't
+</span>            <span class="cd">;; </span><span class="c">expect the region to be affected.
+</span>            (deactivate-mark))
+          (goto-char end)
+          (tuareg-skip-blank-and-comments))
+      (goto-char opoint))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

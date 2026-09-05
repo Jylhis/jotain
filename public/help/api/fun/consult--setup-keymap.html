@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--setup-keymap – Emacs Documentation Online</title>
+<meta name="description" content="consult--setup-keymap is a natively compiled function defined in
+consult.el.
+Setup minibuffer keymap.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--setup-keymap</code></h1><p><span class="m"><code>consult--setup-keymap</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--setup-keymap <a href="#:~:text=keymap.-,KEYMAP"><span class="arg">KEYMAP</span></a> <a href="#:~:text=keymap.-,ASYNC"><span class="arg">ASYNC</span></a> <a href="#:~:text=functions.-,NARROW"><span class="arg">NARROW</span></a> <a href="#:~:text=configuration.-,PREVIEW-KEY"><span class="arg">PREVIEW-KEY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Setup minibuffer keymap.
+<p><span class="arg">KEYMAP</span> is a command-specific keymap.
+<span class="arg">ASYNC</span> must be non-nil for async completion functions.
+<span class="arg">NARROW</span> is the narrowing configuration.
+<span class="arg">PREVIEW-KEY</span> are the preview keys.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--setup-keymap</span> (keymap async narrow preview-key)
+  <span class="doc">"Setup minibuffer keymap.
+
+KEYMAP is a command-specific keymap.
+ASYNC must be non-nil for async completion functions.
+NARROW is the narrowing configuration.
+PREVIEW-KEY are the preview keys."</span>
+  (<span class="k">let</span> ((old-map (current-local-map))
+        (map (make-sparse-keymap)))
+
+    <span class="cd">;; </span><span class="c">Add narrow keys
+</span>    (<span class="k">when</span> narrow
+      (consult--narrow-setup narrow map))
+
+    <span class="cd">;; </span><span class="c">Preview trigger keys
+</span>    (<span class="k">when</span> (<span class="k">and</span> (consp preview-key) (memq <span class="bi">:keys</span> preview-key))
+      (<span class="k">setq</span> preview-key (plist-get preview-key <span class="bi">:keys</span>)))
+    (<span class="k">setq</span> preview-key (mapcar #'car (consult--preview-key-normalize preview-key)))
+    (<span class="k">when</span> preview-key
+      (<span class="k">dolist</span> (key preview-key)
+        (<span class="k">unless</span> (<span class="k">or</span> (eq key 'any) (lookup-key old-map key))
+          (define-key map key #'ignore))))
+
+    <span class="cd">;; </span><span class="c">Put the keymap together
+</span>    (use-local-map
+     (make-composed-keymap
+      (delq nil (list keymap
+                      (<span class="k">and</span> async consult-async-map)
+                      (<span class="k">and</span> narrow consult-narrow-map)
+                      map))
+      old-map))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu--process-wait – Emacs Documentation Online</title>
+<meta name="description" content="majutsu--process-wait is a natively compiled function defined in
+majutsu-process.el.
+Wait for PROCESS to finish while continuing to service Emacs subprocesses.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu--process-wait</code></h1><p><span class="m"><code>majutsu--process-wait</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-process.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu--process-wait <a href="#:~:text=for-,PROCESS"><span class="arg">PROCESS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=When-,STDERR-PROCESS"><span class="arg">STDERR-PROCESS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Wait for <span class="arg">PROCESS</span> to finish while continuing to service Emacs subprocesses.
+<p>This is used for commands that are synchronous from Majutsu's point of
+view, but may need another Emacs subprocess to run concurrently.  In
+particular, GnuPG setups using an Emacs-based pinentry need Emacs to keep
+servicing the server/pinentry process while jj is waiting for GPG.
+<p><a href="../fun/accept-process-output.html"><code>accept-process-output</code></a> keeps servicing every Emacs subprocess while it
+waits, so pinentry stays responsive even though we block on <span class="arg">PROCESS</span>.  When
+<span class="arg">STDERR-PROCESS</span> is non-nil, also drain it; per the Emacs manual, output from
+a separate standard error process is not delivered by waiting on the main
+process alone.
+<p>If the user interrupts the wait with <span class="m"><code>C-g</code></span>, return 255 so callers can
+finalize the process section as a failed command.  In that case the
+surrounding <a href="../fun/unwind-protect.html"><code>unwind-protect</code></a> is responsible for cleaning up <span class="arg">PROCESS</span> and
+<span class="arg">STDERR-PROCESS</span>; any partially captured stderr is discarded.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-process.el</span>
+(<span class="k">defun</span> <span class="f">majutsu--process-wait</span> (process <span class="ty">&amp;optional</span> stderr-process)
+  <span class="doc">"Wait for PROCESS to finish while continuing to service Emacs subprocesses.
+
+This is used for commands that are synchronous from Majutsu's point of
+view, but may need another Emacs subprocess to run concurrently.  In
+particular, GnuPG setups using an Emacs-based pinentry need Emacs to keep
+servicing the server/pinentry process while jj is waiting for GPG.
+
+`</span><span class="m doc">accept-process-output</span><span class="doc">' keeps servicing every Emacs subprocess while it
+waits, so pinentry stays responsive even though we block on PROCESS.  When
+STDERR-PROCESS is non-nil, also drain it; per the Emacs manual, output from
+a separate standard error process is not delivered by waiting on the main
+process alone.
+
+If the user interrupts the wait with `</span><span class="m doc">C-g</span><span class="doc">', return 255 so callers can
+finalize the process section as a failed command.  In that case the
+surrounding `</span><span class="m doc">unwind-protect</span><span class="doc">' is responsible for cleaning up PROCESS and
+STDERR-PROCESS; any partially captured stderr is discarded."</span>
+  (<span class="k">condition-case</span> nil
+      (<span class="k">progn</span>
+        (<span class="k">while</span> (accept-process-output process))
+        (<span class="k">when</span> stderr-process
+          (<span class="k">while</span> (accept-process-output stderr-process)))
+        (process-exit-status process))
+    (quit 255)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

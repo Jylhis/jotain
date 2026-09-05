@@ -1,0 +1,83 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: mc/edit-lines – Emacs Documentation Online</title>
+<meta name="description" content="mc/edit-lines is an interactive and natively compiled function defined
+in mc-edit-lines.el.
+Add one cursor to each line of the active region.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>mc/edit-lines</code></h1><p><span class="m"><code>mc/edit-lines</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">mc-edit-lines.el</span>.
+<h2>Signature</h2>
+<pre><code>(mc/edit-lines <span class="ty">&amp;optional</span> <a href="#:~:text=argument-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Add one cursor to each line of the active region.
+<p>Starts from mark and moves in straight down or up towards the
+line point is on.
+<p>What is done with lines which are not long enough is governed by
+<a href="../var/mc_002fedit-lines-empty-lines.html"><code>mc/edit-lines-empty-lines</code></a>.  The prefix argument <span class="arg">ARG</span> can be used
+to override this.  If <span class="arg">ARG</span> is a symbol (when called from Lisp),
+that symbol is used instead of <a href="../var/mc_002fedit-lines-empty-lines.html"><code>mc/edit-lines-empty-lines</code></a>.
+Otherwise, if <span class="arg">ARG</span> negative, short lines will be ignored.  Any
+other non-nil value will cause short lines to be padded.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bwmgnvnjv89idk13xc843r24h4ygwjwz-emacs-packages-deps/share/emacs/site-lisp/elpa/multiple-cursors-20260419.931/mc-edit-lines.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">mc/edit-lines</span> (<span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Add one cursor to each line of the active region.
+Starts from mark and moves in straight down or up towards the
+line point is on.
+
+What is done with lines which are not long enough is governed by
+`</span><span class="m doc">mc/edit-lines-empty-lines</span><span class="doc">'.  The prefix argument ARG can be used
+to override this.  If ARG is a symbol (when called from Lisp),
+that symbol is used instead of `</span><span class="m doc">mc/edit-lines-empty-lines</span><span class="doc">'.
+Otherwise, if ARG negative, short lines will be ignored.  Any
+other non-nil value will cause short lines to be padded."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">unless</span> mark-active
+    (<span class="w">error</span> <span class="s">"Mark a set of lines first"</span>))
+  (mc/remove-fake-cursors)
+  (<span class="k">let*</span> ((col (current-column))
+         (point-line (mc/line-number-at-pos))
+         (mark-line (<span class="k">progn</span> (exchange-point-and-mark) (mc/line-number-at-pos)))
+         (direction (<span class="k">if</span> (&lt; point-line mark-line) <span class="bi">:up</span> <span class="bi">:down</span>))
+         (style (<span class="k">cond</span>
+                 <span class="cd">;; </span><span class="c">called from lisp
+</span>                 ((<span class="k">and</span> arg (symbolp arg))
+                  arg)
+                 <span class="cd">;; </span><span class="c">negative argument
+</span>                 ((&lt; (prefix-numeric-value arg) 0)
+                  'ignore)
+                 (arg 'pad)
+                 (t mc/edit-lines-empty-lines))))
+    (deactivate-mark)
+    (<span class="k">when</span> (<span class="k">and</span> (eq direction <span class="bi">:up</span>) (bolp))
+      (previous-logical-line 1 nil)
+      (move-to-column col))
+    <span class="cd">;; </span><span class="c">Add the cursors
+</span>    (<span class="k">while</span> (not (eq (mc/line-number-at-pos) point-line))
+      <span class="cd">;; </span><span class="c">Pad the line
+</span>      (<span class="k">when</span> (eq style 'pad)
+        (<span class="k">while</span> (&lt; (current-column) col)
+          (insert <span class="s">" "</span>)))
+      <span class="cd">;; </span><span class="c">Error
+</span>      (<span class="k">when</span> (<span class="k">and</span> (eq style 'error)
+                 (not (equal col (current-column))))
+        (<span class="w">error</span> <span class="s">"Short line encountered in `</span><span class="m s">mc/edit-lines</span><span class="s">'"</span>))
+      <span class="cd">;; </span><span class="c">create the cursor
+</span>      (<span class="k">unless</span> (<span class="k">and</span> (eq style 'ignore)
+                   (not (equal col (current-column))))
+        (mc/create-fake-cursor-at-point))
+      <span class="cd">;; </span><span class="c">proceed to next
+</span>      (<span class="k">if</span> (eq direction <span class="bi">:up</span>)
+          (previous-logical-line 1 nil)
+        (next-logical-line 1 nil))
+      (move-to-column col))
+    (multiple-cursors-mode)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

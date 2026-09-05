@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: treesit-fold-close-all – Emacs Documentation Online</title>
+<meta name="description" content="treesit-fold-close-all is an interactive and byte-compiled function
+defined in treesit-fold.el.
+Fold all foldable syntax nodes in the buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>treesit-fold-close-all</code></h1><p><span class="m"><code>treesit-fold-close-all</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function
+defined in <span class="bt">treesit-fold.el</span>.
+<h2>Signature</h2>
+<pre><code>(treesit-fold-close-all)
+</code></pre>
+<h2>Documentation</h2>
+<p>Fold all foldable syntax nodes in the buffer.
+<p>This function has :after advice: <a href="../fun/treesit-fold--after-command.html"><code>treesit-fold--after-command</code></a>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/8bsxam5z769p2v85807qya1p1fb50bqx-emacs-packages-deps/share/emacs/site-lisp/elpa/treesit-fold-0.2.1/treesit-fold.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">treesit-fold-close-all</span> ()
+  <span class="doc">"Fold all foldable syntax nodes in the buffer."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">treesit-fold--ensure-ts</span>
+    (<span class="k">let</span> (nodes)
+      (<span class="k">let*</span> ((treesit-fold-indicators-mode)
+             (treesit-fold-on-fold-hook)
+             (node (treesit-buffer-root-node))
+             (patterns (seq-mapcat (<span class="k">lambda</span> (fold-range) `((,(car fold-range)) @name))
+                                   (alist-get major-mode treesit-fold-range-alist)))
+             (query (treesit-query-compile (treesit-node-language node) patterns)))
+        (<span class="k">setq</span> nodes (treesit-query-capture node query)
+              nodes (cl-remove-if (<span class="k">lambda</span> (node)
+                                    <span class="cd">;; </span><span class="c">Removed if on same line
+</span>                                    (treesit-fold--node-range-on-same-line (cdr node)))
+                                  nodes))
+        (<span class="k">thread-last</span> nodes
+                     (mapcar #'cdr)
+                     (mapc #'treesit-fold-close)))
+      (<span class="k">when</span> nodes
+        (run-hooks 'treesit-fold-on-fold-hook)
+        t))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

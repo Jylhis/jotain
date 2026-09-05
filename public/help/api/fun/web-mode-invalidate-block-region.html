@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-invalidate-block-region – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-invalidate-block-region is a natively compiled function
+defined in web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-invalidate-block-region</code></h1><p><span class="m"><code>web-mode-invalidate-block-region</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-invalidate-block-region <span class="arg">POS-BEG</span> <span class="arg">POS-END</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+<span class="cd">;; </span><span class="c">NOTE: il est important d'identifier des caractères en fin de ligne
+</span><span class="cd">;; </span><span class="c">web-mode-block-tokenize travaille en effet sur les fins de lignes pour
+</span><span class="cd">;; </span><span class="c">les commentaires de type //
+</span>(<span class="k">defun</span> <span class="f">web-mode-invalidate-block-region</span> (pos-beg pos-end)
+  <span class="cd">;;  </span><span class="c">(message "pos-beg(%S) pos-end(%S)" pos-beg pos-end)
+</span>  (<span class="k">save-excursion</span>
+    (<span class="k">let</span> (beg end code-beg code-end)
+      <span class="cd">;;</span><span class="c">(message "invalidate-block-region: pos-beg(%S)=%S" pos-beg (get-text-property pos 'block-side))
+</span>      <span class="cd">;;</span><span class="c">(message "code-beg(%S) code-end(%S) pos-beg(%S) pos-end(%S)" code-beg code-end pos-beg pos-end)
+</span>      (<span class="k">cond</span>
+        ((not (<span class="k">and</span> (<span class="k">setq</span> code-beg (web-mode-block-code-beginning-position pos-beg))
+                   (<span class="k">setq</span> code-end (web-mode-block-code-end-position pos-beg))
+                   (&gt;= pos-beg code-beg)
+                   (&lt;= pos-end code-end)
+                   (&gt; code-end code-beg)))
+         (web-mode-invalidate-region pos-beg pos-end))
+        ((member web-mode-engine '(<span class="s">"asp"</span>))
+         (goto-char pos-beg)
+         (forward-line -1)
+         (<span class="k">setq</span> beg (line-beginning-position))
+         (<span class="k">when</span> (&gt; code-beg beg)
+           (<span class="k">setq</span> beg code-beg))
+         (goto-char pos-beg)
+         (forward-line)
+         (<span class="k">setq</span> end (line-end-position))
+         (<span class="k">when</span> (&lt; code-end end)
+           (<span class="k">setq</span> end code-end))
+         <span class="cd">;; </span><span class="c">?? pas de (web-mode-block-tokenize beg end) ?
+</span>         (web-mode-block-tokenize beg end)
+         (cons beg end)
+         ) <span class="cd">;</span><span class="c">asp
+</span>        (t
+         (goto-char pos-beg)
+         <span class="cd">;;</span><span class="c">(message "pos-beg=%S" pos-beg)
+</span>         (<span class="k">when</span> (string= web-mode-engine <span class="s">"php"</span>)
+           (<span class="k">cond</span>
+             ((<span class="k">and</span> (looking-back <span class="s">"</span><span class="w s">\</span><span class="s">*"</span> (point-min))
+                   (looking-at-p <span class="s">"/"</span>))
+              (search-backward <span class="s">"/*"</span> code-beg))
+             ) <span class="cd">;</span><span class="c">cond
+</span>           ) <span class="cd">;</span><span class="c">when
+</span>         (<span class="k">if</span> (web-mode-block-rsb <span class="s">"[;{}(][ ]*\n"</span> code-beg)
+             (<span class="k">setq</span> beg (match-end 0))
+             (<span class="k">setq</span> beg code-beg))
+         (goto-char pos-end)
+         (<span class="k">if</span> (web-mode-block-rsf <span class="s">"[;{})][ ]*\n"</span> code-end)
+             (<span class="k">setq</span> end (1- (match-end 0)))
+             (<span class="k">setq</span> end code-end))
+         (web-mode-block-tokenize beg end)
+         <span class="cd">;;</span><span class="c">(message "beg(%S) end(%S)" beg end)
+</span>         (cons beg end)
+         )
+        ) <span class="cd">;</span><span class="c">cond
+</span>      )))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

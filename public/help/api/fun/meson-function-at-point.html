@@ -1,0 +1,45 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: meson-function-at-point – Emacs Documentation Online</title>
+<meta name="description" content="meson-function-at-point is a natively compiled function defined in
+meson-mode.el.
+Return name of the function under point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>meson-function-at-point</code></h1><p><span class="m"><code>meson-function-at-point</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">meson-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(meson-function-at-point)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return name of the function under point.
+<p>The point can be anywhere within function name or argument list.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ajn730848zmcji1jjy9y0s8x1mck32q9-emacs-packages-deps/share/emacs/site-lisp/elpa/meson-mode-20240601.1647/meson-mode.el</span>
+(<span class="k">defun</span> <span class="f">meson-function-at-point</span> ()
+  <span class="doc">"Return name of the function under point.
+The point can be anywhere within function name or argument list."</span>
+  (<span class="k">save-excursion</span>
+    (skip-syntax-backward <span class="s">"w_"</span>)
+    (<span class="k">let</span> ((ppss (syntax-ppss))
+	  (functions (mapcar 'car meson-builtin-functions)))
+      (<span class="k">cond</span>
+       ((<span class="k">or</span> (nth 3 ppss)		<span class="cd">; </span><span class="c">inside string
+</span>	    (nth 4 ppss))		<span class="cd">; </span><span class="c">inside comment
+</span>	(goto-char (nth 8 ppss))	<span class="cd">; </span><span class="c">go to the beginning
+</span>	(meson-function-at-point))
+       ((cl-some (<span class="k">lambda</span> (fname) (<span class="k">when</span> (looking-at-p fname) fname)) functions))
+       ((<span class="k">and</span> (&gt; (nth 0 ppss) 0)			 <span class="cd">; </span><span class="c">inside parentheses
+</span>	     (eq (char-after (nth 1 ppss)) ?\()) <span class="cd">; </span><span class="c">rounded parentheses
+</span>	(goto-char (nth 1 ppss))
+	(cl-some (<span class="k">lambda</span> (fname)
+		   (<span class="k">when</span> (looking-back (concat fname (<span class="k">rx</span> (zero-or-more (any <span class="s">" "</span> <span class="s">"\t"</span>))))
+				       (line-beginning-position))
+		     fname))
+		 functions))
+       ((&gt; (nth 0 ppss) 1)		<span class="cd">; </span><span class="c">inside nested parentheses - other than rounded
+</span>	(goto-char (nth 1 ppss))
+	(meson-function-at-point))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

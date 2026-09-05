@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: wgrep-commit-edits – Emacs Documentation Online</title>
+<meta name="description" content="wgrep-commit-edits is a natively compiled function defined in
+wgrep.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>wgrep-commit-edits</code></h1><p><span class="m"><code>wgrep-commit-edits</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">wgrep.el</span>.
+<h2>Signature</h2>
+<pre><code>(wgrep-commit-edits <span class="arg">EDITOR</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/jh0vggyzz4qppa1npcrzxy9a9bgj60hg-emacs-packages-deps/share/emacs/site-lisp/elpa/wgrep-20230203.1214/wgrep.el</span>
+(<span class="k">defun</span> <span class="f">wgrep-commit-edits</span> (editor)
+  (<span class="k">let</span> ((file (car editor))
+        (edits (cdr editor)))
+    (wgrep-compute-linum-to-marker edits)
+    (<span class="k">let</span> ((done 0)
+          (first-result nil)
+          (inhibit-read-only wgrep-change-readonly-file))
+      (<span class="k">dolist</span> (edit edits)
+        (<span class="k">let</span> ((marker (nth 0 edit))
+              (old (nth 1 edit))
+              (new (nth 2 edit))
+              (result-ov (nth 3 edit))
+              (edit-ov (nth 4 edit)))
+          (<span class="k">condition-case</span> err
+              (<span class="k">progn</span>
+                (<span class="k">unless</span> first-result
+                  (<span class="k">setq</span> first-result result-ov))
+                (wgrep-apply-change marker old new)
+                (wgrep-put-done-result result-ov)
+                (delete-overlay edit-ov)
+                (<span class="k">setq</span> done (1+ done)))
+            (<span class="w">error</span>
+             (wgrep-put-reject-result result-ov (cdr err))))))
+      (<span class="k">cond</span>
+       ((<span class="k">or</span> (not wgrep-auto-apply-disk)
+            (= done 0)))
+       (buffer-file-name
+        (basic-save-buffer))
+       (t
+        (<span class="k">let</span> ((coding-system-for-write buffer-file-coding-system))
+          (write-region (point-min) (point-max) file nil 'no-msg))))
+      (list done first-result))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

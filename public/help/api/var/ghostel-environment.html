@@ -1,0 +1,90 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: ghostel-environment – Emacs Documentation Online</title>
+<meta name="description" content="ghostel-environment is a customizable variable defined in ghostel.el.
+Extra environment variables for ghostel shell processes.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>ghostel-environment</code></h1><p><span class="m"><code>ghostel-environment</code></span> is a <a href="/info/elisp/variable-definitions.html">customizable</a> variable defined in <span class="bt">ghostel.el</span>.
+<h2>Value</h2>
+<pre><code>nil
+</code></pre>
+<h2>Documentation</h2>
+<p>Extra environment variables for ghostel shell processes.
+<p>A list of "KEY=VALUE" strings, prepended to <a href="../var/process-environment.html"><code>process-environment</code></a>
+before spawning the shell.  A bare "KEY" (no <a href="../fun/%3D.html"><code>=</code></a>) unsets the variable.
+<p>For local spawns, entries here take precedence over ghostel's own
+variables (TERM, INSIDE_EMACS, PWD, EMACS_GHOSTEL_PATH,
+shell-integration vars), so a user who sets TERM here wins — which
+will also disable ghostel's shell integration if the chosen TERM
+breaks its assumptions.
+<p>Also honored via <span class="m"><code>dir-locals.el</code></span> for per-project overrides.
+<p>TRAMP caveats:
+<br>- Entries with <a href="../fun/%3D.html"><code>=</code></a> are propagated to the remote shell.
+<br>- TERM/TERMINFO/TERM_PROGRAM/TERM_PROGRAM_VERSION/COLORTERM here
+<br>&nbsp;&nbsp;are ignored for remote spawns and overridden unconditionally by
+<br>&nbsp;&nbsp;the per-spawn <span class="m"><code>/bin/sh -c</code></span> wrapper after <span class="m"><code>infocmp</code></span>-probing the
+<br>&nbsp;&nbsp;remote for <span class="m"><code>xterm-ghostty</code></span> terminfo.  TRAMP's
+<br>&nbsp;&nbsp;<a href="../fun/tramp-local-environment-variable-p.html"><code>tramp-local-environment-variable-p</code></a> filter strips env entries
+<br>&nbsp;&nbsp;that match the local default top-level <a href="../var/process-environment.html"><code>process-environment</code></a>,
+<br>&nbsp;&nbsp;so pushing TERM via env was unreliable; the wrapper exports
+<br>&nbsp;&nbsp;these from inside the remote shell instead, where the filter
+<br>&nbsp;&nbsp;doesn't reach.  Customize <a href="../var/ghostel-term.html"><code>ghostel-term</code></a> (locally, or per-host
+<br>&nbsp;&nbsp;via dir-locals or <a href="../fun/connection-local-set-profile-variables.html"><code>connection-local-set-profile-variables</code></a>) to
+<br>&nbsp;&nbsp;change what gets advertised; on a customized branch the wrapper
+<br>&nbsp;&nbsp;exports <span class="m"><code>TERM=$ghostel-term</code></span> only — no <span class="m"><code>TERM_PROGRAM*</code></span> ghostty
+<br>&nbsp;&nbsp;advertisement.  Every other entry in this list still propagates.
+<br>- INSIDE_EMACS is rewritten by TRAMP via <a href="../fun/tramp-inside-emacs.html"><code>tramp-inside-emacs</code></a>,
+<br>&nbsp;&nbsp;which appends <span class="bi">,tramp:VER</span> to whatever value is in scope.  For
+<br>&nbsp;&nbsp;ghostel that means the remote shell sees <span class="bi">ghostel,tramp:VER</span>
+<br>&nbsp;&nbsp;rather than the bare <a href="../fun/ghostel.html"><code>ghostel</code></a> set locally — the leading
+<br>&nbsp;&nbsp;<a href="../fun/ghostel.html"><code>ghostel</code></a> segment is preserved.
+<br>- Bare "KEY" unset works for TRAMP-sh methods (<span class="m"><code>ssh</code></span>, <span class="m"><code>sudo</code></span>, ...)
+<br>&nbsp;&nbsp;which emit <span class="m"><code>unset KEY</code></span> in the remote wrapper, but is dropped by
+<br>&nbsp;&nbsp;the generic handler used by <span class="m"><code>adb</code></span> and <span class="m"><code>sshfs</code></span>.
+<p>Example: '("LANG=en_US.UTF-8" "CC=clang")
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defcustom</span> <span class="v">ghostel-environment</span> nil
+  <span class="doc">"Extra environment variables for ghostel shell processes.
+
+A list of \"KEY=VALUE\" strings, prepended to `</span><span class="m doc">process-environment</span><span class="doc">'
+before spawning the shell.  A bare \"KEY\" (no `</span><span class="m doc">=</span><span class="doc">') unsets the variable.
+
+For local spawns, entries here take precedence over ghostel's own
+variables (TERM, INSIDE_EMACS, PWD, EMACS_GHOSTEL_PATH,
+shell-integration vars), so a user who sets TERM here wins — which
+will also disable ghostel's shell integration if the chosen TERM
+breaks its assumptions.
+
+Also honored via `</span><span class="m doc">dir-locals.el</span><span class="doc">' for per-project overrides.
+
+TRAMP caveats:
+- Entries with `</span><span class="m doc">=</span><span class="doc">' are propagated to the remote shell.
+- TERM/TERMINFO/TERM_PROGRAM/TERM_PROGRAM_VERSION/COLORTERM here
+  are ignored for remote spawns and overridden unconditionally by
+  the per-spawn `/bin/sh -c' wrapper after `</span><span class="m doc">infocmp</span><span class="doc">'-probing the
+  remote for `</span><span class="m doc">xterm-ghostty</span><span class="doc">' terminfo.  TRAMP's
+  `</span><span class="m doc">tramp-local-environment-variable-p</span><span class="doc">' filter strips env entries
+  that match the local default top-level `</span><span class="m doc">process-environment</span><span class="doc">',
+  so pushing TERM via env was unreliable; the wrapper exports
+  these from inside the remote shell instead, where the filter
+  doesn't reach.  Customize `</span><span class="m doc">ghostel-term</span><span class="doc">' (locally, or per-host
+  via dir-locals or `</span><span class="m doc">connection-local-set-profile-variables</span><span class="doc">') to
+  change what gets advertised; on a customized branch the wrapper
+  exports `</span><span class="m doc">TERM=$ghostel-term</span><span class="doc">' only — no `</span><span class="m doc">TERM_PROGRAM*</span><span class="doc">' ghostty
+  advertisement.  Every other entry in this list still propagates.
+- INSIDE_EMACS is rewritten by TRAMP via `</span><span class="m doc">tramp-inside-emacs</span><span class="doc">',
+  which appends `,tramp:VER' to whatever value is in scope.  For
+  ghostel that means the remote shell sees `ghostel,tramp:VER'
+  rather than the bare `</span><span class="m doc">ghostel</span><span class="doc">' set locally — the leading
+  `</span><span class="m doc">ghostel</span><span class="doc">' segment is preserved.
+- Bare \"KEY\" unset works for TRAMP-sh methods (`</span><span class="m doc">ssh</span><span class="doc">', `</span><span class="m doc">sudo</span><span class="doc">', ...)
+  which emit `unset KEY' in the remote wrapper, but is dropped by
+  the generic handler used by `</span><span class="m doc">adb</span><span class="doc">' and `</span><span class="m doc">sshfs</span><span class="doc">'.
+
+Example: </span><span class="bi doc">\\=</span><span class="doc">'(\"LANG=en_US.UTF-8\" \"CC=clang\")"</span>
+  <span class="bi">:type</span> '(repeat string))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

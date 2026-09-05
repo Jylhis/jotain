@@ -1,0 +1,40 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-sequencer-process-sentinel – Emacs Documentation Online</title>
+<meta name="description" content="magit-sequencer-process-sentinel is a natively compiled function
+defined in magit-process.el.
+Special sentinel used by magit-run-git-sequencer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-sequencer-process-sentinel</code></h1><p><span class="m"><code>magit-sequencer-process-sentinel</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-process.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-sequencer-process-sentinel <a href="#:~:text="><span class="arg">PROCESS</span></a> <a href="#:~:text="><span class="arg">EVENT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Special sentinel used by <a href="../fun/magit-run-git-sequencer.html"><code>magit-run-git-sequencer</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-process.el</span>
+(<span class="k">defun</span> <span class="f">magit-sequencer-process-sentinel</span> (process event)
+  <span class="doc">"Special sentinel used by `</span><span class="m doc">magit-run-git-sequencer</span><span class="doc">'."</span>
+  (<span class="k">when</span> (memq (process-status process) '(exit signal))
+    (magit-process-sentinel process event)
+    (<span class="k">when-let*</span> ((process-buf (process-buffer process))
+                (_(buffer-live-p process-buf))
+                (status-buf (<span class="k">with-current-buffer</span> process-buf
+                              (magit-get-mode-buffer 'magit-status-mode))))
+      (<span class="k">with-current-buffer</span> status-buf
+        (<span class="k">when-let</span>
+            ((section
+              (magit-get-section
+               `((commit . ,(magit-rev-parse <span class="s">"HEAD"</span>))
+                 (,(<span class="k">pcase-let</span> ((`(,cmd . ,args) (process-command process)))
+                     (<span class="k">pcase</span> (cadr (magit-process-git-arguments--split cmd args))
+                       ((<span class="k">or</span> <span class="s">"rebase"</span> <span class="s">"am"</span>) 'rebase-sequence)
+                       ((<span class="k">or</span> <span class="s">"cherry-pick"</span> <span class="s">"revert"</span>) 'sequence))))
+                 (status)))))
+          (goto-char (<span class="k">oref</span> section start))
+          (magit-section-update-highlight))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

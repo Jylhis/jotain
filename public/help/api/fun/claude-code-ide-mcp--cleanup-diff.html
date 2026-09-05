@@ -1,0 +1,67 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp--cleanup-diff – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp--cleanup-diff is a natively compiled function
+defined in claude-code-ide-mcp-handlers.el.
+Clean up diff session for TAB-NAME.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp--cleanup-diff</code></h1><p><span class="m"><code>claude-code-ide-mcp--cleanup-diff</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide-mcp-handlers.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp--cleanup-diff <a href="#:~:text=for-,TAB-NAME"><span class="arg">TAB-NAME</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=NAME.-,SESSION"><span class="arg">SESSION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Clean up diff session for <span class="arg">TAB-NAME</span>.
+<p><span class="arg">SESSION</span> is the MCP session to use - if not provided, tries to determine it.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp-handlers.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp--cleanup-diff</span> (tab-name <span class="ty">&amp;optional</span> session)
+  <span class="doc">"Clean up diff session for TAB-NAME.
+SESSION is the MCP session to use - if not provided, tries to determine it."</span>
+  (<span class="k">let</span> ((active-diffs (claude-code-ide-mcp--get-active-diffs session)))
+    (<span class="k">when-let</span> ((diff-info (gethash tab-name active-diffs)))
+      <span class="cd">;; </span><span class="c">If session wasn't provided, try to get it from diff-info
+</span>      (<span class="k">unless</span> session
+        (<span class="k">setq</span> session (alist-get 'session diff-info)))
+      (<span class="k">let</span> ((buffer-A (alist-get 'buffer-A diff-info))
+            (buffer-B (alist-get 'buffer-B diff-info))
+            (control-buf (alist-get 'control-buffer diff-info))
+            (file-exists (alist-get 'file-exists diff-info))
+            <span class="cd">;; </span><span class="c">First try to get buffers from diff-info (stored during close_tab)
+</span>            (error-buffer (alist-get 'error-buffer diff-info))
+            (diff-buffer (alist-get 'diff-buffer diff-info))
+            (fine-diff-buffer (alist-get 'fine-diff-buffer diff-info))
+            (custom-diff-buffer (alist-get 'custom-diff-buffer diff-info)))
+        <span class="cd">;; </span><span class="c">Get all ediff buffers from control buffer before killing it
+</span>        (<span class="k">when</span> (<span class="k">and</span> control-buf (buffer-live-p control-buf))
+          (<span class="k">with-current-buffer</span> control-buf
+            <span class="cd">;; </span><span class="c">Capture all ediff-related buffers
+</span>            (<span class="k">claude-code-ide-debug</span> <span class="s">"Capturing ediff buffers from control buffer"</span>)
+            (<span class="k">when</span> (<span class="k">and</span> (boundp 'ediff-error-buffer) ediff-error-buffer (not error-buffer))
+              (<span class="k">setq</span> error-buffer ediff-error-buffer))
+            (<span class="k">when</span> (<span class="k">and</span> (boundp 'ediff-diff-buffer) ediff-diff-buffer (not diff-buffer))
+              (<span class="k">setq</span> diff-buffer ediff-diff-buffer))
+            (<span class="k">when</span> (<span class="k">and</span> (boundp 'ediff-fine-diff-buffer) ediff-fine-diff-buffer (not fine-diff-buffer))
+              (<span class="k">setq</span> fine-diff-buffer ediff-fine-diff-buffer))
+            (<span class="k">when</span> (<span class="k">and</span> (boundp 'ediff-custom-diff-buffer) ediff-custom-diff-buffer (not custom-diff-buffer))
+              (<span class="k">setq</span> custom-diff-buffer ediff-custom-diff-buffer))
+            (<span class="k">setq</span> ediff-quit-hook nil))  <span class="cd">; </span><span class="c">Prevent quit hooks from running
+</span>          (kill-buffer control-buf))
+        <span class="cd">;; </span><span class="c">Kill all the auxiliary buffers
+</span>        (<span class="k">dolist</span> (buf (list error-buffer diff-buffer fine-diff-buffer custom-diff-buffer))
+          (<span class="k">when</span> (<span class="k">and</span> buf (buffer-live-p buf))
+            (<span class="k">claude-code-ide-debug</span> <span class="s">"Killing ediff auxiliary buffer: %s"</span> (buffer-name buf))
+            (kill-buffer buf)))
+        <span class="cd">;; </span><span class="c">Kill the temporary buffer (buffer B)
+</span>        (<span class="k">when</span> (<span class="k">and</span> buffer-B (buffer-live-p buffer-B))
+          (kill-buffer buffer-B))
+        <span class="cd">;; </span><span class="c">Kill buffer A only if it was created for a new file
+</span>        (<span class="k">when</span> (<span class="k">and</span> buffer-A (buffer-live-p buffer-A) (not file-exists))
+          <span class="cd">;; </span><span class="c">This is a *New file: buffer that we created
+</span>          (kill-buffer buffer-A))
+        <span class="cd">;; </span><span class="c">Remove from active diffs
+</span>        (remhash tab-name active-diffs)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

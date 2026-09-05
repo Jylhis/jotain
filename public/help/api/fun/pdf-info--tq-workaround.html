@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-info--tq-workaround – Emacs Documentation Online</title>
+<meta name="description" content="pdf-info--tq-workaround is a natively compiled function defined in
+pdf-info.el.
+Fix a bug in trunk where the wrong callback gets called.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-info--tq-workaround</code></h1><p><span class="m"><code>pdf-info--tq-workaround</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">pdf-info.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-info--tq-workaround <a href="#:~:text=called.-,ORIG-FUN"><span class="arg">ORIG-FUN</span></a> <a href="#:~:text=called.-,TQ"><span class="arg">TQ</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=and-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Fix a bug in trunk where the wrong callback gets called.
+<p><span class="arg">ORIG-FUN</span> is the callback that should be called. <span class="arg">TQ</span> and <span class="arg">ARGS</span> are
+the transmission-queue and arguments to the callback.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-info.el</span>
+(<span class="k">defun</span> <span class="f">pdf-info--tq-workaround</span> (orig-fun tq <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Fix a bug in trunk where the wrong callback gets called.
+
+ORIG-FUN is the callback that should be called. TQ and ARGS are
+the transmission-queue and arguments to the callback."</span>
+  <span class="cd">;; </span><span class="c">FIXME: Make me iterative.
+</span>  (<span class="k">if</span> (not (equal (car (process-command (tq-process tq)))
+                  pdf-info-epdfinfo-program))
+      (apply orig-fun tq args)
+    (<span class="k">let</span> ((buffer (tq-buffer tq))
+          done)
+      (<span class="k">when</span> (buffer-live-p buffer)
+        (set-buffer buffer)
+        (<span class="k">while</span> (<span class="k">and</span> (not done)
+                    (&gt; (buffer-size) 0))
+          (<span class="k">setq</span> done t)
+          (<span class="k">if</span> (tq-queue-empty tq)
+              (<span class="k">let</span> ((buf (generate-new-buffer <span class="s">"*spurious*"</span>)))
+                (copy-to-buffer buf (point-min) (point-max))
+                (delete-region (point-min) (point))
+                (pop-to-buffer buf nil)
+                (<span class="w">error</span> <span class="s">"Spurious communication from process %s, see buffer %s"</span>
+                       (process-name (tq-process tq))
+                       (buffer-name buf)))
+            (goto-char (point-min))
+            (<span class="k">when</span> (re-search-forward (tq-queue-head-regexp tq) nil t)
+              (<span class="k">setq</span> done nil)
+              (<span class="k">let</span> ((answer (buffer-substring (point-min) (point)))
+                    (fn (tq-queue-head-fn tq))
+                    (closure (tq-queue-head-closure tq)))
+                (delete-region (point-min) (point))
+                (tq-queue-pop tq)
+                (<span class="k">condition-case-unless-debug</span> err
+                    (funcall fn closure answer)
+                  (<span class="w">error</span>
+                   (message <span class="s">"Error while processing tq callback: %s"</span>
+                            (error-message-string err))))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

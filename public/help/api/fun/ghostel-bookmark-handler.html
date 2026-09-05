@@ -1,0 +1,119 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel-bookmark-handler – Emacs Documentation Online</title>
+<meta name="description" content="ghostel-bookmark-handler is an autoloaded and natively compiled
+function defined in ghostel-bookmark.el.
+Restore the ghostel bookmark BMK.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel-bookmark-handler</code></h1><p><span class="m"><code>ghostel-bookmark-handler</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">ghostel-bookmark.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel-bookmark-handler <a href="#:~:text=bookmark-,BMK"><span class="arg">BMK</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Restore the ghostel bookmark <span class="arg">BMK</span>.
+<p>Reuse a live ghostel buffer: slot identities match whole, command
+records match a live buffer running the recorded command, other
+records match by name (title tracking may have renamed the buffer).
+Otherwise create one in the bookmarked directory, respawning the
+recorded <span class="m"><code>command</code></span> or starting a shell.  Respawned buffers are plain
+<a href="../fun/ghostel-exec.html"><code>ghostel-exec</code></a> buffers; kind-specific setup (e.g. eshell's
+visual-command exit behavior) is not restored.
+When a reused shell's directory differs and <a href="../var/ghostel-bookmark-check-dir.html"><code>ghostel-bookmark-check-dir</code></a>
+is non-nil, a <a href="../fun/cd.html"><code>cd</code></a> is typed into it; command buffers are left alone.
+<h2>Aliases</h2>
+<p><a href="../fun/ghostel--bookmark-handler.html"><code>ghostel--bookmark-handler</code></a> (obsolete since 0.51.0)
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-bookmark.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">ghostel-bookmark-handler</span> (bmk)
+  <span class="doc">"Restore the ghostel bookmark BMK.
+Reuse a live ghostel buffer: slot identities match whole, command
+records match a live buffer running the recorded command, other
+records match by name (title tracking may have renamed the buffer).
+Otherwise create one in the bookmarked directory, respawning the
+recorded `</span><span class="m doc">command</span><span class="doc">' or starting a shell.  Respawned buffers are plain
+`</span><span class="m doc">ghostel-exec</span><span class="doc">' buffers; kind-specific setup (e.g. eshell's
+visual-command exit behavior) is not restored.
+When a reused shell's directory differs and `</span><span class="m doc">ghostel-bookmark-check-dir</span><span class="doc">'
+is non-nil, a `</span><span class="m doc">cd</span><span class="doc">' is typed into it; command buffers are left alone."</span>
+  (ghostel--load-module t)
+  (<span class="k">let*</span> ((dir (bookmark-prop-get bmk 'location))
+         (buf-name (bookmark-prop-get bmk 'buf-name))
+         <span class="cd">;; </span><span class="c">Bookmark files are external data; treat a non-alist identity
+</span>         <span class="cd">;; </span><span class="c">as absent.
+</span>         (identity (<span class="k">let</span> ((id (bookmark-prop-get bmk 'identity)))
+                     (<span class="k">and</span> (consp id) id)))
+         (command (alist-get 'command identity))
+         (live-p (<span class="k">lambda</span> (b)
+                   (<span class="k">let</span> ((p (<span class="k">and</span> b (buffer-local-value 'ghostel--process b))))
+                     (<span class="k">and</span> p (process-live-p p) b))))
+         <span class="cd">;; </span><span class="c">Retained dead-shell buffers may share the identity; reuse only
+</span>         <span class="cd">;; </span><span class="c">a live one.  Slot identities (with an `</span><span class="m c">instance</span><span class="c">') are unique;
+</span>         <span class="cd">;; </span><span class="c">command records reattach to a live buffer running the same
+</span>         <span class="cd">;; </span><span class="c">command (its name may have been uniquified); the rest reuse
+</span>         <span class="cd">;; </span><span class="c">by name.
+</span>         (buf (<span class="k">cond</span>
+               ((alist-get 'instance identity)
+                (ghostel--find-buffer-by-identity identity live-p))
+               (command
+                (<span class="k">let</span> ((match-p
+                       (<span class="k">lambda</span> (b)
+                         (<span class="k">and</span> (<span class="k">with-current-buffer</span> b
+                                (<span class="k">and</span> (derived-mode-p 'ghostel-mode)
+                                     (ghostel-identity-match-p
+                                      `((command . ,command))
+                                      ghostel-identity)))
+                              (funcall live-p b)))))
+                  <span class="cd">;; </span><span class="c">Prefer the recorded name so several buffers running
+</span>                  <span class="cd">;; </span><span class="c">the same command each reattach to their own bookmark.
+</span>                  (<span class="k">or</span> (<span class="k">when-let*</span> ((b (get-buffer buf-name)))
+                        (funcall match-p b))
+                      (seq-find match-p (buffer-list)))))
+               (t
+                (<span class="k">let</span> ((b (get-buffer buf-name)))
+                  (<span class="k">and</span> b
+                       (eq (buffer-local-value 'major-mode b) 'ghostel-mode)
+                       (funcall live-p b)))))))
+    <span class="cd">;; </span><span class="c">Create branch: the program starts directly in DIR (no `</span><span class="m c">cd</span><span class="c">').  A
+</span>    <span class="cd">;; </span><span class="c">failed spawn kills the partially created buffer and re-signals.
+</span>    (<span class="k">unless</span> buf
+      (<span class="k">let</span> ((default-directory (<span class="k">if</span> ghostel-bookmark-check-dir
+                                   dir
+                                 default-directory)))
+        (<span class="k">condition-case</span> err
+            (<span class="k">if</span> command
+                (<span class="k">progn</span>
+                  (<span class="k">setq</span> buf (generate-new-buffer buf-name))
+                  (ghostel-exec buf (car command) (cdr command) identity))
+              (<span class="k">setq</span> buf (ghostel--create buf-name))
+              (<span class="k">with-current-buffer</span> buf
+                <span class="cd">;; </span><span class="c">A nil identity stays nil: a fabricated slot would let
+</span>                <span class="cd">;; </span><span class="c">plain `</span><span class="m c">ghostel</span><span class="c">' claim this buffer.
+</span>                (<span class="k">setq</span> ghostel--managed-buffer-name (buffer-name)
+                      ghostel--initial-name (buffer-name)
+                      ghostel-identity identity)
+                (ghostel--start-process)
+                (ghostel--apply-initial-input-mode)))
+          ((<span class="w">error</span> quit)
+           (<span class="k">when</span> (buffer-live-p buf) (kill-buffer buf))
+           (<span class="w">signal</span> (car err) (cdr err))))))
+    <span class="cd">;; </span><span class="c">Reuse branch: `</span><span class="m c">cd</span><span class="c">' if the live shell has wandered elsewhere.  A
+</span>    <span class="cd">;; </span><span class="c">typed `</span><span class="m c">cd</span><span class="c">' only makes sense in a shell, not in a command buffer.
+</span>    (<span class="k">with-current-buffer</span> buf
+      (<span class="k">when</span> (<span class="k">and</span> ghostel-bookmark-check-dir
+                 ghostel--term
+                 (not (alist-get 'command ghostel-identity))
+                 (not (string-equal default-directory dir)))
+        (<span class="k">when</span> (memq ghostel--input-mode '(copy emacs))
+          (ghostel-readonly-exit))
+        <span class="cd">;; </span><span class="c">Ghostel records remote dirs as TRAMP paths, so strip the TRAMP prefix
+</span>        <span class="cd">;; </span><span class="c">with `</span><span class="m c">file-local-name</span><span class="c">', and quote so paths with spaces survive.
+</span>        (ghostel-send-string
+         (concat <span class="s">"cd "</span> (shell-quote-argument (file-local-name dir))))
+        (ghostel-send-key <span class="s">"return"</span>)))
+    (set-buffer buf)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

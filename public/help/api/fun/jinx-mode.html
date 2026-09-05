@@ -1,0 +1,74 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: jinx-mode – Emacs Documentation Online</title>
+<meta name="description" content="jinx-mode is an interactive and natively compiled function defined in
+jinx.el.
+Enchanted Spell Checker.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>jinx-mode</code></h1><p><span class="m"><code>jinx-mode</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">jinx.el</span>.
+<h2>Signature</h2>
+<pre><code>(jinx-mode <span class="ty">&amp;optional</span> <a href="#:~:text=if-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Enchanted Spell Checker.
+<p>This is a minor mode.  If called interactively, toggle the <span class="m"><code>Jinx mode</code></span>
+mode.  If the prefix argument is positive, enable the mode, and if it is
+zero or negative, disable the mode.
+<p>If called from Lisp, toggle the mode if <span class="arg">ARG</span> is <span class="m"><code>toggle</code></span>.  Enable the
+mode if <span class="arg">ARG</span> is nil, omitted, or is a positive number.  Disable the mode
+if <span class="arg">ARG</span> is a negative number.
+<p>To check whether the minor mode is enabled in the current buffer,
+evaluate the variable <a class="v" href="../var/jinx-mode.html"><code>jinx-mode</code>(var)</a>/<a class="f" href="../fun/jinx-mode.html"><code>jinx-mode</code>(fun)</a>.
+<p>The mode's hook is called both when the mode is enabled and when it is
+disabled.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a84p94snryc55wrv02kbf63qv5yqsxl8-emacs-packages-deps/share/emacs/site-lisp/elpa/jinx-20260813.954/jinx.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">define-minor-mode</span> <span class="f">jinx-mode</span>
+  <span class="doc">"Enchanted Spell Checker."</span>
+  <span class="bi">:lighter</span> (<span class="s">" "</span> (<span class="bi">:eval</span> (concat <span class="s">"Jinx["</span> jinx-languages <span class="s">"]"</span>)))
+  <span class="bi">:group</span> 'jinx
+  <span class="bi">:keymap</span> jinx-mode-map
+  (<span class="k">cond</span>
+   ((buffer-base-buffer) <span class="cd">;; </span><span class="c">Do not enable in indirect buffers
+</span>    (<span class="k">when</span> jinx-mode
+      (jinx-mode -1)))
+   (jinx-mode
+    (jinx--load-module)
+    (<span class="k">cl-letf*</span> ((enable-local-variables <span class="bi">:safe</span>)
+               (enable-local-eval nil)
+               <span class="cd">;; </span><span class="c">Fix reentrancy problem (gh:minad/jinx#158)
+</span>               ((symbol-function #'jinx-mode) #'ignore))
+      (hack-local-variables 'ignore-mode))
+    (jinx--get-org-language)
+    (<span class="k">setq</span> jinx--exclude-regexp
+          (<span class="k">when-let*</span> ((regexps (jinx--mode-list jinx-exclude-regexps)))
+            (mapconcat (<span class="k">lambda</span> (r) (format <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">%s</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> r))
+                       regexps <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">"</span>))
+          jinx--include-faces (jinx--mode-list jinx-include-faces)
+          jinx--exclude-faces (jinx--mode-list jinx-exclude-faces)
+          jinx--exclude-properties (jinx--mode-list jinx-exclude-properties)
+          jinx--camel (<span class="k">or</span> (eq jinx-camel-modes t)
+                          (seq-some #'derived-mode-p jinx-camel-modes))
+          jinx--session-words (nconc (split-string jinx-dir-local-words)
+                                     (split-string jinx-local-words)))
+    (jinx--load-dicts)
+    (<span class="k">dolist</span> (hook jinx--reschedule-hooks)
+      (add-hook hook #'jinx--reschedule nil t))
+    (jit-lock-register #'jinx--mark-pending))
+   (t
+    (mapc #'kill-local-variable '(jinx--exclude-regexp jinx--include-faces
+                                  jinx--exclude-faces jinx--camel
+                                  jinx--dicts jinx--syntax-table
+                                  jinx--session-words))
+    (<span class="k">dolist</span> (hook jinx--reschedule-hooks)
+      (remove-hook hook #'jinx--reschedule t))
+    (jit-lock-unregister #'jinx--mark-pending)
+    (jinx--cleanup))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: expreg--list-at-point – Emacs Documentation Online</title>
+<meta name="description" content="expreg--list-at-point is a natively compiled function defined in
+expreg.el.
+Return a list of one region marking the list at point, or nil.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>expreg--list-at-point</code></h1><p><span class="m"><code>expreg--list-at-point</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">expreg.el</span>.
+<h2>Signature</h2>
+<pre><code>(expreg--list-at-point)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a list of one region marking the list at point, or nil.
+<p>Point should be at the beginning or end of a list. Does not move
+point.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ryq27wm6zz42wjg7mgw3mayap8817nnz-emacs-packages-deps/share/emacs/site-lisp/elpa/expreg-1.4.1/expreg.el</span>
+(<span class="k">defun</span> <span class="f">expreg--list-at-point</span> ()
+  <span class="doc">"Return a list of one region marking the list at point, or nil.
+Point should be at the beginning or end of a list. Does not move
+point."</span>
+  (<span class="k">unless</span> (expreg--inside-string-p)
+    (<span class="k">condition-case</span> nil
+        (<span class="k">save-excursion</span>
+          <span class="cd">;; </span><span class="c">Even if point is not at the beginning of a list, but
+</span>          <span class="cd">;; </span><span class="c">before a list (with only spaces between), we want to
+</span>          <span class="cd">;; </span><span class="c">return a region covering that list after point, for
+</span>          <span class="cd">;; </span><span class="c">convenience. But because this region will not cover
+</span>          <span class="cd">;; </span><span class="c">point, it will not pass the filtering, so this function
+</span>          <span class="cd">;; </span><span class="c">needs to be added to ‘</span><span class="m c">expreg--validation-white-list</span><span class="c">’.
+</span>          (<span class="k">when</span> (<span class="k">and</span> (looking-at (<span class="k">rx</span> (syntax whitespace)))
+                     (not (eq 41 (char-syntax (<span class="k">or</span> (char-before) ?x)))))
+            (skip-syntax-forward <span class="s">"-"</span>))
+
+          <span class="cd">;; </span><span class="c">If at the end of a list and not the beginning of another
+</span>          <span class="cd">;; </span><span class="c">one, move to the beginning of the list. Corresponding
+</span>          <span class="cd">;; </span><span class="c">char for each int: 40=(, 39=', 41=).
+</span>          (<span class="k">when</span> (<span class="k">and</span> (eq 41 (char-syntax (<span class="k">or</span> (char-before) ?x)))
+                     (not (memq (char-syntax (<span class="k">or</span> (char-after) ?x))
+                                '(39 40))))
+            (backward-list 1))
+
+          (<span class="k">when</span> (memq (char-syntax (<span class="k">or</span> (char-after) ?x))
+                      '(39 40))
+            (<span class="k">let</span> ((beg (<span class="k">if</span> (eq 39 (char-syntax (<span class="k">or</span> (char-before) ?x)))
+                           (1- (point))
+                         (point))))
+              (forward-list)
+              (list `(list-at-point . ,(cons beg (point)))))))
+      (scan-error nil))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

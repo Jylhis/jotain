@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: define-pdf-cache-function – Emacs Documentation Online</title>
+<meta name="description" content="define-pdf-cache-function is a macro defined in pdf-cache.el.
+Define a simple data cache function.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>define-pdf-cache-function</code></h1><p><span class="m"><code>define-pdf-cache-function</code></span> is a macro defined in <span class="bt">pdf-cache.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">define-pdf-cache-function</span> <a href="#:~:text=function.-,COMMAND"><span class="arg">COMMAND</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,PAGE-ARG-P"><span class="arg">PAGE-ARG-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Define a simple data cache function.
+<p><span class="arg">COMMAND</span> is the name of the command, e.g. number-of-pages.  It
+should have a corresponding pdf-info function.  If <span class="arg">PAGE-ARG-P</span> is
+non-nil, define a one-dimensional cache indexed by the page
+number. Otherwise the value is constant for each document, like
+e.g. number-of-pages.
+<p>Both args are unevaluated.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-cache.el</span>
+(<span class="k">defmacro</span> <span class="f">define-pdf-cache-function</span> (command <span class="ty">&amp;optional</span> page-arg-p)
+  <span class="doc">"Define a simple data cache function.
+
+COMMAND is the name of the command, e.g. number-of-pages.  It
+should have a corresponding pdf-info function.  If PAGE-ARG-P is
+non-nil, define a one-dimensional cache indexed by the page
+number. Otherwise the value is constant for each document, like
+e.g. number-of-pages.
+
+Both args are unevaluated."</span>
+
+  (<span class="k">let</span> ((args (<span class="k">if</span> page-arg-p (list 'page)))
+        (fn (intern (format <span class="s">"pdf-cache-%s"</span> command)))
+        (ifn (intern (format <span class="s">"pdf-info-%s"</span> command)))
+        (doc (format <span class="s">"Cached version of `</span><span class="m s">pdf-info-%s</span><span class="s">', which see.
+
+Make sure, not to modify its return value."</span> command)))
+    `(<span class="k">defun</span> ,fn ,args
+       ,doc
+       (<span class="k">let</span> ((hit-value (pdf-cache--data-get ',command ,(<span class="k">if</span> page-arg-p 'page))))
+         (<span class="k">if</span> (car hit-value)
+             (cdr hit-value)
+           (pdf-cache--data-put
+            ',command
+            ,(<span class="k">if</span> page-arg-p
+                 (list ifn 'page)
+               (list ifn))
+            ,(<span class="k">if</span> page-arg-p 'page)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

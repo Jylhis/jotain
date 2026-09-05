@@ -1,0 +1,78 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-list-worktrees – Emacs Documentation Online</title>
+<meta name="description" content="magit-list-worktrees is a natively compiled function defined in
+magit-git.el.
+Return list of the worktrees of this repository.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-list-worktrees</code></h1><p><span class="m"><code>magit-list-worktrees</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-git.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-list-worktrees)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return list of the worktrees of this repository.
+<p>The returned list has the form (PATH COMMIT BRANCH BARE DETACHED
+LOCKED PRUNABLE).  The last four elements are booleans, with the
+exception of LOCKED and PRUNABLE, which may also be strings.
+See git-worktree(1) manpage for the meaning of the various parts.
+<p>This function corrects a situation where "git worktree list"
+would claim a worktree is bare, even though the working tree is
+specified using <span class="m"><code>core.worktree</code></span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-git.el</span>
+(<span class="k">defun</span> <span class="f">magit-list-worktrees</span> ()
+  <span class="doc">"Return list of the worktrees of this repository.
+
+The returned list has the form (PATH COMMIT BRANCH BARE DETACHED
+LOCKED PRUNABLE).  The last four elements are booleans, with the
+exception of LOCKED and PRUNABLE, which may also be strings.
+See git-worktree(1) manpage for the meaning of the various parts.
+
+This function corrects a situation where \"git worktree list\"
+would claim a worktree is bare, even though the working tree is
+specified using `</span><span class="m doc">core.worktree</span><span class="doc">'."</span>
+  (<span class="k">let</span> ((remote (file-remote-p default-directory))
+        worktrees worktree)
+    (<span class="k">dolist</span> (line (<span class="k">if</span> (magit-git-version&gt;= <span class="s">"2.36"</span>)
+                      (magit-git-items <span class="s">"worktree"</span> <span class="s">"list"</span> <span class="s">"--porcelain"</span> <span class="s">"-z"</span>)
+                    (magit-git-lines <span class="s">"worktree"</span> <span class="s">"list"</span> <span class="s">"--porcelain"</span>)))
+      (<span class="k">cond</span> ((string-prefix-p <span class="s">"worktree"</span> line)
+             (<span class="k">let</span> ((path (substring line 9)))
+               (<span class="k">when</span> remote
+                 (<span class="k">setq</span> path (concat remote path)))
+               <span class="cd">;; </span><span class="c">If the git directory is separate from the main
+</span>               <span class="cd">;; </span><span class="c">worktree, then "git worktree" returns the git
+</span>               <span class="cd">;; </span><span class="c">directory instead of the worktree, which isn't
+</span>               <span class="cd">;; </span><span class="c">what it is supposed to do and not what we want.
+</span>               <span class="cd">;; </span><span class="c">However, if the worktree has been removed, then
+</span>               <span class="cd">;; </span><span class="c">we want to return it anyway; instead of nil.
+</span>               (<span class="k">setq</span> path (<span class="k">or</span> (magit-toplevel path) path))
+               (<span class="k">setq</span> worktree (list path nil nil nil nil nil nil))
+               (<span class="k">push</span> worktree worktrees)))
+            ((string-prefix-p <span class="s">"HEAD"</span> line)
+             (<span class="k">setf</span> (nth 1 worktree) (substring line 5)))
+            ((string-prefix-p <span class="s">"branch"</span> line)
+             (<span class="k">setf</span> (nth 2 worktree) (substring line 18)))
+            ((string-equal line <span class="s">"bare"</span>)
+             (<span class="k">let*</span> ((default-directory (car worktree))
+                    (wt (<span class="k">and</span> (not (magit-get-boolean <span class="s">"core.bare"</span>))
+                             (magit-get <span class="s">"core.worktree"</span>))))
+               (<span class="k">cond</span> ((<span class="k">and</span> wt (file-exists-p (expand-file-name wt)))
+                      (<span class="k">setf</span> (nth 0 worktree) (expand-file-name wt))
+                      (<span class="k">setf</span> (nth 2 worktree) (magit-rev-parse <span class="s">"HEAD"</span>))
+                      (<span class="k">setf</span> (nth 3 worktree) (magit-get-current-branch)))
+                     ((<span class="k">setf</span> (nth 3 worktree) t)))))
+            ((string-equal <span class="s">"detached"</span> line)
+             (<span class="k">setf</span> (nth 4 worktree) t))
+            ((string-prefix-p <span class="s">"locked"</span> line)
+             (<span class="k">setf</span> (nth 5 worktree)
+                   (<span class="k">if</span> (&gt; (length line) 6) (substring line 7) t)))
+            ((string-prefix-p <span class="s">"prunable"</span> line)
+             (<span class="k">setf</span> (nth 6 worktree)
+                   (<span class="k">if</span> (&gt; (length line) 8) (substring line 9) t)))))
+    (nreverse worktrees)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

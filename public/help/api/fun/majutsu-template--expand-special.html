@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-template--expand-special – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-template--expand-special is a function defined in
+majutsu-template.el.
+Expand syntax special OP with raw ARGS, if one exists.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-template--expand-special</code></h1><p><span class="m"><code>majutsu-template--expand-special</code></span> is a function defined in
+<span class="bt">majutsu-template.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-template--expand-special <a href="#:~:text=special-,OP"><span class="arg">OP</span></a> <a href="#:~:text=raw-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Expand syntax special <span class="arg">OP</span> with raw <span class="arg">ARGS</span>, if one exists.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-template.el</span>
+<span class="cd">;;;; </span><span class="c">Syntax specials
+</span>
+(<span class="k">eval-and-compile</span>
+  (<span class="k">defconst</span> <span class="v">majutsu-template--no-special-expansion</span>
+    (make-symbol <span class="s">"majutsu-template-no-special-expansion"</span>)
+    <span class="doc">"Sentinel returned when no syntax special matches an operator."</span>)
+
+  (<span class="k">defvar</span> <span class="v">majutsu-template--special-registry</span> (make-hash-table <span class="bi">:test</span> #'eq)
+    <span class="doc">"Registry mapping exact syntax operators to expansion functions."</span>)
+
+  (<span class="k">defvar</span> <span class="v">majutsu-template--special-resolvers</span> nil
+    <span class="doc">"List of pattern-based syntax special resolver functions."</span>)
+
+  (<span class="k">defun</span> <span class="f">majutsu-template-define-special</span> (name expander)
+    <span class="doc">"Register syntax special NAME handled by EXPANDER.
+EXPANDER receives raw operator arguments and returns a lowered form or node."</span>
+    (<span class="k">unless</span> (symbolp name)
+      (<span class="w">user-error</span> <span class="s">"majutsu-template: special name must be a symbol, got %S"</span> name))
+    (<span class="k">unless</span> (<span class="k">or</span> (functionp expander) (symbolp expander))
+      (<span class="w">user-error</span> <span class="s">"majutsu-template: special %S requires a callable expander, got %S"</span>
+                  name expander))
+    (puthash name expander majutsu-template--special-registry)
+    expander)
+
+  (<span class="k">defun</span> <span class="f">majutsu-template-define-special-resolver</span> (resolver)
+    <span class="doc">"Register pattern-based syntax special RESOLVER.
+RESOLVER is called with (OP ARGS) and should return either a lowered form/node
+or `</span><span class="m doc">majutsu-template--no-special-expansion</span><span class="doc">'."</span>
+    (<span class="k">unless</span> (<span class="k">or</span> (functionp resolver) (symbolp resolver))
+      (<span class="w">user-error</span> <span class="s">"majutsu-template: special resolver must be callable, got %S"</span> resolver))
+    (<span class="k">unless</span> (memq resolver majutsu-template--special-resolvers)
+      (<span class="k">setq</span> majutsu-template--special-resolvers
+            (append majutsu-template--special-resolvers (list resolver))))
+    resolver)
+
+  (<span class="k">defun</span> <span class="f">majutsu-template--expand-special</span> (op args)
+    <span class="doc">"Expand syntax special OP with raw ARGS, if one exists."</span>
+    (<span class="k">or</span> (<span class="k">when-let*</span> ((expander (gethash op majutsu-template--special-registry)))
+          (apply expander args))
+        (<span class="k">cl-loop</span> for resolver in majutsu-template--special-resolvers
+                 for expansion = (funcall resolver op args)
+                 unless (eq expansion majutsu-template--no-special-expansion)
+                 return expansion)
+        majutsu-template--no-special-expansion)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

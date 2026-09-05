@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate--consume-node – Emacs Documentation Online</title>
+<meta name="description" content="combobulate--consume-node is a natively compiled function defined in
+combobulate-manipulation.el.
+Consume NODE in the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate--consume-node</code></h1><p><span class="m"><code>combobulate--consume-node</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">combobulate-manipulation.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate--consume-node <a href="#:~:text=Consume-,NODE"><span class="arg">NODE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,BALANCE"><span class="arg">BALANCE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Consume <span class="arg">NODE</span> in the current buffer.
+<p>If <span class="arg">BALANCE</span> is non-nil, more than the requested <span class="arg">NODE</span> may be consumeed
+also (and appended to the final string, including any whitespace
+between <span class="arg">NODE</span> and the balancing node whitespace) if consuming <span class="arg">NODE</span>
+results in one or more <span class="m"><code>ERROR</code></span> nodes appearing in the tree.
+<p>If consuming the balancing node leaves the tree in an error state,
+then that consume is undone and only the first consume is kept.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-manipulation.el</span>
+(<span class="k">defun</span> <span class="f">combobulate--consume-node</span> (node <span class="ty">&amp;optional</span> balance)
+  <span class="doc">"Consume NODE in the current buffer.
+
+If BALANCE is non-nil, more than the requested NODE may be consumeed
+also (and appended to the final string, including any whitespace
+between NODE and the balancing node whitespace) if consuming NODE
+results in one or more `</span><span class="m doc">ERROR</span><span class="doc">' nodes appearing in the tree.
+
+If consuming the balancing node leaves the tree in an error state,
+then that consume is undone and only the first consume is kept."</span>
+  (<span class="k">let</span> ((num-errors (length (combobulate-get-error-nodes)))
+        (start) (end)
+        (node-texts))
+    (<span class="k">save-excursion</span>
+      <span class="cd">;; </span><span class="c">use point as the start and not the node so we capture the
+</span>      <span class="cd">;; </span><span class="c">whitespace also.
+</span>      (<span class="k">setq</span> start (point)
+            end (combobulate-node-end node))
+      (<span class="k">push</span> (delete-and-extract-region start end) node-texts)
+      (<span class="k">when</span> (<span class="k">and</span> balance (combobulate-get-error-nodes))
+        (<span class="k">push</span> (<span class="k">let</span> ((text))
+                (<span class="k">combobulate-with-change-group</span>
+                  (<span class="k">setq</span> text (delete-and-extract-region
+                              (point)
+                              (<span class="k">save-excursion</span>
+                                (combobulate-skip-whitespace-forward t)
+                                (combobulate-node-end (combobulate-node-at-point)))))
+                  (<span class="k">when</span> (&gt; (length (combobulate-get-error-nodes)) num-errors)
+                    (cancel-changes)
+                    (<span class="k">setq</span> text nil)))
+                text)
+              node-texts)))
+    (string-join (nreverse node-texts) <span class="s">""</span>)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

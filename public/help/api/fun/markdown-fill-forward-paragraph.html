@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-fill-forward-paragraph – Emacs Documentation Online</title>
+<meta name="description" content="markdown-fill-forward-paragraph is a natively compiled function
+defined in markdown-mode.el.
+Function used by fill-paragraph to move over ARG paragraphs.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-fill-forward-paragraph</code></h1><p><span class="m"><code>markdown-fill-forward-paragraph</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-fill-forward-paragraph <span class="ty">&amp;optional</span> <a href="#:~:text=over-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Function used by <a href="../fun/fill-paragraph.html"><code>fill-paragraph</code></a> to move over <span class="arg">ARG</span> paragraphs.
+<p>This is a <a href="../var/fill-forward-paragraph-function.html"><code>fill-forward-paragraph-function</code></a> for <a href="../fun/markdown-mode.html"><code>markdown-mode</code></a>.
+It is called with a single argument specifying the number of
+paragraphs to move.  Just like <a href="../fun/forward-paragraph.html"><code>forward-paragraph</code></a>, it should
+return the number of paragraphs left to move.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-fill-forward-paragraph</span> (<span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Function used by `</span><span class="m doc">fill-paragraph</span><span class="doc">' to move over ARG paragraphs.
+This is a `</span><span class="m doc">fill-forward-paragraph-function</span><span class="doc">' for `</span><span class="m doc">markdown-mode</span><span class="doc">'.
+It is called with a single argument specifying the number of
+paragraphs to move.  Just like `</span><span class="m doc">forward-paragraph</span><span class="doc">', it should
+return the number of paragraphs left to move."</span>
+  (<span class="k">or</span> arg (<span class="k">setq</span> arg 1))
+  (<span class="k">if</span> (&gt; arg 0)
+      <span class="cd">;; </span><span class="c">With positive ARG, move across ARG non-code-block paragraphs,
+</span>      <span class="cd">;; </span><span class="c">one at a time.  When passing a code block, don't decrement ARG.
+</span>      (<span class="k">while</span> (<span class="k">and</span> (not (eobp))
+                  (&gt; arg 0)
+                  (= (forward-paragraph 1) 0)
+                  (<span class="k">or</span> (markdown-code-block-at-pos (line-beginning-position 0))
+                      (<span class="k">setq</span> arg (1- arg)))))
+    <span class="cd">;; </span><span class="c">Move backward by one paragraph with negative ARG (always -1).
+</span>    (<span class="k">let</span> ((start (point)))
+      (<span class="k">setq</span> arg (forward-paragraph arg))
+      (<span class="k">while</span> (<span class="k">and</span> (not (eobp))
+                  (<span class="k">progn</span> (move-to-left-margin) (not (eobp)))
+                  (looking-at-p paragraph-separate))
+        (forward-line 1))
+      (<span class="k">cond</span>
+       <span class="cd">;; </span><span class="c">Move point past whitespace following list marker.
+</span>       ((looking-at markdown-regex-list)
+        (goto-char (match-end 0)))
+       <span class="cd">;; </span><span class="c">Move point past whitespace following pipe at beginning of line
+</span>       <span class="cd">;; </span><span class="c">to handle Pandoc line blocks.
+</span>       ((looking-at <span class="s">"^|\\s-*"</span>)
+        (goto-char (match-end 0)))
+       <span class="cd">;; </span><span class="c">Return point if the paragraph passed was a code block.
+</span>       ((markdown-code-block-at-pos (line-beginning-position 2))
+        (goto-char start)))))
+  arg)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

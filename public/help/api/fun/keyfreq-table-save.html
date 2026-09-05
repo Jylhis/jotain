@@ -1,0 +1,79 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: keyfreq-table-save – Emacs Documentation Online</title>
+<meta name="description" content="keyfreq-table-save is a natively compiled function defined in
+keyfreq.el.
+Append all values from the specified TABLE into the
+keyfreq-file as a sexp of an alist.  Then resets the TABLE
+if it was successfully merged.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>keyfreq-table-save</code></h1><p><span class="m"><code>keyfreq-table-save</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">keyfreq.el</span>.
+<h2>Signature</h2>
+<pre><code>(keyfreq-table-save <a href="#:~:text=specified-,TABLE"><span class="arg">TABLE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,MUSTSAVE"><span class="arg">MUSTSAVE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Append all values from the specified <span class="arg">TABLE</span> into the
+<a href="../var/keyfreq-file.html"><code>keyfreq-file</code></a> as a sexp of an alist.  Then resets the <span class="arg">TABLE</span>
+if it was successfully merged.
+<p>If <span class="arg">MUSTSAVE</span> is t, this function tries to save the table until it
+gets the lock and successfully saves it.  If <span class="arg">MUSTSAVE</span> is nil, it
+does nothing if the table cannot be saved.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/nw5qmniwc6r7bs6r68drlfgkhdppv4z5-emacs-packages-deps/share/emacs/site-lisp/elpa/keyfreq-20231107.106/keyfreq.el</span>
+(<span class="k">defun</span> <span class="f">keyfreq-table-save</span> (table <span class="ty">&amp;optional</span> mustsave)
+  <span class="doc">"Append all values from the specified TABLE into the
+`</span><span class="m doc">keyfreq-file</span><span class="doc">' as a sexp of an alist.  Then resets the TABLE
+if it was successfully merged.
+
+If MUSTSAVE is t, this function tries to save the table until it
+gets the lock and successfully saves it.  If MUSTSAVE is nil, it
+does nothing if the table cannot be saved."</span>
+
+  <span class="cd">;; </span><span class="c">Avoid adding nothing to the file
+</span>  (<span class="k">if</span> (&gt; (hash-table-count table) 0)
+    (<span class="k">let</span> ((done))
+      <span class="cd">;; </span><span class="c">Check that the lock file doesn't exist
+</span>      (<span class="k">while</span> (not done)
+	(<span class="k">when</span> (keyfreq-file-is-unlocked)
+	  <span class="cd">;; </span><span class="c">Lock the file
+</span>	  (keyfreq-file-claim-lock)
+
+	  <span class="cd">;; </span><span class="c">Check that we have the lock
+</span>	  (<span class="k">if</span> (eq (keyfreq-file-owner) (emacs-pid))
+	      (<span class="k">unwind-protect</span>
+		  (<span class="k">progn</span>
+		    <span class="cd">;; </span><span class="c">Load values and merge them with the current keyfreq-table
+</span>		    (keyfreq-table-load table)
+
+		    <span class="cd">;; </span><span class="c">Write the new frequencies
+</span>		    (<span class="k">with-temp-file</span> keyfreq-file
+		      (<span class="k">let</span> ((l (cdr (keyfreq-list table 'no-sort))))
+			(insert <span class="s">"("</span>)
+			(<span class="k">dolist</span> (item l)
+			  (prin1 item (current-buffer))
+			  <span class="cd">;; </span><span class="c">Easy for git to track if every command is
+</span>			  <span class="cd">;; </span><span class="c">one line
+</span>			  (insert <span class="s">"\n"</span>))
+			(insert <span class="s">")"</span>))))
+
+		<span class="cd">;; </span><span class="c">Reset the hash table, enable the '</span><span class="m c">done</span><span class="c">' flag, and
+</span>		<span class="cd">;; </span><span class="c">release the lock.
+</span>		(clrhash table)
+		(<span class="k">setq</span> done t)
+		(keyfreq-file-release-lock))))
+
+	(<span class="k">if</span> (<span class="k">and</span> (not done) mustsave)
+	    <span class="cd">;; </span><span class="c">If we must save the file right now, we'll just keep
+</span>	    <span class="cd">;; </span><span class="c">trying until we can get the lock.  So we can sleep some
+</span>	    <span class="cd">;; </span><span class="c">milliseconds for the next while-loop cycle.
+</span>	    (sleep-for 0.1)
+	  <span class="cd">;; </span><span class="c">If we can wait to the next timer's timeout, just enable
+</span>	  <span class="cd">;; </span><span class="c">the '</span><span class="m c">done</span><span class="c">' flag to break the while-loop.
+</span>	  (<span class="k">setq</span> done t))
+
+	))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

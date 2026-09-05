@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark-dwim – Emacs Documentation Online</title>
+<meta name="description" content="embark-dwim is an interactive and natively compiled function defined
+in embark.el.
+Run the default action on the current target.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark-dwim</code></h1><p><span class="m"><code>embark-dwim</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark-dwim <span class="ty">&amp;optional</span> <a href="#:~:text=prefix-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run the default action on the current target.
+<p>The target of the action is chosen by <a href="../var/embark-target-finders.html"><code>embark-target-finders</code></a>.
+<p>If the target comes from minibuffer completion, then the default
+action is the command that opened the minibuffer in the first
+place, unless overridden by <a href="../var/embark-default-action-overrides.html"><code>embark-default-action-overrides</code></a>.
+<p>For targets that do not come from minibuffer completion
+<br>(typically some thing at point in a regular buffer) and whose
+<br>type is not listed in <a href="../var/embark-default-action-overrides.html"><code>embark-default-action-overrides</code></a>, the
+default action is given by whatever binding RET has in the action
+keymap for the target's type.
+<p>See <a href="../fun/embark-act.html"><code>embark-act</code></a> for the meaning of the prefix <span class="arg">ARG</span>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">embark-dwim</span> (<span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Run the default action on the current target.
+The target of the action is chosen by `</span><span class="m doc">embark-target-finders</span><span class="doc">'.
+
+If the target comes from minibuffer completion, then the default
+action is the command that opened the minibuffer in the first
+place, unless overridden by `</span><span class="m doc">embark-default-action-overrides</span><span class="doc">'.
+
+For targets that do not come from minibuffer completion
+\(typically some thing at point in a regular buffer) and whose
+type is not listed in `</span><span class="m doc">embark-default-action-overrides</span><span class="doc">', the
+default action is given by whatever binding RET has in the action
+keymap for the target's type.
+
+See `</span><span class="m doc">embark-act</span><span class="doc">' for the meaning of the prefix ARG."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">if-let*</span> ((targets (embark--targets)))
+      (<span class="k">let*</span> ((target
+              (<span class="k">or</span> (nth
+                   (<span class="k">if</span> (<span class="k">or</span> (null arg) (minibufferp))
+                       0
+                     (mod (prefix-numeric-value arg) (length targets)))
+                   targets)))
+             (type (plist-get target <span class="bi">:type</span>))
+             (default-action (embark--default-action type))
+             (command-remapping (command-remapping default-action))
+             (action (<span class="k">or</span> (<span class="k">unless</span> (eq 'embark-dwim command-remapping) command-remapping) default-action)))
+        (<span class="k">unless</span> action
+          (<span class="w">user-error</span> <span class="s">"No default action for %s targets"</span> type))
+        (<span class="k">when</span> (<span class="k">and</span> arg (minibufferp)) (<span class="k">setq</span> embark--toggle-quit t))
+        (embark--act action
+                     (<span class="k">if</span> (<span class="k">and</span> (eq default-action embark--command)
+                              (not (memq default-action
+                                         embark-multitarget-actions)))
+                         (embark--orig-target target)
+                       target)
+                     (embark--quit-p action)))
+    (<span class="w">user-error</span> <span class="s">"No target found"</span>)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

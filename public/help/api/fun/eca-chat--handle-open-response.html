@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--handle-open-response – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--handle-open-response is a natively compiled function defined
+in eca-chat.el.
+Hydrate CHAT-ID from chat/open RESPONSE for SESSION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--handle-open-response</code></h1><p><span class="m"><code>eca-chat--handle-open-response</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--handle-open-response <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=SESSION.-,FROM-BUFFER"><span class="arg">FROM-BUFFER</span></a> <a href="#:~:text=Hydrate-,CHAT-ID"><span class="arg">CHAT-ID</span></a> <a href="#:~:text=open-,RESPONSE"><span class="arg">RESPONSE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Hydrate <span class="arg">CHAT-ID</span> from chat/open <span class="arg">RESPONSE</span> for <span class="arg">SESSION</span>.
+<p><span class="arg">FROM-BUFFER</span> is the buffer where the resume command started.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--handle-open-response</span>
+    (session from-buffer chat-id response)
+  <span class="doc">"Hydrate CHAT-ID from chat/open RESPONSE for SESSION.
+FROM-BUFFER is the buffer where the resume command started."</span>
+  (eca-chat--finish-opening session chat-id)
+  (<span class="k">cond</span>
+   ((not (eca-chat--open-response-found-p response))
+    (<span class="w">user-error</span> <span class="s">"Server could not open chat %s"</span> chat-id))
+   ((plist-get response <span class="bi">:error</span>)
+    (<span class="w">user-error</span>
+     <span class="s">"Server could not open chat %s: %s"</span>
+     chat-id
+     (plist-get (plist-get response <span class="bi">:error</span>) <span class="bi">:message</span>)))
+   ((not (buffer-live-p (eca-get (eca--session-chats session) chat-id)))
+    (<span class="w">user-error</span> <span class="s">"Resume: no buffer was registered for chat %s"</span> chat-id))
+   (t
+    (<span class="k">let</span> ((chat-buffer (eca-get (eca--session-chats session) chat-id)))
+      (<span class="k">when</span> (plist-member response <span class="bi">:selection</span>)
+        (eca-chat--apply-selection-snapshot
+         (plist-get response <span class="bi">:selection</span>)
+         chat-buffer))
+      (<span class="k">setf</span> (eca--session-last-chat-buffer session) chat-buffer)
+      (<span class="k">eca-chat--with-current-buffer</span> chat-buffer
+        (<span class="k">when-let*</span> ((title (plist-get response <span class="bi">:title</span>)))
+          (<span class="k">setq-local</span> eca-chat--title title))
+        (eca-chat--apply-history-meta (plist-get response <span class="bi">:meta</span>))
+        (eca-chat--refresh-load-older-control)
+        (eca-chat--protect-non-prompt))
+      (eca-chat-open session)
+      (eca-chat--kill-empty-welcome-buffer
+       session from-buffer chat-buffer)
+      chat-buffer))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

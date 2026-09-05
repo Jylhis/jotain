@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-editor--lsp-mode-diagnostics – Emacs Documentation Online</title>
+<meta name="description" content="eca-editor--lsp-mode-diagnostics is a natively compiled function
+defined in eca-editor.el.
+Find all `lsp-mode` diagnostics found for WORKSPACE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-editor--lsp-mode-diagnostics</code></h1><p><span class="m"><code>eca-editor--lsp-mode-diagnostics</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-editor.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-editor--lsp-mode-diagnostics <a href="#:~:text=If-,URI"><span class="arg">URI</span></a> <a href="#:~:text=for-,WORKSPACE"><span class="arg">WORKSPACE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find all `lsp-mode` diagnostics found for <span class="arg">WORKSPACE</span>.
+<p>If <span class="arg">URI</span> is nil find all diagnostics otherwise filter to that uri.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-editor.el</span>
+(<span class="k">defun</span> <span class="f">eca-editor--lsp-mode-diagnostics</span> (uri workspace)
+  <span class="doc">"Find all `lsp-mode` diagnostics found for WORKSPACE.
+If URI is nil find all diagnostics otherwise filter to that uri."</span>
+  (<span class="k">let*</span> ((eca-diagnostics '())
+         (all-diagnostics (car (<span class="k">--keep</span> (<span class="k">when</span> (<span class="k">and</span> (buffer-file-name it)
+                                                  (f-ancestor-of? workspace (buffer-file-name it)))
+                                         (<span class="k">with-current-buffer</span> it
+                                           (lsp-diagnostics t)))
+                                       (buffer-list))))
+         (diagnostics (<span class="k">if</span> uri
+                          (ht-select (<span class="k">lambda</span> (k _v) (string= k (eca--uri-to-path uri))) all-diagnostics)
+                        all-diagnostics)))
+    (<span class="k">when</span> diagnostics
+      (maphash (<span class="k">lambda</span> (path lsp-diagnostics)
+                 (<span class="k">let</span> ((uri (eca--path-to-uri path)))
+                   (<span class="k">--map</span> (<span class="k">let*</span> ((range (lsp-get it <span class="bi">:range</span>))
+                                 (start-r (lsp-get range <span class="bi">:start</span>))
+                                 (end-r (lsp-get range <span class="bi">:end</span>)))
+                            (<span class="k">push</span> (list <span class="bi">:uri</span> uri
+                                        <span class="bi">:severity</span> (eca-editor--lsp-to-eca-severity (lsp-get it <span class="bi">:severity</span>))
+                                        <span class="bi">:code</span> (<span class="k">when-let</span> ((code (lsp-get it <span class="bi">:code</span>)))
+                                                (<span class="k">if</span> (symbolp code)
+                                                    (symbol-name code)
+                                                  (format <span class="s">"%s"</span> code)))
+                                        <span class="bi">:range</span> (list <span class="bi">:start</span> (list <span class="bi">:line</span> (lsp-get start-r <span class="bi">:line</span>)
+                                                                  <span class="bi">:character</span> (lsp-get start-r <span class="bi">:character</span>))
+                                                     <span class="bi">:end</span> (list <span class="bi">:line</span> (lsp-get end-r <span class="bi">:line</span>)
+                                                                <span class="bi">:character</span> (lsp-get end-r <span class="bi">:character</span>)))
+                                        <span class="bi">:source</span> (<span class="k">when-let</span> ((source (lsp-get it <span class="bi">:source</span>)))
+                                                  (<span class="k">if</span> (symbolp source)
+                                                      (symbol-name source)
+                                                    (format <span class="s">"%s"</span> source)))
+                                        <span class="bi">:message</span> (lsp-get it <span class="bi">:message</span>))
+                                  eca-diagnostics))
+                          lsp-diagnostics)))
+               diagnostics))
+    eca-diagnostics))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

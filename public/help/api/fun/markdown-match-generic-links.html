@@ -1,0 +1,137 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-match-generic-links – Emacs Documentation Online</title>
+<meta name="description" content="markdown-match-generic-links is a natively compiled function defined
+in markdown-mode.el.
+Match inline links from point to LAST.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-match-generic-links</code></h1><p><span class="m"><code>markdown-match-generic-links</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-match-generic-links <a href="#:~:text=to-,LAST"><span class="arg">LAST</span></a> <a href="#:~:text=When-,REF"><span class="arg">REF</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Match inline links from point to <span class="arg">LAST</span>.
+<p>When <span class="arg">REF</span> is non-nil, match reference links instead of standard
+links with URLs.
+This function should only be used during font-lock, as it
+determines syntax based on the presence of faces for previously
+processed elements.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-match-generic-links</span> (last ref)
+  <span class="doc">"Match inline links from point to LAST.
+When REF is non-nil, match reference links instead of standard
+links with URLs.
+This function should only be used during font-lock, as it
+determines syntax based on the presence of faces for previously
+processed elements."</span>
+  <span class="cd">;; </span><span class="c">Search for the next potential link (not in a code block).
+</span>  (<span class="k">let</span> ((prohibited-faces '(markdown-pre-face
+                            markdown-code-face
+                            markdown-inline-code-face
+                            markdown-comment-face))
+        found)
+    (<span class="k">while</span>
+        (<span class="k">and</span> (not found) (&lt; (point) last)
+             (<span class="k">progn</span>
+               <span class="cd">;; </span><span class="c">Clear match data to test for a match after functions returns.
+</span>               (set-match-data nil)
+               <span class="cd">;; </span><span class="c">Preliminary regular expression search so we can return
+</span>               <span class="cd">;; </span><span class="c">quickly upon failure.  This doesn't handle malformed links
+</span>               <span class="cd">;; </span><span class="c">or nested square brackets well, so if it passes we back up
+</span>               <span class="cd">;; </span><span class="c">continue with a more precise search.
+</span>               (re-search-forward
+                (<span class="k">if</span> ref
+                    markdown-regex-link-reference
+                  markdown-regex-link-inline)
+                last 'limit)))
+      <span class="cd">;; </span><span class="c">Keep searching if this is in a code block, inline code, or a
+</span>      <span class="cd">;; </span><span class="c">comment, or if it is include syntax. The link text portion
+</span>      <span class="cd">;; </span><span class="c">(group 3) may contain inline code or comments, but the
+</span>      <span class="cd">;; </span><span class="c">markup, URL, and title should not be part of such elements.
+</span>      (<span class="k">if</span> (<span class="k">or</span> (markdown-range-property-any
+               (match-beginning 0) (match-end 2) 'face prohibited-faces)
+              (markdown-range-property-any
+               (match-beginning 4) (match-end 0) 'face prohibited-faces)
+              (<span class="k">and</span> (char-equal (char-after (line-beginning-position)) ?&lt;)
+                   (char-equal (char-after (1+ (line-beginning-position))) ?&lt;)))
+          (set-match-data nil)
+        (<span class="k">setq</span> found t))))
+  <span class="cd">;; </span><span class="c">Match opening exclamation point (optional) and left bracket.
+</span>  (<span class="k">when</span> (match-beginning 2)
+    (<span class="k">let*</span> ((bang (match-beginning 1))
+           (first-begin (match-beginning 2))
+           <span class="cd">;; </span><span class="c">Find end of block to prevent matching across blocks.
+</span>           (end-of-block (<span class="k">save-excursion</span>
+                           (<span class="k">progn</span>
+                             (goto-char (match-beginning 2))
+                             (markdown-end-of-text-block)
+                             (point))))
+           <span class="cd">;; </span><span class="c">Move over balanced expressions to closing right bracket.
+</span>           <span class="cd">;; </span><span class="c">Catch unbalanced expression errors, then try to search right bracket manually.
+</span>           (first-end (<span class="k">condition-case</span> nil
+                          (<span class="k">and</span> (goto-char first-begin)
+                               (scan-sexps (point) 1))
+                        (<span class="w">error</span>
+                         (<span class="k">save-match-data</span>
+                           (<span class="k">let</span> ((last (match-end 4))
+                                 ok end-pos)
+                             (<span class="k">while</span> (<span class="k">and</span> (not ok) (search-forward <span class="s">"]"</span> last t))
+                               (<span class="k">unless</span> (= (char-before (1- (point))) ?\\)
+                                 (<span class="k">setq</span> ok t end-pos (point))))
+                             end-pos)))))
+           <span class="cd">;; </span><span class="c">Continue with point at CONT-POINT upon failure.
+</span>           (cont-point (min (1+ first-begin) last))
+           second-begin second-end url-begin url-end
+           title-begin title-end)
+      <span class="cd">;; </span><span class="c">When bracket found, in range, and followed by a left paren/bracket...
+</span>      (<span class="k">when</span> (<span class="k">and</span> first-end (&lt; first-end end-of-block) (goto-char first-end)
+                 (char-equal (char-after (point)) (<span class="k">if</span> ref ?\[ ?\()))
+        <span class="cd">;; </span><span class="c">Scan across balanced expressions for closing parenthesis/bracket.
+</span>        (<span class="k">setq</span> second-begin (point)
+              second-end (<span class="k">condition-case</span> nil
+                             (scan-sexps (point) 1)
+                           (<span class="w">error</span> nil)))
+        <span class="cd">;; </span><span class="c">Check that closing parenthesis/bracket is in range.
+</span>        (<span class="k">if</span> (<span class="k">and</span> second-end (&lt;= second-end end-of-block) (&lt;= second-end last))
+            (<span class="k">progn</span>
+              <span class="cd">;; </span><span class="c">Search for (optional) title inside closing parenthesis
+</span>              (<span class="k">when</span> (<span class="k">and</span> (not ref) (search-forward <span class="s">"\""</span> second-end t))
+                (<span class="k">setq</span> title-begin (1- (point))
+                      title-end (<span class="k">and</span> (goto-char second-end)
+                                     (search-backward <span class="s">"\""</span> (1+ title-begin) t))
+                      title-end (<span class="k">and</span> title-end (1+ title-end))))
+              <span class="cd">;; </span><span class="c">Store URL/reference range
+</span>              (<span class="k">setq</span> url-begin (1+ second-begin)
+                    url-end (1- (<span class="k">or</span> title-begin second-end)))
+              <span class="cd">;; </span><span class="c">Set match data, move point beyond link, and return
+</span>              (set-match-data
+               (list (<span class="k">or</span> bang first-begin) second-end  <span class="cd">; </span><span class="c">0 - all
+</span>                     bang (<span class="k">and</span> bang (1+ bang))         <span class="cd">; </span><span class="c">1 - bang
+</span>                     first-begin (1+ first-begin)      <span class="cd">; </span><span class="c">2 - markup
+</span>                     (1+ first-begin) (1- first-end)   <span class="cd">; </span><span class="c">3 - link text
+</span>                     (1- first-end) first-end          <span class="cd">; </span><span class="c">4 - markup
+</span>                     second-begin (1+ second-begin)    <span class="cd">; </span><span class="c">5 - markup
+</span>                     url-begin url-end                 <span class="cd">; </span><span class="c">6 - url/reference
+</span>                     title-begin title-end             <span class="cd">; </span><span class="c">7 - title
+</span>                     (1- second-end) second-end))      <span class="cd">; </span><span class="c">8 - markup
+</span>              <span class="cd">;; </span><span class="c">Nullify cont-point and leave point at end and
+</span>              (<span class="k">setq</span> cont-point nil)
+              (goto-char second-end))
+          <span class="cd">;; </span><span class="c">If no closing parenthesis in range, update continuation point
+</span>          (<span class="k">setq</span> cont-point (min end-of-block second-begin))))
+      (<span class="k">cond</span>
+       <span class="cd">;; </span><span class="c">On failure, continue searching at cont-point
+</span>       ((<span class="k">and</span> cont-point (&lt; cont-point last))
+        (goto-char cont-point)
+        (markdown-match-generic-links last ref))
+       <span class="cd">;; </span><span class="c">No more text, return nil
+</span>       ((<span class="k">and</span> cont-point (= cont-point last))
+        nil)
+       <span class="cd">;; </span><span class="c">Return t if a match occurred
+</span>       (t t)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

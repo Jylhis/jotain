@@ -1,0 +1,90 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-execute-envelope – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-execute-envelope is a natively compiled function defined
+in combobulate-envelope.el.
+Executes any envelope with a :name equal to ENVELOPE-NAME.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-execute-envelope</code></h1><p><span class="m"><code>combobulate-execute-envelope</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">combobulate-envelope.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-execute-envelope <a href="#:~:text=to-,ENVELOPE-NAME"><span class="arg">ENVELOPE-NAME</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">NODE</span></a> <a href="#:~:text="><span class="arg">FORCE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Executes any envelope with a <span class="bi">:name</span> equal to <span class="arg">ENVELOPE-NAME</span>.
+<p>See <a href="../fun/combobulate-apply-envelope.html"><code>combobulate-apply-envelope</code></a> for more information.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-envelope.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-execute-envelope</span> (envelope-name <span class="ty">&amp;optional</span> node force)
+  <span class="doc">"Executes any envelope with a `</span><span class="m doc">:name</span><span class="doc">' equal to ENVELOPE-NAME.
+
+See `</span><span class="m doc">combobulate-apply-envelope</span><span class="doc">' for more information."</span>
+  (<span class="k">let</span> ((envelope (combobulate-get-envelope-by-name envelope-name))
+        <span class="cd">;; </span><span class="c">Default to true as we'll only turn this off briefly when we
+</span>        <span class="cd">;; </span><span class="c">expand an envelope during a proffer preview.
+</span>        (combobulate-envelope--undo-on-quit t)
+        (chosen-node) (accepted nil))
+    (<span class="k">unless</span> envelope
+      (<span class="w">error</span> <span class="s">"There is no such envelope registered with the name `</span><span class="m s">%s</span><span class="s">'"</span>
+             envelope-name))
+    (<span class="k">if</span> (region-active-p)
+        (combobulate-apply-envelope envelope nil t)
+      (<span class="k">if</span> node
+          (<span class="k">when-let</span> (target-pt (cdr (combobulate-apply-envelope envelope node)))
+            (goto-char target-pt))
+        (<span class="k">map-let</span> (<span class="bi">:nodes</span> <span class="bi">:shorthand</span> <span class="bi">:split-node</span>) envelope
+          (<span class="k">let*</span> ((combobulate-envelope-static t)
+                 (envelope-nodes (seq-sort #'combobulate-envelope-smart-sort
+                                           (<span class="k">if</span> (<span class="k">or</span> nodes shorthand)
+                                               (combobulate-envelope-get-applicable-nodes envelope force)
+                                             <span class="cd">;; </span><span class="c">if we don't have any assigned envelope nodes,
+</span>                                             <span class="cd">;; </span><span class="c">create a proxy node at point; that node (and
+</span>                                             <span class="cd">;; </span><span class="c">thus `</span><span class="m c">point</span><span class="c">') will instead be where the
+</span>                                             <span class="cd">;; </span><span class="c">envelope is inserted.
+</span>                                             (list (combobulate-proxy-node-make-point-node))))))
+            <span class="cd">;; </span><span class="c">Walk through the collected envelope nodes and
+</span>            <span class="cd">;; </span><span class="c">determine if point is at the beginning of any of
+</span>            <span class="cd">;; </span><span class="c">them. If that is not the case, we'll create a
+</span>            <span class="cd">;; </span><span class="c">pseudo-node at point that extends to the farthest of
+</span>            <span class="cd">;; </span><span class="c">the envelope nodes.
+</span>            (<span class="k">when</span> (<span class="k">and</span> envelope-nodes
+                       split-node
+                       (not (seq-find #'combobulate-point-at-node-p envelope-nodes)))
+              (<span class="k">let*</span> ((source-node (<span class="k">or</span>
+                                   (<span class="k">let</span> ((point-node (combobulate-node-at-point)))
+                                     (seq-find (<span class="k">lambda</span> (parent-node)
+                                                 (&gt; (combobulate-node-end parent-node)
+                                                    (combobulate-node-end point-node)))
+                                               (combobulate-get-parents point-node)))
+                                   (car (seq-sort #'combobulate-node-larger-than-node-p
+                                                  envelope-nodes))))
+                     (split-node (combobulate-proxy-node-make-from-range
+                                  (point)
+                                  (combobulate-node-end source-node)
+                                  <span class="s">"split-node"</span> (format <span class="s">"Split %s"</span> (combobulate-pretty-print-node-type source-node)))))
+                (<span class="k">setq</span> envelope-nodes (append (list split-node) envelope-nodes))))
+            (<span class="k">setq</span> chosen-node
+                  (combobulate-proffer-choices
+                   envelope-nodes
+                   (<span class="k">lambda-slots</span> (current-node refactor-id)
+                     (<span class="k">combobulate-refactor</span> (<span class="bi">:id</span> refactor-id)
+                       (<span class="k">let</span> ((ov (mark-node-highlighted current-node))
+                             (combobulate-envelope--undo-on-quit nil))
+                         (<span class="k">seq-let</span> [[start <span class="ty">&amp;rest</span> end] <span class="ty">&amp;rest</span> pt]
+                             (combobulate-apply-envelope envelope current-node)
+                           (goto-char pt)
+                           <span class="cd">;; </span><span class="c">lil' hack. The extent of the node is not
+</span>                           <span class="cd">;; </span><span class="c">the same as the envelope we just
+</span>                           <span class="cd">;; </span><span class="c">applied.
+</span>                           (move-overlay ov start end)))))
+                   <span class="bi">:reset-point-on-abort</span> t
+                   <span class="bi">:reset-point-on-accept</span> nil))
+            (<span class="k">setq</span> accepted t)))
+        <span class="cd">;; </span><span class="c">here we simply repeat what ever the selected choice was, as
+</span>        <span class="cd">;; </span><span class="c">an explicit node skips the proffering process entirely.
+</span>        (<span class="k">when</span> (<span class="k">and</span> chosen-node accepted)
+          (combobulate-execute-envelope envelope-name chosen-node))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

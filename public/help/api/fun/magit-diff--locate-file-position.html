@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-diff--locate-file-position – Emacs Documentation Online</title>
+<meta name="description" content="magit-diff--locate-file-position is a natively compiled function
+defined in magit-diff.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-diff--locate-file-position</code></h1><p><span class="m"><code>magit-diff--locate-file-position</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-diff--locate-file-position <span class="arg">FILE</span> <span class="arg">LINE</span> <span class="arg">COLUMN</span> <span class="ty">&amp;optional</span> <span class="arg">PARENT</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-diff.el</span>
+(<span class="k">defun</span> <span class="f">magit-diff--locate-file-position</span> (file line column <span class="ty">&amp;optional</span> parent)
+  (<span class="k">and-let*</span>
+      ((parent (<span class="k">pcase</span> parent
+                 ('unstaged (magit-get-section '((unstaged) (status))))
+                 ('staged   (magit-get-section '((staged)   (status))))
+                 ('nil (<span class="k">and</span> (cl-typep (car (<span class="k">oref</span> magit-root-section children))
+                                      'magit-file-section)
+                            magit-root-section))
+                 (_ parent)))
+       (diff (cl-find-if (##equal (<span class="k">oref</span> % value) file)
+                         (<span class="k">oref</span> parent children)))
+       (hunks (<span class="k">oref</span> diff children)))
+    (<span class="k">let</span> (hunk pos found)
+      (<span class="k">while</span> (<span class="k">and</span> (<span class="k">setq</span> hunk (<span class="k">pop</span> hunks))
+                  (not pos))
+        (<span class="k">when-let*</span> ((range (<span class="k">oref</span> hunk to-range))
+                    (beg (car range))
+                    (len (cadr range))
+                    (end (+ beg len)))
+          (<span class="k">cond</span>
+            ((&gt; beg line)
+             (<span class="k">setq</span> pos (<span class="k">oref</span> diff start)))
+            ((&lt;= beg line end)
+             (<span class="k">save-excursion</span>
+               (goto-char (<span class="k">oref</span> hunk content))
+               (<span class="k">let</span> ((l beg))
+                 (<span class="k">while</span> (<span class="k">or</span> (&lt; l line)
+                            (= (char-after) ?-))
+                   (<span class="k">unless</span> (= (char-after) ?-)
+                     (<span class="k">incf</span> l))
+                   (forward-line)))
+               (<span class="k">setq</span> found (<span class="k">if</span> (= (char-after) ?+) 'line 'hunk))
+               (forward-char (1+ column))
+               (<span class="k">setq</span> pos (point))))
+            ((null hunks)
+             (<span class="k">setq</span> pos (<span class="k">oref</span> hunk start))))))
+      (<span class="k">and</span> pos
+           (list pos (<span class="k">or</span> found file))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

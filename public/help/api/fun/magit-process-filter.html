@@ -1,0 +1,42 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-process-filter – Emacs Documentation Online</title>
+<meta name="description" content="magit-process-filter is a natively compiled function defined in
+magit-process.el.
+Default filter used by magit-start-process.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-process-filter</code></h1><p><span class="m"><code>magit-process-filter</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-process.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-process-filter <a href="#:~:text="><span class="arg">PROC</span></a> <a href="#:~:text="><span class="arg">STRING</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Default filter used by <a href="../fun/magit-start-process.html"><code>magit-start-process</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-process.el</span>
+(<span class="k">defun</span> <span class="f">magit-process-filter</span> (proc string)
+  <span class="doc">"Default filter used by `</span><span class="m doc">magit-start-process</span><span class="doc">'."</span>
+  (<span class="k">with-current-buffer</span> (process-buffer proc)
+    (<span class="k">let</span> ((inhibit-read-only t))
+      (goto-char (process-mark proc))
+      <span class="cd">;; </span><span class="c">Find last ^M in string.  If one was found, ignore
+</span>      <span class="cd">;; </span><span class="c">everything before it and delete the current line.
+</span>      (<span class="k">when-let</span> ((ret-pos (cl-position ?\r string <span class="bi">:from-end</span> t)))
+        (<span class="k">setq</span> string (substring string (1+ ret-pos)))
+        (delete-region (line-beginning-position) (point)))
+      (<span class="k">setq</span> string (magit-process-remove-bogus-errors string))
+      (<span class="k">when</span> (eq magit-process-apply-ansi-colors 'filter)
+        (<span class="k">setq</span> string (ansi-color-apply string)))
+      (insert (propertize string 'magit-section
+                          (process-get proc 'section)))
+      (set-marker (process-mark proc) (point))
+      <span class="cd">;; </span><span class="c">Make sure prompts are matched after removing ^M.
+</span>      (magit-process-yes-or-no-prompt proc string)
+      (magit-process-username-prompt  proc string)
+      (magit-process-password-prompt  proc string)
+      (run-hook-with-args-until-success 'magit-process-prompt-functions
+                                        proc string))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

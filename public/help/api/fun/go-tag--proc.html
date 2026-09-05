@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: go-tag--proc – Emacs Documentation Online</title>
+<meta name="description" content="go-tag--proc is a natively compiled function defined in go-tag.el.
+Modify field tags based on CMD-ARGS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>go-tag--proc</code></h1><p><span class="m"><code>go-tag--proc</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">go-tag.el</span>.
+<h2>Signature</h2>
+<pre><code>(go-tag--proc <a href="#:~:text=on-,CMD-ARGS"><span class="arg">CMD-ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Modify field tags based on <span class="arg">CMD-ARGS</span>.
+<p>&nbsp;&nbsp;The tool used can be set via ‘go-tag-command` (default: go-tag)
+<br>&nbsp;and additional arguments can be set as a list via ‘go-tag-args`.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/55a262l3zl8xvyyydkm11mnkgmjfhzvd-emacs-packages-deps/share/emacs/site-lisp/elpa/go-tag-20230111.651/go-tag.el</span>
+(<span class="k">defun</span> <span class="f">go-tag--proc</span> (cmd-args)
+  <span class="doc">"Modify field tags based on CMD-ARGS.
+
+  The tool used can be set via ‘go-tag-command` (default: go-tag)
+ and additional arguments can be set as a list via ‘go-tag-args`."</span>
+  (<span class="k">let</span> ((tmpfile (make-temp-file <span class="s">"go-tag"</span> nil <span class="s">".go"</span>))
+        (patchbuf (get-buffer-create <span class="s">"*Go-Tag patch*"</span>))
+        (errbuf (<span class="k">if</span> go-tag-show-errors
+                    (get-buffer-create <span class="s">"*Go-Tag Errors*"</span>)))
+        (coding-system-for-read 'utf-8)
+        (coding-system-for-write 'utf-8))
+
+    (<span class="k">unwind-protect</span>
+        (<span class="k">save-restriction</span>
+          (widen)
+          (<span class="k">if</span> errbuf
+              (<span class="k">with-current-buffer</span> errbuf
+                (<span class="k">setq</span> buffer-read-only nil)
+                (erase-buffer)))
+          (<span class="k">with-current-buffer</span> patchbuf
+            (erase-buffer))
+
+          (write-region nil nil tmpfile)
+
+          (<span class="k">setq</span> cmd-args (append cmd-args (list <span class="s">"-file"</span> tmpfile <span class="s">"-w"</span>)))
+
+          (message <span class="s">"Calling go-tag: %s %s"</span> go-tag-command cmd-args)
+          (<span class="k">if</span> (zerop (apply #'call-process go-tag-command nil errbuf nil cmd-args))
+              (<span class="k">progn</span>
+                (<span class="k">if</span> (zerop (call-process-region (point-min) (point-max) <span class="s">"diff"</span> nil patchbuf nil <span class="s">"-n"</span> <span class="s">"-"</span> tmpfile))
+                    (message <span class="s">"Buffer is already go-tag"</span>)
+                  (go--apply-rcs-patch patchbuf)
+                  (message <span class="s">"Applied go-tag"</span>))
+                (<span class="k">if</span> errbuf (go-tag--kill-error-buffer errbuf)))
+            (message <span class="s">"Could not apply go-tag"</span>)
+            (<span class="k">if</span> errbuf
+                (<span class="k">progn</span>
+                  (message (<span class="k">with-current-buffer</span> errbuf (buffer-string)))
+                  (go-tag--kill-error-buffer errbuf)))))
+
+      (kill-buffer patchbuf)
+      (delete-file tmpfile))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

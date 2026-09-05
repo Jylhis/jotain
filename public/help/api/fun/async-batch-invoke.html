@@ -1,0 +1,45 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: async-batch-invoke – Emacs Documentation Online</title>
+<meta name="description" content="async-batch-invoke is a natively compiled function defined in
+async.el.
+Called from the child Emacs process' command line.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>async-batch-invoke</code></h1><p><span class="m"><code>async-batch-invoke</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">async.el</span>.
+<h2>Signature</h2>
+<pre><code>(async-batch-invoke)
+</code></pre>
+<h2>Documentation</h2>
+<p>Called from the child Emacs process' command line.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vpxd64bbf27n3ziyqnh29vmak5xnpk2l-emacs-packages-deps/share/emacs/site-lisp/elpa/async-20260729.1431/async.el</span>
+(<span class="k">defun</span> <span class="f">async-batch-invoke</span> ()
+  <span class="doc">"Called from the child Emacs process' command line."</span>
+  <span class="cd">;; </span><span class="c">Make sure '</span><span class="m c">message</span><span class="c">' and '</span><span class="m c">prin1</span><span class="c">' encode stuff in utf-8-emacs-unix,
+</span>  <span class="cd">;; </span><span class="c">as parent process expects.
+</span>  (<span class="k">let</span> ((coding-system-for-write 'utf-8-emacs-unix)
+        (args-left command-line-args-left))
+    (<span class="k">setq</span> async-in-child-emacs t
+          debug-on-error async-debug
+          command-line-args-left nil)
+    (<span class="k">condition-case-unless-debug</span> err
+        (<span class="k">let</span> ((ret (funcall
+                    (async--receive-sexp (<span class="k">unless</span> async-send-over-pipe
+                                           args-left)))))
+          <span class="cd">;; </span><span class="c">The newlines makes client messages more robust and also
+</span>          <span class="cd">;; </span><span class="c">handle some weird line-buffering issues on windows.
+</span>          <span class="cd">;; </span><span class="c">Sometimes, the last "chunk" was not read by the filter,
+</span>          <span class="cd">;; </span><span class="c">so a newline here should force a buffer flush.
+</span>          (princ <span class="s">"\n"</span>)
+          (prin1 ret)
+          (princ <span class="s">"\n"</span>))
+      (<span class="w">error</span>
+       (<span class="k">progn</span>
+         (princ <span class="s">"\n"</span>)
+         (prin1 (list 'async-signal err))
+         (princ <span class="s">"\n"</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,39 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--memory-write – Emacs Documentation Online</title>
+<meta name="description" content="dape--memory-write is a natively compiled function defined in dape.el.
+Write buffer contents to stopped connection.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--memory-write</code></h1><p><span class="m"><code>dape--memory-write</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--memory-write)
+</code></pre>
+<h2>Documentation</h2>
+<p>Write buffer contents to stopped connection.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--memory-write</span> ()
+  <span class="doc">"Write buffer contents to stopped connection."</span>
+  (<span class="k">let</span> ((conn (dape--live-connection 'last))
+        (buffer (current-buffer))
+        (address dape--memory-address))
+    (<span class="k">with-temp-buffer</span>
+      (insert-buffer-substring buffer)
+      (dehexlify-buffer)
+      (<span class="k">dape--with-request-bind</span>
+          (_body error)
+          (dape-request conn <span class="bi">:writeMemory</span>
+                        (list <span class="bi">:memoryReference</span> address
+                              <span class="bi">:data</span> (base64-encode-string (buffer-string) t)))
+        (<span class="k">if</span> error
+            (message <span class="s">"Failed to write memory: %s"</span> error)
+          (<span class="k">with-current-buffer</span> buffer
+            (set-buffer-modified-p nil))
+          (message <span class="s">"Memory written successfully at %s"</span> address)
+          (dape--update conn 'variables nil)))))
+  <span class="cd">;; </span><span class="c">Return `</span><span class="m c">t</span><span class="c">' to signal buffer written
+</span>  t)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

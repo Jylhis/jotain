@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-indent-string-1 – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-indent-string-1 is a natively compiled function defined in
+combobulate-manipulation.el.
+Indent LINE as per OPERATION and AMOUNT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-indent-string-1</code></h1><p><span class="m"><code>combobulate-indent-string-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">combobulate-manipulation.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-indent-string-1 <a href="#:~:text=Indent-,LINE"><span class="arg">LINE</span></a> <a href="#:~:text=per-,OPERATION"><span class="arg">OPERATION</span></a> <a href="#:~:text=and-,AMOUNT"><span class="arg">AMOUNT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Indent <span class="arg">LINE</span> as per <span class="arg">OPERATION</span> and <span class="arg">AMOUNT</span>.
+<p>If <span class="arg">OPERATION</span> is <span class="m"><code>add</code></span>, then <span class="arg">AMOUNT</span> is added to the current
+indentation.
+<p>If <span class="arg">OPERATION</span> is <span class="m"><code>subtract</code></span>, then <span class="arg">AMOUNT</span> is subtracted from the
+current indentation.
+<p>If <span class="arg">OPERATION</span> is <span class="m"><code>absolute</code></span>, then <span class="arg">AMOUNT</span> is used as the new
+indentation.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-manipulation.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-indent-string-1</span> (line operation amount)
+  <span class="doc">"Indent LINE as per OPERATION and AMOUNT.
+
+If OPERATION is `</span><span class="m doc">add</span><span class="doc">', then AMOUNT is added to the current
+indentation.
+
+If OPERATION is `</span><span class="m doc">subtract</span><span class="doc">', then AMOUNT is subtracted from the
+current indentation.
+
+If OPERATION is `</span><span class="m doc">absolute</span><span class="doc">', then AMOUNT is used as the new
+indentation."</span>
+  <span class="cd">;; </span><span class="c">operation must be: `</span><span class="m c">add</span><span class="c">', `</span><span class="m c">subtract</span><span class="c">', `</span><span class="m c">absolute</span><span class="c">'.
+</span>  (<span class="w">cl-assert</span> (member operation '(add subtract absolute)))
+  <span class="cd">;; </span><span class="c">see if we can invert operations if the amount warrants it.
+</span>  (<span class="k">cond</span>
+   ((<span class="k">and</span> (eq operation 'add) (&lt; amount 0))
+    (<span class="k">setq</span> operation 'subtract
+          amount (- amount)))
+   ((<span class="k">and</span> (eq operation 'subtract) (&lt; amount 0))
+    (<span class="k">setq</span> operation 'add
+          amount (- amount))))
+  (<span class="k">let</span> ((current-indent (combobulate-indent-string--count-whitespace line))
+        (line-without-indent (combobulate-indent-string--strip-whitespace line)))
+    (<span class="k">cond</span> ((eq operation 'add)
+           <span class="cd">;; </span><span class="c">if the amount is zero, then there is nothing to add.
+</span>           (<span class="k">if</span> (= amount 0) line
+             (concat (make-string (+ current-indent amount) ? ) line-without-indent)))
+          ((eq operation 'subtract)
+           <span class="cd">;; </span><span class="c">check for whether we're subtracting more than we
+</span>           <span class="cd">;; </span><span class="c">have. If so, then we subtract the exact amount we need.
+</span>           (<span class="k">cond</span> ((&gt;= current-indent amount)
+                  (concat (make-string (- current-indent amount) ? ) line-without-indent))
+                 (t
+                  (concat (make-string 0 ? ) line-without-indent))))
+          ((eq operation 'absolute)
+           (<span class="w">cl-assert</span> (&gt;= amount 0) <span class="s">"Absolute indentation must be positive."</span>)
+           (concat (make-string amount ? ) line-without-indent)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

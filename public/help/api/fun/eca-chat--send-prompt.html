@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--send-prompt – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--send-prompt is a natively compiled function defined in
+eca-chat.el.
+Send PROMPT to server for SESSION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--send-prompt</code></h1><p><span class="m"><code>eca-chat--send-prompt</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--send-prompt <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=Send-,PROMPT"><span class="arg">PROMPT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Send <span class="arg">PROMPT</span> to server for <span class="arg">SESSION</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--send-prompt</span> (session prompt)
+  <span class="doc">"Send PROMPT to server for SESSION."</span>
+  (<span class="k">when</span> eca-chat--closed
+    (<span class="w">user-error</span> (eca-error <span class="s">"This chat is closed"</span>)))
+  (<span class="k">let*</span> ((prompt-contexts (eca-chat--extract-contexts-from-prompt))
+         (refined-contexts (<span class="k">-&gt;&gt;</span> (append eca-chat--context prompt-contexts)
+                                (-map #'eca-chat--refine-context)
+                                (-keep #'eca-chat--materialize-context))))
+    (<span class="k">when</span> eca-chat--welcome-shown (eca-chat--clear))
+    (add-to-list 'eca-chat--history prompt)
+    (<span class="k">setq</span> eca-chat--history-index -1)
+    (eca-chat--set-prompt <span class="s">""</span>)
+    (eca-chat--set-chat-loading session t)
+    (eca-api-request-async
+     session
+     <span class="bi">:method</span> <span class="s">"chat/prompt"</span>
+     <span class="bi">:params</span> (append (list <span class="bi">:message</span> (eca-chat--normalize-prompt prompt)
+                           <span class="bi">:request-id</span> (<span class="k">cl-incf</span> eca-chat--last-request-id)
+                           <span class="bi">:chatId</span> eca-chat--id
+                           <span class="bi">:model</span> (eca-chat--model)
+                           <span class="bi">:agent</span> (eca-chat--agent)
+                           <span class="bi">:contexts</span> (vconcat refined-contexts))
+                     (<span class="k">when-let*</span> ((variant (eca-chat--variant)))
+                       (list <span class="bi">:variant</span> variant))
+                     (<span class="k">when</span> (eca-chat--trust)
+                       (list <span class="bi">:trust</span> t)))
+     <span class="cd">;; </span><span class="c">The chat-id is already set buffer-locally at chat creation
+</span>     <span class="cd">;; </span><span class="c">time, so the prompt response carries no information we need
+</span>     <span class="cd">;; </span><span class="c">to act on.  Pass `#'</span><span class="m c">ignore</span><span class="c">' (rather than nil) so the response
+</span>     <span class="cd">;; </span><span class="c">dispatcher still removes the pending-handler entry.
+</span>     <span class="bi">:success-callback</span> #'ignore)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

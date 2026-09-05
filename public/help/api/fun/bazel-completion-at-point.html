@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel-completion-at-point – Emacs Documentation Online</title>
+<meta name="description" content="bazel-completion-at-point is a natively compiled function defined in
+bazel.el.
+Provide completion of Bazel target labels at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel-completion-at-point</code></h1><p><span class="m"><code>bazel-completion-at-point</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel-completion-at-point)
+</code></pre>
+<h2>Documentation</h2>
+<p>Provide completion of Bazel target labels at point.
+<p>‘bazel-mode’ adds this function to
+<br>‘completion-at-point-functions’.
+<br>See Info node <a href="/info/elisp/completion-in-buffers.html">(elisp) Completion in Buffers</a> for context.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+<span class="cd">;;;; </span><span class="c">Completion support
+</span>
+(<span class="k">defun</span> <span class="f">bazel-completion-at-point</span> ()
+  <span class="doc">"Provide completion of Bazel target labels at point.
+‘</span><span class="m doc">bazel-mode</span><span class="doc">’ adds this function to
+‘</span><span class="m doc">completion-at-point-functions</span><span class="doc">’.
+See Info node ‘(elisp) Completion in Buffers’ for context."</span>
+  <span class="cd">;; </span><span class="c">This function should be fast, so we perform the quick checks (reading
+</span>  <span class="cd">;; </span><span class="c">variables, syntax tables) first before hitting the filesystem to find the
+</span>  <span class="cd">;; </span><span class="c">repository root.
+</span>  (<span class="k">when-let*</span> ((file-name buffer-file-name))
+    (<span class="k">when</span> (derived-mode-p 'bazel-mode)
+      <span class="cd">;; </span><span class="c">We assume for now that labels always appear as strings.  That should
+</span>      <span class="cd">;; </span><span class="c">cover most cases (e.g. “deps” attributes), but not add large amounts of
+</span>      <span class="cd">;; </span><span class="c">false positives.
+</span>      (<span class="k">let</span> ((state (syntax-ppss)))
+        (<span class="k">when</span> (ppss-string-terminator state) <span class="cd">; </span><span class="c">in string
+</span>          (<span class="k">let</span> ((start (1+ (ppss-comment-or-string-start state))))
+            (<span class="k">save-excursion</span>
+              <span class="cd">;; </span><span class="c">Jump to the closing quotation mark.
+</span>              (parse-partial-sexp (point) (point-max) nil nil state
+                                  'syntax-table)
+              (<span class="k">let</span> ((end (1- (point))))
+                (<span class="k">when</span> (&gt;= end start)
+                  (<span class="k">when-let*</span> ((table (bazel--completion-at-point-table start)))
+                    (list start end table)))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

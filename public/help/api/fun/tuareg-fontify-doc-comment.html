@@ -1,0 +1,134 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg-fontify-doc-comment – Emacs Documentation Online</title>
+<meta name="description" content="tuareg-fontify-doc-comment is a natively compiled function defined in
+tuareg.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg-fontify-doc-comment</code></h1><p><span class="m"><code>tuareg-fontify-doc-comment</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg-fontify-doc-comment <span class="arg">STATE</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg-fontify-doc-comment</span> (state)
+  (<span class="k">let</span> ((beg (nth 8 state))
+        (end (<span class="k">save-excursion</span>
+               (parse-partial-sexp (point) (point-max) nil nil state
+                                   'syntax-table)
+               (point))))
+    (put-text-property beg end 'face 'font-lock-doc-face)
+    (<span class="k">when</span> (<span class="k">and</span> (eq (char-after (- end 2)) ?*)
+               (eq (char-after (- end 1)) ?\)))
+      (<span class="k">setq</span> end (- end 2)))             <span class="cd">; </span><span class="c">stop before closing "*)"
+</span>    (<span class="k">save-excursion</span>
+      (<span class="k">let</span> ((case-fold-search nil))
+        (funcall
+         (<span class="k">tuareg--syntax-rules</span>
+          ((<span class="k">rx</span> (<span class="k">or</span> <span class="s">"["</span> <span class="s">"{["</span>))
+           <span class="cd">;; </span><span class="c">Fontify opening bracket.
+</span>           (put-text-property start (point) 'face
+                              'tuareg-font-lock-doc-markup-face)
+           <span class="cd">;; </span><span class="c">Skip balanced set of brackets.
+</span>           (<span class="k">let</span> ((start-end (point))
+                 (level 1))
+             (<span class="k">while</span> (<span class="k">and</span> (&lt; (point) end)
+                         (re-search-forward (<span class="k">rx</span> (? <span class="s">"\\"</span>) (in <span class="s">"[]"</span>))
+                                            end 'noerror)
+                         (<span class="k">let</span> ((next (char-after (match-beginning 0))))
+                           (<span class="k">cond</span>
+                            ((eq next ?\[)
+                             (<span class="k">setq</span> level (1+ level))
+                             t)
+                            ((eq next ?\])
+                             (<span class="k">setq</span> level (1- level))
+                             (<span class="k">if</span> (&gt; level 0)
+                                 t
+                               (forward-char -1)
+                               nil))
+                            (t t)))))
+             (put-text-property start-end (point) 'face
+                                tuareg-font-lock-doc-code-face)
+             (<span class="k">if</span> (&gt; level 0)
+                 <span class="cd">;; </span><span class="c">Highlight unbalanced opening bracket.
+</span>                 (put-text-property start start-end 'face
+                                    'tuareg-font-lock-error-face)
+               <span class="cd">;; </span><span class="c">Fontify closing bracket.
+</span>               (put-text-property (point) (1+ (point)) 'face
+                                  'tuareg-font-lock-doc-markup-face)
+               (forward-char 1))))
+
+          ((<span class="k">rx</span> <span class="s">"]"</span>)
+           (put-text-property start (1+ start) 'face
+                              'tuareg-font-lock-error-face))
+
+          <span class="cd">;; </span><span class="c">@-tag.
+</span>          ((<span class="k">rx</span> <span class="s">"@"</span> (group (<span class="k">or</span> <span class="s">"author"</span> <span class="s">"deprecated"</span> <span class="s">"param"</span> <span class="s">"raise"</span> <span class="s">"return"</span>
+                              <span class="s">"see"</span> <span class="s">"since"</span> <span class="s">"before"</span> <span class="s">"version"</span>))
+               word-end)
+           (put-text-property start (point) 'face
+                              'tuareg-font-lock-doc-markup-face)
+           <span class="cd">;; </span><span class="c">Use code face for the first argument of some tags.
+</span>           (<span class="k">when</span> (<span class="k">and</span> (member (match-string group)
+                              '(<span class="s">"param"</span> <span class="s">"raise"</span> <span class="s">"before"</span>))
+                      (looking-at (<span class="k">rx</span> (+ space)
+                                      (group
+                                       (+ (in alpha <span class="s">"0-9"</span> <span class="s">"_.'-"</span>))))))
+             (put-text-property (match-beginning 1) (match-end 1) 'face
+                                tuareg-font-lock-doc-code-face)
+             (goto-char (match-end 0))))
+
+          <span class="cd">;; </span><span class="c">Cross-reference.
+</span>          ((<span class="k">rx</span> (<span class="k">or</span> <span class="s">"{!"</span> <span class="s">"{{!"</span>)
+               (? (<span class="k">or</span> <span class="s">"tag"</span> <span class="s">"module"</span> <span class="s">"modtype"</span> <span class="s">"class"</span> <span class="s">"classtype"</span> <span class="s">"val"</span> <span class="s">"type"</span>
+                      <span class="s">"exception"</span> <span class="s">"attribute"</span> <span class="s">"method"</span> <span class="s">"section"</span> <span class="s">"const"</span>
+                      <span class="s">"recfield"</span>)
+                  <span class="s">":"</span>)
+                (group (* (in alpha <span class="s">"0-9"</span> <span class="s">"_.'"</span>))))
+           (put-text-property start (match-beginning group) 'face
+                              'tuareg-font-lock-doc-markup-face)
+           <span class="cd">;; </span><span class="c">Use code face for the reference.
+</span>           (put-text-property (match-beginning group) (match-end group) 'face
+                              tuareg-font-lock-doc-code-face))
+
+          <span class="cd">;; </span><span class="c">{v ... v}
+</span>          ((<span class="k">rx</span> <span class="s">"{v"</span> (in <span class="s">" \t\n"</span>))
+           (put-text-property start (+ 3 start) 'face
+                              'tuareg-font-lock-doc-markup-face)
+           (<span class="k">let</span> ((verbatim-end end))
+             (<span class="k">when</span> (re-search-forward (<span class="k">rx</span> (in <span class="s">" \t\n"</span>) <span class="s">"v}"</span>)
+                                      end 'noerror)
+               (<span class="k">setq</span> verbatim-end (match-beginning 0))
+               (put-text-property verbatim-end (point) 'face
+                                  'tuareg-font-lock-doc-markup-face))
+             (put-text-property (+ 3 start) verbatim-end 'face
+                                'tuareg-font-lock-doc-verbatim-face)))
+
+          <span class="cd">;; </span><span class="c">Other {..} and &lt;..&gt; constructs.
+</span>          ((<span class="k">rx</span> (<span class="k">or</span> (seq <span class="s">"{"</span>
+                        (<span class="k">or</span> (<span class="k">or</span> <span class="s">"-"</span> <span class="s">":"</span> <span class="s">"_"</span> <span class="s">"^"</span>
+                                <span class="s">"b"</span> <span class="s">"i"</span> <span class="s">"e"</span> <span class="s">"C"</span> <span class="s">"L"</span> <span class="s">"R"</span>
+                                <span class="s">"ul"</span> <span class="s">"ol"</span> <span class="s">"%"</span>
+                                <span class="s">"{:"</span>)
+                            <span class="cd">;; </span><span class="c">Section header with optional label.
+</span>                            (seq (+ digit)
+                                 (? <span class="s">":"</span>
+                                    (+ (in alpha <span class="s">"0-9"</span> <span class="s">"_"</span>))))))
+                   <span class="s">"}"</span>
+                   <span class="cd">;; </span><span class="c">HTML-style tags
+</span>                   (seq <span class="s">"&lt;"</span> (? <span class="s">"/"</span>)
+                        (<span class="k">or</span> <span class="s">"b"</span> <span class="s">"i"</span> <span class="s">"code"</span> <span class="s">"ul"</span> <span class="s">"ol"</span> <span class="s">"li"</span>
+                            <span class="s">"center"</span> <span class="s">"left"</span> <span class="s">"right"</span>
+                            (seq <span class="s">"h"</span> (+ digit)))
+                        <span class="s">"&gt;"</span>)))
+           (put-text-property start (point) 'face
+                              'tuareg-font-lock-doc-markup-face))
+
+          <span class="cd">;; </span><span class="c">Escaped syntax characters.
+</span>          ((<span class="k">rx</span> <span class="s">"\\"</span> (in <span class="s">"{}[]@"</span>))))
+         beg end))))
+  nil)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

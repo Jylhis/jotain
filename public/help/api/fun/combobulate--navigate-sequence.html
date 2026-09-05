@@ -1,0 +1,91 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate--navigate-sequence – Emacs Documentation Online</title>
+<meta name="description" content="combobulate--navigate-sequence is a natively compiled function defined
+in combobulate-navigation.el.
+Navigate to the next node in the sequence in DIRECTION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate--navigate-sequence</code></h1><p><span class="m"><code>combobulate--navigate-sequence</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">combobulate-navigation.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate--navigate-sequence <a href="#:~:text=in-,DIRECTION"><span class="arg">DIRECTION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Navigate to the next node in the sequence in <span class="arg">DIRECTION</span>.
+<p>If there is no node in the sequence in <span class="arg">DIRECTION</span>, raise an error.
+<p>If the command is re-issued after an error is raised, the search will
+continue by scanning in <span class="arg">DIRECTION</span> for any other contextual node (as per
+<span class="m"><code>context-nodes</code></span>) that has the same text.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-navigation.el</span>
+(<span class="k">defun</span> <span class="f">combobulate--navigate-sequence</span> (direction)
+  <span class="doc">"Navigate to the next node in the sequence in DIRECTION.
+
+If there is no node in the sequence in DIRECTION, raise an error.
+
+If the command is re-issued after an error is raised, the search will
+continue by scanning in DIRECTION for any other contextual node (as per
+`</span><span class="m doc">context-nodes</span><span class="doc">') that has the same text."</span>
+  (<span class="k">let*</span> ((thing (thing-at-point 'symbol))
+         (node (combobulate--get-nearest-navigable-node))
+         (node-text (<span class="k">or</span> (<span class="k">with-navigation-nodes</span> (<span class="bi">:procedures</span> (<span class="k">combobulate-read</span> context-nodes))
+                          <span class="cd">;; </span><span class="c">we must explicitly get the nearest
+</span>                          <span class="cd">;; </span><span class="c">navigable node again as we have changed
+</span>                          <span class="cd">;; </span><span class="c">the context.
+</span>                          (combobulate-node-text (combobulate--get-nearest-navigable-node)))
+                        <span class="cd">;; </span><span class="c">fall back to the thing at point if this
+</span>                        <span class="cd">;; </span><span class="c">function is triggered in a comment, string,
+</span>                        <span class="cd">;; </span><span class="c">or other ex-node context.
+</span>                        thing))
+         (seq-nodes (<span class="k">ignore-errors</span> (combobulate-procedure-start-matches node))))
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">This is the 'fallback scan' in case there are no sequences
+</span>     <span class="cd">;; </span><span class="c">available at/near point. It can only trigger if:
+</span>     <span class="cd">;;</span><span class="c">
+</span>     <span class="cd">;; </span><span class="c">1. There are no sequences available at/near point.  2. The
+</span>     <span class="cd">;; </span><span class="c">last command was a sequence scan, indicating continuity (i.e.,
+</span>     <span class="cd">;; </span><span class="c">the user has requested multiple scans in a row and we should
+</span>     <span class="cd">;; </span><span class="c">just proceed accordingly.)
+</span>     ((<span class="k">or</span> (null seq-nodes)
+          (eq last-command 'combobulate-navigation-sequence-scan))
+      (<span class="k">unless</span> thing (<span class="w">error</span> <span class="s">"No valid symbol at point"</span>))
+      (<span class="k">setq</span> this-command 'combobulate-navigation-sequence-scan)
+      (combobulate--navigate-scan
+       <span class="cd">;; </span><span class="c">Use the last term if we have one, otherwise use the symbol
+</span>       <span class="cd">;; </span><span class="c">at point.
+</span>       (<span class="k">if</span> (not (eq last-command 'combobulate-navigation-sequence-scan))
+           (<span class="k">progn</span> (push-mark)
+                  (<span class="k">setq</span> combobulate--navigate-term thing))
+         combobulate--navigate-term)
+       direction))
+     <span class="cd">;; </span><span class="c">This is the '</span><span class="m c">normal</span><span class="c">' case where we have sequences available
+</span>     <span class="cd">;; </span><span class="c">at/near point.
+</span>     ((member this-command '(combobulate-navigate-sequence-next
+                             combobulate-navigate-sequence-previous))
+      <span class="cd">;; </span><span class="c">Find the following node in the direction we are told to look
+</span>      <span class="cd">;; </span><span class="c">and return it if there is such a node.
+</span>      (<span class="k">if-let</span> (following-node (<span class="k">if</span> (eq direction 'next)
+                                  (seq-find #'combobulate-node-after-point-p seq-nodes)
+                                (seq-find #'combobulate-node-before-point-p (reverse seq-nodes))))
+          following-node
+        <span class="cd">;; </span><span class="c">Hack this/last command so it thinks we're doing a sequence
+</span>        <span class="cd">;; </span><span class="c">scan. This is probably the simplest way of passing state
+</span>        <span class="cd">;; </span><span class="c">between commands without having to build an elaborate state
+</span>        <span class="cd">;; </span><span class="c">machine and ensure it does not go out of sync if myriad of
+</span>        <span class="cd">;; </span><span class="c">conditions cause it to do so.
+</span>        (<span class="k">setq</span> last-command 'combobulate-navigation-sequence-scan
+              this-command 'combobulate-navigation-sequence-scan)
+        <span class="cd">;; </span><span class="c">Capture the current symbol at point.
+</span>        (<span class="k">setq</span> combobulate--navigate-term thing)
+        <span class="cd">;; </span><span class="c">Throw an error so the user knows there is no node that
+</span>        <span class="cd">;; </span><span class="c">follows in DIRECTION.
+</span>        (<span class="w">user-error</span>
+         (format <span class="s">"%s (repeat command to scan for `</span><span class="m s">%s</span><span class="s">')"</span>
+                 (<span class="k">if</span> (eq direction 'next)
+                     <span class="s">"No next node in sequence"</span>
+                   <span class="s">"No previous node in sequence"</span>)
+                 node-text)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

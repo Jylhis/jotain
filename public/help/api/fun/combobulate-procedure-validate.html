@@ -1,0 +1,75 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-procedure-validate – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-procedure-validate is a natively compiled function defined
+in combobulate-procedure.el.
+Validate PROCEDURE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-procedure-validate</code></h1><p><span class="m"><code>combobulate-procedure-validate</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">combobulate-procedure.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-procedure-validate <a href="#:~:text=Validate-,PROCEDURE"><span class="arg">PROCEDURE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Validate <span class="arg">PROCEDURE</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-procedure.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-procedure-validate</span> (procedure)
+  <span class="doc">"Validate PROCEDURE."</span>
+  <span class="cd">;; </span><span class="c">assert that there are no keys beyond these three
+</span>  (<span class="k">when-let</span> (unknown-keys (seq-difference (map-keys procedure)
+                                          '(<span class="bi">:activation-nodes</span> <span class="bi">:selector</span>)))
+    (<span class="w">error</span> <span class="s">"Unknown key in procedure `</span><span class="m s">%s</span><span class="s">'. Only `</span><span class="m s">:activation-nodes</span><span class="s">' or
+ `</span><span class="m s">:selector</span><span class="s">' are valid"</span> unknown-keys))
+  (<span class="k">map-let</span> (<span class="bi">:activation-nodes</span> <span class="bi">:selector</span>)
+      procedure
+    (<span class="k">unless</span> (listp activation-nodes)
+      (<span class="w">error</span> <span class="s">"Expected `</span><span class="m s">:activation-nodes</span><span class="s">' to be a list, but got `</span><span class="m s">%s</span><span class="s">'"</span> <span class="bi">:activation-nodes</span>))
+    (<span class="k">dolist</span> (activation-node activation-nodes)
+      (<span class="k">when</span> (<span class="k">and</span> (plist-get activation-node <span class="bi">:has-parent</span>)
+                 (plist-get activation-node <span class="bi">:has-ancestor</span>)
+                 (plist-get activation-node <span class="bi">:has-fields</span>))
+        (<span class="w">error</span> <span class="s">"`</span><span class="m s">:activation-node</span><span class="s">' allows only: `</span><span class="m s">:has-parent</span><span class="s">', `</span><span class="m s">:has-ancestor</span><span class="s">', or `</span><span class="m s">:has-fields</span><span class="s">' but got `</span><span class="m s">%s</span><span class="s">'"</span> activation-node)))
+    (<span class="k">when</span> selector
+      (<span class="k">map-let</span> (<span class="bi">:match-children</span> <span class="bi">:match-siblings</span> <span class="bi">:match-query</span>)
+          selector
+        (<span class="k">let</span> ((matcher))
+          (<span class="k">setq</span> matcher (<span class="k">or</span> (plist-get selector <span class="bi">:match-children</span>)
+                            (plist-get selector <span class="bi">:match-siblings</span>)
+                            (plist-get selector <span class="bi">:match-query</span>)))
+          (<span class="k">cond</span>
+           ((<span class="k">or</span> match-children match-siblings)
+            (<span class="k">unless</span> (<span class="k">or</span> (listp matcher) (equal matcher 't))
+              (<span class="w">error</span> <span class="s">"Expected `</span><span class="m s">:selector</span><span class="s">' to have a list of matchers, but got `</span><span class="m s">%s</span><span class="s">'"</span> matcher)))
+           (match-query
+            <span class="cd">;; </span><span class="c">match-query should be a list (:query QUERY :discard-rules RULES :engine ENGINE)
+</span>            (<span class="k">unless</span> (<span class="k">and</span> (listp matcher)
+                         (<span class="k">let</span> ((query (plist-get matcher <span class="bi">:query</span>))
+                               <span class="cd">;; </span><span class="c">(discard-rules (plist-get matcher :discard-rules))
+</span>                               )
+                           (<span class="k">and</span> (listp query))))
+              (<span class="w">error</span> <span class="s">"Query matchers must have `</span><span class="m s">:query</span><span class="s">' (and optionally `</span><span class="m s">:discard-rules</span><span class="s">') but got `</span><span class="m s">%s</span><span class="s">'"</span> matcher))
+            <span class="cd">;; </span><span class="c">cquery and query should match using `</span><span class="m c">@match</span><span class="c">' and
+</span>            <span class="cd">;; </span><span class="c">`</span><span class="m c">@discard</span><span class="c">' and not other markers.
+</span>            (<span class="k">when</span> match-query
+              (<span class="k">when-let</span>
+                  (wrong-mark
+                   (seq-find
+                    (<span class="k">lambda</span> (query-atom)
+                      (<span class="k">and</span>
+                       <span class="cd">;; </span><span class="c">only check symbols!
+</span>                       (symbolp query-atom)
+                       (<span class="k">let</span> ((name (symbol-name query-atom)))
+                         <span class="cd">;; </span><span class="c">ensure the name, if it starts with
+</span>                         <span class="cd">;; </span><span class="c">`</span><span class="m c">@</span><span class="c">', is either `</span><span class="m c">@match</span><span class="c">' or
+</span>                         <span class="cd">;; </span><span class="c">`</span><span class="m c">@discard</span><span class="c">'.
+</span>                         (<span class="k">and</span> (string-prefix-p <span class="s">"@"</span> name)
+                              (not (member name '(<span class="s">"@match"</span> <span class="s">"@discard"</span>)))))))
+                    (flatten-tree matcher)))
+                (<span class="w">error</span> <span class="s">"`</span><span class="m s">:match-query</span><span class="s">' should use `</span><span class="m s">@match</span><span class="s">' and `</span><span class="m s">@discard</span><span class="s">' to tag nodes, but got `</span><span class="m s">%s</span><span class="s">'"</span> wrong-mark))))
+           (t
+            (<span class="w">error</span> <span class="s">"Expected `</span><span class="m s">:selector</span><span class="s">' to have either `</span><span class="m s">:match-children</span><span class="s">' or `</span><span class="m s">:match-query</span><span class="s">', but got `</span><span class="m s">%s</span><span class="s">'"</span> selector))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

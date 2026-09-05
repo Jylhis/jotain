@@ -1,0 +1,94 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-template-defun – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-template-defun is a macro defined in majutsu-template.el.
+Define a majutsu template helper NAME with ARGS, SIGNATURE and BODY.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-template-defun</code></h1><p><span class="m"><code>majutsu-template-defun</code></span> is a macro defined in <span class="bt">majutsu-template.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">majutsu-template-defun</span> <a href="#:~:text=helper-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=with-,ARGS"><span class="arg">ARGS</span></a> <a href="#:~:text=ARGS,-,SIGNATURE"><span class="arg">SIGNATURE</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=and-,BODY"><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Define a majutsu template helper <span class="arg">NAME</span> with <span class="arg">ARGS</span>, <span class="arg">SIGNATURE</span> and <span class="arg">BODY</span>.
+<p>Generates <span class="m"><code>majutsu-template-</code></span><span class="arg">NAME</span> and registers it for template DSL usage.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-template.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defmacro</span> <span class="f">majutsu-template-defun</span> (name args signature <span class="ty">&amp;rest</span> body)
+  <span class="doc">"Define a majutsu template helper NAME with ARGS, SIGNATURE and BODY.
+Generates `</span><span class="m doc">majutsu-template-NAME</span><span class="doc">' and registers it for template DSL usage."</span>
+  (<span class="k">declare</span> (indent defun))
+  (<span class="k">unless</span> (<span class="k">and</span> (symbolp name) (not (keywordp name)))
+    (<span class="w">user-error</span> <span class="s">"majutsu-template-defun: NAME must be an unprefixed symbol"</span>))
+  (<span class="k">let*</span> ((name-str (symbol-name name))
+         (signature-info (majutsu-template--parse-signature name signature))
+         (owner (majutsu-template--ensure-owner-type
+                 (plist-get signature-info <span class="bi">:owner</span>)
+                 name))
+         (template-name (<span class="k">or</span> (plist-get signature-info <span class="bi">:template-name</span>) name-str))
+         (keyword-flag (plist-get signature-info <span class="bi">:keyword</span>))
+         (fn-symbol (intern (format <span class="s">"majutsu-template-%s"</span> name-str)))
+         (parsed-args (majutsu-template--parse-args name args))
+         (bind-self-arg (majutsu-template--validate-bind-self
+                         name
+                         (plist-get signature-info <span class="bi">:bind-self</span>)
+                         parsed-args))
+         (self-arg (<span class="k">and</span> owner (car parsed-args)))
+         (self-binding-arg (<span class="k">or</span> bind-self-arg self-arg))
+         (returns-via (majutsu-template--validate-returns-via
+                       name
+                       (plist-get signature-info <span class="bi">:returns-via</span>)
+                       parsed-args))
+         (lambda-list (majutsu-template--build-lambda-list parsed-args))
+         (normalizers (majutsu-template--build-arg-normalizers parsed-args))
+         (arg-checks (majutsu-template--build-arg-type-checks name parsed-args))
+         (return-type (plist-get signature-info <span class="bi">:returns</span>))
+         (docstring (majutsu-template--compose-docstring
+                     template-name (plist-get signature-info <span class="bi">:doc</span>) parsed-args))
+         (body-context (list <span class="bi">:name</span> name
+                             <span class="bi">:template-name</span> template-name
+                             <span class="bi">:owner</span> owner
+                             <span class="bi">:keyword</span> keyword-flag
+                             <span class="bi">:args</span> parsed-args
+                             <span class="bi">:returns</span> return-type
+                             <span class="bi">:body-forms</span> body))
+         (body-forms (<span class="k">cond</span>
+                      (body body)
+                      (owner
+                       (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: owner-bound helpers must provide a body; use majutsu-template-defmethod/defkeyword for declarations"</span>
+                                   name))
+                      (t
+                       (majutsu-template--default-defun-body body-context))))
+         (meta `(majutsu-template--make-fn
+                 <span class="bi">:name</span> ,template-name
+                 <span class="bi">:symbol</span> ',fn-symbol
+                 <span class="bi">:args</span> ',parsed-args
+                 <span class="bi">:returns</span> ',return-type
+                 <span class="bi">:returns-via</span> ',returns-via
+                 <span class="bi">:doc</span> ,docstring
+                 <span class="bi">:owner</span> ',owner
+                 <span class="bi">:keyword</span> ',keyword-flag
+                 <span class="bi">:bind-self</span> ',(<span class="k">and</span> bind-self-arg
+                                   (majutsu-template--arg-name bind-self-arg)))))
+    (<span class="k">when</span> (<span class="k">and</span> owner bind-self-arg)
+      (<span class="w">user-error</span> <span class="s">"majutsu-template-defun %s: owner-bound helpers already bind self automatically; do not also specify :bind-self"</span>
+                  name))
+    `(<span class="k">progn</span>
+       (majutsu-template--register-function ,meta)
+       (<span class="k">defun</span> ,fn-symbol ,lambda-list
+         ,docstring
+         ,@normalizers
+         ,@arg-checks
+         ,(<span class="k">if</span> self-binding-arg
+              `(majutsu-template--call-with-self-binding
+                ,(majutsu-template--arg-name self-binding-arg)
+                ',(majutsu-template--arg-type self-binding-arg)
+                (<span class="k">lambda</span> ()
+                  (<span class="k">let</span> ((majutsu-template--result (<span class="k">progn</span> ,@body-forms)))
+                    (majutsu-template--rewrite majutsu-template--result))))
+            `(<span class="k">let</span> ((majutsu-template--result (<span class="k">progn</span> ,@body-forms)))
+               (majutsu-template--rewrite majutsu-template--result)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

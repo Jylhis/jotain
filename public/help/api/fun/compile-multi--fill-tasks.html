@@ -1,0 +1,84 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: compile-multi--fill-tasks – Emacs Documentation Online</title>
+<meta name="description" content="compile-multi--fill-tasks is a natively compiled function defined in
+compile-multi.el.
+Convert TASKS values into shell commands.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>compile-multi--fill-tasks</code></h1><p><span class="m"><code>compile-multi--fill-tasks</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">compile-multi.el</span>.
+<h2>Signature</h2>
+<pre><code>(compile-multi--fill-tasks <a href="#:~:text=Convert-,TASKS"><span class="arg">TASKS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Convert <span class="arg">TASKS</span> values into shell commands.
+<p>Returns a cons cell of the completion target and a plist of task properties.
+The plist will contain a command and an optional annotation property for task.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/n9g199gdc6vrzif3lm10ki51lkffqvg0-emacs-packages-deps/share/emacs/site-lisp/elpa/compile-multi-20250831.1542/compile-multi.el</span>
+(<span class="k">defun</span> <span class="f">compile-multi--fill-tasks</span> (tasks)
+  <span class="doc">"Convert TASKS values into shell commands.
+Returns a cons cell of the completion target and a plist of task properties.
+The plist will contain a command and an optional annotation property for task."</span>
+  (<span class="k">let</span> (res)
+    (<span class="k">dolist</span> (task tasks)
+      (<span class="k">cond</span>
+       <span class="cd">;; </span><span class="c">Generate one-or more tasks to replace this task.
+</span>       ((functionp task)
+        (<span class="k">setq</span> res (append (nreverse
+                           (compile-multi--fill-tasks (funcall task)))
+                          res)))
+       <span class="cd">;; </span><span class="c">A full command to be called as a standalone task.
+</span>       ((stringp (cdr task))
+        (<span class="k">push</span> `(,(car task)
+                <span class="bi">:command</span> ,(cdr task)
+                ,@(<span class="k">when</span> compile-multi-annotate-string-cmds
+                    (list <span class="bi">:annotation</span> (cdr task))))
+              res))
+       <span class="cd">;; </span><span class="c">Defer to a lisp-command to compile, not a shell command.
+</span>       <span class="cd">;; </span><span class="c">KLUDGE: I'm not sure about this, it might be a little too hacky.
+</span>       ((functionp (cdr task))
+        (<span class="k">push</span> `(,(car task)
+                <span class="bi">:command</span> ,(cdr task)
+                <span class="bi">:annotation</span> ,(<span class="k">if</span> (eq (car-safe (cdr task)) 'lambda)
+                                 <span class="s">"lambda"</span>
+                               (format <span class="s">"%s"</span> (cdr task))))
+              res))
+       <span class="cd">;; </span><span class="c">Command is a pre-formatted plist, nothing to be done.
+</span>       ((<span class="k">and</span> (listp (cdr task))
+             (keywordp (cadr task)))
+        <span class="cd">;; </span><span class="c">(cl-assert (plist-get (cdr task) :command) nil
+</span>        <span class="cd">;;            </span><span class="c">"Task %S has a missing command value" task)
+</span>        (<span class="k">when-let</span> ((annotation (plist-get (cdr task) <span class="bi">:annotation</span>)))
+          (plist-put (cdr task) <span class="bi">:annotation</span>
+                     (<span class="k">when</span> compile-multi-annotate-cmds
+                       annotation)))
+        (<span class="k">push</span> `(,(car task) ,@(cdr task)) res))
+       <span class="cd">;; </span><span class="c">It's a list that we need to format into a shell-command to run.
+</span>       ((listp (cdr task))
+        (<span class="k">let</span> ((cmd
+               (mapconcat (<span class="k">lambda</span> (it)
+                            (<span class="k">or</span>
+                             (<span class="k">and</span> (symbolp it)
+                                  (<span class="k">let*</span> ((val (<span class="k">or</span> (alist-get it compile-multi-forms)
+                                                  it))
+                                         (evaluated-value (eval val)))
+                                    (<span class="k">unless</span> (stringp evaluated-value)
+                                      (<span class="w">error</span> <span class="s">"Failed to stringify task argument %s"</span> val))
+                                    evaluated-value))
+                             (<span class="k">let</span> ((evaluated-value (eval it)))
+                               (<span class="k">unless</span> (stringp evaluated-value)
+                                 (<span class="w">error</span> <span class="s">"Failed to stringify task argument %s"</span> it))
+                               evaluated-value)))
+                          (cdr task) <span class="s">" "</span>)))
+          (<span class="k">push</span> `(,(car task)
+                  <span class="bi">:command</span> ,cmd
+                  ,@(<span class="k">when</span> compile-multi-annotate-string-cmds
+                      (list <span class="bi">:annotation</span> cmd)))
+                res)))
+       (t (<span class="w">error</span> <span class="s">"Unknown task type: %s"</span> task))))
+    (nreverse res)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

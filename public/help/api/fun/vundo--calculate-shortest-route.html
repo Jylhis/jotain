@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vundo--calculate-shortest-route – Emacs Documentation Online</title>
+<meta name="description" content="vundo--calculate-shortest-route is a natively compiled function
+defined in vundo.el.
+Calculate the shortest route from FROM to TO node.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vundo--calculate-shortest-route</code></h1><p><span class="m"><code>vundo--calculate-shortest-route</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">vundo.el</span>.
+<h2>Signature</h2>
+<pre><code>(vundo--calculate-shortest-route <a href="#:~:text=from-,FROM"><span class="arg">FROM</span></a> <a href="#:~:text=to-,TO"><span class="arg">TO</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Calculate the shortest route from <span class="arg">FROM</span> to <span class="arg">TO</span> node.
+<p>Return (SOURCE STOP1 STOP2 ... DEST), meaning you should undo the
+modifications from DEST to SOURCE. Each STOP is an intermediate
+stop. Eg, (6 5 4 3). Return nil if there’s no valid route.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/7c2696v2qdrdv2vf2im8alazibi7qq0z-emacs-packages-deps/share/emacs/site-lisp/elpa/vundo-2.4.0/vundo.el</span>
+<span class="cd">;;; </span><span class="c">Traverse undo tree
+</span>
+(<span class="k">defun</span> <span class="f">vundo--calculate-shortest-route</span> (from to)
+  <span class="doc">"Calculate the shortest route from FROM to TO node.
+Return (SOURCE STOP1 STOP2 ... DEST), meaning you should undo the
+modifications from DEST to SOURCE. Each STOP is an intermediate
+stop. Eg, (6 5 4 3). Return nil if there’s no valid route."</span>
+  (<span class="k">let</span> (route-list)
+    <span class="cd">;; </span><span class="c">Find all valid routes.
+</span>    (<span class="k">dolist</span> (source (vundo--eqv-list-of from))
+      (<span class="k">dolist</span> (dest (vundo--eqv-list-of to))
+        <span class="cd">;; </span><span class="c">We only allow route in this direction.
+</span>        (<span class="k">if</span> (&gt; (vundo-m-idx source) (vundo-m-idx dest))
+            (<span class="k">push</span> (cons (vundo-m-idx source)
+                        (vundo-m-idx dest))
+                  route-list))))
+    <span class="cd">;; </span><span class="c">Find the shortest route.
+</span>    (<span class="k">setq</span> route-list
+          (seq-sort
+           (<span class="k">lambda</span> (r1 r2)
+             <span class="cd">;; </span><span class="c">Ie, distance between SOURCE and DEST in R1 compare
+</span>             <span class="cd">;; </span><span class="c">against distance in R2.
+</span>             (&lt; (- (car r1) (cdr r1)) (- (car r2) (cdr r2))))
+           route-list))
+    (<span class="k">if-let*</span> ((route (car route-list))
+              (source (car route))
+              (dest (cdr route)))
+        (number-sequence source dest -1))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

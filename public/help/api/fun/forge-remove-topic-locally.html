@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge-remove-topic-locally – Emacs Documentation Online</title>
+<meta name="description" content="forge-remove-topic-locally is an interactive and natively compiled
+function defined in forge-commands.el.
+Remove a topic from the local database only.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge-remove-topic-locally</code></h1><p><span class="m"><code>forge-remove-topic-locally</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">forge-commands.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge-remove-topic-locally <a href="#:~:text="><span class="arg">TOPIC</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Remove a topic from the local database only.
+<p>When the region marks multiple topics, then offer to remove them all.
+<p>The topic is not removed from the forge and, if it is later modified,
+then it will be added to the database again when fetching all topics.
+<p>This is useful for users who only fetch individual topics and want to
+remove the topics they are no longer interested in.  This can also be
+used to remove topics locally, which have already been removed on the
+forge (the service).  Forge (the package) cannot automatically detect
+when that happens, because given how the APIs work, this would be too
+expensive.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-commands.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">forge-remove-topic-locally</span> (topic)
+  <span class="doc">"Remove a topic from the local database only.
+
+When the region marks multiple topics, then offer to remove them all.
+
+The topic is not removed from the forge and, if it is later modified,
+then it will be added to the database again when fetching all topics.
+
+This is useful for users who only fetch individual topics and want to
+remove the topics they are no longer interested in.  This can also be
+used to remove topics locally, which have already been removed on the
+forge (the service).  Forge (the package) cannot automatically detect
+when that happens, because given how the APIs work, this would be too
+expensive."</span>
+  (<span class="k">interactive</span>
+    (list (<span class="k">if-let*</span> ((topics (magit-region-values '(issue pullreq) t))
+                    (_(magit-confirm 'remove-topics-locally nil
+                        <span class="s">"Delete %d topics locally"</span> nil
+                        (mapcar #'forge--format-topic-line topics))))
+              topics
+            (forge-read-topic <span class="s">"Delete topic LOCALLY only"</span>))))
+  (<span class="k">if</span> (listp topic)
+      (<span class="k">progn</span> (mapc #'closql-delete topic)
+             (forge-refresh-buffer))
+    (<span class="k">setq</span> topic (forge-get-topic topic))
+    (closql-delete topic)
+    (<span class="k">if</span> (<span class="k">and</span> (derived-mode-p 'forge-topic-mode)
+             (equal (<span class="k">oref</span> topic id)
+                    (<span class="k">oref</span> forge-buffer-topic id)))
+        (kill-buffer (current-buffer))
+      (forge-refresh-buffer))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

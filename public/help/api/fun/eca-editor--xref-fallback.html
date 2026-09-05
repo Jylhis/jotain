@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-editor--xref-fallback – Emacs Documentation Online</title>
+<meta name="description" content="eca-editor--xref-fallback is a natively compiled function defined in
+eca-editor.el.
+Try answering the nav REQUEST of SESSION with the buffer's xref backend.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-editor--xref-fallback</code></h1><p><span class="m"><code>eca-editor--xref-fallback</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-editor.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-editor--xref-fallback <a href="#:~:text=of-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=nav-,REQUEST"><span class="arg">REQUEST</span></a> <a href="#:~:text=and-,PARAMS"><span class="arg">PARAMS</span></a> <a href="#:~:text=backend.-,METHOD"><span class="arg">METHOD</span></a> <a href="#:~:text=return-,NO-SERVER-RESPONSE"><span class="arg">NO-SERVER-RESPONSE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Try answering the nav <span class="arg">REQUEST</span> of <span class="arg">SESSION</span> with the buffer's xref backend.
+<p>Covers eglot, etags with a loaded tags table and any custom
+backend.  <span class="arg">METHOD</span> decides between definitions and references and
+<span class="arg">PARAMS</span> carry the position, mirroring the lsp-mode path.  Schedule
+the lookup outside the process filter and return <span class="bi">:async</span> when a
+usable backend exists, otherwise return <span class="arg">NO-SERVER-RESPONSE</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-editor.el</span>
+(<span class="k">defun</span> <span class="f">eca-editor--xref-fallback</span> (session request params method no-server-response)
+  <span class="doc">"Try answering the nav REQUEST of SESSION with the buffer's xref backend.
+Covers eglot, etags with a loaded tags table and any custom
+backend.  METHOD decides between definitions and references and
+PARAMS carry the position, mirroring the lsp-mode path.  Schedule
+the lookup outside the process filter and return `</span><span class="m doc">:async</span><span class="doc">' when a
+usable backend exists, otherwise return NO-SERVER-RESPONSE."</span>
+  (<span class="k">if-let</span> ((backend (eca-editor--xref-backend)))
+      (<span class="k">let</span> ((buffer (current-buffer))
+            (position (plist-get params <span class="bi">:position</span>))
+            (references-p (string= method <span class="s">"textDocument/references"</span>))
+            (include-declaration (eca-editor--include-declaration-p params)))
+        (run-at-time
+         0 nil
+         (<span class="k">lambda</span> ()
+           (eca-api-send-request-response
+            session request
+            (<span class="k">condition-case</span> err
+                (<span class="k">if</span> (buffer-live-p buffer)
+                    (<span class="k">with-current-buffer</span> buffer
+                      (list <span class="bi">:status</span> <span class="s">"success"</span>
+                            <span class="bi">:locations</span> (eca-editor--xref-locations
+                                        backend position references-p include-declaration)))
+                  (list <span class="bi">:status</span> <span class="s">"error"</span> <span class="bi">:message</span> <span class="s">"Buffer was killed"</span>))
+              (<span class="w">error</span> (list <span class="bi">:status</span> <span class="s">"error"</span>
+                           <span class="bi">:message</span> (error-message-string err)))))))
+        <span class="bi">:async</span>)
+    no-server-response))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- Jotain - a GNU Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer.
+
+Copyright © Markus Jylhänkangas. -->
+<title>Packages (Jotain Emacs Configuration)</title>
+
+<meta name="description" content="Packages (Jotain Emacs Configuration)">
+<meta name="keywords" content="Packages (Jotain Emacs Configuration)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Package-Reference.html" rel="next" title="Package Reference">
+<link href="Early-Init.html" rel="prev" title="Early Init">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+span:hover a.copiable-link {visibility: visible}
+ul.mark-bullet {list-style-type: disc}
+</style>
+<link rel="stylesheet" type="text/css" href="manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Packages">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Package-Reference.html" rel="next">Package Reference</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Early-Init.html" rel="prev">Early Init</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+<h2 class="chapter" id="Packages-1"><span>9 Packages<a class="copiable-link" href="#Packages-1"> &para;</a></span></h2>
+
+<p>Jotain is a &quot;use-package + Nix&quot; configuration: Nix provides most packages on <code class="code">load-path</code>, so <code class="code">use-package</code> finds them without touching the network; anything Nix does not ship falls through to MELPA at install time.
+</p>
+<ul class="mini-toc">
+<li><a href="#Provenance">Provenance</a></li>
+<li><a href="#Tree_002dsitter-grammars-2">Tree-sitter grammars</a></li>
+<li><a href="#Packages-that-live-in-Nix">Packages that live in Nix</a></li>
+<li><a href="#The-devenv-shell">The devenv shell</a></li>
+<li><a href="#Adding-a-new-package">Adding a new package</a></li>
+</ul>
+<div class="section-level-extent" id="Provenance">
+<h3 class="section"><span>9.1 Provenance<a class="copiable-link" href="#Provenance"> &para;</a></span></h3>
+<ul class="itemize mark-bullet">
+<li><strong class="strong">Built-in to Emacs 30+</strong> &mdash; always opt out of installation with <code class="code">:ensure nil</code>.
+
+</li><li><strong class="strong">Provided by Nix</strong> &mdash; the distribution (<code class="code">nix/mk-overlay.nix</code>) scans the <code class="code">use-package</code> declarations and maps them to the emacs-overlay package set; archive-absent packages (e.g. <code class="code">claude-code-ide</code>, <code class="code">combobulate</code>) are built in <code class="code">nix/extra-packages.nix</code>. These also use <code class="code">:ensure nil</code> because Nix already put them on the load path.
+
+</li><li><strong class="strong">MELPA / NonGNU ELPA fallback</strong> &mdash; every other <code class="code">use-package</code> block. <code class="code">use-package-always-ensure</code> is <code class="code">t</code> (set in <code class="code">early-init.el</code>), so these default to &quot;install if missing&quot; without any extra boilerplate. Archives are registered in <code class="code">init.el</code>:
+
+<pre class="verbatim">(add-to-list 'package-archives '(&quot;melpa&quot;  . &quot;https://melpa.org/packages/&quot;)     t)
+(add-to-list 'package-archives '(&quot;nongnu&quot; . &quot;https://elpa.nongnu.org/nongnu/&quot;) t)
+</pre>
+</li></ul>
+
+</div>
+<div class="section-level-extent" id="Tree_002dsitter-grammars-2">
+<h3 class="section"><span>9.2 Tree-sitter grammars<a class="copiable-link" href="#Tree_002dsitter-grammars-2"> &para;</a></span></h3>
+<p>When built with <code class="code">default.nix</code> (the full distribution &mdash; <code class="code">just build</code> and friends), Jotain ships <em class="emph">every</em> tree-sitter grammar in nixpkgs via <code class="code">emacsPackagesFor emacs |&gt; withPackages (epkgs: [ epkgs.treesit-grammars.with-all-grammars ])</code>. The grammar bundle is exposed through <code class="code">TREE_SITTER_DIR</code>; <code class="code">early-init.el</code> picks that up and adds it to <code class="code">treesit-extra-load-path</code> so every built-in <code class="code">*-ts-mode</code> finds its grammar out of the box.
+</p>
+</div>
+<div class="section-level-extent" id="Packages-that-live-in-Nix">
+<h3 class="section"><span>9.3 Packages that live in Nix<a class="copiable-link" href="#Packages-that-live-in-Nix"> &para;</a></span></h3>
+<p><code class="code">nix/extra-packages.nix</code> defines the Elisp packages that are not on any archive (MELPA, GNU ELPA, NonGNU ELPA), so Nix builds them directly via <code class="code">trivialBuild</code> from pinned revisions and puts them on <code class="code">load-path</code>:
+</p>
+<ul class="itemize mark-bullet">
+<li><strong class="strong"><code class="code">ghostel</code></strong> &mdash; Ghostty terminal integration.
+</li><li><strong class="strong"><code class="code">jylhis-emacs-themes</code></strong> &mdash; the design-system themes; their revision comes from <code class="code">nix/design-pin.nix</code>, the single pin shared with the website&rsquo;s vendored CSS.
+</li><li><strong class="strong"><code class="code">claude-code-ide</code></strong> &mdash; fetched from <code class="code">manzaltu/claude-code-ide.el</code>, built with <code class="code">websocket</code> and <code class="code">web-server</code> as runtime dependencies (<code class="code">transient</code> is built in to Emacs 30+).
+</li><li><strong class="strong"><code class="code">combobulate</code></strong> &mdash; fetched from <code class="code">mickeynp/combobulate</code>; all its dependencies (<code class="code">seq</code>, <code class="code">map</code>, <code class="code">treesit</code>) are built in to Emacs 30+.
+</li><li><strong class="strong"><code class="code">majutsu</code></strong> &mdash; Magit-style porcelain for Jujutsu (jj), wired in <code class="code">init-vc.el</code>.
+</li><li><strong class="strong"><code class="code">tagref</code></strong> &mdash; Emacs integration for the <code class="code">tagref</code> cross-reference checker.
+</li></ul>
+
+<p>All are consumed by <code class="code">use-package ... :ensure nil</code> blocks in the relevant <code class="code">init-*.el</code> module and wired into the distribution by <code class="code">nix/mk-overlay.nix</code>.
+</p>
+</div>
+<div class="section-level-extent" id="The-devenv-shell">
+<h3 class="section"><span>9.4 The devenv shell<a class="copiable-link" href="#The-devenv-shell"> &para;</a></span></h3>
+<p>The devenv shell provides <strong class="strong">tooling only</strong> &mdash; linters, language servers, the docs chain, fonts. Emacs itself is <em class="emph">not</em> in the shell (see the top-of-file note in <code class="code">devenv.nix</code>); build and launch the editor with <code class="code">just run-built</code>.
+</p>
+</div>
+<div class="section-level-extent" id="Adding-a-new-package">
+<h3 class="section"><span>9.5 Adding a new package<a class="copiable-link" href="#Adding-a-new-package"> &para;</a></span></h3>
+<p>Most of the time you just need a <code class="code">use-package</code> block in the appropriate <code class="code">init-*.el</code> module &mdash; <code class="code">:ensure t</code> is implicit thanks to <code class="code">use-package-always-ensure</code>:
+</p>
+<pre class="verbatim">(use-package some-package
+  :mode &quot;\\.ext\\'&quot;
+  :custom
+  (some-package-option t)
+  :config
+  ;; configuration here
+  )
+</pre>
+<p>If the package is not on any archive, add it to <code class="code">nix/extra-packages.nix</code> with <code class="code">trivialBuild</code> so it is built from a pinned GitHub revision and available on <code class="code">load-path</code>, then declare it with <code class="code">:ensure nil</code> in the module.
+</p>
+<p>One invariant to know: the Nix side (<code class="code">nix/use-package.nix</code>) <strong class="strong">parses</strong> the Elisp &mdash; it does not evaluate it. <code class="code">use-package</code> forms must stay top-level (not wrapped in <code class="code">when</code>/<code class="code">let</code>/macros) and not <code class="code">:disabled</code>, or the package silently drops out of the Nix-provided set even though the Elisp still works interactively.
+</p>
+</div>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Package-Reference.html" rel="next">Package Reference</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Early-Init.html" rel="prev">Early Init</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Jotain</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span></p>
+
+
+
+</body>
+</html>

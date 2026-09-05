@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge-create-post – Emacs Documentation Online</title>
+<meta name="description" content="forge-create-post is an interactive and natively compiled function
+defined in forge-commands.el.
+Create a new post on an existing topic.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge-create-post</code></h1><p><span class="m"><code>forge-create-post</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">forge-commands.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge-create-post <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">QUOTE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create a new post on an existing topic.
+<p>If the region is active, then quote that part of the post.
+Otherwise and with a prefix argument quote the post that
+point is currently on.
+<h2>Key Bindings</h2>
+<p><span class="v">forge-topic-mode-map</span> <span class="key">C-c C-n</span>
+<span class="v">forge-topic-mode-map</span> <span class="key">C-c C-r</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-commands.el</span>
+(<span class="k">defun</span> <span class="f">forge-create-post</span> (<span class="ty">&amp;optional</span> quote)
+  <span class="doc">"Create a new post on an existing topic.
+If the region is active, then quote that part of the post.
+Otherwise and with a prefix argument quote the post that
+point is currently on."</span>
+  (<span class="k">interactive</span> (list current-prefix-arg))
+  (<span class="k">unless</span> (derived-mode-p 'forge-topic-mode)
+    (<span class="w">user-error</span> <span class="s">"This command is only available from topic buffers"</span>))
+  (<span class="k">let*</span> ((quote (<span class="k">cond</span>
+                  ((not (magit-section-match 'post)) nil)
+                  ((use-region-p)
+                   (buffer-str (region-beginning) (region-end)))
+                  (<span class="k">quote</span>
+                   (<span class="k">with-slots</span> (content end) (magit-current-section)
+                     (string-trim (buffer-str content end))))))
+         (quote (<span class="k">and</span> quote
+                     (<span class="k">lambda</span> ()
+                       (goto-char (point-max))
+                       (<span class="k">unless</span> (bobp)
+                         (insert <span class="s">"\n"</span>))
+                       (insert (replace-regexp-in-string <span class="s">"^"</span> <span class="s">"&gt; "</span> quote))
+                       (insert <span class="s">"\n\n"</span>))))
+         (obj (<span class="k">if</span> (forge-discussion-p forge-buffer-topic)
+                  (forge--select-discussion-reply-target)
+                forge-buffer-topic)))
+    (<span class="k">cl-typecase</span> obj
+      (forge-discussion-post
+       (forge--setup-post-buffer obj #'forge--submit-create-post
+         <span class="s">"%i;%I;new-reply"</span> <span class="s">"New comment on #%i;%I of %p"</span> nil quote))
+      (forge-discussion
+       (forge--setup-post-buffer obj #'forge--submit-create-post
+         <span class="s">"%i;new-answer"</span> <span class="s">"New comment on #%i of %p"</span> nil quote))
+      (t
+       (forge--setup-post-buffer obj #'forge--submit-create-post
+         <span class="s">"%i;new-comment"</span> <span class="s">"New comment on #%i of %p"</span> nil quote)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,219 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: gptel--header-line-info – Emacs Documentation Online</title>
+<meta name="description" content="gptel--header-line-info is a variable defined in gptel.el.
+Information segment for the header-line in gptel-mode.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>gptel--header-line-info</code></h1><p><span class="m"><code>gptel--header-line-info</code></span> is a variable defined in <span class="bt">gptel.el</span>.
+<h2>Value</h2>
+<details><summary>Large value</summary><pre><code>(:eval
+ (let*
+     ((model (gptel--model-name gptel-model))
+      (system
+       (propertize
+	(buttonize
+	 (format "[Prompt: %s]"
+		 (or
+		  (car-safe
+		   (rassoc gptel-system-prompt gptel-directives))
+		  (gptel--describe-directive gptel-system-prompt 15)))
+	 (lambda (&amp;rest _) (gptel-system-prompt)))
+	'mouse-face 'highlight 'help-echo "System message for session"))
+      (context
+       (and gptel-context
+	    (cl-loop for entry in gptel-context if
+		     (bufferp (or (car-safe entry) entry)) count it
+		     into bufs else count
+		     (stringp (or (car-safe entry) entry)) into files
+		     finally return
+		     (propertize
+		      (buttonize
+		       (concat "["
+			       (and (&gt; bufs 0) (format "%d buf" bufs))
+			       (and (&gt; bufs 1) "s")
+			       (and (&gt; bufs 0) (&gt; files 0) ", ")
+			       (and (&gt; files 0)
+				    (format "%d file" files))
+			       (and (&gt; files 1) "s") "]")
+		       (lambda (&amp;rest _) (require 'gptel-context)
+			 (gptel-context--buffer-setup)))
+		      'mouse-face 'highlight 'help-echo
+		      "Active gptel context"))))
+      (toggle-track-media
+       (lambda (&amp;rest _)
+	 (setq-local gptel-track-media (not gptel-track-media))
+	 (if gptel-track-media
+	     (progn
+	       (run-hooks 'gptel-refresh-buffer-hook)
+	       (message "Sending media from included links."))
+	   (without-restriction (gptel--annotate-link-clear))
+	   (message "Ignoring links.  Only link text will be sent."))
+	 (run-at-time 0 nil #'force-mode-line-update)))
+      (track-media
+       (and (gptel--model-capable-p 'media)
+	    (if gptel-track-media
+		(propertize
+		 (buttonize "[Media: Send]" toggle-track-media)
+		 'mouse-face 'highlight 'help-echo
+		 "Sending media from links/urls when supported.\nClick to toggle")
+	      (propertize (buttonize "[Media: No]" toggle-track-media)
+			  'mouse-face 'highlight 'help-echo
+			  "Ignoring media from links/urls.\nClick to toggle"))))
+      (toggle-tools
+       (lambda (&amp;rest _) (interactive)
+	 (run-at-time 0 nil
+		      (lambda nil (call-interactively #'gptel-tools)))))
+      (tools
+       (when (and gptel-use-tools gptel-tools)
+	 (propertize
+	  (buttonize
+	   (pcase (length gptel-tools)
+	     (0 "[No tools]") (1 "[1 tool]")
+	     (len (format "[%d tools]" len)))
+	   toggle-tools)
+	  'mouse-face 'highlight 'help-echo "Select tools")))
+      (usage
+       (and-let*
+	   ((idx (car-safe gptel--token-usage-strings))
+	    (entry
+	     (or (nth (1+ idx) gptel--token-usage-strings)
+		 "[usage...]"))
+	    (noinfo "[No info]")
+	    (toggle-usage
+	     (lambda (strings) (interactive)
+	       (and (car-safe strings)
+		    (cl-callf (lambda (pos) (% (1+ pos) 2))
+			(car strings))))))
+	 (buttonize entry toggle-usage gptel--token-usage-strings
+		    (concat
+		     "Token usage (C = cached tokens)\nLast request: "
+		     (or (cadr gptel--token-usage-strings) noinfo)
+		     "\nThis buffer:  "
+		     (or (caddr gptel--token-usage-strings) noinfo))))))
+   (let
+       ((rhs
+	 (concat usage (and usage " ") tools (and tools " ")
+		 track-media (and track-media " ") context
+		 (and context " ") system " "
+		 (propertize
+		  (buttonize (concat "[" model "]")
+			     (lambda (&amp;rest _) (gptel-menu)))
+		  'mouse-face 'highlight 'help-echo "Model in use"))))
+     (concat
+      (propertize " " 'display
+		  (if
+		      (and (fboundp 'string-pixel-width)
+			   (display-graphic-p))
+		      `(space :align-to
+			      (- right (,(string-pixel-width rhs))))
+		    `(space :align-to
+			    (- right ,(+ 5 (string-width rhs))))))
+      rhs))))
+</code></pre>
+</details>
+<h2>Documentation</h2>
+<p>Information segment for the header-line in <a class="v" href="../var/gptel-mode.html"><code>gptel-mode</code>(var)</a>/<a class="f" href="../fun/gptel-mode.html"><code>gptel-mode</code>(fun)</a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+<span class="cd">;;;; </span><span class="c">Header line formatting
+</span>(<span class="k">defvar</span> <span class="v">gptel--header-line-info</span>
+  '(<span class="bi">:eval</span>
+    (<span class="k">let*</span> ((model (gptel--model-name gptel-model))
+           (system
+            (propertize
+             (buttonize
+              (format <span class="s">"[Prompt: %s]"</span>
+                      (<span class="k">or</span> (car-safe (rassoc gptel-system-prompt gptel-directives))
+                          (gptel--describe-directive gptel-system-prompt 15)))
+              (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> _) (gptel-system-prompt)))
+             'mouse-face 'highlight
+             'help-echo <span class="s">"System message for session"</span>))
+           (context
+            (<span class="k">and</span> gptel-context
+                 (<span class="k">cl-loop</span>
+                  for entry in gptel-context
+                  if (bufferp (<span class="k">or</span> (car-safe entry) entry)) count it into bufs
+                  else count (stringp (<span class="k">or</span> (car-safe entry) entry)) into files
+                  finally return
+                  (propertize
+                   (buttonize
+                    (concat <span class="s">"["</span> (<span class="k">and</span> (&gt; bufs 0) (format <span class="s">"%d buf"</span> bufs))
+                            (<span class="k">and</span> (&gt; bufs 1) <span class="s">"s"</span>)
+                            (<span class="k">and</span> (&gt; bufs 0) (&gt; files 0) <span class="s">", "</span>)
+                            (<span class="k">and</span> (&gt; files 0) (format <span class="s">"%d file"</span> files))
+                            (<span class="k">and</span> (&gt; files 1) <span class="s">"s"</span>) <span class="s">"]"</span>)
+                    (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> _)
+                      (<span class="k">require</span> '<span class="m">gptel-context</span>)
+                      (gptel-context--buffer-setup)))
+                   'mouse-face 'highlight
+                   'help-echo <span class="s">"Active gptel context"</span>))))
+           (toggle-track-media
+            (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> _)
+              (<span class="k">setq-local</span> gptel-track-media (not gptel-track-media))
+              (<span class="k">if</span> gptel-track-media
+                  (<span class="k">progn</span>
+                    (run-hooks 'gptel-refresh-buffer-hook)
+                    (message <span class="s">"Sending media from included links."</span>))
+                (<span class="k">without-restriction</span> (gptel--annotate-link-clear))
+                (message <span class="s">"Ignoring links.  Only link text will be sent."</span>))
+              (run-at-time 0 nil #'force-mode-line-update)))
+           (track-media
+            (<span class="k">and</span> (gptel--model-capable-p 'media)
+                 (<span class="k">if</span> gptel-track-media
+                     (propertize
+                      (buttonize <span class="s">"[Media: Send]"</span> toggle-track-media)
+                      'mouse-face 'highlight
+                      'help-echo
+                      <span class="s">"Sending media from links/urls when supported.\nClick to toggle"</span>)
+                   (propertize
+                    (buttonize <span class="s">"[Media: No]"</span> toggle-track-media)
+                    'mouse-face 'highlight
+                    'help-echo
+                    <span class="s">"Ignoring media from links/urls.\nClick to toggle"</span>))))
+           (toggle-tools (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> _) (<span class="k">interactive</span>)
+                           (run-at-time 0 nil
+                                        (<span class="k">lambda</span> () (call-interactively #'gptel-tools)))))
+           (tools (<span class="k">when</span> (<span class="k">and</span> gptel-use-tools gptel-tools)
+                    (propertize
+                     (buttonize (<span class="k">pcase</span> (length gptel-tools)
+                                  (0 <span class="s">"[No tools]"</span>) (1 <span class="s">"[1 tool]"</span>)
+                                  (len (format <span class="s">"[%d tools]"</span> len)))
+                                toggle-tools)
+                     'mouse-face 'highlight
+                     'help-echo <span class="s">"Select tools"</span>)))
+           (usage
+            (<span class="k">and-let*</span> ((idx (car-safe gptel--token-usage-strings))
+                       (entry (<span class="k">or</span> (nth (1+ idx) gptel--token-usage-strings)
+                                  <span class="s">"[usage...]"</span>))
+                       (noinfo <span class="s">"[No info]"</span>)
+                       (toggle-usage
+                        (<span class="k">lambda</span> (strings) (<span class="k">interactive</span>)
+                          (<span class="k">and</span> (car-safe strings)
+                               (<span class="k">cl-callf</span> (<span class="k">lambda</span> (pos) (% (1+ pos) 2)) (car strings))))))
+              (buttonize entry toggle-usage gptel--token-usage-strings
+                         (concat <span class="s">"Token usage (C = cached tokens)\nLast request: "</span>
+                                 (<span class="k">or</span> (cadr gptel--token-usage-strings) noinfo)
+                                 <span class="s">"\nThis buffer:  "</span>
+                                 (<span class="k">or</span> (caddr gptel--token-usage-strings) noinfo))))))
+      (<span class="k">let</span> ((rhs (concat
+                  usage (<span class="k">and</span> usage <span class="s">" "</span>) tools (<span class="k">and</span> tools <span class="s">" "</span>)
+                  track-media (<span class="k">and</span> track-media <span class="s">" "</span>)
+                  context (<span class="k">and</span> context <span class="s">" "</span>) system <span class="s">" "</span>
+                  (propertize
+                   (buttonize (concat <span class="s">"["</span> model <span class="s">"]"</span>)
+                              (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> _) (gptel-menu)))
+                   'mouse-face 'highlight
+                   'help-echo <span class="s">"Model in use"</span>))))
+        (concat
+         (propertize
+          <span class="s">" "</span> 'display
+          (<span class="k">if</span> (<span class="k">and</span> (fboundp 'string-pixel-width)
+                   (display-graphic-p))
+              `(space <span class="bi">:align-to</span> (- right (,(string-pixel-width rhs))))
+            `(space <span class="bi">:align-to</span> (- right ,(+ 5 (string-width rhs))))))
+         rhs))))
+  <span class="doc">"Information segment for the header-line in `</span><span class="m doc">gptel-mode</span><span class="doc">'."</span>)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

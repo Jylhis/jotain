@@ -1,0 +1,260 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pcase – Emacs Documentation Online</title>
+<meta name="description" content="pcase is an autoloaded macro defined in pcase.el.gz.
+Evaluate EXP to get EXPVAL; try passing control to one of CASES.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pcase</code></h1><p><span class="m"><code>pcase</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a> macro defined in <a href="../src/emacs-lisp/pcase.el.html">pcase.el.gz</a>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">pcase</span> <a href="#:~:text=Evaluate-,EXP"><span class="arg">EXP</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=of-,CASES"><span class="arg">CASES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Evaluate <span class="arg">EXP</span> to get EXPVAL; try passing control to one of <span class="arg">CASES</span>.
+<p><span class="arg">CASES</span> is a list of elements of the form (PATTERN CODE...).
+For the first CASE whose PATTERN "matches" EXPVAL,
+evaluate its CODE..., and return the value of the last form.
+If no CASE has a PATTERN that matches, return nil.
+<p>Each PATTERN expands, in essence, to a predicate to call
+on EXPVAL.  When the return value of that call is non-nil,
+PATTERN matches.  PATTERN can take one of the forms:
+<p>&nbsp;&nbsp;_                matches anything.
+<br>&nbsp;&nbsp;'VAL             matches if EXPVAL is <a href="../fun/equal.html"><code>equal</code></a> to VAL.
+<br>&nbsp;&nbsp;KEYWORD          shorthand for 'KEYWORD
+<br>&nbsp;&nbsp;INTEGER          shorthand for 'INTEGER
+<br>&nbsp;&nbsp;STRING           shorthand for 'STRING
+<br>&nbsp;&nbsp;SYMBOL           matches anything and binds it to SYMBOL.
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;If a SYMBOL is used twice in the same pattern
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;the second occurrence becomes an <a href="../fun/eq.html"><code>eq</code></a>uality test.
+<br>&nbsp;&nbsp;(pred FUN)       matches if FUN called on EXPVAL returns non-nil.
+<br>&nbsp;&nbsp;(pred (not FUN)) matches if FUN called on EXPVAL returns nil.
+<br>&nbsp;&nbsp;(app FUN PAT)    matches if FUN called on EXPVAL matches PAT.
+<br>&nbsp;&nbsp;(guard BOOLEXP)  matches if BOOLEXP evaluates to non-nil.
+<br>&nbsp;&nbsp;(<span class="k">and</span> PAT...)     matches if all the patterns match.
+<br>&nbsp;&nbsp;(<span class="k">or</span> PAT...)      matches if any of the patterns matches.
+<p>FUN in <span class="m"><code>pred</code></span> and <span class="m"><code>app</code></span> can take one of the forms:
+<br>&nbsp;&nbsp;SYMBOL  or  (lambda ARGS BODY)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;call it with one argument
+<br>&nbsp;&nbsp;(F ARG1 .. ARGn)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;call F with ARG1..ARGn and EXPVAL as n+1'th argument
+<br>&nbsp;&nbsp;(F ARG1 .. _ .. ARGn)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;call F, passing EXPVAL at the _ position.
+<p>FUN, BOOLEXP, and subsequent PAT can refer to variables
+bound earlier in the pattern by a SYMBOL pattern.
+<p>Additional patterns can be defined using <a href="../fun/pcase-defmacro.html"><code>pcase-defmacro</code></a>.
+<p>See Info node <a href="/info/elisp/pattern-matching-conditional.html">(elisp) Pattern-Matching Conditional</a> in the
+Emacs Lisp manual for more information and examples.
+<p>-- `QPAT  in <a href="../src/emacs-lisp/pcase.el.html">pcase.el</a>.
+<p>Backquote-style pcase patterns: `QPAT
+QPAT can take the following forms:
+<br>&nbsp;&nbsp;(QPAT1 . QPAT2)       matches if QPAT1 matches the car and QPAT2 the cdr.
+<br>&nbsp;&nbsp;[QPAT1 QPAT2..QPATn]  matches a vector of length n and QPAT1..QPATn match
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;its 0..(n-1)th elements, respectively.
+<br>&nbsp;&nbsp;,PAT                  matches if the pcase pattern PAT matches.
+<br>&nbsp;&nbsp;SYMBOL                matches if EXPVAL is equal to SYMBOL.
+<br>&nbsp;&nbsp;KEYWORD               likewise for KEYWORD.
+<br>&nbsp;&nbsp;NUMBER                likewise for NUMBER.
+<br>&nbsp;&nbsp;STRING                likewise for STRING.
+<p>The list or vector QPAT is a template.  The predicate formed
+by a backquote-style pattern is a combination of those
+formed by any sub-patterns, wrapped in a top-level condition:
+EXPVAL must be "congruent" with the template.  For example:
+<p>&nbsp;&nbsp;`(technical ,forum)
+<p>The predicate is the logical-AND of:
+<br>&nbsp;- Is EXPVAL a list of two elements?
+<br>&nbsp;- Is the first element the symbol <span class="m"><code>technical</code></span>?
+<br>&nbsp;- True!  (The second element can be anything, and for the sake
+<br>&nbsp;&nbsp;&nbsp;of the body forms, its value is bound to the symbol <span class="m"><code>forum</code></span>.)
+<p>-- (cl-type TYPE)  in <a href="../src/emacs-lisp/cl-macs.el.html">cl-macs.el</a>.
+<p>Pcase pattern that matches objects of TYPE.
+TYPE is a type descriptor as accepted by <a href="../fun/cl-typep.html"><code>cl-typep</code></a>, which see.
+<p>-- (let PAT EXPR)  in <a href="../src/emacs-lisp/pcase.el.html">pcase.el</a>.
+<p>Matches if EXPR matches PAT.
+<p>-- (cl-struct TYPE &amp;rest FIELDS)  in <a href="../src/emacs-lisp/cl-macs.el.html">cl-macs.el</a>.
+<p>Pcase patterns that match cl-struct EXPVAL of type TYPE.
+Elements of FIELDS can be of the form (NAME PAT) in which case the
+contents of field NAME is matched against PAT, or they can be of
+the form NAME which is a shorthand for (NAME NAME).
+<p>-- (map &amp;rest ARGS)  in <a href="../src/emacs-lisp/map.el.html">map.el</a>.
+<p>Build a <a href="../fun/pcase.html"><code>pcase</code></a> pattern matching map elements.
+<p>ARGS is a list of elements to be matched in the map.
+<p>Each element of ARGS can be of the form (KEY PAT [DEFAULT]),
+which looks up KEY in the map and matches the associated value
+against <a href="../fun/pcase.html"><code>pcase</code></a> pattern PAT.  DEFAULT specifies the fallback
+value to use when KEY is not present in the map.  If omitted, it
+defaults to nil.  Both KEY and DEFAULT are evaluated.
+<p>Each element can also be a SYMBOL, which is an abbreviation of
+a (KEY PAT) tuple of the form ('SYMBOL SYMBOL).  When SYMBOL
+is a keyword, it is an abbreviation of the form (:SYMBOL SYMBOL),
+useful for binding plist values.
+<p>An element of ARGS fails to match if PAT does not match the
+associated value or the default value.  The overall pattern fails
+to match if any element of ARGS fails to match.
+<p>-- (seq &amp;rest PATTERNS)  in <a href="../src/emacs-lisp/seq.el.html">seq.el</a>.
+<p>Build a <a href="../fun/pcase.html"><code>pcase</code></a> pattern that matches elements of SEQUENCE.
+<p>The <a href="../fun/pcase.html"><code>pcase</code></a> pattern will match each element of PATTERNS against the
+corresponding element of SEQUENCE.
+<p>Extra elements of the sequence are ignored if fewer PATTERNS are
+given, and the match does not fail.
+<p>-- (radix-tree-leaf VPAT)  in <a href="../src/emacs-lisp/radix-tree.el.html">radix-tree.el</a>.
+<p>Pattern which matches a radix-tree leaf.
+The pattern VPAT is matched against the leaf's carried value.
+<p>-- (rx &amp;rest REGEXPS)  in <a href="../src/emacs-lisp/rx.el.html">rx.el</a>.
+<p>A pattern that matches strings against <a href="../fun/rx.html"><code>rx</code></a> REGEXPS in sexp form.
+REGEXPS are interpreted as in <a href="../fun/rx.html"><code>rx</code></a>.  The pattern matches any
+string that is a match for REGEXPS, as if by <a href="../fun/string-match.html"><code>string-match</code></a>.
+<p>In addition to the usual <a href="../fun/rx.html"><code>rx</code></a> syntax, REGEXPS can contain the
+following constructs:
+<p>&nbsp;&nbsp;(<span class="k">let</span> REF RX...)  binds the symbol REF to a submatch that matches
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;the regular expressions RX.  REF is bound in
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CODE to the string of the submatch or nil, but
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;can also be used in backref.
+<br>&nbsp;&nbsp;(backref REF)    matches whatever the submatch REF matched.
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;REF can be a number, as usual, or a name
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;introduced by a previous (<span class="k">let</span> REF ...)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;construct.
+<p>-- (eieio &amp;rest FIELDS)  in <a href="../src/emacs-lisp/eieio.el.html">eieio.el</a>.
+<p>Pcase patterns that match EIEIO object EXPVAL.
+Elements of FIELDS can be of the form (NAME PAT) in which case the
+contents of field NAME is matched against PAT, or they can be of
+<br>&nbsp;the form NAME which is a shorthand for (NAME NAME).
+<p><a href="/info/elisp/pcase-macro.html#index-pcase">View in manual</a>
+<p>Probably introduced at or before Emacs version <a href="../etc/NEWS.24.html">24.1</a>.
+<h2>Demos</h2>
+<pre><code><span class="c">:PROPERTIES:</span>
+<span class="c">:added:</span>    <span class="s">24.1</span>
+<span class="c">:changes:</span>  <span class="s">25.1 New UPatterns 'quote', 'app', 'cl-struct', 'eieio', 'seq', 'map'.</span>
+<span class="c">:changes+:</span> <span class="s">25.1 New vector QPattern.</span>
+<span class="c">:changes+:</span> <span class="s">26.1 The rx pattern is added.</span>
+<span class="c">:changes+:</span> <span class="s">28.1 The 'pred' pattern can now take the form '(pred (not FUN))'.</span>
+<span class="c">:changes+:</span> <span class="s">28.1 Added 'cl-type' pattern.</span>
+<span class="c">:END:</span>
+
+<span class="c">#+BEGIN_SRC elisp :results silent
+</span><span class="">(</span><span class="k ">pcase</span><span class=""> (read)
+  </span><span class="cd ">;; </span><span class="c ">42
+</span><span class="">  (42
+   (message </span><span class="s ">"forty-two"</span><span class="">))
+  </span><span class="cd ">;; </span><span class="c ">other numbers
+</span><span class="">  ((</span><span class="k ">and</span><span class=""> (pred numberp) n)
+   (message </span><span class="s ">"Number: %d"</span><span class=""> n))
+  </span><span class="cd ">;; </span><span class="c ">string
+</span><span class="">  ((</span><span class="k ">and</span><span class=""> (pred stringp) s)
+   (message </span><span class="s ">"String: %S"</span><span class=""> s))
+  </span><span class="cd ">;; </span><span class="c ">'hello (symbol)
+</span><span class="">  ('hello
+   (message </span><span class="s ">"World"</span><span class="">))
+  </span><span class="cd ">;; </span><span class="c ">default
+</span><span class="">  (x (message </span><span class="s ">"=&gt; %S"</span><span class=""> x)))
+</span><span class="c">#+END_SRC
+</span>
+<span class="c">#+begin_src elisp :results silent
+</span><span class="cd ">;; </span><span class="c ">pred
+</span><span class="">(</span><span class="k ">pcase</span><span class=""> (random 3)
+  ((pred zerop)           </span><span class="s ">"zero"</span><span class="">)
+  ((pred (</span><span class="k ">lambda</span><span class=""> (n) (= n 1))) </span><span class="s ">"one"</span><span class="">)
+  ((pred (= 2))           </span><span class="s ">"two"</span><span class="">))
+</span><span class="c">#+end_src
+</span>
+<span class="c">#+begin_src elisp :results silent
+</span><span class="cd ">;; </span><span class="c ">app
+</span><span class="">(</span><span class="k ">pcase</span><span class=""> (random 3)
+  ((app identity 0) </span><span class="s ">"zero"</span><span class="">)
+  ((app (</span><span class="k ">lambda</span><span class=""> (n) n) 1) </span><span class="s ">"one"</span><span class="">)
+  ((app (identity) 2) </span><span class="s ">"two"</span><span class="">))
+</span><span class="c">#+end_src
+</span>
+<span class="c">#+begin_src elisp :results silent
+</span><span class="cd ">;; </span><span class="c ">let
+</span><span class="">(</span><span class="k ">pcase</span><span class=""> (read-number </span><span class="s ">"Number: "</span><span class="">)
+  ((</span><span class="k ">and</span><span class=""> 42 (</span><span class="k ">let</span><span class=""> msg </span><span class="s ">"forty-two"</span><span class="">))
+   msg))
+</span><span class="c">#+end_src
+</span>
+<span class="c">#+begin_src elisp
+</span><span class="cd ">;; </span><span class="c ">rx
+</span><span class="">(</span><span class="k ">pcase</span><span class=""> (format-time-string </span><span class="s ">"%Y-%m-%d"</span><span class="">)
+  </span><span class="cd ">;; </span><span class="c ">2020-03-07
+</span><span class="">  ((</span><span class="k ">rx</span><span class=""> (</span><span class="k ">let</span><span class=""> y (= 4 num)) </span><span class="s ">"-"</span><span class="">
+       (</span><span class="k ">let</span><span class=""> m (= 2 num)) </span><span class="s ">"-"</span><span class="">
+       (</span><span class="k ">let</span><span class=""> d (= 2 num)))
+   (list </span><span class="bi ">:year</span><span class=""> y
+         </span><span class="bi ">:month</span><span class=""> m
+         </span><span class="bi ">:day</span><span class=""> d)))
+</span><span class="c">#+end_src
+</span>
+<span class="c">#+RESULTS:</span>
+<span class="">: (:year "2020" :month "03" :day "07")</span>
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><a href="../src/emacs-lisp/pcase.el.html">/usr/src/emacs/lisp/emacs-lisp/pcase.el.gz</a>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defmacro</span> <span class="f">pcase</span> (exp <span class="ty">&amp;rest</span> cases)
+  <span class="cd">;; </span><span class="c">FIXME: Add some "global pattern" to wrap every case?
+</span>  <span class="cd">;; </span><span class="c">Could be used to wrap all cases in a `
+</span>  <span class="doc">"Evaluate EXP to get EXPVAL; try passing control to one of CASES.
+CASES is a list of elements of the form (PATTERN CODE...).
+For the first CASE whose PATTERN \"matches\" EXPVAL,
+evaluate its CODE..., and return the value of the last form.
+If no CASE has a PATTERN that matches, return nil.
+
+Each PATTERN expands, in essence, to a predicate to call
+on EXPVAL.  When the return value of that call is non-nil,
+PATTERN matches.  PATTERN can take one of the forms:
+
+  _                matches anything.
+  </span><span class="bi doc">\\=</span><span class="doc">'VAL             matches if EXPVAL is `</span><span class="m doc">equal</span><span class="doc">' to VAL.
+  KEYWORD          shorthand for </span><span class="bi doc">\\=</span><span class="doc">'KEYWORD
+  INTEGER          shorthand for </span><span class="bi doc">\\=</span><span class="doc">'INTEGER
+  STRING           shorthand for </span><span class="bi doc">\\=</span><span class="doc">'STRING
+  SYMBOL           matches anything and binds it to SYMBOL.
+                   If a SYMBOL is used twice in the same pattern
+                   the second occurrence becomes an `</span><span class="m doc">eq</span><span class="doc">'uality test.
+  (pred FUN)       matches if FUN called on EXPVAL returns non-nil.
+  (pred (not FUN)) matches if FUN called on EXPVAL returns nil.
+  (app FUN PAT)    matches if FUN called on EXPVAL matches PAT.
+  (guard BOOLEXP)  matches if BOOLEXP evaluates to non-nil.
+  (and PAT...)     matches if all the patterns match.
+  (or PAT...)      matches if any of the patterns matches.
+
+FUN in `</span><span class="m doc">pred</span><span class="doc">' and `</span><span class="m doc">app</span><span class="doc">' can take one of the forms:
+  SYMBOL  or  (lambda ARGS BODY)
+     call it with one argument
+  (F ARG1 .. ARGn)
+     call F with ARG1..ARGn and EXPVAL as n+1'th argument
+  (F ARG1 .. _ .. ARGn)
+     call F, passing EXPVAL at the _ position.
+
+FUN, BOOLEXP, and subsequent PAT can refer to variables
+bound earlier in the pattern by a SYMBOL pattern.
+
+Additional patterns can be defined using `</span><span class="m doc">pcase-defmacro</span><span class="doc">'.
+
+See Info node `(elisp) Pattern-Matching Conditional' in the
+Emacs Lisp manual for more information and examples."</span>
+  (<span class="k">declare</span> (indent 1) (debug (form <span class="ty">&amp;rest</span> (pcase-PAT body))))
+  <span class="cd">;; </span><span class="c">We want to use a weak hash table as a cache, but the key will unavoidably
+</span>  <span class="cd">;; </span><span class="c">be based on `</span><span class="m c">exp</span><span class="c">' and `</span><span class="m c">cases</span><span class="c">', yet `</span><span class="m c">cases</span><span class="c">' is a fresh new list each time
+</span>  <span class="cd">;; </span><span class="c">we're called so it'll be immediately GC'd.  So we use (car cases) as key
+</span>  <span class="cd">;; </span><span class="c">which does come straight from the source code and should hence not be GC'd
+</span>  <span class="cd">;; </span><span class="c">so easily.
+</span>  (<span class="k">let</span> ((data (gethash (car cases) pcase--memoize)))
+    <span class="cd">;; </span><span class="c">data = (EXP CASES . EXPANSION)
+</span>    (<span class="k">if</span> (<span class="k">and</span> (equal exp (car data)) (equal cases (cadr data)))
+        <span class="cd">;; </span><span class="c">We have the right expansion.
+</span>        (cddr data)
+      <span class="cd">;; </span><span class="c">(when (gethash (car cases) pcase--memoize-1)
+</span>      <span class="cd">;;   </span><span class="c">(message "pcase-memoize failed because of weak key!!"))
+</span>      <span class="cd">;; </span><span class="c">(when (gethash (car cases) pcase--memoize-2)
+</span>      <span class="cd">;;   </span><span class="c">(message "pcase-memoize failed because of eq test on %S"
+</span>      <span class="cd">;;            </span><span class="c">(car cases)))
+</span>      <span class="cd">;; </span><span class="c">(when data
+</span>      <span class="cd">;;   </span><span class="c">(message "pcase-memoize: equal first branch, yet different"))
+</span>      (<span class="k">let</span> ((expansion (pcase--expand exp cases)))
+        (puthash (car cases) `(,exp ,cases ,@expansion) pcase--memoize)
+        <span class="cd">;; </span><span class="c">(puthash (car cases) `(,exp ,cases ,@expansion) pcase--memoize-1)
+</span>        <span class="cd">;; </span><span class="c">(puthash (car cases) `(,exp ,cases ,@expansion) pcase--memoize-2)
+</span>        expansion))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

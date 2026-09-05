@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--threads-set-status – Emacs Documentation Online</title>
+<meta name="description" content="dape--threads-set-status is a natively compiled function defined in
+dape.el.
+Set string STATUS thread(s) for CONN.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--threads-set-status</code></h1><p><span class="m"><code>dape--threads-set-status</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--threads-set-status <a href="#:~:text=for-,CONN"><span class="arg">CONN</span></a> <a href="#:~:text=If-,THREAD-ID"><span class="arg">THREAD-ID</span></a> <a href="#:~:text=If-,ALL-THREADS"><span class="arg">ALL-THREADS</span></a> <a href="#:~:text=string-,STATUS"><span class="arg">STATUS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=if-,UPDATE-HANDLE"><span class="arg">UPDATE-HANDLE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Set string <span class="arg">STATUS</span> thread(s) for <span class="arg">CONN</span>.
+<p>If <span class="arg">THREAD-ID</span> is non-nil set status for thread with :id equal to
+<span class="arg">THREAD-ID</span> to <span class="arg">STATUS</span>.
+If <span class="arg">ALL-THREADS</span> is non-nil set status of all all threads to <span class="arg">STATUS</span>.
+Ignore status update if <span class="arg">UPDATE-HANDLE</span> is not the last handle created
+by <a href="../fun/dape--threads-make-update-handle.html"><code>dape--threads-make-update-handle</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--threads-set-status</span> ( conn thread-id all-threads status
+                                  <span class="ty">&amp;optional</span> update-handle)
+  <span class="doc">"Set string STATUS thread(s) for CONN.
+If THREAD-ID is non-nil set status for thread with :id equal to
+THREAD-ID to STATUS.
+If ALL-THREADS is non-nil set status of all all threads to STATUS.
+Ignore status update if UPDATE-HANDLE is not the last handle created
+by `</span><span class="m doc">dape--threads-make-update-handle</span><span class="doc">'."</span>
+  (<span class="k">unless</span> update-handle
+    (<span class="k">setq</span> update-handle (dape--threads-make-update-handle conn)))
+  (<span class="k">when</span> (&gt; update-handle (dape--threads-last-update-handle conn))
+    (<span class="k">setf</span> (dape--threads-last-update-handle conn) update-handle)
+    (<span class="k">let*</span> ((threads (dape--threads conn))
+           (thread (cl-find thread-id threads
+                            <span class="bi">:key</span> (<span class="k">lambda</span> (th) (plist-get th <span class="bi">:id</span>)))))
+      (<span class="k">unless</span> thread
+        (<span class="k">setf</span> (dape--threads conn)
+              (nconc threads
+                     `(( <span class="bi">:id</span> ,thread-id
+                         <span class="bi">:name</span> ,(format <span class="s">"thread-%s"</span> thread-id)
+                         <span class="bi">:status</span> ,status)))))
+      (<span class="k">cond</span> (<span class="cd">;; </span><span class="c">Set status on all threads
+</span>             all-threads
+             (<span class="k">cl-loop</span> for th in threads
+                      do (plist-put th <span class="bi">:status</span> status)))
+            (<span class="cd">;; </span><span class="c">Set status only on specified thread
+</span>             thread (plist-put thread <span class="bi">:status</span> status))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult-theme – Emacs Documentation Online</title>
+<meta name="description" content="consult-theme is an interactive and natively compiled function defined
+in consult.el.
+Disable current themes and enable THEME from consult-themes.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult-theme</code></h1><p><span class="m"><code>consult-theme</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult-theme <a href="#:~:text=enable-,THEME"><span class="arg">THEME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Disable current themes and enable <span class="arg">THEME</span> from <a href="../var/consult-themes.html"><code>consult-themes</code></a>.
+<p>The command supports previewing the currently selected theme.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+<span class="cd">;;;;; </span><span class="c">Command: consult-theme
+</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">consult-theme</span> (theme)
+  <span class="doc">"Disable current themes and enable THEME from `</span><span class="m doc">consult-themes</span><span class="doc">'.
+
+The command supports previewing the currently selected theme."</span>
+  (<span class="k">interactive</span>
+   (list
+    (<span class="k">let*</span> ((regexp (consult--regexp-filter
+                    (mapcar (<span class="k">lambda</span> (x) (<span class="k">if</span> (stringp x) x (format <span class="s">"\\`</span><span class="m m s">%s\\</span><span class="s">'"</span> x)))
+                            consult-themes)))
+           (avail-themes (seq-filter
+                          (<span class="k">lambda</span> (x) (string-match-p regexp (symbol-name x)))
+                          (cons 'default (custom-available-themes))))
+           (saved-theme (car custom-enabled-themes)))
+      (consult--read
+       (mapcar #'symbol-name avail-themes)
+       <span class="bi">:prompt</span> <span class="s">"Theme: "</span>
+       <span class="bi">:require-match</span> t
+       <span class="bi">:category</span> 'theme
+       <span class="bi">:history</span> 'consult--theme-history
+       <span class="bi">:lookup</span> (<span class="k">lambda</span> (selected <span class="ty">&amp;rest</span> _)
+                 (<span class="k">setq</span> selected (<span class="k">and</span> selected (intern-soft selected)))
+                 (<span class="k">or</span> (<span class="k">and</span> selected (car (memq selected avail-themes)))
+                     saved-theme))
+       <span class="bi">:state</span> (<span class="k">lambda</span> (action theme)
+                (<span class="k">with-selected-window</span> (<span class="k">or</span> (active-minibuffer-window)
+                                          (selected-window))
+                  (<span class="k">pcase</span> action
+                    ('return (consult-theme (<span class="k">or</span> theme saved-theme)))
+                    ((<span class="k">and</span> 'preview (guard theme)) (consult-theme theme)))))
+       <span class="bi">:default</span> (symbol-name (<span class="k">or</span> saved-theme 'default))))))
+  (<span class="k">when</span> (eq theme 'default) (<span class="k">setq</span> theme nil))
+  (<span class="k">unless</span> (eq theme (car custom-enabled-themes))
+    (mapc #'disable-theme custom-enabled-themes)
+    (<span class="k">when</span> theme
+      (<span class="k">unless</span> (<span class="k">and</span> (memq theme custom-known-themes) (get theme 'theme-settings))
+        (load-theme theme 'no-confirm 'no-enable))
+      (<span class="k">if</span> (<span class="k">and</span> (memq theme custom-known-themes) (get theme 'theme-settings))
+          (enable-theme theme)
+        (consult--minibuffer-message <span class="s">"%s is not a valid theme"</span> theme)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

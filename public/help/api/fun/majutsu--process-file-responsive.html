@@ -1,0 +1,83 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu--process-file-responsive – Emacs Documentation Online</title>
+<meta name="description" content="majutsu--process-file-responsive is a natively compiled function
+defined in majutsu-process.el.
+Run PROGRAM with ARGS synchronously while servicing Emacs subprocesses.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu--process-file-responsive</code></h1><p><span class="m"><code>majutsu--process-file-responsive</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-process.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu--process-file-responsive <a href="#:~:text=Run-,PROGRAM"><span class="arg">PROGRAM</span></a> <a href="#:~:text="><span class="arg">INFILE</span></a> <a href="#:~:text=subprocesses.-,DESTINATION"><span class="arg">DESTINATION</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=with-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run <span class="arg">PROGRAM</span> with <span class="arg">ARGS</span> synchronously while servicing Emacs subprocesses.
+<p><span class="arg">DESTINATION</span> follows the <a href="../fun/process-file.html"><code>process-file</code></a> stdout/stderr contract supported by
+<a href="../fun/majutsu--process-file-supported-p.html"><code>majutsu--process-file-supported-p</code></a>.  When stderr is requested as a file,
+the standard error process spawned by <a href="../fun/make-process.html"><code>make-process</code></a> has its sentinel
+silenced so the captured stderr is verbatim, and is drained explicitly
+before the file is written so its output cannot lag behind.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-process.el</span>
+(<span class="k">defun</span> <span class="f">majutsu--process-file-responsive</span> (program _infile destination <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Run PROGRAM with ARGS synchronously while servicing Emacs subprocesses.
+
+DESTINATION follows the `</span><span class="m doc">process-file</span><span class="doc">' stdout/stderr contract supported by
+`</span><span class="m doc">majutsu--process-file-supported-p</span><span class="doc">'.  When stderr is requested as a file,
+the standard error process spawned by `</span><span class="m doc">make-process</span><span class="doc">' has its sentinel
+silenced so the captured stderr is verbatim, and is drained explicitly
+before the file is written so its output cannot lag behind."</span>
+  (<span class="k">let*</span> ((stdout-dest (<span class="k">if</span> (consp destination) (car destination) destination))
+         (stderr-dest (<span class="k">and</span> (consp destination) (cadr destination)))
+         (stdout-buffer (majutsu--process-destination-buffer stdout-dest))
+         (stdout-marker (<span class="k">and</span> stdout-buffer
+                             (copy-marker (<span class="k">with-current-buffer</span> stdout-buffer
+                                            (point))
+                                          t)))
+         (stderr-buffer (<span class="k">and</span> (stringp stderr-dest)
+                             (generate-new-buffer <span class="s">" *majutsu-stderr*"</span>)))
+         (process (make-process
+                   <span class="bi">:name</span> (file-name-nondirectory program)
+                   <span class="bi">:buffer</span> stdout-buffer
+                   <span class="bi">:command</span> (cons program args)
+                   <span class="bi">:connection-type</span> 'pipe
+                   <span class="bi">:coding</span> default-process-coding-system
+                   <span class="bi">:noquery</span> t
+                   <span class="bi">:filter</span> (<span class="k">and</span> stdout-marker
+                                (majutsu--process-file-insert-filter stdout-marker))
+                   <span class="bi">:sentinel</span> #'ignore
+                   <span class="bi">:stderr</span> stderr-buffer
+                   <span class="bi">:file-handler</span> t))
+         (stderr-process (<span class="k">and</span> stderr-buffer (get-buffer-process stderr-buffer)))
+         exit)
+    <span class="cd">;; </span><span class="c">Emacs' default sentinel on the standard error process appends a
+</span>    <span class="cd">;; </span><span class="c">"Process ... finished" line to the stderr buffer; silence it so the
+</span>    <span class="cd">;; </span><span class="c">captured stderr is verbatim.
+</span>    (<span class="k">when</span> stderr-process
+      (set-process-sentinel stderr-process #'ignore))
+    (<span class="k">unwind-protect</span>
+        (<span class="k">progn</span>
+          <span class="cd">;; </span><span class="c">The main process may have already exited (e.g. it does not
+</span>          <span class="cd">;; </span><span class="c">read stdin); guard `</span><span class="m c">process-send-eof</span><span class="c">' so we never signal
+</span>          <span class="cd">;; </span><span class="c">"Process ... not running" from the dispatch path.
+</span>          (<span class="k">when</span> (process-live-p process)
+            (<span class="k">condition-case</span> nil
+                (process-send-eof process)
+              (<span class="w">error</span> nil)))
+          (<span class="k">setq</span> exit (majutsu--process-wait process stderr-process))
+          (<span class="k">when</span> stderr-buffer
+            (<span class="k">with-current-buffer</span> stderr-buffer
+              (write-region (point-min) (point-max) stderr-dest nil 'silent)))
+          exit)
+      (<span class="k">when</span> (process-live-p process)
+        (delete-process process))
+      (<span class="k">when</span> (process-live-p stderr-process)
+        (delete-process stderr-process))
+      (<span class="k">when</span> stdout-marker
+        (set-marker stdout-marker nil))
+      (<span class="k">when</span> (buffer-live-p stderr-buffer)
+        (kill-buffer stderr-buffer)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,87 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark-completing-read-prompter – Emacs Documentation Online</title>
+<meta name="description" content="embark-completing-read-prompter is a natively compiled function
+defined in embark.el.
+Prompt via completion for a command bound in KEYMAP.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark-completing-read-prompter</code></h1><p><span class="m"><code>embark-completing-read-prompter</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark-completing-read-prompter <a href="#:~:text=in-,KEYMAP"><span class="arg">KEYMAP</span></a> <a href="#:~:text=read.-,UPDATE"><span class="arg">UPDATE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,NO-DEFAULT"><span class="arg">NO-DEFAULT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Prompt via completion for a command bound in <span class="arg">KEYMAP</span>.
+<p>If <span class="arg">NO-DEFAULT</span> is t, no default value is passed to<a href="../fun/completing-read.html"><code>completing-read</code></a>.
+<p><span class="arg">UPDATE</span> is the indicator update function.  It is not used directly
+here, but if the user switches to <a href="../fun/embark-keymap-prompter.html"><code>embark-keymap-prompter</code></a>, the
+<span class="arg">UPDATE</span> function is passed to it.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+(<span class="k">defun</span> <span class="f">embark-completing-read-prompter</span> (keymap update <span class="ty">&amp;optional</span> no-default)
+  <span class="doc">"Prompt via completion for a command bound in KEYMAP.
+If NO-DEFAULT is t, no default value is passed to`</span><span class="m doc">completing-read</span><span class="doc">'.
+
+UPDATE is the indicator update function.  It is not used directly
+here, but if the user switches to `</span><span class="m doc">embark-keymap-prompter</span><span class="doc">', the
+UPDATE function is passed to it."</span>
+  (<span class="k">let*</span> ((candidates+def (embark--formatted-bindings keymap))
+         (candidates (car candidates+def))
+         (def (<span class="k">and</span> (not no-default) (cdr candidates+def)))
+         (buf (current-buffer))
+         (choice
+          (<span class="k">catch</span> '<span class="m">choice</span>
+            (<span class="k">minibuffer-with-setup-hook</span>
+                (<span class="k">lambda</span> ()
+                  (<span class="k">let</span> ((map (make-sparse-keymap)))
+                    (define-key map <span class="s">"\M-q"</span>
+                                (<span class="k">lambda</span> ()
+                                  (<span class="k">interactive</span>)
+                                  (<span class="k">with-current-buffer</span> buf
+                                    (embark-toggle-quit))))
+                    (<span class="k">when-let*</span> ((cycle (embark--cycle-key)))
+                      <span class="cd">;; </span><span class="c">Rebind `</span><span class="m c">embark-cycle</span><span class="c">' in order allow cycling
+</span>                      <span class="cd">;; </span><span class="c">from the `</span><span class="m c">completing-read</span><span class="c">' prompter. Additionally
+</span>                      <span class="cd">;; </span><span class="c">`</span><span class="m c">embark-cycle</span><span class="c">' can be selected via
+</span>                      <span class="cd">;; </span><span class="c">`</span><span class="m c">completing-read</span><span class="c">'. The downside is that this breaks
+</span>                      <span class="cd">;; </span><span class="c">recursively acting on the candidates of type
+</span>                      <span class="cd">;; </span><span class="c">embark-keybinding in the `</span><span class="m c">completing-read</span><span class="c">' prompter.
+</span>                      (define-key
+                       map cycle
+                       (<span class="k">cond</span>
+                        ((eq (lookup-key keymap cycle) 'embark-cycle)
+                         (<span class="k">lambda</span> ()
+                           (<span class="k">interactive</span>)
+                           (<span class="k">throw</span> '<span class="m">choice</span> 'embark-cycle)))
+                        ((null embark-cycle-key)
+                         (<span class="k">lambda</span> ()
+                           (<span class="k">interactive</span>)
+                           (minibuffer-message
+                            <span class="s">"No cycling possible; press `</span><span class="m s">%s</span><span class="s">' again to act."</span>
+                            (key-description cycle))
+                           (define-key map cycle #'embark-act))))))
+                    (<span class="k">when</span> embark-keymap-prompter-key
+                      (keymap-set map embark-keymap-prompter-key
+                        (<span class="k">lambda</span> ()
+                          (<span class="k">interactive</span>)
+                          (message <span class="s">"Press key binding"</span>)
+                          (<span class="k">let</span> ((cmd (embark-keymap-prompter keymap update)))
+                            (<span class="k">if</span> (null cmd)
+                                (<span class="w">user-error</span> <span class="s">"Unknown key"</span>)
+                              (<span class="k">throw</span> '<span class="m">choice</span> cmd))))))
+                    (use-local-map
+                     (make-composed-keymap map (current-local-map)))))
+              (completing-read
+               <span class="s">"Command: "</span>
+               (embark--with-category 'embark-keybinding candidates)
+               nil nil nil 'embark--prompter-history def)))))
+    (<span class="k">pcase</span> (assoc choice candidates)
+      (`(,_formatted ,_name ,cmd ,key ,_desc)
+       <span class="cd">;; </span><span class="c">Set last-command-event as it would be from the command loop.
+</span>       (<span class="k">setq</span> last-command-event (aref key (1- (length key))))
+       cmd)
+      ('nil (intern-soft choice)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

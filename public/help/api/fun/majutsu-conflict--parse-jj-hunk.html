@@ -1,0 +1,121 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-conflict--parse-jj-hunk – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-conflict--parse-jj-hunk is a natively compiled function
+defined in majutsu-conflict.el.
+Parse JJ-style conflict hunk between BEGIN and END.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-conflict--parse-jj-hunk</code></h1><p><span class="m"><code>majutsu-conflict--parse-jj-hunk</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-conflict.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-conflict--parse-jj-hunk <a href="#:~:text=between-,BEGIN"><span class="arg">BEGIN</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a> <a href="#:~:text=END.-,MARKER-LEN"><span class="arg">MARKER-LEN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse JJ-style conflict hunk between <span class="arg">BEGIN</span> and <span class="arg">END</span>.
+<p><span class="arg">MARKER-LEN</span> is the expected marker length.
+Returns (STYLE REMOVES ADDS BASE) or nil if invalid.
+BASE is the snapshot term shown as a standalone +++++++ section.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-conflict.el</span>
+<span class="cd">;;; </span><span class="c">JJ-Style Parser
+</span>
+(<span class="k">defun</span> <span class="f">majutsu-conflict--parse-jj-hunk</span> (begin end marker-len)
+  <span class="doc">"Parse JJ-style conflict hunk between BEGIN and END.
+MARKER-LEN is the expected marker length.
+Returns (STYLE REMOVES ADDS BASE) or nil if invalid.
+BASE is the snapshot term shown as a standalone +++++++ section."</span>
+  (<span class="k">save-excursion</span>
+    (goto-char begin)
+    (forward-line 1)  <span class="cd">; </span><span class="c">skip &lt;&lt;&lt;&lt;&lt;&lt;&lt; line
+</span>    (<span class="k">let</span> ((state 'unknown)
+          (style 'jj-snapshot)
+          (seen-diff nil)
+          (removes nil)
+          (adds nil)
+          (current-remove nil)
+          (current-add nil)
+          (snapshot-cell nil)
+          (done nil))
+      (<span class="k">catch</span> '<span class="m">invalid</span>
+        (<span class="k">cl-labels</span>
+            ((append-cell (cell text)
+               (setcdr cell (concat (cdr cell) text))))
+          (<span class="k">while</span> (<span class="k">and</span> (not done) (&lt; (point) end))
+            (<span class="k">let*</span> ((line (buffer-substring-no-properties
+                          (line-beginning-position)
+                          (line-end-position)))
+                   (marker (majutsu-conflict--line-marker line marker-len))
+                   (kind (car-safe marker))
+                   (label (cdr-safe marker)))
+              (<span class="k">pcase</span> kind
+                ('end
+                 (<span class="k">setq</span> done t))
+                ('diff
+                 (<span class="k">setq</span> style 'jj-diff
+                       seen-diff t
+                       state 'diff)
+                 (<span class="k">push</span> (cons (majutsu-conflict--normalize-diff-remove-label label) <span class="s">""</span>) removes)
+                 (<span class="k">push</span> (cons nil <span class="s">""</span>) adds)
+                 (<span class="k">setq</span> current-remove (car removes)
+                       current-add (car adds)))
+                ('remove
+                 (<span class="k">setq</span> state 'remove)
+                 (<span class="k">push</span> (cons label <span class="s">""</span>) removes)
+                 (<span class="k">setq</span> current-remove (car removes)))
+                ('add
+                 (<span class="k">setq</span> state 'add)
+                 (<span class="k">push</span> (cons label <span class="s">""</span>) adds)
+                 (<span class="k">setq</span> current-add (car adds))
+                 (<span class="k">when</span> (<span class="k">and</span> (null snapshot-cell)
+                            (<span class="k">or</span> seen-diff
+                                (<span class="k">and</span> (null removes)
+                                     (= (length adds) 1))))
+                   (<span class="k">setq</span> snapshot-cell current-add)))
+                ('note
+                 (<span class="k">when</span> (<span class="k">and</span> (eq state 'diff)
+                            current-add
+                            (null (car current-add)))
+                   (setcar current-add
+                           (majutsu-conflict--normalize-diff-add-label label))))
+                (_
+                 (<span class="k">pcase</span> state
+                   ('diff
+                    (<span class="k">cond</span>
+                     ((string-prefix-p <span class="s">"-"</span> line)
+                      (append-cell current-remove (concat (substring line 1) <span class="s">"\n"</span>)))
+                     ((string-prefix-p <span class="s">"+"</span> line)
+                      (append-cell current-add (concat (substring line 1) <span class="s">"\n"</span>)))
+                     ((string-prefix-p <span class="s">" "</span> line)
+                      (<span class="k">let</span> ((rest (concat (substring line 1) <span class="s">"\n"</span>)))
+                        (append-cell current-remove rest)
+                        (append-cell current-add rest)))
+                     ((string= line <span class="s">""</span>)
+                      (append-cell current-remove <span class="s">"\n"</span>)
+                      (append-cell current-add <span class="s">"\n"</span>))
+                     (t
+                      (<span class="k">throw</span> '<span class="m">invalid</span> nil))))
+                   ('remove
+                    (append-cell current-remove (concat line <span class="s">"\n"</span>)))
+                   ('add
+                    (append-cell current-add (concat line <span class="s">"\n"</span>)))
+                   (_
+                    (<span class="k">throw</span> '<span class="m">invalid</span> nil))))))
+            (<span class="k">unless</span> done
+              (forward-line 1))))
+        (<span class="k">let*</span> ((removes (nreverse removes))
+               (all-adds (nreverse adds))
+               (base nil)
+               (side-adds nil))
+          (<span class="k">dolist</span> (cell all-adds)
+            (<span class="k">if</span> (eq cell snapshot-cell)
+                (<span class="k">setq</span> base cell)
+              (<span class="k">push</span> cell side-adds)))
+          (<span class="k">setq</span> side-adds (nreverse side-adds))
+          (<span class="k">if</span> (<span class="k">and</span> base
+                   (= (length side-adds) (length removes)))
+              (list style removes side-adds base)
+            nil))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

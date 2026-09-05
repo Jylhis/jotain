@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: helpful--buffer – Emacs Documentation Online</title>
+<meta name="description" content="helpful--buffer is a natively compiled function defined in helpful.el.
+Return a buffer to show help for SYMBOL in.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>helpful--buffer</code></h1><p><span class="m"><code>helpful--buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">helpful.el</span>.
+<h2>Signature</h2>
+<pre><code>(helpful--buffer <a href="#:~:text=for-,SYMBOL"><span class="arg">SYMBOL</span></a> <a href="#:~:text="><span class="arg">CALLABLE-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a buffer to show help for <span class="arg">SYMBOL</span> in.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/al1y9rq93c50r6aqa0749m04ilfnar06-emacs-packages-deps/share/emacs/site-lisp/elpa/helpful-20250408.334/helpful.el</span>
+(<span class="k">defun</span> <span class="f">helpful--buffer</span> (symbol callable-p)
+  <span class="doc">"Return a buffer to show help for SYMBOL in."</span>
+  (<span class="k">let*</span> ((current-buffer (current-buffer))
+         (buf-name
+          (format <span class="s">"*helpful %s*"</span>
+                  (<span class="k">if</span> (symbolp symbol)
+                      (format <span class="s">"%s: %s"</span>
+                              (helpful--kind-name symbol callable-p)
+                              symbol)
+                    <span class="s">"lambda"</span>)))
+         (buf (get-buffer buf-name)))
+    (<span class="k">unless</span> buf
+      <span class="cd">;; </span><span class="c">If we need to create the buffer, ensure we don't exceed
+</span>      <span class="cd">;; </span><span class="c">`</span><span class="m c">helpful-max-buffers</span><span class="c">' by killing the least recently used.
+</span>      (<span class="k">when</span> (numberp helpful-max-buffers)
+        (<span class="k">let*</span> ((buffers (buffer-list))
+               (helpful-bufs (<span class="k">--filter</span> (<span class="k">with-current-buffer</span> it
+                                         (eq major-mode 'helpful-mode))
+                                       buffers))
+               <span class="cd">;; </span><span class="c">`</span><span class="m c">buffer-list</span><span class="c">' seems to be ordered by most recently
+</span>               <span class="cd">;; </span><span class="c">visited first, so keep those.
+</span>               (excess-buffers (-drop (1- helpful-max-buffers) helpful-bufs)))
+          <span class="cd">;; </span><span class="c">Kill buffers so we have one buffer less than the maximum
+</span>          <span class="cd">;; </span><span class="c">before we create a new one.
+</span>          (-each excess-buffers #'kill-buffer)))
+
+      (<span class="k">setq</span> buf (get-buffer-create buf-name)))
+
+    <span class="cd">;; </span><span class="c">Initialise the buffer with the symbol and associated data.
+</span>    (<span class="k">with-current-buffer</span> buf
+      (helpful-mode)
+      (<span class="k">setq</span> helpful--sym symbol)
+      (<span class="k">setq</span> helpful--callable-p callable-p)
+      (<span class="k">setq</span> helpful--start-buffer current-buffer)
+      (<span class="k">setq</span> helpful--associated-buffer current-buffer)
+      (<span class="k">setq</span> list-buffers-directory
+        (<span class="k">if</span> (symbolp symbol) (format <span class="s">"%s: %s"</span> (helpful--kind-name symbol callable-p) symbol) <span class="s">"lambda"</span>))
+      (<span class="k">if</span> (helpful--primitive-p symbol callable-p)
+          (<span class="k">setq-local</span> comment-start <span class="s">"//"</span>)
+        (<span class="k">setq-local</span> comment-start <span class="s">";"</span>)))
+    buf))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

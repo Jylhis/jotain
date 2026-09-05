@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: kkp--terminal-setup – Emacs Documentation Online</title>
+<meta name="description" content="kkp--terminal-setup is a natively compiled function defined in kkp.el.
+Run setup to enable KKP support in current terminal.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>kkp--terminal-setup</code></h1><p><span class="m"><code>kkp--terminal-setup</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">kkp.el</span>.
+<h2>Signature</h2>
+<pre><code>(kkp--terminal-setup)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run setup to enable KKP support in current terminal.
+<p>This does not work well if checking for another terminal which
+does not have focus, as input from this terminal cannot be reliably read.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/m2b3xmgxg24a6yvrhn2hs2kx62d820n5-emacs-packages-deps/share/emacs/site-lisp/elpa/kkp-20260706.858/kkp.el</span>
+(<span class="k">defun</span> <span class="f">kkp--terminal-setup</span> ()
+  <span class="doc">"Run setup to enable KKP support in current terminal.
+This does not work well if checking for another terminal which
+does not have focus, as input from this terminal cannot be reliably read."</span>
+
+  (<span class="k">let</span> ((terminal-input <span class="s">""</span>)
+        (terminal (kkp--selected-terminal))
+        chr)
+    (<span class="k">while</span> (<span class="k">and</span> (<span class="k">setq</span> chr (read-event nil nil kkp-terminal-query-timeout)) (not (equal chr ?c)))
+      (<span class="k">setq</span> terminal-input (concat terminal-input (string chr))))
+
+    <span class="cd">;; </span><span class="c">clear the setup-started flag as soon as possible
+</span>    <span class="cd">;; </span><span class="c">to enable another try if somehow the string-match-p evaluates to nil
+</span>    (<span class="k">setf</span> (kkp--state-setup-started (kkp--ensure-state terminal)) nil)
+
+    <span class="cd">;; </span><span class="c">Condition: CSI?&lt;flags&gt;u CSI?...c must be in response
+</span>    <span class="cd">;; </span><span class="c">CSI? is already in response as it was registered as handler for the async request
+</span>    <span class="cd">;; </span><span class="c">thus it is not in terminal-input.
+</span>    (<span class="k">if</span> (string-match-p (<span class="k">rx</span> line-start
+                            (+ digit) <span class="cd">;; </span><span class="c">&lt;flags&gt;
+</span>                            <span class="s">"u\e[?"</span>
+                            (+ anychar) <span class="cd">;; </span><span class="c">primary device attributes
+</span>                            eol) <span class="w">terminal-input)</span>
+        (<span class="k">progn</span>
+          (kkp--verbose <span class="s">"setup response matched (terminal supports KKP)"</span>)
+          (<span class="k">unless</span> (kkp--active-p terminal)
+            (<span class="k">let</span> ((enhancement-flag (kkp--calculate-flags-integer)))
+              (<span class="k">if</span> (eq enhancement-flag 0)
+                  (kkp--verbose <span class="s">"no enhancements to enable (flag=0); skipping"</span>)
+                (kkp--verbose <span class="s">"enabling KKP: sending &gt;%su, setting keymaps"</span> enhancement-flag)
+                (send-string-to-terminal (kkp--csi-escape (format <span class="s">"&gt;%su"</span> enhancement-flag)) terminal)
+                <span class="cd">;; </span><span class="c">Record the flags the terminal actually enabled, not those we
+</span>                <span class="cd">;; </span><span class="c">requested: some terminals (e.g. zellij) implement only a
+</span>                <span class="cd">;; </span><span class="c">subset of the enhancements and enable fewer flags than asked.
+</span>                (<span class="k">setf</span> (kkp--state-enhancements (kkp--ensure-state terminal))
+                      (kkp--reply-flags (kkp--query-terminal-sync <span class="s">"?u"</span> ?u)))
+                (kkp-setup-function-keys terminal)
+                (<span class="k">setf</span> (kkp--state-previous-normal-erase (kkp--ensure-state terminal)) (terminal-parameter terminal 'normal-erase-is-backspace))
+                (<span class="k">dolist</span> (frame (frames-on-display-list terminal))
+                  (<span class="k">with-selected-frame</span> frame
+                    (normal-erase-is-backspace-mode 1)
+                    <span class="cd">;; </span><span class="c">we register functions for each prefix to not interfere with e.g., M-[ I
+</span>                    (<span class="k">dolist</span> (prefix kkp--key-prefixes)
+                      (define-key input-decode-map (kkp--csi-escape (string prefix))
+                                  (<span class="k">lambda</span> (_prompt) (kkp--process-keys prefix))))
+                    (run-hooks 'kkp-terminal-setup-complete-hook)))
+                (kkp--verbose <span class="s">"setup complete; enhancements active"</span>)))))
+      (kkp--verbose <span class="s">"setup response did not match (slow SSH? non-Kitty?); %s"</span>
+                    (kkp--format-bytes-and-readable terminal-input)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

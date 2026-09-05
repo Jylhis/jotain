@@ -1,0 +1,83 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: neocaml-backward-up-list – Emacs Documentation Online</title>
+<meta name="description" content="neocaml-backward-up-list is an interactive and natively compiled
+function defined in neocaml.el.
+Move backward out of one level of OCaml list-like construct.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>neocaml-backward-up-list</code></h1><p><span class="m"><code>neocaml-backward-up-list</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">neocaml.el</span>.
+<h2>Signature</h2>
+<pre><code>(neocaml-backward-up-list <span class="ty">&amp;optional</span> <a href="#:~:text=With-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Move backward out of one level of OCaml list-like construct.
+<p>With <span class="arg">ARG</span>, do this that many times.  A negative <span class="arg">ARG</span> means move
+forward but still to a less deep spot.
+<p>Unlike the built-in <a href="../fun/backward-up-list.html"><code>backward-up-list</code></a>, this recognises OCaml
+constructs delimited by keywords (<span class="m"><code>struct</code></span>/<span class="m"><code>end</code></span>, <span class="m"><code>sig</code></span>/<span class="m"><code>end</code></span>,
+<span class="m"><code>object</code></span>/<span class="m"><code>end</code></span>) in addition to ordinary parens, brackets and
+braces.  Useful for jumping out to the enclosing module, signature
+or object from somewhere inside its body.
+<p>On Emacs 31+, the built-in <a href="../fun/backward-up-list.html"><code>backward-up-list</code></a> already understands
+these constructs via <a href="../var/treesit-thing-settings.html"><code>treesit-thing-settings</code></a>, so this command
+simply delegates to it there.
+<h2>Key Bindings</h2>
+<p><span class="v">neocaml-base-mode-map</span> <span class="key">C-M-u</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/6yvzbjq5ljnchx97n8s5w91crk1nh47b-emacs-packages-deps/share/emacs/site-lisp/elpa/neocaml-20260710.532/neocaml.el</span>
+(<span class="k">defun</span> <span class="f">neocaml-backward-up-list</span> (<span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Move backward out of one level of OCaml list-like construct.
+With ARG, do this that many times.  A negative ARG means move
+forward but still to a less deep spot.
+
+Unlike the built-in `</span><span class="m doc">backward-up-list</span><span class="doc">', this recognises OCaml
+constructs delimited by keywords (`</span><span class="m doc">struct</span><span class="doc">'/`</span><span class="m doc">end</span><span class="doc">', `</span><span class="m doc">sig</span><span class="doc">'/`</span><span class="m doc">end</span><span class="doc">',
+`</span><span class="m doc">object</span><span class="doc">'/`</span><span class="m doc">end</span><span class="doc">') in addition to ordinary parens, brackets and
+braces.  Useful for jumping out to the enclosing module, signature
+or object from somewhere inside its body.
+
+On Emacs 31+, the built-in `</span><span class="m doc">backward-up-list</span><span class="doc">' already understands
+these constructs via `</span><span class="m doc">treesit-thing-settings</span><span class="doc">', so this command
+simply delegates to it there."</span>
+  (<span class="k">interactive</span> <span class="s">"^p"</span>)
+  (<span class="k">if</span> (&gt;= emacs-major-version 31)
+      (backward-up-list arg t t)
+    (<span class="k">let</span> ((arg (<span class="k">or</span> arg 1)))
+      (<span class="k">dotimes</span> (_ (abs arg))
+        <span class="cd">;; </span><span class="c">Consider both the nearest enclosing tree-sitter list node and
+</span>        <span class="cd">;; </span><span class="c">the nearest syntactic delimiter, then jump to whichever is
+</span>        <span class="cd">;; </span><span class="c">closer to point.  This matches the Emacs 31 built-in, which
+</span>        <span class="cd">;; </span><span class="c">combines the two via `</span><span class="m c">treesit-thing-settings</span><span class="c">'.
+</span>        (<span class="k">let*</span> ((node (treesit-node-at (point)))
+               (parent (treesit-parent-until
+                        node
+                        (<span class="k">lambda</span> (n)
+                          (<span class="k">and</span> (string-match-p neocaml--list-node-regex
+                                               (treesit-node-type n))
+                               (<span class="k">if</span> (&lt; arg 0)
+                                   (&gt; (treesit-node-end n) (point))
+                                 (&lt; (treesit-node-start n) (point)))))))
+               (tree-pos (<span class="k">and</span> parent
+                              (<span class="k">if</span> (&lt; arg 0)
+                                  (treesit-node-end parent)
+                                (treesit-node-start parent))))
+               <span class="cd">;; </span><span class="c">Use `</span><span class="m c">syntax-ppss</span><span class="c">' rather than `</span><span class="m c">up-list</span><span class="c">': the OCaml
+</span>               <span class="cd">;; </span><span class="c">syntax table treats `(' as both a paren and part of the
+</span>               <span class="cd">;; </span><span class="c">`(*' comment delimiter, which confuses `</span><span class="m c">up-list</span><span class="c">'.
+</span>               (syn-pos (<span class="k">let</span> ((open (nth 1 (syntax-ppss))))
+                          (<span class="k">cond</span> ((null open) nil)
+                                ((&lt; arg 0) (<span class="k">ignore-errors</span> (scan-sexps open 1)))
+                                (t open))))
+               (target (<span class="k">cond</span> ((<span class="k">and</span> tree-pos syn-pos)
+                              (<span class="k">if</span> (&lt; arg 0)
+                                  (min tree-pos syn-pos)
+                                (max tree-pos syn-pos)))
+                             (t (<span class="k">or</span> tree-pos syn-pos)))))
+          (<span class="k">if</span> target
+              (goto-char target)
+            (<span class="w">user-error</span> <span class="s">"At top level"</span>)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,87 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge-dispatch – Emacs Documentation Online</title>
+<meta name="description" content="forge-dispatch is an interactive and natively compiled function
+defined in forge-commands.el.
+Dispatch a forge command.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge-dispatch</code></h1><p><span class="m"><code>forge-dispatch</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">forge-commands.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge-dispatch)
+</code></pre>
+<h2>Documentation</h2>
+<p>Dispatch a forge command.
+<h2>Key Bindings</h2>
+<p><span class="v">forge-repository-list-mode-map</span> <span class="key">n</span>
+<span class="v">magit-mode-map</span> <span class="key">'</span>
+<span class="v">magit-mode-map</span> <span class="key">N</span>
+<span class="v">magit-repolist-mode-map</span> <span class="key">N</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-commands.el</span>
+<span class="cd">;;; </span><span class="c">Dispatch
+</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">(autoload 'forge-dispatch "forge-commands" nil t)
+</span>(<span class="k">transient-define-prefix</span> <span class="f">forge-dispatch</span> ()
+  <span class="doc">"Dispatch a forge command."</span>
+  <span class="bi">:transient-non-suffix</span> #'transient--do-call
+  <span class="bi">:refresh-suffixes</span> t
+  <span class="bi">:environment</span> #'forge--menu-environment
+  <span class="bi">:column-widths</span> forge--topic-menus-column-widths
+  [forge--topic-menus-group
+   [<span class="s">"Fetch"</span>
+    (<span class="s">"f f"</span> <span class="s">"all topics"</span>     forge-pull)
+    (<span class="s">"f t"</span> <span class="s">"one topic"</span>      forge-pull-topic)
+    (<span class="s">"f n"</span> <span class="s">"notifications"</span>  forge-pull-notifications)]
+   [<span class="s">"Create"</span>
+    <span class="bi">:if</span> (##forge-get-repository <span class="bi">:tracked?</span>)
+    (<span class="s">"c d"</span> <span class="s">"discussion"</span>     forge-create-discussion)
+    (<span class="s">"c i"</span> <span class="s">"issue"</span>          forge-create-issue)
+    (<span class="s">"c p"</span> <span class="s">"pull-request"</span>   forge-create-pullreq)
+    (<span class="s">"c u"</span> <span class="s">"pr from issue"</span>  forge-create-pullreq-from-issue)
+    (<span class="s">"c f"</span> <span class="s">"fork or remote"</span> forge-fork)]
+   [<span class="bi">:description</span> (<span class="k">lambda</span> ()
+                   (<span class="k">cond</span>
+                     ((forge-get-repository <span class="bi">:tracked?</span>) <span class="s">"Actions"</span>)
+                     ((<span class="k">or</span> (magit-gitdir) (forge-repository-at-point))
+                      <span class="s">"Forge does not yet track this repository"</span>)
+                     (<span class="s">"Not inside a Git repository"</span>)))
+    (<span class="s">"/ a"</span> forge-add-repository
+     <span class="bi">:description</span> (<span class="k">lambda</span> () (<span class="k">let</span> ((repo (forge-get-repository <span class="bi">:stub?</span>)))
+                          (<span class="k">if</span> (<span class="k">or</span> (not repo)
+                                  (eq (<span class="k">oref</span> repo condition) <span class="bi">:tracked</span>))
+                              <span class="s">"track some repo"</span>
+                            <span class="s">"track this repository"</span>))))
+    (<span class="s">"c f"</span> <span class="s">"fork this repository"</span> forge-fork
+     <span class="bi">:if-not</span> (##forge-get-repository <span class="bi">:tracked?</span>))
+    (<span class="s">"/ M"</span> <span class="s">"merge with api"</span> forge-merge
+     <span class="bi">:if</span> (##forge-get-repository <span class="bi">:tracked?</span>)
+     <span class="bi">:level</span> 7)]]
+  [forge--lists-group
+   [<span class="s">"Visit"</span>
+    <span class="bi">:inapt-if-not</span> (##forge-get-repository <span class="bi">:tracked?</span>)
+    (<span class="s">"v t"</span> <span class="s">"topic"</span>          forge-visit-topic)
+    (<span class="s">"v u"</span> <span class="s">"topic from url"</span> forge-visit-topic-from-url <span class="bi">:level</span> 0)
+    (<span class="s">"v d"</span> <span class="s">"discussion"</span>     forge-visit-discussion)
+    (<span class="s">"v i"</span> <span class="s">"issue"</span>          forge-visit-issue)
+    (<span class="s">"v p"</span> <span class="s">"pull-request"</span>   forge-visit-pullreq)]
+   [<span class="s">"Browse"</span>
+    (<span class="s">"b t"</span> <span class="s">"topic"</span>          forge-browse-topic
+     <span class="bi">:inapt-if-not</span> (##forge-get-repository <span class="bi">:tracked?</span>))
+    (<span class="s">"b i"</span> <span class="s">"issue"</span>          forge-browse-issue
+     <span class="bi">:inapt-if-not</span> (##forge-get-repository <span class="bi">:tracked?</span>))
+    (<span class="s">"b p"</span> <span class="s">"pull-request"</span>   forge-browse-pullreq
+     <span class="bi">:inapt-if-not</span> (##forge-get-repository <span class="bi">:tracked?</span>))
+    (<span class="s">"b r"</span> <span class="s">"remote"</span>         forge-browse-remote)
+    (<span class="s">"b I"</span> <span class="s">"issues"</span>         forge-browse-issues)
+    (<span class="s">"b P"</span> <span class="s">"pull-requests"</span>  forge-browse-pullreqs)
+    <span class="s">""</span>]
+   [<span class="s">"Display"</span>
+    (<span class="s">"-S"</span> forge-toggle-display-in-status-buffer
+     <span class="bi">:inapt-if-not</span> forge--buffer-with-topics-sections-p)
+    (<span class="s">"-H"</span> forge-toggle-topic-legend)]]
+  [forge--topic-legend-group])</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

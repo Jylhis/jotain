@@ -1,0 +1,70 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-node--format-entry – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-node--format-entry is a natively compiled function defined in
+org-roam-node.el.
+Formats NODE for display in the results list.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-node--format-entry</code></h1><p><span class="m"><code>org-roam-node--format-entry</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">org-roam-node.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-node--format-entry <a href="#:~:text=list.-,TEMPLATE"><span class="arg">TEMPLATE</span></a> <a href="#:~:text=Formats-,NODE"><span class="arg">NODE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=list.-,WIDTH"><span class="arg">WIDTH</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Formats <span class="arg">NODE</span> for display in the results list.
+<p><span class="arg">WIDTH</span> is the width of the results list.
+<span class="arg">TEMPLATE</span> is the processed template used to format the entry.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-node.el</span>
+(<span class="k">defun</span> <span class="f">org-roam-node--format-entry</span> (template node <span class="ty">&amp;optional</span> width)
+  <span class="doc">"Formats NODE for display in the results list.
+WIDTH is the width of the results list.
+TEMPLATE is the processed template used to format the entry."</span>
+  (<span class="k">pcase-let</span> ((`(,tmpl . ,tmpl-width) template))
+    (org-roam-format-template
+     tmpl
+     (<span class="k">lambda</span> (field _default-val)
+       (<span class="k">pcase-let*</span> ((`(,field-name ,field-width) (split-string field <span class="s">":"</span>))
+                    (getter (intern (concat <span class="s">"org-roam-node-"</span> field-name)))
+                    (field-value (funcall getter node)))
+         (<span class="k">when</span> (<span class="k">and</span> (equal field-name <span class="s">"file"</span>)
+                    field-value)
+           (<span class="k">setq</span> field-value (file-relative-name field-value org-roam-directory)))
+         (<span class="k">when</span> (<span class="k">and</span> (equal field-name <span class="s">"olp"</span>)
+                    field-value)
+           (<span class="k">setq</span> field-value (string-join field-value <span class="s">" &gt; "</span>)))
+         (<span class="k">when</span> (<span class="k">and</span> field-value (not (listp field-value)))
+           (<span class="k">setq</span> field-value (list field-value)))
+         (<span class="k">setq</span> field-value (mapconcat
+                            (<span class="k">lambda</span> (v)
+                              (concat (<span class="k">or</span> (cdr (assoc field-name org-roam-node-template-prefixes))
+                                          <span class="s">""</span>)
+                                      v))
+                            field-value <span class="s">" "</span>))
+         (<span class="k">setq</span> field-width (<span class="k">cond</span>
+                            ((not field-width)
+                             field-width)
+                            ((string-equal field-width <span class="s">"*"</span>)
+                             (<span class="k">if</span> width
+                                 (- width tmpl-width)
+                               tmpl-width))
+                            ((&gt;= (string-to-number field-width) 0)
+                             (string-to-number field-width))))
+         (<span class="k">when</span> field-width
+           (<span class="k">let*</span> ((truncated (truncate-string-to-width field-value field-width 0 ?\s))
+                  (tlen (length truncated))
+                  (len (length field-value)))
+             (<span class="k">if</span> (&lt; tlen len)
+                 <span class="cd">;; </span><span class="c">Make the truncated part of the string invisible. If strings
+</span>                 <span class="cd">;; </span><span class="c">are pre-propertized with display or invisible properties, the
+</span>                 <span class="cd">;; </span><span class="c">formatting may get messed up. Ideally, truncated strings are
+</span>                 <span class="cd">;; </span><span class="c">not preformatted with these properties. Face properties are
+</span>                 <span class="cd">;; </span><span class="c">allowed without restriction.
+</span>                 (put-text-property tlen len 'invisible t field-value)
+               <span class="cd">;; </span><span class="c">If the string wasn't truncated, but padded, use this string instead.
+</span>               (<span class="k">setq</span> field-value truncated))))
+         field-value)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

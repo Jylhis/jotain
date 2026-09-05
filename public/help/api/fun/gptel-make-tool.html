@@ -1,0 +1,171 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-make-tool – Emacs Documentation Online</title>
+<meta name="description" content="gptel-make-tool is a natively compiled function defined in
+gptel-request.el.
+Make a gptel tool for LLM use.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-make-tool</code></h1><p><span class="m"><code>gptel-make-tool</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-make-tool <span class="ty">&amp;rest</span> <a href="#:~:text=four-,SLOTS"><span class="arg">SLOTS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Make a gptel tool for LLM use.
+<p>The following keyword arguments are available, of which the first
+four <span class="arg">SLOTS</span> are required.
+<p>NAME: The name of the tool, recommended to be in Javascript style snake_case.
+<p>FUNCTION: The function itself (lambda or symbol) that runs the tool.
+<p>DESCRIPTION: A verbose description of what the tool does, how to
+call it and what it returns.
+<p>ARGS: A list of plists specifying the arguments, or nil for a function that
+takes no arguments.  Each plist in ARGS requires the following keys:
+<br>- argument :name and :description, as strings.
+<br>- argument :type, as a symbol.  Allowed types are those understood by the JSON
+<br>&nbsp;&nbsp;schema: string, number, integer, boolean, array, object or null
+<p>The following plist keys are conditional/optional:
+<br>- :optional, boolean indicating if argument is optional
+<br>- :enum for enumerated types, whose value is a vector of strings representing
+<br>&nbsp;&nbsp;allowed values.  Note that :type is still required for enums.
+<br>- :items, if the :type is array.  Its value must be a plist including at least
+<br>&nbsp;&nbsp;the item's :type.
+<br>- :properties, if the type is object.  Its value must be a plist that can be
+<br>&nbsp;&nbsp;serialized into a JSON object specification by <a href="../fun/json-serialize.html"><code>json-serialize</code></a>.
+<p>ASYNC: boolean indicating if the elisp function is asynchronous.
+If ASYNC is t, the function should take a callback as its first
+argument, along with the arguments specified in ARGS, and run the
+callback with the tool call result when it's ready.  The callback
+itself is an implementation detail and must not be included in
+ARGS.
+<p>The following keys are optional
+<p>CATEGORY: A string indicating a category for the tool.  This is
+used only for grouping in gptel's UI.  Defaults to "misc".
+<p>CONFIRM: Whether the tool call should wait for the user to run it.  If
+true, the user will be prompted with the proposed tool call, which can
+be examined, accepted, deferred or canceled.  It can also be a function
+that receives the same arguments as FUNCTION and returns true if the
+user should be prompted.
+<p>INCLUDE: Whether the tool results should be included as part of
+the LLM output.  This is useful for logging and as context for
+subsequent requests in the same buffer.  This is primarily useful
+in chat buffers.  Possible values:
+<p>- t (default): Include both the call parameters and the result.
+<br>- symbol <span class="m"><code>call</code></span>: Include only the call parameters, not the result.
+<br>- nil: Exclude the tool call from the buffer entirely.
+<p>Here is an example definition:
+<p>&nbsp;&nbsp;(gptel-make-tool
+<br>&nbsp;&nbsp;&nbsp;<span class="bi">:function</span> (<span class="k">lambda</span> (location unit)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(url-retrieve-synchronously <span class="s">"api.weather.com/..."</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;location unit))
+<br>&nbsp;&nbsp;&nbsp;<span class="bi">:name</span> <span class="s">"get_weather"</span>
+<br>&nbsp;&nbsp;&nbsp;<span class="bi">:description</span> <span class="s">"Get the current weather in a given location"</span>
+<br>&nbsp;&nbsp;&nbsp;<span class="bi">:args</span> (list '(<span class="bi">:name</span> <span class="s">"location"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:type</span> string
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:description</span> <span class="s">"The city and state, e.g. San Francisco, CA"</span>)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'(<span class="bi">:name</span> <span class="s">"unit"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:type</span> string
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:enum</span> [<span class="s">"celsius"</span> <span class="s">"farenheit"</span>]
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:description</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="s">"The unit of temperature, either </span><span class="bi s">\\=</span><span class="s">'</span><span class="m s">celsius</span><span class="bi m s">\\=</span><span class="s">' or </span><span class="bi s">\\=</span><span class="s">'</span><span class="m s">fahrenheit</span><span class="bi m s">\\=</span><span class="s">'"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:optional</span> t)))
+<p>If the tool is asynchronous, the function is modified to take a
+callback as its first argument, which it runs with the result:
+<p>&nbsp;&nbsp;&nbsp;(<span class="k">lambda</span> (callback location unit)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(url-retrieve <span class="s">"api.weather.com/..."</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">lambda</span> (_)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="k">let</span> ((result (parse-this-buffer)))
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(funcall callback result)))))
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+(<span class="k">defun</span> <span class="f">gptel-make-tool</span> (<span class="ty">&amp;rest</span> slots)
+  <span class="doc">"Make a gptel tool for LLM use.
+
+The following keyword arguments are available, of which the first
+four SLOTS are required.
+
+NAME: The name of the tool, recommended to be in Javascript style snake_case.
+
+FUNCTION: The function itself (lambda or symbol) that runs the tool.
+
+DESCRIPTION: A verbose description of what the tool does, how to
+call it and what it returns.
+
+ARGS: A list of plists specifying the arguments, or nil for a function that
+takes no arguments.  Each plist in ARGS requires the following keys:
+- argument :name and :description, as strings.
+- argument :type, as a symbol.  Allowed types are those understood by the JSON
+  schema: string, number, integer, boolean, array, object or null
+
+The following plist keys are conditional/optional:
+- :optional, boolean indicating if argument is optional
+- :enum for enumerated types, whose value is a vector of strings representing
+  allowed values.  Note that :type is still required for enums.
+- :items, if the :type is array.  Its value must be a plist including at least
+  the item's :type.
+- :properties, if the type is object.  Its value must be a plist that can be
+  serialized into a JSON object specification by `</span><span class="m doc">json-serialize</span><span class="doc">'.
+
+ASYNC: boolean indicating if the elisp function is asynchronous.
+If ASYNC is t, the function should take a callback as its first
+argument, along with the arguments specified in ARGS, and run the
+callback with the tool call result when it's ready.  The callback
+itself is an implementation detail and must not be included in
+ARGS.
+
+The following keys are optional
+
+CATEGORY: A string indicating a category for the tool.  This is
+used only for grouping in gptel's UI.  Defaults to \"misc\".
+
+CONFIRM: Whether the tool call should wait for the user to run it.  If
+true, the user will be prompted with the proposed tool call, which can
+be examined, accepted, deferred or canceled.  It can also be a function
+that receives the same arguments as FUNCTION and returns true if the
+user should be prompted.
+
+INCLUDE: Whether the tool results should be included as part of
+the LLM output.  This is useful for logging and as context for
+subsequent requests in the same buffer.  This is primarily useful
+in chat buffers.  Possible values:
+
+- t (default): Include both the call parameters and the result.
+- symbol `</span><span class="m doc">call</span><span class="doc">': Include only the call parameters, not the result.
+- nil: Exclude the tool call from the buffer entirely.
+
+Here is an example definition:
+
+  (gptel-make-tool
+   :function (lambda (location unit)
+                (url-retrieve-synchronously \"api.weather.com/...\"
+                                            location unit))
+   :name \"get_weather\"
+   :description \"Get the current weather in a given location\"
+   :args (list </span><span class="bi doc">\\=</span><span class="doc">'(:name \"location\"
+                 :type string
+                 :description \"The city and state, e.g. San Francisco, CA\")
+               </span><span class="bi doc">\\=</span><span class="doc">'(:name \"unit\"
+                 :type string
+                 :enum [\"celsius\" \"farenheit\"]
+                 :description
+                 \"The unit of temperature, either </span><span class="bi doc">\\=</span><span class="doc">'</span><span class="m doc">celsius</span><span class="bi m doc">\\=</span><span class="doc">' or </span><span class="bi doc">\\=</span><span class="doc">'</span><span class="m doc">fahrenheit</span><span class="bi m doc">\\=</span><span class="doc">'\"
+                 :optional t)))
+
+If the tool is asynchronous, the function is modified to take a
+callback as its first argument, which it runs with the result:
+
+   (lambda (callback location unit)
+     (url-retrieve \"api.weather.com/...\"
+                   (lambda (_)
+                     (let ((result (parse-this-buffer)))
+                       (funcall callback result)))))"</span>
+  (<span class="k">let*</span> ((tool (apply #'gptel--make-tool slots))
+         (category (<span class="k">or</span> (gptel-tool-category tool) <span class="s">"misc"</span>)))
+    (<span class="k">setf</span> (alist-get
+           (gptel-tool-name tool)
+           (alist-get category gptel--known-tools nil nil #'equal)
+           nil nil #'equal)
+          tool)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

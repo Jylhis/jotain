@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-insert-upstream-branch-header – Emacs Documentation Online</title>
+<meta name="description" content="magit-insert-upstream-branch-header is a natively compiled function
+defined in magit-status.el.
+Insert a header line about the upstream of the current branch.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-insert-upstream-branch-header</code></h1><p><span class="m"><code>magit-insert-upstream-branch-header</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-status.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-insert-upstream-branch-header <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">BRANCH</span></a> <a href="#:~:text="><span class="arg">UPSTREAM</span></a> <a href="#:~:text="><span class="arg">KEYWORD</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert a header line about the upstream of the current branch.
+<p>If no branch is checked out, then insert nothing.  The optional
+arguments are for internal use only.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-status.el</span>
+(<span class="k">defun</span> <span class="f">magit-insert-upstream-branch-header</span> (<span class="ty">&amp;optional</span> branch upstream keyword)
+  <span class="doc">"Insert a header line about the upstream of the current branch.
+If no branch is checked out, then insert nothing.  The optional
+arguments are for internal use only."</span>
+  (<span class="k">when-let</span> ((branch (<span class="k">or</span> branch (magit-get-current-branch))))
+    (<span class="k">let</span> ((remote (magit-get <span class="s">"branch"</span> branch <span class="s">"remote"</span>))
+          (merge  (magit-get <span class="s">"branch"</span> branch <span class="s">"merge"</span>))
+          (rebase (magit-get <span class="s">"branch"</span> branch <span class="s">"rebase"</span>)))
+      (<span class="k">when</span> (<span class="k">or</span> remote merge)
+        (<span class="k">unless</span> upstream
+          (<span class="k">setq</span> upstream (magit-get-upstream-branch branch)))
+        (<span class="k">magit-insert-section</span> (branch upstream)
+          (<span class="k">pcase</span> rebase
+            (<span class="s">"true"</span>)
+            (<span class="s">"false"</span> (<span class="k">setq</span> rebase nil))
+            (_       (<span class="k">setq</span> rebase (magit-get-boolean <span class="s">"pull.rebase"</span>))))
+          (insert (format <span class="s">"%-10s"</span> (<span class="k">or</span> keyword (<span class="k">if</span> rebase <span class="s">"Rebase: "</span> <span class="s">"Merge: "</span>))))
+          (insert
+           (<span class="k">cond</span>
+             (upstream
+              (concat (<span class="k">and</span> magit-status-show-hashes-in-headers
+                           (concat (propertize (magit-rev-format <span class="s">"%h"</span> upstream)
+                                               'font-lock-face 'magit-hash)
+                                   <span class="s">" "</span>))
+                      upstream <span class="s">" "</span>
+                      (magit-log--wash-summary
+                       (<span class="k">or</span> (magit-rev-format <span class="s">"%s"</span> upstream)
+                           <span class="s">"(no commit message)"</span>))))
+             ((magit--unnamed-upstream-p remote merge)
+              (concat (propertize merge  'font-lock-face 'magit-branch-remote)
+                      <span class="s">" from "</span>
+                      (propertize remote 'font-lock-face 'bold)))
+             ((magit--valid-upstream-p remote merge)
+              (<span class="k">if</span> (equal remote <span class="s">"."</span>)
+                  (concat
+                   (propertize merge 'font-lock-face 'magit-branch-local) <span class="s">" "</span>
+                   (propertize <span class="s">"does not exist"</span>
+                               'font-lock-face 'magit-branch-warning))
+                (format
+                 <span class="s">"%s %s %s"</span>
+                 (propertize merge 'font-lock-face 'magit-branch-remote)
+                 (propertize <span class="s">"does not exist on"</span>
+                             'font-lock-face 'magit-branch-warning)
+                 (propertize remote 'font-lock-face 'magit-branch-remote))))
+             ((propertize <span class="s">"invalid upstream configuration"</span>
+                          'font-lock-face 'magit-branch-warning))))
+          (insert ?\n))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

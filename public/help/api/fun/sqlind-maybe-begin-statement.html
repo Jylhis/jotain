@@ -1,0 +1,88 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sqlind-maybe-begin-statement – Emacs Documentation Online</title>
+<meta name="description" content="sqlind-maybe-begin-statement is a natively compiled function defined
+in sql-indent.el.
+Return the syntax of a &quot;begin&quot; statement.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sqlind-maybe-begin-statement</code></h1><p><span class="m"><code>sqlind-maybe-begin-statement</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">sql-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(sqlind-maybe-begin-statement)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the syntax of a "begin" statement.
+<p>If (point) is on a "begin" statement, report its syntax. Only
+keywords in program code are matched, not the ones inside
+expressions.
+<p>See also <a href="../fun/sqlind-beginning-of-block.html"><code>sqlind-beginning-of-block</code></a>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vgm6xb2iy00bs19rdw9z3nfi5nf8g873-emacs-packages-deps/share/emacs/site-lisp/elpa/sql-indent-1.7/sql-indent.el</span>
+(<span class="k">defun</span> <span class="f">sqlind-maybe-begin-statement</span> ()
+  <span class="doc">"Return the syntax of a \"begin\" statement.
+If (point) is on a \"begin\" statement, report its syntax. Only
+keywords in program code are matched, not the ones inside
+expressions.
+
+See also `</span><span class="m doc">sqlind-beginning-of-block</span><span class="doc">'"</span>
+  (<span class="k">when</span> (<span class="k">and</span> (looking-at <span class="s">"begin"</span>) (not (sqlind-looking-at-begin-transaction)))
+    <span class="cd">;; </span><span class="c">a begin statement starts a block unless it is the first begin in a
+</span>    <span class="cd">;; </span><span class="c">procedure over which we need to skip it.
+</span>    (<span class="k">prog1</span>  t                           <span class="cd">; </span><span class="c">make sure we return t
+</span>      (<span class="k">let*</span> ((saved-pos (point))
+	     (begin-label (<span class="k">save-excursion</span>
+			    (sqlind-beginning-of-statement)
+			    (<span class="k">if</span> (looking-at <span class="s">"&lt;&lt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[a-z0-9_]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">&gt;&gt;\\_&gt;"</span>)
+				(sqlind-match-string 1) <span class="s">""</span>)))
+	     (previous-block (<span class="k">save-excursion</span>
+			       (<span class="k">ignore-errors</span> (forward-char -1))
+			       (cons (sqlind-beginning-of-block) (point))))
+	     (previous-block-kind (nth 0 previous-block)))
+
+	(goto-char saved-pos)
+	(<span class="k">when</span> (null sqlind-end-stmt-stack)
+	  (<span class="k">throw</span> '<span class="m">finished</span>
+	    (<span class="k">cond</span> ((memq previous-block-kind '(toplevel declare-statement))
+		   (list 'in-begin-block 'toplevel-block begin-label))
+		  ((<span class="k">and</span> (listp previous-block-kind)
+			(eq (nth 0 previous-block-kind) 'defun-start))
+		   (list 'in-begin-block 'defun (nth 1 previous-block-kind)))
+                  ((<span class="k">and</span> (listp previous-block-kind)
+                        (memq (nth 0 previous-block-kind) '(package package-body)))
+                   (list 'in-begin-block 'package (nth 1 previous-block-kind)))
+		  (t
+		   (list 'in-begin-block nil begin-label)))))
+
+	(<span class="k">cl-destructuring-bind</span> (pos kind label) (<span class="k">pop</span> sqlind-end-stmt-stack)
+	  (<span class="k">cond</span>
+	    (kind
+	     (<span class="k">throw</span> '<span class="m">finished</span>
+	       (list 'syntax-error <span class="s">"bad closing for begin block"</span> (point) pos)))
+
+	    ((not (equal begin-label <span class="s">""</span>))
+	     <span class="cd">;; </span><span class="c">we have a begin label.  In this case it must match the end
+</span>	     <span class="cd">;; </span><span class="c">label
+</span>	     (<span class="k">unless</span> (equal begin-label label)
+	       (<span class="k">throw</span> '<span class="m">finished</span>
+		 (list 'syntax-error <span class="s">"mismatched block labels"</span> (point) pos))))
+
+	    (t
+	     <span class="cd">;; </span><span class="c">we don't have a begin label.  In this case, the begin
+</span>	     <span class="cd">;; </span><span class="c">statement might not start a block if it is the begining of a
+</span>	     <span class="cd">;; </span><span class="c">procedure or declare block over which we need to skip.
+</span>
+	     (<span class="k">cond</span> ((memq previous-block-kind '(toplevel declare-statement))
+		    (goto-char (cdr previous-block)))
+		   ((<span class="k">and</span> (listp previous-block-kind)
+			 (memq (nth 0 previous-block-kind)
+                               '(defun-start package package-body)))
+		    (<span class="k">unless</span> (sqlind-labels-match
+			     label (nth 1 previous-block-kind))
+		      (<span class="k">throw</span> '<span class="m">finished</span>
+			(list 'syntax-error
+			      <span class="s">"bad end label for defun"</span> (point) pos)))
+		    (goto-char (cdr previous-block)))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

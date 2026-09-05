@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--tty-esc-init – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--tty-esc-init is a natively compiled function defined in
+ghostel.el.
+Install the lone-ESC to escape filter on FRAME's terminal.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--tty-esc-init</code></h1><p><span class="m"><code>ghostel--tty-esc-init</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--tty-esc-init <span class="ty">&amp;optional</span> <a href="#:~:text=on-,FRAME"><span class="arg">FRAME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Install the lone-ESC to <span class="m"><code>escape</code></span> filter on <span class="arg">FRAME</span>'s terminal.
+<p>Only acts on text terminals; re-wraps if another package later
+replaced the entry.  The wrapped entry may itself be another
+package's filter (e.g. evil's) — nested filters compose, with at
+most one translation delay paid per key.  The filter is inert
+outside ghostel terminal-input buffers, so no uninstall is needed.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--tty-esc-init</span> (<span class="ty">&amp;optional</span> frame)
+  <span class="doc">"Install the lone-ESC to `</span><span class="m doc">escape</span><span class="doc">' filter on FRAME's terminal.
+Only acts on text terminals; re-wraps if another package later
+replaced the entry.  The wrapped entry may itself be another
+package's filter (e.g. evil's) — nested filters compose, with at
+most one translation delay paid per key.  The filter is inert
+outside ghostel terminal-input buffers, so no uninstall is needed."</span>
+  (<span class="k">let</span> ((term (frame-terminal frame)))
+    (<span class="k">when</span> (eq (terminal-live-p term) t)
+      <span class="cd">;; </span><span class="c">`</span><span class="m c">input-decode-map</span><span class="c">' is terminal-local; select the frame to
+</span>      <span class="cd">;; </span><span class="c">read and modify the right terminal's map.
+</span>      (<span class="k">with-selected-frame</span> (<span class="k">or</span> frame (selected-frame))
+        <span class="cd">;; </span><span class="c">`</span><span class="m c">lookup-key</span><span class="c">' resolves menu-item filters to the wrapped map,
+</span>        <span class="cd">;; </span><span class="c">dropping another package's wrapper — read the entry
+</span>        <span class="cd">;; </span><span class="c">structurally.
+</span>        (<span class="k">let*</span> ((cell (assq ?\e (cdr input-decode-map)))
+               (raw (<span class="k">if</span> cell (cdr cell)
+                      (lookup-key input-decode-map [?\e]))))
+          <span class="cd">;; </span><span class="c">Recognize our wrapper by its :filter tag; `</span><span class="m c">define-key</span><span class="c">'
+</span>          <span class="cd">;; </span><span class="c">copies the menu-item list, so object identity won't do.
+</span>          (<span class="k">unless</span> (<span class="k">if</span> cell
+                      (<span class="k">and</span> (eq (car-safe raw) 'menu-item)
+                           (eq (cadr (memq <span class="bi">:filter</span> raw)) 'ghostel--tty-esc))
+                    (terminal-parameter term 'ghostel--tty-esc-map))
+            (set-terminal-parameter term 'ghostel--tty-esc-map (<span class="k">or</span> raw t))
+            <span class="cd">;; </span><span class="c">package-lint's reserved-key check matches literal
+</span>            <span class="cd">;; </span><span class="c">vectors only; a translation-map entry is not a
+</span>            <span class="cd">;; </span><span class="c">reserved binding.
+</span>            (define-key input-decode-map (vector ?\e)
+              `(menu-item <span class="s">""</span> ,raw <span class="bi">:filter</span> ghostel--tty-esc))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

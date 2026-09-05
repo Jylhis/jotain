@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--compile-module – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--compile-module is a natively compiled function defined in
+ghostel-module-install.el.
+Compile the native module from source and install it in DEST-DIR.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--compile-module</code></h1><p><span class="m"><code>ghostel--compile-module</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel-module-install.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--compile-module <a href="#:~:text=in-,DEST-DIR"><span class="arg">DEST-DIR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Compile the native module from source and install it in <span class="arg">DEST-DIR</span>.
+<p>The build runs in <a href="../fun/ghostel--resource-root.html"><code>ghostel--resource-root</code></a> (which holds build.zig);
+on success the produced module and its sidecar are moved into <span class="arg">DEST-DIR</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-module-install.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--compile-module</span> (dest-dir)
+  <span class="doc">"Compile the native module from source and install it in DEST-DIR.
+The build runs in `</span><span class="m doc">ghostel--resource-root</span><span class="doc">' (which holds build.zig);
+on success the produced module and its sidecar are moved into DEST-DIR."</span>
+  (<span class="k">let*</span> ((source-dir (ghostel--resource-root))
+         (build-dir nil)
+         (default-directory source-dir))
+    (message <span class="s">"ghostel: compiling native module with zig build (this may take a moment)..."</span>)
+    (<span class="k">condition-case</span> err
+        (<span class="k">unwind-protect</span>
+            (<span class="k">progn</span>
+              (<span class="k">setq</span> build-dir (ghostel--make-module-build-dir dest-dir))
+              (<span class="k">let</span> ((ret (process-file <span class="s">"zig"</span> nil <span class="s">"*ghostel-build*"</span> nil
+                                       <span class="s">"build"</span> <span class="s">"--prefix"</span> build-dir
+                                       <span class="s">"-Doptimize=ReleaseFast"</span> <span class="s">"-Dcpu=baseline"</span>)))
+                (<span class="k">if</span> (not (eq ret 0))
+                    (display-warning 'ghostel
+                                     <span class="s">"Module compilation failed.  See *ghostel-build* buffer for details."</span>)
+                  (<span class="k">let*</span> ((file-name (concat <span class="s">"ghostel-module"</span> module-file-suffix))
+                         (built (expand-file-name file-name build-dir))
+                         (final (expand-file-name file-name dest-dir)))
+                    (<span class="k">if</span> (not (file-exists-p built))
+                        (display-warning 'ghostel
+                                         (format <span class="s">"Build succeeded but module not produced at %s"</span>
+                                                 built))
+                      (ghostel--install-module-pair
+                       built final
+                       (expand-file-name <span class="s">"ghostel-module.version"</span> build-dir)
+                       (expand-file-name <span class="s">"ghostel-module.version"</span> dest-dir))
+                      (ghostel--install-support-assets dest-dir)
+                      (message <span class="s">"ghostel: native module compiled successfully"</span>))))))
+          (<span class="k">when</span> (<span class="k">and</span> build-dir (file-directory-p build-dir))
+            (<span class="k">ignore-errors</span> (delete-directory build-dir t))))
+      (file-missing
+       (display-warning 'ghostel
+                        (format <span class="s">"zig executable not found while compiling in %s"</span> source-dir)))
+      (<span class="w">error</span>
+       (display-warning 'ghostel (error-message-string err))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

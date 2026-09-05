@@ -1,0 +1,73 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: haskell-ts-mode-abbrev-table – Emacs Documentation Online</title>
+<meta name="description" content="haskell-ts-mode-abbrev-table is a variable defined in
+haskell-ts-mode.el.
+Abbrev table for haskell-ts-mode.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>haskell-ts-mode-abbrev-table</code></h1><p><span class="m"><code>haskell-ts-mode-abbrev-table</code></span> is a variable defined in
+<span class="bt">haskell-ts-mode.el</span>.
+<h2>Value</h2>
+<pre><code>#&lt;obarray n=1&gt;
+</code></pre>
+<h2>Documentation</h2>
+<p>Abbrev table for <a href="../fun/haskell-ts-mode.html"><code>haskell-ts-mode</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/am3ajmj7v231qaf4mcqzwr4449gjyqhm-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-ts-mode-1.3.5/haskell-ts-mode.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">define-derived-mode</span> <span class="f">haskell-ts-mode</span> prog-mode <span class="s">"haskell ts mode"</span>
+  <span class="doc">"Major mode for Haskell files using tree-sitter."</span>
+  <span class="bi">:table</span> haskell-ts-mode-syntax-table
+  (<span class="k">unless</span> (treesit-ready-p 'haskell)
+    (<span class="w">error</span> <span class="s">"Tree-sitter for Haskell is not available"</span>))
+  (<span class="k">setq</span> treesit-primary-parser (treesit-parser-create 'haskell))
+  (<span class="k">setq</span> treesit-language-at-point-function
+        (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> _) 'haskell))
+  (<span class="k">setq-local</span> treesit-defun-type-regexp <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">function</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">struct</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">_definition</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+  <span class="cd">;; </span><span class="c">Indent
+</span>  (<span class="k">when</span> haskell-ts-use-indent
+    (<span class="k">setq-local</span> treesit-simple-indent-rules haskell-ts-indent-rules)
+    (<span class="k">setq-local</span> indent-tabs-mode nil))
+  (<span class="k">setq-local</span> electric-indent-functions '(haskell-ts-indent-after-newline))
+  <span class="cd">;; </span><span class="c">Comment
+</span>  (<span class="k">setq-local</span> comment-start <span class="s">"-- "</span>)
+  (<span class="k">setq-local</span> comment-use-syntax t)
+  (<span class="k">setq-local</span> comment-start-skip <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">--+"</span>)
+  <span class="cd">;; </span><span class="c">Electric
+</span>  (<span class="k">setq-local</span> electric-pair-pairs
+              '((?` . ?`) (?\( . ?\)) (?{ . ?}) (?\" . ?\") (?\[ . ?\])))
+  <span class="cd">;; </span><span class="c">Navigation
+</span>  (<span class="k">setq-local</span> treesit-defun-name-function 'haskell-ts-defun-name)
+  (<span class="k">setq-local</span> treesit-thing-settings haskell-ts-thing-settings)
+  (<span class="k">setq-local</span> treesit-defun-type-regexp
+              <span class="cd">;; </span><span class="c">Since haskell is strict functional, any 2nd level
+</span>              <span class="cd">;; </span><span class="c">entity is defintion
+</span>              (cons <span class="s">".+"</span>
+                    (<span class="k">lambda</span> (node)
+                      (<span class="k">and</span> (not (string-match haskell-ts--ignore-types (treesit-node-type node)))
+                           (string= <span class="s">"declarations"</span> (treesit-node-type (treesit-node-parent node)))))))
+  (<span class="k">setq-local</span> prettify-symbols-alist
+              (append (<span class="k">and</span> haskell-ts-prettify-symbols
+                           haskell-ts-prettify-symbols-alist)
+                      (<span class="k">and</span> haskell-ts-prettify-words
+                           haskell-ts-prettify-words-alist)))
+
+  <span class="cd">;; </span><span class="c">Imenu
+</span>  (<span class="k">setq-local</span> treesit-simple-imenu-settings
+              `((nil haskell-ts-imenu-func-node-p nil
+                     ,(<span class="k">haskell-ts-imenu-name-function</span> #'haskell-ts-imenu-func-node-p))
+                (<span class="s">"Signatures.."</span> haskell-ts-imenu-sig-node-p nil
+                 ,(<span class="k">haskell-ts-imenu-name-function</span> #'haskell-ts-imenu-sig-node-p))
+                (<span class="s">"Data..."</span> haskell-ts-imenu-data-type-p nil
+                 (<span class="k">lambda</span> (node)
+                   (treesit-node-text (treesit-node-child node 1))))))
+  <span class="cd">;; </span><span class="c">font-lock
+</span>  (<span class="k">setq-local</span> treesit-font-lock-level haskell-ts-font-lock-level)
+  (<span class="k">setq-local</span> treesit-font-lock-settings haskell-ts-font-lock)
+  (<span class="k">setq-local</span> treesit-font-lock-feature-list
+              haskell-ts-font-lock-feature-list)
+  (treesit-major-mode-setup))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

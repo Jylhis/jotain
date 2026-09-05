@@ -1,0 +1,82 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--inspect-query – Emacs Documentation Online</title>
+<meta name="description" content="gptel--inspect-query is a natively compiled function defined in
+gptel.el.
+Show the full LLM query that will be sent in a buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--inspect-query</code></h1><p><span class="m"><code>gptel--inspect-query</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--inspect-query <span class="ty">&amp;optional</span> <a href="#:~:text=buffer.-,REQUEST-FSM"><span class="arg">REQUEST-FSM</span></a> <a href="#:~:text=If-,FORMAT"><span class="arg">FORMAT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Show the full LLM query that will be sent in a buffer.
+<p>This functions as a dry run of <a href="../fun/gptel-send.html"><code>gptel-send</code></a>.  The request data
+may be edited and the query continued from this buffer.
+<p><span class="arg">REQUEST-FSM</span> is the state of the request, as returned by
+<a href="../fun/gptel-request.html"><code>gptel-request</code></a>.  If <span class="arg">FORMAT</span> is the symbol json, show the encoded
+JSON query instead of the Lisp structure gptel uses.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--inspect-query</span> (<span class="ty">&amp;optional</span> request-fsm format)
+  <span class="doc">"Show the full LLM query that will be sent in a buffer.
+
+This functions as a dry run of `</span><span class="m doc">gptel-send</span><span class="doc">'.  The request data
+may be edited and the query continued from this buffer.
+
+REQUEST-FSM is the state of the request, as returned by
+`</span><span class="m doc">gptel-request</span><span class="doc">'.  If FORMAT is the symbol json, show the encoded
+JSON query instead of the Lisp structure gptel uses."</span>
+  (<span class="k">unless</span> request-fsm (<span class="k">setq</span> request-fsm gptel--fsm-last))
+  (<span class="k">if</span> (bufferp (plist-get (gptel-fsm-info request-fsm) <span class="bi">:data</span>))
+      (<span class="k">letrec</span> ((dry-run-poll
+                (run-with-timer
+                 0 1 (<span class="k">lambda</span> (fsm form)
+                       (<span class="k">unless</span> (bufferp (plist-get (gptel-fsm-info fsm) <span class="bi">:data</span>))
+                         (cancel-timer dry-run-poll)
+                         (gptel--inspect-query fsm form)))
+                 request-fsm format))))
+    (<span class="k">with-current-buffer</span> (plist-get (gptel-fsm-info request-fsm) <span class="bi">:buffer</span>)
+      (gptel--update-status <span class="s">" Ready"</span> 'success))
+    (<span class="k">with-current-buffer</span> (get-buffer-create <span class="s">"*gptel-query*"</span>)
+      (<span class="k">let*</span> ((standard-output (current-buffer))
+             (inhibit-read-only t)
+             (print-length nil)
+             (request-data
+              (plist-get (gptel-fsm-info request-fsm) <span class="bi">:data</span>)))
+        (buffer-disable-undo)
+        (erase-buffer)
+        (<span class="k">if</span> (eq format 'json)
+            (<span class="k">progn</span> (fundamental-mode)
+                   (insert (<span class="k">gptel--json-encode</span> request-data))
+                   (json-pretty-print-buffer))
+          (lisp-data-mode)
+          (prin1 request-data)
+          (pp-buffer))
+        (<span class="k">setq-local</span> gptel--fsm-last request-fsm)
+        (goto-char (point-min))
+        (view-mode 1)
+        (<span class="k">setq</span> buffer-undo-list nil)
+        (use-local-map
+         (make-composed-keymap
+          (define-keymap
+            <span class="s">"C-c C-c"</span> #'gptel--continue-query
+            <span class="s">"C-c C-w"</span> (<span class="k">lambda</span> () <span class="doc">"Copy Curl command for query."</span>
+                        (<span class="k">interactive</span>) (gptel--continue-query 'copy))
+            <span class="s">"C-c C-k"</span> #'quit-window)
+          (current-local-map)))
+        (<span class="k">unless</span> header-line-format
+          (<span class="k">setq</span> header-line-format
+                (substitute-command-keys
+                 (concat
+                  <span class="s">"Edit request: \\[</span><span class="m s">read-only-mode</span><span class="s">],"</span>
+                  <span class="s">" Send request: \\[</span><span class="m s">gptel--continue-query</span><span class="s">],"</span>
+                  (format <span class="s">" Copy Curl: %s"</span>
+                          (propertize <span class="s">"C-c C-w"</span> 'face 'help-key-binding))
+                  <span class="s">" Quit: \\[</span><span class="m s">quit-window</span><span class="s">]"</span>))))
+        (display-buffer (current-buffer) gptel-display-buffer-action)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

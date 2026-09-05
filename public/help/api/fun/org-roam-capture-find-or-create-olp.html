@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-capture-find-or-create-olp – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-capture-find-or-create-olp is a natively compiled function
+defined in org-roam-capture.el.
+Return a marker pointing to the entry at OLP in the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-capture-find-or-create-olp</code></h1><p><span class="m"><code>org-roam-capture-find-or-create-olp</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">org-roam-capture.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-capture-find-or-create-olp <a href="#:~:text=at-,OLP"><span class="arg">OLP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a marker pointing to the entry at <span class="arg">OLP</span> in the current buffer.
+<p>If <span class="arg">OLP</span> does not exist, create it. If anything goes wrong, throw
+an error, and if you need to do something based on this error,
+you can catch it with <a href="../fun/condition-case.html"><code>condition-case</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-capture.el</span>
+(<span class="k">defun</span> <span class="f">org-roam-capture-find-or-create-olp</span> (olp)
+  <span class="doc">"Return a marker pointing to the entry at OLP in the current buffer.
+If OLP does not exist, create it. If anything goes wrong, throw
+an error, and if you need to do something based on this error,
+you can catch it with `</span><span class="m doc">condition-case</span><span class="doc">'."</span>
+  (<span class="k">let*</span> ((level 1)
+         (lmin 1)
+         (lmax 1)
+         (start (point-min))
+         (end (point-max))
+         found flevel)
+    (<span class="k">unless</span> (derived-mode-p 'org-mode)
+      (<span class="w">error</span> <span class="s">"Buffer %s needs to be in Org mode"</span> (current-buffer)))
+    (<span class="k">org-with-wide-buffer</span>
+     (goto-char start)
+     (<span class="k">dolist</span> (heading olp)
+       (<span class="k">setq</span> heading (org-roam-capture--fill-template heading))
+       (<span class="k">let</span> ((re (format org-complex-heading-regexp-format
+                         (regexp-quote heading)))
+             (cnt 0))
+         (<span class="k">while</span> (re-search-forward re end t)
+           (<span class="k">setq</span> level (- (match-end 1) (match-beginning 1)))
+           (<span class="k">when</span> (<span class="k">and</span> (&gt;= level lmin) (&lt;= level lmax))
+             (<span class="k">setq</span> found (match-beginning 0) flevel level cnt (1+ cnt))))
+         (<span class="k">when</span> (&gt; cnt 1)
+           (<span class="w">error</span> <span class="s">"Heading not unique on level %d: %s"</span> lmax heading))
+         (<span class="k">when</span> (= cnt 0)
+           <span class="cd">;; </span><span class="c">Create heading if it doesn't exist
+</span>           (goto-char end)
+           (<span class="k">unless</span> (bolp) (newline))
+           (<span class="k">let</span> (org-insert-heading-respect-content)
+             (org-insert-heading nil nil t))
+           (<span class="k">unless</span> (= lmax 1)
+             (<span class="k">dotimes</span> (_ level) (org-do-demote)))
+           (insert heading)
+           (<span class="k">setq</span> end (point))
+           (goto-char start)
+           (<span class="k">while</span> (re-search-forward re end t)
+             (<span class="k">setq</span> level (- (match-end 1) (match-beginning 1)))
+             (<span class="k">when</span> (<span class="k">and</span> (&gt;= level lmin) (&lt;= level lmax))
+               (<span class="k">setq</span> found (match-beginning 0) flevel level cnt (1+ cnt))))))
+       (goto-char found)
+       (<span class="k">setq</span> lmin (1+ flevel) lmax (+ lmin (<span class="k">if</span> org-odd-levels-only 1 0)))
+       (<span class="k">setq</span> start found
+             end (<span class="k">save-excursion</span> (org-end-of-subtree t t))))
+     (point-marker))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

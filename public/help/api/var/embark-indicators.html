@@ -1,0 +1,151 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: embark-indicators – Emacs Documentation Online</title>
+<meta name="description" content="embark-indicators is a customizable variable defined in embark.el.
+Indicator functions to use when acting or becoming.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>embark-indicators</code></h1><p><span class="m"><code>embark-indicators</code></span> is a <a href="/info/elisp/variable-definitions.html">customizable</a> variable defined in <span class="bt">embark.el</span>.
+<h2>Value</h2>
+<pre><code>(embark-mixed-indicator embark-highlight-indicator
+			embark-isearch-highlight-indicator)
+</code></pre>
+<h2>Documentation</h2>
+<p>Indicator functions to use when acting or becoming.
+<p>The indicator functions are called from both <a href="../fun/embark-act.html"><code>embark-act</code></a> and
+from <a href="../fun/embark-become.html"><code>embark-become</code></a> and should display information about this to
+the user, such as: which of those two commands is running; a
+description of the key bindings that are available for actions or
+commands to become; and, in the case of <a href="../fun/embark-act.html"><code>embark-act</code></a>, the type
+and value of the targets, and whether other targets are available
+via <a href="../fun/embark-cycle.html"><code>embark-cycle</code></a>.  The indicator function is free to display as
+much or as little of this information as desired and can use any
+Emacs interface elements to do so.
+<p>Embark comes with five such indicators:
+<p>- <a href="../fun/embark-minimal-indicator.html"><code>embark-minimal-indicator</code></a>, which does not display any
+<br>&nbsp;&nbsp;information about keybindings, but does display types and
+<br>&nbsp;&nbsp;values of action targets in the echo area or minibuffer prompt,
+<p>- <a href="../fun/embark-verbose-indicator.html"><code>embark-verbose-indicator</code></a>, which pops up a buffer containing
+<br>&nbsp;&nbsp;detailed information including key bindings and the first line
+<br>&nbsp;&nbsp;of the docstring of the commands they run, and
+<p>- <a href="../fun/embark-mixed-indicator.html"><code>embark-mixed-indicator</code></a>, which combines the minimal and the
+<br>&nbsp;&nbsp;verbose indicator: the minimal indicator is shown first and the
+<br>&nbsp;&nbsp;verbose popup is shown after <a href="../var/embark-mixed-indicator-delay.html"><code>embark-mixed-indicator-delay</code></a>
+<br>&nbsp;&nbsp;seconds.
+<p>- <a href="../fun/embark-highlight-indicator.html"><code>embark-highlight-indicator</code></a>, which highlights the target
+<br>&nbsp;&nbsp;at point.
+<p>- <a href="../fun/embark-isearch-highlight-indicator.html"><code>embark-isearch-highlight-indicator</code></a>, which when the target at
+<br>&nbsp;&nbsp;point is an identifier or symbol, lazily highlights all
+<br>&nbsp;&nbsp;occurrences of it.
+<p>The protocol for indicator functions is as follows:
+<p>When called from <a href="../fun/embark-act.html"><code>embark-act</code></a>, an indicator function is called
+without arguments.  The indicator function should then return a
+closure, which captures the indicator state.  The returned
+closure must accept up to three optional arguments, the action
+keymap, the targets (plists as returned by <a href="../fun/embark--targets.html"><code>embark--targets</code></a>) and
+the prefix keys typed by the user so far.  The keymap, targets
+and prefix keys may be updated when cycling targets at point
+resulting in multiple calls to the closure.  When called from
+<a href="../fun/embark-become.html"><code>embark-become</code></a>, the indicator closure will be called with the
+keymap of commands to become, a fake target list containing a
+single target of type <a href="../fun/embark-become.html"><code>embark-become</code></a> and whose value is the
+minibuffer input, and the prefix set to nil.  Note, in
+particular, that if an indicator function wishes to distinguish
+between <a href="../fun/embark-act.html"><code>embark-act</code></a> and <a href="../fun/embark-become.html"><code>embark-become</code></a> it should check whether
+the <a href="../fun/car.html"><code>car</code></a> of the first target is <a href="../fun/embark-become.html"><code>embark-become</code></a>.
+<p>After the action has been performed the indicator closure is
+called without arguments, such that the indicator can perform the
+necessary cleanup work.  For example, if the indicator adds
+overlays, it should remove these overlays.  The indicator should
+be written in a way that it is safe to call it for cleanup more
+than once, in fact, it should be able to handle any sequence of
+update and cleanup calls ending in a call for cleanup.
+<p>NOTE: Experience shows that the indicator calling convention may
+change again in order to support more action features.  The
+calling convention should currently be considered unstable.
+Please keep this in mind when writing a custom indicator
+function, or when using the <span class="m"><code>which-key</code></span> indicator function from
+the wiki.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+(<span class="k">defcustom</span> <span class="v">embark-indicators</span>
+  '(embark-mixed-indicator
+    embark-highlight-indicator
+    embark-isearch-highlight-indicator)
+  <span class="doc">"Indicator functions to use when acting or becoming.
+The indicator functions are called from both `</span><span class="m doc">embark-act</span><span class="doc">' and
+from `</span><span class="m doc">embark-become</span><span class="doc">' and should display information about this to
+the user, such as: which of those two commands is running; a
+description of the key bindings that are available for actions or
+commands to become; and, in the case of `</span><span class="m doc">embark-act</span><span class="doc">', the type
+and value of the targets, and whether other targets are available
+via `</span><span class="m doc">embark-cycle</span><span class="doc">'.  The indicator function is free to display as
+much or as little of this information as desired and can use any
+Emacs interface elements to do so.
+
+Embark comes with five such indicators:
+
+- `</span><span class="m doc">embark-minimal-indicator</span><span class="doc">', which does not display any
+  information about keybindings, but does display types and
+  values of action targets in the echo area or minibuffer prompt,
+
+- `</span><span class="m doc">embark-verbose-indicator</span><span class="doc">', which pops up a buffer containing
+  detailed information including key bindings and the first line
+  of the docstring of the commands they run, and
+
+- `</span><span class="m doc">embark-mixed-indicator</span><span class="doc">', which combines the minimal and the
+  verbose indicator: the minimal indicator is shown first and the
+  verbose popup is shown after `</span><span class="m doc">embark-mixed-indicator-delay</span><span class="doc">'
+  seconds.
+
+- `</span><span class="m doc">embark-highlight-indicator</span><span class="doc">', which highlights the target
+  at point.
+
+- `</span><span class="m doc">embark-isearch-highlight-indicator</span><span class="doc">', which when the target at
+  point is an identifier or symbol, lazily highlights all
+  occurrences of it.
+
+The protocol for indicator functions is as follows:
+
+When called from `</span><span class="m doc">embark-act</span><span class="doc">', an indicator function is called
+without arguments.  The indicator function should then return a
+closure, which captures the indicator state.  The returned
+closure must accept up to three optional arguments, the action
+keymap, the targets (plists as returned by `</span><span class="m doc">embark--targets</span><span class="doc">') and
+the prefix keys typed by the user so far.  The keymap, targets
+and prefix keys may be updated when cycling targets at point
+resulting in multiple calls to the closure.  When called from
+`</span><span class="m doc">embark-become</span><span class="doc">', the indicator closure will be called with the
+keymap of commands to become, a fake target list containing a
+single target of type `</span><span class="m doc">embark-become</span><span class="doc">' and whose value is the
+minibuffer input, and the prefix set to nil.  Note, in
+particular, that if an indicator function wishes to distinguish
+between `</span><span class="m doc">embark-act</span><span class="doc">' and `</span><span class="m doc">embark-become</span><span class="doc">' it should check whether
+the `</span><span class="m doc">car</span><span class="doc">' of the first target is `</span><span class="m doc">embark-become</span><span class="doc">'.
+
+After the action has been performed the indicator closure is
+called without arguments, such that the indicator can perform the
+necessary cleanup work.  For example, if the indicator adds
+overlays, it should remove these overlays.  The indicator should
+be written in a way that it is safe to call it for cleanup more
+than once, in fact, it should be able to handle any sequence of
+update and cleanup calls ending in a call for cleanup.
+
+NOTE: Experience shows that the indicator calling convention may
+change again in order to support more action features.  The
+calling convention should currently be considered unstable.
+Please keep this in mind when writing a custom indicator
+function, or when using the `</span><span class="m doc">which-key</span><span class="doc">' indicator function from
+the wiki."</span>
+  <span class="bi">:type</span> '(repeat
+          (choice
+           (const <span class="bi">:tag</span> <span class="s">"Verbose indicator"</span> embark-verbose-indicator)
+           (const <span class="bi">:tag</span> <span class="s">"Minimal indicator"</span> embark-minimal-indicator)
+           (const <span class="bi">:tag</span> <span class="s">"Mixed indicator"</span> embark-mixed-indicator)
+           (const <span class="bi">:tag</span> <span class="s">"Highlight target"</span> embark-highlight-indicator)
+           (const <span class="bi">:tag</span> <span class="s">"Highlight all occurrences"</span>
+                  embark-isearch-highlight-indicator)
+           (<span class="k">function</span> <span class="bi">:tag</span> <span class="s">"Other"</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

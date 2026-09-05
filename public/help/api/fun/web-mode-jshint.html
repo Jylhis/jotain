@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-jshint – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-jshint is an interactive and natively compiled function
+defined in web-mode.el.
+Run JSHint on all the JavaScript parts.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-jshint</code></h1><p><span class="m"><code>web-mode-jshint</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-jshint)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run JSHint on all the JavaScript parts.
+<h2>Key Bindings</h2>
+<p><span class="v">web-mode-map</span> <span class="key">C-c C-j</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-jshint</span> ()
+  <span class="doc">"Run JSHint on all the JavaScript parts."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> (proc)
+    (<span class="k">when</span> (buffer-file-name)
+      (<span class="k">setq</span> proc (start-process
+                  <span class="s">"jshint-proc"</span>
+                  nil
+                  (<span class="k">or</span> (executable-find <span class="s">"jshint"</span>) <span class="s">"/usr/local/bin/jshint"</span>)
+                  <span class="s">"--extract=auto"</span>
+                  (buffer-file-name)))
+      (<span class="k">setq</span> web-mode-jshint-errors 0)
+      (set-process-filter proc
+                          (<span class="k">lambda</span> (_proc output)
+                            (<span class="k">let</span> ((offset 0) overlay pos (old 0) msg)
+                              (remove-overlays (point-min) (point-max) 'font-lock-face 'web-mode-error-face)
+                              (<span class="k">while</span> (string-match
+                                      <span class="s">"line </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:digit:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">, col </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[[:digit:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">, </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\.$"</span>
+                                      output offset)
+                                (<span class="k">setq</span> web-mode-jshint-errors (1+ web-mode-jshint-errors))
+                                (<span class="k">setq</span> offset (match-end 0))
+                                (<span class="k">setq</span> pos (web-mode-coord-position
+                                           (match-string-no-properties 1 output)
+                                           (match-string-no-properties 2 output)))
+                                (<span class="k">when</span> (get-text-property pos 'tag-beg)
+                                  (<span class="k">setq</span> pos (1- pos)))
+                                (<span class="k">when</span> (not (= pos old))
+                                  (<span class="k">setq</span> old pos)
+                                  (<span class="k">setq</span> overlay (make-overlay pos (1+ pos)))
+                                  (overlay-put overlay 'font-lock-face 'web-mode-error-face)
+                                  )
+                                (<span class="k">setq</span> msg (<span class="k">or</span> (overlay-get overlay 'help-echo)
+                                              (concat <span class="s">"line="</span>
+                                                      (match-string-no-properties 1 output)
+                                                      <span class="s">" column="</span>
+                                                      (match-string-no-properties 2 output)
+                                                      )))
+                                (overlay-put overlay 'help-echo
+                                             (concat msg <span class="s">" ## "</span> (match-string-no-properties 3 output)))
+                                ) <span class="cd">;</span><span class="c">while
+</span>                              ))
+                          )
+      ) <span class="cd">;</span><span class="c">when
+</span>    ))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb--clean-url – Emacs Documentation Online</title>
+<meta name="description" content="verb--clean-url is a natively compiled function defined in verb.el.
+Return a correctly encoded URL struct to use with url-retrieve.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb--clean-url</code></h1><p><span class="m"><code>verb--clean-url</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">verb.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb--clean-url <a href="#:~:text=encoded-,URL"><span class="arg">URL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a correctly encoded <span class="arg">URL</span> struct to use with <a href="../fun/url-retrieve.html"><code>url-retrieve</code></a>.
+<p>Additionally, given a <span class="arg">URL</span> like "http://foo.com?a=b", return
+<br>"http://foo.com/?a=b". This is what curl does when the path is empty
+<br>and there are query string arguments present.
+<p>Also, replace any present Org hyperlinks with their literal link
+contents, using <a href="../fun/verb-util--remove-org-hyperlinks.html"><code>verb-util--remove-org-hyperlinks</code></a>.
+<p>If a scheme is not present, interpret the <span class="arg">URL</span> as a path, query string
+and fragment component of a <span class="arg">URL</span> with no host or scheme defined.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb.el</span>
+(<span class="k">defun</span> <span class="f">verb--clean-url</span> (url)
+  <span class="doc">"Return a correctly encoded URL struct to use with `</span><span class="m doc">url-retrieve</span><span class="doc">'.
+
+Additionally, given a URL like \"http://foo.com?a=b\", return
+\"http://foo.com/?a=b\". This is what curl does when the path is empty
+and there are query string arguments present.
+
+Also, replace any present Org hyperlinks with their literal link
+contents, using `</span><span class="m doc">verb-util--remove-org-hyperlinks</span><span class="doc">'.
+
+If a scheme is not present, interpret the URL as a path, query string
+and fragment component of a URL with no host or scheme defined."</span>
+  (<span class="k">let*</span> ((url (verb-util--remove-org-hyperlinks url))
+         <span class="cd">;; </span><span class="c">If we're not expanding code tags, do not attempt to encode
+</span>         <span class="cd">;; </span><span class="c">'</span><span class="m c">{</span><span class="c">', '</span><span class="m c">}</span><span class="c">', etc., so that we keep the original URL text.
+</span>         (encoded-url (<span class="k">if</span> verb--inhibit-code-tags-evaluation
+                          url
+                        (url-encode-url url)))
+         (url-obj (url-generic-parse-url encoded-url))
+         (path (url-filename url-obj))
+         (scheme (url-type url-obj)))
+    (<span class="k">if</span> (not scheme)
+        <span class="cd">;; </span><span class="c">If no scheme defined, interpret everything as path + query
+</span>        <span class="cd">;; </span><span class="c">string + fragment.
+</span>        (<span class="k">progn</span>
+          (<span class="k">setf</span> (url-filename url-obj)
+                (concat (url-host url-obj)
+                        (url-filename url-obj)))
+          (<span class="k">setf</span> (url-host url-obj) nil))
+      <span class="cd">;; </span><span class="c">Scheme is present:
+</span>      (<span class="k">unless</span> (member scheme '(<span class="s">"http"</span> <span class="s">"https"</span>))
+        (<span class="w">user-error</span> (concat <span class="s">"The URL must specify \"http://\" or "</span>
+                            <span class="s">"\"https://\" (got: \"%s\")"</span>)
+                    scheme))
+      <span class="cd">;; </span><span class="c">If path is "" but there are query string arguments, set path
+</span>      <span class="cd">;; </span><span class="c">to "/" (taken from curl).
+</span>      <span class="cd">;; </span><span class="c">Note that `</span><span class="m c">path</span><span class="c">' here contains path and query string.
+</span>      (<span class="k">when</span> (string-prefix-p <span class="s">"?"</span> path)
+        (<span class="k">setf</span> (url-filename url-obj) (concat <span class="s">"/"</span> path))))
+    url-obj))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vundo--mod-list-from – Emacs Documentation Online</title>
+<meta name="description" content="vundo--mod-list-from is a natively compiled function defined in
+vundo.el.
+Generate and return a modification list from UNDO-LIST.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vundo--mod-list-from</code></h1><p><span class="m"><code>vundo--mod-list-from</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">vundo.el</span>.
+<h2>Signature</h2>
+<pre><code>(vundo--mod-list-from <a href="#:~:text=from-,UNDO-LIST"><span class="arg">UNDO-LIST</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=U-,N"><span class="arg">N</span></a> <a href="#:~:text=If-,MOD-LIST"><span class="arg">MOD-LIST</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Generate and return a modification list from <span class="arg">UNDO-LIST</span>.
+<p>If <span class="arg">N</span> non-nil, only look at the first <span class="arg">N</span> entries in <span class="arg">UNDO-LIST</span>.
+If <span class="arg">MOD-LIST</span> non-nil, extend on <span class="arg">MOD-LIST</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/7c2696v2qdrdv2vf2im8alazibi7qq0z-emacs-packages-deps/share/emacs/site-lisp/elpa/vundo-2.4.0/vundo.el</span>
+(<span class="k">defun</span> <span class="f">vundo--mod-list-from</span> (undo-list <span class="ty">&amp;optional</span> n mod-list)
+  <span class="doc">"Generate and return a modification list from UNDO-LIST.
+If N non-nil, only look at the first N entries in UNDO-LIST.
+If MOD-LIST non-nil, extend on MOD-LIST."</span>
+  (<span class="k">let</span> ((uidx 0)
+        (mod-list (<span class="k">or</span> mod-list (vector (make-vundo-m))))
+        new-mlist)
+    (<span class="k">while</span> (<span class="k">and</span> undo-list (<span class="k">or</span> (null n) (&lt; uidx n)))
+      <span class="cd">;; </span><span class="c">Skip leading nils.
+</span>      (<span class="k">while</span> (<span class="k">and</span> undo-list (null (car undo-list)))
+        (<span class="k">setq</span> undo-list (cdr undo-list))
+        (<span class="k">cl-incf</span> uidx))
+      <span class="cd">;; </span><span class="c">It's possible the index was exceeded stepping over nil.
+</span>      (<span class="k">when</span> (<span class="k">or</span> (null n) (&lt; uidx n))
+        <span class="cd">;; </span><span class="c">Add modification.
+</span>        (<span class="k">let</span> ((pos-only (vundo--position-only-p undo-list))
+              (mod-timestamp nil))
+          (<span class="k">unless</span> pos-only
+            <span class="cd">;; </span><span class="c">If this record is position-only, we skip it and don’t
+</span>            <span class="cd">;; </span><span class="c">add a mod for it. Effectively taking it out of the undo
+</span>            <span class="cd">;; </span><span class="c">tree. Read ‘Position-only records’ section in
+</span>            <span class="cd">;; </span><span class="c">Commentary for more explanation.
+</span>            (<span class="w">cl-assert</span> (not (null (car undo-list))))
+            (<span class="k">push</span> (make-vundo-m <span class="bi">:undo-list</span> undo-list)
+                  new-mlist))
+          <span class="cd">;; </span><span class="c">Skip through the content of this modification.
+</span>          (<span class="k">while</span> (car undo-list)
+            <span class="cd">;; </span><span class="c">Is this entry a timestamp?
+</span>            (<span class="k">when</span> (<span class="k">and</span> (consp (car undo-list)) (eq (caar undo-list) t))
+              (<span class="k">setq</span> mod-timestamp (cdar undo-list)))
+            (<span class="k">setq</span> undo-list (cdr undo-list))
+            (<span class="k">cl-incf</span> uidx))
+          <span class="cd">;; </span><span class="c">If this modification contains a timestamp, the previous
+</span>          <span class="cd">;; </span><span class="c">state is saved to file.
+</span>          (<span class="k">when</span> (<span class="k">and</span> mod-timestamp (not pos-only))
+            (<span class="k">setf</span> (vundo-m-timestamp (car new-mlist)) mod-timestamp)))))
+    <span class="cd">;; </span><span class="c">Convert to vector.
+</span>    (vconcat mod-list new-mlist)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

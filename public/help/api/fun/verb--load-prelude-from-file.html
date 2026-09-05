@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb--load-prelude-from-file – Emacs Documentation Online</title>
+<meta name="description" content="verb--load-prelude-from-file is an interactive and natively compiled
+function defined in verb.el.
+Load Emacs Lisp or JSON prelude file FILENAME into Verb variables.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb--load-prelude-from-file</code></h1><p><span class="m"><code>verb--load-prelude-from-file</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">verb.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb--load-prelude-from-file <a href="#:~:text=file-,FILENAME"><span class="arg">FILENAME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Load Emacs Lisp or JSON prelude file <span class="arg">FILENAME</span> into Verb variables.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb.el</span>
+(<span class="k">defun</span> <span class="f">verb--load-prelude-from-file</span> (filename)
+  <span class="doc">"Load Emacs Lisp or JSON prelude file FILENAME into Verb variables."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">save-excursion</span>
+    (<span class="k">let</span> ((file-extension (file-name-extension filename)))
+      (<span class="k">when</span> (member file-extension '(<span class="s">"gpg"</span> <span class="s">"gz"</span> <span class="s">"z"</span> <span class="s">"7z"</span>))
+        (<span class="k">setq</span> file-extension (file-name-extension (file-name-base filename))))
+      (<span class="k">cond</span>
+       ((string= <span class="s">"el"</span> file-extension) <span class="cd">; </span><span class="c">file is Emacs Lisp
+</span>        (<span class="k">if</span> (<span class="k">or</span> verb-suppress-load-unsecure-prelude-warning
+                (yes-or-no-p
+                 (concat (format <span class="s">"File %s may contain code "</span> filename)
+                         <span class="s">"that may not be safe (see: "</span>
+                         <span class="s">"`</span><span class="m s">verb-suppress-load-unsecure-prelude-warning</span><span class="s">')"</span>
+                         <span class="s">"\nLoad it anyways? "</span>)))
+            (load-file filename)
+          (<span class="w">user-error</span> <span class="s">"Operation cancelled"</span>)))
+       ((string-match-p <span class="s">"^json.?"</span> file-extension) <span class="cd">; </span><span class="c">file is JSON(C)
+</span>        (<span class="k">let</span> ((file-contents
+               (<span class="k">with-temp-buffer</span>
+                 (insert-file-contents filename)
+                 (set-auto-mode)
+                 (goto-char (point-min))
+                 <span class="cd">;; </span><span class="c">If a modern JSON / JavaScript package not
+</span>                 <span class="cd">;; </span><span class="c">installed, then comments cannot be removed or
+</span>                 <span class="cd">;; </span><span class="c">supported. Also, not likely to have JSON comments
+</span>                 <span class="cd">;; </span><span class="c">if this is the case.
+</span>                 (<span class="k">when</span> comment-start
+                   (comment-kill (count-lines (point-min) (point-max))))
+                 (verb--buffer-string-no-properties))))
+          (verb--process-json-prelude file-contents)))
+       (t (<span class="w">user-error</span> <span class="s">"Unable to determine file type for %s"</span> filename))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

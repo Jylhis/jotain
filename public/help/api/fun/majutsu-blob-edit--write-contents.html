@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-blob-edit--write-contents – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-blob-edit--write-contents is a natively compiled function
+defined in majutsu-file.el.
+Apply blob edits through `jj diffedit` and finish save.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-blob-edit--write-contents</code></h1><p><span class="m"><code>majutsu-blob-edit--write-contents</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-file.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-blob-edit--write-contents)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply blob edits through `jj diffedit` and finish save.
+<p>This function is used from <a href="../var/write-contents-functions.html"><code>write-contents-functions</code></a> in editable blob mode.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-file.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-blob-edit--write-contents</span> ()
+  <span class="doc">"Apply blob edits through `jj diffedit` and finish save.
+This function is used from `</span><span class="m doc">write-contents-functions</span><span class="doc">' in editable blob mode."</span>
+  (<span class="k">if</span> (not majutsu-blob-edit-mode)
+      nil
+    (<span class="k">unless</span> (<span class="k">and</span> majutsu-buffer-blob-root
+                 majutsu-buffer-blob-path
+                 majutsu-buffer-blob-revision)
+      (<span class="w">user-error</span> <span class="s">"Missing blob context for editable save"</span>))
+    (<span class="k">let</span> ((current (buffer-substring-no-properties (point-min) (point-max))))
+      (<span class="k">if</span> (equal current majutsu-blob-edit--original-content)
+          (<span class="k">progn</span>
+            (set-buffer-modified-p nil)
+            (majutsu-blob-edit-mode -1)
+            t)
+        (<span class="k">let</span> ((exit (majutsu-blob-edit--apply-diffedit current)))
+          (<span class="k">if</span> (zerop exit)
+              (<span class="k">progn</span>
+                (<span class="k">when-let*</span> ((rev-info (majutsu-file--resolve-single-rev-info
+                                       majutsu-buffer-blob-revset))
+                            (new-change (plist-get rev-info <span class="bi">:change-id</span>)))
+                  (<span class="k">setq</span> majutsu-buffer-blob-revision new-change)
+                  (<span class="k">setq</span> majutsu-buffer-blob-change-id new-change)
+                  (<span class="k">setq</span> majutsu-buffer-blob-commit-id (plist-get rev-info <span class="bi">:commit-id</span>))
+                  (majutsu-file--refresh-buffer-name))
+                (<span class="k">setq</span> majutsu-blob-edit--original-content current)
+                (set-buffer-modified-p nil)
+                (majutsu-blob-edit-mode -1)
+                (<span class="k">setq-local</span> majutsu-buffer-blob-content-hash
+                            (secure-hash 'sha1 current))
+                (message <span class="s">"Blob edits applied via jj diffedit"</span>)
+                t)
+            (<span class="w">user-error</span> <span class="s">"Failed to apply blob edits (exit %s)"</span> exit)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apheleia--map-rcs-patch – Emacs Documentation Online</title>
+<meta name="description" content="apheleia--map-rcs-patch is a natively compiled function defined in
+apheleia-rcs.el.
+Map over the RCS patch in the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apheleia--map-rcs-patch</code></h1><p><span class="m"><code>apheleia--map-rcs-patch</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">apheleia-rcs.el</span>.
+<h2>Signature</h2>
+<pre><code>(apheleia--map-rcs-patch <a href="#:~:text=command,-,FUNC"><span class="arg">FUNC</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Map over the RCS patch in the current buffer.
+<p>For each RCS patch command, <span class="arg">FUNC</span> is called with an alist that has
+the following keys:
+<p>- <span class="m"><code>command</code></span>: either <span class="m"><code>addition</code></span> or <span class="m"><code>deletion</code></span>
+<br>- <span class="m"><code>start</code></span>: line number, an integer
+<br>- <span class="m"><code>lines</code></span>: number of lines to be inserted or removed
+<br>- <span class="m"><code>text</code></span>: the string to be inserted, only for <span class="m"><code>addition</code></span>
+<p>See &lt;<a href="https://web.archive.org/web/20220527003730/https://tools.ietf.org/doc/tcllib/html/rcs.html#section4">https://web.archive.org/web/20220527003730/https://tools.ietf.org/doc/tcllib/html/rcs.html#section4</a>&gt;
+for documentation on the RCS patch format.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbykkl13khzh84lv9vw1bf1vijzg30fr-emacs-packages-deps/share/emacs/site-lisp/elpa/apheleia-20260817.2331/apheleia-rcs.el</span>
+(<span class="k">defun</span> <span class="f">apheleia--map-rcs-patch</span> (func)
+  <span class="doc">"Map over the RCS patch in the current buffer.
+For each RCS patch command, FUNC is called with an alist that has
+the following keys:
+
+- `</span><span class="m doc">command</span><span class="doc">': either `</span><span class="m doc">addition</span><span class="doc">' or `</span><span class="m doc">deletion</span><span class="doc">'
+- `</span><span class="m doc">start</span><span class="doc">': line number, an integer
+- `</span><span class="m doc">lines</span><span class="doc">': number of lines to be inserted or removed
+- `</span><span class="m doc">text</span><span class="doc">': the string to be inserted, only for `</span><span class="m doc">addition</span><span class="doc">'
+
+See &lt;https://web.archive.org/web/20220527003730/https://tools.ietf.org/doc/tcllib/html/rcs.html#section4&gt;
+for documentation on the RCS patch format."</span>
+  (<span class="k">save-excursion</span>
+    (goto-char (point-min))
+    (<span class="k">while</span> (not (eobp))
+      (<span class="k">unless</span> (looking-at <span class="s">"$</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[ad]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+        (<span class="w">error</span> <span class="s">"Malformed RCS patch: %S"</span> (point)))
+      (forward-line)
+      (<span class="k">when-let</span> ((command (match-string 1)))
+        (<span class="k">let</span> ((start (string-to-number (match-string 2)))
+              (lines (string-to-number (match-string 3))))
+          (<span class="k">pcase</span> command
+            (<span class="s">"a"</span>
+             (<span class="k">let</span> ((text-start (point)))
+               (forward-line lines)
+               (funcall
+                func
+                `((command . addition)
+                  (start . ,start)
+                  (lines . ,lines)
+                  (text . ,(buffer-substring-no-properties
+                            text-start (point)))))))
+            (<span class="s">"d"</span>
+             (funcall
+              func
+              `((command . deletion)
+                (start . ,start)
+                (lines . ,lines))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

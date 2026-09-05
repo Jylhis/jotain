@@ -1,0 +1,313 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-envelope-expand-instructions-1 – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-envelope-expand-instructions-1 is a natively compiled
+function defined in combobulate-envelope.el.
+Internal function that expands INSTRUCTIONS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-envelope-expand-instructions-1</code></h1><p><span class="m"><code>combobulate-envelope-expand-instructions-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">combobulate-envelope.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-envelope-expand-instructions-1 <a href="#:~:text=expands-,INSTRUCTIONS"><span class="arg">INSTRUCTIONS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Internal function that expands <span class="arg">INSTRUCTIONS</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-envelope.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-envelope-expand-instructions-1</span> (instructions)
+  <span class="doc">"Internal function that expands INSTRUCTIONS."</span>
+  (<span class="k">let</span> ((buf (current-buffer))
+        (user-actions)
+        (end)
+        (start (point-marker)))
+    (ignore end)
+    (<span class="k">cl-flet</span> ((expand-block (rest-instructions categories)
+                <span class="cd">;; </span><span class="c">Expand a block of instructions.
+</span>                (<span class="k">let</span> ((ctx (combobulate-envelope-expand-instructions-1 rest-instructions))
+                      (expanded-ctx))
+                  (<span class="k">setq</span> expanded-ctx
+                        (combobulate-envelope-expand-post-run-instructions
+                         ctx
+                         <span class="cd">;; </span><span class="c">categories to expand right now. Note that we
+</span>                         <span class="cd">;; </span><span class="c">intentionally exclude `</span><span class="m c">point</span><span class="c">' as the default
+</span>                         <span class="cd">;; </span><span class="c">as they should only be run once everything
+</span>                         <span class="cd">;; </span><span class="c">else is finalised: they are literally the only
+</span>                         <span class="cd">;; </span><span class="c">thing to run after everything else is done.
+</span>                         categories))
+                  (<span class="k">setq</span> user-actions
+                        (nconc user-actions
+                               (combobulate-envelope-context-user-actions
+                                expanded-ctx)))
+                  (<span class="k">setq</span> end (combobulate-envelope-context-end expanded-ctx)))))
+      (<span class="k">combobulate-refactor</span> (<span class="bi">:id</span> combobulate-envelope-refactor-id)
+        (<span class="k">dolist</span> (sub-instruction instructions)
+          (<span class="k">pcase</span> sub-instruction
+            <span class="cd">;; </span><span class="c">`(b instructions)'
+</span>            <span class="cd">;; </span><span class="c">`(b* instructions)'
+</span>            <span class="cd">;; </span><span class="c">Execute INSTRUCTIONS in a block, and interactively ask
+</span>            <span class="cd">;; </span><span class="c">the user to complete `</span><span class="m c">repeat</span><span class="c">' and `</span><span class="m c">choice</span><span class="c">' instructions.
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">The special block `</span><span class="m c">b*</span><span class="c">' will also execute `</span><span class="m c">point</span><span class="c">' instructions.
+</span>            ((<span class="k">or</span> (<span class="k">and</span> `(b . ,rest) (<span class="k">let</span> categories '(repeat choice prompt)))
+                 (<span class="k">and</span> `(b* ,categories . ,rest)))
+             (expand-block rest categories))
+            <span class="cd">;; </span><span class="c">`(choice instructions)'
+</span>            <span class="cd">;; </span><span class="c">`(choice* :name NAME :missing MISSING :rest INSTRUCTIONS)'
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">Presents a prompt to the user to choose between any of
+</span>            <span class="cd">;; </span><span class="c">the choices in the same block. `</span><span class="m c">choice</span><span class="c">' is the simplest,
+</span>            <span class="cd">;; </span><span class="c">and `</span><span class="m c">choice*</span><span class="c">' is more complex.
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">`</span><span class="m c">choice*</span><span class="c">' allows you to specify a name for the choice; it
+</span>            <span class="cd">;; </span><span class="c">is shown in the prompt. The `</span><span class="m c">:missing</span><span class="c">' keyword argument
+</span>            <span class="cd">;; </span><span class="c">is a string that is shown if the user does not pick that
+</span>            <span class="cd">;; </span><span class="c">choice. `</span><span class="m c">:rest</span><span class="c">' is the instructions to execute if the
+</span>            <span class="cd">;; </span><span class="c">user picks that choice.
+</span>            ((<span class="k">or</span> (<span class="k">and</span> `(choice . ,rest)
+                      (<span class="k">let</span> name nil)
+                      (<span class="k">let</span> missing nil)
+                      (<span class="k">let</span> rest-instructions rest))
+                 (<span class="k">and</span> `(choice* . ,rest)
+                      (<span class="k">let</span> name (plist-get rest <span class="bi">:name</span>))
+                      (<span class="k">let</span> missing (plist-get rest <span class="bi">:missing</span>))
+                      (<span class="k">let</span> rest-instructions (plist-get rest <span class="bi">:rest</span>))))
+             (<span class="k">push</span> `(choice ,(point-marker) ,name ,missing ,rest-instructions
+                            ,(apply-partially #'combobulate-envelope-expand-instructions-1
+                                              rest-instructions))
+                   user-actions))
+            <span class="cd">;; </span><span class="c">`(save-column BLOCK)'
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">Records the `</span><span class="m c">current-column</span><span class="c">' of `</span><span class="m c">point</span><span class="c">' when it enters
+</span>            <span class="cd">;; </span><span class="c">BLOCK and resets `</span><span class="m c">point</span><span class="c">' to that column when after exiting.
+</span>            (`(save-column . ,rest)
+             (<span class="k">let</span> ((col (current-column)))
+               (expand-block rest nil)
+               <span class="cd">;; </span><span class="c">(delete-horizontal-space)
+</span>               (insert (make-string col ? ))))
+            <span class="cd">;; </span><span class="c">`(prompt TAG PROMPT [TRANSFORM-FN])' / `(p TAG PROMPT [TRANSFORM-FN])'
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">Prompts the user with PROMPT and stores the returned value
+</span>            <span class="cd">;; </span><span class="c">against TAG.  Any fields tagged TAG (alongside the prompt
+</span>            <span class="cd">;; </span><span class="c">itself) are updated automatically.
+</span>            ((<span class="k">or</span> (<span class="k">and</span> `(prompt ,tag ,prompt) (<span class="k">let</span> transformer-fn nil))
+                 (<span class="k">and</span> `(p ,tag ,prompt) (<span class="k">let</span> transformer-fn nil))
+                 (<span class="k">and</span> `(prompt ,tag ,prompt ,transformer-fn))
+                 (<span class="k">and</span> `(p ,tag ,prompt ,transformer-fn)))
+             (<span class="k">when</span> (<span class="k">and</span> transformer-fn (not (functionp transformer-fn)))
+               (<span class="w">error</span> <span class="s">"Prompt has invalid transformer function `</span><span class="m s">%s</span><span class="s">'"</span> transformer-fn))
+             (<span class="k">let</span> ((prompt-point (point-marker)))
+               (<span class="k">push</span> (cons 'prompt
+                           (<span class="k">lambda</span> () (<span class="k">save-excursion</span>
+                                   (goto-char prompt-point)
+                                   (mark-field prompt-point tag (combobulate-envelope-get-register tag) transformer-fn)
+                                   (<span class="k">unless</span> combobulate-envelope-static
+                                     (<span class="k">let</span> ((new-text (<span class="k">or</span> (combobulate-envelope-get-register tag)
+                                                         (combobulate-envelope-prompt
+                                                          prompt tag nil
+                                                          (<span class="k">lambda</span> ()
+                                                            (combobulate-envelope--update-prompts
+                                                             buf tag (minibuffer-contents)))))))
+                                       (<span class="k">push</span> (cons tag new-text) combobulate-envelope--registers)
+                                       (combobulate-envelope--update-prompts buf tag new-text))))))
+                     user-actions)))
+            <span class="cd">;; </span><span class="c">`(field TAG)' or `(f TAG)'
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">If there is a matching prompt TAG, update its text to that value.
+</span>            ((<span class="k">or</span> (<span class="k">and</span> `(field ,tag) (<span class="k">let</span> transformer-fn nil))
+                 (<span class="k">and</span> `(f ,tag) (<span class="k">let</span> transformer-fn nil))
+                 (<span class="k">and</span> `(field ,tag ,transformer-fn))
+                 (<span class="k">and</span> `(f ,tag ,transformer-fn)))
+             (mark-field (point-marker) tag (combobulate-envelope-get-register tag) transformer-fn))
+            <span class="cd">;; </span><span class="c">`</span><span class="m c">@&gt;</span><span class="c">'
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">Push a `</span><span class="m c">point-marker</span><span class="c">' that will moves with insertions
+</span>            <span class="cd">;; </span><span class="c">made at the marker.
+</span>            ('@&gt; (<span class="k">push</span> `(point ,(<span class="k">let</span> ((m (point-marker)))
+                                  (set-marker-insertion-type m t)
+                                  m))
+                       user-actions))
+            <span class="cd">;; </span><span class="c">`</span><span class="m c">@</span><span class="c">'
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">Push a `</span><span class="m c">point-marker</span><span class="c">' that will serve as a possible
+</span>            <span class="cd">;; </span><span class="c">placement point for point after expansion.
+</span>            ('@ (<span class="k">push</span> `(point ,(point-marker))
+                      user-actions))
+            <span class="cd">;; </span><span class="c">`</span><span class="m c">@@</span><span class="c">'
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">Push a `</span><span class="m c">point</span><span class="c">' that will serve as a possible
+</span>            <span class="cd">;; </span><span class="c">placement point for point after expansion.
+</span>            ('@@ (<span class="k">push</span> `(point ,(point)) user-actions))
+            <span class="cd">;; </span><span class="c">`</span><span class="m c">n</span><span class="c">' or `</span><span class="m c">n&gt;</span><span class="c">'
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">Calls `</span><span class="m c">newline</span><span class="c">', or `</span><span class="m c">newline</span><span class="c">' then `</span><span class="m c">indent-according-to-mode</span><span class="c">'.
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">Never `</span><span class="m c">newline-and-indent</span><span class="c">' because it strips horizontal
+</span>            <span class="cd">;; </span><span class="c">space, which is unhelpful.
+</span>            ('n (newline))
+            ('n&gt; (newline) (indent-according-to-mode))
+            <span class="cd">;; </span><span class="c">`</span><span class="m c">&gt;</span><span class="c">'
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">Call `</span><span class="m c">indent-according-to-mode</span><span class="c">'
+</span>            ('&gt; (indent-according-to-mode))
+            <span class="cd">;; </span><span class="c">`</span><span class="m c">&lt;</span><span class="c">'
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">For whitespace-sensitive languages, this is a way to move
+</span>            <span class="cd">;; </span><span class="c">back one level of indentation.
+</span>            ('&lt; (<span class="k">let</span> ((col (<span class="k">or</span> (<span class="k">and</span> (<span class="k">combobulate-read</span> envelope-deindent-function)
+                                    (funcall (<span class="k">combobulate-read</span> envelope-deindent-function)))
+                               0)))
+                  (delete-horizontal-space)
+                  (insert (make-string col ? ))))
+            <span class="cd">;; </span><span class="c">`(r&gt; REGISTER [DEFAULT])' and `(r REGISTER [DEFAULT])'; or `</span><span class="m c">r&gt;</span><span class="c">' and `</span><span class="m c">r</span><span class="c">'
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">Inserts the register REGISTER (retreived from
+</span>            <span class="cd">;; </span><span class="c">`</span><span class="m c">combobulate-envelope--registers</span><span class="c">') or, if there is no
+</span>            <span class="cd">;; </span><span class="c">register specified, default to the REGISTER `</span><span class="m c">region</span><span class="c">' (or
+</span>            <span class="cd">;; </span><span class="c">`</span><span class="m c">region-indented</span><span class="c">' if
+</span>            <span class="cd">;; </span><span class="c">`</span><span class="m c">envelope-indent-region-function</span><span class="c">' is nil) which
+</span>            <span class="cd">;; </span><span class="c">holds that captured region (if any).
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">Forms ending with `</span><span class="m c">&gt;</span><span class="c">' are indented as per the major mode's
+</span>            <span class="cd">;; </span><span class="c">indentation engine. Forms without `</span><span class="m c">&gt;</span><span class="c">' are not indented at all.
+</span>            ((<span class="k">or</span>
+              <span class="cd">;; </span><span class="c">surely there's a better way than this?
+</span>              (<span class="k">and</span> 'r&gt;
+                   (<span class="k">let</span> register nil)
+                   (<span class="k">let</span> default <span class="s">""</span>)
+                   (<span class="k">let</span> indent t))
+              (<span class="k">and</span> 'r
+                   (<span class="k">let</span> register nil)
+                   (<span class="k">let</span> default <span class="s">""</span>)
+                   (<span class="k">let</span> indent nil))
+              (<span class="k">and</span> `(r&gt; ,register)
+                   (<span class="k">let</span> indent t)
+                   (<span class="k">let</span> default <span class="s">""</span>))
+              (<span class="k">and</span> `(r ,register)
+                   (<span class="k">let</span> indent nil)
+                   (<span class="k">let</span> default <span class="s">""</span>))
+              (<span class="k">and</span> `(r&gt; ,register ,default)
+                   (<span class="k">let</span> indent t))
+              (<span class="k">and</span> `(r ,register ,default)
+                   (<span class="k">let</span> indent nil)))
+             (<span class="k">setq</span> default (combobulate-envelope-get-register
+                            (<span class="k">or</span> register
+                                (<span class="k">if</span> (<span class="k">and</span> (null (<span class="k">combobulate-read</span> envelope-indent-region-function)) indent)
+                                    'region-indented
+                                  'region))
+                            default))
+             (<span class="k">cond</span>
+              ((<span class="k">and</span> (<span class="k">combobulate-read</span> envelope-indent-region-function) indent)
+               (funcall (<span class="k">combobulate-read</span> envelope-indent-region-function)
+                        (point) (<span class="k">progn</span> (insert default) (point))))
+              <span class="cd">;; </span><span class="c">if `</span><span class="m c">envelope-indent-region-function</span><span class="c">' is nil
+</span>              <span class="cd">;; </span><span class="c">then we default to a simplistic indentation style that
+</span>              <span class="cd">;; </span><span class="c">works well with the likes of Python where crass,
+</span>              <span class="cd">;; </span><span class="c">region-based indentation will never work.
+</span>              ((<span class="k">and</span> (not (<span class="k">combobulate-read</span> envelope-indent-region-function)) indent)
+               (<span class="k">let</span> ((offset (current-indentation)))
+                 <span class="cd">;; </span><span class="c">Check if point has nothing but whitespace before
+</span>                 <span class="cd">;; </span><span class="c">it. Only if it does do we delete it. This is
+</span>                 <span class="cd">;; </span><span class="c">perhaps the only reasonable way of checking if
+</span>                 <span class="cd">;; </span><span class="c">we're dealing with something that a
+</span>                 <span class="cd">;; </span><span class="c">whitespace-based language's indentation function
+</span>                 <span class="cd">;; </span><span class="c">can reasonably indent again after the whitespace
+</span>                 <span class="cd">;; </span><span class="c">has been deleted.
+</span>                 <span class="cd">;;</span><span class="c">
+</span>                 <span class="cd">;; </span><span class="c">Whitespace in any other place may in fact be
+</span>                 <span class="cd">;; </span><span class="c">either syntactically mandatory or used for
+</span>                 <span class="cd">;; </span><span class="c">formatting. We should avoid touching that.
+</span>                 (<span class="k">when</span> (<span class="k">save-excursion</span>
+                         (skip-chars-backward combobulate-skip-prefix-regexp
+                                              (line-beginning-position))
+                         (bolp))
+                   (delete-horizontal-space))
+                 (<span class="k">setf</span> start (point))
+                 <span class="cd">;; </span><span class="c">clear whitespace from the start of the line
+</span>                 (<span class="k">let</span> ((before-pt (point)))
+                   (insert (combobulate-indent-string
+                            default
+                            <span class="bi">:first-line-operation</span> 'absolute
+                            <span class="bi">:first-line-amount</span> offset
+                            <span class="bi">:rest-lines-operation</span> 'relative))
+                   (<span class="k">save-excursion</span>
+                     (goto-char before-pt)
+                     (combobulate-skip-whitespace-forward)
+                     (<span class="k">push</span> `(point ,(point-marker)) user-actions)))))
+              (t (insert default))))
+            <span class="cd">;; </span><span class="c">"string"
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">Strings are inserted at point.
+</span>            ((<span class="k">and</span> (pred stringp) s)
+             (insert s))
+            <span class="cd">;; </span><span class="c">`(repeat BLOCK)' or `(repeat-1 BLOCK)'
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">Repeats BLOCK an unlimited number of times or at most once.
+</span>            ((<span class="k">or</span> (<span class="k">and</span> `(repeat . ,repeat-instructions) (<span class="k">let</span> max-repeat most-positive-fixnum))
+                 (<span class="k">and</span> `(repeat-1 . ,repeat-instructions) (<span class="k">let</span> max-repeat 1)))
+             (<span class="k">condition-case</span> nil
+                 <span class="cd">;; </span><span class="c">we start with `</span><span class="m c">repeat-answer</span><span class="c">' set to `</span><span class="m c">t</span><span class="c">' by default
+</span>                 <span class="cd">;; </span><span class="c">because we want to expand `</span><span class="m c">repeat-instructions</span><span class="c">'
+</span>                 <span class="cd">;; </span><span class="c">*first* and *then*  prompt the user if they want
+</span>                 <span class="cd">;; </span><span class="c">to keep the now-displayed instruction.
+</span>                 (<span class="k">let</span> ((repeat-answer t))
+                   (<span class="k">when</span> combobulate-envelope-static
+                     (<span class="k">setq</span> max-repeat 1))
+                   (<span class="k">while</span> (<span class="k">and</span> repeat-answer (&gt; max-repeat 0))
+                     (<span class="k">combobulate-refactor</span> ()
+                       <span class="cd">;; </span><span class="c">call with `</span><span class="m c">combobulate-envelope-static</span><span class="c">' set to
+</span>                       <span class="cd">;; </span><span class="c">`</span><span class="m c">t</span><span class="c">'. When an envelope is static, no
+</span>                       <span class="cd">;; </span><span class="c">interactive functions are called (prompts and
+</span>                       <span class="cd">;; </span><span class="c">such).
+</span>                       <span class="cd">;;</span><span class="c">
+</span>                       <span class="cd">;; </span><span class="c">That way we can safely insert the template
+</span>                       <span class="cd">;; </span><span class="c">knowing that it won't block for user input.
+</span>                       (<span class="k">seq-let</span> [[inst-start <span class="ty">&amp;rest</span> inst-end] <span class="ty">&amp;rest</span> _]
+                           (<span class="k">let</span> ((combobulate-envelope-static t))
+                             (combobulate-envelope-expand-instructions-1 repeat-instructions))
+                         <span class="cd">;; </span><span class="c">mark the range as highlighted, so it's
+</span>                         <span class="cd">;; </span><span class="c">easier to see its extent; and as deleted,
+</span>                         <span class="cd">;; </span><span class="c">so that -- due to how we're using
+</span>                         <span class="cd">;; </span><span class="c">`</span><span class="m c">combobulate-refactor</span><span class="c">' -- we can delete
+</span>                         <span class="cd">;; </span><span class="c">the expansion immediately after the
+</span>                         <span class="cd">;; </span><span class="c">prompt.
+</span>                         <span class="cd">;; </span><span class="c">BUG: if
+</span>                         <span class="cd">;; </span><span class="c">`</span><span class="m c">combobulate-envelope-expand-instructions-1</span><span class="c">'
+</span>                         <span class="cd">;; </span><span class="c">ends up calling `</span><span class="m c">save-column</span><span class="c">' as its last form
+</span>                         <span class="cd">;; </span><span class="c">before exiting, then the call to set the column
+</span>                         <span class="cd">;; </span><span class="c">will corrupt the `</span><span class="m c">inst-end</span><span class="c">' value resulting in
+</span>                         <span class="cd">;; </span><span class="c">text being left behind.
+</span>                         (mark-range-deleted inst-start inst-end)
+                         (mark-range-highlighted inst-start inst-end)
+                         <span class="cd">;; </span><span class="c">note that regardless of whether we accept
+</span>                         <span class="cd">;; </span><span class="c">or decline the expansion, we `</span><span class="m c">commit</span><span class="c">'
+</span>                         <span class="cd">;; </span><span class="c">(i.e., delete!) the expansion we created
+</span>                         <span class="cd">;; </span><span class="c">above. The reason this is done is so that
+</span>                         <span class="cd">;; </span><span class="c">we ditch the static ersatz template and
+</span>                         <span class="cd">;; </span><span class="c">instead re-run it, and this time
+</span>                         <span class="cd">;; </span><span class="c">interactively so prompts and the like are
+</span>                         <span class="cd">;; </span><span class="c">invoked.
+</span>                         (<span class="k">if</span> (<span class="k">setq</span> repeat-answer
+                                   (<span class="k">or</span> combobulate-envelope-static
+                                       (combobulate-envelope-prompt-expansion <span class="s">"Apply this expansion? "</span>)))
+                             (<span class="k">progn</span> (commit)
+                                    (<span class="k">let</span> ((sub-inst (combobulate-envelope-expand-instructions-1 repeat-instructions)))
+                                      (<span class="k">setq</span> user-actions (append user-actions (cdr sub-inst))))
+                                    (<span class="k">cl-decf</span> max-repeat)
+                                    (commit))
+                           (commit))))))
+               <span class="cd">;; </span><span class="c">capture `</span><span class="m c">C-g</span><span class="c">' (`</span><span class="m c">keyboard-quit</span><span class="c">') so that a user can
+</span>               <span class="cd">;; </span><span class="c">enter an expansion and back out one step.
+</span>               <span class="cd">;;</span><span class="c">
+</span>               <span class="cd">;; </span><span class="c">The actual cleanup is done when
+</span>               <span class="cd">;; </span><span class="c">`</span><span class="m c">combobulate-refactor</span><span class="c">' captures the uncaught error
+</span>               <span class="cd">;; </span><span class="c">and undoes everything.
+</span>               (quit (combobulate-message <span class="s">"Keyboard quit. Undoing expansion."</span>))))
+            (_ (<span class="w">error</span> <span class="s">"Unknown sub-instruction: %S"</span> sub-instruction)))))
+      (combobulate-envelope-context-create
+       <span class="bi">:start</span> start
+       <span class="bi">:end</span> end
+       <span class="bi">:user-actions</span> user-actions))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

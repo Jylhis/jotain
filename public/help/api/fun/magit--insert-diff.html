@@ -1,0 +1,41 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit--insert-diff – Emacs Documentation Online</title>
+<meta name="description" content="magit--insert-diff is a natively compiled function defined in
+magit-diff.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit--insert-diff</code></h1><p><span class="m"><code>magit--insert-diff</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit--insert-diff <span class="arg">KEEP-ERROR</span> <span class="ty">&amp;rest</span> <span class="arg">ARGS</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-diff.el</span>
+(<span class="k">defun</span> <span class="f">magit--insert-diff</span> (keep-error <span class="ty">&amp;rest</span> args)
+  (<span class="k">declare</span> (indent 1))
+  (<span class="k">pcase-let</span> ((`(,cmd . ,args)
+               (flatten-tree args))
+              (magit-git-global-arguments
+               (remove <span class="s">"--literal-pathspecs"</span> magit-git-global-arguments)))
+    <span class="cd">;; </span><span class="c">We need to generate diffs with "--ita-visible-in-index" so that
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">magit-stage</span><span class="c">' can work with intent-to-add files (see #4026).
+</span>    <span class="cd">;; </span><span class="c">When "-C" is used don't add "--ita-visible-in-index" because
+</span>    <span class="cd">;; </span><span class="c">that renders the former ineffective (see ##5629).
+</span>    (<span class="k">unless</span> (<span class="k">or</span> (equal cmd <span class="s">"merge-tree"</span>)
+                (seq-some (##string-prefix-p <span class="s">"-C"</span> %) args))
+      (<span class="k">push</span> <span class="s">"--ita-visible-in-index"</span> args))
+    (<span class="k">setq</span> args (magit-diff--maybe-add-stat-arguments args))
+    (<span class="k">when</span> (any (##string-prefix-p <span class="s">"--color-moved"</span> %) args)
+      (<span class="k">push</span> <span class="s">"--color=always"</span> args)
+      (<span class="k">setq</span> magit-git-global-arguments
+            (append magit-diff--reset-non-color-moved
+                    magit-git-global-arguments)))
+    (magit--git-wash #'magit-diff-wash-diffs
+        (<span class="k">if</span> (member <span class="s">"--no-index"</span> args)
+            'wash-anyway
+          (<span class="k">or</span> keep-error t))
+      cmd args)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

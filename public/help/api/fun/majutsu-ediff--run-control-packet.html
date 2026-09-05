@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-ediff--run-control-packet – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-ediff--run-control-packet is a natively compiled function
+defined in majutsu-ediff.el.
+Handle parsed control SPEC in DIRECTORY and signal completion.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-ediff--run-control-packet</code></h1><p><span class="m"><code>majutsu-ediff--run-control-packet</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-ediff.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-ediff--run-control-packet <a href="#:~:text=control-,SPEC"><span class="arg">SPEC</span></a> <a href="#:~:text=in-,DIRECTORY"><span class="arg">DIRECTORY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle parsed control <span class="arg">SPEC</span> in <span class="arg">DIRECTORY</span> and signal completion.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-ediff.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-ediff--run-control-packet</span> (spec directory)
+  <span class="doc">"Handle parsed control SPEC in DIRECTORY and signal completion."</span>
+  (<span class="k">let</span> ((default-directory (<span class="k">or</span> directory default-directory))
+        (inputs nil)
+        (ok nil))
+    (<span class="k">unwind-protect</span>
+        (<span class="k">condition-case</span> err
+            (<span class="k">progn</span>
+              (<span class="k">setq</span> inputs (majutsu-ediff--control-required-inputs spec))
+              (<span class="k">unless</span> (majutsu-ediff--wait-for-input-files inputs)
+                (<span class="w">error</span> <span class="s">"temporary inputs unavailable: %s"</span>
+                       (mapconcat #'identity inputs <span class="s">", "</span>)))
+              (<span class="k">pcase</span> (plist-get spec <span class="bi">:type</span>)
+                ('diff
+                 (majutsu-ediff-diffedit-file
+                  (plist-get spec <span class="bi">:left</span>)
+                  (plist-get spec <span class="bi">:right</span>)
+                  (plist-get spec <span class="bi">:file</span>)))
+                ('merge
+                 (majutsu-ediff-merge-files
+                  (plist-get spec <span class="bi">:left</span>)
+                  (plist-get spec <span class="bi">:base</span>)
+                  (plist-get spec <span class="bi">:right</span>)
+                  (plist-get spec <span class="bi">:output</span>)
+                  (plist-get spec <span class="bi">:marker</span>))))
+              (<span class="k">setq</span> ok t))
+          ((<span class="w">error</span> quit)
+           (message <span class="s">"Majutsu Ediff control callback failed: %s"</span>
+                    (error-message-string err))))
+      (<span class="k">condition-case</span> err
+          (majutsu-ediff--signal-control-session (plist-get spec <span class="bi">:pid</span>) ok)
+        ((<span class="w">error</span> quit)
+         (message <span class="s">"Majutsu Ediff failed to signal editor process: %s"</span>
+                  (error-message-string err)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

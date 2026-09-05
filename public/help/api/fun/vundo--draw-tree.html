@@ -1,0 +1,91 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vundo--draw-tree – Emacs Documentation Online</title>
+<meta name="description" content="vundo--draw-tree is a natively compiled function defined in vundo.el.
+Draw the tree in MOD-LIST in current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vundo--draw-tree</code></h1><p><span class="m"><code>vundo--draw-tree</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">vundo.el</span>.
+<h2>Signature</h2>
+<pre><code>(vundo--draw-tree <a href="#:~:text=in-,MOD-LIST"><span class="arg">MOD-LIST</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Draw the tree in <span class="arg">MOD-LIST</span> in current buffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/7c2696v2qdrdv2vf2im8alazibi7qq0z-emacs-packages-deps/share/emacs/site-lisp/elpa/vundo-2.4.0/vundo.el</span>
+(<span class="k">defun</span> <span class="f">vundo--draw-tree</span> (mod-list)
+  <span class="doc">"Draw the tree in MOD-LIST in current buffer."</span>
+  (<span class="k">let*</span> ((root (aref mod-list 0))
+         (node-queue (list root))
+         (inhibit-read-only t)
+         (inhibit-modification-hooks t))
+    (erase-buffer)
+    (<span class="k">while</span> node-queue
+      (<span class="k">let*</span> ((node (<span class="k">pop</span> node-queue))
+             (children (vundo-m-children node))
+             (parent (vundo-m-parent node))
+             (siblings (<span class="k">and</span> parent (vundo-m-children parent)))
+             (only-child-p (<span class="k">and</span> parent (eq (length siblings) 1)))
+             (node-last-child-p (<span class="k">and</span> parent (eq node (car (last siblings)))))
+             (mod-ts (vundo--node-timestamp mod-list node 'no-buffer))
+             (node-face (<span class="k">if</span> (<span class="k">and</span> vundo-highlight-saved-nodes mod-ts)
+                            'vundo-saved 'vundo-node))
+             (stem-face (<span class="k">if</span> only-child-p 'vundo-stem 'vundo-branch-stem)))
+        <span class="cd">;; </span><span class="c">Go to parent.
+</span>        (<span class="k">if</span> parent (goto-char (vundo-m-point parent)))
+        (<span class="k">let</span> ((room-for-another-rx
+               (rx-to-string
+                `(<span class="k">or</span> (&gt;= ,(<span class="k">if</span> vundo-compact-display 3 4) ?\s) eol))))
+          (<span class="k">if</span> (null parent)
+              (insert (propertize (vundo--translate <span class="s">"○"</span>)
+                                  'face node-face))
+            (<span class="k">let</span> ((planned-point (point)))
+              <span class="cd">;; </span><span class="c">If a node is blocking, try next line.
+</span>              <span class="cd">;; </span><span class="c">Example: 1--2--3  Here we want to add a
+</span>              <span class="cd">;;             </span><span class="c">|     child to 1 but is blocked
+</span>              <span class="cd">;;             </span><span class="c">+--4  by that plus sign.
+</span>              (<span class="k">while</span> (not (looking-at room-for-another-rx))
+                (vundo--next-line-at-column (max 0 (1- (current-column))))
+                <span class="cd">;; </span><span class="c">When we go down, we could encounter space, EOL, │,
+</span>                <span class="cd">;; </span><span class="c">├, or └. Space and EOL should be replaced by │, ├
+</span>                <span class="cd">;; </span><span class="c">and └ should be replaced by ├.
+</span>                (<span class="k">let</span> ((replace-char
+                       (<span class="k">if</span> (looking-at
+                            (rx-to-string
+                             `(<span class="k">or</span> ,(vundo--translate <span class="s">"├"</span>)
+                                  ,(vundo--translate <span class="s">"└"</span>))))
+                           (vundo--translate <span class="s">"├"</span>)
+                         (vundo--translate <span class="s">"│"</span>))))
+                  (<span class="k">unless</span> (eolp) (delete-char 1))
+                  (insert (propertize replace-char 'face stem-face))))
+              <span class="cd">;; </span><span class="c">Make room for inserting the new node.
+</span>              (<span class="k">unless</span> (looking-at <span class="s">"$"</span>)
+                (delete-char (<span class="k">if</span> vundo-compact-display 2 3)))
+              <span class="cd">;; </span><span class="c">Insert the new node.
+</span>              (<span class="k">if</span> (eq (point) planned-point)
+                  (insert (propertize
+                           (vundo--translate
+                            (<span class="k">if</span> vundo-compact-display <span class="s">"─"</span> <span class="s">"──"</span>))
+                           'face stem-face)
+                          (propertize (vundo--translate <span class="s">"○"</span>)
+                                      'face node-face))
+                <span class="cd">;; </span><span class="c">We must break the line. Delete the previously
+</span>                <span class="cd">;; </span><span class="c">inserted char.
+</span>                (delete-char -1)
+                (insert (propertize
+                         (vundo--translate
+                          (<span class="k">if</span> node-last-child-p
+                              (<span class="k">if</span> vundo-compact-display <span class="s">"└─"</span> <span class="s">"└──"</span>)
+                            (<span class="k">if</span> vundo-compact-display <span class="s">"├─"</span> <span class="s">"├──"</span>)))
+                         'face stem-face))
+                (insert (propertize (vundo--translate <span class="s">"○"</span>)
+                                    'face node-face))))))
+        <span class="cd">;; </span><span class="c">Store point so we can later come back to this node.
+</span>        (<span class="k">setf</span> (vundo-m-point node) (point))
+        <span class="cd">;; </span><span class="c">Associate the text node in buffer with the node object.
+</span>        (vundo--put-node-at-point node)
+        <span class="cd">;; </span><span class="c">Depth-first search.
+</span>        (<span class="k">setq</span> node-queue (append children node-queue))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

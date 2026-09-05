@@ -1,0 +1,68 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--update-issue – Emacs Documentation Online</title>
+<meta name="description" content="forge--update-issue is a byte-compiled function defined in
+forge-github.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--update-issue</code></h1><p><span class="m"><code>forge--update-issue</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in
+<span class="bt">forge-github.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--update-issue <span class="ty">&amp;rest</span> <span class="arg">ARGS</span>)
+</code></pre>
+<h2>Implementations</h2>
+<p>(forge--update-issue (REPO forge-gitlab-repository) DATA) in `<span class="bt">forge-gitlab.el</span>'.
+<p>Undocumented
+<p>(forge--update-issue (REPO forge-github-repository) DATA &amp;optional BUMP INITIAL-PULL) in `<span class="bt">forge-github.el</span>'.
+<p>Undocumented
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-github.el</span>
+(<span class="k">cl-defmethod</span> <span class="f">forge--update-issue</span> ((repo forge-github-repository) data
+                                   <span class="ty">&amp;optional</span> bump initial-pull)
+  (<span class="k">let</span> ((repo-id (<span class="k">oref</span> repo id))
+        issue-id issue)
+    (<span class="k">let-alist</span> data
+      (<span class="k">closql-with-transaction</span> (forge-db)
+        (<span class="k">setq</span> issue-id (forge--object-id 'forge-issue repo .number))
+        (<span class="k">setq</span> issue (<span class="k">or</span> (forge-get-issue repo .number)
+                        (closql-insert
+                         (forge-db)
+                         (forge-issue <span class="bi">:id</span>         issue-id
+                                      <span class="bi">:repository</span> repo-id
+                                      <span class="bi">:number</span>     .number))))
+        (<span class="k">oset</span> issue their-id   .id)
+        (<span class="k">oset</span> issue slug       (format <span class="s">"#%s"</span> .number))
+        (<span class="k">oset</span> issue state
+              (<span class="k">pcase-exhaustive</span> (list .stateReason .state)
+                ('(<span class="s">"COMPLETED"</span>   <span class="s">"CLOSED"</span>) 'completed)
+                ('(<span class="s">"NOT_PLANNED"</span> <span class="s">"CLOSED"</span>) 'unplanned)
+                ('(<span class="s">"DUPLICATE"</span>   <span class="s">"CLOSED"</span>) 'duplicate)
+                ('(<span class="s">"REOPENED"</span>      <span class="s">"OPEN"</span>) 'open)
+                ('(nil             <span class="s">"OPEN"</span>) 'open)))
+        (<span class="k">oset</span> issue author     .author.login)
+        (<span class="k">oset</span> issue title      .title)
+        (<span class="k">oset</span> issue created    .createdAt)
+        (<span class="k">oset</span> issue closed     .closedAt)
+        (<span class="k">oset</span> issue locked-p   .locked)
+        (<span class="k">oset</span> issue milestone  (forge--object-id repo-id .milestone.id))
+        (<span class="k">oset</span> issue body       (forge--sanitize-string .body))
+        (<span class="k">dolist</span> (c .comments)
+          (<span class="k">let-alist</span> c
+            (closql-insert
+             (forge-db)
+             (forge-issue-post
+              <span class="bi">:id</span>      (forge--object-id issue-id .databaseId)
+              <span class="bi">:issue</span>   issue-id
+              <span class="bi">:number</span>  .databaseId
+              <span class="bi">:author</span>  .author.login
+              <span class="bi">:created</span> .createdAt
+              <span class="bi">:updated</span> .updatedAt
+              <span class="bi">:body</span>    (forge--sanitize-string .body))
+             t)))
+        (forge--update-status repo issue data bump initial-pull))
+      (forge--set-connections repo issue 'assignees .assignees)
+      (forge--set-connections repo issue 'labels .labels))
+    issue))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

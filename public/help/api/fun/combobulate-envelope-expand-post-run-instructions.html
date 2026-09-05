@@ -1,0 +1,201 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-envelope-expand-post-run-instructions – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-envelope-expand-post-run-instructions is a natively
+compiled function defined in combobulate-envelope.el.
+Expand the user actions in CTX according to CATEGORIES.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-envelope-expand-post-run-instructions</code></h1><p><span class="m"><code>combobulate-envelope-expand-post-run-instructions</code></span> is a <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <span class="bt">combobulate-envelope.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-envelope-expand-post-run-instructions <a href="#:~:text=in-,CTX"><span class="arg">CTX</span></a> <a href="#:~:text=to-,CATEGORIES"><span class="arg">CATEGORIES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Expand the user actions in <span class="arg">CTX</span> according to <span class="arg">CATEGORIES</span>.
+<p><span class="arg">CATEGORIES</span> is a list of instructions to expand now.
+<p>Valid choices are: <span class="m"><code>prompt</code></span>, <span class="m"><code>choice</code></span>, <a href="../fun/repeat.html"><code>repeat</code></a> and <a href="../fun/point.html"><code>point</code></a>. All
+other categories are ignored.
+<p>Every instruction in <span class="arg">CTX</span>'s <span class="bi">:user-actions</span> must be of the form
+<p>&nbsp;&nbsp;&nbsp;(TYPE . REST)
+<p>Where TYPE is one of the <span class="arg">CATEGORIES</span> and REST could be anything,
+depending on TYPE.
+<p>This function will expand the user actions in the order
+they are given in <span class="arg">CATEGORIES</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-envelope.el</span>
+(<span class="k">cl-defun</span> <span class="f">combobulate-envelope-expand-post-run-instructions</span> (ctx categories)
+  <span class="doc">"Expand the user actions in CTX according to CATEGORIES.
+
+CATEGORIES is a list of instructions to expand now.
+
+Valid choices are: `</span><span class="m doc">prompt</span><span class="doc">', `</span><span class="m doc">choice</span><span class="doc">', `</span><span class="m doc">repeat</span><span class="doc">' and `</span><span class="m doc">point</span><span class="doc">'. All
+other categories are ignored.
+
+Every instruction in CTX's `</span><span class="m doc">:user-actions</span><span class="doc">' must be of the form
+
+   (TYPE . REST)
+
+Where TYPE is one of the CATEGORIES and REST could be anything,
+depending on TYPE.
+
+This function will expand the user actions in the order
+they are given in CATEGORIES."</span>
+  (<span class="k">pcase-let</span> (((cl-struct combobulate-envelope-context
+                          (user-actions user-actions))
+               ctx))
+    <span class="cd">;; </span><span class="c">We need to group the instructions by category so that we can
+</span>    <span class="cd">;; </span><span class="c">action each category as one cohesive whole. `</span><span class="m c">seq-group-by</span><span class="c">'
+</span>    <span class="cd">;; </span><span class="c">preserves the relative order in the user actions, which
+</span>    <span class="cd">;; </span><span class="c">is also important.
+</span>    (<span class="k">let</span> ((selected-point) (grouped-instructions (seq-group-by #'car user-actions))
+          (remaining-user-actions)
+          (end (point-marker)))
+      <span class="cd">;; </span><span class="c">The set of categories we're asked to process is possibly a
+</span>      <span class="cd">;; </span><span class="c">subset of the user actions we've been given. All
+</span>      <span class="cd">;; </span><span class="c">instructions that we have not been told to process are passed
+</span>      <span class="cd">;; </span><span class="c">through unchanged.
+</span>      (<span class="k">setq</span> remaining-user-actions (seq-remove (<span class="k">lambda</span> (x) (member (car x) categories)) user-actions))
+      <span class="cd">;; </span><span class="c">Re-use the global refactor ID here so we manipulate the same
+</span>      <span class="cd">;; </span><span class="c">refactoring instance as the progenitor instance the envelope
+</span>      <span class="cd">;; </span><span class="c">code was first activated with.
+</span>      (<span class="k">combobulate-refactor</span> (<span class="bi">:id</span> combobulate-envelope-refactor-id)
+        (<span class="k">dolist</span> (category categories)
+          (<span class="k">pcase</span> (assoc category grouped-instructions)
+            (`(prompt . ,prompts)
+             (<span class="k">save-excursion</span> (mapc #'funcall (mapcar #'cdr prompts))))
+            (`(choice . ,choices)
+             (<span class="k">let</span> ((nodes))
+               (<span class="k">pcase-dolist</span> (`(choice ,pt ,name ,missing ,rest-envelope ,text) choices)
+                 (<span class="k">push</span> (combobulate-proxy-node-create
+                        <span class="bi">:start</span> pt
+                        <span class="bi">:end</span> pt
+                        <span class="bi">:text</span> text
+                        <span class="bi">:named</span> t
+                        <span class="bi">:type</span> <span class="s">"Choice"</span>
+                        <span class="bi">:pp</span> (<span class="k">if</span> name (format <span class="s">"Choice: %s"</span> name) <span class="s">"Choice"</span>)
+                        <span class="bi">:extra</span> (cons missing rest-envelope))
+                       nodes))
+               (<span class="k">when-let</span> (selected-node
+                          (combobulate-proffer-choices
+                           nodes
+                           #'combobulate-envelope-render-choice-preview
+                           <span class="cd">;; </span><span class="c">ordinarily, we'd want to filter out nodes
+</span>                           <span class="cd">;; </span><span class="c">that have identical node ranges. However,
+</span>                           <span class="cd">;; </span><span class="c">with choices, we may well have multiple
+</span>                           <span class="cd">;; </span><span class="c">choices in a row, each occupying the exact
+</span>                           <span class="cd">;; </span><span class="c">same range, but nevertheless expanding to
+</span>                           <span class="cd">;; </span><span class="c">vastly different things.
+</span>                           <span class="bi">:unique-only</span> nil
+                           <span class="cd">;; </span><span class="c">pass whatever the value of
+</span>                           <span class="cd">;; </span><span class="c">`</span><span class="m c">combobulate-envelope-static</span><span class="c">' is to the
+</span>                           <span class="cd">;; </span><span class="c">proffer function. If it's non-nil, then
+</span>                           <span class="cd">;; </span><span class="c">the caller of this function does not
+</span>                           <span class="cd">;; </span><span class="c">intend for the user to make a choice;
+</span>                           <span class="cd">;; </span><span class="c">instead, the first is picked
+</span>                           <span class="cd">;; </span><span class="c">automatically. The automatic choice is
+</span>                           <span class="cd">;; </span><span class="c">made because we want to expand some
+</span>                           <span class="cd">;; </span><span class="c">instructions (like prompt and choice)
+</span>                           <span class="cd">;; </span><span class="c">without actually triggering a user
+</span>                           <span class="cd">;; </span><span class="c">interaction
+</span>                           <span class="bi">:first-choice</span> combobulate-envelope-static
+                           <span class="bi">:signal-on-abort</span> t
+                           <span class="bi">:quiet</span> t
+                           <span class="bi">:reset-point-on-abort</span> nil
+                           <span class="bi">:reset-point-on-accept</span> nil
+                           <span class="cd">;; </span><span class="c">`</span><span class="m c">combobulate-envelope-render-choice-preview</span><span class="c">'
+</span>                           <span class="cd">;; </span><span class="c">inserts text for potentially many nodes,
+</span>                           <span class="cd">;; </span><span class="c">which would be preserved if the normal
+</span>                           <span class="cd">;; </span><span class="c">accept action -- rollback -- were used
+</span>                           <span class="cd">;; </span><span class="c">instead.
+</span>                           <span class="bi">:accept-action</span> 'commit))
+                 <span class="cd">;; </span><span class="c">If one of the proffered choices was selected, then
+</span>                 <span class="cd">;; </span><span class="c">we need to:
+</span>                 <span class="cd">;;</span><span class="c">
+</span>                 <span class="cd">;; </span><span class="c">1. Move to the node
+</span>                 <span class="cd">;;</span><span class="c">
+</span>                 <span class="cd">;; </span><span class="c">2. Expand the envelope found in either `</span><span class="m c">:missing</span><span class="c">'
+</span>                 <span class="cd">;;    </span><span class="c">or `</span><span class="m c">:rest</span><span class="c">'. The `</span><span class="m c">:missing</span><span class="c">' envelope is expanded
+</span>                 <span class="cd">;;    </span><span class="c">if the node is not the selected node, and the
+</span>                 <span class="cd">;;    </span><span class="c">`</span><span class="m c">:rest</span><span class="c">' envelope is expanded if the node is the
+</span>                 <span class="cd">;;    </span><span class="c">selected node.
+</span>                 <span class="cd">;;</span><span class="c">
+</span>                 <span class="cd">;; </span><span class="c">3. The outcome of recursively expanding the
+</span>                 <span class="cd">;;    </span><span class="c">envelope will yield user actions that
+</span>                 <span class="cd">;;    </span><span class="c">require further processing. However, these
+</span>                 <span class="cd">;;    </span><span class="c">user actions may include categories the
+</span>                 <span class="cd">;;    </span><span class="c">`</span><span class="m c">b</span><span class="c">' block cannot process itself. Namely, that
+</span>                 <span class="cd">;;    </span><span class="c">is almost always just `</span><span class="m c">point</span><span class="c">' nodes. We'll need
+</span>                 <span class="cd">;;    </span><span class="c">to walk each user action in turn and put
+</span>                 <span class="cd">;;    </span><span class="c">them back into the grouped instructions alist
+</span>                 <span class="cd">;;    </span><span class="c">so they can be processed in turn.
+</span>                 (<span class="k">dolist</span> (node nodes)
+                   (<span class="k">pcase-let</span> ((`(,missing . ,rest-envelope) (combobulate-proxy-node-extra node)))
+                     (combobulate-move-to-node node)
+                     (<span class="k">pcase-let</span> (((cl-struct combobulate-envelope-context
+                                             (user-actions user-actions)
+                                             (end ctx-end))
+                                  (combobulate-envelope-expand-instructions-1
+                                   <span class="cd">;; </span><span class="c">If the node is selected we use
+</span>                                   <span class="cd">;; </span><span class="c">the rest-envelope; for
+</span>                                   <span class="cd">;; </span><span class="c">everything else, the missing
+</span>                                   <span class="cd">;; </span><span class="c">envelope.
+</span>                                   <span class="cd">;;</span><span class="c">
+</span>                                   <span class="cd">;; </span><span class="c">Regardless of the envelope, we
+</span>                                   <span class="cd">;; </span><span class="c">ensure it's wrapped in an
+</span>                                   <span class="cd">;; </span><span class="c">implicit `</span><span class="m c">b</span><span class="c">' block.
+</span>                                   `((b ,@(<span class="k">if</span> (equal node selected-node) rest-envelope missing))))))
+                       (<span class="k">pcase-dolist</span> (`(,block-category . ,user-action) user-actions)
+                         <span class="cd">;; </span><span class="c">If we're dealing with any sort of block
+</span>                         <span class="cd">;; </span><span class="c">instruction that is part of the categories
+</span>                         <span class="cd">;; </span><span class="c">we are dealing with, put them back into
+</span>                         <span class="cd">;; </span><span class="c">the grouped instructions alist so they can
+</span>                         <span class="cd">;; </span><span class="c">be processed in turn.
+</span>                         (<span class="k">if</span> (member block-category categories)
+                             (<span class="k">setf</span> (alist-get block-category grouped-instructions)
+                                   (cons (cons block-category user-action)
+                                         (alist-get block-category grouped-instructions)))
+                           (<span class="k">push</span> (cons block-category user-action) remaining-user-actions)))
+                       (<span class="k">setq</span> end (max end ctx-end))))))))
+            (`(selected-point . ,pts)
+             <span class="cd">;; </span><span class="c">it's possible there's more than one selected-point, I
+</span>             <span class="cd">;; </span><span class="c">suppose? It should not happen, though.
+</span>             (<span class="k">dolist</span> (pt pts)
+               (goto-char (cdr pt))))
+            (`(point . ,points)
+             (<span class="k">let</span> ((nodes (mapcar (<span class="k">lambda</span> (pt-instruction)
+                                    (combobulate-proxy-node-make-point-node (cadr pt-instruction)))
+                                  points)))
+               <span class="cd">;; </span><span class="c">Ensure every single point node has a cursor visible
+</span>               <span class="cd">;; </span><span class="c">so the user can see the available cursor choices.
+</span>               (mapc #'mark-node-cursor nodes)
+               (<span class="k">save-excursion</span>
+                 (<span class="k">if-let</span> (selected-node (combobulate-proffer-choices
+                                         nodes
+                                         (<span class="k">lambda-slots</span> (current-node refactor-id)
+                                           (<span class="k">combobulate-refactor</span> (<span class="bi">:id</span> refactor-id)
+                                             (combobulate-move-to-node current-node)))
+                                         <span class="cd">;; </span><span class="c">as above, if we're in static mode, we do not
+</span>                                         <span class="cd">;; </span><span class="c">prompt the user to pick a cursor
+</span>                                         <span class="bi">:first-choice</span> combobulate-envelope-static
+                                         <span class="bi">:signal-on-abort</span> t
+                                         <span class="bi">:quiet</span> t
+                                         <span class="bi">:reset-point-on-abort</span> t
+                                         <span class="bi">:reset-point-on-accept</span> nil))
+                     (<span class="k">setq</span> selected-point (combobulate-node-start selected-node))
+                   (<span class="k">setq</span> selected-point nil)))
+               <span class="cd">;; </span><span class="c">`</span><span class="m c">selected-point</span><span class="c">' is a special post-run block
+</span>               <span class="cd">;; </span><span class="c">instruction that we only ever action once we've
+</span>               <span class="cd">;; </span><span class="c">exited the entire envelope instruction loop. It is
+</span>               <span class="cd">;; </span><span class="c">the final action carried out at the very end.
+</span>               (<span class="k">push</span> (cons 'selected-point selected-point) remaining-user-actions)))))
+        (<span class="k">if</span> combobulate-envelope-static
+            (rollback)
+          (commit)))
+      (combobulate-envelope-context-create
+       <span class="bi">:user-actions</span> remaining-user-actions
+       <span class="bi">:start</span> nil
+       <span class="bi">:end</span> end))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

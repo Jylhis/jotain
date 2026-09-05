@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--info-set-related-buffers – Emacs Documentation Online</title>
+<meta name="description" content="dape--info-set-related-buffers is a natively compiled function defined
+in dape.el.
+Set related buffers and header-line-format.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--info-set-related-buffers</code></h1><p><span class="m"><code>dape--info-set-related-buffers</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--info-set-related-buffers)
+</code></pre>
+<h2>Documentation</h2>
+<p>Set related buffers and <a href="../var/header-line-format.html"><code>header-line-format</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--info-set-related-buffers</span> ()
+  <span class="doc">"Set related buffers and `</span><span class="m doc">header-line-format</span><span class="doc">'."</span>
+  (<span class="k">let*</span> ((conn (dape--live-connection 'stopped t))
+         (scopes (plist-get (dape--current-stack-frame conn) <span class="bi">:scopes</span>)))
+    (<span class="k">when</span> (<span class="k">or</span> (not dape--info-buffer-related) scopes)
+      (<span class="k">setq</span>
+       <span class="cd">;; </span><span class="c">Set related buffers
+</span>       dape--info-buffer-related
+       (<span class="k">cl-loop</span>
+        for spec in (dape--info-window-group)
+        for (mode index) = (ensure-list spec)
+        append
+        (<span class="k">cond</span>
+         ((<span class="k">and</span> (eq 'dape-info-scope-mode mode) (not index))
+          (<span class="k">cl-loop</span> for scope in scopes for index upfrom 0 collect
+                   `(dape-info-scope-mode ,index ,(plist-get scope <span class="bi">:name</span>))))
+         ((<span class="k">and</span> (eq 'dape-info-scope-mode mode) index)
+          (<span class="k">when-let*</span> ((scope (nth index scopes)))
+            `((dape-info-scope-mode ,index ,(plist-get scope <span class="bi">:name</span>)))))
+         (`((,mode nil ,(alist-get mode dape--info-buffer-name-alist))))))
+       <span class="cd">;; </span><span class="c">Show buffer tabs in header-line
+</span>       header-line-format
+       (<span class="k">cl-loop</span> for (mode index name) in dape--info-buffer-related
+                append
+                `(,(<span class="k">if</span> (dape--info-buffer-p mode index)
+                       (dape--info-header name mode index nil nil 'dape-header-line-active-face)
+                     (dape--info-header name mode index <span class="s">"mouse-1: select"</span>
+                                        'dape-header-line-hover-face
+                                        'dape-header-line-inactive-face))
+                  <span class="s">" "</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

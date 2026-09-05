@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-todos--async-when-done – Emacs Documentation Online</title>
+<meta name="description" content="magit-todos--async-when-done is a natively compiled function defined
+in magit-todos.el.
+Process sentinel used to retrieve the value from the child PROC.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-todos--async-when-done</code></h1><p><span class="m"><code>magit-todos--async-when-done</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">magit-todos.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-todos--async-when-done <a href="#:~:text=child-,PROC"><span class="arg">PROC</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">CHANGE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Process sentinel used to retrieve the value from the child <span class="arg">PROC</span>.
+<p>This is a copy of <a href="../fun/async-when-done.html"><code>async-when-done</code></a> that does not raise an error
+if the process's buffer has already been deleted.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/na5pd87dpfy16i19v2xzgb9ry6gjpyvw-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-todos-20250928.1611/magit-todos.el</span>
+(<span class="k">defun</span> <span class="f">magit-todos--async-when-done</span> (proc <span class="ty">&amp;optional</span> _change)
+  <span class="doc">"Process sentinel used to retrieve the value from the child PROC.
+
+This is a copy of `</span><span class="m doc">async-when-done</span><span class="doc">' that does not raise an error
+if the process's buffer has already been deleted."</span>
+  <span class="cd">;; </span><span class="c">I wish it weren't necessary to copy this function here, but at the moment it seems like the
+</span>  <span class="cd">;; </span><span class="c">only reasonable way to work around this problem of `</span><span class="m c">async-when-done</span><span class="c">' trying to select deleted
+</span>  <span class="cd">;; </span><span class="c">buffers.  I already tried not deleting the buffers, but then I got bug reports about that and
+</span>  <span class="cd">;; </span><span class="c">had to revert it.  I don't know if I'm encountering a bug in my code, in `</span><span class="m c">async</span><span class="c">', or in Emacs
+</span>  <span class="cd">;; </span><span class="c">itself, because it seems that `</span><span class="m c">async-when-done</span><span class="c">' is being called on the wrong buffers: When I'm
+</span>  <span class="cd">;; </span><span class="c">connected with `</span><span class="m c">matrix-client</span><span class="c">', and when I have a Magit status buffer opened with
+</span>  <span class="cd">;; </span><span class="c">`</span><span class="m c">magit-todos-mode</span><span class="c">' active, then when one of the `</span><span class="m c">url</span><span class="c">' process buffers from Matrix gets its
+</span>  <span class="cd">;; </span><span class="c">sentinel called, I get an error from `</span><span class="m c">async-when-done</span><span class="c">' trying to select the already-deleted
+</span>  <span class="cd">;; </span><span class="c">`</span><span class="m c">rg</span><span class="c">' scanner buffer!  It's as if Emacs is mixing up the process buffers.  I really don't know
+</span>  <span class="cd">;; </span><span class="c">what's going on.  But maybe I can work around it by copying this function and checking whether
+</span>  <span class="cd">;; </span><span class="c">the process's buffer is alive.
+</span>  <span class="cd">;; </span><span class="c">NOTE: TRAMP processes seem to have the status `</span><span class="m c">signal</span><span class="c">' instead of
+</span>  <span class="cd">;; </span><span class="c">`</span><span class="m c">exit</span><span class="c">'.  I can't find documentation as to why.
+</span>  (<span class="k">when</span> (<span class="k">and</span> (memq (process-status proc) '(exit signal))
+             (buffer-live-p (process-buffer proc)))
+    (<span class="k">with-current-buffer</span> (process-buffer proc)
+      (<span class="k">let</span> ((async-current-process proc))
+        <span class="cd">;; </span><span class="c">TRAMP processes seem to have the exit status 9 instead of
+</span>        <span class="cd">;; </span><span class="c">0.  I can't find documentation or code about it.
+</span>        (<span class="k">if</span> (memq (process-exit-status proc) (process-get proc <span class="bi">:allow-exit-codes</span>))
+            (<span class="k">if</span> async-callback-for-process
+                (<span class="k">if</span> async-callback
+                    (<span class="k">prog1</span>
+                        (funcall async-callback proc)
+                      (<span class="k">unless</span> async-debug
+                        (kill-buffer (current-buffer))))
+                  (set (make-local-variable 'async-callback-value) proc)
+                  (set (make-local-variable 'async-callback-value-set) t))
+              (goto-char (point-max))
+              (backward-sexp)
+              (async-handle-result async-callback (read (current-buffer))
+                                   (current-buffer)))
+          (<span class="w">error</span> <span class="s">"magit-todos--async-when-done: Process %S failed with exit code %d.  Output:%S"</span>
+                 (process-name proc) (process-exit-status proc) (buffer-string)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

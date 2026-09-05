@@ -1,0 +1,97 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vundo--trim-undo-list – Emacs Documentation Online</title>
+<meta name="description" content="vundo--trim-undo-list is a natively compiled function defined in
+vundo.el.
+Trim buffer-undo-list in BUFFER according to CURRENT and MOD-LIST.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vundo--trim-undo-list</code></h1><p><span class="m"><code>vundo--trim-undo-list</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">vundo.el</span>.
+<h2>Signature</h2>
+<pre><code>(vundo--trim-undo-list <a href="#:~:text=in-,BUFFER"><span class="arg">BUFFER</span></a> <a href="#:~:text=to-,CURRENT"><span class="arg">CURRENT</span></a> <a href="#:~:text=and-,MOD-LIST"><span class="arg">MOD-LIST</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Trim <a href="../var/buffer-undo-list.html"><code>buffer-undo-list</code></a> in <span class="arg">BUFFER</span> according to <span class="arg">CURRENT</span> and <span class="arg">MOD-LIST</span>.
+<p><span class="arg">CURRENT</span> is the current mod, <span class="arg">MOD-LIST</span> is the current mod-list.
+<p>This function modifies <a href="../var/buffer-undo-list.html"><code>buffer-undo-list</code></a> of <span class="arg">BUFFER</span>.
+<p>IMPORTANT Relationship between <a href="../fun/vundo--move-to-node.html"><code>vundo--move-to-node</code></a>,
+<a href="../fun/vundo--refresh-buffer.html"><code>vundo--refresh-buffer</code></a>, <a href="../fun/vundo--trim-undo-list.html"><code>vundo--trim-undo-list</code></a>:
+<p>Each vundo command cycle roughly works like this:
+<br>1. <a href="../fun/vundo--refresh-buffer.html"><code>vundo--refresh-buffer</code></a>: <a href="../var/buffer-undo-list.html"><code>buffer-undo-list</code></a> -&gt; mod-list
+<br>2. <a href="../fun/vundo--move-to-node.html"><code>vundo--move-to-node</code></a>: read mod-list, modify <a href="../var/buffer-undo-list.html"><code>buffer-undo-list</code></a>
+<br>3. <a href="../fun/vundo--trim-undo-list.html"><code>vundo--trim-undo-list</code></a>: trim <a href="../var/buffer-undo-list.html"><code>buffer-undo-list</code></a>
+<br>1. <a href="../fun/vundo--refresh-buffer.html"><code>vundo--refresh-buffer</code></a>: <a href="../var/buffer-undo-list.html"><code>buffer-undo-list</code></a> -&gt; mod-list
+<br>...
+<p>We can call <a href="../fun/vundo--move-to-node.html"><code>vundo--move-to-node</code></a> multiple times between two
+<a href="../fun/vundo--refresh-buffer.html"><code>vundo--refresh-buffer</code></a>. But we should only call
+<a href="../fun/vundo--trim-undo-list.html"><code>vundo--trim-undo-list</code></a> once between two <a href="../fun/vundo--refresh-buffer.html"><code>vundo--refresh-buffer</code></a>.
+Because if we only trim once, <a href="../var/buffer-undo-list.html"><code>buffer-undo-list</code></a> either shrinks
+or expands. But if we trim multiple times after multiple
+movements, it could happen that the undo-list first
+shrinks (trimmed) then expands. In that situation we cannot use
+the INCREMENTAL option in <a href="../fun/vundo--refresh-buffer.html"><code>vundo--refresh-buffer</code></a> anymore.
+<p>Also, if you move back-end-forth with ‘vundo--move-to-node’, it
+might not work: Suppose undo list is [1 2 3], mod-list is [1 2
+<br>3], now we move back to 2, undo list becomes [1 2 3 2’], but
+<br>before we refresh vundo buffer, mod-list will remain [1 2 3], so
+there’s no route from 2 to 3 (you can only move back). Once
+we refresh the buffer and mod-list is updated to [1 2 3 2’], we
+have a route from 3 to 2 (2’-&gt;3).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/7c2696v2qdrdv2vf2im8alazibi7qq0z-emacs-packages-deps/share/emacs/site-lisp/elpa/vundo-2.4.0/vundo.el</span>
+(<span class="k">defun</span> <span class="f">vundo--trim-undo-list</span> (buffer current mod-list)
+  <span class="doc">"Trim `</span><span class="m doc">buffer-undo-list</span><span class="doc">' in BUFFER according to CURRENT and MOD-LIST.
+CURRENT is the current mod, MOD-LIST is the current mod-list.
+
+This function modifies `</span><span class="m doc">buffer-undo-list</span><span class="doc">' of BUFFER.
+
+IMPORTANT Relationship between `</span><span class="m doc">vundo--move-to-node</span><span class="doc">',
+`</span><span class="m doc">vundo--refresh-buffer</span><span class="doc">', `</span><span class="m doc">vundo--trim-undo-list</span><span class="doc">':
+
+Each vundo command cycle roughly works like this:
+1. `</span><span class="m doc">vundo--refresh-buffer</span><span class="doc">': `</span><span class="m doc">buffer-undo-list</span><span class="doc">' -&gt; mod-list
+2. `</span><span class="m doc">vundo--move-to-node</span><span class="doc">': read mod-list, modify `</span><span class="m doc">buffer-undo-list</span><span class="doc">'
+3. `</span><span class="m doc">vundo--trim-undo-list</span><span class="doc">': trim `</span><span class="m doc">buffer-undo-list</span><span class="doc">'
+1. `</span><span class="m doc">vundo--refresh-buffer</span><span class="doc">': `</span><span class="m doc">buffer-undo-list</span><span class="doc">' -&gt; mod-list
+...
+
+We can call `</span><span class="m doc">vundo--move-to-node</span><span class="doc">' multiple times between two
+`</span><span class="m doc">vundo--refresh-buffer</span><span class="doc">'. But we should only call
+`</span><span class="m doc">vundo--trim-undo-list</span><span class="doc">' once between two `</span><span class="m doc">vundo--refresh-buffer</span><span class="doc">'.
+Because if we only trim once, `</span><span class="m doc">buffer-undo-list</span><span class="doc">' either shrinks
+or expands. But if we trim multiple times after multiple
+movements, it could happen that the undo-list first
+shrinks (trimmed) then expands. In that situation we cannot use
+the INCREMENTAL option in `</span><span class="m doc">vundo--refresh-buffer</span><span class="doc">' anymore.
+
+Also, if you move back-end-forth with ‘</span><span class="m doc">vundo--move-to-node</span><span class="doc">’, it
+might not work: Suppose undo list is [1 2 3], mod-list is [1 2
+3], now we move back to 2, undo list becomes [1 2 3 2’], but
+before we refresh vundo buffer, mod-list will remain [1 2 3], so
+there’s no route from 2 to 3 (you can only move back). Once
+we refresh the buffer and mod-list is updated to [1 2 3 2’], we
+have a route from 3 to 2 (2’-&gt;3)."</span>
+  (<span class="k">let</span> ((latest-buffer-state-idx
+         <span class="cd">;; </span><span class="c">Among all the MODs that represents a unique buffer
+</span>         <span class="cd">;; </span><span class="c">state, we find the latest one. Because any node
+</span>         <span class="cd">;; </span><span class="c">beyond that one is dispensable.
+</span>         (vundo-m-idx
+          (vundo--latest-buffer-state mod-list))))
+    <span class="cd">;; </span><span class="c">Find a trim point between latest buffer state and
+</span>    <span class="cd">;; </span><span class="c">current node.
+</span>    (<span class="k">when-let</span> ((possible-trim-point
+                (<span class="k">cl-loop</span> for node in (vundo--eqv-list-of current)
+                         if (&gt;= (vundo-m-idx node)
+                                latest-buffer-state-idx)
+                         return node
+                         finally return nil)))
+      (<span class="k">with-current-buffer</span> buffer
+        (<span class="k">setq</span> buffer-undo-list
+              (vundo-m-undo-list possible-trim-point)))
+      (<span class="k">when</span> vundo--message
+        (message <span class="s">"Trimmed to: %s"</span>
+                 (vundo-m-idx possible-trim-point))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

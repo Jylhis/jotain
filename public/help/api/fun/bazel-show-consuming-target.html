@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel-show-consuming-target – Emacs Documentation Online</title>
+<meta name="description" content="bazel-show-consuming-target is an interactive and natively compiled
+function defined in bazel.el.
+Find the definition of the rule target consuming the current file.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel-show-consuming-target</code></h1><p><span class="m"><code>bazel-show-consuming-target</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel-show-consuming-target)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find the definition of the rule target consuming the current file.
+<p>The current buffer must visit a file, and the file must be in a
+Bazel repository.  Use ‘xref-show-definitions-function’ to display
+the rule target definition.  Right now, perform a best-effort attempt
+for finding the consuming rule target by a textual search in the BUILD
+file.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Aliases</h2>
+<p><a href="../fun/bazel-show-consuming-rule.html"><code>bazel-show-consuming-rule</code></a> (obsolete since 2026-04-16)
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel-show-consuming-target</span> ()
+  <span class="doc">"Find the definition of the rule target consuming the current file.
+The current buffer must visit a file, and the file must be in a
+Bazel repository.  Use ‘</span><span class="m doc">xref-show-definitions-function</span><span class="doc">’ to display
+the rule target definition.  Right now, perform a best-effort attempt
+for finding the consuming rule target by a textual search in the BUILD
+file."</span>
+  (<span class="k">declare</span> (interactive-only t))
+  (<span class="k">interactive</span>)
+  (<span class="k">let*</span> ((source-file (<span class="k">or</span> buffer-file-name
+                          (<span class="w">user-error</span> <span class="s">"Buffer doesn’t visit a file"</span>)))
+         (root (<span class="k">or</span> (bazel--repository-root source-file)
+                   (<span class="w">user-error</span> <span class="s">"File is not in a Bazel repository"</span>)))
+         (directory (<span class="k">or</span> (bazel--package-directory source-file root)
+                        (<span class="w">user-error</span> <span class="s">"File is not in a Bazel package"</span>)))
+         (package (<span class="k">or</span> (bazel--package-name directory root)
+                      (<span class="w">user-error</span> <span class="s">"File is not in a Bazel package"</span>)))
+         (build-file (<span class="k">or</span> (bazel--locate-build-file directory)
+                         (<span class="w">user-error</span> <span class="s">"No BUILD file found"</span>)))
+         (relative-file (file-relative-name source-file directory))
+         (case-fold-file (file-name-case-insensitive-p source-file))
+         (target (<span class="k">or</span> (bazel--consuming-target build-file relative-file
+                                              case-fold-file nil)
+                     (<span class="w">user-error</span> <span class="s">"No rule target for file %s found"</span>
+                                 relative-file)))
+         <span class="cd">;; </span><span class="c">We press ‘</span><span class="m c">xref-find-definitions</span><span class="c">’ into service for finding and
+</span>         <span class="cd">;; </span><span class="c">showing the rule target definition.  For that to work, our Xref
+</span>         <span class="cd">;; </span><span class="c">backend must be found unconditionally.
+</span>         (xref-backend-functions (list (<span class="k">lambda</span> () 'bazel-mode))))
+    (xref-find-definitions
+     <span class="cd">;; </span><span class="c">Create a target identifier similar to what
+</span>     <span class="cd">;; </span><span class="c">‘</span><span class="m c">xref-backend-identifier-at-point</span><span class="c">’ returns.
+</span>     (propertize (bazel--canonical nil package target)
+                 'bazel-mode-workspace root)))
+  nil)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

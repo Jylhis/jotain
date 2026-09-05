@@ -1,0 +1,96 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: csv-transpose – Emacs Documentation Online</title>
+<meta name="description" content="csv-transpose is an interactive and natively compiled function defined
+in csv-mode.el.
+Rewrite rows (which may have different lengths) as columns.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>csv-transpose</code></h1><p><span class="m"><code>csv-transpose</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">csv-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(csv-transpose <a href="#:~:text=interactively,-,BEG"><span class="arg">BEG</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Rewrite rows (which may have different lengths) as columns.
+<p>Null fields are introduced as necessary within records but are
+stripped from the ends of records.  Preserve soft alignment.
+This function is its own inverse.  Ignore blank and comment lines.
+When called non-interactively, <span class="arg">BEG</span> and <span class="arg">END</span> specify region to process.
+<h2>Key Bindings</h2>
+<p><span class="v">csv-mode-map</span> <span class="key">C-c C-t</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mrygxsladaca2yfyr2cy0am5zm9lzddg-emacs-packages-deps/share/emacs/site-lisp/elpa/csv-mode-1.27/csv-mode.el</span>
+<span class="cd">;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;</span><span class="c">
+</span><span class="cd">;;;  </span><span class="c">Transposing rows and columns
+</span><span class="cd">;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;</span><span class="c">
+</span>
+(<span class="k">defun</span> <span class="f">csv-transpose</span> (beg end)
+  <span class="doc">"Rewrite rows (which may have different lengths) as columns.
+Null fields are introduced as necessary within records but are
+stripped from the ends of records.  Preserve soft alignment.
+This function is its own inverse.  Ignore blank and comment lines.
+When called non-interactively, BEG and END specify region to process."</span>
+  <span class="cd">;; </span><span class="c">(interactive "*P\nr")
+</span>  (<span class="k">interactive</span> (csv-interactive-args 'noarg))
+  (barf-if-buffer-read-only)
+  (<span class="k">save-excursion</span>
+    (<span class="k">save-restriction</span>
+      (narrow-to-region beg end)
+      (goto-char (point-min))
+      <span class="cd">;; </span><span class="c">Delete rows and collect them as a reversed list of lists of
+</span>      <span class="cd">;; </span><span class="c">fields, skipping comment and blank lines:
+</span>      (<span class="k">let</span> ((sep (car csv-separators))
+	    (align (overlays-in beg end))
+	    rows columns)
+	<span class="cd">;; </span><span class="c">Remove soft alignment if necessary:
+</span>	(<span class="k">when</span> align
+	  (mapc #'csv--delete-overlay align)
+	  (<span class="k">setq</span> align t))
+	(<span class="k">while</span> (not (eobp))
+	  (<span class="k">if</span> (csv-not-looking-at-record)
+	      <span class="cd">;; </span><span class="c">Skip blank and comment lines:
+</span>	      (forward-line)
+	    (<span class="k">let</span> ((lep (line-end-position)))
+	      (<span class="k">push</span>
+	       (csv--collect-fields lep)
+	       rows)
+	      (delete-region (point) lep)
+	      (<span class="k">or</span> (eobp) (delete-char 1)))))
+	<span class="cd">;; </span><span class="c">Rows must have monotonic decreasing lengths to be
+</span>	<span class="cd">;; </span><span class="c">transposable, so ensure this by padding with null fields.
+</span>	<span class="cd">;; </span><span class="c">rows is currently a reversed list of field lists, which
+</span>	<span class="cd">;; </span><span class="c">must therefore have monotonic increasing lengths.
+</span>	(<span class="k">let</span> ((oldlen (length (car rows))) newlen
+	      (r (cdr rows)))
+	  (<span class="k">while</span> r
+	    (<span class="k">setq</span> newlen (length (car r)))
+	    (<span class="k">if</span> (&lt; newlen oldlen)
+		(nconc (car r) (make-list (- oldlen newlen) nil))
+	      (<span class="k">setq</span> oldlen newlen))
+	    (<span class="k">setq</span> r (cdr r))))
+	<span class="cd">;; </span><span class="c">Collect columns as a reversed list of lists of fields:
+</span>	(<span class="k">while</span> rows
+	  (<span class="k">let</span> (column (r rows) row)
+	    (<span class="k">while</span> r
+	      (<span class="k">setq</span> row (car r))
+	      <span class="cd">;; </span><span class="c">Provided it would not be a trailing null field, push
+</span>	      <span class="cd">;; </span><span class="c">field onto column:
+</span>	      (<span class="k">if</span> (<span class="k">or</span> column (string&lt; <span class="s">""</span> (car row)))
+		  (<span class="k">push</span> (car row) column))
+	      <span class="cd">;; </span><span class="c">Pop field off row:
+</span>	      (setcar r (cdr row))
+	      <span class="cd">;; </span><span class="c">If row is now empty then remove it:
+</span>	      (<span class="k">or</span> (car r) (<span class="k">setq</span> rows (cdr rows)))
+	      (<span class="k">setq</span> r (cdr r)))
+	    (<span class="k">push</span> column columns)))
+	<span class="cd">;; </span><span class="c">Insert columns into buffer as rows:
+</span>	(<span class="k">setq</span> columns (nreverse columns))
+	(<span class="k">while</span> columns
+	  (insert (mapconcat #'identity (car columns) sep) ?\n)
+	  (<span class="k">setq</span> columns (cdr columns)))
+	<span class="cd">;; </span><span class="c">Re-do soft alignment if necessary:
+</span>	(<span class="k">if</span> align (csv-align-fields nil (point-min) (point-max)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

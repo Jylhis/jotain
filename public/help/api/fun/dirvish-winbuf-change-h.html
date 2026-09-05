@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dirvish-winbuf-change-h – Emacs Documentation Online</title>
+<meta name="description" content="dirvish-winbuf-change-h is a natively compiled function defined in
+dirvish.el.
+Rebuild layout once buffer in WINDOW changed.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dirvish-winbuf-change-h</code></h1><p><span class="m"><code>dirvish-winbuf-change-h</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dirvish.el</span>.
+<h2>Signature</h2>
+<pre><code>(dirvish-winbuf-change-h <a href="#:~:text=in-,WINDOW"><span class="arg">WINDOW</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Rebuild layout once buffer in <span class="arg">WINDOW</span> changed.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a7h73ip6x5m1pxn38j7f0al6n93w904q-emacs-packages-deps/share/emacs/site-lisp/elpa/dirvish-20260725.1520/dirvish.el</span>
+(<span class="k">defun</span> <span class="f">dirvish-winbuf-change-h</span> (window)
+  <span class="doc">"Rebuild layout once buffer in WINDOW changed."</span>
+  (<span class="k">when-let*</span> ((dv (<span class="k">with-selected-window</span> window (dirvish-curr)))
+              (dir (car (dv-index dv))) (buf (cdr (dv-index dv)))
+              (old-tab (<span class="k">with-selected-window</span> window (<span class="k">dirvish-prop</span> <span class="bi">:tab</span>)))
+              (old-frame (<span class="k">with-selected-window</span> window (<span class="k">dirvish-prop</span> <span class="bi">:frame</span>)))
+              (sc (<span class="k">cl-loop</span> for (k v) on dirvish--scopes by 'cddr
+                           append (list k (<span class="k">and</span> (functionp v) (funcall v)))))
+              (layout t) (frame t) (tab t))
+    (<span class="k">setq</span> layout (dv-curr-layout dv)
+          frame (plist-get sc <span class="bi">:frame</span>) tab (plist-get sc <span class="bi">:tab</span>))
+    (<span class="k">cl-flet</span> ((killall (bufs) (mapc #'dirvish--kill-buffer bufs))
+              (build-dv (dv frame dir)
+                (<span class="k">with-selected-frame</span> frame
+                  (<span class="k">with-selected-window</span> (dirvish--create-root-window dv)
+                    (<span class="k">dirvish-save-dedication</span>
+                     (switch-to-buffer (get-buffer-create <span class="s">"*scratch*"</span>)))
+                    (<span class="k">dirvish-save-dedication</span>
+                     (switch-to-buffer (dired-noselect dir)))
+                    (dirvish--build-layout dv)))))
+      (<span class="k">cond</span> <span class="cd">; </span><span class="c">created new tab / frame in a reused session, clear the old one
+</span>       ((not (equal old-frame frame))
+        (killall (append (list buf) (mapcar #'cdr (dv-roots dv))))
+        (build-dv (dirvish--new <span class="bi">:curr-layout</span> layout) frame dir))
+       ((not (equal old-tab tab))
+        (tab-bar-switch-to-recent-tab)
+        (killall (append (list buf) (mapcar #'cdr (dv-roots dv))))
+        (tab-bar-switch-to-recent-tab)
+        (build-dv (dirvish--new <span class="bi">:curr-layout</span> layout) frame dir))
+       (t (<span class="k">with-selected-window</span> window (dirvish--build-layout dv)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

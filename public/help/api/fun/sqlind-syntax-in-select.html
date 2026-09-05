@@ -1,0 +1,119 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sqlind-syntax-in-select – Emacs Documentation Online</title>
+<meta name="description" content="sqlind-syntax-in-select is a natively compiled function defined in
+sql-indent.el.
+Return the syntax ar POS which is inside a &quot;select&quot; statement at START.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sqlind-syntax-in-select</code></h1><p><span class="m"><code>sqlind-syntax-in-select</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">sql-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(sqlind-syntax-in-select <a href="#:~:text=ar-,POS"><span class="arg">POS</span></a> <a href="#:~:text=at-,START"><span class="arg">START</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the syntax ar <span class="arg">POS</span> which is inside a "select" statement at <span class="arg">START</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vgm6xb2iy00bs19rdw9z3nfi5nf8g873-emacs-packages-deps/share/emacs/site-lisp/elpa/sql-indent-1.7/sql-indent.el</span>
+(<span class="k">defun</span> <span class="f">sqlind-syntax-in-select</span> (pos start)
+  <span class="doc">"Return the syntax ar POS which is inside a \"select\" statement at START."</span>
+  (<span class="k">save-excursion</span>
+    (<span class="k">catch</span> '<span class="m">finished</span>
+      (goto-char pos)
+
+      <span class="cd">;; </span><span class="c">all select query components are indented relative to the
+</span>      <span class="cd">;; </span><span class="c">start of the select statement)
+</span>      (<span class="k">when</span> (looking-at sqlind-select-clauses-regexp)
+	(<span class="k">throw</span> '<span class="m">finished</span> (cons 'select-clause start)))
+
+      <span class="cd">;; </span><span class="c">when we are not looking at a select component, find the
+</span>      <span class="cd">;; </span><span class="c">nearest one from us.
+</span>
+      (<span class="k">while</span> (sqlind-search-backward (point) sqlind-select-clauses-regexp start)
+	(<span class="k">let*</span> ((match-pos (match-beginning 0))
+	       (clause (sqlind-match-string 0)))
+	  (<span class="k">setq</span> clause (replace-regexp-in-string <span class="s">"[ \t\r\n\f]"</span> <span class="s">" "</span> clause))
+	  (<span class="k">when</span> (sqlind-same-level-statement (point) start)
+	    (<span class="k">cond</span>
+	      ((<span class="k">or</span> (looking-at <span class="s">"select</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\s *\\_&lt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">top\\s +[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">distinct</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">unique</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?"</span>)
+                   (<span class="k">and</span> (eq sql-product 'postgres) (looking-at <span class="s">"perform\\_&gt;"</span>)))
+	       <span class="cd">;; </span><span class="c">we are in the column selection section.
+</span>	       (goto-char pos)
+               (<span class="k">if</span> (looking-at <span class="s">","</span>)
+                   (<span class="k">throw</span> '<span class="m">finished</span> (cons 'select-column match-pos))
+                 (<span class="k">progn</span>
+                   (sqlind-backward-syntactic-ws)
+                   (<span class="k">throw</span> '<span class="m">finished</span>
+                     (cons (<span class="k">if</span> (<span class="k">or</span> (eq (match-end 0) (1+ (point)))
+                                   (looking-at <span class="s">","</span>))
+                               'select-column
+                             'select-column-continuation)
+                           match-pos)))))
+
+	      ((looking-at <span class="s">"from"</span>)
+	       <span class="cd">;; </span><span class="c">FROM is only keyword if the previous char is NOT a
+</span>	       <span class="cd">;; </span><span class="c">comma ','
+</span>	       (forward-char -1)
+	       (sqlind-backward-syntactic-ws)
+	       (<span class="k">unless</span> (looking-at <span class="s">","</span>)
+		 <span class="cd">;; </span><span class="c">We are in the from section.  If this line starts with '</span><span class="m c">on</span><span class="c">'
+</span>		 <span class="cd">;; </span><span class="c">or the previous line ends with '</span><span class="m c">on</span><span class="c">' we have a join
+</span>		 <span class="cd">;; </span><span class="c">condition
+</span>		 (goto-char pos)
+		 (<span class="k">when</span> (<span class="k">or</span> (looking-at sqlind-join-condition-regexp)
+			   (<span class="k">progn</span> (forward-word -1)
+                                  (<span class="k">and</span> (sqlind-same-level-statement (point) pos)
+                                       (looking-at sqlind-select-join-regexp))))
+		   <span class="cd">;; </span><span class="c">look for the join start, that will be the anchor
+</span>                   (<span class="k">let</span> ((jstart (sqlind-find-join-start (point) start)))
+                     (<span class="k">when</span> jstart
+                       (<span class="k">throw</span> '<span class="m">finished</span> (cons 'select-join-condition jstart))))))
+
+	       <span class="cd">;; </span><span class="c">if this line starts with a ',' or the previous line starts
+</span>	       <span class="cd">;; </span><span class="c">with a ',', we have a new table
+</span>	       (goto-char pos)
+               <span class="cd">;; </span><span class="c">NOTE: the combination of tests and movement operations in
+</span>               <span class="cd">;; </span><span class="c">the when clause is not ideal...
+</span>	       (<span class="k">when</span> (<span class="k">or</span> (looking-at <span class="s">","</span>)
+                         (looking-at sqlind-select-join-regexp)
+                         (looking-at <span class="s">"join\\b"</span>)
+			 (<span class="k">progn</span>
+                           (sqlind-backward-syntactic-ws)
+                           (<span class="k">or</span> (looking-at <span class="s">","</span>)
+                               (<span class="k">progn</span>
+                                 (forward-word -1)
+                                 (<span class="k">or</span> (looking-at sqlind-select-join-regexp)
+                                     (looking-at <span class="s">"join\\b"</span>)
+                                     (looking-at <span class="s">"from\\b"</span>))))))
+		 (<span class="k">throw</span> '<span class="m">finished</span> (cons 'select-table match-pos)))
+
+               (goto-char pos)
+               (<span class="k">let</span> ((limit match-pos))
+                 (<span class="k">if</span> (sqlind-search-backward (point) (regexp-opt (list <span class="s">","</span> <span class="s">"join"</span>) 'symbols) limit)
+                     (<span class="k">progn</span>
+                       (goto-char (match-end 0))
+                       (sqlind-forward-syntactic-ws)
+                       (<span class="k">when</span> (looking-at <span class="s">"lateral"</span>)
+                         (forward-word 1)
+                         (sqlind-forward-syntactic-ws))
+                       <span class="cd">;; </span><span class="c">otherwise, we continue the table definition from the
+        </span>               <span class="cd">;; </span><span class="c">previous line.
+        </span>               (<span class="k">throw</span> '<span class="m">finished</span>
+                         <span class="cd">;; </span><span class="c">If, after following all these joins, we got back
+</span>                         <span class="cd">;; </span><span class="c">to our line, we are in a select-table after all,
+</span>                         <span class="cd">;; </span><span class="c">otherwise it is a table continuation.
+</span>                         (<span class="k">if</span> (eq (point) pos)
+                             (cons 'select-table match-pos)
+                           (cons 'select-table-continuation (point)))))
+                   (<span class="k">progn</span>               <span class="cd">; </span><span class="c">this must be the first table in the FROM section
+</span>                     (<span class="k">when</span> (looking-at <span class="s">"from\\b"</span>)
+                       (forward-word)
+                       (sqlind-forward-syntactic-ws))
+                     (<span class="k">throw</span> '<span class="m">finished</span> (cons 'select-table-continuation (point)))))))
+
+	      (t
+	       (<span class="k">throw</span> '<span class="m">finished</span>
+		 (cons (list 'in-select-clause clause) match-pos))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

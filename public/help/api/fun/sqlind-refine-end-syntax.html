@@ -1,0 +1,211 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sqlind-refine-end-syntax – Emacs Documentation Online</title>
+<meta name="description" content="sqlind-refine-end-syntax is a natively compiled function defined in
+sql-indent.el.
+Return a 'block-end syntax when line contains an &quot;end&quot; keyword.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sqlind-refine-end-syntax</code></h1><p><span class="m"><code>sqlind-refine-end-syntax</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">sql-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(sqlind-refine-end-syntax <a href="#:~:text=keyword.-,END-KIND"><span class="arg">END-KIND</span></a> <a href="#:~:text=keyword.-,END-LABEL"><span class="arg">END-LABEL</span></a> <a href="#:~:text=one.-,END-POS"><span class="arg">END-POS</span></a> <a href="#:~:text=is.-,CONTEXT"><span class="arg">CONTEXT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a 'block-end syntax when line contains an "end" keyword.
+<p><span class="arg">END-KIND</span> contains the symbol after the end statement ('if if
+the statement is an "end if", 'loop if the statement is an
+<br>"end loop", etc).  This can be nil if there is a plain "end"
+<br>keyword.
+<p><span class="arg">END-LABEL</span> contains the label of the end statement, when there is
+one.
+<p><span class="arg">END-POS</span> is the position where the "end" keyword is.
+<p><span class="arg">CONTEXT</span> represents the syntactic context up to the current line.
+<p>The function will perform some validations, for example, an "end
+if" must close an if statement, an "end loop" must close a
+loop, etc.  It will return a 'syntax-error syntax if the
+validation fails.
+<p>If all checks pass, it will return a (block-end KIND LABEL) where
+KIND is the symbol determining the type of the block ('if,
+<br>'loop, 'procedure, etc) and LABEL is the block label, if
+<br>there is any.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vgm6xb2iy00bs19rdw9z3nfi5nf8g873-emacs-packages-deps/share/emacs/site-lisp/elpa/sql-indent-1.7/sql-indent.el</span>
+<span class="cd">;;;;; </span><span class="c">Refine the syntax of an end statement.
+</span>
+(<span class="k">defun</span> <span class="f">sqlind-refine-end-syntax</span> (end-kind end-label end-pos context)
+  <span class="doc">"Return a </span><span class="bi doc">\\=</span><span class="doc">'block-end syntax when line contains an \"end\" keyword.
+
+END-KIND contains the symbol after the end statement (</span><span class="bi doc">\\=</span><span class="doc">'if if
+the statement is an \"end if\", </span><span class="bi doc">\\=</span><span class="doc">'loop if the statement is an
+\"end loop\", etc).  This can be nil if there is a plain \"end\"
+keyword.
+
+END-LABEL contains the label of the end statement, when there is
+one.
+
+END-POS is the position where the \"end\" keyword is.
+
+CONTEXT represents the syntactic context up to the current line.
+
+The function will perform some validations, for example, an \"end
+if\" must close an if statement, an \"end loop\" must close a
+loop, etc.  It will return a </span><span class="bi doc">\\=</span><span class="doc">'syntax-error syntax if the
+validation fails.
+
+If all checks pass, it will return a (block-end KIND LABEL) where
+KIND is the symbol determining the type of the block (</span><span class="bi doc">\\=</span><span class="doc">'if,
+</span><span class="bi doc">\\=</span><span class="doc">'loop, </span><span class="bi doc">\\=</span><span class="doc">'procedure, etc) and LABEL is the block label, if
+there is any."</span>
+  (<span class="k">catch</span> '<span class="m">done</span>
+
+    (<span class="k">when</span> (null context)                <span class="cd">; </span><span class="c">can happen
+</span>      (<span class="k">throw</span> '<span class="m">done</span>
+        (cons (list 'syntax-error <span class="s">"end statement closes nothing"</span>
+                    end-pos end-pos)
+              end-pos)))
+
+    (<span class="k">let</span> ((syntax (sqlind-syntax context))
+          (anchor (sqlind-anchor-point context))
+          (syntax-symbol (sqlind-syntax-symbol context)))
+      (<span class="k">cond</span>
+	((memq syntax-symbol '(package package-body))
+	 <span class="cd">;; </span><span class="c">we are closing a package declaration or body, `</span><span class="m c">end-kind</span><span class="c">' must be
+</span>	 <span class="cd">;; </span><span class="c">empty, `</span><span class="m c">end-label</span><span class="c">' can be empty or it must match the package name
+</span>	 (<span class="k">throw</span> '<span class="m">done</span>
+	   (cons
+	    (<span class="k">cond</span> (end-kind   <span class="cd">; </span><span class="c">no end-kind is allowed for a package
+</span>		   (list 'syntax-error
+			 <span class="s">"bad closing for package"</span> anchor end-pos))
+		  ((sqlind-labels-match end-label (nth 1 syntax))
+		   (list 'block-end syntax-symbol (nth 1 syntax)))
+		  (t
+		   (list 'syntax-error <span class="s">"mismatched end label for package"</span>
+			 anchor end-pos)))
+	    anchor)))
+
+	((eq syntax-symbol 'in-begin-block)
+	 <span class="cd">;; </span><span class="c">we are closing a begin block (either toplevel, procedure/function
+</span>	 <span class="cd">;; </span><span class="c">or a simple begin block.  `</span><span class="m c">end-kind</span><span class="c">' must be empty, `</span><span class="m c">end-label</span><span class="c">'
+</span>	 <span class="cd">;; </span><span class="c">can be empty or it must match the pakage-name
+</span>	 (<span class="k">let</span> ((block-label (nth 2 syntax)))
+	   (<span class="k">throw</span> '<span class="m">done</span>
+	     (cons
+	      (<span class="k">cond</span> (end-kind <span class="cd">; </span><span class="c">no end-kind is allowed for a begin block
+</span>		     (list 'syntax-error
+			   <span class="s">"bad closing for begin block"</span> anchor end-pos))
+		    ((sqlind-labels-match end-label block-label)
+		     (list 'block-end (nth 1 syntax) block-label))
+		    (t
+		     (list 'syntax-error <span class="s">"mismatched end label for block"</span>
+			   anchor end-pos)))
+	      anchor))))
+
+	((eq syntax-symbol 'in-block)
+	 (<span class="k">let</span> ((block-kind (nth 1 syntax))
+	       (block-label (nth 2 syntax)))
+	   (<span class="k">cond</span>
+	     ((eq block-kind 'exception)
+	      (goto-char anchor)
+	      (<span class="k">throw</span> '<span class="m">done</span>
+		(sqlind-refine-end-syntax
+		 end-kind end-label end-pos (sqlind-syntax-of-line))))
+
+	     ((eq block-kind 'loop)
+	      (<span class="k">throw</span> '<span class="m">done</span>
+		(cons
+		 (<span class="k">cond</span> ((not (eq end-kind 'loop))
+			(list 'syntax-error <span class="s">"bad closing for loop block"</span>
+			      anchor end-pos))
+		       ((not (sqlind-labels-match end-label block-label))
+			(list 'syntax-error <span class="s">"mismatched end label for loop"</span>
+			      anchor end-pos))
+		       (t
+			(list 'block-end block-kind block-label)))
+		 anchor)))
+
+	     ((eq block-kind 'then)
+	      (goto-char anchor)
+
+	      (<span class="k">catch</span> '<span class="m">found</span>
+		(<span class="k">while</span> t
+		  (<span class="k">let</span> ((then-context (sqlind-syntax-of-line)))
+		    (goto-char (cdar then-context))
+		    (<span class="k">cond</span>
+		      ((looking-at <span class="s">"when\\_&gt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">then\\_&gt;"</span>) t)
+		      ((looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">&lt;&lt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[a-z0-9_]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">&gt;&gt;[ \t\r\n\f]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?\\_&lt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">case</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\_&gt;"</span>)
+		       (<span class="k">throw</span> '<span class="m">found</span> t))
+		      (t
+		       (<span class="k">throw</span> '<span class="m">done</span>
+			 (cons
+			  (list 'syntax-error <span class="s">"bad syntax start for then keyword"</span>
+				(point) (point))
+			  anchor)))))))
+
+	      (<span class="k">let</span> ((start-label (<span class="k">or</span> (sqlind-match-string 1) <span class="s">""</span>))
+		    (start-kind (intern (sqlind-match-string 2))))
+		(<span class="k">throw</span> '<span class="m">done</span>
+		  (cons
+		   (<span class="k">cond</span> ((not (<span class="k">or</span> (null end-kind) (eq end-kind start-kind)))
+			  (list 'syntax-error <span class="s">"bad closing for if/case block"</span>
+				(point) end-pos))
+			 ((not (sqlind-labels-match end-label start-label))
+			  (list 'syntax-error <span class="s">"mismatched labels for if/case block"</span>
+				(point) end-pos))
+			 (t
+			  (list 'block-end start-kind start-label)))
+		   anchor))))
+
+	     ((memq block-kind '(else elsif elseif))
+	      <span class="cd">;; </span><span class="c">search the enclosing then context and refine form there.  The
+</span>	      <span class="cd">;; </span><span class="c">`</span><span class="m c">cdr</span><span class="c">' in sqlind-syntax-of-line is used to remove the
+</span>	      <span class="cd">;; </span><span class="c">block-start context for the else clause
+</span>	      (goto-char anchor)
+	      (<span class="k">throw</span> '<span class="m">done</span>
+		(sqlind-refine-end-syntax
+		 end-kind end-label end-pos (cdr (sqlind-syntax-of-line)))))
+
+	     ((memq block-kind '(if case))
+	      (<span class="k">throw</span> '<span class="m">done</span>
+		(cons
+		 (<span class="k">cond</span> ((not (eq end-kind block-kind))
+			(list 'syntax-error <span class="s">"bad closing for if/case block"</span>
+			      anchor end-pos))
+		       ((not (sqlind-labels-match end-label block-label))
+			(list 'syntax-error
+			      <span class="s">"bad closing for if/case block (label mismatch)"</span>
+			      anchor end-pos))
+		       (t (list 'block-end block-kind block-label)))
+		 anchor)))
+	     )))
+
+	((memq syntax-symbol '(block-start comment-start))
+	 <span class="cd">;; </span><span class="c">there is a more generic context following one of these
+</span>	 (<span class="k">throw</span> '<span class="m">done</span>
+	   (sqlind-refine-end-syntax
+	    end-kind end-label end-pos (cdr context))))
+
+	((eq syntax-symbol 'defun-start)
+	 (<span class="k">throw</span> '<span class="m">done</span>
+	   (cons
+	    (<span class="k">if</span> (<span class="k">and</span> (null end-kind)
+		     (sqlind-labels-match end-label (nth 1 syntax)))
+		(list 'block-end 'defun end-label)
+		(list 'syntax-error <span class="s">"mismatched end label for defun"</span>
+		      anchor end-pos))
+	    anchor)))
+
+	((eq syntax-symbol 'block-end)
+	 (goto-char anchor)
+	 (forward-line -1)
+	 (<span class="k">throw</span> '<span class="m">done</span>
+	   (sqlind-refine-end-syntax
+	    end-kind end-label end-pos (sqlind-syntax-of-line)))))
+
+      <span class="cd">;; </span><span class="c">if the above cond fell through, we have a syntax error
+</span>      (cons (list 'syntax-error <span class="s">"end statement closes nothing"</span>
+		  end-pos end-pos)
+	    anchor))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

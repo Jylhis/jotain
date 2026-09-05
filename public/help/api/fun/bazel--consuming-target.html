@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--consuming-target – Emacs Documentation Online</title>
+<meta name="description" content="bazel--consuming-target is a natively compiled function defined in
+bazel.el.
+Return the name of the rule target in BUILD-FILE that consumes SOURCE-FILE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--consuming-target</code></h1><p><span class="m"><code>bazel--consuming-target</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--consuming-target <a href="#:~:text=in-,BUILD-FILE"><span class="arg">BUILD-FILE</span></a> <a href="#:~:text=consumes-,SOURCE-FILE"><span class="arg">SOURCE-FILE</span></a> <a href="#:~:text=If-,CASE-FOLD-FILE"><span class="arg">CASE-FOLD-FILE</span></a> <a href="#:~:text=If-,ONLY-TESTS"><span class="arg">ONLY-TESTS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the name of the rule target in <span class="arg">BUILD-FILE</span> that consumes <span class="arg">SOURCE-FILE</span>.
+<p>If <span class="arg">CASE-FOLD-FILE</span> is non-nil, ignore filename case when
+searching.  If <span class="arg">ONLY-TESTS</span> is non-nil, look only for test targets.
+Return nil if no consuming rule target was found.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--consuming-target</span>
+    (build-file source-file case-fold-file only-tests)
+  <span class="doc">"Return the name of the rule target in BUILD-FILE that consumes SOURCE-FILE.
+If CASE-FOLD-FILE is non-nil, ignore filename case when
+searching.  If ONLY-TESTS is non-nil, look only for test targets.
+Return nil if no consuming rule target was found."</span>
+  (<span class="w">cl-check-type</span> build-file string)
+  (<span class="w">cl-check-type</span> source-file string)
+  <span class="cd">;; </span><span class="c">Prefer a buffer that’s already visiting BUILD-FILE.
+</span>  (<span class="k">bazel--with-file-buffer</span> existing build-file
+    (<span class="k">unless</span> existing (bazel-build-mode))  <span class="cd">; </span><span class="c">for correct syntax tables
+</span>    (<span class="k">let</span> ((case-fold-search nil)
+          (search-spaces-regexp nil))
+      (<span class="k">save-excursion</span>
+        <span class="cd">;; </span><span class="c">Don’t widen; if the rule target definition isn’t found within the
+</span>        <span class="cd">;; </span><span class="c">accessible portion of the current buffer, that’s probably what the
+</span>        <span class="cd">;; </span><span class="c">user wants.
+</span>        (goto-char (point-min))
+        <span class="cd">;; </span><span class="c">We perform a simple textual search for rule target definitions with
+</span>        <span class="cd">;; </span><span class="c">“srcs” attributes that contain references to SOURCE-FILE.  That’s in
+</span>        <span class="cd">;; </span><span class="c">no way exact, but faster than invoking “bazel query”, and most BUILD
+</span>        <span class="cd">;; </span><span class="c">files are regular enough for this approach to give acceptable
+</span>        <span class="cd">;; </span><span class="c">results.
+</span>        (<span class="k">cl-block</span> nil
+          (<span class="k">while</span> (<span class="k">let</span> ((case-fold-search case-fold-file))
+                   (re-search-forward (<span class="k">rx</span> (group (any ?\" ?\'))
+                                          (? ?:) (literal source-file)
+                                          (backref 1))
+                                      nil t))
+            (<span class="k">let</span> ((begin (match-beginning 0))
+                  (end (match-end 0)))
+              (goto-char begin)
+              (python-nav-up-list -1)  <span class="cd">; </span><span class="c">move to start of attribute value
+</span>              (<span class="k">when</span> (looking-back
+                     (<span class="k">rx</span> symbol-start <span class="s">"srcs"</span> (* blank) ?= (* blank))
+                     (line-beginning-position))
+                (<span class="k">when-let*</span> ((target-name (bazel-current-target-name)))
+                  (<span class="k">when</span> (<span class="k">or</span> (not only-tests) (bazel--in-test-target-p))
+                    (<span class="k">cl-return</span> target-name))))
+              <span class="cd">;; </span><span class="c">Ensure we don’t loop forever if we ended up in a weird place.
+</span>              (goto-char end))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

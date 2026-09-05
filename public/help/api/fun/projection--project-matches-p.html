@@ -1,0 +1,45 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: projection--project-matches-p – Emacs Documentation Online</title>
+<meta name="description" content="projection--project-matches-p is a natively compiled function defined
+in projection-core-match.el.
+Assert whether project of type PROJECT-TYPE matches ROOT-DIR.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>projection--project-matches-p</code></h1><p><span class="m"><code>projection--project-matches-p</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">projection-core-match.el</span>.
+<h2>Signature</h2>
+<pre><code>(projection--project-matches-p <a href="#:~:text=matches-,ROOT-DIR"><span class="arg">ROOT-DIR</span></a> <a href="#:~:text=type-,PROJECT-TYPE"><span class="arg">PROJECT-TYPE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Assert whether project of type <span class="arg">PROJECT-TYPE</span> matches <span class="arg">ROOT-DIR</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kqajmnl5vwqnlsg3vcmlj2d28ylc2n0n-emacs-packages-deps/share/emacs/site-lisp/elpa/projection-20260614.1822/projection-core-match.el</span>
+(<span class="k">defun</span> <span class="f">projection--project-matches-p</span> (root-dir project-type)
+  <span class="doc">"Assert whether project of type PROJECT-TYPE matches ROOT-DIR."</span>
+  (<span class="k">let</span> ((default-directory root-dir))
+    (<span class="k">if-let*</span> ((predicate (<span class="k">oref</span> project-type predicate)))
+        (<span class="k">progn</span>
+          (<span class="k">setq</span> predicate
+                (<span class="k">if</span> (<span class="k">and</span> (consp predicate)
+                         (functionp predicate))
+                    (list predicate)
+                  <span class="cd">;; </span><span class="c">For some reason this can't handle closures accurately.
+</span>                  (ensure-list predicate)))
+          (<span class="k">cl-loop</span> for it in predicate
+                   when (<span class="k">cond</span>
+                         ((stringp it)
+                          (file-exists-p it))
+                         ((functionp it)
+                          (funcall it))
+                         (t
+                          (<span class="w">user-error</span> <span class="s">"Unknown project predicate type %s: %S"</span>
+                                      (projection-type--name project-type)
+                                      it)))
+                   return t
+                   finally return nil))
+      (<span class="w">warn</span> <span class="s">"Project with no predicate in `</span><span class="m s">projection-project-types</span><span class="s">': %s"</span>
+            (projection-type--name project-type)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

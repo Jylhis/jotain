@@ -1,0 +1,45 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg-interactive--send-region – Emacs Documentation Online</title>
+<meta name="description" content="tuareg-interactive--send-region is a natively compiled function
+defined in tuareg.el.
+Send the region between START and END to the OCaml REPL.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg-interactive--send-region</code></h1><p><span class="m"><code>tuareg-interactive--send-region</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg-interactive--send-region <a href="#:~:text=between-,START"><span class="arg">START</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Send the region between <span class="arg">START</span> and <span class="arg">END</span> to the OCaml REPL.
+<p>It is assumed that the range START-END delimit valid OCaml phrases.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg-interactive--send-region</span> (start end)
+  <span class="doc">"Send the region between START and END to the OCaml REPL.
+It is assumed that the range START-END delimit valid OCaml phrases."</span>
+  (<span class="k">save-excursion</span> (tuareg-run-process-if-needed))
+  (comint-preinput-scroll-to-bottom)
+  (<span class="k">setq</span> tuareg-interactive-last-phrase-pos-in-source start)
+  (<span class="k">let*</span> ((phrases (buffer-substring-no-properties start end))
+         (phrases (replace-regexp-in-string <span class="s">"[ \t\n]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">;;[ \t\n]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?\\'"</span> <span class="s">""</span>
+                                            phrases))
+         (phrases-semicolon (concat phrases <span class="s">";;"</span>)))
+    (<span class="k">if</span> (string= phrases <span class="s">""</span>)
+        (message <span class="s">"Cannot send empty commands to OCaml REPL!"</span>)
+      (<span class="k">with-current-buffer</span> tuareg-interactive-buffer-name
+        (goto-char (point-max))
+        (<span class="k">setq</span> tuareg-interactive-last-phrase-pos-in-repl (point))
+        (comint-send-string tuareg-interactive-buffer-name phrases-semicolon)
+        (<span class="k">let</span> ((pos (point)))
+          (comint-send-input)
+          (<span class="k">when</span> tuareg-interactive-echo-phrase
+            (<span class="k">save-excursion</span>
+              (goto-char pos)
+              (insert phrases-semicolon)))))))
+  (<span class="k">when</span> tuareg-display-buffer-on-eval
+    (display-buffer tuareg-interactive-buffer-name)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

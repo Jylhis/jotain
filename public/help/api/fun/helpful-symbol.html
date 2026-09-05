@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: helpful-symbol – Emacs Documentation Online</title>
+<meta name="description" content="helpful-symbol is an interactive and natively compiled function
+defined in helpful.el.
+Show help for SYMBOL, a variable, function, macro, or face.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>helpful-symbol</code></h1><p><span class="m"><code>helpful-symbol</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">helpful.el</span>.
+<h2>Signature</h2>
+<pre><code>(helpful-symbol <a href="#:~:text=for-,SYMBOL"><span class="arg">SYMBOL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Show help for <span class="arg">SYMBOL</span>, a variable, function, macro, or face.
+<p>See also <a href="../fun/helpful-callable.html"><code>helpful-callable</code></a> and <a href="../fun/helpful-variable.html"><code>helpful-variable</code></a>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/al1y9rq93c50r6aqa0749m04ilfnar06-emacs-packages-deps/share/emacs/site-lisp/elpa/helpful-20250408.334/helpful.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">helpful-symbol</span> (symbol)
+  <span class="doc">"Show help for SYMBOL, a variable, function, macro, or face.
+
+See also `</span><span class="m doc">helpful-callable</span><span class="doc">' and `</span><span class="m doc">helpful-variable</span><span class="doc">'."</span>
+  (<span class="k">interactive</span>
+   (list (helpful--read-symbol
+          <span class="s">"Symbol: "</span>
+          (helpful--symbol-at-point)
+          #'helpful--bound-p)))
+  (<span class="k">let</span> (choices)
+    (<span class="k">when-let</span> (c-var-sym (helpful--convert-c-name symbol t))
+      (<span class="k">push</span> (list (<span class="k">lambda</span> (_) (helpful-variable c-var-sym))
+                  <span class="s">"c-style [V]ariable"</span> ?V)
+            choices))
+    (<span class="k">when-let</span> (c-fn-sym (helpful--convert-c-name symbol nil))
+      (<span class="k">push</span> (list (<span class="k">lambda</span> (_) (helpful-callable c-fn-sym))
+                  <span class="s">"c-style [F]unction"</span> ?F)
+            choices))
+    (<span class="k">when</span> (fboundp symbol)
+      (<span class="k">push</span> (list #'helpful-callable <span class="s">"[c]allable"</span> ?c) choices))
+    (<span class="k">when</span> (boundp symbol)
+      (<span class="k">push</span> (list #'helpful-variable <span class="s">"[v]ariable"</span> ?v) choices))
+    (<span class="k">when</span> (facep symbol)
+      (<span class="k">push</span> (list (<span class="k">lambda</span> (face)
+                    (describe-face face)
+                    (funcall helpful-switch-buffer-function (help-buffer)))
+                  <span class="s">"[f]ace"</span> ?f)
+            choices))
+    (<span class="k">cond</span>
+     ((null choices)
+      (<span class="w">user-error</span> <span class="s">"Not bound: %S"</span> symbol))
+     ((= 1 (length choices))
+      (funcall (caar choices) symbol))
+     (t (helpful--disambiguate symbol choices)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

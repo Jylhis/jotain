@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pp-display-expression – Emacs Documentation Online</title>
+<meta name="description" content="pp-display-expression is an autoloaded and natively compiled function
+defined in pp.el.gz.
+Prettify and display EXPRESSION in an appropriate way, depending on length.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pp-display-expression</code></h1><p><span class="m"><code>pp-display-expression</code></span> is an <a href="/info/elisp/autoload.html">autoloaded</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <a href="../src/emacs-lisp/pp.el.html">pp.el.gz</a>.
+<h2>Signature</h2>
+<pre><code>(pp-display-expression <a href="#:~:text=display-,EXPRESSION"><span class="arg">EXPRESSION</span></a> <a href="#:~:text=after-,OUT-BUFFER-NAME"><span class="arg">OUT-BUFFER-NAME</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,LISP"><span class="arg">LISP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Prettify and display <span class="arg">EXPRESSION</span> in an appropriate way, depending on length.
+<p>If <span class="arg">LISP</span>, format with <a href="../fun/pp-emacs-lisp-code.html"><code>pp-emacs-lisp-code</code></a>; use <a href="../fun/pp.html"><code>pp</code></a> otherwise.
+<p>If a temporary buffer is needed for representation, it will be named
+after <span class="arg">OUT-BUFFER-NAME</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><a href="../src/emacs-lisp/pp.el.html">/usr/src/emacs/lisp/emacs-lisp/pp.el.gz</a>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">pp-display-expression</span> (expression out-buffer-name <span class="ty">&amp;optional</span> lisp)
+  <span class="doc">"Prettify and display EXPRESSION in an appropriate way, depending on length.
+If LISP, format with `</span><span class="m doc">pp-emacs-lisp-code</span><span class="doc">'; use `</span><span class="m doc">pp</span><span class="doc">' otherwise.
+
+If a temporary buffer is needed for representation, it will be named
+after OUT-BUFFER-NAME."</span>
+  (<span class="k">let*</span> ((lexical lexical-binding)
+         (old-show-function temp-buffer-show-function)
+	 <span class="cd">;; </span><span class="c">Use this function to display the buffer.
+</span>	 <span class="cd">;; </span><span class="c">This function either decides not to display it at all
+</span>	 <span class="cd">;; </span><span class="c">or displays it in the usual way.
+</span>	 (temp-buffer-show-function
+          (<span class="k">lambda</span> (buf)
+            (<span class="k">with-current-buffer</span> buf
+              (goto-char (point-min))
+              (end-of-line 1)
+              (<span class="k">if</span> (<span class="k">or</span> (&lt; (1+ (point)) (point-max))
+                      (&gt;= (- (point) (point-min)) (frame-width)))
+                  (<span class="k">let</span> ((temp-buffer-show-function old-show-function)
+                        (old-selected (selected-window))
+                        (window (display-buffer buf)))
+                    (goto-char (point-min)) <span class="cd">; </span><span class="c">expected by some hooks ...
+</span>                    (make-frame-visible (window-frame window))
+                    (<span class="k">unwind-protect</span>
+                        (<span class="k">progn</span>
+                          (select-window window)
+                          (run-hooks 'temp-buffer-show-hook))
+                      (<span class="k">when</span> (window-live-p old-selected)
+                        (select-window old-selected))))
+                (message <span class="s">"%s"</span> (buffer-substring (point-min) (point))))))))
+    (<span class="k">with-output-to-temp-buffer</span> out-buffer-name
+      (<span class="k">if</span> lisp
+          (<span class="k">with-current-buffer</span> standard-output
+            (pp-emacs-lisp-code expression))
+        (pp expression))
+      (<span class="k">with-current-buffer</span> standard-output
+	(emacs-lisp-mode)
+        (<span class="k">setq</span> lexical-binding lexical)
+	(<span class="k">setq</span> buffer-read-only nil)
+        (<span class="k">setq-local</span> font-lock-verbose nil)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

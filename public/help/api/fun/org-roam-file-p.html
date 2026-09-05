@@ -1,0 +1,60 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-file-p – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-file-p is a natively compiled function defined in
+org-roam.el.
+Return t if FILE is an Org-roam file, nil otherwise.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-file-p</code></h1><p><span class="m"><code>org-roam-file-p</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">org-roam.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-file-p <span class="ty">&amp;optional</span> <a href="#:~:text=if-,FILE"><span class="arg">FILE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return t if <span class="arg">FILE</span> is an Org-roam file, nil otherwise.
+<p>If <span class="arg">FILE</span> is not specified, use the current buffer's file-path.
+<p><span class="arg">FILE</span> is an Org-roam file if:
+<br>- It's located somewhere under <a href="../var/org-roam-directory.html"><code>org-roam-directory</code></a>
+<br>- It has a matching file extension (<a href="../var/org-roam-file-extensions.html"><code>org-roam-file-extensions</code></a>)
+<br>- It doesn't match excluded regexp (<a href="../var/org-roam-file-exclude-regexp.html"><code>org-roam-file-exclude-regexp</code></a>)
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam.el</span>
+<span class="cd">;;; </span><span class="c">Library
+</span>(<span class="k">defun</span> <span class="f">org-roam-file-p</span> (<span class="ty">&amp;optional</span> file)
+  <span class="doc">"Return t if FILE is an Org-roam file, nil otherwise.
+If FILE is not specified, use the current buffer's file-path.
+
+FILE is an Org-roam file if:
+- It's located somewhere under `</span><span class="m doc">org-roam-directory</span><span class="doc">'
+- It has a matching file extension (`</span><span class="m doc">org-roam-file-extensions</span><span class="doc">')
+- It doesn't match excluded regexp (`</span><span class="m doc">org-roam-file-exclude-regexp</span><span class="doc">')"</span>
+  (<span class="k">when</span> (<span class="k">or</span> file (buffer-file-name (buffer-base-buffer)))
+    (<span class="k">let*</span> ((path (<span class="k">or</span> file (buffer-file-name (buffer-base-buffer))))
+           (relative-path (file-relative-name path org-roam-directory))
+           (ext (org-roam--file-name-extension path))
+           (ext (<span class="k">if</span> (<span class="k">or</span> (string= ext <span class="s">"gpg"</span>)
+                        (string= ext <span class="s">"age"</span>))
+                    (org-roam--file-name-extension (file-name-sans-extension path))
+                  ext))
+           (org-roam-dir-p (org-roam-descendant-of-p path org-roam-directory))
+           (valid-file-ext-p (member ext org-roam-file-extensions))
+           (match-exclude-regexp-p
+            (<span class="k">cond</span>
+             ((not org-roam-file-exclude-regexp) nil)
+             ((stringp org-roam-file-exclude-regexp)
+              (string-match-p org-roam-file-exclude-regexp relative-path))
+             ((listp org-roam-file-exclude-regexp)
+              (<span class="k">let</span> (is-match)
+                (<span class="k">dolist</span> (exclude-re org-roam-file-exclude-regexp)
+                  (<span class="k">setq</span> is-match (<span class="k">or</span> is-match (string-match-p exclude-re relative-path))))
+                is-match)))))
+      (<span class="k">save-match-data</span>
+        (<span class="k">and</span>
+         path
+         org-roam-dir-p
+         valid-file-ext-p
+         (not match-exclude-regexp-p))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

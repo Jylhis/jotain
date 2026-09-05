@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-invalidate-part-region – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-invalidate-part-region is a natively compiled function
+defined in web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-invalidate-part-region</code></h1><p><span class="m"><code>web-mode-invalidate-part-region</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-invalidate-part-region <span class="arg">POS-BEG</span> <span class="arg">POS-END</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-invalidate-part-region</span> (pos-beg pos-end)
+  (<span class="k">save-excursion</span>
+    (<span class="k">let</span> (beg end part-beg part-end language)
+      (<span class="k">if</span> (member web-mode-content-type web-mode-part-content-types)
+          (<span class="k">setq</span> language web-mode-content-type)
+          (<span class="k">setq</span> language (symbol-name (get-text-property pos-beg 'part-side))))
+      (<span class="k">setq</span> part-beg (web-mode-part-beginning-position pos-beg)
+            part-end (web-mode-part-end-position pos-beg))
+      <span class="cd">;;</span><span class="c">(message "language(%S) pos-beg(%S) pos-end(%S) part-beg(%S) part-end(%S)"
+</span>      <span class="cd">;;         </span><span class="c">language pos-beg pos-end part-beg part-end)
+</span>      (goto-char pos-beg)
+      (<span class="k">cond</span>
+        ((not (<span class="k">and</span> part-beg part-end
+                   (&gt;= pos-beg part-beg)
+                   (&lt;= pos-end part-end)
+                   (&gt; part-end part-beg)))
+         (web-mode-invalidate-region pos-beg pos-end))
+        ((member language '(<span class="s">"javascript"</span> <span class="s">"json"</span> <span class="s">"jsx"</span> <span class="s">"typescript"</span>))
+         (<span class="k">if</span> (web-mode-javascript-rsb <span class="s">"[;{}(][ ]*\n"</span> part-beg)
+             (<span class="k">setq</span> beg (match-end 0))
+             (<span class="k">setq</span> beg part-beg))
+         (goto-char pos-end)
+         (<span class="k">if</span> (web-mode-javascript-rsf <span class="s">"[;{})][ ]*\n"</span> part-end)
+             (<span class="k">setq</span> end (match-end 0))
+             (<span class="k">setq</span> end part-end))
+         (web-mode-scan-region beg end language))
+        ((member language '(<span class="s">"css"</span> <span class="s">"sass"</span>))
+         (<span class="k">let</span> (rule1 rule2)
+           (<span class="k">setq</span> rule1 (web-mode-css-rule-current pos-beg))
+           (<span class="k">setq</span> rule2 rule1)
+           (<span class="k">when</span> (&gt; pos-end (cdr rule1))
+             (<span class="k">setq</span> rule2 (web-mode-css-rule-current pos-end)))
+           (<span class="k">setq</span> beg (car rule1)
+                 end (cdr rule2))
+           )
+         (web-mode-scan-region beg end language))
+        (t
+         (<span class="k">setq</span> beg part-beg
+               end part-end)
+         (web-mode-scan-region beg end language))
+        ) <span class="cd">;</span><span class="c">cond
+</span>      )))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

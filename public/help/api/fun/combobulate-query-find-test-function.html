@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-query-find-test-function – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-query-find-test-function is a natively compiled function
+defined in combobulate-navigation.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-query-find-test-function</code></h1><p><span class="m"><code>combobulate-query-find-test-function</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">combobulate-navigation.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-query-find-test-function <span class="arg">TERM</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-navigation.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-query-find-test-function</span> (term)
+  (<span class="k">let</span> ((term-type (combobulate-query--term-type term)))
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">wildcard -- (_) and _ -- query terms are
+</span>     <span class="cd">;; </span><span class="c">handled differently from explicit nodes:
+</span>     <span class="cd">;;</span><span class="c">
+</span>     <span class="cd">;; </span><span class="c">(_) wildcards match any named node.
+</span>     <span class="cd">;;</span><span class="c">
+</span>     <span class="cd">;; </span><span class="c">_ wildcards match both anonymous and named
+</span>     <span class="cd">;; </span><span class="c">alike.
+</span>     <span class="cd">;;</span><span class="c">
+</span>     <span class="cd">;; </span><span class="c">Combined with `</span><span class="m c">*</span><span class="c">' or `</span><span class="m c">+</span><span class="c">' and it'll greedily
+</span>     <span class="cd">;; </span><span class="c">consume all possible matches, as per their
+</span>     <span class="cd">;; </span><span class="c">respective rules.
+</span>     <span class="cd">;;</span><span class="c">
+</span>     <span class="cd">;; </span><span class="c">Ordinarily, we'd recurse into the subquery
+</span>     <span class="cd">;; </span><span class="c">of a named cons cell node query to match;
+</span>     <span class="cd">;; </span><span class="c">this is not required here at all. Simply
+</span>     <span class="cd">;; </span><span class="c">return the item itself to match.
+</span>     ((eq term-type 'named-wildcard)
+      (<span class="k">lambda</span> (child _) (<span class="k">if</span> (combobulate-node-named-p child)
+                            (cons 'match (cons (list child) nil))
+                          (cons 'no-match (cons nil nil)))))
+     ((eq term-type 'wildcard)
+      (<span class="k">lambda</span> (child _) (cons 'match (cons (list child) nil))))
+     <span class="cd">;; </span><span class="c">strings are handled by equality checking
+</span>     <span class="cd">;; </span><span class="c">the node text against `</span><span class="m c">sub-query</span><span class="c">'.
+</span>     ((eq term-type 'anonymous)
+      (<span class="k">lambda</span> (child _)
+        (<span class="k">if</span> (equal term (combobulate-node-text child))
+            (cons 'match (cons (list child) nil))
+          (cons 'no-match (cons nil nil)))))
+     <span class="cd">;; </span><span class="c">a single standalone (not in a cons cell)
+</span>     <span class="cd">;; </span><span class="c">symbol is usually the first symbol in a
+</span>     <span class="cd">;; </span><span class="c">query as it indicates the parent node
+</span>     <span class="cd">;; </span><span class="c">against which any children must match.
+</span>     ((eq term-type 'node)
+      (<span class="k">lambda</span> (child _)
+        (<span class="k">if</span> (eq term (combobulate-query--node-type child))
+            (cons 'match (cons (list child) nil))
+          (cons 'no-match (cons nil nil)))))
+     <span class="cd">;; </span><span class="c">For everything else, apply recursion.
+</span>     (t (<span class="k">lambda</span> (child term)
+          (<span class="k">if-let</span> (result (combobulate-query-search-1 child term))
+              (cons 'match (cons (list result) nil))
+            (cons 'no-match (cons nil nil))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

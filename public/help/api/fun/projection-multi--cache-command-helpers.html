@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: projection-multi--cache-command-helpers – Emacs Documentation Online</title>
+<meta name="description" content="projection-multi--cache-command-helpers is a macro defined in
+projection-multi.el.
+Setup memoisation for each function in TARGET-FUNCTIONS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>projection-multi--cache-command-helpers</code></h1><p><span class="m"><code>projection-multi--cache-command-helpers</code></span> is a macro defined in
+<span class="bt">projection-multi.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">projection-multi--cache-command-helpers</span> <a href="#:~:text=in-,TARGET-FUNCTIONS"><span class="arg">TARGET-FUNCTIONS</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=when-,BODY"><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Setup memoisation for each function in <span class="arg">TARGET-FUNCTIONS</span>.
+<p>Within the body of this macro every invocation of <span class="arg">TARGET-FUNCTIONS</span> is cached.
+If a previous invocation with the same arguments is already in the cache it
+will be returned directly. This function as a simple optimiser. All the
+functions in <span class="arg">TARGET-FUNCTIONS</span> must be defined when <span class="arg">BODY</span> is invoked and the
+result of each function should be deterministic.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/md0zfwyf8wnwwkh8r5cc9j9ip3z12gp0-emacs-packages-deps/share/emacs/site-lisp/elpa/projection-multi-20260614.1822/projection-multi.el</span>
+(<span class="k">defmacro</span> <span class="f">projection-multi--cache-command-helpers</span> (target-functions <span class="ty">&amp;rest</span> body)
+  <span class="doc">"Setup memoisation for each function in TARGET-FUNCTIONS.
+Within the body of this macro every invocation of TARGET-FUNCTIONS is cached.
+If a previous invocation with the same arguments is already in the cache it
+will be returned directly. This function as a simple optimiser. All the
+functions in TARGET-FUNCTIONS must be defined when BODY is invoked and the
+result of each function should be deterministic."</span>
+  (<span class="k">declare</span> (indent 2))
+  `(<span class="k">let</span> ((--projection-multi-helper-cache nil))
+     (<span class="k">let*</span> ((target-functions (<span class="k">quote</span> (list ,@target-functions)))
+            (loaded-target-functions
+             (seq-filter #'symbol-function (<span class="k">quote</span> (list ,@target-functions))))
+            (missing-target-functions
+             (seq-difference target-functions loaded-target-functions)))
+       (<span class="w">cl-assert</span>
+        (not missing-target-functions)
+        'show-args
+        <span class="s">"Command helper caching requires all cached helpers to be loaded %s"</span>
+        missing-target-functions))
+     (<span class="k">cl-letf*</span>
+         (,@(<span class="k">cl-loop</span> for function in target-functions
+                     with cached-function = nil
+                     do (<span class="k">setq</span> cached-function
+                              (intern (concat <span class="s">"--project-multi-cached-"</span>
+                                              (symbol-name function))))
+                     collect
+                     `(,cached-function (symbol-function ',function))
+                     collect
+                     `((symbol-function ',function)
+                       (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> args)
+                         (<span class="k">let</span> ((key (append (list ',function) args)))
+                           (<span class="k">if-let*</span> ((cached
+                                     (assoc key --projection-multi-helper-cache #'equal)))
+                               (cdr cached)
+                             (<span class="k">let</span> ((value (apply ,cached-function args)))
+                               (<span class="k">push</span> (cons key value) --projection-multi-helper-cache)
+                               value)))))))
+       ,@body)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

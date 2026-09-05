@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: corfu--capf-wrapper – Emacs Documentation Online</title>
+<meta name="description" content="corfu--capf-wrapper is a natively compiled function defined in
+corfu.el.
+Wrapper for completion-at-point FUN.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>corfu--capf-wrapper</code></h1><p><span class="m"><code>corfu--capf-wrapper</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">corfu.el</span>.
+<h2>Signature</h2>
+<pre><code>(corfu--capf-wrapper <a href="#:~:text=point-,FUN"><span class="arg">FUN</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=state.-,PREFIX"><span class="arg">PREFIX</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Wrapper for <a href="../fun/completion-at-point.html"><code>completion-at-point</code></a> <span class="arg">FUN</span>.
+<p>The wrapper determines if the Capf is applicable at the current
+position, performs sanity checking on the returned result and computes
+the initial completion state.  <span class="arg">PREFIX</span> is the minimum prefix length.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w8w9ybb6ad8ab6ghqfbq36v1kcp2igzi-emacs-packages-deps/share/emacs/site-lisp/elpa/corfu-20260828.932/corfu.el</span>
+(<span class="k">defun</span> <span class="f">corfu--capf-wrapper</span> (fun <span class="ty">&amp;optional</span> prefix)
+  <span class="doc">"Wrapper for `</span><span class="m doc">completion-at-point</span><span class="doc">' FUN.
+The wrapper determines if the Capf is applicable at the current
+position, performs sanity checking on the returned result and computes
+the initial completion state.  PREFIX is the minimum prefix length."</span>
+  (<span class="k">pcase</span> (funcall fun)
+    (`(,beg ,end ,table . ,plist)
+     (<span class="k">and</span> (integer-or-marker-p beg) <span class="cd">;; </span><span class="c">Valid Capf result
+</span>          (&lt;= beg (point) end)      <span class="cd">;; </span><span class="c">Sanity checking
+</span>          <span class="cd">;; </span><span class="c">Check minimal prefix length if given.
+</span>          (<span class="k">or</span> (not prefix)
+              (<span class="k">let</span> ((len (<span class="k">or</span> (plist-get plist <span class="bi">:company-prefix-length</span>)
+                             (- (point) beg))))
+                (<span class="k">or</span> (eq len t) (&gt;= len prefix))))
+          (<span class="k">let*</span> ((str (buffer-substring-no-properties beg end))
+                 (pt (- (point) beg))
+                 (pred (plist-get plist <span class="bi">:predicate</span>))
+                 (state (corfu--compute (cons str pt) table pred)))
+            (<span class="k">cond</span> ((alist-get 'corfu--candidates state)
+                   `(,fun ,beg ,end ,table <span class="bi">:corfu--state</span> ,state ,@plist))
+                  <span class="cd">;; </span><span class="c">Stop with empty result for exclusive Capf.
+</span>                  ((not (eq 'no (plist-get plist <span class="bi">:exclusive</span>)))
+                   '(nil))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-indentation-expression – Emacs Documentation Online</title>
+<meta name="description" content="haskell-indentation-expression is a natively compiled function defined
+in haskell-indentation.el.
+Parse an expression until an unknown token is encountered.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-indentation-expression</code></h1><p><span class="m"><code>haskell-indentation-expression</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">haskell-indentation.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-indentation-expression <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">ACCEPTED-TOKENS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse an expression until an unknown token is encountered.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-indentation.el</span>
+(<span class="k">defun</span> <span class="f">haskell-indentation-expression</span> (<span class="ty">&amp;optional</span> accepted-tokens)
+  <span class="doc">"Parse an expression until an unknown token is encountered."</span>
+  (<span class="k">catch</span> '<span class="m">return</span>
+    (<span class="k">let</span> ((current-indent (current-column)))
+      (<span class="k">unless</span> accepted-tokens
+        (<span class="k">setq</span> accepted-tokens '(value operator)))
+      (<span class="k">while</span> t
+        (<span class="k">cond</span>
+         ((memq current-token accepted-tokens)
+          (haskell-indentation-read-next-token))
+         ((eq current-token 'end-tokens)
+          (<span class="k">cond</span> ((string= following-token <span class="s">"where"</span>)
+                 (haskell-indentation-add-where-pre-indent)) <span class="cd">; </span><span class="c">before a where
+</span>                ((haskell-indentation-expression-token-p following-token)
+                 <span class="cd">;; </span><span class="c">a normal expression can be either continued or have
+</span>                 <span class="cd">;; </span><span class="c">left indent
+</span>                 (haskell-indentation-add-indentation
+                  current-indent)
+                 (haskell-indentation-add-indentation
+                  left-indent)))
+          (<span class="k">throw</span> '<span class="m">return</span> nil))
+         (t (<span class="k">let</span> ((parser (assoc current-token
+                                 haskell-indentation-expression-list)))
+              (<span class="k">when</span> (null parser)
+                (<span class="k">throw</span> '<span class="m">return</span> nil)) <span class="cd">; </span><span class="c">not expression token, so exit
+</span>              (funcall (cdr parser)) <span class="cd">; </span><span class="c">run parser
+</span>
+              <span class="cd">;; </span><span class="c">after an '</span><span class="m c">open</span><span class="c">' expression such as '</span><span class="m c">if</span><span class="c">', exit
+</span>              (<span class="k">unless</span> (member (car parser) '(<span class="s">"("</span> <span class="s">"["</span> <span class="s">"{"</span> <span class="s">"case"</span>))
+                (<span class="k">throw</span> '<span class="m">return</span> nil)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

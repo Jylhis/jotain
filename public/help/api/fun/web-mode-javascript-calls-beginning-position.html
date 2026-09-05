@@ -1,0 +1,81 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-javascript-calls-beginning-position – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-javascript-calls-beginning-position is a natively compiled
+function defined in web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-javascript-calls-beginning-position</code></h1><p><span class="m"><code>web-mode-javascript-calls-beginning-position</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-javascript-calls-beginning-position <span class="arg">POS</span> <span class="ty">&amp;optional</span> <span class="arg">REG-BEG</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-javascript-calls-beginning-position</span> (pos <span class="ty">&amp;optional</span> reg-beg)
+  (<span class="k">unless</span> pos (<span class="k">setq</span> pos (point)))
+  <span class="cd">;;</span><span class="c">(message "pos=%S" pos)
+</span>  (<span class="k">let</span> ((char nil)
+        (dot-pos nil)
+        (blockside (get-text-property pos 'block-side))
+        (i 0)
+        (continue (not (null pos))))
+    (<span class="k">unless</span> reg-beg
+      (<span class="k">setq</span> reg-beg (<span class="k">if</span> blockside
+                        (web-mode-block-beginning-position pos)
+                        (web-mode-part-beginning-position pos))))
+    (<span class="k">while</span> continue
+      (<span class="k">setq</span> char (char-after pos))
+      <span class="cd">;;</span><span class="c">(message "%S| %S=%c" reg-beg pos char)
+</span>      (<span class="k">cond</span>
+        ((&gt; (<span class="k">setq</span> i (1+ i)) 20000)
+         (message <span class="s">"javascript-calls-beginning-position ** warning (%S) **"</span> pos)
+         (<span class="k">setq</span> continue nil
+               pos nil))
+        ((null pos)
+         (message <span class="s">"javascript-calls-beginning-position ** invalid pos **"</span>)
+         (<span class="k">setq</span> continue nil))
+        ((&lt; pos reg-beg)
+         (<span class="k">setq</span> continue nil
+               pos reg-beg))
+        ((<span class="k">and</span> blockside
+              (member (get-text-property pos 'block-token) '(string comment))
+              (eq (get-text-property pos 'block-token) (get-text-property (1- pos) 'block-token)))
+         (<span class="k">setq</span> pos (web-mode-block-token-beginning-position pos)))
+        ((<span class="k">and</span> (not blockside)
+              (member (get-text-property pos 'part-token) '(string comment))
+              (eq (get-text-property pos 'part-token) (get-text-property (1- pos) 'part-token)))
+         (<span class="k">setq</span> pos (web-mode-part-token-beginning-position pos)))
+        ((<span class="k">and</span> (not blockside)
+              (get-text-property pos 'block-side))
+         (<span class="k">when</span> (<span class="k">setq</span> pos (web-mode-block-beginning-position pos))
+           (<span class="k">setq</span> pos (1- pos))))
+        ((<span class="k">and</span> (member char '(?\.)) (&gt; i 1))
+         (<span class="k">setq</span> dot-pos pos
+               pos (1- pos)))
+        ((member char '(?\) ?\]))
+         (<span class="k">when</span> (<span class="k">setq</span> pos (web-mode-part-opening-paren-position pos reg-beg))
+           (<span class="k">setq</span> pos (1- pos)))
+         )
+        ((member char '(?\( ?\{ ?\} ?\[ ?\= ?\? ?\: ?\; ?\, ?\&amp; ?\| ?\&gt;))
+         (web-mode-looking-at <span class="s">".[ \t\n]*"</span> pos)
+         (<span class="k">setq</span> pos (+ pos (length (match-string-no-properties 0)))
+               continue nil))
+        ((web-mode-looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">return</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">else</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">const</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">[ \n]"</span> pos)
+         (<span class="k">setq</span> pos (+ pos (length (match-string-no-properties 0)))
+               continue nil))
+        (t
+         (<span class="k">setq</span> pos (web-mode-rsb-position pos <span class="s">"[</span><span class="w s">\</span><span class="s">]</span><span class="w s">\</span><span class="s">[}{)(=?:;,&amp;|&gt;.]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">return</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">else</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">const</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> reg-beg))
+         (<span class="k">when</span> (not pos)
+           (message <span class="s">"javascript-calls-beginning-position ** search failure **"</span>)
+           (<span class="k">setq</span> pos reg-beg
+                 continue nil))
+         ) <span class="cd">;</span><span class="c">t
+</span>        ) <span class="cd">;</span><span class="c">cond
+</span>      ) <span class="cd">;</span><span class="c">while
+</span>    <span class="cd">;;</span><span class="c">(message "pos=%S dot-pos=%S" pos dot-pos)
+</span>    (<span class="k">if</span> (null pos) pos (cons pos dot-pos))
+    ))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

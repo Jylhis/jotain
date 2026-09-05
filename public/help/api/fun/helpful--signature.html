@@ -1,0 +1,88 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: helpful--signature – Emacs Documentation Online</title>
+<meta name="description" content="helpful--signature is a natively compiled function defined in
+helpful.el.
+Get the signature for function SYM, as a string.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>helpful--signature</code></h1><p><span class="m"><code>helpful--signature</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">helpful.el</span>.
+<h2>Signature</h2>
+<pre><code>(helpful--signature <a href="#:~:text=function-,SYM"><span class="arg">SYM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Get the signature for function <span class="arg">SYM</span>, as a string.
+<p>For example, "(some-func FOO &amp;optional BAR)".
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/al1y9rq93c50r6aqa0749m04ilfnar06-emacs-packages-deps/share/emacs/site-lisp/elpa/helpful-20250408.334/helpful.el</span>
+<span class="cd">;; </span><span class="c">TODO: this is broken for -any?.
+</span>(<span class="k">defun</span> <span class="f">helpful--signature</span> (sym)
+  <span class="doc">"Get the signature for function SYM, as a string.
+For example, \"(some-func FOO &amp;optional BAR)\"."</span>
+  (<span class="k">let</span> (docstring-sig
+        source-sig
+        (advertised-args
+         (<span class="k">when</span> (symbolp sym)
+           (gethash (symbol-function sym) advertised-signature-table))))
+    <span class="cd">;; </span><span class="c">Get the usage from the function definition.
+</span>    (<span class="k">let*</span> ((function-args
+            (<span class="k">cond</span>
+             ((symbolp sym)
+              (help-function-arglist sym))
+             ((<span class="k">or</span> (byte-code-function-p sym)
+                  (<span class="k">if</span> (fboundp 'interpreted-function-p)
+                      (interpreted-function-p sym)))
+              <span class="cd">;; </span><span class="c">argdesc can be a list of arguments or an integer
+</span>              <span class="cd">;; </span><span class="c">encoding the min/max number of arguments. See
+</span>              <span class="cd">;; </span><span class="c">Byte-Code Function Objects in the elisp manual.
+</span>              (<span class="k">let</span> ((argdesc (aref sym 0)))
+                (<span class="k">if</span> (consp argdesc)
+                    argdesc
+                  <span class="cd">;; </span><span class="c">TODO: properly handle argdesc values.
+</span>                  nil)))
+             (t
+              <span class="cd">;; </span><span class="c">Interpreted function (lambda ...)
+</span>              (cadr sym))))
+           (formatted-args
+            (<span class="k">cond</span>
+             (advertised-args
+              (-map #'helpful--format-argument advertised-args))
+             ((listp function-args)
+              (-map #'helpful--format-argument function-args))
+             (t
+              (list function-args)))))
+      (<span class="k">setq</span> source-sig
+            (<span class="k">cond</span>
+             <span class="cd">;; </span><span class="c">If it's a function object, just show the arguments.
+</span>             ((not (symbolp sym))
+              (format <span class="s">"(%s)"</span>
+                      (s-join <span class="s">" "</span> formatted-args)))
+             <span class="cd">;; </span><span class="c">If it has multiple arguments, join them with spaces.
+</span>             (formatted-args
+              (format <span class="s">"(%s %s)"</span>
+                      (helpful--format-symbol sym)
+                      (s-join <span class="s">" "</span> formatted-args)))
+             <span class="cd">;; </span><span class="c">Otherwise, this function takes no arguments when called.
+</span>             (t
+              (format <span class="s">"(%s)"</span> (helpful--format-symbol sym))))))
+
+    <span class="cd">;; </span><span class="c">If the docstring ends with (fn FOO BAR), extract that.
+</span>    (<span class="k">-when-let</span> (docstring (documentation sym))
+      (<span class="k">-when-let</span> (docstring-with-usage (help-split-fundoc docstring sym))
+        (<span class="k">setq</span> docstring-sig (car docstring-with-usage))))
+
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">Advertised signature always wins.
+</span>     (advertised-args
+      source-sig)
+     <span class="cd">;; </span><span class="c">If that's not set, use the usage specification in the
+</span>     <span class="cd">;; </span><span class="c">docstring, if present.
+</span>     (docstring-sig
+      (replace-regexp-in-string <span class="s">"\\</span><span class="bi s">\\=</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">['\\`‘’]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> <span class="s">"\\1"</span> docstring-sig t))
+     (t
+      <span class="cd">;; </span><span class="c">Otherwise, just use the signature from the source code.
+</span>      source-sig))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark-mixed-indicator – Emacs Documentation Online</title>
+<meta name="description" content="embark-mixed-indicator is a natively compiled function defined in
+embark.el.
+Mixed indicator showing keymap and targets.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark-mixed-indicator</code></h1><p><span class="m"><code>embark-mixed-indicator</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark-mixed-indicator)
+</code></pre>
+<h2>Documentation</h2>
+<p>Mixed indicator showing keymap and targets.
+<p>The indicator shows the <a href="../fun/embark-minimal-indicator.html"><code>embark-minimal-indicator</code></a> by default.
+After <a href="../var/embark-mixed-indicator-delay.html"><code>embark-mixed-indicator-delay</code></a> seconds, the
+<a href="../fun/embark-verbose-indicator.html"><code>embark-verbose-indicator</code></a> is shown.  This which-key-like approach
+ensures that Embark stays out of the way for quick actions.  The
+helpful keybinding reminder still pops up automatically without
+further user intervention.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+(<span class="k">defun</span> <span class="f">embark-mixed-indicator</span> ()
+  <span class="doc">"Mixed indicator showing keymap and targets.
+The indicator shows the `</span><span class="m doc">embark-minimal-indicator</span><span class="doc">' by default.
+After `</span><span class="m doc">embark-mixed-indicator-delay</span><span class="doc">' seconds, the
+`</span><span class="m doc">embark-verbose-indicator</span><span class="doc">' is shown.  This which-key-like approach
+ensures that Embark stays out of the way for quick actions.  The
+helpful keybinding reminder still pops up automatically without
+further user intervention."</span>
+  (<span class="k">let</span> ((vindicator (embark-verbose-indicator))
+        (mindicator (embark-minimal-indicator))
+        vindicator-active
+        vtimer)
+    (<span class="k">lambda</span> (<span class="ty">&amp;optional</span> keymap targets prefix)
+      <span class="cd">;; </span><span class="c">Always cancel the timer.
+</span>      <span class="cd">;; </span><span class="c">1. When updating, cancel timer, since the user has pressed
+</span>      <span class="cd">;;    </span><span class="c">a key before the timer elapsed.
+</span>      <span class="cd">;; </span><span class="c">2. For cleanup, the timer must also be canceled.
+</span>      (<span class="k">when</span> vtimer
+        (cancel-timer vtimer)
+        (<span class="k">setq</span> vtimer nil))
+      (<span class="k">if</span> (not keymap)
+          (<span class="k">progn</span>
+            (funcall vindicator)
+            (<span class="k">when</span> mindicator
+              (funcall mindicator)))
+        (<span class="k">when</span> mindicator
+          (funcall mindicator keymap targets prefix))
+        (<span class="k">if</span> vindicator-active
+            (funcall vindicator keymap targets prefix)
+          (<span class="k">setq</span> vtimer
+                (run-at-time
+                 embark-mixed-indicator-delay nil
+                 (<span class="k">lambda</span> ()
+                   (<span class="k">when</span> (<span class="k">and</span> (not embark-mixed-indicator-both) mindicator)
+                     (funcall mindicator)
+                     (<span class="k">setq</span> mindicator nil))
+                   (<span class="k">setq</span> vindicator-active t)
+                   (funcall vindicator keymap targets prefix)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

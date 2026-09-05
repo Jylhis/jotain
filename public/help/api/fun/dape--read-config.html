@@ -1,0 +1,110 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--read-config – Emacs Documentation Online</title>
+<meta name="description" content="dape--read-config is a natively compiled function defined in dape.el.
+Read configuration from minibuffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--read-config</code></h1><p><span class="m"><code>dape--read-config</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--read-config)
+</code></pre>
+<h2>Documentation</h2>
+<p>Read configuration from minibuffer.
+<p>Completes from suggested conjurations, a configuration is suggested if
+it's for current <a href="../var/major-mode.html"><code>major-mode</code></a> and it's available.
+See <span class="m"><code>modes</code></span> and <span class="m"><code>ensure</code></span> in <a href="../var/dape-configs.html"><code>dape-configs</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--read-config</span> ()
+  <span class="doc">"Read configuration from minibuffer.
+Completes from suggested conjurations, a configuration is suggested if
+it's for current `</span><span class="m doc">major-mode</span><span class="doc">' and it's available.
+See `</span><span class="m doc">modes</span><span class="doc">' and `</span><span class="m doc">ensure</span><span class="doc">' in `</span><span class="m doc">dape-configs</span><span class="doc">'."</span>
+  (run-hooks 'dape-read-config-hook)
+  (<span class="k">let*</span> ((suggested-configs
+          (<span class="k">cl-loop</span> for (name . config) in dape-configs
+                   when (<span class="k">and</span> (dape--config-mode-p config)
+                             (<span class="k">ignore-errors</span> (dape--config-ensure config)))
+                   collect (symbol-name name)))
+         (initial-contents
+          (<span class="k">or</span>
+           <span class="cd">;; </span><span class="c">Take `</span><span class="m c">dape-command</span><span class="c">' if exist
+</span>           (<span class="k">when</span> dape-command
+             (dape--config-to-string (car dape-command) (cdr dape-command)))
+           <span class="cd">;; </span><span class="c">Take first valid history item
+</span>           (<span class="k">cl-loop</span> for string in dape-history
+                    for (_ config) = (<span class="k">ignore-errors</span>
+                                       (dape--config-from-string string))
+                    when (<span class="k">and</span> config
+                              (dape--config-mode-p config)
+                              (<span class="k">ignore-errors</span> (dape--config-ensure config)))
+                    return string)
+           <span class="cd">;; </span><span class="c">Take first suggested config if only one exist
+</span>           (<span class="k">when</span> (<span class="k">and</span> (length= suggested-configs 1)
+                      (car suggested-configs))
+             suggested-configs)))
+         (default-value
+          (<span class="k">when</span> initial-contents
+            (<span class="k">pcase-let</span> ((`(,key ,config)
+                         (<span class="k">ignore-errors</span> (dape--config-from-string initial-contents))))
+              (list
+               (dape--config-to-string
+                key (<span class="k">ignore-errors</span> (dape--config-eval key config 'skip-functions)))
+               (format <span class="s">"%s "</span> key))))))
+    (<span class="k">setq</span> dape--minibuffer-last-buffer (current-buffer)
+          dape--minibuffer-cache nil)
+    (<span class="k">minibuffer-with-setup-hook</span>
+        (<span class="k">lambda</span> ()
+          (<span class="k">setq-local</span> dape--minibuffer-suggestions suggested-configs
+                      comint-completion-addsuffix nil
+                      resize-mini-windows t
+                      max-mini-window-height 0.5
+                      dape--minibuffer-hint-overlay (make-overlay (point) (point))
+                      default-directory (dape-command-cwd)
+                      <span class="cd">;; </span><span class="c">Store origin buffer `</span><span class="m c">dape-configs</span><span class="c">' value
+</span>                      dape-configs (buffer-local-value
+                                    'dape-configs dape--minibuffer-last-buffer))
+          (set-syntax-table emacs-lisp-mode-syntax-table)
+          (add-hook 'completion-at-point-functions
+                    #'comint-filename-completion nil t)
+          (add-hook 'completion-at-point-functions
+                    #'dape--config-completion-at-point nil t)
+          (add-hook 'after-change-functions
+                    #'dape--minibuffer-hint nil t)
+          (dape--minibuffer-hint))
+      (<span class="k">pcase-let*</span>
+          ((str
+            (<span class="k">let</span> ((history-add-new-input (eq dape-history-add 'input)))
+              (read-from-minibuffer
+               <span class="s">"Run adapter: "</span>
+               initial-contents
+               (<span class="k">let</span> ((map (make-sparse-keymap)))
+                 (set-keymap-parent map minibuffer-local-map)
+                 (define-key map (kbd <span class="s">"C-M-i"</span>) #'completion-at-point)
+                 (define-key map <span class="s">"\t"</span> #'completion-at-point)
+                 <span class="cd">;; </span><span class="c">This mapping is shadowed by `</span><span class="m c">next-history-element</span><span class="c">'
+</span>                 <span class="cd">;; </span><span class="c">future history (default-value)
+</span>                 (define-key map (kbd <span class="s">"C-c C-k"</span>)
+                             (<span class="k">lambda</span> ()
+                               (<span class="k">interactive</span>)
+                               (<span class="k">pcase-let*</span>
+                                   ((str (buffer-substring (minibuffer-prompt-end)
+                                                           (point-max)))
+                                    (`(,key) (dape--config-from-string str)))
+                                 (delete-region (minibuffer-prompt-end)
+                                                (point-max))
+                                 (insert (format <span class="s">"%s"</span> key) <span class="s">" "</span>))))
+                 map)
+               nil 'dape-history default-value)))
+           (`(,key ,config)
+            (dape--config-from-string (substring-no-properties str)))
+           (evaled-config
+            (<span class="k">let</span> ((default-directory (dape--guess-root config)))
+              (dape--config-eval key config))))
+        (<span class="k">unless</span> (eq dape-history-add 'input)
+          (<span class="k">push</span> (dape--config-to-string key evaled-config) dape-history))
+        evaled-config))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

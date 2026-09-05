@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: neocaml--forward-comment – Emacs Documentation Online</title>
+<meta name="description" content="neocaml--forward-comment is a natively compiled function defined in
+neocaml.el.
+Corrected forward-comment-function for OCaml block comments.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>neocaml--forward-comment</code></h1><p><span class="m"><code>neocaml--forward-comment</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">neocaml.el</span>.
+<h2>Signature</h2>
+<pre><code>(neocaml--forward-comment <span class="ty">&amp;optional</span> <a href="#:~:text=31+.-,COUNT"><span class="arg">COUNT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Corrected <a href="../var/forward-comment-function.html"><code>forward-comment-function</code></a> for OCaml block comments.
+<p>Emacs 31's <a href="../fun/treesit-forward-comment.html"><code>treesit-forward-comment</code></a> has an off-by-one bug: it
+does (1+ (treesit-node-end ...)) but <a href="../fun/treesit-node-end.html"><code>treesit-node-end</code></a> already
+returns an exclusive position, so point overshoots by one
+character.  This breaks <a href="../fun/uncomment-region.html"><code>uncomment-region</code></a> for multi-line
+regions.  This function is identical to <a href="../fun/treesit-forward-comment.html"><code>treesit-forward-comment</code></a>
+with the overshoot removed.
+<p>Only installed on Emacs 31+.  <span class="arg">COUNT</span> is the same as in
+<a href="../fun/forward-comment.html"><code>forward-comment</code></a>; uses <a href="../fun/funcall.html"><code>funcall</code></a> to avoid a package-lint
+warning about <a href="../fun/treesit-thing-at.html"><code>treesit-thing-at</code></a> requiring Emacs 30.1 while the
+package supports 29.1.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/6yvzbjq5ljnchx97n8s5w91crk1nh47b-emacs-packages-deps/share/emacs/site-lisp/elpa/neocaml-20260710.532/neocaml.el</span>
+(<span class="k">defun</span> <span class="f">neocaml--forward-comment</span> (<span class="ty">&amp;optional</span> count)
+  <span class="doc">"Corrected `</span><span class="m doc">forward-comment-function</span><span class="doc">' for OCaml block comments.
+Emacs 31's `</span><span class="m doc">treesit-forward-comment</span><span class="doc">' has an off-by-one bug: it
+does (1+ (treesit-node-end ...)) but `</span><span class="m doc">treesit-node-end</span><span class="doc">' already
+returns an exclusive position, so point overshoots by one
+character.  This breaks `</span><span class="m doc">uncomment-region</span><span class="doc">' for multi-line
+regions.  This function is identical to `</span><span class="m doc">treesit-forward-comment</span><span class="doc">'
+with the overshoot removed.
+
+Only installed on Emacs 31+.  COUNT is the same as in
+`</span><span class="m doc">forward-comment</span><span class="doc">'; uses `</span><span class="m doc">funcall</span><span class="doc">' to avoid a package-lint
+warning about `</span><span class="m doc">treesit-thing-at</span><span class="doc">' requiring Emacs 30.1 while the
+package supports 29.1."</span>
+  (<span class="k">let</span> ((res t) thing
+        (thing-at (intern <span class="s">"treesit-thing-at"</span>)))
+    (<span class="k">while</span> (&gt; count 0)
+      (skip-chars-forward <span class="s">" \t\n"</span>)
+      (<span class="k">setq</span> thing (funcall thing-at (point) 'comment))
+      (<span class="k">if</span> (<span class="k">and</span> thing (eq (point) (treesit-node-start thing)))
+          (<span class="k">progn</span>
+            (goto-char (treesit-node-end thing))
+            (<span class="k">setq</span> count (1- count)))
+        (<span class="k">setq</span> count 0 res nil)))
+    (<span class="k">while</span> (&lt; count 0)
+      (skip-chars-backward <span class="s">" \t\n"</span>)
+      (<span class="k">setq</span> thing (funcall thing-at (max (1- (point)) (point-min)) 'comment))
+      (<span class="k">if</span> (<span class="k">and</span> thing (eq (point) (treesit-node-end thing)))
+          (<span class="k">progn</span>
+            (goto-char (treesit-node-start thing))
+            (<span class="k">setq</span> count (1+ count)))
+        (<span class="k">setq</span> count 0 res nil)))
+    res))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

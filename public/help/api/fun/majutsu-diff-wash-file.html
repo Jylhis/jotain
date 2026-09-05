@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-diff-wash-file – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-diff-wash-file is a natively compiled function defined in
+majutsu-diff.el.
+Parse a single file section at point and wrap it in Magit sections.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-diff-wash-file</code></h1><p><span class="m"><code>majutsu-diff-wash-file</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-diff-wash-file)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse a single file section at point and wrap it in Magit sections.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-diff.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-diff-wash-file</span> ()
+  <span class="doc">"Parse a single file section at point and wrap it in Magit sections."</span>
+  (<span class="k">when</span> (looking-at <span class="s">"^diff --git a/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> b/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">$"</span>)
+    (<span class="k">let*</span> ((file-a (match-string-no-properties 1))
+           (file-b (match-string-no-properties 2))
+           (file (<span class="k">or</span> file-b file-a))
+           (headers nil)
+           (diff-header (buffer-substring-no-properties
+                         (line-beginning-position)
+                         (min (point-max) (1+ (line-end-position))))))
+      <span class="cd">;; </span><span class="c">Drop the diff header line; keep the rest of the text in place.
+</span>      (majutsu-diff--delete-line)
+      <span class="cd">;; </span><span class="c">Collect extended headers
+</span>      (<span class="k">while</span> (<span class="k">and</span> (not (eobp))
+                  (not (looking-at <span class="s">"^diff --git "</span>))
+                  (not (looking-at <span class="s">"^@@ "</span>)))
+        (<span class="k">push</span> (buffer-substring-no-properties (line-beginning-position)
+                                              (min (point-max)
+                                                   (1+ (line-end-position))))
+              headers)
+        (majutsu-diff--delete-line))
+      (<span class="k">magit-insert-section</span>
+          (jj-file file nil
+                   <span class="bi">:header</span> (concat diff-header (string-join (nreverse headers) <span class="s">""</span>)))
+        (magit-insert-heading
+          (propertize (majutsu-diff--file-heading file (nreverse headers))
+                      'font-lock-face 'magit-diff-file-heading))
+        <span class="cd">;; </span><span class="c">Hunk bodies remain in the buffer; just wrap them.
+</span>        (<span class="k">while</span> (<span class="k">and</span> (not (eobp)) (looking-at <span class="s">"^@@ "</span>))
+          (majutsu-diff-wash-hunk file))
+        (insert <span class="s">"\n"</span>))))
+  t)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

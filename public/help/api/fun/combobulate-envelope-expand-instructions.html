@@ -1,0 +1,435 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-envelope-expand-instructions – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-envelope-expand-instructions is a natively compiled
+function defined in combobulate-envelope.el.
+Expand an envelope of INSTRUCTIONS at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-envelope-expand-instructions</code></h1><p><span class="m"><code>combobulate-envelope-expand-instructions</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">combobulate-envelope.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-envelope-expand-instructions <a href="#:~:text=of-,INSTRUCTIONS"><span class="arg">INSTRUCTIONS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">REGISTERS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Expand an envelope of <span class="arg">INSTRUCTIONS</span> at point.
+<p>Combobulate envelopes work in much the same way as Tempo or
+Skeletons, but Combobulate's envelopes are more powerful.
+<p>Here are some of the differences:
+<p>1. Prompts are executed in the minibuffer, much like the
+<br>&nbsp;&nbsp;&nbsp;aforementioned tools, but they also update interactively as
+<br>&nbsp;&nbsp;&nbsp;you type. You can have transformers that alter some or all of
+<br>&nbsp;&nbsp;&nbsp;the prompts and fields you use.
+<p>2. Regions are now stored in a register, and thus <span class="m"><code>r</code></span>, <span class="m"><code>r&gt;</code></span> and
+<br>&nbsp;&nbsp;&nbsp;so on are in effect just using those.
+<p>3. The indentation algorithm now "understands" block-based,
+<br>whitespace-sensitive languages like Python better.
+<p>&nbsp;&nbsp;&nbsp;This follows on from point #2: special care is made in
+<br>&nbsp;&nbsp;&nbsp;whitespace-sensitive languages like Python. Combobulate will
+<br>&nbsp;&nbsp;&nbsp;attempt to ensure the indentation is correct for the block you
+<br>&nbsp;&nbsp;&nbsp;wish to insert the code into. Combobulate can only do this if
+<br>&nbsp;&nbsp;&nbsp;the underlying Python mode's indentation engine is capable of
+<br>&nbsp;&nbsp;&nbsp;determining the correct indentation for a given line. If it is
+<br>&nbsp;&nbsp;&nbsp;not, then Combobulate will not be able to determine the
+<br>&nbsp;&nbsp;&nbsp;correct indentation either.
+<p>4. Remembering a previous line's indentation is very difficult
+<br>&nbsp;&nbsp;&nbsp;with other templating tools. Combobulate simplifies this with
+<br>&nbsp;&nbsp;&nbsp;the <span class="m"><code>save-column</code></span> form. When Combobulate enters a
+<br>&nbsp;&nbsp;&nbsp;<span class="m"><code>save-column</code></span> form it saves the column offset (but not point!)
+<br>&nbsp;&nbsp;&nbsp;and restores the column on exit. That makes it possible to
+<br>&nbsp;&nbsp;&nbsp;have nested sequences of code and be assured that the column
+<br>&nbsp;&nbsp;&nbsp;is reset correctly when you exit the block. This is only of
+<br>&nbsp;&nbsp;&nbsp;importance in whitespace-sensitive languages where Combobulate
+<br>&nbsp;&nbsp;&nbsp;cannot safely indent the whole region.
+<p>5. You can now explicitly place point with <span class="m"><code>@</code></span>. Multiple
+<br>&nbsp;&nbsp;&nbsp;instances of <span class="m"><code>@</code></span> are remembered and presented to you at the
+<br>&nbsp;&nbsp;&nbsp;end of the expansion so that you can choose which one to place
+<br>&nbsp;&nbsp;&nbsp;your point at.
+<p>7. Repetition (also a feature in Skeleton, but not Tempo) is also
+<br>&nbsp;&nbsp;&nbsp;possible with <a href="../fun/repeat.html"><code>repeat</code></a> and <span class="m"><code>repeat-1</code></span>. Note that indentation
+<br>&nbsp;&nbsp;&nbsp;in whitespace-sensitive languages can be difficult to control
+<br>&nbsp;&nbsp;&nbsp;with these forms. Keep them simple if you can.
+<p>If there is an active REGION, then everything between <a href="../fun/point.html"><code>point</code></a> and
+<a href="../fun/mark.html"><code>mark</code></a> is extracted and deleted and made available to
+<span class="arg">INSTRUCTIONS</span> through the register system. It is accessed
+implicitly by calling <span class="m"><code>r</code></span> or <span class="m"><code>r&gt;</code></span> without a form; or explicitly
+with <span class="m"><code>(r REGISTER [DEFAULT])</code></span> where REGISTER is <span class="m"><code>region</code></span>.
+<p>The following instructions are supported by Combobulate's envelope
+expansion:
+<p>&nbsp;<a href="../fun/%3E.html"><code>&gt;</code></a>
+<p>&nbsp;&nbsp;&nbsp;Call <a href="../fun/indent-according-to-mode.html"><code>indent-according-to-mode</code></a> at point.
+<p>&nbsp;(r REGISTER [DEFAULT])
+<br>&nbsp;(r&gt; REGISTER [DEFAULT])
+<br>&nbsp;<span class="m"><code>r</code></span>
+<br>&nbsp;<span class="m"><code>r&gt;</code></span>
+<p>&nbsp;&nbsp;&nbsp;Insert REGISTER at point. Where REGISTER defaults to
+<br>&nbsp;&nbsp;&nbsp;<span class="m"><code>region</code></span> (when <span class="m"><code>envelope-indent-region-function</code></span>
+<br>&nbsp;&nbsp;&nbsp;is non-nil) or <span class="m"><code>region-indented</code></span> when it is nil.
+<p>&nbsp;&nbsp;&nbsp;Both register names hold the marked region (which is likely
+<br>&nbsp;&nbsp;&nbsp;the triggering node, if the user did not mark a region
+<br>&nbsp;&nbsp;&nbsp;themselves) when the envelope is activated. The value is
+<br>&nbsp;&nbsp;&nbsp;stored in <a href="../var/combobulate-envelope-registers.html"><code>combobulate-envelope-registers</code></a>.
+<p>&nbsp;&nbsp;&nbsp;The DEFAULT is a fallback value in case the REGISTER does not
+<br>&nbsp;&nbsp;&nbsp;exist.
+<p>&nbsp;&nbsp;&nbsp;Instructions ending with <a href="../fun/%3E.html"><code>&gt;</code></a> also indent the inserted text
+<br>&nbsp;&nbsp;&nbsp;according to the major mode's indentation preferences. It uses
+<br>&nbsp;&nbsp;&nbsp;<a href="../fun/indent-region.html"><code>indent-region</code></a> for languages that are not
+<br>&nbsp;&nbsp;&nbsp;whitespace-sensitive.
+<p>&nbsp;&nbsp;&nbsp;However, if <span class="m"><code>envelope-indent-region-function</code></span> is
+<br>&nbsp;&nbsp;&nbsp;nil (as it is in the likes of <a href="../fun/python-mode.html"><code>python-mode</code></a>) then a
+<br>&nbsp;&nbsp;&nbsp;specialized indentation system is used instead. The relative
+<br>&nbsp;&nbsp;&nbsp;indentation at the point of envelope invocation is preserved
+<br>&nbsp;&nbsp;&nbsp;and used to indent the inserted register according to its new
+<br>&nbsp;&nbsp;&nbsp;column offset when it is inserted and indented by <span class="m"><code>r&gt;</code></span>.
+<p>&nbsp;(b BLOCK)
+<p>&nbsp;&nbsp;&nbsp;Execute the BLOCK of instructions and, when exiting, action
+<br>&nbsp;&nbsp;&nbsp;all the user actions that require user input:
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <a href="../fun/repeat.html"><code>repeat</code></a> instructions are executed first;
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Then, <span class="m"><code>choice</code></span> prompts are executed;
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Then, <span class="m"><code>prompt</code></span>s are executed.
+<p>&nbsp;&nbsp;&nbsp;All envelopes are wrapped an implicit <span class="m"><code>b</code></span> block. You really
+<br>&nbsp;&nbsp;&nbsp;only need this construct if you're doing something very
+<br>&nbsp;&nbsp;&nbsp;specific, such as multiple distinct choice groupings.
+<p>&nbsp;(choice BLOCK)
+<br>&nbsp;(choice* <span class="bi">:name</span> NAME <span class="bi">:missing</span> MISSING-BLOCK <span class="bi">:rest</span> BLOCK)
+<p>&nbsp;&nbsp;&nbsp;Collect all choice instructions in the current <span class="m"><code>b</code></span> block and
+<br>&nbsp;&nbsp;&nbsp;present them to the user to choose one. The BLOCK is a list of
+<br>&nbsp;&nbsp;&nbsp;instructions that are executed when the user picks that
+<br>&nbsp;&nbsp;&nbsp;choice.
+<p>&nbsp;&nbsp;&nbsp;The <span class="m"><code>choice*</code></span> form is a variant that allows you to specify a
+<br>&nbsp;&nbsp;&nbsp;name for the choice, a block to execute if the choice is
+<br>&nbsp;&nbsp;&nbsp;*not* picked, and a block to execute if the choice is picked.
+<p>&nbsp;&nbsp;&nbsp;Warning: If you are using multiple <span class="m"><code>choice*</code></span> instructions with
+<br>&nbsp;&nbsp;&nbsp;<span class="bi">:missing</span> properties set in a row, you may run into expansion
+<br>&nbsp;&nbsp;&nbsp;problems.
+<p>&nbsp;(prompt TAG PROMPT [TRANSFORMER-FN])
+<br>&nbsp;(p TAG PROMPT [TRANSFORMER-FN])
+<p>&nbsp;&nbsp;&nbsp;Place a prompt named TAG at point and interactively query the
+<br>&nbsp;&nbsp;&nbsp;user with PROMPT. Any input is optionally run through
+<br>&nbsp;&nbsp;&nbsp;TRANSFORMER-FN which takes one function argument: the input
+<br>&nbsp;&nbsp;&nbsp;string.
+<p>&nbsp;&nbsp;&nbsp;Prompts are commonly matched with fields, which replicate the
+<br>&nbsp;&nbsp;&nbsp;input of a prompt.
+<p>&nbsp;&nbsp;&nbsp;Prompt values are stored in
+<br>&nbsp;&nbsp;&nbsp;<a href="../var/combobulate-envelope-registers.html"><code>combobulate-envelope-registers</code></a>. If there is already an entry
+<br>&nbsp;&nbsp;&nbsp;for TAG in that variable, then no interactive prompt is
+<br>&nbsp;&nbsp;&nbsp;presented, and the stored value is used instead.
+<p>&nbsp;(field TAG [TRANSFORMER-FN])
+<br>&nbsp;(f TAG [TRANSFORMER-FN])
+<p>&nbsp;&nbsp;&nbsp;Like a prompt, but only inserts the text belonging to its
+<br>&nbsp;&nbsp;&nbsp;prompt named TAG.
+<p>&nbsp;<span class="m"><code>@</code></span>
+<br>&nbsp;&nbsp;&nbsp;Insert a point marker at point. Point markers move with the
+<br>&nbsp;&nbsp;&nbsp;text being inserted, which is probably what you want. After
+<br>&nbsp;&nbsp;&nbsp;expansion, your point is placed at this location. If there is
+<br>&nbsp;&nbsp;&nbsp;more than one, then you are asked to pick the one to jump to.
+<p>&nbsp;<span class="m"><code>@@</code></span>
+<p>&nbsp;&nbsp;&nbsp;Track the absolute position of point. This is useful if you
+<br>&nbsp;&nbsp;&nbsp;want to place point at a specific location after expansion,
+<br>&nbsp;&nbsp;&nbsp;and because <span class="m"><code>@</code></span> does not put your point where you want it to.
+<p>&nbsp;<span class="m"><code>n</code></span>
+<br>&nbsp;<span class="m"><code>n&gt;</code></span>
+<p>&nbsp;&nbsp;&nbsp;Call <a href="../fun/newline.html"><code>newline</code></a> or <a href="../fun/newline.html"><code>newline</code></a> followed by
+<br>&nbsp;&nbsp;&nbsp;<a href="../fun/indent-according-to-mode.html"><code>indent-according-to-mode</code></a>.
+<p>&nbsp;&nbsp;&nbsp;Indentation is done according to your major mode. Pay
+<br>&nbsp;&nbsp;&nbsp;attention if you use an envelope in a whitespace-sensitive
+<br>&nbsp;&nbsp;&nbsp;language like Python or YAML: you may need to use
+<br>&nbsp;&nbsp;&nbsp;<span class="m"><code>save-column</code></span> to remember the indentation of the previous
+<br>&nbsp;&nbsp;&nbsp;line, or <a href="../fun/%3C.html"><code>&lt;</code></a> to remove one level of semantic indentation.
+<p>&nbsp;<a href="../fun/%3C.html"><code>&lt;</code></a>
+<p>&nbsp;&nbsp;&nbsp;Remove one level of indentation from the current line. This
+<br>&nbsp;&nbsp;&nbsp;operation only works in select, whitespace-sensitive modes
+<br>&nbsp;&nbsp;&nbsp;like Python or YAML.
+<p>&nbsp;(save-column BLOCK)
+<p>&nbsp;&nbsp;&nbsp;Saves point's *column* -- but not point itself! -- when
+<br>&nbsp;&nbsp;&nbsp;entering BLOCK. Use this to remember indentation offset from
+<br>&nbsp;&nbsp;&nbsp;the beginning of the line.
+<p>&nbsp;&nbsp;&nbsp;This is mostly of use in whitespace-sensitive languages like
+<br>&nbsp;&nbsp;&nbsp;Python.
+<p>&nbsp;&nbsp;&nbsp;You are strongly encouraged to place a singular <span class="m"><code>n</code></span> at the end
+<br>&nbsp;&nbsp;&nbsp;of BLOCK: this will ensure your point is placed on a new line
+<br>&nbsp;&nbsp;&nbsp;with the correct indentation.
+<p>&nbsp;(repeat BLOCK)
+<br>&nbsp;(repeat-1 BLOCK)
+<p>&nbsp;&nbsp;&nbsp;Temporarily inserts BLOCK and then asks if you want to keep
+<br>&nbsp;&nbsp;&nbsp;it.  If you answer yes, the BLOCK is kept; if you answer no,
+<br>&nbsp;&nbsp;&nbsp;it is removed and Combobulate exits the repeat instruction
+<br>&nbsp;&nbsp;&nbsp;form and carries on.
+<p>&nbsp;&nbsp;&nbsp;The instruction <span class="m"><code>repeat-1</code></span> is identical to <a href="../fun/repeat.html"><code>repeat</code></a> except it
+<br>&nbsp;&nbsp;&nbsp;only allows at most 1 entry.
+<p>&nbsp;"STRING"
+<p>&nbsp;&nbsp;&nbsp;Insert STRING at point.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-envelope.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-envelope-expand-instructions</span> (instructions <span class="ty">&amp;optional</span> registers)
+  <span class="doc">"Expand an envelope of INSTRUCTIONS at point.
+
+Combobulate envelopes work in much the same way as Tempo or
+Skeletons, but Combobulate's envelopes are more powerful.
+
+Here are some of the differences:
+
+1. Prompts are executed in the minibuffer, much like the
+   aforementioned tools, but they also update interactively as
+   you type. You can have transformers that alter some or all of
+   the prompts and fields you use.
+
+2. Regions are now stored in a register, and thus `</span><span class="m doc">r</span><span class="doc">', `</span><span class="m doc">r&gt;</span><span class="doc">' and
+   so on are in effect just using those.
+
+3. The indentation algorithm now \"understands\" block-based,
+whitespace-sensitive languages like Python better.
+
+   This follows on from point #2: special care is made in
+   whitespace-sensitive languages like Python. Combobulate will
+   attempt to ensure the indentation is correct for the block you
+   wish to insert the code into. Combobulate can only do this if
+   the underlying Python mode's indentation engine is capable of
+   determining the correct indentation for a given line. If it is
+   not, then Combobulate will not be able to determine the
+   correct indentation either.
+
+4. Remembering a previous line's indentation is very difficult
+   with other templating tools. Combobulate simplifies this with
+   the `</span><span class="m doc">save-column</span><span class="doc">' form. When Combobulate enters a
+   `</span><span class="m doc">save-column</span><span class="doc">' form it saves the column offset (but not point!)
+   and restores the column on exit. That makes it possible to
+   have nested sequences of code and be assured that the column
+   is reset correctly when you exit the block. This is only of
+   importance in whitespace-sensitive languages where Combobulate
+   cannot safely indent the whole region.
+
+5. You can now explicitly place point with `</span><span class="m doc">@</span><span class="doc">'. Multiple
+   instances of `</span><span class="m doc">@</span><span class="doc">' are remembered and presented to you at the
+   end of the expansion so that you can choose which one to place
+   your point at.
+
+7. Repetition (also a feature in Skeleton, but not Tempo) is also
+   possible with `</span><span class="m doc">repeat</span><span class="doc">' and `</span><span class="m doc">repeat-1</span><span class="doc">'. Note that indentation
+   in whitespace-sensitive languages can be difficult to control
+   with these forms. Keep them simple if you can.
+
+If there is an active REGION, then everything between `</span><span class="m doc">point</span><span class="doc">' and
+`</span><span class="m doc">mark</span><span class="doc">' is extracted and deleted and made available to
+INSTRUCTIONS through the register system. It is accessed
+implicitly by calling `</span><span class="m doc">r</span><span class="doc">' or `</span><span class="m doc">r&gt;</span><span class="doc">' without a form; or explicitly
+with `(r REGISTER [DEFAULT])' where REGISTER is `</span><span class="m doc">region</span><span class="doc">'.
+
+The following instructions are supported by Combobulate's envelope
+expansion:
+
+ `</span><span class="m doc">&gt;</span><span class="doc">'
+
+   Call `</span><span class="m doc">indent-according-to-mode</span><span class="doc">' at point.
+
+ `(r REGISTER [DEFAULT])'
+ `(r&gt; REGISTER [DEFAULT])'
+ `</span><span class="m doc">r</span><span class="doc">'
+ `</span><span class="m doc">r&gt;</span><span class="doc">'
+
+   Insert REGISTER at point. Where REGISTER defaults to
+   `</span><span class="m doc">region</span><span class="doc">' (when `</span><span class="m doc">envelope-indent-region-function</span><span class="doc">'
+   is non-nil) or `</span><span class="m doc">region-indented</span><span class="doc">' when it is nil.
+
+   Both register names hold the marked region (which is likely
+   the triggering node, if the user did not mark a region
+   themselves) when the envelope is activated. The value is
+   stored in `</span><span class="m doc">combobulate-envelope-registers</span><span class="doc">'.
+
+   The DEFAULT is a fallback value in case the REGISTER does not
+   exist.
+
+   Instructions ending with `</span><span class="m doc">&gt;</span><span class="doc">' also indent the inserted text
+   according to the major mode's indentation preferences. It uses
+   `</span><span class="m doc">indent-region</span><span class="doc">' for languages that are not
+   whitespace-sensitive.
+
+   However, if `</span><span class="m doc">envelope-indent-region-function</span><span class="doc">' is
+   nil (as it is in the likes of `</span><span class="m doc">python-mode</span><span class="doc">') then a
+   specialized indentation system is used instead. The relative
+   indentation at the point of envelope invocation is preserved
+   and used to indent the inserted register according to its new
+   column offset when it is inserted and indented by `</span><span class="m doc">r&gt;</span><span class="doc">'.
+
+ `(b BLOCK)'
+
+   Execute the BLOCK of instructions and, when exiting, action
+   all the user actions that require user input:
+
+     - `</span><span class="m doc">repeat</span><span class="doc">' instructions are executed first;
+     - Then, `</span><span class="m doc">choice</span><span class="doc">' prompts are executed;
+     - Then, `</span><span class="m doc">prompt</span><span class="doc">'s are executed.
+
+   All envelopes are wrapped an implicit `</span><span class="m doc">b</span><span class="doc">' block. You really
+   only need this construct if you're doing something very
+   specific, such as multiple distinct choice groupings.
+
+ `(choice BLOCK)'
+ `(choice* :name NAME :missing MISSING-BLOCK :rest BLOCK)'
+
+   Collect all choice instructions in the current `</span><span class="m doc">b</span><span class="doc">' block and
+   present them to the user to choose one. The BLOCK is a list of
+   instructions that are executed when the user picks that
+   choice.
+
+   The `</span><span class="m doc">choice*</span><span class="doc">' form is a variant that allows you to specify a
+   name for the choice, a block to execute if the choice is
+   *not* picked, and a block to execute if the choice is picked.
+
+   Warning: If you are using multiple `</span><span class="m doc">choice*</span><span class="doc">' instructions with
+   `</span><span class="m doc">:missing</span><span class="doc">' properties set in a row, you may run into expansion
+   problems.
+
+ `(prompt TAG PROMPT [TRANSFORMER-FN])'
+ `(p TAG PROMPT [TRANSFORMER-FN])'
+
+   Place a prompt named TAG at point and interactively query the
+   user with PROMPT. Any input is optionally run through
+   TRANSFORMER-FN which takes one function argument: the input
+   string.
+
+   Prompts are commonly matched with fields, which replicate the
+   input of a prompt.
+
+   Prompt values are stored in
+   `</span><span class="m doc">combobulate-envelope-registers</span><span class="doc">'. If there is already an entry
+   for TAG in that variable, then no interactive prompt is
+   presented, and the stored value is used instead.
+
+ `(field TAG [TRANSFORMER-FN])'
+ `(f TAG [TRANSFORMER-FN])'
+
+   Like a prompt, but only inserts the text belonging to its
+   prompt named TAG.
+
+ `</span><span class="m doc">@</span><span class="doc">'
+   Insert a point marker at point. Point markers move with the
+   text being inserted, which is probably what you want. After
+   expansion, your point is placed at this location. If there is
+   more than one, then you are asked to pick the one to jump to.
+
+ `</span><span class="m doc">@@</span><span class="doc">'
+
+   Track the absolute position of point. This is useful if you
+   want to place point at a specific location after expansion,
+   and because `</span><span class="m doc">@</span><span class="doc">' does not put your point where you want it to.
+
+ `</span><span class="m doc">n</span><span class="doc">'
+ `</span><span class="m doc">n&gt;</span><span class="doc">'
+
+   Call `</span><span class="m doc">newline</span><span class="doc">' or `</span><span class="m doc">newline</span><span class="doc">' followed by
+   `</span><span class="m doc">indent-according-to-mode</span><span class="doc">'.
+
+   Indentation is done according to your major mode. Pay
+   attention if you use an envelope in a whitespace-sensitive
+   language like Python or YAML: you may need to use
+   `</span><span class="m doc">save-column</span><span class="doc">' to remember the indentation of the previous
+   line, or `</span><span class="m doc">&lt;</span><span class="doc">' to remove one level of semantic indentation.
+
+ `</span><span class="m doc">&lt;</span><span class="doc">'
+
+   Remove one level of indentation from the current line. This
+   operation only works in select, whitespace-sensitive modes
+   like Python or YAML.
+
+ `(save-column BLOCK)'
+
+   Saves point's *column* -- but not point itself! -- when
+   entering BLOCK. Use this to remember indentation offset from
+   the beginning of the line.
+
+   This is mostly of use in whitespace-sensitive languages like
+   Python.
+
+   You are strongly encouraged to place a singular `</span><span class="m doc">n</span><span class="doc">' at the end
+   of BLOCK: this will ensure your point is placed on a new line
+   with the correct indentation.
+
+ `(repeat BLOCK)'
+ `(repeat-1 BLOCK)'
+
+   Temporarily inserts BLOCK and then asks if you want to keep
+   it.  If you answer yes, the BLOCK is kept; if you answer no,
+   it is removed and Combobulate exits the repeat instruction
+   form and carries on.
+
+   The instruction `</span><span class="m doc">repeat-1</span><span class="doc">' is identical to `</span><span class="m doc">repeat</span><span class="doc">' except it
+   only allows at most 1 entry.
+
+ \"STRING\"
+
+   Insert STRING at point."</span>
+  (<span class="k">when</span> (<span class="k">and</span> (use-region-p) (&gt; (point) (mark))) (exchange-point-and-mark))
+  (<span class="k">let</span> ((start (point))
+        (end (point-marker))
+        (change-group (prepare-change-group))
+        (state 'start)
+        (combobulate-envelope--registers (append registers combobulate-envelope-registers))
+        (combobulate-envelope-refactor-id (combobulate-refactor-setup))
+        (selected-point (point)))
+    (activate-change-group change-group)
+    (<span class="k">if</span> (use-region-p)
+        (<span class="k">progn</span>
+          (indent-region (point) (mark) nil)
+          (<span class="k">let</span> ((col (current-indentation))
+                (text (substring-no-properties (delete-and-extract-region (point) (mark)))))
+            (<span class="k">push</span> (cons 'region-indented (combobulate-indent-string-first-line text col))
+                  combobulate-envelope--registers)
+            (<span class="k">push</span> (cons 'region text) combobulate-envelope--registers)
+            <span class="cd">;; </span><span class="c">deactivate the mark as the region would otherwise interfere
+</span>            <span class="cd">;; </span><span class="c">with the expansion.
+</span>            (<span class="k">setq</span> mark-active nil))))
+    (<span class="w">cl-assert</span> (eq state 'start))
+    (<span class="k">combobulate-refactor</span> (<span class="bi">:id</span> combobulate-envelope-refactor-id)
+      (<span class="k">condition-case</span> nil
+          (<span class="k">progn</span>
+            (<span class="k">let</span> ((ctx (combobulate-envelope-expand-instructions-1
+                        <span class="cd">;; </span><span class="c">Build the base template for the envelope we are to
+</span>                        <span class="cd">;; </span><span class="c">expand. The base template is just `</span><span class="m c">b*</span><span class="c">', which is a
+</span>                        <span class="cd">;; </span><span class="c">"super-block" that expands all user actions such as
+</span>                        <span class="cd">;; </span><span class="c">choice, repeat, prompt and -- for `</span><span class="m c">b*</span><span class="c">' specifically --
+</span>                        <span class="cd">;; </span><span class="c">also `</span><span class="m c">point</span><span class="c">'.
+</span>                        `((b* (repeat choice prompt point selected-point) ,@instructions)))))
+              <span class="cd">;; </span><span class="c">The `</span><span class="m c">point</span><span class="c">' category is special in that it is
+</span>              <span class="cd">;; </span><span class="c">executed only at the `</span><span class="m c">b*</span><span class="c">' superblock stage. If there
+</span>              <span class="cd">;; </span><span class="c">is more than one `</span><span class="m c">point</span><span class="c">', the user is asked to
+</span>              <span class="cd">;; </span><span class="c">choose: that choice is then put back into the context
+</span>              <span class="cd">;; </span><span class="c">as `</span><span class="m c">selected-point</span><span class="c">'. This code will then move point
+</span>              <span class="cd">;; </span><span class="c">to that location.
+</span>              <span class="cd">;;</span><span class="c">
+</span>              <span class="cd">;; </span><span class="c">It's a little bit hacky, but we assume that as we
+</span>              <span class="cd">;; </span><span class="c">come out of this expansion of post-run instructions,
+</span>              <span class="cd">;; </span><span class="c">that where ever point is, is what we want to end the
+</span>              <span class="cd">;; </span><span class="c">envelope at.
+</span>              (combobulate-envelope-expand-post-run-instructions
+               ctx
+               '(selected-point))
+              (<span class="k">setq</span> selected-point (point))
+              <span class="cd">;; </span><span class="c">Track the contextual end of the envelope.
+</span>              (set-marker end (combobulate-envelope-context-end ctx)))
+            (commit)
+            (<span class="k">setq</span> state 'success))
+        (quit (rollback) (<span class="k">setq</span> state 'error))))
+    <span class="cd">;; </span><span class="c">Amalgamate all the changes into one single change. If a user
+</span>    <span class="cd">;; </span><span class="c">accepts an envelope, but changes their mind, they won't have to
+</span>    <span class="cd">;; </span><span class="c">undo multiple times to return to the state they were in before
+</span>    <span class="cd">;; </span><span class="c">the envelope was expanded.
+</span>    (undo-amalgamate-change-group change-group)
+    <span class="cd">;; </span><span class="c">Only when both `</span><span class="m c">combobulate-envelope--undo-on-quit</span><span class="c">' and `</span><span class="m c">state</span><span class="c">'
+</span>    <span class="cd">;; </span><span class="c">is `</span><span class="m c">error</span><span class="c">' is set do we cancel the change group. The
+</span>    <span class="cd">;; </span><span class="c">`</span><span class="m c">combobulate-envelope--undo-on-quit</span><span class="c">' variable is there to
+</span>    <span class="cd">;; </span><span class="c">prevent cancellations during proffer choices where the envelope
+</span>    <span class="cd">;; </span><span class="c">is previewed.
+</span>    (<span class="k">if</span> (<span class="k">and</span> (eq state 'error) combobulate-envelope--undo-on-quit)
+        (cancel-change-group change-group)
+      (accept-change-group change-group))
+    <span class="cd">;; </span><span class="c">Throw a courtesy region indent call if we support such a
+</span>    <span class="cd">;; </span><span class="c">thing. (We do not in the likes of Python, where indenting a
+</span>    <span class="cd">;; </span><span class="c">region is dangerous.
+</span>    (<span class="k">when</span> (<span class="k">combobulate-read</span> envelope-indent-region-function)
+      (apply (<span class="k">combobulate-read</span> envelope-indent-region-function)
+             (combobulate-extend-region-to-whole-lines start end)))
+    (cons (cons start end) selected-point)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

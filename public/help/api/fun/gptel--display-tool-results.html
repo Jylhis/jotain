@@ -1,0 +1,117 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--display-tool-results – Emacs Documentation Online</title>
+<meta name="description" content="gptel--display-tool-results is a natively compiled function defined in
+gptel.el.
+Insert TOOL-RESULTS into buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--display-tool-results</code></h1><p><span class="m"><code>gptel--display-tool-results</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--display-tool-results <a href="#:~:text=Insert-,TOOL-RESULTS"><span class="arg">TOOL-RESULTS</span></a> <a href="#:~:text=results.-,INFO"><span class="arg">INFO</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert <span class="arg">TOOL-RESULTS</span> into buffer.
+<p><span class="arg">TOOL-RESULTS</span> is
+<p>&nbsp;((tool args result) ...)
+<p>for tool call results.  <span class="arg">INFO</span> contains the state of the request.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--display-tool-results</span> (tool-results info)
+  <span class="doc">"Insert TOOL-RESULTS into buffer.
+
+TOOL-RESULTS is
+
+ ((tool args result) ...)
+
+for tool call results.  INFO contains the state of the request."</span>
+  (<span class="k">let*</span> ((start-marker (plist-get info <span class="bi">:position</span>))
+         (tool-marker (plist-get info <span class="bi">:tool-marker</span>))
+         (tracking-marker (plist-get info <span class="bi">:tracking-marker</span>)))
+    <span class="cd">;; </span><span class="c">Insert tool results
+</span>    (<span class="k">with-current-buffer</span> (marker-buffer start-marker)
+      (<span class="k">when</span> gptel-include-tool-results
+        (<span class="k">cl-loop</span>
+         for (tool args result) in tool-results
+         with include-names =
+         (mapcar #'gptel-tool-name
+                 (cl-remove-if-not #'gptel-tool-include (plist-get info <span class="bi">:tools</span>)))
+         if (<span class="k">or</span> (memq gptel-include-tool-results '(t call))
+                (member (gptel-tool-name tool) include-names))
+         do (funcall
+             (plist-get info <span class="bi">:callback</span>)
+             (<span class="k">let*</span> ((name (gptel-tool-name tool))
+                    (separator        <span class="cd">;</span><span class="c">Separate from response prefix if required
+</span>                     (<span class="k">cond</span> ((not tracking-marker)
+                            (<span class="k">and</span> gptel-mode
+                                 (not (string-suffix-p
+                                       <span class="s">"\n"</span> (gptel-response-prefix-string)))
+                                 <span class="s">"\n"</span>)) <span class="cd">;</span><span class="c">start of response
+</span>                           ((not tool-marker) gptel-response-separator)
+                           ((<span class="k">and</span> (not (= tracking-marker tool-marker))
+                                 (not (eq (char-before tracking-marker) ?\n)))
+                            gptel-response-separator)))
+                    (tool-use
+                     <span class="cd">;; </span><span class="c">TODO(tool) also check args since there may be more than
+</span>                     <span class="cd">;; </span><span class="c">one call/result for the same tool
+</span>                     (cl-find-if
+                      (<span class="k">lambda</span> (tu) (equal (plist-get tu <span class="bi">:name</span>) name))
+                      (plist-get info <span class="bi">:tool-use</span>)))
+                    (id (plist-get tool-use <span class="bi">:id</span>))
+                    (display-call (format <span class="s">"(%s %s)"</span> name
+                                          (string-trim (prin1-to-string args) <span class="s">"("</span> <span class="s">")"</span>)))
+                    (call (prin1-to-string `(<span class="bi">:name</span> ,name <span class="bi">:args</span> ,args)))
+                    (truncated-call
+                     (string-replace <span class="s">"\n"</span> <span class="s">" "</span>
+                                     (truncate-string-to-width
+                                      display-call
+                                      (floor (* (window-width) 0.6)) 0 nil <span class="s">" ...)"</span>)))
+                    (result-final       <span class="cd">;</span><span class="c">Check if the results should be excluded
+</span>                     (<span class="k">if</span> (<span class="k">or</span> (eq gptel-include-tool-results 'call)
+                             (<span class="k">and</span> (eq gptel-include-tool-results 'auto)
+                                  (eq (gptel-tool-include tool) 'call)))
+                         <span class="s">"(Cached tool result — available during original generation but not replayed)"</span>
+                       result)))
+               (<span class="k">if</span> (derived-mode-p 'org-mode)
+                   (concat
+                    separator
+                    <span class="s">"#+begin_tool "</span>
+                    truncated-call
+                    (propertize
+                     (org-escape-code-in-string (concat <span class="s">"\n"</span> call <span class="s">"\n\n"</span> result-final))
+                     'gptel `(tool . ,id))
+                    <span class="s">"\n#+end_tool\n"</span>)
+                 <span class="cd">;; </span><span class="c">TODO(tool) else branch is handling all front-ends as markdown.
+</span>                 <span class="cd">;; </span><span class="c">At least escape markdown.
+</span>                 (concat
+                  separator
+                  <span class="cd">;; </span><span class="c">TODO(tool) remove properties and strip instead of ignoring
+</span>                  (propertize (format <span class="s">"``` tool %s"</span> truncated-call)
+                              'gptel 'ignore 'keymap gptel--markdown-block-map)
+                  (propertize
+                   <span class="cd">;; </span><span class="c">TODO(tool) escape markdown in result
+</span>                   (concat <span class="s">"\n"</span> call <span class="s">"\n\n"</span> result-final)
+                   'gptel `(tool . ,id))
+                  <span class="cd">;; </span><span class="c">TODO(tool) remove properties and strip instead of ignoring
+</span>                  (propertize <span class="s">"\n```\n"</span> 'gptel 'ignore
+                              'keymap gptel--markdown-block-map))))
+             info
+             'raw)
+         <span class="cd">;; </span><span class="c">tool-result insertion has updated the tracking marker
+</span>         (<span class="k">unless</span> tracking-marker
+           (<span class="k">setq</span> tracking-marker (plist-get info <span class="bi">:tracking-marker</span>)))
+         (<span class="k">if</span> tool-marker
+             (move-marker tool-marker tracking-marker)
+           (<span class="k">setq</span> tool-marker (copy-marker tracking-marker nil))
+           (plist-put info <span class="bi">:tool-marker</span> tool-marker))
+         (<span class="k">ignore-errors</span>                 <span class="cd">;</span><span class="c">fold drawer
+</span>           (<span class="k">save-excursion</span>
+             (goto-char tracking-marker)
+             (forward-line -1)
+             (<span class="k">if</span> (derived-mode-p 'org-mode)
+                 (<span class="k">when</span> (looking-at-p <span class="s">"^#\\+end_tool"</span>) (org-cycle))
+               (<span class="k">when</span> (looking-at-p <span class="s">"^```"</span>) (gptel-markdown-cycle-block))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

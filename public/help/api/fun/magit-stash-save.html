@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-stash-save – Emacs Documentation Online</title>
+<meta name="description" content="magit-stash-save is a natively compiled function defined in
+magit-stash.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-stash-save</code></h1><p><span class="m"><code>magit-stash-save</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-stash.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-stash-save <span class="arg">MESSAGE</span> <span class="arg">INDEX</span> <span class="arg">WORKTREE</span> <span class="arg">UNTRACKED</span> <span class="ty">&amp;optional</span> <span class="arg">REFRESH</span> <span class="arg">KEEP</span> <span class="arg">NOERROR</span> <span class="arg">REF</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-stash.el</span>
+<span class="cd">;;; </span><span class="c">Plumbing
+</span>
+(<span class="k">defun</span> <span class="f">magit-stash-save</span> (message index worktree untracked
+                                 <span class="ty">&amp;optional</span> refresh keep noerror ref)
+  (<span class="k">if</span> (<span class="k">or</span> (<span class="k">and</span> index     (magit-staged-files t))
+          (<span class="k">and</span> worktree  (magit-unstaged-files t))
+          (<span class="k">and</span> untracked (magit-untracked-files (eq untracked 'all))))
+      (<span class="k">magit-with-toplevel</span>
+        (magit-stash-store message (<span class="k">or</span> ref <span class="s">"refs/stash"</span>)
+                           (magit-stash-create message index worktree untracked))
+        (<span class="k">if</span> (eq keep 'worktree)
+            (<span class="k">with-temp-buffer</span>
+              (magit-git-insert <span class="s">"diff"</span> <span class="s">"--cached"</span> <span class="s">"--no-ext-diff"</span>)
+              (magit-run-git-with-input
+               <span class="s">"apply"</span> <span class="s">"--reverse"</span> <span class="s">"--cached"</span> <span class="s">"--ignore-space-change"</span> <span class="s">"-"</span>)
+              (magit-run-git-with-input
+               <span class="s">"apply"</span> <span class="s">"--reverse"</span> <span class="s">"--ignore-space-change"</span> <span class="s">"-"</span>))
+          (<span class="k">unless</span> (eq keep t)
+            (<span class="k">if</span> (eq keep 'index)
+                (magit-call-git <span class="s">"checkout"</span> <span class="s">"--"</span> <span class="s">"."</span>)
+              (magit-call-git <span class="s">"reset"</span> <span class="s">"--hard"</span> <span class="s">"HEAD"</span> <span class="s">"--"</span>))
+            (<span class="k">when</span> untracked
+              (magit-call-git <span class="s">"clean"</span> <span class="s">"--force"</span> <span class="s">"-d"</span>
+                              (<span class="k">and</span> (eq untracked 'all) <span class="s">"-x"</span>)))))
+        (<span class="k">when</span> refresh
+          (magit-refresh)))
+    (<span class="k">unless</span> noerror
+      (<span class="w">user-error</span> <span class="s">"No %s changes to save"</span> (<span class="k">cond</span> ((not index)  <span class="s">"unstaged"</span>)
+                                                ((not worktree) <span class="s">"staged"</span>)
+                                                (<span class="s">"local"</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

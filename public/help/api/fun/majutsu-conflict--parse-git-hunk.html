@@ -1,0 +1,87 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-conflict--parse-git-hunk – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-conflict--parse-git-hunk is a natively compiled function
+defined in majutsu-conflict.el.
+Parse Git-style conflict hunk between BEGIN and END.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-conflict--parse-git-hunk</code></h1><p><span class="m"><code>majutsu-conflict--parse-git-hunk</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-conflict.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-conflict--parse-git-hunk <a href="#:~:text=between-,BEGIN"><span class="arg">BEGIN</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a> <a href="#:~:text=END.-,MARKER-LEN"><span class="arg">MARKER-LEN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse Git-style conflict hunk between <span class="arg">BEGIN</span> and <span class="arg">END</span>.
+<p><span class="arg">MARKER-LEN</span> is the expected marker length.
+Returns (='git REMOVES ADDS) or nil if invalid.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-conflict.el</span>
+<span class="cd">;;; </span><span class="c">Git-Style Parser
+</span>
+(<span class="k">defun</span> <span class="f">majutsu-conflict--parse-git-hunk</span> (begin end marker-len)
+  <span class="doc">"Parse Git-style conflict hunk between BEGIN and END.
+MARKER-LEN is the expected marker length.
+Returns (</span><span class="w doc">\</span><span class="doc">='git REMOVES ADDS) or nil if invalid."</span>
+  (<span class="k">save-excursion</span>
+    (goto-char begin)
+    (forward-line 1)  <span class="cd">; </span><span class="c">skip &lt;&lt;&lt;&lt;&lt;&lt;&lt; line
+</span>    (<span class="k">let</span> ((state 'left)
+          (left <span class="s">""</span>)
+          (base <span class="s">""</span>)
+          (right <span class="s">""</span>)
+          (left-label nil)
+          (base-label nil)
+          (right-label nil)
+          (done nil))
+      <span class="cd">;; </span><span class="c">Get left label from &lt;&lt;&lt;&lt;&lt;&lt;&lt; line
+</span>      (<span class="k">save-excursion</span>
+        (goto-char begin)
+        (<span class="k">let*</span> ((line (buffer-substring-no-properties
+                      (line-beginning-position)
+                      (line-end-position)))
+               (marker (majutsu-conflict--line-marker line marker-len)))
+          (<span class="k">when</span> (eq (car-safe marker) 'begin)
+            (<span class="k">setq</span> left-label (cdr marker)))))
+
+      (<span class="k">catch</span> '<span class="m">invalid</span>
+        (<span class="k">while</span> (<span class="k">and</span> (not done) (&lt; (point) end))
+          (<span class="k">let*</span> ((line (buffer-substring-no-properties
+                        (line-beginning-position)
+                        (line-end-position)))
+                 (marker (majutsu-conflict--line-marker line marker-len))
+                 (kind (car-safe marker))
+                 (label (cdr-safe marker)))
+            (<span class="k">cond</span>
+             ((eq kind 'end)
+              (<span class="k">setq</span> right-label label
+                    done t))
+             ((eq kind 'git-ancestor)
+              (<span class="k">if</span> (eq state 'left)
+                  (<span class="k">setq</span> state 'base
+                        base-label label)
+                (<span class="k">throw</span> '<span class="m">invalid</span> nil)))
+             ((eq kind 'git-separator)
+              (<span class="k">if</span> (eq state 'base)
+                  (<span class="k">setq</span> state 'right)
+                (<span class="k">throw</span> '<span class="m">invalid</span> nil)))
+             (t
+              (<span class="k">let</span> ((content (concat line <span class="s">"\n"</span>)))
+                (<span class="k">pcase</span> state
+                  ('left (<span class="k">setq</span> left (concat left content)))
+                  ('base (<span class="k">setq</span> base (concat base content)))
+                  ('right (<span class="k">setq</span> right (concat right content)))
+                  (_ (<span class="k">throw</span> '<span class="m">invalid</span> nil)))))))
+          (<span class="k">unless</span> done
+            (forward-line 1)))
+
+        <span class="cd">;; </span><span class="c">Validate: must have reached right side before end marker
+</span>        (<span class="k">if</span> (eq state 'right)
+            (<span class="k">let</span> ((removes (list (cons base-label base)))
+                  (adds (list (cons left-label left)
+                              (cons right-label right))))
+              (list 'git removes adds (car removes)))
+          nil)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,167 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: define-combobulate-language – Emacs Documentation Online</title>
+<meta name="description" content="define-combobulate-language is a macro defined in
+combobulate-setup.el.
+Define a new language for Combobulate.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>define-combobulate-language</code></h1><p><span class="m"><code>define-combobulate-language</code></span> is a macro defined in
+<span class="bt">combobulate-setup.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">define-combobulate-language</span> <span class="ty">&amp;key</span> <a href="#:~:text=Combobulate.-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=Combobulate;-,LANGUAGE"><span class="arg">LANGUAGE</span></a> <a href="#:~:text=and-,MAJOR-MODES"><span class="arg">MAJOR-MODES</span></a> (<a href="#:~:text="><span class="arg">CUSTOM</span></a> nil) <a href="#:~:text="><span class="arg">SETUP-FN</span></a> (<a href="#:~:text="><span class="arg">KEYMAP-VAR</span></a> nil) (<a href="#:~:text="><span class="arg">EXTRA-DEFCUSTOMS</span></a> nil) (<a href="#:~:text="><span class="arg">EXTRA-DEFVARS</span></a> nil))
+</code></pre>
+<h2>Documentation</h2>
+<p>Define a new language for Combobulate.
+<p><span class="arg">NAME</span> is the name of the language as it'll be known to
+Combobulate; <span class="arg">LANGUAGE</span> is the tree sitter language symbol, and
+<span class="arg">MAJOR-MODES</span> is a list of major modes that should be set up for
+this language.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-setup.el</span>
+(<span class="k">cl-defmacro</span> <span class="f">define-combobulate-language</span> (<span class="ty">&amp;key</span> name language
+                                               major-modes (custom nil)
+                                               setup-fn
+                                               (keymap-var nil)
+                                               (extra-defcustoms nil)
+                                               (extra-defvars nil))
+  <span class="doc">"Define a new language for Combobulate.
+
+NAME is the name of the language as it'll be known to
+Combobulate; LANGUAGE is the tree sitter language symbol, and
+MAJOR-MODES is a list of major modes that should be set up for
+this language."</span>
+  (<span class="w">cl-assert</span> (symbolp language) t <span class="s">"LANGUAGE must be a list"</span>)
+  (<span class="w">cl-assert</span> (symbolp name) t <span class="s">"NAME must be a symbol"</span>)
+  (<span class="k">let</span> ((group-name (intern (format <span class="s">"combobulate-language-%s"</span> name))))
+    <span class="cd">;; </span><span class="c">Create a customize group for the language
+</span>    (<span class="k">let</span> ((defvars
+           <span class="cd">;; </span><span class="c">((SHORTHAND DOCSTRING DEFAULT-VALUE) ... )
+</span>           (append
+            combobulate-default-definitions
+            (<span class="k">and</span> (boundp extra-defvars) (symbol-value extra-defvars))))
+          (defcustoms
+           (append
+            `((major-modes
+               <span class="s">"List of major modes where this language applies.
+
+Combobulate will set up tree-sitter to use that language as the
+primary buffer language if the major mode does not do this
+itself. This is also useful for modes that lack tree-sitter
+support where you still want to use Combobulate's features."</span>
+               ',major-modes
+               <span class="bi">:type</span> '(repeat symbol)))
+            (<span class="k">and</span> (boundp extra-defcustoms) (symbol-value extra-defcustoms))))
+          (known-variable-shorthands)
+          (decls))
+      (<span class="k">cl-flet*</span>
+          ((intern-var (lang-name variable)
+             (combobulate-get variable lang-name))
+           (intern-lang-var (variable)
+             (<span class="k">push</span> (<span class="k">if</span> (stringp variable)
+                       (intern variable)
+                     variable)
+                   known-variable-shorthands)
+             (intern-var name variable)))
+        (<span class="k">push</span> `(custom-declare-group
+                ',group-name nil ,(format <span class="s">"Language settings for `</span><span class="m s">%s</span><span class="s">'"</span> name)
+                <span class="bi">:group</span> 'combobulate)
+              decls)
+        <span class="cd">;; </span><span class="c">Appease the byte compiler.
+</span>        (<span class="k">push</span> '(declare-function combobulate-baseline-indentation-default <span class="s">"combobulate-manipulation"</span>) decls)
+        (<span class="k">push</span> '(<span class="k">defvar</span> <span class="v">combobulate-key-map</span>) decls)
+        (<span class="k">push</span> '(<span class="k">defvar</span> <span class="v">combobulate-options-key-map</span>) decls)
+        <span class="cd">;; </span><span class="c">Create the `</span><span class="m c">defcustom</span><span class="c">' forms.
+</span>        (<span class="k">pcase-dolist</span> (`(,shorthand-var ,docstring ,default . ,rest) defcustoms)
+          <span class="cd">;; </span><span class="c">(push shorthand-var known-variable-shorthands)
+</span>          (<span class="k">push</span> `(<span class="k">defcustom</span> ,(intern-lang-var shorthand-var) ,default ,docstring
+                   ,@rest
+                   <span class="bi">:group</span> ',group-name)
+                decls))
+        <span class="cd">;; </span><span class="c">Create the `</span><span class="m c">defvar</span><span class="c">' forms.
+</span>        (<span class="k">pcase-dolist</span> (`(,shorthand-var ,docstring ,default) defvars)
+          <span class="cd">;; </span><span class="c">(push shorthand-var known-variable-shorthands)
+</span>          (<span class="k">push</span> `(<span class="k">defvar</span> ,(intern-lang-var shorthand-var)
+                   <span class="cd">;; </span><span class="c">We must check that we have an association record
+</span>                   <span class="cd">;; </span><span class="c">explicitly (and not just the value) as it could
+</span>                   <span class="cd">;; </span><span class="c">be nil, which would then roll over to default,
+</span>                   <span class="cd">;; </span><span class="c">which is not what we want.
+</span>                   ,(<span class="k">if-let</span> ((v (assoc shorthand-var (symbol-value custom))))
+                        (cadr v)
+                      default)
+                   ,docstring)
+                decls))
+        <span class="cd">;; </span><span class="c">Create (or reuse) a key map and create a minor mode for
+</span>        <span class="cd">;; </span><span class="c">LANGUAGE.
+</span>        (<span class="k">let</span> ((language-keymap (<span class="k">or</span> keymap-var (intern-lang-var <span class="s">"map"</span>)))
+              (envelope-keymap (<span class="k">or</span> keymap-var (intern-lang-var <span class="s">"envelope-map"</span>)))
+              (minor-mode-fn (intern-lang-var <span class="s">"minor-mode"</span>)))
+          <span class="cd">;; </span><span class="c">General key map for this language
+</span>          (<span class="k">push</span> `(makunbound ',language-keymap) decls)
+          (<span class="k">push</span> `(<span class="k">defvar-keymap</span> ,language-keymap
+                   <span class="bi">:doc</span> ,(format <span class="s">"Keymap for Combobulate language for `</span><span class="m s">%s</span><span class="s">'."</span> language)
+                   <span class="bi">:full</span> nil
+                   <span class="bi">:parent</span> combobulate-key-map)
+                decls)
+
+          <span class="cd">;; </span><span class="c">This is the envelope-specific keymap
+</span>          (<span class="k">push</span> `(<span class="k">defvar-keymap</span> ,envelope-keymap
+                   <span class="bi">:doc</span> ,(format <span class="s">"Keymap for Combobulate envelopes for `</span><span class="m s">%s</span><span class="s">'."</span> language)
+                   <span class="bi">:full</span> nil)
+                decls)
+          <span class="cd">;; </span><span class="c">This maps the `</span><span class="m c">e</span><span class="c">' key to the envelope keymap.
+</span>          (<span class="k">push</span> `(define-key ,language-keymap (kbd ,(format <span class="s">"%s e"</span> combobulate-key-prefix))
+                             ,envelope-keymap)
+                decls)
+          <span class="cd">;; </span><span class="c">Create a minor mode for this language.
+</span>          (<span class="k">push</span> `(<span class="k">defvar-local</span> ,minor-mode-fn nil
+                   ,(format <span class="s">"Combobulate minor mode for the `</span><span class="m s">%s</span><span class="s">' tree-sitter language."</span> language))
+                decls)
+          (<span class="k">push</span> `(<span class="k">define-minor-mode</span> ,minor-mode-fn
+                   ,(format <span class="s">"Combobulate minor mode for the `</span><span class="m s">%s</span><span class="s">' tree-sitter language."</span> language)
+                   <span class="bi">:init-value</span> nil
+                   <span class="bi">:lighter</span> <span class="s">"©"</span>
+                   <span class="bi">:keymap</span> ,language-keymap
+                   <span class="cd">;; </span><span class="c">Recycle `</span><span class="m c">combobulate-mode</span><span class="c">' as the variable used
+</span>                   <span class="cd">;; </span><span class="c">to store the toggle state of this minor mode
+</span>                   <span class="cd">;; </span><span class="c">even though it is effectively '</span><span class="m c">shared</span><span class="c">' across
+</span>                   <span class="cd">;; </span><span class="c">all the various minor modes we may create when
+</span>                   <span class="cd">;; </span><span class="c">this macro is called. This has two beneficial
+</span>                   <span class="cd">;; </span><span class="c">advantages:
+</span>                   <span class="cd">;;</span><span class="c">
+</span>                   <span class="cd">;;  </span><span class="c">1. `M-x combobulate-mode' is the default
+</span>                   <span class="cd">;;  </span><span class="c">entrypoint for the package, and people expect
+</span>                   <span class="cd">;;  </span><span class="c">the "mode" variable to match the command name.
+</span>                   <span class="cd">;;</span><span class="c">
+</span>                   <span class="cd">;;  </span><span class="c">2. It is not possible to engage more than one
+</span>                   <span class="cd">;;  </span><span class="c">minor mode in the same buffer.
+</span>                   <span class="bi">:variable</span> ,minor-mode-fn
+                   <span class="cd">;; </span><span class="c">Hm... leaving this to nil is probably for the
+</span>                   <span class="cd">;; </span><span class="c">best. We do not want to encourage people to go
+</span>                   <span class="cd">;; </span><span class="c">around experimenting with the minor mode as that
+</span>                   <span class="cd">;; </span><span class="c">could circumvent other setup processes.
+</span>                   <span class="bi">:interactive</span> nil
+                   <span class="cd">;; </span><span class="c">This is the generic setup function that is
+</span>                   <span class="cd">;; </span><span class="c">always run.
+</span>                   (combobulate-setup)
+                   <span class="cd">;; </span><span class="c">If a language has a custom setup function, we
+</span>                   <span class="cd">;; </span><span class="c">run it with the language we are being
+</span>                   <span class="cd">;; </span><span class="c">triggered in.
+</span>                   ,(<span class="k">when</span> setup-fn
+                      `(,setup-fn ',language)))
+                decls)
+          (<span class="k">push</span> `(combobulate-register-language ',language ',major-modes #',minor-mode-fn)
+                decls)
+          (<span class="k">push</span> `(<span class="k">defconst</span> ,(intern-lang-var <span class="s">"defined-variables"</span>)
+                   ',known-variable-shorthands
+                   ,(format <span class="s">"List of variable shorthands known to `</span><span class="m s">%s</span><span class="s">'.
+
+Each shorthand is a symbol referencing a variable belonging to
+that language. They are best accessed with the `</span><span class="m s">combobulate-read</span><span class="s">'
+macro which optionally takes a language argument to retrieve that
+language's setting."</span> language))
+                decls)))
+      `(<span class="k">progn</span> ,@(nreverse decls)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

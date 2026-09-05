@@ -1,0 +1,102 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-start-process – Emacs Documentation Online</title>
+<meta name="description" content="magit-start-process is a natively compiled function defined in
+magit-process.el.
+Start PROGRAM, prepare for refresh, and return the process object.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-start-process</code></h1><p><span class="m"><code>magit-start-process</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-process.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-start-process <a href="#:~:text=Start-,PROGRAM"><span class="arg">PROGRAM</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=argument-,INPUT"><span class="arg">INPUT</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text="><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Start <span class="arg">PROGRAM</span>, prepare for refresh, and return the process object.
+<p>If optional argument <span class="arg">INPUT</span> is non-nil, it has to be a buffer or
+the name of an existing buffer.  The buffer content becomes the
+processes standard input.
+<p>The process is started using <a href="../fun/start-file-process.html"><code>start-file-process</code></a> and then setup
+to use the sentinel <a href="../fun/magit-process-sentinel.html"><code>magit-process-sentinel</code></a> and the filter
+<a href="../fun/magit-process-filter.html"><code>magit-process-filter</code></a>.  Information required by these functions
+is stored in the process object.  When this function returns the
+process has not started to run yet so it is possible to override
+the sentinel and filter.
+<p>After the process returns, <a href="../fun/magit-process-sentinel.html"><code>magit-process-sentinel</code></a> refreshes the
+buffer that was current when <a href="../fun/magit-start-process.html"><code>magit-start-process</code></a> was called (if
+it is a Magit buffer and still alive), as well as the respective
+Magit status buffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-process.el</span>
+(<span class="k">defun</span> <span class="f">magit-start-process</span> (program <span class="ty">&amp;optional</span> input <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Start PROGRAM, prepare for refresh, and return the process object.
+
+If optional argument INPUT is non-nil, it has to be a buffer or
+the name of an existing buffer.  The buffer content becomes the
+processes standard input.
+
+The process is started using `</span><span class="m doc">start-file-process</span><span class="doc">' and then setup
+to use the sentinel `</span><span class="m doc">magit-process-sentinel</span><span class="doc">' and the filter
+`</span><span class="m doc">magit-process-filter</span><span class="doc">'.  Information required by these functions
+is stored in the process object.  When this function returns the
+process has not started to run yet so it is possible to override
+the sentinel and filter.
+
+After the process returns, `</span><span class="m doc">magit-process-sentinel</span><span class="doc">' refreshes the
+buffer that was current when `</span><span class="m doc">magit-start-process</span><span class="doc">' was called (if
+it is a Magit buffer and still alive), as well as the respective
+Magit status buffer."</span>
+  (<span class="k">pcase-let*</span>
+      ((`(,process-buf . ,section)
+        (magit-process-setup program args))
+       (process
+        (<span class="k">let</span> ((process-connection-type <span class="cd">;</span><span class="c">t=pty nil=pipe
+</span>               (<span class="k">or</span>
+                <span class="cd">;; </span><span class="c">With Tramp, maybe force use a pty.  #4720
+</span>                (<span class="k">and</span> (file-remote-p default-directory)
+                     (eq magit-tramp-pipe-stty-settings 'pty))
+                <span class="cd">;; </span><span class="c">Without input, don't use a pty, because it would
+</span>                <span class="cd">;; </span><span class="c">set icrnl, which would modify the input.  #20
+</span>                (<span class="k">and</span> (not input) magit-process-connection-type)))
+              (tramp-pipe-stty-settings
+               (<span class="k">or</span> (<span class="k">and</span> (not (eq magit-tramp-pipe-stty-settings 'pty))
+                        <span class="cd">;; </span><span class="c">Defaults to "", to allow staging hunks over
+</span>                        <span class="cd">;; </span><span class="c">Tramp again.  #4720
+</span>                        magit-tramp-pipe-stty-settings)
+                   (<span class="k">bound-and-true-p</span> tramp-pipe-stty-settings)))
+              (process-environment (magit-process-environment))
+              (default-process-coding-system (magit--process-coding-system)))
+          (apply #'start-file-process
+                 (file-name-nondirectory program)
+                 process-buf program args))))
+    (with-editor-set-process-filter process #'magit-process-filter)
+    (set-process-sentinel process #'magit-process-sentinel)
+    (set-process-buffer   process process-buf)
+    (<span class="k">when</span> (eq system-type 'windows-nt)
+      <span class="cd">;; </span><span class="c">On w32, git expects UTF-8 encoded input, ignore any user
+</span>      <span class="cd">;; </span><span class="c">configuration telling us otherwise.
+</span>      (set-process-coding-system process nil 'utf-8-unix))
+    (process-put process 'section section)
+    (process-put process 'command-buf (current-buffer))
+    (process-put process 'default-dir default-directory)
+    (<span class="k">when</span> magit-inhibit-refresh
+      (process-put process 'inhibit-refresh t))
+    (<span class="k">oset</span> section process process)
+    (<span class="k">with-current-buffer</span> process-buf
+      (set-marker (process-mark process) (point)))
+    (<span class="k">when</span> input
+      (<span class="k">with-current-buffer</span> input
+        (process-send-region process (point-min) (point-max))
+        <span class="cd">;; </span><span class="c">`</span><span class="m c">process-send-eof</span><span class="c">' appears to be broken over
+</span>        <span class="cd">;;  </span><span class="c">Tramp from Windows. See #3624 and bug#43226.
+</span>        (<span class="k">if</span> (<span class="k">and</span> (eq system-type 'windows-nt)
+                 (file-remote-p (process-get process 'default-dir) nil t))
+            (process-send-string process <span class="s">"&#4;"</span>)
+          (process-send-eof process))))
+    (<span class="k">setq</span> magit-this-process process)
+    (<span class="k">oset</span> section value process)
+    (magit-process-display-buffer process)
+    process))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

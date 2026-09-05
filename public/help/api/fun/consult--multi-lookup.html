@@ -1,0 +1,45 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--multi-lookup – Emacs Documentation Online</title>
+<meta name="description" content="consult--multi-lookup is a natively compiled function defined in
+consult.el.
+Lookup SELECTED in CANDIDATES given SOURCES, with potential NARROW.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--multi-lookup</code></h1><p><span class="m"><code>consult--multi-lookup</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--multi-lookup <a href="#:~:text=given-,SOURCES"><span class="arg">SOURCES</span></a> <a href="#:~:text=Lookup-,SELECTED"><span class="arg">SELECTED</span></a> <a href="#:~:text=in-,CANDIDATES"><span class="arg">CANDIDATES</span></a> <a href="#:~:text="><span class="arg">INPUT</span></a> <a href="#:~:text=potential-,NARROW"><span class="arg">NARROW</span></a> <span class="ty">&amp;rest</span> _)
+</code></pre>
+<h2>Documentation</h2>
+<p>Lookup <span class="arg">SELECTED</span> in <span class="arg">CANDIDATES</span> given <span class="arg">SOURCES</span>, with potential <span class="arg">NARROW</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--multi-lookup</span> (sources selected candidates _input narrow <span class="ty">&amp;rest</span> _)
+  <span class="doc">"Lookup SELECTED in CANDIDATES given SOURCES, with potential NARROW."</span>
+  (<span class="k">if</span> (<span class="k">or</span> (string-blank-p selected)
+          (not (consult--tofu-p (aref selected (1- (length selected))))))
+      <span class="cd">;; </span><span class="c">Non-existing candidate without Tofu or default submitted (empty string)
+</span>      (<span class="k">let*</span> ((src (<span class="k">cond</span>
+                   (narrow (seq-find (<span class="k">lambda</span> (src)
+                                       (<span class="k">let</span> ((n (plist-get src <span class="bi">:narrow</span>)))
+                                         (eq (<span class="k">or</span> (car-safe n) n -1) narrow)))
+                                     sources))
+                   ((seq-find (<span class="k">lambda</span> (src) (plist-get src <span class="bi">:default</span>)) sources))
+                   ((seq-find (<span class="k">lambda</span> (src) (not (plist-get src <span class="bi">:hidden</span>))) sources))
+                   ((aref sources 0))))
+             (idx (seq-position sources src))
+             (def (<span class="k">and</span> (string-blank-p selected) <span class="cd">;; </span><span class="c">default candidate
+</span>                       (seq-find (<span class="k">lambda</span> (cand) (eq idx (consult--tofu-get cand))) candidates))))
+        (<span class="k">if</span> def
+            (cons (cdr (get-text-property 0 'multi-category def)) src)
+          `(,selected <span class="bi">:match</span> nil ,@src)))
+    (<span class="k">if-let*</span> ((found (member selected candidates)))
+        <span class="cd">;; </span><span class="c">Existing candidate submitted
+</span>        (cons (cdr (get-text-property 0 'multi-category (car found)))
+              (consult--multi-source sources selected))
+      <span class="cd">;; </span><span class="c">Non-existing Tofu'ed candidate submitted, e.g., via Embark
+</span>      `(,(substring selected 0 -1) <span class="bi">:match</span> nil ,@(consult--multi-source sources selected)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-move-heading-common – Emacs Documentation Online</title>
+<meta name="description" content="markdown-move-heading-common is a natively compiled function defined
+in markdown-mode.el.
+Wrapper for outline-mode functions to skip false positives.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-move-heading-common</code></h1><p><span class="m"><code>markdown-move-heading-common</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-move-heading-common <a href="#:~:text=positives.-,MOVE-FN"><span class="arg">MOVE-FN</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=and-,ARG"><span class="arg">ARG</span></a> <a href="#:~:text=When-,ADJUST"><span class="arg">ADJUST</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Wrapper for <a href="../fun/outline-mode.html"><code>outline-mode</code></a> functions to skip false positives.
+<p><span class="arg">MOVE-FN</span> is a function and <span class="arg">ARG</span> is its argument. For example,
+headings inside preformatted code blocks may match
+<a href="../var/outline-regexp.html"><code>outline-regexp</code></a> but should not be considered as headings.
+When <span class="arg">ADJUST</span> is non-nil, adjust the point for interactive calls
+to avoid leaving the point at invisible markup.  This adjustment
+generally should only be done for interactive calls, since other
+functions may expect the point to be at the beginning of the
+regular expression.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+<span class="cd">;;; </span><span class="c">Outline ===================================================================
+</span>
+(<span class="k">defun</span> <span class="f">markdown-move-heading-common</span> (move-fn <span class="ty">&amp;optional</span> arg adjust)
+  <span class="doc">"Wrapper for `</span><span class="m doc">outline-mode</span><span class="doc">' functions to skip false positives.
+MOVE-FN is a function and ARG is its argument. For example,
+headings inside preformatted code blocks may match
+`</span><span class="m doc">outline-regexp</span><span class="doc">' but should not be considered as headings.
+When ADJUST is non-nil, adjust the point for interactive calls
+to avoid leaving the point at invisible markup.  This adjustment
+generally should only be done for interactive calls, since other
+functions may expect the point to be at the beginning of the
+regular expression."</span>
+  (<span class="k">let</span> ((prev -1) (start (point)))
+    (<span class="k">if</span> arg (funcall move-fn arg) (funcall move-fn))
+    (<span class="k">while</span> (<span class="k">and</span> (/= prev (point)) (markdown-code-block-at-point-p))
+      (<span class="k">setq</span> prev (point))
+      (<span class="k">if</span> arg (funcall move-fn arg) (funcall move-fn)))
+    <span class="cd">;; </span><span class="c">Adjust point for setext headings and invisible text.
+</span>    (<span class="k">save-match-data</span>
+      (<span class="k">when</span> (<span class="k">and</span> adjust (thing-at-point-looking-at markdown-regex-header))
+        (<span class="k">if</span> markdown-hide-markup
+            <span class="cd">;; </span><span class="c">Move to beginning of heading text if markup is hidden.
+</span>            (goto-char (<span class="k">or</span> (match-beginning 1) (match-beginning 5)))
+          <span class="cd">;; </span><span class="c">Move to beginning of markup otherwise.
+</span>          (goto-char (<span class="k">or</span> (match-beginning 1) (match-beginning 4))))))
+    (<span class="k">if</span> (= (point) start) nil (point))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

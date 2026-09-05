@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-commit-squash-internal – Emacs Documentation Online</title>
+<meta name="description" content="magit-commit-squash-internal is a natively compiled function defined
+in magit-commit.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-commit-squash-internal</code></h1><p><span class="m"><code>magit-commit-squash-internal</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">magit-commit.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-commit-squash-internal <span class="arg">OPTION</span> <span class="arg">COMMIT</span> <span class="ty">&amp;optional</span> <span class="arg">ARGS</span> <span class="arg">NOPATCH</span> <span class="arg">EDIT</span> <span class="arg">REBASE</span> <span class="arg">CONFIRMED</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-commit.el</span>
+<span class="cd">;;;; </span><span class="c">Internal
+</span>
+(<span class="k">defun</span> <span class="f">magit-commit-squash-internal</span>
+    (option commit <span class="ty">&amp;optional</span> args nopatch edit rebase confirmed)
+  (<span class="k">when-let</span> ((args (magit-commit-assert args nopatch (not edit))))
+    (<span class="k">when</span> (<span class="k">and</span> commit rebase (not (magit-rev-ancestor-p commit <span class="s">"HEAD"</span>)))
+      (<span class="k">magit-read-char-case</span>
+          (format <span class="s">"%s isn't an ancestor of HEAD.  "</span> commit) nil
+        (?c <span class="s">"[c]reate without rebasing"</span> (<span class="k">setq</span> rebase nil))
+        (?s <span class="s">"[s]elect other"</span>            (<span class="k">setq</span> commit nil))
+        (?a <span class="s">"[a]bort"</span>                   (<span class="w">user-error</span> <span class="s">"Quit"</span>))))
+    (<span class="k">when</span> commit
+      (<span class="k">setq</span> commit (magit-rebase-interactive-assert commit t)))
+    (<span class="k">if</span> (<span class="k">and</span> commit
+             (<span class="k">or</span> confirmed
+                 (not (<span class="k">or</span> rebase
+                          current-prefix-arg
+                          magit-commit-squash-confirm))))
+        (<span class="k">let</span> ((magit-commit-show-diff nil))
+          (<span class="k">push</span> (concat option commit) args)
+          (<span class="k">push</span> (<span class="k">if</span> edit <span class="s">"--edit"</span> <span class="s">"--no-edit"</span>) args)
+          (<span class="k">if</span> rebase
+              (<span class="k">magit-with-editor</span>
+                (magit-call-git
+                 <span class="s">"commit"</span> <span class="s">"--no-gpg-sign"</span>
+                 (seq-remove (apply-partially #'string-prefix-p <span class="s">"--gpg-sign="</span>)
+                             args)))
+            (magit-run-git-with-editor <span class="s">"commit"</span> args))
+          t) <span class="cd">; </span><span class="c">The commit was created; used by below lambda.
+</span>      (<span class="k">let</span> ((winconf (<span class="k">and</span> magit-commit-show-diff
+                          (current-window-configuration))))
+        (magit-log-select
+          (<span class="k">lambda</span> (commit)
+            (<span class="k">when</span> (<span class="k">and</span> (magit-commit-squash-internal option commit args
+                                                     nopatch edit rebase t)
+                       rebase)
+              (magit-commit-amend-assert commit)
+              (magit-rebase-interactive-1 commit
+                  (list <span class="s">"--autosquash"</span> <span class="s">"--autostash"</span> <span class="s">"--keep-empty"</span>)
+                <span class="s">""</span> <span class="s">"true"</span> nil t))
+            (<span class="k">when</span> winconf
+              (set-window-configuration winconf)))
+          (format <span class="s">"Type %%p on a commit to %s into it,"</span>
+                  (substring option 2))
+          nil nil nil commit))
+      (<span class="k">when</span> (<span class="k">and</span> magit-commit-show-diff (not nopatch))
+        (<span class="k">let</span> ((magit-display-buffer-noselect t))
+          (apply #'magit-diff-staged nil (magit-diff-arguments)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

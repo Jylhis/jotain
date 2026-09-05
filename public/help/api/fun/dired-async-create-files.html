@@ -1,0 +1,195 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dired-async-create-files – Emacs Documentation Online</title>
+<meta name="description" content="dired-async-create-files is a natively compiled function defined in
+dired-async.el.
+Same as dired-create-files but asynchronous.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dired-async-create-files</code></h1><p><span class="m"><code>dired-async-create-files</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dired-async.el</span>.
+<h2>Signature</h2>
+<pre><code>(dired-async-create-files <a href="#:~:text="><span class="arg">FILE-CREATOR</span></a> <a href="#:~:text="><span class="arg">OPERATION</span></a> <a href="#:~:text="><span class="arg">FN-LIST</span></a> <a href="#:~:text="><span class="arg">NAME-CONSTRUCTOR</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">MARKER-CHAR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Same as <a href="../fun/dired-create-files.html"><code>dired-create-files</code></a> but asynchronous.
+<p>See <a href="../fun/dired-create-files.html"><code>dired-create-files</code></a> for the behavior of arguments.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vpxd64bbf27n3ziyqnh29vmak5xnpk2l-emacs-packages-deps/share/emacs/site-lisp/elpa/async-20260729.1431/dired-async.el</span>
+(<span class="k">defun</span> <span class="f">dired-async-create-files</span> (file-creator operation fn-list name-constructor
+                                              <span class="ty">&amp;optional</span> _marker-char)
+  <span class="doc">"Same as `</span><span class="m doc">dired-create-files</span><span class="doc">' but asynchronous.
+
+See `</span><span class="m doc">dired-create-files</span><span class="doc">' for the behavior of arguments."</span>
+  (<span class="k">setq</span> overwrite-query nil)
+  (<span class="k">let</span> ((total (length fn-list))
+        failures async-fn-list skipped callback
+        async-quiet-switch create-dir)
+    (<span class="k">let</span> (to)
+      (<span class="k">dolist</span> (from fn-list)
+        (<span class="k">setq</span> to (funcall name-constructor from))
+        (<span class="k">if</span> (<span class="k">and</span> (equal to from)
+                 (null (eq file-creator 'backup-file)))
+            (<span class="k">progn</span>
+              (<span class="k">setq</span> to nil)
+              (dired-log <span class="s">"Cannot %s to same file: %s\n"</span>
+                         (downcase operation) from)))
+        (<span class="k">if</span> (not to)
+            (<span class="k">setq</span> skipped (cons (dired-make-relative from) skipped))
+          (<span class="k">let*</span> ((overwrite (<span class="k">and</span> (null (eq file-creator 'backup-file))
+                                 (file-exists-p to)))
+                 (dired-overwrite-confirmed <span class="cd">; </span><span class="c">for dired-handle-overwrite
+</span>                  (<span class="k">and</span> overwrite
+                       (<span class="k">let</span> ((help-form `(format <span class="s">"\
+Type SPC or `</span><span class="m s">y</span><span class="s">' to overwrite file `</span><span class="m s">%s</span><span class="s">',
+DEL or `</span><span class="m s">n</span><span class="s">' to skip to next,
+ESC or `</span><span class="m s">q</span><span class="s">' to not overwrite any of the remaining files,
+`</span><span class="m s">!</span><span class="s">' to overwrite all remaining files with no more questions."</span> ,to)))
+                         (dired-query 'overwrite-query <span class="s">"Overwrite `</span><span class="m s">%s</span><span class="s">'?"</span> to)))))
+            <span class="cd">;; </span><span class="c">Handle the `</span><span class="m c">dired-copy-file</span><span class="c">' file-creator specially
+</span>            <span class="cd">;; </span><span class="c">When copying a directory to another directory or
+</span>            <span class="cd">;; </span><span class="c">possibly to itself or one of its subdirectories.
+</span>            <span class="cd">;; </span><span class="c">e.g "~/foo/" =&gt; "~/test/"
+</span>            <span class="cd">;; </span><span class="c">or "~/foo/" =&gt;"~/foo/"
+</span>            <span class="cd">;; </span><span class="c">or "~/foo/ =&gt; ~/foo/bar/")
+</span>            <span class="cd">;; </span><span class="c">In this case the '</span><span class="m c">name-constructor</span><span class="c">' have set the destination
+</span>            <span class="cd">;; </span><span class="c">TO to "~/test/foo" because the old emacs23 behavior
+</span>            <span class="cd">;; </span><span class="c">of `</span><span class="m c">copy-directory</span><span class="c">' was to not create the subdirectory
+</span>            <span class="cd">;; </span><span class="c">and instead copy the contents.
+</span>            <span class="cd">;; </span><span class="c">With the new behavior of `</span><span class="m c">copy-directory</span><span class="c">'
+</span>            <span class="cd">;; </span><span class="c">(similar to the `</span><span class="m c">cp</span><span class="c">' shell command) we don't
+</span>            <span class="cd">;; </span><span class="c">need such a construction of the target directory,
+</span>            <span class="cd">;; </span><span class="c">so modify the destination TO to "~/test/" instead of "~/test/foo/".
+</span>            (<span class="k">let</span> ((destname (file-name-directory to)))
+              (<span class="k">when</span> (<span class="k">and</span> (funcall dired-async-file-directory-p-fn from)
+                         (file-directory-p to)
+                         (eq file-creator 'dired-copy-file))
+                (<span class="k">setq</span> to destname))
+              <span class="cd">;; </span><span class="c">If DESTNAME is a subdirectory of FROM, not a symlink,
+</span>              <span class="cd">;; </span><span class="c">and the method in use is copying, signal an error.
+</span>              (<span class="k">and</span> (eq t (car (file-attributes destname)))
+                   (eq file-creator 'dired-copy-file)
+                   (file-in-directory-p destname from)
+                   (<span class="w">error</span> <span class="s">"Cannot copy `</span><span class="m s">%s</span><span class="s">' into its subdirectory `</span><span class="m s">%s</span><span class="s">'"</span>
+                          from to)))
+            <span class="cd">;; </span><span class="c">Skip file if it is too large.
+</span>            (<span class="k">if</span> (<span class="k">and</span> (member operation '(<span class="s">"Copy"</span> <span class="s">"Rename"</span>))
+                     dired-async-large-file-warning-threshold
+                     (eq (dired-async--abort-if-file-too-large
+                          (file-attribute-size
+                           (file-attributes (file-truename from)))
+                          (downcase operation) from)
+                         'abort))
+                (<span class="k">push</span> from skipped)
+              (<span class="k">if</span> overwrite
+                  (<span class="k">or</span> (<span class="k">and</span> dired-overwrite-confirmed
+                           (<span class="k">push</span> (cons from to) async-fn-list))
+                      (<span class="k">progn</span>
+                        (<span class="k">push</span> (dired-make-relative from) failures)
+                        (dired-log <span class="s">"%s `</span><span class="m s">%s</span><span class="s">' to `</span><span class="m s">%s</span><span class="s">' failed\n"</span>
+                                   operation from to)))
+                (<span class="k">push</span> (cons from to) async-fn-list))))))
+      <span class="cd">;; </span><span class="c">Fix tramp issue #80 with emacs-26, use "-q" only when needed.
+</span>      (<span class="k">setq</span> async-quiet-switch
+            (<span class="k">if</span> (<span class="k">and</span> (boundp 'tramp-cache-read-persistent-data)
+                     async-fn-list
+                     (<span class="k">cl-loop</span> for (_from . to) in async-fn-list
+                              thereis (file-remote-p to)))
+                <span class="s">"-q"</span> <span class="s">"-Q"</span>))
+      <span class="cd">;; </span><span class="c">When failures have been printed to dired log add the date at bob.
+</span>      (<span class="k">when</span> (<span class="k">or</span> failures skipped) (dired-log t))
+      <span class="cd">;; </span><span class="c">When async-fn-list is empty that's mean only one file
+</span>      <span class="cd">;; </span><span class="c">had to be copied and user finally answer NO.
+</span>      <span class="cd">;; </span><span class="c">In this case async process will never start and callback
+</span>      <span class="cd">;; </span><span class="c">will have no chance to run, so notify failures here.
+</span>      (<span class="k">unless</span> async-fn-list
+        (<span class="k">cond</span> (failures
+               (funcall dired-async-message-function
+                        <span class="s">"%s failed for %d of %d file%s -- See *Dired log* buffer"</span>
+                        'dired-async-failures
+                        operation (length failures)
+                        total (dired-plural-s total)))
+              (skipped
+               (funcall dired-async-message-function
+                        <span class="s">"%s: %d of %d file%s skipped -- See *Dired log* buffer"</span>
+                        'dired-async-failures
+                        operation (length skipped) total
+                        (dired-plural-s total)))))
+      <span class="cd">;; </span><span class="c">Setup callback.
+</span>      (<span class="k">setq</span> callback
+            (<span class="k">lambda</span> (<span class="ty">&amp;optional</span> _ignore)
+              (dired-async-after-file-create
+               total (list operation (length async-fn-list)) failures skipped)
+              (<span class="k">when</span> (string= (downcase operation) <span class="s">"rename"</span>)
+                (<span class="k">cl-loop</span> for (file . to) in async-fn-list
+                         for bf = (get-file-buffer file)
+                         for destp = (file-exists-p to)
+                         do (<span class="k">and</span> bf destp
+                                 (<span class="k">with-current-buffer</span> bf
+                                   (set-visited-file-name to t t)))))))
+      (<span class="k">let</span> ((dirp (file-directory-p to))
+            (dest (file-name-directory to)))
+        (<span class="k">when</span> (boundp 'dired-create-destination-dirs)
+          (<span class="k">setq</span> create-dir
+                (<span class="k">cl-case</span> dired-create-destination-dirs
+                  (always 'always)
+                  (ask (<span class="k">and</span> (null dirp)
+                            (null (file-directory-p dest))
+                            (y-or-n-p (format <span class="s">"Create directory `</span><span class="m s">%s</span><span class="s">'? "</span> dest)))
+                       'always))))))
+    <span class="cd">;; </span><span class="c">Start async process.
+</span>    (<span class="k">when</span> async-fn-list
+      (process-put
+       (async-start `(<span class="k">lambda</span> ()
+                       (<span class="k">require</span> '<span class="m">cl-lib</span>) (<span class="k">require</span> '<span class="m">dired-aux</span>) (<span class="k">require</span> '<span class="m">dired-x</span>)
+                       ,(async-inject-variables dired-async-env-variables-regexp)
+                       (advice-add #'files--ask-user-about-large-file
+                                   <span class="bi">:override</span> (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> args) nil))
+                       (<span class="k">let</span> ((dired-recursive-copies (<span class="k">quote</span> always))
+                             (dired-copy-preserve-time
+                              ,dired-copy-preserve-time)
+                             (dired-create-destination-dirs ',create-dir)
+                             (dired-vc-rename-file ,dired-vc-rename-file)
+                             auth-source-save-behavior)
+                         (<span class="k">setq</span> overwrite-backup-query nil)
+                         <span class="cd">;; </span><span class="c">Inline `</span><span class="m c">backup-file</span><span class="c">' as long as it is not
+</span>                         <span class="cd">;; </span><span class="c">available in emacs.
+</span>                         (<span class="k">defalias</span> '<span class="f">backup-file</span>
+                           <span class="cd">;; </span><span class="c">Same feature as "cp -f --backup=numbered from to"
+</span>                           <span class="cd">;; </span><span class="c">Symlinks are copied as file from source unlike
+</span>                           <span class="cd">;; </span><span class="c">`</span><span class="m c">dired-copy-file</span><span class="c">' which is same as cp -d.
+</span>                           <span class="cd">;; </span><span class="c">Directories are omitted.
+</span>                           (<span class="k">lambda</span> (from to ok)
+                             (<span class="k">cond</span> ((file-directory-p from) (ignore))
+                                   (t (<span class="k">let</span> ((count 0))
+                                        (<span class="k">while</span> (<span class="k">let</span> ((attrs (file-attributes to)))
+                                                 (<span class="k">and</span> attrs (null (nth 0 attrs))))
+                                          (<span class="k">cl-incf</span> count)
+                                          (<span class="k">setq</span> to (concat (file-name-sans-versions to)
+                                                           (format <span class="s">".~%s~"</span> count)))))
+                                      (<span class="k">condition-case</span> err
+                                          (copy-file from to ok dired-copy-preserve-time)
+                                        (file-date-error
+                                         (dired-log <span class="s">"Can't set date on %s:\n%s\n"</span> from err)))))))
+                         <span class="cd">;; </span><span class="c">Now run the FILE-CREATOR function on files.
+</span>                         (<span class="k">cl-loop</span> with fn = (<span class="k">quote</span> ,file-creator)
+                                  for (from . dest) in (<span class="k">quote</span> ,async-fn-list)
+                                  do (<span class="k">condition-case</span> err
+                                         (funcall fn from dest t)
+                                       (file-error
+                                        (dired-log <span class="s">"%s: %s\n"</span> (car err) (cdr err))
+                                        nil)))
+                         (<span class="k">when</span> (get-buffer dired-log-buffer)
+                           (dired-log t)
+                           (<span class="k">with-current-buffer</span> dired-log-buffer
+                             (write-region (point-min) (point-max)
+                                           ,dired-async-log-file))))
+                       ,(dired-async-maybe-kill-ftp))
+                    callback)
+       'dired-async-process t)
+      <span class="cd">;; </span><span class="c">Run mode-line notifications while process running.
+</span>      (dired-async--modeline-mode 1)
+      (message <span class="s">"%s proceeding asynchronously..."</span> operation))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

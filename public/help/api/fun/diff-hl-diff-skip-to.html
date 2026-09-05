@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: diff-hl-diff-skip-to – Emacs Documentation Online</title>
+<meta name="description" content="diff-hl-diff-skip-to is a natively compiled function defined in
+diff-hl.el.
+In diff-mode, skip to the hunk and line corresponding to LINE
+in the source file, or the last line of the hunk above it.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>diff-hl-diff-skip-to</code></h1><p><span class="m"><code>diff-hl-diff-skip-to</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">diff-hl.el</span>.
+<h2>Signature</h2>
+<pre><code>(diff-hl-diff-skip-to <a href="#:~:text=to-,LINE"><span class="arg">LINE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=passed-,FILENAME"><span class="arg">FILENAME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>In <a href="../fun/diff-mode.html"><code>diff-mode</code></a>, skip to the hunk and line corresponding to <span class="arg">LINE</span>
+in the source file, or the last line of the hunk above it.
+<p>When passed <span class="arg">FILENAME</span>, ensure that the line is in the section belonging to
+that file, if it's present.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/742jfhd6j9y7y1gqxy624dchx31gwmax-emacs-packages-deps/share/emacs/site-lisp/elpa/diff-hl-20260830.1400/diff-hl.el</span>
+(<span class="k">defun</span> <span class="f">diff-hl-diff-skip-to</span> (line <span class="ty">&amp;optional</span> filename)
+  <span class="doc">"In `</span><span class="m doc">diff-mode</span><span class="doc">', skip to the hunk and line corresponding to LINE
+in the source file, or the last line of the hunk above it.
+
+When passed FILENAME, ensure that the line is in the section belonging to
+that file, if it's present."</span>
+  (goto-char (point-min)) <span class="cd">; </span><span class="c">Counteract any similar behavior in diff-mode.
+</span>  (<span class="k">let</span> (found
+        (end-pos (point-max)))
+    (diff-hunk-next)
+    (<span class="k">when</span> filename
+      (<span class="k">while</span> (<span class="k">and</span> (not (equal (diff-find-file-name nil t)
+                              filename))
+                  (not (eobp)))
+        (diff-file-next))
+      (<span class="k">if</span> (not (eobp))
+          <span class="cd">;; </span><span class="c">Found our file in the changed set. Ensure that we don't go past.
+</span>          (<span class="k">setq</span> end-pos (<span class="k">save-excursion</span>
+                          (diff-end-of-file)
+                          (point)))
+        (goto-char (point-min))
+        (<span class="k">setq</span> line 0)))
+    (<span class="k">while</span> (<span class="k">and</span> (looking-at diff-hunk-header-re-unified)
+                (not found)
+                (&lt; (point) end-pos))
+      (<span class="k">let</span> ((hunk-line (string-to-number (match-string 3)))
+            (len (<span class="k">let</span> ((m (match-string 4)))
+                   (<span class="k">if</span> m (string-to-number m) 1))))
+        (<span class="k">if</span> (&gt; line (+ hunk-line len))
+            (diff-hunk-next)
+          (<span class="k">setq</span> found t)
+          (<span class="k">if</span> (&lt; line hunk-line)
+              <span class="cd">;; </span><span class="c">Retreat to the previous hunk.
+</span>              (forward-line -1)
+            (<span class="k">let</span> ((to-go (1+ (- line hunk-line))))
+              (<span class="k">while</span> (cl-plusp to-go)
+                (forward-line 1)
+                (<span class="k">unless</span> (looking-at <span class="s">"^[-\\]"</span>)
+                  (<span class="k">cl-decf</span> to-go))))))))
+    (<span class="k">when</span> (&gt; (point) end-pos)
+      (diff-hunk-prev)
+      (diff-end-of-hunk))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

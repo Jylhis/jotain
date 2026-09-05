@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-end-of-meta-data – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-end-of-meta-data is a natively compiled function defined in
+org-roam-utils.el.
+Like org-end-of-meta-data, but supports file-level metadata.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-end-of-meta-data</code></h1><p><span class="m"><code>org-roam-end-of-meta-data</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">org-roam-utils.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-end-of-meta-data <span class="ty">&amp;optional</span> <a href="#:~:text=When-,FULL"><span class="arg">FULL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Like <a href="../fun/org-end-of-meta-data.html"><code>org-end-of-meta-data</code></a>, but supports file-level metadata.
+<p>When <span class="arg">FULL</span> is non-nil but not t, skip planning information,
+properties, clocking lines and logbook drawers.
+<p>When optional argument <span class="arg">FULL</span> is t, skip everything above, and also
+skip keywords.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-utils.el</span>
+(<span class="k">defun</span> <span class="f">org-roam-end-of-meta-data</span> (<span class="ty">&amp;optional</span> full)
+  <span class="doc">"Like `</span><span class="m doc">org-end-of-meta-data</span><span class="doc">', but supports file-level metadata.
+
+When FULL is non-nil but not t, skip planning information,
+properties, clocking lines and logbook drawers.
+
+When optional argument FULL is t, skip everything above, and also
+skip keywords."</span>
+  (org-back-to-heading-or-point-min t)
+  (<span class="k">when</span> (org-at-heading-p) (forward-line))
+  <span class="cd">;; </span><span class="c">Skip planning information.
+</span>  (<span class="k">when</span> (looking-at-p org-planning-line-re) (forward-line))
+  <span class="cd">;; </span><span class="c">Skip property drawer.
+</span>  (<span class="k">when</span> (looking-at org-property-drawer-re)
+    (goto-char (match-end 0))
+    (forward-line))
+  <span class="cd">;; </span><span class="c">When FULL is not nil, skip more.
+</span>  (<span class="k">when</span> (<span class="k">and</span> full (not (org-at-heading-p)))
+    (<span class="k">catch</span> '<span class="m">exit</span>
+      (<span class="k">let</span> ((end (<span class="k">save-excursion</span> (outline-next-heading) (point)))
+            (re (concat <span class="s">"[ \t]*$"</span> <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">"</span> org-clock-line-re)))
+        (<span class="k">while</span> (not (eobp))
+          (<span class="k">cond</span> <span class="cd">;; </span><span class="c">Skip clock lines.
+</span>           ((looking-at-p re) (forward-line))
+           <span class="cd">;; </span><span class="c">Skip logbook drawer.
+</span>           ((looking-at-p org-logbook-drawer-re)
+            (<span class="k">if</span> (re-search-forward <span class="s">"^[ \t]*:END:[ \t]*$"</span> end t)
+                (forward-line)
+              (<span class="k">throw</span> '<span class="m">exit</span> t)))
+           ((looking-at-p org-drawer-regexp)
+            (<span class="k">if</span> (re-search-forward <span class="s">"^[ \t]*:END:[ \t]*$"</span> end t)
+                (forward-line)
+              (<span class="k">throw</span> '<span class="m">exit</span> t)))
+           <span class="cd">;; </span><span class="c">When FULL is t, skip keywords too.
+</span>           ((<span class="k">and</span> (eq full t)
+                 (looking-at-p org-keyword-regexp))
+            (forward-line))
+           (t (<span class="k">throw</span> '<span class="m">exit</span> t))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

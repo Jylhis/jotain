@@ -1,0 +1,77 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult-isearch-history – Emacs Documentation Online</title>
+<meta name="description" content="consult-isearch-history is an interactive and natively compiled
+function defined in consult.el.
+Read a search string with completion from the Isearch history.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult-isearch-history</code></h1><p><span class="m"><code>consult-isearch-history</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult-isearch-history)
+</code></pre>
+<h2>Documentation</h2>
+<p>Read a search string with completion from the Isearch history.
+<p>This replaces the current search string if Isearch is active, and
+starts a new Isearch session otherwise.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">consult-isearch-history</span> ()
+  <span class="doc">"Read a search string with completion from the Isearch history.
+
+This replaces the current search string if Isearch is active, and
+starts a new Isearch session otherwise."</span>
+  (<span class="k">interactive</span>)
+  (consult--forbid-minibuffer)
+  (<span class="k">let*</span> ((isearch-message-function #'ignore)
+         (cursor-in-echo-area t) <span class="cd">;; </span><span class="c">Avoid cursor flickering
+</span>         (candidates (consult--isearch-history-candidates)))
+    (<span class="k">unless</span> isearch-mode (isearch-mode t))
+    (<span class="k">with-isearch-suspended</span>
+     (<span class="k">setq</span> isearch-new-string
+           (consult--read
+            candidates
+            <span class="bi">:prompt</span> <span class="s">"I-search: "</span>
+            <span class="bi">:category</span> 'consult-isearch-history
+            <span class="bi">:history</span> t <span class="cd">;; </span><span class="c">disable history
+</span>            <span class="bi">:sort</span> nil
+            <span class="bi">:initial</span> isearch-string
+            <span class="bi">:keymap</span> consult-isearch-history-map
+            <span class="bi">:annotate</span>
+            (<span class="k">lambda</span> (cand)
+              (consult--annotate-align
+               cand
+               (alist-get (consult--tofu-get cand) consult--isearch-history-narrow)))
+            <span class="bi">:group</span>
+            (<span class="k">lambda</span> (cand transform)
+              (<span class="k">if</span> transform
+                  cand
+                (alist-get (consult--tofu-get cand) consult--isearch-history-narrow)))
+            <span class="bi">:lookup</span>
+            (<span class="k">lambda</span> (selected candidates <span class="ty">&amp;rest</span> _)
+              (<span class="k">if-let*</span> ((found (member selected candidates)))
+                  (substring (car found) 0 -1)
+                selected))
+            <span class="bi">:state</span>
+            (<span class="k">lambda</span> (action cand)
+              (<span class="k">when</span> (<span class="k">and</span> (eq action 'preview) cand)
+                (<span class="k">setq</span> isearch-string cand)
+                (isearch-update-from-string-properties cand)
+                (isearch-update)))
+            <span class="bi">:narrow</span>
+            (list <span class="bi">:predicate</span>
+                  (<span class="k">lambda</span> (cand) (= (consult--tofu-get cand) consult--narrow))
+                  <span class="bi">:keys</span> consult--isearch-history-narrow))
+           isearch-new-message
+           (mapconcat #'isearch-text-char-description isearch-new-string <span class="s">""</span>)))
+    <span class="cd">;; </span><span class="c">Setting `</span><span class="m c">isearch-regexp</span><span class="c">' etc only works outside of `</span><span class="m c">with-isearch-suspended</span><span class="c">'.
+</span>    (<span class="k">unless</span> (plist-member (text-properties-at 0 isearch-string) 'isearch-regexp-function)
+      (<span class="k">setq</span> isearch-regexp t
+            isearch-regexp-function nil))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

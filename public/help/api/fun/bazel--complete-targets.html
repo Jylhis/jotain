@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--complete-targets – Emacs Documentation Online</title>
+<meta name="description" content="bazel--complete-targets is a natively compiled function defined in
+bazel.el.
+Find all rule targets starting with the given PREFIX in the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--complete-targets</code></h1><p><span class="m"><code>bazel--complete-targets</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--complete-targets <a href="#:~:text=given-,PREFIX"><span class="arg">PREFIX</span></a> <a href="#:~:text=If-,ONLY-TESTS"><span class="arg">ONLY-TESTS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find all rule targets starting with the given <span class="arg">PREFIX</span> in the current buffer.
+<p>The current buffer should visit a BUILD file.  Return a list of
+target names that start with <span class="arg">PREFIX</span>.  If <span class="arg">ONLY-TESTS</span> is non-nil,
+restrict the returned targets to test targets.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--complete-targets</span> (prefix only-tests)
+  <span class="doc">"Find all rule targets starting with the given PREFIX in the current buffer.
+The current buffer should visit a BUILD file.  Return a list of
+target names that start with PREFIX.  If ONLY-TESTS is non-nil,
+restrict the returned targets to test targets."</span>
+  (<span class="w">cl-check-type</span> prefix string)
+  (<span class="k">when</span> (derived-mode-p 'bazel-mode)
+    (<span class="k">let</span> ((case-fold-search nil)
+          (search-spaces-regexp nil)
+          (targets ()))
+      (<span class="k">save-excursion</span>
+        <span class="cd">;; </span><span class="c">We don’t widen here.  If the user has narrowed the buffer, it’s fair
+</span>        <span class="cd">;; </span><span class="c">to assume they only want completions within the narrowed portion.
+</span>        (goto-char (point-min))
+        (<span class="k">while</span> (re-search-forward
+                (<span class="k">rx</span> symbol-start <span class="s">"name"</span> (* blank) ?= (* blank)
+                    (group (any ?\" ?'))
+                    (group (literal prefix) (* (not (any ?\" ?' ?\n))))
+                    (backref 1))
+                nil t)
+          (<span class="k">let</span> ((name (match-string-no-properties 2)))
+            (<span class="k">and</span> (not (python-syntax-comment-or-string-p))
+                 (<span class="k">or</span> (not only-tests) (bazel--in-test-target-p))
+                 (<span class="k">push</span> name targets)))))
+      (nreverse targets))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

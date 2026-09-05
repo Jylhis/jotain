@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca--handle-message – Emacs Documentation Online</title>
+<meta name="description" content="eca--handle-message is a natively compiled function defined in eca.el.
+Handle raw message JSON-DATA for SESSION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca--handle-message</code></h1><p><span class="m"><code>eca--handle-message</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">eca.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca--handle-message <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=message-,JSON-DATA"><span class="arg">JSON-DATA</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle raw message <span class="arg">JSON-DATA</span> for <span class="arg">SESSION</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca.el</span>
+(<span class="k">defun</span> <span class="f">eca--handle-message</span> (session json-data)
+  <span class="doc">"Handle raw message JSON-DATA for SESSION."</span>
+  (<span class="k">let</span> ((id (plist-get json-data <span class="bi">:id</span>))
+        (result (plist-get json-data <span class="bi">:result</span>))
+        (backtrace nil)
+        (eca--path-session session))
+    (<span class="k">eca--with-backtrace</span> backtrace
+      (<span class="k">condition-case</span> err
+          (<span class="k">pcase</span> (eca--get-message-type json-data)
+            ('response (<span class="k">-let</span> [(success-callback) (plist-get (eca--session-response-handlers session) id)]
+                         (<span class="k">when</span> success-callback
+                           (<span class="k">cl-remf</span> (eca--session-response-handlers session) id)
+                           (funcall success-callback result))))
+            ('response-error (<span class="k">-let</span> [(_ error-callback) (plist-get (eca--session-response-handlers session) id)]
+                               (<span class="k">when</span> error-callback
+                                 (<span class="k">cl-remf</span> (eca--session-response-handlers session) id)
+                                 (funcall error-callback (plist-get json-data <span class="bi">:error</span>)))))
+            ('notification (eca--handle-server-notification session json-data))
+            <span class="cd">;; </span><span class="c">Handler errors must not escape into the process filter:
+</span>            <span class="cd">;; </span><span class="c">answer the server with an error status instead of leaving
+</span>            <span class="cd">;; </span><span class="c">the request pending until it times out server-side.
+</span>            ('request (<span class="k">let</span> ((response (<span class="k">condition-case</span> req-err
+                                          (eca--handle-server-request session json-data)
+                                        (<span class="w">error</span>
+                                         (eca--log-error session req-err <span class="s">"handle-server-request"</span> backtrace)
+                                         (eca-warn <span class="s">"Error handling server request %s: %s"</span>
+                                                   (plist-get json-data <span class="bi">:method</span>)
+                                                   (error-message-string req-err))
+                                         (list <span class="bi">:status</span> <span class="s">"error"</span>
+                                               <span class="bi">:message</span> (error-message-string req-err))))))
+                        (<span class="k">unless</span> (eq response <span class="bi">:async</span>)
+                          (eca-api-send-request-response session json-data response)))))
+        (<span class="w">error</span>
+         (eca--log-error session err <span class="s">"handle-message"</span> backtrace)
+         (<span class="w">signal</span> (car err) (cdr err)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

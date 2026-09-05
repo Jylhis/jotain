@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--normalize-prompt – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--normalize-prompt is a natively compiled function defined in
+eca-chat.el.
+Normalize PROMPT before sending to server.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--normalize-prompt</code></h1><p><span class="m"><code>eca-chat--normalize-prompt</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--normalize-prompt <a href="#:~:text=Normalize-,PROMPT"><span class="arg">PROMPT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Normalize <span class="arg">PROMPT</span> before sending to server.
+<p>- If any expandable (@context or #file) is found, expand it.
+<br>- Removes # from #files.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--normalize-prompt</span> (prompt)
+  <span class="doc">"Normalize PROMPT before sending to server.
+- If any expandable (@context or #file) is found, expand it.
+- Removes # from #files."</span>
+  (<span class="k">let</span> ((result <span class="s">""</span>)
+        (pos 0))
+    (<span class="k">while</span> (&lt; pos (length prompt))
+      (<span class="k">let*</span> ((next-change (next-single-property-change pos 'eca-chat-expanded-item-str prompt (length prompt)))
+             (expanded-str (get-text-property pos 'eca-chat-expanded-item-str prompt))
+             (item-type (get-text-property pos 'eca-chat-item-type prompt)))
+        (<span class="k">if</span> expanded-str
+            (<span class="k">setq</span> result (concat result
+                                 (<span class="k">cond</span>
+                                  ((eq item-type 'filepath)
+                                   (eca--path-local-to-remote (substring expanded-str 1)))
+                                  <span class="cd">;; </span><span class="c">Only path-based contexts go through path
+</span>                                  <span class="cd">;; </span><span class="c">translation; labels like buffer names
+</span>                                  <span class="cd">;; </span><span class="c">must be kept as-is.
+</span>                                  ((<span class="k">and</span> (eq item-type 'context)
+                                        (<span class="k">let</span> ((ctx (get-text-property pos 'eca-chat-context-item prompt)))
+                                          (<span class="k">or</span> (null ctx) (plist-get ctx <span class="bi">:path</span>))))
+                                   (concat <span class="s">"@"</span> (eca--path-local-to-remote
+                                                (substring expanded-str 1))))
+                                  (t expanded-str))))
+          (<span class="k">setq</span> result (concat result (substring prompt pos next-change))))
+        (<span class="k">setq</span> pos next-change)))
+    result))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

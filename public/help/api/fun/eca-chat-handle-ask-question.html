@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat-handle-ask-question – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat-handle-ask-question is a natively compiled function defined
+in eca-chat.el.
+Handle chat/askQuestion REQUEST for SESSION with PARAMS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat-handle-ask-question</code></h1><p><span class="m"><code>eca-chat-handle-ask-question</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat-handle-ask-question <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=askQuestion-,REQUEST"><span class="arg">REQUEST</span></a> <a href="#:~:text=with-,PARAMS"><span class="arg">PARAMS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle chat/askQuestion <span class="arg">REQUEST</span> for <span class="arg">SESSION</span> with <span class="arg">PARAMS</span>.
+<p>Renders the question in the chat buffer and switches the prompt
+to answer mode.  Returns :async — the response is sent later when
+the user answers or cancels.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+<span class="cd">;;; </span><span class="c">Ask question
+</span>
+(<span class="k">defun</span> <span class="f">eca-chat-handle-ask-question</span> (session request params)
+  <span class="doc">"Handle chat/askQuestion REQUEST for SESSION with PARAMS.
+Renders the question in the chat buffer and switches the prompt
+to answer mode.  Returns :async — the response is sent later when
+the user answers or cancels."</span>
+  (<span class="k">let*</span> ((chat-id (plist-get params <span class="bi">:chatId</span>))
+         (question (plist-get params <span class="bi">:question</span>))
+         <span class="cd">;; </span><span class="c">Guard against a non-sequence `:options` (e.g. a malformed
+</span>         <span class="cd">;; </span><span class="c">string from a misbehaving server): `</span><span class="m c">append</span><span class="c">' on a string would
+</span>         <span class="cd">;; </span><span class="c">split it into character integers that render as random numbers.
+</span>         (options (<span class="k">let</span> ((raw (plist-get params <span class="bi">:options</span>)))
+                    (<span class="k">when</span> (<span class="k">or</span> (listp raw) (vectorp raw))
+                      (append raw nil))))
+         (tool-call-id (plist-get params <span class="bi">:toolCallId</span>))
+         (allow-freeform (plist-get params <span class="bi">:allowFreeform</span>))
+         (chat-buffer (eca-chat--get-chat-buffer session chat-id)))
+    (<span class="k">if</span> (<span class="k">and</span> chat-buffer (buffer-live-p chat-buffer))
+        (<span class="k">progn</span>
+          (<span class="k">eca-chat--with-current-buffer</span> chat-buffer
+            (<span class="k">setq</span> eca-chat--pending-question
+                  (list <span class="bi">:session</span> session <span class="bi">:request</span> request
+                        <span class="bi">:question</span> question <span class="bi">:options</span> options
+                        <span class="bi">:tool-call-id</span> tool-call-id
+                        <span class="bi">:allow-freeform</span> allow-freeform))
+            (<span class="k">if</span> tool-call-id
+                (<span class="k">progn</span>
+                  (eca-chat--update-expandable-content
+                   tool-call-id
+                   (propertize (concat <span class="s">"Q: "</span> question)
+                               'font-lock-face 'eca-chat-question-face)
+                   (eca-chat--build-question-options-content options))
+                  (eca-chat--expandable-content-toggle tool-call-id t nil))
+              (eca-chat--render-ask-question-standalone question options))
+            (<span class="k">when</span> allow-freeform
+              (eca-chat--set-question-prompt-prefix t))
+            <span class="cd">;; </span><span class="c">A pending question keeps the turn active server-side, so
+</span>            <span class="cd">;; </span><span class="c">surface the stop affordance even if the chat reports idle.
+</span>            (eca-chat--refresh-transient-area)
+            (eca-chat--notify-status-changed session))
+          <span class="bi">:async</span>)
+      (list <span class="bi">:answer</span> nil <span class="bi">:cancelled</span> t))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

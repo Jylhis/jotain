@@ -1,0 +1,76 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--preset-mismatch-value – Emacs Documentation Online</title>
+<meta name="description" content="gptel--preset-mismatch-value is a natively compiled function defined
+in gptel.el.
+Determine if the value of KEY in PRESET-SPEC matches VAL.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--preset-mismatch-value</code></h1><p><span class="m"><code>gptel--preset-mismatch-value</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--preset-mismatch-value <a href="#:~:text=in-,PRESET-SPEC"><span class="arg">PRESET-SPEC</span></a> <a href="#:~:text=of-,KEY"><span class="arg">KEY</span></a> <a href="#:~:text=matches-,VAL"><span class="arg">VAL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Determine if the value of <span class="arg">KEY</span> in <span class="arg">PRESET-SPEC</span> matches <span class="arg">VAL</span>.
+<p>This is an imperfect check for whether the value corresponding to <span class="arg">KEY</span> (a
+keyword) in <span class="arg">PRESET-SPEC</span> (a plist) matches <span class="arg">VAL</span>.  This is required
+primarily to identify which gptel variable values have changed since
+<span class="arg">PRESET-SPEC</span> was applied, which is relevant when writing gptel metadata
+to a chat file.
+<p>See also <span class="m"><code>gptel--preset-mismatch-p</code></span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--preset-mismatch-value</span> (preset-spec key val)
+  <span class="doc">"Determine if the value of KEY in PRESET-SPEC matches VAL.
+
+This is an imperfect check for whether the value corresponding to KEY (a
+keyword) in PRESET-SPEC (a plist) matches VAL.  This is required
+primarily to identify which gptel variable values have changed since
+PRESET-SPEC was applied, which is relevant when writing gptel metadata
+to a chat file.
+
+See also `</span><span class="m doc">gptel--preset-mismatch-p</span><span class="doc">'."</span>
+  <span class="cd">;; </span><span class="c">In all cases, assume a mismatch if the preset's value for KEY is a
+</span>  <span class="cd">;; </span><span class="c">modify-list spec, such as (:append ...)
+</span>  <span class="cd">;; </span><span class="c">Mismatches may not even be well-defined/determinable in these cases.
+</span>  (<span class="k">or</span> (not preset-spec)
+      (<span class="k">pcase</span> key
+        <span class="cd">;; </span><span class="c">special cases
+</span>        ((<span class="k">or</span> <span class="bi">:system</span> <span class="bi">:system-message</span>)
+         (<span class="k">let</span> ((system (plist-get preset-spec <span class="bi">:system</span>)))
+           (<span class="k">or</span> (<span class="k">and</span> (stringp system) (not (equal system val)))
+               (functionp system)
+               (<span class="k">and</span> (consp system) (keywordp (car system)))
+               (<span class="k">and</span> (consp system)
+                    (not (equal (car-safe (gptel--parse-directive system))
+                                val))))))
+        (<span class="bi">:backend</span>
+         (<span class="k">let</span> ((backend (plist-get preset-spec <span class="bi">:backend</span>)))
+           (<span class="k">or</span> (<span class="k">and</span> (consp backend) (keywordp (car-safe backend)))
+               (not (equal (<span class="k">or</span> (<span class="k">and</span> (gptel-backend-p val) (gptel-backend-name val))
+                               val)
+                           (<span class="k">or</span> (<span class="k">and</span> (gptel-backend-p backend) (gptel-backend-name backend))
+                               backend))))))
+        <span class="cd">;; </span><span class="c">FIXME: We're assuming that val is a list of tool names, not tools
+</span>        (<span class="bi">:tools</span>
+         (<span class="k">and-let*</span> ((preset-tools (plist-get preset-spec <span class="bi">:tools</span>)))
+           (<span class="k">or</span> (keywordp (car-safe preset-tools))
+               (<span class="k">cl-loop</span>
+                for tool in preset-tools
+                for tool-name =
+                (<span class="k">or</span> (<span class="k">and</span> (stringp tool) tool)
+                    (<span class="k">ignore-errors</span> (gptel-tool-name
+                                    (gptel-get-tool tool))))
+                if (not (member tool-name uniq-tool-names))
+                collect tool-name into uniq-tool-names
+                finally return
+                (not (equal (sort uniq-tool-names #'string-lessp)
+                            (sort (copy-sequence (ensure-list val)) #'string-lessp)))))))
+        <span class="cd">;; </span><span class="c">Generic case
+</span>        (_ (<span class="k">let</span> ((field-val (plist-get preset-spec key)))
+             (<span class="k">or</span> (<span class="k">and</span> (consp field-val) (keywordp (car field-val)))
+                 (not (equal field-val val))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

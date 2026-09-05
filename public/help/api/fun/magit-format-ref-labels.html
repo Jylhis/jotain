@@ -1,0 +1,99 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-format-ref-labels – Emacs Documentation Online</title>
+<meta name="description" content="magit-format-ref-labels is a natively compiled function defined in
+magit-git.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-format-ref-labels</code></h1><p><span class="m"><code>magit-format-ref-labels</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-git.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-format-ref-labels <span class="arg">STRING</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-git.el</span>
+(<span class="k">defun</span> <span class="f">magit-format-ref-labels</span> (string)
+  (<span class="k">save-match-data</span>
+    (<span class="k">let</span> ((refs (split-string
+                 (replace-regexp-in-string <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">tag: </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">HEAD -&gt; </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> <span class="s">""</span> string)
+                 <span class="s">", "</span> t))
+          state head upstream tags branches remotes other combined)
+      (<span class="k">dolist</span> (ref refs)
+        (<span class="k">let*</span> ((face (cdr (seq-find (##string-match (car %) ref)
+                                    magit-ref-namespaces)))
+               (name (match-str 1 ref))
+               (name (<span class="k">if</span> (<span class="k">and</span> name
+                              (not (string-prefix-p <span class="s">"refs/tags/"</span> ref))
+                              (magit-rev-verify (concat <span class="s">"refs/tags/"</span> name)))
+                         (magit-ref-abbrev ref)
+                       (<span class="k">or</span> name ref)))
+               (name (magit--propertize-face name face)))
+          (<span class="k">cl-case</span> face
+            ((magit-bisect-bad magit-bisect-skip magit-bisect-good)
+             (<span class="k">setq</span> state name))
+            (magit-head
+             (<span class="k">setq</span> head (magit--propertize-face <span class="s">"@"</span> 'magit-head)))
+            (magit-tag            (<span class="k">push</span> name tags))
+            (magit-branch-local   (<span class="k">push</span> name branches))
+            (magit-branch-remote  (<span class="k">push</span> name remotes))
+            (t                    (<span class="k">push</span> name other)))))
+      (<span class="k">setq</span> remotes
+            (seq-keep
+             (<span class="k">lambda</span> (name)
+               (<span class="k">if</span> (string-match <span class="s">"\\`</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s">/]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\'"</span> name)
+                   (<span class="k">let</span> ((r (match-str 1 name))
+                         (b (match-str 2 name)))
+                     (<span class="k">and</span> (not (equal b <span class="s">"HEAD"</span>))
+                          (<span class="k">if</span> (equal (concat <span class="s">"refs/remotes/"</span> name)
+                                     (magit-git-string
+                                      <span class="s">"symbolic-ref"</span>
+                                      (format <span class="s">"refs/remotes/%s/HEAD"</span> r)))
+                              (magit--propertize-face
+                               name 'magit-branch-remote-head)
+                            name)))
+                 name))
+             remotes))
+      (<span class="k">let*</span> ((current (magit-get-current-branch))
+             (target  (magit-get-upstream-branch current)))
+        (<span class="k">dolist</span> (name branches)
+          (<span class="k">let</span> ((push (car (member (magit-get-push-branch name) remotes))))
+            (<span class="k">when</span> push
+              (<span class="k">setq</span> remotes (delete push remotes))
+              (string-match <span class="s">"^[</span><span class="neg s">^</span><span class="s">/]*/"</span> push)
+              (<span class="k">setq</span> push (substring push 0 (match-end 0))))
+            (<span class="k">cond</span>
+              ((equal name current)
+               (<span class="k">setq</span> head
+                     (concat push
+                             (magit--propertize-face
+                              name 'magit-branch-current))))
+              ((equal name target)
+               (<span class="k">setq</span> upstream
+                     (concat push
+                             (magit--propertize-face
+                              name '(magit-branch-upstream
+                                     magit-branch-local)))))
+              ((<span class="k">push</span> (concat push name) combined)))))
+        (<span class="k">cond-let</span>
+          ((<span class="k">or</span> upstream (not target)))
+          ((member target remotes)
+           (magit--add-face-text-property
+            0 (length target) 'magit-branch-upstream nil target)
+           (<span class="k">setq</span> upstream target)
+           (<span class="k">setq</span> remotes (delete target remotes)))
+          ([target (car (member target combined))]
+           (magit--add-face-text-property
+            0 (length target) 'magit-branch-upstream nil target)
+           (<span class="k">setq</span> upstream target)
+           (<span class="k">setq</span> combined (delete target combined)))))
+      (string-join (flatten-tree `(,state
+                                   ,head
+                                   ,upstream
+                                   ,@(nreverse tags)
+                                   ,@(nreverse combined)
+                                   ,@(nreverse remotes)
+                                   ,@other))
+                   <span class="s">" "</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

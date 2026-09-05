@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--current-history – Emacs Documentation Online</title>
+<meta name="description" content="consult--current-history is a natively compiled function defined in
+consult.el.
+Return the history and index variable relevant to the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--current-history</code></h1><p><span class="m"><code>consult--current-history</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--current-history)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the history and index variable relevant to the current buffer.
+<p>If the minibuffer is active, the minibuffer history is returned,
+otherwise the history corresponding to the mode.  There is a
+special case for <a href="../fun/repeat-complex-command.html"><code>repeat-complex-command</code></a>, for which the command
+history is used.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+<span class="cd">;;;;; </span><span class="c">Command: consult-history
+</span>
+(<span class="k">defun</span> <span class="f">consult--current-history</span> ()
+  <span class="doc">"Return the history and index variable relevant to the current buffer.
+If the minibuffer is active, the minibuffer history is returned,
+otherwise the history corresponding to the mode.  There is a
+special case for `</span><span class="m doc">repeat-complex-command</span><span class="doc">', for which the command
+history is used."</span>
+  (<span class="k">cond</span>
+   <span class="cd">;; </span><span class="c">In the minibuffer we use the current minibuffer history,
+</span>   <span class="cd">;; </span><span class="c">which can be configured by setting `</span><span class="m c">minibuffer-history-variable</span><span class="c">'.
+</span>   ((minibufferp)
+    (<span class="k">when</span> (eq minibuffer-history-variable t)
+      (<span class="w">user-error</span> <span class="s">"Minibuffer history is disabled for `</span><span class="m s">%s</span><span class="s">'"</span> this-command))
+    (list (mapcar #'consult--tofu-strip
+                  (<span class="k">if</span> (eq minibuffer-history-variable 'command-history)
+                      <span class="cd">;; </span><span class="c">If pressing "C-x M-:", i.e., `</span><span class="m c">repeat-complex-command</span><span class="c">',
+</span>                      <span class="cd">;; </span><span class="c">we are instead querying the `</span><span class="m c">command-history</span><span class="c">' and get a
+</span>                      <span class="cd">;; </span><span class="c">full s-expression.  Alternatively you might want to use
+</span>                      <span class="cd">;; </span><span class="c">`</span><span class="m c">consult-complex-command</span><span class="c">', which can also be bound to
+</span>                      <span class="cd">;; </span><span class="c">"C-x M-:"!
+</span>                      (mapcar #'prin1-to-string command-history)
+                    (symbol-value minibuffer-history-variable)))))
+   <span class="cd">;; </span><span class="c">Otherwise we use a mode-specific history, see `</span><span class="m c">consult-mode-histories</span><span class="c">'.
+</span>   (t (<span class="k">let</span> ((found (seq-find (<span class="k">lambda</span> (h)
+                               (<span class="k">and</span> (derived-mode-p (car h))
+                                    (boundp (<span class="k">if</span> (consp (cdr h)) (cadr h) (cdr h)))))
+                             consult-mode-histories)))
+        (<span class="k">unless</span> found
+          (<span class="w">user-error</span> <span class="s">"No history configured for `</span><span class="m s">%s</span><span class="s">', see `</span><span class="m s">consult-mode-histories</span><span class="s">'"</span>
+                      major-mode))
+        (cons (symbol-value (cadr found)) (cddr found))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

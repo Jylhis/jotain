@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: avy--linum-update-window – Emacs Documentation Online</title>
+<meta name="description" content="avy--linum-update-window is a natively compiled function defined in
+avy.el.
+Update line numbers for the portion visible in window WIN.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>avy--linum-update-window</code></h1><p><span class="m"><code>avy--linum-update-window</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">avy.el</span>.
+<h2>Signature</h2>
+<pre><code>(avy--linum-update-window _ <a href="#:~:text=window-,WIN"><span class="arg">WIN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update line numbers for the portion visible in window <span class="arg">WIN</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w15jf1dbl3fxkx8c35ym39v09hnaxjw9-emacs-packages-deps/share/emacs/site-lisp/elpa/avy-20241101.1357/avy.el</span>
+(<span class="k">defun</span> <span class="f">avy--linum-update-window</span> (_ win)
+  <span class="doc">"Update line numbers for the portion visible in window WIN."</span>
+  (goto-char (window-start win))
+  (<span class="k">let</span> ((line (line-number-at-pos))
+        (limit (window-end win t))
+        (fmt (<span class="k">cond</span> ((stringp linum-format) linum-format)
+                   ((eq linum-format 'dynamic)
+                    (<span class="k">let</span> ((w (length (number-to-string
+                                      (count-lines (point-min) (point-max))))))
+                      (concat <span class="s">"%"</span> (number-to-string w) <span class="s">"d"</span>)))))
+        (width 0)
+        (avy-strs (<span class="k">when</span> avy-linum-mode
+                    (avy--linum-strings))))
+    (run-hooks 'linum-before-numbering-hook)
+    <span class="cd">;; </span><span class="c">Create an overlay (or reuse an existing one) for each
+</span>    <span class="cd">;; </span><span class="c">line visible in this window, if necessary.
+</span>    (<span class="k">while</span> (<span class="k">and</span> (not (eobp)) (&lt; (point) limit))
+      (<span class="k">let*</span> ((str
+              (<span class="k">cond</span> (avy-linum-mode
+                     (<span class="k">pop</span> avy-strs))
+                    (fmt
+                     (propertize (format fmt line) 'face 'linum))
+                    (t
+                     (funcall linum-format line))))
+             (visited (<span class="k">catch</span> '<span class="m">visited</span>
+                        (<span class="k">dolist</span> (o (overlays-in (point) (point)))
+                          (<span class="k">when</span> (equal-including-properties
+                                 (overlay-get o 'linum-str) str)
+                            (<span class="k">unless</span> (memq o linum-overlays)
+                              (<span class="k">push</span> o linum-overlays))
+                            (<span class="k">setq</span> linum-available (delq o linum-available))
+                            (<span class="k">throw</span> '<span class="m">visited</span> t))))))
+        (<span class="k">setq</span> width (max width (length str)))
+        (<span class="k">unless</span> visited
+          (<span class="k">let</span> ((ov (<span class="k">if</span> (null linum-available)
+                        (make-overlay (point) (point))
+                      (move-overlay (<span class="k">pop</span> linum-available) (point) (point)))))
+            (<span class="k">push</span> ov linum-overlays)
+            (overlay-put ov 'before-string
+                         (propertize <span class="s">" "</span> 'display `((margin left-margin) ,str)))
+            (overlay-put ov 'linum-str str))))
+      <span class="cd">;; </span><span class="c">Text may contain those nasty intangible properties, but that
+</span>      <span class="cd">;; </span><span class="c">shouldn't prevent us from counting those lines.
+</span>      (<span class="k">let</span> ((inhibit-point-motion-hooks t))
+        (forward-line))
+      (<span class="k">setq</span> line (1+ line)))
+    (<span class="k">when</span> (display-graphic-p)
+      (<span class="k">setq</span> width (ceiling
+                   (/ (* width 1.0 (linum--face-width 'linum))
+                      (frame-char-width)))))
+    (set-window-margins win width (cdr (window-margins win)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

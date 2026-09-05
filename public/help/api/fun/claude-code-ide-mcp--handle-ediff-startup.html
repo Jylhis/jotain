@@ -1,0 +1,78 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp--handle-ediff-startup – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp--handle-ediff-startup is a natively compiled
+function defined in claude-code-ide-mcp-handlers.el.
+Handle ediff startup for TAB-NAME with SESSION and SAVED-WINCONF.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp--handle-ediff-startup</code></h1><p><span class="m"><code>claude-code-ide-mcp--handle-ediff-startup</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">claude-code-ide-mcp-handlers.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp--handle-ediff-startup <a href="#:~:text=for-,TAB-NAME"><span class="arg">TAB-NAME</span></a> <a href="#:~:text=with-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=and-,SAVED-WINCONF"><span class="arg">SAVED-WINCONF</span></a> <a href="#:~:text=WINCONF.-,STARTUP-HOOK-FN"><span class="arg">STARTUP-HOOK-FN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle ediff startup for <span class="arg">TAB-NAME</span> with <span class="arg">SESSION</span> and <span class="arg">SAVED-WINCONF</span>.
+<p><span class="arg">STARTUP-HOOK-FN</span> is the hook function to remove after use.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp-handlers.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp--handle-ediff-startup</span> (tab-name session saved-winconf startup-hook-fn)
+  <span class="doc">"Handle ediff startup for TAB-NAME with SESSION and SAVED-WINCONF.
+STARTUP-HOOK-FN is the hook function to remove after use."</span>
+  <span class="cd">;; </span><span class="c">Capture the control buffer and store it in diff-info
+</span>  (<span class="k">when</span> ediff-control-buffer
+    <span class="cd">;; </span><span class="c">Store the control buffer in our diff-info
+</span>    (<span class="k">let</span> ((active-diffs (claude-code-ide-mcp--get-active-diffs session))
+          (control-buffer ediff-control-buffer))
+      (<span class="k">when-let</span> ((diff-info (gethash tab-name active-diffs)))
+        (<span class="k">setf</span> (alist-get 'control-buffer diff-info) control-buffer)
+        (puthash tab-name diff-info active-diffs)))
+
+    (<span class="k">with-current-buffer</span> ediff-control-buffer
+      <span class="cd">;; </span><span class="c">Set up quit hook with captured values in lexical closure
+</span>      (<span class="k">setq-local</span> ediff-quit-hook
+                  (list (<span class="k">lambda</span> ()
+                          <span class="cd">;; </span><span class="c">Check if this quit was initiated by Claude
+</span>                          (<span class="k">let*</span> ((active-diffs (claude-code-ide-mcp--get-active-diffs session))
+                                 (diff-info (gethash tab-name active-diffs))
+                                 (quit-from-claude (alist-get 'quit-from-claude diff-info)))
+                            (<span class="k">unless</span> quit-from-claude
+                              <span class="cd">;; </span><span class="c">Only handle quit if not initiated by Claude
+</span>                              (claude-code-ide-mcp--handle-ediff-quit
+                               tab-name
+                               session)))
+                          <span class="cd">;; </span><span class="c">Always restore window configuration
+</span>                          (<span class="k">when</span> saved-winconf
+                            (<span class="k">condition-case</span> nil
+                                (set-window-configuration saved-winconf)
+                              (<span class="w">error</span> nil)))))))
+
+    <span class="cd">;; </span><span class="c">Jump to the first difference if there are any
+</span>    (<span class="k">ignore-errors</span> (ediff-next-difference))
+
+    <span class="cd">;; </span><span class="c">Save the current window before any operations
+</span>    (<span class="k">let</span> ((original-window (selected-window))
+          (claude-window nil))
+      <span class="cd">;; </span><span class="c">Restore Claude side window only if user wants it shown during ediff
+</span>      (<span class="k">when</span> claude-code-ide-show-claude-window-in-ediff
+        (<span class="k">when-let*</span> ((project-dir (claude-code-ide-mcp-session-project-dir session))
+                    (claude-buffer-name (claude-code-ide--get-buffer-name project-dir))
+                    (claude-buffer (get-buffer claude-buffer-name)))
+          (<span class="k">when</span> (buffer-live-p claude-buffer)
+            <span class="cd">;; </span><span class="c">Display Claude buffer in side window and save the window
+</span>            (<span class="k">setq</span> claude-window (claude-code-ide--display-buffer-in-side-window claude-buffer)))))
+
+      <span class="cd">;; </span><span class="c">Handle focus based on user preference
+</span>      (<span class="k">cond</span>
+       <span class="cd">;; </span><span class="c">If user wants Claude window focus and it's visible, select it
+</span>       ((<span class="k">and</span> claude-code-ide-focus-claude-after-ediff claude-window)
+        (select-window claude-window))
+       <span class="cd">;; </span><span class="c">Otherwise, restore the original window (which might be one of the ediff windows)
+</span>       (t
+        (select-window original-window))))
+
+    <span class="cd">;; </span><span class="c">Remove this startup hook after use
+</span>    (remove-hook 'ediff-startup-hook startup-hook-fn)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

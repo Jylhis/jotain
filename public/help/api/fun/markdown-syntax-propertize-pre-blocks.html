@@ -1,0 +1,73 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-syntax-propertize-pre-blocks – Emacs Documentation Online</title>
+<meta name="description" content="markdown-syntax-propertize-pre-blocks is a natively compiled function
+defined in markdown-mode.el.
+Match preformatted text blocks from START to END.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-syntax-propertize-pre-blocks</code></h1><p><span class="m"><code>markdown-syntax-propertize-pre-blocks</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-syntax-propertize-pre-blocks <a href="#:~:text=from-,START"><span class="arg">START</span></a> <a href="#:~:text=to-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Match preformatted text blocks from <span class="arg">START</span> to <span class="arg">END</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-syntax-propertize-pre-blocks</span> (start end)
+  <span class="doc">"Match preformatted text blocks from START to END."</span>
+  (<span class="k">save-excursion</span>
+    (goto-char start)
+    (<span class="k">let</span> (finish)
+      <span class="cd">;; </span><span class="c">Use loop for avoiding too many recursive calls
+</span>      <span class="cd">;; </span><span class="c">https://github.com/jrblevin/markdown-mode/issues/512
+</span>      (<span class="k">while</span> (not finish)
+        (<span class="k">let</span> ((levels (markdown-calculate-list-levels))
+              indent pre-regexp close-regexp open close)
+          (<span class="k">while</span> (<span class="k">and</span> (&lt; (point) end) (not close))
+            <span class="cd">;; </span><span class="c">Search for a region with sufficient indentation
+</span>            (<span class="k">if</span> (null levels)
+                (<span class="k">setq</span> indent 1)
+              (<span class="k">setq</span> indent (1+ (length levels))))
+            (<span class="k">setq</span> pre-regexp (format <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">    </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\t</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\{%d\\}"</span> indent))
+            (<span class="k">setq</span> close-regexp (format <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">    </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\t</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\{0,%d\\}</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s"> \t]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> (1- indent)))
+
+            (<span class="k">cond</span>
+             <span class="cd">;; </span><span class="c">If not at the beginning of a line, move forward
+</span>             ((not (bolp)) (forward-line))
+             <span class="cd">;; </span><span class="c">Move past blank lines
+</span>             ((markdown-cur-line-blank-p) (forward-line))
+             <span class="cd">;; </span><span class="c">At headers and horizontal rules, reset levels
+</span>             ((markdown-new-baseline) (forward-line) (<span class="k">setq</span> levels nil))
+             <span class="cd">;; </span><span class="c">If the current line has sufficient indentation, mark out pre block
+</span>             <span class="cd">;; </span><span class="c">The opening should be preceded by a blank line.
+</span>             ((<span class="k">and</span> (markdown-prev-line-blank) (looking-at pre-regexp))
+              (<span class="k">setq</span> open (match-beginning 0))
+              (<span class="k">while</span> (<span class="k">and</span> (<span class="k">or</span> (looking-at-p pre-regexp) (markdown-cur-line-blank-p))
+                          (not (eobp)))
+                (forward-line))
+              (skip-syntax-backward <span class="s">"-"</span>)
+              (forward-line)
+              (<span class="k">setq</span> close (point)))
+             <span class="cd">;; </span><span class="c">If current line has a list marker, update levels, move to end of block
+</span>             ((looking-at markdown-regex-list)
+              (<span class="k">setq</span> levels (markdown-update-list-levels
+                            (match-string 2) (current-indentation) levels))
+              (markdown-end-of-text-block))
+             <span class="cd">;; </span><span class="c">If this is the end of the indentation level, adjust levels accordingly.
+</span>             <span class="cd">;; </span><span class="c">Only match end of indentation level if levels is not the empty list.
+</span>             ((<span class="k">and</span> (car levels) (looking-at-p close-regexp))
+              (<span class="k">setq</span> levels (markdown-update-list-levels
+                            nil (current-indentation) levels))
+              (markdown-end-of-text-block))
+             (t (markdown-end-of-text-block))))
+
+          (<span class="k">if</span> (<span class="k">and</span> open close)
+              <span class="cd">;; </span><span class="c">Set text property data and continue to search
+</span>              (put-text-property open close 'markdown-pre (list open close))
+            (<span class="k">setq</span> finish t))))
+      nil)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

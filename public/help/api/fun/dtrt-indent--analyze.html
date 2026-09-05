@@ -1,0 +1,137 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dtrt-indent--analyze – Emacs Documentation Online</title>
+<meta name="description" content="dtrt-indent--analyze is a natively compiled function defined in
+dtrt-indent.el.
+Analyze the histogram.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dtrt-indent--analyze</code></h1><p><span class="m"><code>dtrt-indent--analyze</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dtrt-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(dtrt-indent--analyze <a href="#:~:text=histogram.-,HISTOGRAM-AND-TOTAL-LINES"><span class="arg">HISTOGRAM-AND-TOTAL-LINES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Analyze the histogram.
+<p><span class="arg">HISTOGRAM-AND-TOTAL-LINES</span> is a tuple with the first item being
+the histogram, the second item being the total number of lines
+considered in the histogram.
+<p>Returns a map with the following entries:
+<p>TBD
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/07pi18l0q79xmgqf3amadq86iinldk0s-emacs-packages-deps/share/emacs/site-lisp/elpa/dtrt-indent-20260709.2011/dtrt-indent.el</span>
+(<span class="k">defun</span> <span class="f">dtrt-indent--analyze</span> (histogram-and-total-lines)
+  <span class="doc">"Analyze the histogram.
+
+HISTOGRAM-AND-TOTAL-LINES is a tuple with the first item being
+the histogram, the second item being the total number of lines
+considered in the histogram.
+
+Returns a map with the following entries:
+
+TBD"</span>
+  (<span class="k">let*</span> ((analysis
+          (<span class="k">let</span> ((try-offset dtrt-indent-min-offset)
+                unsorted-analysis)
+            (<span class="k">while</span> (&lt;= try-offset dtrt-indent-max-offset)
+              (<span class="k">setq</span>
+               unsorted-analysis
+               (append unsorted-analysis
+                       (list (dtrt-indent--analyze-histogram-try-offset
+                              try-offset
+                              (nth 0 histogram-and-total-lines)
+                              (nth 1 histogram-and-total-lines)))))
+              (<span class="k">setq</span> try-offset (1+ try-offset)))
+            (sort unsorted-analysis (<span class="k">lambda</span> (x y) (&gt; (nth 1 x)
+                                                     (nth 1 y))))))
+         (analysis-iterator analysis))
+
+    (<span class="k">while</span> analysis-iterator
+      (<span class="k">let</span> ((analysis-entry (car analysis-iterator)))
+        (<span class="k">dolist</span> (other-analysis-entry (cdr analysis-iterator))
+
+          (<span class="k">let</span> ((deviation (abs (- (nth 1 other-analysis-entry)
+                                   (nth 1 analysis-entry)))))
+            (<span class="k">when</span> (<span class="k">and</span> (not (nth 3 analysis-entry))
+                       (eq 0 (mod (car other-analysis-entry)
+                                  (car analysis-entry)))
+                       (&gt; dtrt-indent-max-merge-deviation
+                          (* 100.0 deviation)))
+              (setcdr
+               (cddr analysis-entry)
+               (list
+                (format <span class="s">"\
+merged with offset %s (%.2f%% deviation, limit %.2f%%)"</span>
+                        (nth 0 other-analysis-entry)
+                        (* 100.0 deviation)
+                        dtrt-indent-max-merge-deviation)))))))
+      (<span class="k">setq</span> analysis-iterator (cdr analysis-iterator)))
+
+    (<span class="k">let</span> (best-guess)
+      (<span class="k">dolist</span> (guess analysis)
+        (<span class="k">cond</span>
+         ((<span class="k">and</span> (null best-guess)
+               (null (nth 3 guess)))
+          (<span class="k">setq</span> best-guess guess))))
+
+      (<span class="k">let*</span> ((confidence
+              (<span class="k">if</span> best-guess
+                  (nth 1 best-guess)
+                0))
+             (total-lines (nth 1 histogram-and-total-lines))
+             (enough-relevant-lines
+              (&gt;= total-lines dtrt-indent-min-relevant-lines))
+             (hard-tab-percentage (<span class="k">if</span> (&gt; total-lines 0)
+                                      (/ (float (nth 2 histogram-and-total-lines))
+                                         total-lines)
+                                    0))
+             (soft-tab-percentage (<span class="k">if</span> (&gt; total-lines 0)
+                                      (/ (float (nth 3 histogram-and-total-lines))
+                                         total-lines)
+                                    0))
+             (change-indent-tabs-mode)
+             (indent-tabs-mode-setting)
+             (rejected
+              (<span class="k">cond</span>
+               ((null best-guess)
+                <span class="s">"no best guess"</span>)
+               ((&lt; (* 100.0 (nth 1 best-guess))
+                   dtrt-indent-min-quality)
+                (format <span class="s">"best guess below minimum quality (%f &lt; %f)"</span>
+                        (* 100.0 (nth 1 best-guess))
+                        dtrt-indent-min-quality))
+               ((not enough-relevant-lines)
+                (format <span class="s">"not enough relevant lines (%d required)"</span>
+                        dtrt-indent-min-relevant-lines)))))
+
+        (<span class="k">cond</span>
+         ((not enough-relevant-lines))
+         ((<span class="k">or</span> (= 0 hard-tab-percentage)
+              (&gt;= (/ soft-tab-percentage
+                     hard-tab-percentage)
+                  (+ 1.0 (/ dtrt-indent-min-soft-tab-superiority 100.0))))
+          (<span class="k">setq</span> change-indent-tabs-mode t)
+          (<span class="k">setq</span> indent-tabs-mode-setting nil))
+
+         ((<span class="k">or</span> (= 0 soft-tab-percentage)
+              (&gt;= (/ hard-tab-percentage
+                     soft-tab-percentage)
+                  (+ 1.0 (/ dtrt-indent-min-hard-tab-superiority 100.0))))
+          (<span class="k">setq</span> change-indent-tabs-mode t)
+          (<span class="k">setq</span> indent-tabs-mode-setting t)))
+
+        (list (cons <span class="bi">:histogram</span> (car histogram-and-total-lines))
+              (cons <span class="bi">:total-lines</span> total-lines)
+              (cons <span class="bi">:analysis</span> analysis)
+              (cons <span class="bi">:best-guess</span> best-guess)
+              (cons <span class="bi">:hard-tab-lines</span> (nth 2 histogram-and-total-lines) )
+              (cons <span class="bi">:hard-tab-percentage</span> hard-tab-percentage)
+              (cons <span class="bi">:soft-tab-lines</span> (nth 3 histogram-and-total-lines) )
+              (cons <span class="bi">:soft-tab-percentage</span> soft-tab-percentage)
+              (cons <span class="bi">:change-indent-tabs-mode</span> change-indent-tabs-mode)
+              (cons <span class="bi">:indent-tabs-mode-setting</span> indent-tabs-mode-setting)
+              (cons <span class="bi">:rejected</span> rejected)
+              (cons <span class="bi">:confidence</span> confidence))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

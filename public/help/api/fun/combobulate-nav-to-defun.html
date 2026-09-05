@@ -1,0 +1,93 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-nav-to-defun – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-nav-to-defun is a natively compiled function defined in
+combobulate-navigation.el.
+Navigate to a defun in DIRECTION, possibly from NODE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-nav-to-defun</code></h1><p><span class="m"><code>combobulate-nav-to-defun</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">combobulate-navigation.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-nav-to-defun <a href="#:~:text=in-,DIRECTION"><span class="arg">DIRECTION</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=from-,NODE"><span class="arg">NODE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Navigate to a defun in <span class="arg">DIRECTION</span>, possibly from <span class="arg">NODE</span>.
+<p><span class="arg">DIRECTION</span> must be <span class="m"><code>forward</code></span> or <span class="m"><code>backward</code></span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-navigation.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-nav-to-defun</span> (direction <span class="ty">&amp;optional</span> node)
+  <span class="doc">"Navigate to a defun in DIRECTION, possibly from NODE.
+
+DIRECTION must be `</span><span class="m doc">forward</span><span class="doc">' or `</span><span class="m doc">backward</span><span class="doc">'."</span>
+  (<span class="k">when-let*</span> ((current-node (<span class="k">or</span> node
+                                (combobulate--get-nearest-navigable-node)
+                                (combobulate-node-at-point)))
+              (min-depth most-positive-fixnum)
+              (tree (<span class="k">save-excursion</span>
+                      (combobulate-move-to-node current-node (eq direction 'backward))
+                      (combobulate-build-sparse-tree direction combobulate-navigable-nodes
+                                                     (<span class="k">if</span> (eq direction 'backward)
+                                                         #'combobulate-node-before-point-p
+                                                       #'combobulate-node-on-or-after-point-p)))))
+    (<span class="k">let</span> ((valid-nodes)
+          (current-node-depth
+           <span class="cd">;; </span><span class="c">determine the smallest depth in the tree and also the
+</span>           <span class="cd">;; </span><span class="c">depth of `</span><span class="m c">current-node</span><span class="c">'.
+</span>           (combobulate-walk-tree tree
+                                  (<span class="k">lambda</span> (leaf depth)
+                                    (<span class="k">setq</span> min-depth (min depth min-depth))
+                                    (<span class="k">when</span> (combobulate-node-eq current-node leaf)
+                                      <span class="cd">;; </span><span class="c">once we've found
+</span>                                      <span class="cd">;; </span><span class="c">`</span><span class="m c">current-node</span><span class="c">' in the tree,
+</span>                                      <span class="cd">;; </span><span class="c">we unwind the walk; no need
+</span>                                      <span class="cd">;; </span><span class="c">to continue.
+</span>                                      (<span class="k">throw</span> '<span class="m">stop</span> depth))
+                                    (cons depth leaf)))))
+      <span class="cd">;; </span><span class="c">if we get anything but a number back, default to node depth
+</span>      <span class="cd">;; </span><span class="c">0
+</span>      (<span class="k">when</span> (consp current-node-depth)
+        (<span class="k">setq</span> current-node-depth 0))
+      <span class="cd">;; </span><span class="c">now walk the tree again. This time it's to find matches
+</span>      <span class="cd">;; </span><span class="c">that satisfy `</span><span class="m c">combobulate-beginning-of-defun-behavior</span><span class="c">'
+</span>      (combobulate-walk-tree
+       tree
+       (<span class="k">lambda</span> (leaf depth)
+         (<span class="k">when</span> (<span class="k">and</span> (<span class="k">if</span> (eq 'forward direction)
+                        (<span class="k">or</span> (combobulate-point-near-node leaf)
+                            (combobulate-node-on-or-after-point-p leaf))
+                      (combobulate-node-before-point-p leaf))
+                    (<span class="k">or</span>
+                     <span class="cd">;; </span><span class="c">we can always match against nodes at the
+</span>                     <span class="cd">;; </span><span class="c">root depth. we need this in case current
+</span>                     <span class="cd">;; </span><span class="c">node depth is root-level.
+</span>                     (= depth min-depth)
+                     (<span class="k">when</span> (eq 'backward direction)
+                       (<span class="k">cond</span>
+                        <span class="cd">;;; </span><span class="c">methods of movement of use to combobulate only (probably.)
+</span>                        ((eq 'sibling-only combobulate-beginning-of-defun-behavior)
+                         (= depth current-node-depth))
+                        <span class="cd">;;; </span><span class="c">methods of movement of interest to users.
+</span>                        <span class="cd">;; </span><span class="c">`</span><span class="m c">self-and-sibling-first</span><span class="c">' matches the defun
+</span>                        <span class="cd">;; </span><span class="c">we're in and any other defun at the same or
+</span>                        <span class="cd">;; </span><span class="c">lower depth than we're currently at
+</span>                        ((eq 'self-and-sibling-first combobulate-beginning-of-defun-behavior)
+                         (&lt;= depth current-node-depth))
+                        <span class="cd">;; </span><span class="c">`</span><span class="m c">parent</span><span class="c">' matches only nodes at a depth less
+</span>                        <span class="cd">;; </span><span class="c">than our current node depth, including self
+</span>                        ((eq 'parent combobulate-beginning-of-defun-behavior)
+                         (<span class="k">or</span> (&lt; depth current-node-depth)
+                             (combobulate-node-eq leaf current-node)))
+                        <span class="cd">;; </span><span class="c">`</span><span class="m c">root</span><span class="c">' means we only match the minimum depth.
+</span>                        ((eq 'root combobulate-beginning-of-defun-behavior)
+                         (= depth min-depth))
+                        <span class="cd">;; </span><span class="c">`</span><span class="m c">linear</span><span class="c">' matches any defun at any depth
+</span>                        ((eq 'linear combobulate-beginning-of-defun-behavior) t)))))
+           (<span class="k">push</span> leaf valid-nodes))
+         (cons depth leaf)))
+      (<span class="k">if</span> (eq 'forward direction)
+          (car (last valid-nodes))
+        (car valid-nodes)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

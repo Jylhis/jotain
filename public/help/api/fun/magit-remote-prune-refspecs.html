@@ -1,0 +1,107 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-remote-prune-refspecs – Emacs Documentation Online</title>
+<meta name="description" content="magit-remote-prune-refspecs is an interactive and natively compiled
+function defined in magit-remote.el.
+Remove stale refspecs for REMOTE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-remote-prune-refspecs</code></h1><p><span class="m"><code>magit-remote-prune-refspecs</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">magit-remote.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-remote-prune-refspecs <a href="#:~:text=for-,REMOTE"><span class="arg">REMOTE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Remove stale refspecs for <span class="arg">REMOTE</span>.
+<p>A refspec is stale if there no longer exists at least one branch
+on the remote that would be fetched due to that refspec.  A stale
+refspec is problematic because its existence causes Git to refuse
+to fetch according to the remaining non-stale refspecs.
+<p>If only stale refspecs remain, then offer to either delete the
+remote or to replace the stale refspecs with the default refspec.
+<p>Also remove the remote-tracking branches that were created due to
+the now stale refspecs.  Other stale branches are not removed.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-remote.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">magit-remote-prune-refspecs</span> (remote)
+  <span class="doc">"Remove stale refspecs for REMOTE.
+
+A refspec is stale if there no longer exists at least one branch
+on the remote that would be fetched due to that refspec.  A stale
+refspec is problematic because its existence causes Git to refuse
+to fetch according to the remaining non-stale refspecs.
+
+If only stale refspecs remain, then offer to either delete the
+remote or to replace the stale refspecs with the default refspec.
+
+Also remove the remote-tracking branches that were created due to
+the now stale refspecs.  Other stale branches are not removed."</span>
+  (<span class="k">interactive</span> (list (magit-read-remote <span class="s">"Prune refspecs of remote"</span>)))
+  (<span class="k">let*</span> ((tracking-refs (magit-list-remote-branches remote))
+         (remote-refs (magit-remote-list-refs remote))
+         (variable (format <span class="s">"remote.%s.fetch"</span> remote))
+         (refspecs (magit-get-all variable))
+         stale)
+    (<span class="k">dolist</span> (refspec refspecs)
+      (<span class="k">when</span> (string-match magit--refspec-re refspec)
+        (<span class="k">let</span> ((theirs (match-str 2 refspec))
+              (ours   (match-str 3 refspec)))
+          (<span class="k">unless</span> (<span class="k">if</span> (string-match <span class="s">"\\*"</span> theirs)
+                      (<span class="k">let</span> ((re (replace-match <span class="s">".*"</span> t t theirs)))
+                        (seq-some (##string-match-p re %) remote-refs))
+                    (member theirs remote-refs))
+            (<span class="k">push</span> (cons refspec
+                        (<span class="k">if</span> (string-match <span class="s">"\\*"</span> ours)
+                            (<span class="k">let</span> ((re (replace-match <span class="s">".*"</span> t t ours)))
+                              (seq-filter (##string-match-p re %)
+                                          tracking-refs))
+                          (list (car (member ours tracking-refs)))))
+                  stale)))))
+    (<span class="k">if</span> (not stale)
+        (message <span class="s">"No stale refspecs for remote %S"</span> remote)
+      (<span class="k">if</span> (= (length stale)
+             (length refspecs))
+          (<span class="k">magit-read-char-case</span>
+              (format <span class="s">"All of %s's refspecs are stale.  "</span> remote) nil
+            (?s <span class="s">"replace with [d]efault refspec"</span>
+                (magit-set-all
+                 (list (format <span class="s">"+refs/heads/*:refs/remotes/%s/*"</span> remote))
+                 variable))
+            (?r <span class="s">"[r]emove remote"</span>
+                (magit-call-git <span class="s">"remote"</span> <span class="s">"rm"</span> remote))
+            (?a <span class="s">"[a]abort"</span>
+                (<span class="w">user-error</span> <span class="s">"Abort"</span>)))
+        (<span class="k">if</span> (<span class="k">if</span> (length= stale 1)
+                (<span class="k">pcase-let</span> ((`(,refspec . ,refs) (car stale)))
+                  (magit-confirm 'prune-stale-refspecs
+                    (list <span class="s">"Prune stale refspec %s and branch %%s"</span> refspec)
+                    (list <span class="s">"Prune stale refspec %s and %%d branches"</span> refspec)
+                    nil refs))
+              (magit-confirm 'prune-stale-refspecs nil
+                (format <span class="s">"Prune %%d stale refspecs and %d branches"</span>
+                        (length (mapcan (##copy-sequence (cdr %)) stale)))
+                nil
+                (mapcar (<span class="k">pcase-lambda</span> (`(,refspec . ,refs))
+                          (concat refspec <span class="s">"\n"</span>
+                                  (mapconcat (##concat <span class="s">"  "</span> %) refs <span class="s">"\n"</span>)))
+                        stale)))
+            (<span class="k">pcase-dolist</span> (`(,refspec . ,refs) stale)
+              (magit-call-git <span class="s">"config"</span> <span class="s">"--unset"</span> variable
+                              (regexp-quote refspec))
+              (magit--log-action
+               (<span class="k">lambda</span> (refs)
+                 (format <span class="s">"Deleting %d branches"</span> (length refs)))
+               (<span class="k">lambda</span> (ref)
+                 (format <span class="s">"Deleting branch %s (was %s)"</span> ref
+                         (magit-rev-parse <span class="s">"--short"</span> ref)))
+               refs)
+              (<span class="k">dolist</span> (ref refs)
+                (magit-call-git <span class="s">"update-ref"</span> <span class="s">"-d"</span> ref)))
+          (<span class="w">user-error</span> <span class="s">"Abort"</span>)))
+      (magit-refresh))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

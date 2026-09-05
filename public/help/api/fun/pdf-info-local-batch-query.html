@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-info-local-batch-query – Emacs Documentation Online</title>
+<meta name="description" content="pdf-info-local-batch-query is a natively compiled function defined in
+pdf-info.el.
+Process a set of queries asynchronously in a local instance.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-info-local-batch-query</code></h1><p><span class="m"><code>pdf-info-local-batch-query</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">pdf-info.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-info-local-batch-query <a href="#:~:text="><span class="arg">PRODUCER-FN</span></a> <a href="#:~:text="><span class="arg">CONSUMER-FN</span></a> <a href="#:~:text="><span class="arg">SENTINEL-FN</span></a> <a href="#:~:text="><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Process a set of queries asynchronously in a local instance.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-info.el</span>
+(<span class="k">defun</span> <span class="f">pdf-info-local-batch-query</span> (producer-fn
+                                   consumer-fn
+                                   sentinel-fn
+                                   args)
+  <span class="doc">"Process a set of queries asynchronously in a local instance."</span>
+  (<span class="k">unless</span> (pdf-info-local-server-p)
+    (<span class="w">error</span> <span class="s">"Create a local server first"</span>))
+  (<span class="k">let*</span> ((buffer (current-buffer))
+         (producer-symbol (make-symbol <span class="s">"producer"</span>))
+         (consumer-symbol (make-symbol <span class="s">"consumer"</span>))
+         (producer
+          (<span class="k">lambda</span> (args)
+            (<span class="k">if</span> (null args)
+                (funcall sentinel-fn 'finished buffer)
+              (<span class="k">let</span> ((pdf-info-asynchronous
+                     (apply-partially
+                      (symbol-function consumer-symbol)
+                      args)))
+                (<span class="k">cond</span>
+                 ((pdf-info-local-server-p buffer)
+                  (<span class="k">with-current-buffer</span> buffer
+                    (apply producer-fn (car args))))
+                 (t
+                  (funcall sentinel-fn 'error buffer)))))))
+         (consumer (<span class="k">lambda</span> (args status result)
+                     (<span class="k">if</span> (not (pdf-info-local-server-p buffer))
+                         (funcall sentinel-fn 'error buffer)
+                       (<span class="k">with-current-buffer</span> buffer
+                         (apply consumer-fn status result (car args)))
+                       (funcall (symbol-function producer-symbol)
+                                (cdr args))))))
+    (fset producer-symbol producer)
+    (fset consumer-symbol consumer)
+    (funcall producer args)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,100 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: denote--rename-file – Emacs Documentation Online</title>
+<meta name="description" content="denote--rename-file is a natively compiled function defined in
+denote.el.
+Rename FILE according to the other parameters.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>denote--rename-file</code></h1><p><span class="m"><code>denote--rename-file</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">denote.el</span>.
+<h2>Signature</h2>
+<pre><code>(denote--rename-file <a href="#:~:text=Rename-,FILE"><span class="arg">FILE</span></a> <a href="#:~:text=Parameters-,TITLE"><span class="arg">TITLE</span></a> <a href="#:~:text=TITLE,-,KEYWORDS"><span class="arg">KEYWORDS</span></a> <a href="#:~:text=KEYWORDS,-,SIGNATURE"><span class="arg">SIGNATURE</span></a> <a href="#:~:text=SIGNATURE,-,DATE"><span class="arg">DATE</span></a> <a href="#:~:text=and-,IDENTIFIER"><span class="arg">IDENTIFIER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Rename <span class="arg">FILE</span> according to the other parameters.
+<p>Parameters <span class="arg">TITLE</span>, <span class="arg">KEYWORDS</span>, <span class="arg">SIGNATURE</span>, <span class="arg">DATE</span>, and <span class="arg">IDENTIFIER</span> are as
+described in <a href="../fun/denote-rename-file.html"><code>denote-rename-file</code></a> and are assumed to be valid (<span class="arg">TITLE</span> and
+<span class="arg">SIGNATURE</span> are strings, <span class="arg">KEYWORDS</span> is a list, etc.).
+<p>This function only does the work necessary to rename a file
+according to its parameters.  In particular, it does not prompt
+for anything.  It is meant to be combined with
+<a href="../fun/denote--rename-get-file-info-from-prompts-or-existing.html"><code>denote--rename-get-file-info-from-prompts-or-existing</code></a> to create
+a renaming command.
+<p>Respect <a href="../var/denote-rename-confirmations.html"><code>denote-rename-confirmations</code></a>, <a href="../var/denote-save-buffers.html"><code>denote-save-buffers</code></a> and
+<a href="../var/denote-kill-buffers.html"><code>denote-kill-buffers</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/5x9606vmybcj80x6qrajp43rma9pa1i7-emacs-packages-deps/share/emacs/site-lisp/elpa/denote-4.2.3/denote.el</span>
+(<span class="k">defun</span> <span class="f">denote--rename-file</span> (file title keywords signature date identifier)
+  <span class="doc">"Rename FILE according to the other parameters.
+Parameters TITLE, KEYWORDS, SIGNATURE, DATE, and IDENTIFIER are as
+described in `</span><span class="m doc">denote-rename-file</span><span class="doc">' and are assumed to be valid (TITLE and
+SIGNATURE are strings, KEYWORDS is a list, etc.).
+
+This function only does the work necessary to rename a file
+according to its parameters.  In particular, it does not prompt
+for anything.  It is meant to be combined with
+`</span><span class="m doc">denote--rename-get-file-info-from-prompts-or-existing</span><span class="doc">' to create
+a renaming command.
+
+Respect `</span><span class="m doc">denote-rename-confirmations</span><span class="doc">', `</span><span class="m doc">denote-save-buffers</span><span class="doc">' and
+`</span><span class="m doc">denote-kill-buffers</span><span class="doc">'."</span>
+  (<span class="k">let*</span> ((initial-state (<span class="k">if</span> (find-buffer-visiting file) 'visited 'not-visited))
+         (file-type (denote-filetype-heuristics file))
+         (keywords (denote-keywords-sort keywords))
+         (directory (file-name-directory file))
+         (extension (denote-get-file-extension file))
+         (date (<span class="k">cond</span> (date date)
+                     (denote-accept-nil-date date)
+                     (t (<span class="k">or</span> (file-attribute-modification-time (file-attributes file))
+                            (current-time)))))
+         (old-identifier (<span class="k">or</span> (denote-retrieve-filename-identifier file) <span class="s">""</span>))
+         <span class="cd">;; </span><span class="c">Handle empty id
+</span>         (identifier (<span class="k">if</span> (<span class="k">and</span> (string-empty-p identifier)
+                              (<span class="k">or</span> (eq denote-generate-identifier-automatically t)
+                                  (eq denote-generate-identifier-automatically 'on-rename)))
+                         (funcall denote-get-identifier-function
+                                  nil
+                                  (<span class="k">or</span> date
+                                      (file-attribute-modification-time (file-attributes file))
+                                      (current-time)))
+                       identifier))
+         (identifier (<span class="k">cond</span> ((string-empty-p identifier) identifier)
+                           ((string= old-identifier identifier) identifier)
+                           ((<span class="k">and</span> (not (string-empty-p old-identifier)) (denote--file-has-backlinks-p file))
+                            (<span class="w">user-error</span> <span class="s">"The identifier cannot be modified: that will break existing links"</span>))
+                           (t (funcall denote-get-identifier-function identifier nil))))
+         (new-name (denote-format-file-name directory identifier keywords title extension signature))
+         (max-mini-window-height denote-rename-max-mini-window-height))
+    (<span class="k">when</span> (<span class="k">and</span> (file-regular-p new-name)
+               (not (string= (expand-file-name file) (expand-file-name new-name))))
+      (<span class="w">user-error</span> <span class="s">"The destination file `</span><span class="m s">%s</span><span class="s">' already exists"</span> new-name))
+    <span class="cd">;; </span><span class="c">Modify file name, buffer name, or both
+</span>    (<span class="k">when</span> (denote-rename-file-prompt file new-name)
+      (denote-rename-file-and-buffer file new-name))
+    <span class="cd">;; </span><span class="c">Handle front matter if new-name is of a supported type (rewrite or add front matter)
+</span>    (<span class="k">when</span> (<span class="k">and</span> denote-rename-rewrite-front-matter
+               (denote-file-has-supported-extension-p file)
+               (denote-file-is-writable-and-supported-p new-name))
+      (<span class="k">if</span> (denote--file-has-front-matter-p new-name file-type)
+          (denote-rewrite-front-matter new-name title keywords signature date identifier file-type)
+        (<span class="k">when</span> (denote-add-front-matter-prompt new-name)
+          (denote-prepend-front-matter new-name title keywords signature date identifier file-type))))
+    (<span class="k">when</span> (<span class="k">and</span> denote-used-identifiers (not (string-empty-p identifier)))
+      (puthash identifier t denote-used-identifiers))
+    (denote--handle-save-and-kill-buffer 'rename new-name initial-state)
+    (<span class="k">setq</span> denote-current-data
+          (list
+           (cons 'title title)
+           (cons 'keywords keywords)
+           (cons 'signature signature)
+           (cons 'directory directory)
+           (cons 'date date)
+           (cons 'id identifier)
+           (cons 'file-type file-type)
+           (cons 'template <span class="s">""</span>)))
+    (run-hooks 'denote-after-rename-file-hook)
+    new-name))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

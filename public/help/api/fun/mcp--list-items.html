@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: mcp--list-items – Emacs Documentation Online</title>
+<meta name="description" content="mcp--list-items is a natively compiled function defined in mcp.el.
+Helper function to list items from the MCP server.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>mcp--list-items</code></h1><p><span class="m"><code>mcp--list-items</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(mcp--list-items <a href="#:~:text=server.-,CONNECTION"><span class="arg">CONNECTION</span></a> <a href="#:~:text=object.-,METHOD"><span class="arg">METHOD</span></a> <a href="#:~:text=list).-,KEY-NAME"><span class="arg">KEY-NAME</span></a> <a href="#:~:text=tools).-,SLOT-NAME"><span class="arg">SLOT-NAME</span></a> <a href="#:~:text=tools).-,CALLBACK"><span class="arg">CALLBACK</span></a> <a href="#:~:text=result.-,ERROR-CALLBACK"><span class="arg">ERROR-CALLBACK</span></a> <a href="#:~:text=error.-,SYNCP"><span class="arg">SYNCP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Helper function to list items from the MCP server.
+<p><span class="arg">CONNECTION</span> is the MCP connection object.
+<span class="arg">METHOD</span> is the JSON-RPC method to call (e.g., :tools/list).
+<span class="arg">KEY-NAME</span> is the connection slot to store results (e.g., :tools).
+<span class="arg">SLOT-NAME</span> is the connection slot to store results (e.g., -tools).
+<span class="arg">CALLBACK</span> is a function to call with the result.
+<span class="arg">ERROR-CALLBACK</span> is a function to call on error.
+<span class="arg">SYNCP</span> specifies if the operation should be synchronous or asynchronous.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a854ba0xan3il3xqm2sx95la5018xp8i-emacs-packages-deps/share/emacs/site-lisp/elpa/mcp-20260615.940/mcp.el</span>
+(<span class="k">defun</span> <span class="f">mcp--list-items</span> (connection method key-name slot-name callback error-callback syncp)
+  <span class="doc">"Helper function to list items from the MCP server.
+
+CONNECTION is the MCP connection object.
+METHOD is the JSON-RPC method to call (e.g., :tools/list).
+KEY-NAME is the connection slot to store results (e.g., :tools).
+SLOT-NAME is the connection slot to store results (e.g., -tools).
+CALLBACK is a function to call with the result.
+ERROR-CALLBACK is a function to call on error.
+SYNCP specifies if the operation should be synchronous or asynchronous."</span>
+  (<span class="k">let*</span> ((success-fn (<span class="k">lambda</span> (res)
+                       (<span class="k">when-let*</span> ((items (plist-get res key-name)))
+                         (<span class="k">setf</span> (slot-value connection slot-name) items)
+                         (<span class="k">when</span> callback
+                           (funcall callback connection items)))))
+         (error-fn (<span class="k">jsonrpc-lambda</span> (<span class="ty">&amp;key</span> code message _data)
+                     (<span class="k">if</span> error-callback
+                         (funcall error-callback code message)
+                       (message <span class="s">"Sadly, %s mpc server reports %s: %s"</span>
+                                (jsonrpc-name connection) code message))))
+         (args `(,connection
+                 ,method ,(make-hash-table)
+                 <span class="bi">:timeout</span> ,(mcp--timeout connection)
+                 ,@(<span class="k">unless</span> syncp `(<span class="bi">:success-fn</span>
+                                   ,success-fn))
+                 ,@(<span class="k">unless</span> syncp `(<span class="bi">:error-fn</span>
+                                   ,error-fn)))))
+    (<span class="k">if</span> syncp
+        (<span class="k">condition-case-unless-debug</span> res
+            (apply #'jsonrpc-request
+                   args)
+          (jsonrpc-error
+           (<span class="k">pcase</span> res
+             (`(jsonrpc-error ,_ (jsonrpc-error-code . ,code) (jsonrpc-error-message . ,message) ,_)
+              (funcall error-fn (list <span class="bi">:code</span> code <span class="bi">:message</span> message))
+              nil)))
+          (<span class="bi">:success</span> (funcall success-fn res)))
+      (apply #'jsonrpc-async-request
+             args))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

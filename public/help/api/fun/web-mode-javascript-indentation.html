@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-javascript-indentation – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-javascript-indentation is a natively compiled function
+defined in web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-javascript-indentation</code></h1><p><span class="m"><code>web-mode-javascript-indentation</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-javascript-indentation <span class="arg">POS</span> <span class="arg">INITIAL-COLUMN</span> <span class="arg">LANGUAGE-OFFSET</span> <span class="arg">LANGUAGE</span> <span class="ty">&amp;optional</span> <span class="arg">LIMIT</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-javascript-indentation</span> (pos initial-column language-offset language <span class="ty">&amp;optional</span> limit)
+  (<span class="k">let</span> (open-ctx open-pos indentation offset sub block-pos)
+    (<span class="k">setq</span> open-ctx (web-mode-bracket-up pos language limit))
+    <span class="cd">;;</span><span class="c">(message "%S" open-ctx)
+</span>    <span class="cd">;;</span><span class="c">(message "pos(%S) initial-column(%S) language-offset(%S) language(%S) limit(%S)" pos initial-column language-offset language limit)
+</span>    <span class="cd">;;</span><span class="c">(message "javascript-indentation: %S\nchar=%c" open-ctx (plist-get open-ctx :char))
+</span>    (<span class="k">setq</span> indentation (plist-get open-ctx <span class="bi">:indentation</span>))
+    (<span class="k">when</span> (<span class="k">and</span> initial-column (&gt; initial-column indentation))
+      (<span class="k">setq</span> indentation initial-column))
+    (<span class="k">setq</span> case-fold-search nil) <span class="cd">;</span><span class="c">#1006
+</span>    (<span class="k">when</span> open-ctx
+      (<span class="k">setq</span> open-pos (plist-get open-ctx <span class="bi">:pos</span>)))
+    (<span class="k">setq</span> block-pos (web-mode-inside-block-control pos))
+    (<span class="k">when</span> (<span class="k">and</span> block-pos (&gt; limit block-pos)) <span class="cd">;</span><span class="c">#1275
+</span>      (<span class="k">setq</span> block-pos nil))
+    <span class="cd">;;</span><span class="c">(message "bracket-pos=%S block-pos=%S" open-pos block-pos)
+</span>    (<span class="k">cond</span>
+      ((<span class="k">and</span> block-pos (<span class="k">or</span> (null open-pos) (&gt; block-pos open-pos))) <span class="cd">;</span><span class="c">#1230
+</span>       (<span class="k">setq</span> offset (+ indentation language-offset)))
+      ((null open-pos)
+       (<span class="k">setq</span> offset initial-column))
+      ((<span class="k">and</span> (member language '(<span class="s">"javascript"</span> <span class="s">"jsx"</span> <span class="s">"ejs"</span>))
+            (eq (plist-get open-ctx <span class="bi">:char</span>) ?\{)
+            (web-mode-looking-back <span class="s">"switch[ ]*"</span> (plist-get open-ctx <span class="bi">:pos</span>)))
+       (<span class="k">setq</span> sub (<span class="k">if</span> (cdr (assoc <span class="s">"case-extra-offset"</span> web-mode-indentation-params)) 0 1))
+       (<span class="k">cond</span>
+         ((looking-at-p <span class="s">"case</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">default"</span>)
+          (<span class="k">setq</span> offset (+ indentation (* language-offset (- 1 sub)))))
+         (t
+          (<span class="k">setq</span> offset (+ indentation (* language-offset (- 2 sub)))))
+         ) <span class="cd">;</span><span class="c">cond switch
+</span>       )
+      (t
+       (<span class="k">setq</span> offset (+ indentation language-offset)))
+      ) <span class="cd">;</span><span class="c">cond
+</span>    (<span class="k">setq</span> case-fold-search t)
+    (cons (<span class="k">if</span> (&lt; offset initial-column) initial-column offset) open-ctx)
+    ))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

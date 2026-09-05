@@ -1,0 +1,39 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vundo--record-timestamps – Emacs Documentation Online</title>
+<meta name="description" content="vundo--record-timestamps is a natively compiled function defined in
+vundo.el.
+Return an alist mapping mods in MOD-LIST to timestamps.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vundo--record-timestamps</code></h1><p><span class="m"><code>vundo--record-timestamps</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">vundo.el</span>.
+<h2>Signature</h2>
+<pre><code>(vundo--record-timestamps <a href="#:~:text=in-,MOD-LIST"><span class="arg">MOD-LIST</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return an alist mapping mods in <span class="arg">MOD-LIST</span> to timestamps.
+<p>The alist is sorted by time, with latest saved mods first.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/7c2696v2qdrdv2vf2im8alazibi7qq0z-emacs-packages-deps/share/emacs/site-lisp/elpa/vundo-2.4.0/vundo.el</span>
+(<span class="k">defun</span> <span class="f">vundo--record-timestamps</span> (mod-list)
+  <span class="doc">"Return an alist mapping mods in MOD-LIST to timestamps.
+The alist is sorted by time, with latest saved mods first."</span>
+  (<span class="k">let</span> ((timestamps ()))
+    (<span class="k">cl-loop</span> for idx from 1 below (length mod-list)
+             for ts = (vundo-m-timestamp (aref mod-list idx))
+             if ts do
+             (<span class="k">let*</span> ((mod-node (aref mod-list (1- idx)))
+                    (master (vundo--master-eqv-mod-of mod-node))
+                    (entry (assq master timestamps))
+                    (old-ts (cdr entry)))
+               (<span class="k">when</span> (<span class="k">and</span> old-ts (time-less-p ts old-ts))
+                 <span class="cd">;; </span><span class="c">Equivalent node modified again? take the newer time.
+</span>                 (<span class="k">setq</span> ts old-ts))
+               (<span class="k">if</span> entry (setcdr entry ts)
+                 (<span class="k">push</span> (cons master ts) timestamps))))
+    (sort timestamps  <span class="cd">; </span><span class="c">Sort latest first.
+</span>          (<span class="k">lambda</span> (a b) (time-less-p (cdr b) (cdr a))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

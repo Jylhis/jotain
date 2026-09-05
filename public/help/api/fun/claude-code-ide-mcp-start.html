@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp-start – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp-start is a natively compiled function defined in
+claude-code-ide-mcp.el.
+Start the MCP server for PROJECT-DIRECTORY.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp-start</code></h1><p><span class="m"><code>claude-code-ide-mcp-start</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">claude-code-ide-mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp-start <span class="ty">&amp;optional</span> <a href="#:~:text=for-,PROJECT-DIRECTORY"><span class="arg">PROJECT-DIRECTORY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Start the MCP server for <span class="arg">PROJECT-DIRECTORY</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp.el</span>
+<span class="cd">;;; </span><span class="c">Public API
+</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp-start</span> (<span class="ty">&amp;optional</span> project-directory)
+  <span class="doc">"Start the MCP server for PROJECT-DIRECTORY."</span>
+  (<span class="k">claude-code-ide-debug</span> <span class="s">"=== Starting MCP server ==="</span>)
+
+  (<span class="k">let*</span> ((project-dir (expand-file-name (<span class="k">or</span> project-directory default-directory)))
+         (existing-session (gethash project-dir claude-code-ide-mcp--sessions)))
+
+    <span class="cd">;; </span><span class="c">If there's an existing session for this project, return its port
+</span>    (<span class="k">if</span> existing-session
+        (<span class="k">progn</span>
+          (<span class="k">claude-code-ide-debug</span> <span class="s">"Reusing existing session for %s"</span> project-dir)
+          (claude-code-ide-mcp-session-port existing-session))
+
+      <span class="cd">;; </span><span class="c">Create new session
+</span>      (<span class="k">let*</span> ((session (make-claude-code-ide-mcp-session
+                       <span class="bi">:project-dir</span> project-dir
+                       <span class="bi">:deferred</span> (make-hash-table <span class="bi">:test</span> 'equal)
+                       <span class="bi">:active-diffs</span> (make-hash-table <span class="bi">:test</span> 'equal)
+                       <span class="bi">:original-tab</span> (<span class="k">when</span> (fboundp 'tab-bar--current-tab)
+                                       (tab-bar--current-tab))))
+             (server-and-port (claude-code-ide-mcp--find-free-port))
+             (server (car server-and-port))
+             (port (cdr server-and-port)))
+
+        <span class="cd">;; </span><span class="c">Set port and server in session
+</span>        (<span class="k">setf</span> (claude-code-ide-mcp-session-port session) port
+              (claude-code-ide-mcp-session-server session) server)
+
+        <span class="cd">;; </span><span class="c">Store session
+</span>        (puthash project-dir session claude-code-ide-mcp--sessions)
+
+        (<span class="k">claude-code-ide-debug</span> <span class="s">"Project directory: %s"</span> project-dir)
+        (<span class="k">claude-code-ide-debug</span> <span class="s">"Creating lockfile for port %d"</span> port)
+        (claude-code-ide-mcp--create-lockfile port project-dir)
+
+        <span class="cd">;; </span><span class="c">Set up hooks for selection and buffer tracking
+</span>        (add-hook 'post-command-hook #'claude-code-ide-mcp--track-selection)
+        (add-hook 'post-command-hook #'claude-code-ide-mcp--track-active-buffer)
+
+        (<span class="k">claude-code-ide-debug</span> <span class="s">"MCP server ready on port %d"</span> port)
+        (<span class="k">claude-code-ide-debug</span> <span class="s">"MCP server started on port %d for %s"</span> port
+                               (file-name-nondirectory (directory-file-name project-dir)))
+        port))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

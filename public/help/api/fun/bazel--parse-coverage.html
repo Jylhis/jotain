@@ -1,0 +1,90 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--parse-coverage – Emacs Documentation Online</title>
+<meta name="description" content="bazel--parse-coverage is a natively compiled function defined in
+bazel.el.
+Parse coverage information in the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--parse-coverage</code></h1><p><span class="m"><code>bazel--parse-coverage</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--parse-coverage <a href="#:~:text=buffer.-,ROOT"><span class="arg">ROOT</span></a> <a href="#:~:text=directory.-,COVERAGE"><span class="arg">COVERAGE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse coverage information in the current buffer.
+<p><span class="arg">ROOT</span> is the Bazel repository root directory.  <span class="arg">COVERAGE</span> is a
+hashtable that maps buffers to hashtables that in turn map line
+numbers ‘bazel--coverage’ structures.  The function walks over
+the coverage information in the current buffer and fills in
+<span class="arg">COVERAGE</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--parse-coverage</span> (root coverage)
+  <span class="doc">"Parse coverage information in the current buffer.
+ROOT is the Bazel repository root directory.  COVERAGE is a
+hashtable that maps buffers to hashtables that in turn map line
+numbers ‘</span><span class="m doc">bazel--coverage</span><span class="doc">’ structures.  The function walks over
+the coverage information in the current buffer and fills in
+COVERAGE."</span>
+  <span class="cd">;; </span><span class="c">See the manual page of ‘</span><span class="m c">geninfo</span><span class="c">’ for a description of the coverage format.
+</span>  (<span class="k">let</span> ((case-fold-search nil)
+        (search-spaces-regexp nil))
+    (<span class="k">while</span> (re-search-forward (<span class="k">rx</span> bol <span class="s">"SF:"</span> (group (+ nonl)) eol) nil t)
+      (<span class="k">let</span> ((begin (line-beginning-position 2))
+            (file (expand-file-name (match-string-no-properties 1) root))
+            <span class="cd">;; </span><span class="c">DATA is a hashtable mapping line numbers to ‘</span><span class="m c">bazel--coverage</span><span class="c">’
+</span>            <span class="cd">;; </span><span class="c">structures for the current file.  It’s initialized lazily.
+</span>            (data nil))
+        (<span class="k">when-let*</span> ((end (re-search-forward (<span class="k">rx</span> bol <span class="s">"end_of_record"</span> eol) nil t))
+                    <span class="cd">;; </span><span class="c">Only collect coverage for files that are visited in some
+</span>                    <span class="cd">;; </span><span class="c">buffer.
+</span>                    (buffer (find-buffer-visiting file)))
+          <span class="cd">;; </span><span class="c">Collect line coverage data.
+</span>          (goto-char begin)
+          (<span class="k">while</span> (re-search-forward (<span class="k">rx</span> bol <span class="s">"DA:"</span> (group (+ digit)) ?,
+                                        (group (+ digit)) (? ?, (+ nonl)) eol)
+                                    end t)
+            (<span class="k">let</span> ((line (bazel--match-natnum 1))
+                  (hits (bazel--match-natnum 2)))
+              (<span class="k">setq</span> data (<span class="k">or</span> (gethash buffer coverage)
+                             (puthash buffer (make-hash-table <span class="bi">:test</span> #'eql)
+                                      coverage)))
+              (<span class="k">if-let*</span> ((info (gethash line data)))
+                  (<span class="k">cl-incf</span> (bazel--coverage-hits info) hits)
+                (puthash line (bazel--make-coverage <span class="bi">:hits</span> hits) data))))
+          <span class="cd">;; </span><span class="c">Collect branch coverage data, but only if we have any coverage data
+</span>          <span class="cd">;; </span><span class="c">for this buffer.
+</span>          (<span class="k">when</span> data
+            (goto-char begin)
+            (<span class="k">while</span> (re-search-forward (<span class="k">rx</span> bol <span class="s">"BRDA:"</span>
+                                          (group (+ digit)) ?, <span class="cd">; </span><span class="c">line number
+</span>                                          (group (+ digit)) ?, <span class="cd">; </span><span class="c">block number
+</span>                                          (group (+ digit)) ?, <span class="cd">; </span><span class="c">branch number
+</span>                                          (<span class="k">or</span> ?- (group (+ digit))) <span class="cd">; </span><span class="c">taken
+</span>                                          eol)
+                                      end t)
+              (<span class="k">let*</span> ((line (bazel--match-natnum 1))
+                     (block (bazel--match-natnum 2))
+                     (branch (bazel--match-natnum 3))
+                     (executedp (match-beginning 4))
+                     (taken (<span class="k">and</span> executedp (bazel--match-natnum 4))))
+                <span class="cd">;; </span><span class="c">Ignore branch coverage for uncovered lines.
+</span>                (<span class="k">when-let*</span> ((coverage (gethash line data)))
+                  (<span class="k">let*</span> ((blocks (<span class="k">or</span> (bazel--coverage-blocks coverage)
+                                     (<span class="k">setf</span> (bazel--coverage-blocks coverage)
+                                           (make-hash-table <span class="bi">:test</span> #'eql))))
+                         (branches (<span class="k">or</span> (gethash block blocks)
+                                       (puthash block
+                                                (make-hash-table <span class="bi">:test</span> #'eql)
+                                                blocks)))
+                         (previous (gethash branch branches))
+                         (new (<span class="k">if</span> (<span class="k">and</span> previous taken)
+                                  (+ previous taken)
+                                (<span class="k">or</span> previous taken))))
+                    (puthash branch new branches))))))
+          (goto-char end)))))
+  nil)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,72 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: corfu--in-region-1 – Emacs Documentation Online</title>
+<meta name="description" content="corfu--in-region-1 is a natively compiled function defined in
+corfu.el.
+Complete in region, see completion-in-region for BEG, END, TABLE, PRED.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>corfu--in-region-1</code></h1><p><span class="m"><code>corfu--in-region-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">corfu.el</span>.
+<h2>Signature</h2>
+<pre><code>(corfu--in-region-1 <a href="#:~:text=for-,BEG"><span class="arg">BEG</span></a> <a href="#:~:text=BEG,-,END"><span class="arg">END</span></a> <a href="#:~:text=END,-,TABLE"><span class="arg">TABLE</span></a> <a href="#:~:text=TABLE,-,PRED"><span class="arg">PRED</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Complete in region, see <a href="../fun/completion-in-region.html"><code>completion-in-region</code></a> for <span class="arg">BEG</span>, <span class="arg">END</span>, <span class="arg">TABLE</span>, <span class="arg">PRED</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w8w9ybb6ad8ab6ghqfbq36v1kcp2igzi-emacs-packages-deps/share/emacs/site-lisp/elpa/corfu-20260828.932/corfu.el</span>
+(<span class="k">defun</span> <span class="f">corfu--in-region-1</span> (beg end table pred)
+  <span class="doc">"Complete in region, see `</span><span class="m doc">completion-in-region</span><span class="doc">' for BEG, END, TABLE, PRED."</span>
+  (barf-if-buffer-read-only)
+  <span class="cd">;; </span><span class="c">Restart the completion. This can happen for example if C-M-/
+</span>  <span class="cd">;; </span><span class="c">(`</span><span class="m c">dabbrev-completion</span><span class="c">') is pressed while the Corfu popup is already open.
+</span>  (<span class="k">when</span> completion-in-region-mode (corfu-quit))
+  (<span class="k">let*</span> ((pt (max 0 (- (point) beg)))
+         (str (buffer-substring-no-properties beg end))
+         (input (cons str pt))
+         (md (completion-metadata (substring str 0 pt) table pred))
+         (threshold (completion--cycle-threshold md))
+         (completion-in-region-mode-predicate
+          (<span class="k">or</span> completion-in-region-mode-predicate #'always)))
+    (<span class="k">pcase</span> (corfu--try-completion str table pred pt md)
+      ('nil (corfu--message <span class="s">"No match"</span>) nil)
+      ('t (goto-char end)
+          (corfu--message <span class="s">"Sole match"</span>)
+          (<span class="k">if</span> (eq corfu-on-exact-match 'show)
+              (corfu--setup beg end table pred)
+            (corfu--exit-function
+             str 'finished
+             (alist-get 'corfu--candidates (corfu--compute input table pred))))
+          t)
+      ((<span class="k">and</span> newinp `(,newstr . ,newpt))
+       (<span class="k">setq</span> end (copy-marker end t))
+       (corfu--replace beg end newstr)
+       (goto-char (+ beg newpt))
+       (<span class="k">let*</span> ((state (corfu--compute newinp table pred))
+              (base (alist-get 'corfu--base state))
+              (total (alist-get 'corfu--total state))
+              (cands (alist-get 'corfu--candidates state)))
+         (<span class="k">cond</span>
+          ((= total 0)
+           (<span class="k">when</span> (test-completion newstr table pred)
+             (corfu--exit-function newstr 'finished nil)))
+          ((= total 1)
+           <span class="cd">;; </span><span class="c">Setup popup if `</span><span class="m c">corfu-on-exact-match</span><span class="c">' is `</span><span class="m c">show</span><span class="c">' or if completion
+</span>           <span class="cd">;; </span><span class="c">can continue.
+</span>           (<span class="k">if</span> (<span class="k">or</span> (eq corfu-on-exact-match 'show)
+                   (consp (corfu--try-completion newstr table pred newpt)))
+               (corfu--setup beg end table pred)
+             (corfu--exit-function (car cands) 'finished nil)))
+          <span class="cd">;; </span><span class="c">Too many candidates for cycling -&gt; Setup popup.
+</span>          ((<span class="k">or</span> (not threshold) (<span class="k">and</span> (not (eq threshold t)) (&lt; threshold total)))
+           (corfu--setup beg end table pred))
+          (t
+           <span class="cd">;; </span><span class="c">Cycle through candidates.
+</span>           (corfu--cycle-candidates total cands (+ (length base) beg) end)
+           <span class="cd">;; </span><span class="c">Do not show Corfu when completion is finished after the candidate.
+</span>           (<span class="k">unless</span> (equal (completion-boundaries (car cands) table pred <span class="s">""</span>) '(0 . 0))
+             (corfu--setup beg end table pred)))))
+       t))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

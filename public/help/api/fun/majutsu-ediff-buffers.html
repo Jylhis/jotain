@@ -1,0 +1,75 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-ediff-buffers – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-ediff-buffers is a macro defined in majutsu-ediff.el.
+Run Ediff on two or three buffers.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-ediff-buffers</code></h1><p><span class="m"><code>majutsu-ediff-buffers</code></span> is a macro defined in <span class="bt">majutsu-ediff.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">majutsu-ediff-buffers</span> <a href="#:~:text=buffers.-,A"><span class="arg">A</span></a> <a href="#:~:text=A,-,B"><span class="arg">B</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=and-,C"><span class="arg">C</span></a> <a href="#:~:text=exit.-,SETUP"><span class="arg">SETUP</span></a> <a href="#:~:text=setup.-,QUIT"><span class="arg">QUIT</span></a> <a href="#:~:text=If-,FILE"><span class="arg">FILE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run Ediff on two or three buffers.
+<p><span class="arg">A</span>, <span class="arg">B</span> and <span class="arg">C</span> have the form (GET-BUFFER CREATE-BUFFER).  If GET-BUFFER
+returns a non-nil value, that buffer is used and not killed when exiting.
+Otherwise CREATE-BUFFER must return a buffer and that is killed on exit.
+<p><span class="arg">SETUP</span> is called after Ediff setup.  <span class="arg">QUIT</span> is added to quit hook.
+If <span class="arg">FILE</span> is non-nil, perform a merge with result written to <span class="arg">FILE</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-ediff.el</span>
+<span class="cd">;;; </span><span class="c">Buffer Management
+</span>
+(<span class="k">defmacro</span> <span class="f">majutsu-ediff-buffers</span> (a b <span class="ty">&amp;optional</span> c setup quit file)
+  <span class="doc">"Run Ediff on two or three buffers.
+A, B and C have the form (GET-BUFFER CREATE-BUFFER).  If GET-BUFFER
+returns a non-nil value, that buffer is used and not killed when exiting.
+Otherwise CREATE-BUFFER must return a buffer and that is killed on exit.
+
+SETUP is called after Ediff setup.  QUIT is added to quit hook.
+If FILE is non-nil, perform a merge with result written to FILE."</span>
+  (<span class="k">let</span> (get make kill (char ?A))
+    (<span class="k">dolist</span> (spec (list a b c))
+      (<span class="k">if</span> (not spec)
+          (<span class="k">push</span> nil make)
+        (<span class="k">pcase-let</span> ((`(,g ,m) spec))
+          (<span class="k">let</span> ((b (intern (format <span class="s">"buf%c"</span> char))))
+            (<span class="k">push</span> `(,b ,g) get)
+            (<span class="k">push</span> `(<span class="k">or</span> ,b ,m) make)
+            (<span class="k">push</span> `(<span class="k">unless</span> ,b
+                     (<span class="k">let</span> ((var ,(<span class="k">if</span> (<span class="k">and</span> file (= char ?C))
+                                     'ediff-ancestor-buffer
+                                   (intern (format <span class="s">"ediff-buffer-%c"</span> char)))))
+                       (ediff-kill-buffer-carefully var)))
+                  kill))
+          (<span class="k">cl-incf</span> char))))
+    (<span class="k">setq</span> get  (nreverse get))
+    (<span class="k">setq</span> make (nreverse make))
+    (<span class="k">setq</span> kill (nreverse kill))
+    (<span class="k">let</span> ((mconf (gensym <span class="s">"conf"</span>))
+          (mfile (gensym <span class="s">"file"</span>)))
+      `(<span class="k">majutsu-with-toplevel</span>
+         (<span class="k">let</span> ((,mconf (current-window-configuration))
+               (,mfile ,file)
+               ,@get)
+           (ediff-buffers-internal
+            ,@make
+            (list ,@(<span class="k">and</span> setup (list setup))
+                  (<span class="k">lambda</span> ()
+                    (<span class="k">setq-local</span> ediff-quit-merge-hook nil)
+                    (<span class="k">setq-local</span> ediff-quit-hook
+                                (list
+                                 ,@(<span class="k">and</span> quit (list quit))
+                                 (<span class="k">lambda</span> ()
+                                   ,@kill
+                                   (<span class="k">let</span> ((majutsu-ediff-previous-winconf ,mconf))
+                                     (run-hooks 'majutsu-ediff-quit-hook)))))))
+            (<span class="k">pcase</span> (list ,(<span class="k">and</span> c t) (<span class="k">and</span> ,mfile t))
+              ('(nil nil) 'ediff-buffers)
+              ('(nil t)   'ediff-merge-buffers)
+              ('(t   nil) 'ediff-buffers3)
+              ('(t   t)   'ediff-merge-buffers-with-ancestor))
+            ,mfile))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

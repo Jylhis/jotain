@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb--response-header-line-string – Emacs Documentation Online</title>
+<meta name="description" content="verb--response-header-line-string is a byte-compiled function defined
+in verb.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb--response-header-line-string</code></h1><p><span class="m"><code>verb--response-header-line-string</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined
+in <span class="bt">verb.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb--response-header-line-string <span class="ty">&amp;rest</span> <span class="arg">ARGS</span>)
+</code></pre>
+<h2>Implementations</h2>
+<p>(verb--response-header-line-string (RESPONSE verb-response)) in `<span class="bt">verb.el</span>'.
+<p>Return a short description of an HTTP RESPONSE's properties.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb.el</span>
+(<span class="k">cl-defmethod</span> <span class="f">verb--response-header-line-string</span> ((response verb-response))
+  <span class="doc">"Return a short description of an HTTP RESPONSE's properties."</span>
+  (<span class="k">let</span> ((status-line (<span class="k">oref</span> response status))
+        (elapsed (<span class="k">oref</span> response duration))
+        (headers (<span class="k">oref</span> response headers))
+        (bytes (<span class="k">oref</span> response body-bytes))
+        (path (car (url-path-and-query (<span class="k">oref</span> (<span class="k">oref</span> response request) url)))))
+    (concat
+     (<span class="k">if-let</span> ((face (verb--status-code-face (<span class="k">or</span> status-line <span class="s">""</span>)))
+              (parts (split-string status-line <span class="s">" "</span> t))
+              (rest (string-join (cdr parts) <span class="s">" "</span>)))
+         (concat (car parts) <span class="s">" | "</span> (propertize rest 'face face))
+       (<span class="k">or</span> status-line <span class="s">"No Response"</span>))
+     <span class="s">" | "</span>
+     (format <span class="s">"%.4gs"</span> elapsed)
+     (<span class="k">let</span> ((content-type (<span class="k">or</span> (car (verb--headers-content-type headers))
+                             <span class="s">"-"</span>)))
+       (format <span class="s">" | %s"</span> content-type))
+     (<span class="k">let*</span> ((content-length (cdr (assoc-string <span class="s">"Content-Length"</span>
+                                               headers t)))
+            (value (<span class="k">if</span> content-length
+                       (string-to-number content-length)
+                     bytes)))
+       (format <span class="s">" | %s byte%s"</span>
+               (file-size-human-readable value)
+               (<span class="k">if</span> (= value 1) <span class="s">""</span> <span class="s">"s"</span>)))
+     (<span class="k">when</span> (not (string-empty-p path))
+       (format <span class="s">" | %s"</span> path)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

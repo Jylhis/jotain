@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--async-sink – Emacs Documentation Online</title>
+<meta name="description" content="consult--async-sink is a natively compiled function defined in
+consult.el.
+Asynchronous sink function.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--async-sink</code></h1><p><span class="m"><code>consult--async-sink</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--async-sink)
+</code></pre>
+<h2>Documentation</h2>
+<p>Asynchronous sink function.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--async-sink</span> ()
+  <span class="doc">"Asynchronous sink function."</span>
+  (<span class="k">let</span> (candidates last buffer)
+    (<span class="k">lambda</span> (action)
+      (<span class="k">pcase-exhaustive</span> action
+        ('setup
+         (<span class="k">setq</span> buffer (current-buffer))
+         nil)
+        ((<span class="k">or</span> (pred stringp) 'destroy 'cancel) nil)
+        ('flush (<span class="k">setq</span> candidates nil last nil))
+        ('refresh
+         <span class="cd">;; </span><span class="c">Refresh the UI when the current minibuffer window belongs
+</span>         <span class="cd">;; </span><span class="c">to the current asynchronous completion session.
+</span>         (<span class="k">when-let*</span> ((win (active-minibuffer-window)))
+           (<span class="k">when</span> (eq (window-buffer win) buffer)
+             (<span class="k">with-selected-window</span> win
+               (run-hooks 'consult--completion-refresh-hook)
+               <span class="cd">;; </span><span class="c">Interaction between asynchronous completion functions and
+</span>               <span class="cd">;; </span><span class="c">preview: We have to trigger preview immediately when
+</span>               <span class="cd">;; </span><span class="c">candidates arrive (gh:minad/consult#436).
+</span>               (<span class="k">when</span> (<span class="k">and</span> consult--preview-function candidates)
+                 (funcall consult--preview-function)))))
+         nil)
+        ('nil candidates)
+        ((pred consp)
+         <span class="cd">;; </span><span class="c">Lazily initialize last link, such that it is only initialized when
+</span>         <span class="cd">;; </span><span class="c">appending, and not for one-shot async functions like
+</span>         <span class="cd">;; </span><span class="c">`</span><span class="m c">consult--async-static</span><span class="c">'.
+</span>         (<span class="k">if</span> (not candidates)
+             (<span class="k">setq</span> candidates action)
+           (<span class="k">setq</span> last (last (setcdr (<span class="k">or</span> last (last candidates)) action)))
+           candidates))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

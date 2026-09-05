@@ -1,0 +1,85 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb--setup-temp-request-buffer – Emacs Documentation Online</title>
+<meta name="description" content="verb--setup-temp-request-buffer is a natively compiled function
+defined in verb.el.
+Setup and show a temporary buffer for editing a request spec.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb--setup-temp-request-buffer</code></h1><p><span class="m"><code>verb--setup-temp-request-buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">verb.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb--setup-temp-request-buffer <a href="#:~:text=Argument-,RS"><span class="arg">RS</span></a> <a href="#:~:text=edit.-,SOURCE-WINDOW"><span class="arg">SOURCE-WINDOW</span></a> <a href="#:~:text=sent.-,VERB-VARIABLES"><span class="arg">VERB-VARIABLES</span></a> <a href="#:~:text=WINDOW.-,WHERE"><span class="arg">WHERE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Setup and show a temporary buffer for editing a request spec.
+<p>Argument <span class="arg">RS</span> indicates the request specification to edit.
+<span class="arg">SOURCE-WINDOW</span> indicates which window should be selected when the
+request is sent.  <span class="arg">VERB-VARIABLES</span> should contain the Verb user-defined
+variables set in the buffer displayed by <span class="arg">SOURCE-WINDOW</span>.  <span class="arg">WHERE</span>
+describes where the response should be shown in (see
+<a href="../fun/verb-send-request-on-point.html"><code>verb-send-request-on-point</code></a> for a complete description).
+<p>After the user has finished modifying the buffer, they can press
+<kbd>C-c C-c</kbd> (<a href="../fun/org-ctrl-c-ctrl-c.html"><code>org-ctrl-c-ctrl-c</code></a>) to send the request.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb.el</span>
+(<span class="k">defun</span> <span class="f">verb--setup-temp-request-buffer</span> (rs source-window verb-variables where)
+  <span class="doc">"Setup and show a temporary buffer for editing a request spec.
+Argument RS indicates the request specification to edit.
+SOURCE-WINDOW indicates which window should be selected when the
+request is sent.  VERB-VARIABLES should contain the Verb user-defined
+variables set in the buffer displayed by SOURCE-WINDOW.  WHERE
+describes where the response should be shown in (see
+`</span><span class="m doc">verb-send-request-on-point</span><span class="doc">' for a complete description).
+
+After the user has finished modifying the buffer, they can press
+\\&lt;</span><span class="v doc">org-mode-map</span><span class="doc">&gt;\\[</span><span class="m doc">org-ctrl-c-ctrl-c</span><span class="doc">] to send the request."</span>
+  (switch-to-buffer-other-window (get-buffer-create <span class="s">"*Edit HTTP Request*"</span>))
+  <span class="cd">;; </span><span class="c">"Reset" the buffer in case it wasn't killed correctly.
+</span>  (erase-buffer)
+  (verb--ensure-org-mode)
+  (verb--ensure-verb-mode)
+
+  <span class="cd">;; </span><span class="c">Don't require tagging for this temp buffer.
+</span>  (set (make-local-variable 'verb-tag) t)
+
+  <span class="cd">;; </span><span class="c">Copy over Verb variables.
+</span>  (<span class="k">setq</span> verb--vars verb-variables)
+
+  <span class="cd">;; </span><span class="c">Insert the request spec.
+</span>  (insert <span class="s">"* Press 'C-c C-c' to send the request.\n"</span>)
+
+  (<span class="k">when-let</span> ((metadata (<span class="k">oref</span> rs metadata)))
+    (insert <span class="s">":properties:\n"</span>)
+    (<span class="k">dolist</span> (element metadata)
+      (insert (format <span class="s">":%s: %s\n"</span> (car element) (cdr element))))
+    (insert <span class="s">":end:\n"</span>))
+
+  (insert <span class="s">"# You can also press 'C-c C-k' to cancel.\n"</span>
+          <span class="s">"# Note that any changes made here won't be saved.\n"</span>
+          (verb-request-spec-to-string rs))
+
+  <span class="cd">;; </span><span class="c">Use a copy of Org mode's keymap as the local keymap, so
+</span>  <span class="cd">;; </span><span class="c">that we can rebind C-c C-c freely.
+</span>  (use-local-map (copy-keymap org-mode-map))
+
+  <span class="cd">;; </span><span class="c">Unbind keys for verb-send-request-on-point-* commands.
+</span>  (<span class="k">dolist</span> (cmd '(verb-send-request-on-point
+                 verb-send-request-on-point-other-window
+                 verb-send-request-on-point-display
+                 verb-send-request-on-point-no-window))
+    (<span class="k">when-let</span> ((key (where-is-internal cmd nil t)))
+      (local-unset-key key)))
+
+  <span class="cd">;; </span><span class="c">Rebind C-c C-c to send the request.
+</span>  <span class="cd">;; </span><span class="c">This will override `</span><span class="m c">org-ctrl-c-ctrl-c-hook</span><span class="c">'.
+</span>  (local-set-key (kbd <span class="s">"C-c C-c"</span>)
+                 (<span class="k">lambda</span> ()
+                   <span class="doc">"Send the request specified in the current buffer."</span>
+                   (<span class="k">interactive</span>)
+                   (verb--send-temp-request-on-point source-window
+                                                     where)))
+  (local-set-key (kbd <span class="s">"C-c C-k"</span>) #'verb-kill-buffer-and-window))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

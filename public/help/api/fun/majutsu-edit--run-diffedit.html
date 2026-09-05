@@ -1,0 +1,42 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-edit--run-diffedit – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-edit--run-diffedit is a natively compiled function defined in
+majutsu-edit.el.
+Run jj diffedit with JJ-ARGS editing FILE through with-editor.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-edit--run-diffedit</code></h1><p><span class="m"><code>majutsu-edit--run-diffedit</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-edit.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-edit--run-diffedit <a href="#:~:text=with-,JJ-ARGS"><span class="arg">JJ-ARGS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=editing-,FILE"><span class="arg">FILE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run jj diffedit with <span class="arg">JJ-ARGS</span> editing <span class="arg">FILE</span> through with-editor.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-edit.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-edit--run-diffedit</span> (jj-args <span class="ty">&amp;optional</span> file)
+  <span class="doc">"Run jj diffedit with JJ-ARGS editing FILE through with-editor."</span>
+  (<span class="k">setq</span> file (<span class="k">or</span> file (cadr (member <span class="s">"--"</span> jj-args))))
+  (<span class="k">unless</span> file
+    (<span class="w">user-error</span> <span class="s">"Diffedit requires a file target"</span>))
+  (<span class="k">let*</span> ((root (majutsu--toplevel-safe default-directory))
+         (default-directory root)
+         (file (<span class="k">if</span> (file-name-absolute-p file)
+                   (<span class="k">let*</span> ((abs-root (file-name-as-directory (expand-file-name root)))
+                          (abs-file (expand-file-name file)))
+                     (<span class="k">if</span> (string-prefix-p abs-root abs-file)
+                         (file-relative-name abs-file abs-root)
+                       (<span class="w">user-error</span> <span class="s">"Diffedit target outside repository: %s"</span> file)))
+                 file))
+         (jj-args (majutsu-edit--replace-diffedit-file-arg jj-args file)))
+    (<span class="k">majutsu-with-editor</span>
+      (<span class="k">let</span> ((diff-editor-cmd
+             (majutsu-jj--editor-command-config
+              <span class="s">"ui.diff-editor"</span>
+              (majutsu-edit--diffedit-editor-target file))))
+        <span class="cd">;; </span><span class="c">Use async to avoid blocking Emacs while jj waits for emacsclient.
+</span>        (apply #'majutsu-run-jj-async <span class="s">"diffedit"</span> <span class="s">"--config"</span> diff-editor-cmd jj-args)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

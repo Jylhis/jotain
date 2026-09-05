@@ -1,0 +1,77 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-conflict--match-line – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-conflict--match-line is a natively compiled function defined
+in majutsu-conflict.el.
+Match any line within JJ conflict.  Font-lock ANCHORED-MATCHER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-conflict--match-line</code></h1><p><span class="m"><code>majutsu-conflict--match-line</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">majutsu-conflict.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-conflict--match-line <a href="#:~:text="><span class="arg">LIMIT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Match any line within JJ conflict.  Font-lock ANCHORED-MATCHER.
+<p>Sets match-data and updates state variables.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-conflict.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-conflict--match-line</span> (limit)
+  <span class="doc">"Match any line within JJ conflict.  Font-lock ANCHORED-MATCHER.
+Sets match-data and updates state variables."</span>
+  (<span class="k">when</span> (&lt; (point) limit)
+    (<span class="k">let*</span> ((line-beg (line-beginning-position))
+           (line-end (line-end-position))
+           (line (buffer-substring-no-properties line-beg line-end))
+           (expected-len (<span class="k">or</span> majutsu-conflict--marker-len
+                             majutsu-conflict-min-marker-len))
+           (parsed (majutsu-conflict--parse-marker-line line expected-len))
+           (kind (<span class="k">and</span> parsed
+                      (majutsu-conflict--marker-kind (plist-get parsed <span class="bi">:char</span>)))))
+      (<span class="k">cond</span>
+       <span class="cd">;; </span><span class="c">Marker line
+</span>       ((memq kind '(begin end diff add remove))
+        (<span class="k">pcase</span> kind
+          ('begin
+           <span class="cd">;; </span><span class="c">Detect style from first body line using this conflict's marker length.
+</span>           (<span class="k">setq</span> majutsu-conflict--marker-len (plist-get parsed <span class="bi">:len</span>)
+                 majutsu-conflict--in-diff nil
+                 majutsu-conflict--in-add nil
+                 majutsu-conflict--in-remove nil
+                 majutsu-conflict--add-count 0)
+           (<span class="k">setq</span> majutsu-conflict--style
+                 (majutsu-conflict--detect-style line-beg majutsu-conflict--marker-len)))
+          ('end
+           (<span class="k">setq</span> majutsu-conflict--in-diff nil
+                 majutsu-conflict--in-add nil
+                 majutsu-conflict--in-remove nil
+                 majutsu-conflict--marker-len nil))
+          ('diff
+           (<span class="k">setq</span> majutsu-conflict--in-diff t
+                 majutsu-conflict--in-add nil
+                 majutsu-conflict--in-remove nil))
+          ('add
+           (<span class="k">setq</span> majutsu-conflict--in-diff nil
+                 majutsu-conflict--in-add t
+                 majutsu-conflict--in-remove nil)
+           (<span class="k">cl-incf</span> majutsu-conflict--add-count))
+          ('remove
+           (<span class="k">setq</span> majutsu-conflict--in-diff nil
+                 majutsu-conflict--in-add nil
+                 majutsu-conflict--in-remove t)))
+        (set-match-data (list line-beg (min (1+ line-end) (point-max))))
+        (goto-char (min (1+ line-end) (point-max)))
+        t)
+       <span class="cd">;; </span><span class="c">Note marker
+</span>       ((eq kind 'note)
+        (set-match-data (list line-beg (min (1+ line-end) (point-max))))
+        (goto-char (min (1+ line-end) (point-max)))
+        t)
+       <span class="cd">;; </span><span class="c">Content line
+</span>       (t
+        (set-match-data (list line-beg (min (1+ line-end) (point-max))))
+        (goto-char (min (1+ line-end) (point-max)))
+        t)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

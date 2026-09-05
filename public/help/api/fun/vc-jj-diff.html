@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vc-jj-diff – Emacs Documentation Online</title>
+<meta name="description" content="vc-jj-diff is a natively compiled function defined in vc-jj.el.
+Display diffs for FILES between revisions REV1 and REV2.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vc-jj-diff</code></h1><p><span class="m"><code>vc-jj-diff</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">vc-jj.el</span>.
+<h2>Signature</h2>
+<pre><code>(vc-jj-diff <a href="#:~:text=for-,FILES"><span class="arg">FILES</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=revisions-,REV1"><span class="arg">REV1</span></a> <a href="#:~:text=and-,REV2"><span class="arg">REV2</span></a> <a href="#:~:text=When-,BUFFER"><span class="arg">BUFFER</span></a> <a href="#:~:text=If _-,ASYNC"><span class="arg">ASYNC</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Display diffs for <span class="arg">FILES</span> between revisions <span class="arg">REV1</span> and <span class="arg">REV2</span>.
+<p><span class="arg">FILES</span> is a list of file paths.  <span class="arg">REV1</span> and <span class="arg">REV2</span> are the full change IDs of
+two revisions.  <span class="arg">REV1</span> is the earlier revision and <span class="arg">REV2</span> is the later
+revision.
+<p>When <span class="arg">BUFFER</span> is non-nil, it is the buffer object or name to insert the
+diff into.  Otherwise, when nil, insert the diff into the *vc-diff*
+buffer.  If _<span class="arg">ASYNC</span> is non-nil, run asynchronously.  This is currently
+unsupported.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/smb5w83hp9nz5jm5ish4kf6mshmmif86-emacs-packages-deps/share/emacs/site-lisp/elpa/vc-jj-0.5/vc-jj.el</span>
+<span class="cd">;;;; </span><span class="c">comment-history
+</span>
+<span class="cd">;;;; </span><span class="c">update-changelog
+</span>
+<span class="cd">;;;; </span><span class="c">diff
+</span>
+(<span class="k">defun</span> <span class="f">vc-jj-diff</span> (files <span class="ty">&amp;optional</span> rev1 rev2 buffer _async)
+  <span class="doc">"Display diffs for FILES between revisions REV1 and REV2.
+FILES is a list of file paths.  REV1 and REV2 are the full change IDs of
+two revisions.  REV1 is the earlier revision and REV2 is the later
+revision.
+
+When BUFFER is non-nil, it is the buffer object or name to insert the
+diff into.  Otherwise, when nil, insert the diff into the *vc-diff*
+buffer.  If _ASYNC is non-nil, run asynchronously.  This is currently
+unsupported."</span>
+  <span class="cd">;; </span><span class="c">TODO: handle async
+</span>  (<span class="k">setq</span> buffer (get-buffer-create (<span class="k">or</span> buffer <span class="s">"*vc-diff*"</span>))
+        files (mapcar #'vc-jj--filename-to-fileset files))
+  (<span class="k">cond</span>
+   ((not (<span class="k">or</span> rev1 rev2))
+    <span class="cd">;; </span><span class="c">Use `</span><span class="m c">vc-jj-previous-revision</span><span class="c">' instead of "@-" because the
+</span>    <span class="cd">;; </span><span class="c">former handles edge cases like e.g. multiple parents
+</span>    (<span class="k">setq</span> rev1 (vc-jj-previous-revision nil <span class="s">"@"</span>)))
+   ((null rev1)
+    (<span class="k">setq</span> rev1 <span class="s">"root()"</span>)))
+  (<span class="k">setq</span> rev2 (<span class="k">or</span> rev2 <span class="s">"@"</span>))
+  (<span class="k">let</span> ((inhibit-read-only t)
+        <span class="cd">;; </span><span class="c">When REV1 and REV2 are the same revision, "-f REV1 -t REV2"
+</span>        <span class="cd">;; </span><span class="c">(erroneously) returns an empty diff.  So we check for that
+</span>        <span class="cd">;; </span><span class="c">case and use "-r REV1" instead, which returns the correct
+</span>        <span class="cd">;; </span><span class="c">diff
+</span>        (args (append (<span class="k">if</span> (string= rev1 rev2)
+                          (list <span class="s">"-r"</span> rev1)
+                        (list <span class="s">"-f"</span> rev1 <span class="s">"-t"</span> rev2))
+                      (vc-switches 'jj 'diff)
+                      (list <span class="s">"--"</span>) files)))
+    (<span class="k">with-current-buffer</span> buffer
+      (erase-buffer))
+    (apply #'call-process vc-jj-program nil buffer nil <span class="s">"diff"</span> args)
+    (<span class="k">if</span> (seq-some (<span class="k">lambda</span> (line) (string-prefix-p <span class="s">"M "</span> line))
+                  (apply #'vc-jj--process-lines <span class="s">"diff"</span> <span class="s">"--summary"</span> <span class="s">"--"</span> files))
+        1
+      0)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

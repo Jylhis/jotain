@@ -1,0 +1,105 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-submodule-remove – Emacs Documentation Online</title>
+<meta name="description" content="magit-submodule-remove is an interactive and natively compiled
+function defined in magit-submodule.el.
+Unregister MODULES and remove their working directories.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-submodule-remove</code></h1><p><span class="m"><code>magit-submodule-remove</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">magit-submodule.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-submodule-remove <a href="#:~:text=Unregister-,MODULES"><span class="arg">MODULES</span></a> <a href="#:~:text="><span class="arg">ARGS</span></a> <a href="#:~:text="><span class="arg">TRASH-GITDIRS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Unregister <span class="arg">MODULES</span> and remove their working directories.
+<p>For safety reasons, do not remove the gitdirs and if a module has
+uncommitted changes, then do not remove it at all.  If a module's
+gitdir is located inside the working directory, then move it into
+the gitdir of the superproject first.
+<p>With the "--force" argument offer to remove dirty working
+directories and with a prefix argument offer to delete gitdirs.
+Both actions are very dangerous and have to be confirmed.  There
+are additional safety precautions in place, so you might be able
+to recover from making a mistake here, but don't count on it.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-submodule.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">magit-submodule-remove</span> (modules args trash-gitdirs)
+  <span class="doc">"Unregister MODULES and remove their working directories.
+
+For safety reasons, do not remove the gitdirs and if a module has
+uncommitted changes, then do not remove it at all.  If a module's
+gitdir is located inside the working directory, then move it into
+the gitdir of the superproject first.
+
+With the \"--force\" argument offer to remove dirty working
+directories and with a prefix argument offer to delete gitdirs.
+Both actions are very dangerous and have to be confirmed.  There
+are additional safety precautions in place, so you might be able
+to recover from making a mistake here, but don't count on it."</span>
+  (<span class="k">interactive</span>
+    (list (<span class="k">if-let</span> ((modules (magit-region-values 'magit-module-section t)))
+              (magit-confirm 'remove-modules nil <span class="s">"Remove %d modules"</span> nil modules)
+            (list (magit-read-module-path <span class="s">"Remove module"</span>)))
+          (magit-submodule-arguments <span class="s">"--force"</span>)
+          current-prefix-arg))
+  (<span class="k">when</span> magit-submodule-remove-trash-gitdirs
+    (<span class="k">setq</span> trash-gitdirs t))
+  (<span class="k">magit-with-toplevel</span>
+    (<span class="k">when-let</span>
+        ((modified
+          (seq-filter (<span class="k">lambda</span> (module)
+                        (<span class="k">let</span> ((default-directory (file-name-as-directory
+                                                  (expand-file-name module))))
+                          (<span class="k">and</span> (cddr (directory-files default-directory))
+                               (magit-anything-modified-p))))
+                      modules)))
+      (<span class="k">if</span> (member <span class="s">"--force"</span> args)
+          (<span class="k">if</span> (magit-confirm 'remove-dirty-modules
+                <span class="s">"Remove dirty module %s"</span>
+                <span class="s">"Remove %d dirty modules"</span>
+                t modified)
+              (<span class="k">dolist</span> (module modified)
+                (<span class="k">let</span> ((default-directory (file-name-as-directory
+                                          (expand-file-name module))))
+                  (magit-git <span class="s">"stash"</span> <span class="s">"push"</span>
+                             <span class="s">"-m"</span> <span class="s">"backup before removal of this module"</span>)))
+            (<span class="k">setq</span> modules (cl-set-difference modules modified <span class="bi">:test</span> #'equal)))
+        (<span class="k">if</span> (cdr modified)
+            (message <span class="s">"Omitting %s modules with uncommitted changes: %s"</span>
+                     (length modified)
+                     (string-join modified <span class="s">", "</span>))
+          (message <span class="s">"Omitting module %s, it has uncommitted changes"</span>
+                   (car modified)))
+        (<span class="k">setq</span> modules (cl-set-difference modules modified <span class="bi">:test</span> #'equal))))
+    (<span class="k">when</span> modules
+      (<span class="k">let</span> ((alist
+             (<span class="k">and</span> trash-gitdirs
+                  (mapcar (##split-string % <span class="s">"\0"</span>)
+                          (magit-git-lines <span class="s">"submodule"</span> <span class="s">"foreach"</span> <span class="s">"-q"</span>
+                                           <span class="s">"printf \"$sm_path\\0$name\n\""</span>)))))
+        (magit-git <span class="s">"submodule"</span> <span class="s">"absorbgitdirs"</span> <span class="s">"--"</span> modules)
+        (magit-git <span class="s">"submodule"</span> <span class="s">"deinit"</span> args <span class="s">"--"</span> modules)
+        (magit-git <span class="s">"rm"</span> args <span class="s">"--"</span> modules)
+        (<span class="k">when</span> (<span class="k">and</span> trash-gitdirs
+                   (magit-confirm 'trash-module-gitdirs
+                     <span class="s">"Trash gitdir of module %s"</span>
+                     <span class="s">"Trash gitdirs of %d modules"</span>
+                     t modules))
+          (<span class="k">dolist</span> (module modules)
+            (<span class="k">if-let</span> ((name (cadr (assoc module alist))))
+                <span class="cd">;; </span><span class="c">Disregard if `</span><span class="m c">magit-delete-by-moving-to-trash</span><span class="c">'
+</span>                <span class="cd">;; </span><span class="c">is nil.  Not doing so would be too dangerous.
+</span>                (delete-directory (convert-standard-filename
+                                   (expand-file-name
+                                    (concat <span class="s">"modules/"</span> name)
+                                    (magit-gitdir)))
+                                  t t)
+              (<span class="w">error</span> <span class="s">"BUG: Weird module name and/or path for %s"</span> module)))))
+      (magit-refresh))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

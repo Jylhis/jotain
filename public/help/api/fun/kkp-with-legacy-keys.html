@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: kkp-with-legacy-keys – Emacs Documentation Online</title>
+<meta name="description" content="kkp-with-legacy-keys is a macro defined in kkp.el.
+Run BODY with KKP key encoding temporarily disabled in the selected terminal.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>kkp-with-legacy-keys</code></h1><p><span class="m"><code>kkp-with-legacy-keys</code></span> is a macro defined in <span class="bt">kkp.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">kkp-with-legacy-keys</span> <span class="ty">&amp;rest</span> <a href="#:~:text=Run-,BODY"><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run <span class="arg">BODY</span> with KKP key encoding temporarily disabled in the selected terminal.
+<p>While <span class="arg">BODY</span> runs in a terminal where KKP is active, the terminal is asked to
+revert to the legacy single-byte encoding of control keys, so that <span class="m"><code>C-g</code></span>
+arrives as the raw <span class="m"><code>quit-char</code></span> byte and can interrupt blocking subprocess
+calls such as a synchronous <a href="../fun/call-process.html"><code>call-process</code></a>.  The previous KKP flags are
+restored afterwards, even if <span class="arg">BODY</span> exits non-locally.
+<p>The flags are toggled with the set command (CSI = flags ; 1 u) rather than
+the push/pop stack: we know the exact flags to restore (they are recorded
+in the terminal's <span class="m"><code>kkp--state</code></span>), and the set command restores them
+directly on terminals that lack the flag stack (e.g. zellij), where a
+stack pop would instead leave KKP disabled for good.
+<p>This is a no-op when KKP is not active in the selected terminal, and is
+not re-applied for nested forms.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/m2b3xmgxg24a6yvrhn2hs2kx62d820n5-emacs-packages-deps/share/emacs/site-lisp/elpa/kkp-20260706.858/kkp.el</span>
+(<span class="k">defmacro</span> <span class="f">kkp-with-legacy-keys</span> (<span class="ty">&amp;rest</span> body)
+  <span class="doc">"Run BODY with KKP key encoding temporarily disabled in the selected terminal.
+While BODY runs in a terminal where KKP is active, the terminal is asked to
+revert to the legacy single-byte encoding of control keys, so that `</span><span class="m doc">C-g</span><span class="doc">'
+arrives as the raw `</span><span class="m doc">quit-char</span><span class="doc">' byte and can interrupt blocking subprocess
+calls such as a synchronous `</span><span class="m doc">call-process</span><span class="doc">'.  The previous KKP flags are
+restored afterwards, even if BODY exits non-locally.
+
+The flags are toggled with the set command (CSI = flags ; 1 u) rather than
+the push/pop stack: we know the exact flags to restore (they are recorded
+in the terminal's `</span><span class="m doc">kkp--state</span><span class="doc">'), and the set command restores them
+directly on terminals that lack the flag stack (e.g. zellij), where a
+stack pop would instead leave KKP disabled for good.
+
+This is a no-op when KKP is not active in the selected terminal, and is
+not re-applied for nested forms."</span>
+  (<span class="k">declare</span> (indent 0) (debug t))
+  (<span class="k">let</span> ((term (make-symbol <span class="s">"terminal"</span>))
+        (state (make-symbol <span class="s">"state"</span>)))
+    `(<span class="k">let*</span> ((,term (kkp--selected-terminal))
+            (,state (kkp--terminal-state ,term)))
+       (<span class="k">if</span> (<span class="k">or</span> (not (<span class="k">and</span> ,state (kkp--state-enhancements ,state)))  <span class="cd">; </span><span class="c">KKP inactive here
+</span>               (kkp--state-legacy-active ,state))                   <span class="cd">; </span><span class="c">already switched
+</span>           (<span class="k">progn</span> ,@body)
+         (<span class="k">setf</span> (kkp--state-legacy-active ,state) t)
+         (kkp--set-encoding-flags ,term 0)
+         (<span class="k">unwind-protect</span>
+             (<span class="k">progn</span> ,@body)
+           (<span class="k">setf</span> (kkp--state-legacy-active ,state) nil)
+           <span class="cd">;; </span><span class="c">Restore the flags kkp recorded when it enabled the terminal;
+</span>           <span class="cd">;; </span><span class="c">the body never changes them, so this value is still current.
+</span>           (kkp--set-encoding-flags ,term (kkp--state-enhancements ,state)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

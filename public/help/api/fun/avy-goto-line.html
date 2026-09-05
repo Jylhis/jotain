@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: avy-goto-line – Emacs Documentation Online</title>
+<meta name="description" content="avy-goto-line is an interactive and natively compiled function defined
+in avy.el.
+Jump to a line start in current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>avy-goto-line</code></h1><p><span class="m"><code>avy-goto-line</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">avy.el</span>.
+<h2>Signature</h2>
+<pre><code>(avy-goto-line <span class="ty">&amp;optional</span> <a href="#:~:text=When-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Jump to a line start in current buffer.
+<p>When <span class="arg">ARG</span> is 1, jump to lines currently visible, with the option
+to cancel to <a href="../fun/goto-line.html"><code>goto-line</code></a> by entering a number.
+<p>When <span class="arg">ARG</span> is 4, negate the window scope determined by
+<a href="../var/avy-all-windows.html"><code>avy-all-windows</code></a>.
+<p>Otherwise, forward to <a href="../fun/goto-line.html"><code>goto-line</code></a> with <span class="arg">ARG</span>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w15jf1dbl3fxkx8c35ym39v09hnaxjw9-emacs-packages-deps/share/emacs/site-lisp/elpa/avy-20241101.1357/avy.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">avy-goto-line</span> (<span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Jump to a line start in current buffer.
+
+When ARG is 1, jump to lines currently visible, with the option
+to cancel to `</span><span class="m doc">goto-line</span><span class="doc">' by entering a number.
+
+When ARG is 4, negate the window scope determined by
+`</span><span class="m doc">avy-all-windows</span><span class="doc">'.
+
+Otherwise, forward to `</span><span class="m doc">goto-line</span><span class="doc">' with ARG."</span>
+  (<span class="k">interactive</span> <span class="s">"p"</span>)
+  (<span class="k">setq</span> arg (<span class="k">or</span> arg 1))
+  (<span class="k">if</span> (not (memq arg '(1 4)))
+      (<span class="k">progn</span>
+        (goto-char (point-min))
+        (forward-line (1- arg)))
+    (<span class="k">avy-with</span> avy-goto-line
+      (<span class="k">let*</span> ((avy-handler-old avy-handler-function)
+             (avy-handler-function
+              (<span class="k">lambda</span> (char)
+                (<span class="k">if</span> (<span class="k">or</span> (&lt; char ?0)
+                        (&gt; char ?9))
+                    (funcall avy-handler-old char)
+                  (<span class="k">let</span> ((line (read-from-minibuffer
+                               <span class="s">"Goto line: "</span> (string char))))
+                    (<span class="k">when</span> line
+                      (avy-push-mark)
+                      (<span class="k">save-restriction</span>
+                        (widen)
+                        (goto-char (point-min))
+                        (forward-line (1- (string-to-number line))))
+                      (<span class="k">throw</span> '<span class="m">done</span> 'exit))))))
+             (r (avy--line (eq arg 4))))
+        (<span class="k">when</span> (<span class="k">and</span> (not (memq r '(t nil))) (eq avy-action #'identity))
+          (avy-action-goto r))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

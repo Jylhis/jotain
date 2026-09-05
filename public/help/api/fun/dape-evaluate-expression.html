@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape-evaluate-expression – Emacs Documentation Online</title>
+<meta name="description" content="dape-evaluate-expression is an interactive and natively compiled
+function defined in dape.el.
+Evaluate expression in current session.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape-evaluate-expression</code></h1><p><span class="m"><code>dape-evaluate-expression</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape-evaluate-expression <a href="#:~:text=CONTEXT.-,CONN"><span class="arg">CONN</span></a> <a href="#:~:text=region.-,EXPRESSION"><span class="arg">EXPRESSION</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=in-,CONTEXT"><span class="arg">CONTEXT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Evaluate expression in current session.
+<p>If called interactively and region is active evaluate region.
+<span class="arg">EXPRESSION</span> should be a string to be evaluated in <span class="arg">CONTEXT</span>.
+<span class="arg">CONN</span> is inferred by either last stopped then last created connection.
+<h2>Key Bindings</h2>
+<p><span class="v">ctl-x-map</span> <span class="key">C-a x</span>
+<span class="v">dape-global-map</span> <span class="key">x</span>
+<span class="v">global-map</span> <span class="key">C-x C-a x</span>
+<span class="v">help-quick-use-map</span> <span class="key">C-x C-a x</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape-evaluate-expression</span> (conn expression <span class="ty">&amp;optional</span> context)
+  <span class="doc">"Evaluate expression in current session.
+If called interactively and region is active evaluate region.
+EXPRESSION should be a string to be evaluated in CONTEXT.
+CONN is inferred by either last stopped then last created connection."</span>
+  (<span class="k">interactive</span>
+   (list
+    (<span class="k">or</span> (dape--live-connection 'stopped t) (dape--live-connection 'last))
+    (<span class="k">if</span> (region-active-p)
+        (buffer-substring (region-beginning) (region-end))
+      (<span class="k">let</span> ((default (thing-at-point 'symbol)))
+        (read-string (format-prompt <span class="s">"Evaluate"</span> default) nil nil default)))))
+  (<span class="k">dape--with-request-bind</span>
+      ((<span class="ty">&amp;whole</span> body <span class="ty">&amp;key</span> variablesReference result <span class="ty">&amp;allow-other-keys</span>) error)
+      (dape--evaluate-expression conn (plist-get (dape--current-stack-frame conn) <span class="bi">:id</span>)
+                                 expression (<span class="k">or</span> context <span class="s">"repl"</span>))
+    (<span class="k">cond</span>
+     (<span class="w">error</span>
+      (<span class="k">if</span> (string-empty-p error)
+          (dape--warn <span class="s">"Failed to evaluate `</span><span class="m s">%s</span><span class="s">'"</span> (substring-no-properties expression))
+        (dape--repl-insert-error (concat (string-trim-right error) <span class="s">"\n"</span>))))
+     ((<span class="k">and</span> (get-buffer <span class="s">"*dape-repl*"</span>)
+           (numberp variablesReference)
+           (not (zerop variablesReference)))
+      (dape--repl-insert
+       (concat (dape--repl-variable (plist-put body <span class="bi">:name</span> expression)) <span class="s">"\n"</span>)))
+     (t
+      <span class="cd">;; </span><span class="c">Refresh is needed as evaluate can change values
+</span>      (dape--update conn 'variables nil)
+      (dape--repl-insert (concat result <span class="s">"\n"</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

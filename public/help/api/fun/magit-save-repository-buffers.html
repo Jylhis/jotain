@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-save-repository-buffers – Emacs Documentation Online</title>
+<meta name="description" content="magit-save-repository-buffers is an interactive and natively compiled
+function defined in magit-mode.el.
+Save file-visiting buffers belonging to the current repository.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-save-repository-buffers</code></h1><p><span class="m"><code>magit-save-repository-buffers</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">magit-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-save-repository-buffers <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Save file-visiting buffers belonging to the current repository.
+<p>After any buffer where <a href="../var/buffer-save-without-query.html"><code>buffer-save-without-query</code></a> is non-nil
+is saved without asking, the user is asked about each modified
+buffer, which visits a file in the current repository.  Optional
+argument (the prefix) non-nil means save all with no questions.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-mode.el</span>
+(<span class="k">defun</span> <span class="f">magit-save-repository-buffers</span> (<span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Save file-visiting buffers belonging to the current repository.
+After any buffer where `</span><span class="m doc">buffer-save-without-query</span><span class="doc">' is non-nil
+is saved without asking, the user is asked about each modified
+buffer, which visits a file in the current repository.  Optional
+argument (the prefix) non-nil means save all with no questions."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">when-let</span> ((topdir (magit-rev-parse-safe <span class="s">"--show-toplevel"</span>)))
+    (<span class="k">let</span> ((save-some-buffers-action-alist
+           `((?Y ,(##with-current-buffer %
+                    (<span class="k">setq</span> buffer-save-without-query t)
+                    (save-buffer))
+                 <span class="s">"to save the current buffer and remember choice"</span>)
+             (?N ,(##with-current-buffer %
+                    (<span class="k">setq</span> magit-inhibit-refresh-save t))
+                 <span class="s">"to skip the current buffer and remember choice"</span>)
+             ,@save-some-buffers-action-alist))
+          <span class="cd">;; </span><span class="c">Create a single wip commit for all saved files.
+</span>          (magit--wip-inhibit-autosave t)
+          (saved nil))
+      (<span class="k">unwind-protect</span>
+          (save-some-buffers
+           arg
+           (<span class="k">lambda</span> ()
+             (<span class="k">and</span> (funcall magit-save-repository-buffers-predicate topdir)
+                  (<span class="k">prog1</span> t
+                    (<span class="k">when</span> magit-wip-mode
+                      (<span class="k">push</span> (expand-file-name buffer-file-name) saved))))))
+        (<span class="k">when</span> saved
+          (<span class="k">let</span> ((default-directory topdir))
+            (magit-wip-commit-worktree
+             (magit-wip-get-ref)
+             saved
+             (<span class="k">if</span> (cdr saved)
+                 (format <span class="s">"autosave %s files after save"</span> (length saved))
+               (format <span class="s">"autosave %s after save"</span>
+                       (file-relative-name (car saved)))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

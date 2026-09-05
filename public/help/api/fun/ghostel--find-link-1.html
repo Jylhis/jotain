@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--find-link-1 – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--find-link-1 is a natively compiled function defined in
+ghostel-links.el.
+Return the start of the next/previous hyperlink from FROM, or nil.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--find-link-1</code></h1><p><span class="m"><code>ghostel--find-link-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel-links.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--find-link-1 <a href="#:~:text=nil.-,DIRECTION"><span class="arg">DIRECTION</span></a> <a href="#:~:text=from-,FROM"><span class="arg">FROM</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the start of the next/previous hyperlink from <span class="arg">FROM</span>, or nil.
+<p><span class="arg">DIRECTION</span> is <span class="m"><code>next</code></span> or <span class="m"><code>previous</code></span>.
+<p>Treats runs sharing a <span class="m"><code>ghostel-link-id</code></span> as one logical link: if <span class="arg">FROM</span> is
+inside such a run, other runs with that id are skipped; for <span class="m"><code>previous</code></span>,
+the result is walked back to the earliest same-id run so a wrapped URL
+lands at its start, not its last chunk.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-links.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--find-link-1</span> (direction from)
+  <span class="doc">"Return the start of the next/previous hyperlink from FROM, or nil.
+DIRECTION is `</span><span class="m doc">next</span><span class="doc">' or `</span><span class="m doc">previous</span><span class="doc">'.
+
+Treats runs sharing a `</span><span class="m doc">ghostel-link-id</span><span class="doc">' as one logical link: if FROM is
+inside such a run, other runs with that id are skipped; for `</span><span class="m doc">previous</span><span class="doc">',
+the result is walked back to the earliest same-id run so a wrapped URL
+lands at its start, not its last chunk."</span>
+  (<span class="k">let</span> ((search-fn (<span class="k">if</span> (eq direction 'next)
+                       #'text-property-search-forward
+                     #'text-property-search-backward))
+        (skip-id (get-text-property from 'ghostel-link-id)))
+    (<span class="k">save-excursion</span>
+      (goto-char from)
+      (<span class="k">catch</span> '<span class="m">found</span>
+        (<span class="k">while-let</span> ((match (funcall search-fn 'help-echo nil
+                                    (<span class="k">lambda</span> (_ v) v) t)))
+          (<span class="k">let*</span> ((pos (prop-match-beginning match))
+                 (id (get-text-property pos 'ghostel-link-id)))
+            (<span class="k">unless</span> (<span class="k">and</span> skip-id (equal skip-id id))
+              (<span class="k">when</span> (<span class="k">and</span> (eq direction 'previous) id)
+                (<span class="k">catch</span> '<span class="m">walked</span>
+                  (<span class="k">while-let</span> ((earlier (text-property-search-backward
+                                        'help-echo nil
+                                        (<span class="k">lambda</span> (_ v) v) t)))
+                    (<span class="k">let</span> ((earlier-pos (prop-match-beginning earlier)))
+                      (<span class="k">if</span> (equal id (get-text-property
+                                     earlier-pos 'ghostel-link-id))
+                          (<span class="k">setq</span> pos earlier-pos)
+                        (<span class="k">throw</span> '<span class="m">walked</span> nil))))))
+              (<span class="k">throw</span> '<span class="m">found</span> pos))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

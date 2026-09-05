@@ -1,0 +1,115 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-mark-node-dwim – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-mark-node-dwim is an interactive and natively compiled
+function defined in combobulate-manipulation.el.
+Mark the most likely node on or near point ARG times.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-mark-node-dwim</code></h1><p><span class="m"><code>combobulate-mark-node-dwim</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">combobulate-manipulation.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-mark-node-dwim <span class="ty">&amp;optional</span> <a href="#:~:text=point-,ARG"><span class="arg">ARG</span></a> <a href="#:~:text=If-,BEGINNING-OF-LINE"><span class="arg">BEGINNING-OF-LINE</span></a> <a href="#:~:text=Setting-,FIRST-CHOICE"><span class="arg">FIRST-CHOICE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Mark the most likely node on or near point <span class="arg">ARG</span> times.
+<p>The exact node that is marked will depend on the location of
+point relative to the nodes in
+<a href="../var/combobulate-navigable-nodes.html"><code>combobulate-navigable-nodes</code></a>.
+<p>If <span class="arg">BEGINNING-OF-LINE</span> is non-nil, then the marked node has its point and
+mark extended, if possible, to the whole line.
+<p>Setting <span class="arg">FIRST-CHOICE</span> to non-nil disables proffered choices if there is
+more than one.
+<h2>Key Bindings</h2>
+<p><span class="v">combobulate-key-map</span> <span class="key">M-h</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-manipulation.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-mark-node-dwim</span> (<span class="ty">&amp;optional</span> arg beginning-of-line first-choice)
+  <span class="doc">"Mark the most likely node on or near point ARG times.
+
+The exact node that is marked will depend on the location of
+point relative to the nodes in
+`</span><span class="m doc">combobulate-navigable-nodes</span><span class="doc">'.
+
+If BEGINNING-OF-LINE is non-nil, then the marked node has its point and
+mark extended, if possible, to the whole line.
+
+Setting FIRST-CHOICE to non-nil disables proffered choices if there is
+more than one."</span>
+  (<span class="k">interactive</span> <span class="s">"^p"</span>)
+  (<span class="k">with-argument-repetition</span> arg
+    (<span class="k">with-navigation-nodes</span> (<span class="bi">:procedures</span> (<span class="k">combobulate-read</span> procedures-default) <span class="bi">:skip-prefix</span> t)
+      <span class="cd">;; </span><span class="c">if the mark's ahead of point then we're at the beginning of the
+</span>      <span class="cd">;; </span><span class="c">region; if so, swap places.
+</span>      (<span class="k">when</span> (<span class="k">and</span> mark-active (&gt; (point) (mark)))
+        (exchange-point-and-mark))
+      (<span class="k">let</span> ((nodes (cons (combobulate--get-nearest-navigable-node)
+                         (combobulate-nav-get-parents
+                          (combobulate-node-at-point)))))
+        <span class="cd">;; </span><span class="c">maybe mark the thing at point first even though it may (or may
+</span>        <span class="cd">;; </span><span class="c">not) match the extents of a node.
+</span>        <span class="cd">;;</span><span class="c">
+</span>        <span class="cd">;; </span><span class="c">Because we shift point around all the time, we don't want the
+</span>        <span class="cd">;; </span><span class="c">`</span><span class="m c">thing-at-point</span><span class="c">' machinery to pick up stray "things" at the
+</span>        <span class="cd">;; </span><span class="c">edges of our region; that would be confusing. So only apply
+</span>        <span class="cd">;; </span><span class="c">it if we don't have a region (i.e., the first time we run
+</span>        <span class="cd">;; </span><span class="c">this command)
+</span>        (<span class="k">when</span> (<span class="k">and</span> combobulate-mark-node-or-thing-at-point (not (use-region-p)))
+          <span class="cd">;; </span><span class="c">NOTE: this may need refinement over time; for now we
+</span>          <span class="cd">;; </span><span class="c">hardcode the `</span><span class="m c">:type</span><span class="c">' to be the symbol name of the thing
+</span>          <span class="cd">;; </span><span class="c">we're looking for, though obviously that is most likely a
+</span>          <span class="cd">;; </span><span class="c">made-up node type.
+</span>          (<span class="k">when-let</span> ((bounds (bounds-of-thing-at-point combobulate-mark-node-or-thing-at-point))
+                     (thing (thing-at-point combobulate-mark-node-or-thing-at-point)))
+            (<span class="k">setq</span> nodes (cons (combobulate-proxy-node-create
+                               <span class="bi">:start</span> (car bounds)
+                               <span class="bi">:end</span> (cdr bounds)
+                               <span class="bi">:type</span> (symbol-name combobulate-mark-node-or-thing-at-point)
+                               <span class="bi">:named</span> nil
+                               <span class="bi">:node</span> nil
+                               <span class="bi">:field</span> nil
+                               <span class="bi">:pp</span> (capitalize (symbol-name combobulate-mark-node-or-thing-at-point))
+                               <span class="bi">:text</span> thing)
+                              nodes))))
+        (combobulate-proffer-choices
+         (seq-drop-while #'combobulate-node-in-region-p nodes)
+         (<span class="k">lambda-slots</span> (index current-node proxy-nodes refactor-id)
+           (<span class="k">combobulate-refactor</span> (<span class="bi">:id</span> refactor-id)
+             <span class="cd">;; </span><span class="c">highlight the current node so the user can see the
+</span>             <span class="cd">;; </span><span class="c">extent of the region.
+</span>             (combobulate--mark-node current-node t beginning-of-line)
+             <span class="cd">;; </span><span class="c">also, if it exists, mark the *next* node in the list
+</span>             <span class="cd">;; </span><span class="c">with a highlight outline
+</span>             (<span class="k">when-let</span> (next-node (nth (1+ index) proxy-nodes))
+               (mark-node-highlighted next-node))
+             <span class="cd">;; </span><span class="c">if the user enabled numeric selection, then label the
+</span>             <span class="cd">;; </span><span class="c">first ten nodes.
+</span>             (<span class="k">when</span> (<span class="k">and</span> (display-graphic-p) combobulate-proffer-allow-numeric-selection)
+               (<span class="k">dotimes</span> (i 9)
+                 (<span class="k">when-let</span> ((idx-node (nth i proxy-nodes)))
+                   (mark-range-label
+                    (combobulate-node-start idx-node)
+                    (1+ (combobulate-node-start idx-node))
+                    (int-to-string (1+ i)) nil t))))))
+         <span class="cd">;; </span><span class="c">this feature only works properly on displays that support
+</span>         <span class="cd">;; </span><span class="c">ctrl-&lt;number&gt; keys.
+</span>         <span class="bi">:allow-numeric-selection</span> (display-graphic-p)
+         <span class="bi">:reset-point-on-abort</span> t
+         <span class="bi">:cancel-action</span> 'rollback
+         <span class="bi">:reset-point-on-accept</span> nil
+         <span class="cd">;; </span><span class="c">This allows repetition of the command that
+</span>         <span class="cd">;; </span><span class="c">`</span><span class="m c">combobulate-mark-node-dwim</span><span class="c">' is bound to, but this should be
+</span>         <span class="cd">;; </span><span class="c">built into `</span><span class="m c">combobulate-proffer-choices</span><span class="c">'. Furthermore, is
+</span>         <span class="cd">;; </span><span class="c">`</span><span class="m c">where-is-internal</span><span class="c">' really the best way to do this?
+</span>         <span class="bi">:extra-map</span> (append
+                     (mapcar (<span class="k">lambda</span> (key) (cons key 'next))
+                             (where-is-internal #'combobulate-mark-node-dwim
+                                                combobulate-key-map))
+                     <span class="cd">;; </span><span class="c">`</span><span class="m c">M-h</span><span class="c">' (default) will expand the region; `</span><span class="m c">M-H</span><span class="c">'
+</span>                     <span class="cd">;; </span><span class="c">contracts it.
+</span>                     (list (cons (kbd <span class="s">"M-H"</span>) 'prev)))
+         <span class="bi">:flash-node</span> t
+         <span class="bi">:first-choice</span> first-choice)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

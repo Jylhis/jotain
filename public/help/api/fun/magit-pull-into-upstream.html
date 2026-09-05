@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-pull-into-upstream – Emacs Documentation Online</title>
+<meta name="description" content="magit-pull-into-upstream is an interactive and natively compiled
+function defined in magit-pull.el.
+Update the upstream of the current branch from its own upstream.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-pull-into-upstream</code></h1><p><span class="m"><code>magit-pull-into-upstream</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">magit-pull.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-pull-into-upstream)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update the upstream of the current branch from its own upstream.
+<p>If the upstream of the current branch is a local branch, and the
+upstream of that is a remote branch, then update the local upstream.
+This makes it possible to update the upstream branch, without having
+to first check it out.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-pull.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">(autoload 'magit-pull-into-upstream "magit-pull" nil t)
+</span>(<span class="k">transient-define-suffix</span> <span class="f">magit-pull-into-upstream</span> ()
+  <span class="doc">"Update the upstream of the current branch from its own upstream.
+
+If the upstream of the current branch is a local branch, and the
+upstream of that is a remote branch, then update the local upstream.
+This makes it possible to update the upstream branch, without having
+to first check it out."</span>
+  <span class="bi">:if</span> #'magit-pull--upstreams
+  <span class="bi">:description</span> (##cdr (magit-pull--upstreams))
+  (<span class="k">interactive</span>)
+  (<span class="k">if-let</span> ((upstreams (magit-pull--upstreams)))
+      (<span class="k">pcase-let*</span> ((`(,up1 . ,up2) upstreams)
+                   (`(,remote . ,branch) (magit-split-branch-name up2)))
+        (magit-run-git-async <span class="s">"fetch"</span> remote branch)
+        (set-process-sentinel
+         magit-this-process
+         (<span class="k">lambda</span> (process _event)
+           (<span class="k">when</span> (memq (process-status process) '(exit signal))
+             (magit-run-git-async <span class="s">"update-ref"</span> (concat <span class="s">"refs/heads/"</span> up1)
+                                  <span class="s">"FETCH_HEAD"</span>)))))
+    (<span class="w">user-error</span> <span class="s">"Cannot perform background update of upstream branch"</span>)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

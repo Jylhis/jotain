@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-template--substitute-var – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-template--substitute-var is a natively compiled function
+defined in majutsu-template.el.
+Replace lexical variable NAME in NODE with REPLACEMENT node.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-template--substitute-var</code></h1><p><span class="m"><code>majutsu-template--substitute-var</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-template.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-template--substitute-var <a href="#:~:text=in-,NODE"><span class="arg">NODE</span></a> <a href="#:~:text=variable-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=with-,REPLACEMENT"><span class="arg">REPLACEMENT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Replace lexical variable <span class="arg">NAME</span> in <span class="arg">NODE</span> with <span class="arg">REPLACEMENT</span> node.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-template.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-template--substitute-var</span> (node name replacement)
+  <span class="doc">"Replace lexical variable NAME in NODE with REPLACEMENT node."</span>
+  (<span class="k">pcase</span> (majutsu-template-node-kind node)
+    (<span class="bi">:var</span>
+     (<span class="k">if</span> (eq (majutsu-template-node-value node) name)
+         replacement
+       node))
+    (<span class="bi">:lambda</span>
+     (<span class="k">if</span> (memq name (majutsu-template--lambda-params node))
+         node
+       (majutsu-template--lambda-node
+        (majutsu-template--lambda-params node)
+        (majutsu-template--substitute-var
+         (majutsu-template--lambda-body node)
+         name replacement)
+        (majutsu-template-node-props node))))
+    (<span class="bi">:call</span>
+     (majutsu-template-node-create
+      <span class="bi">:kind</span> <span class="bi">:call</span>
+      <span class="bi">:type</span> (majutsu-template-node-type node)
+      <span class="bi">:value</span> (majutsu-template-node-value node)
+      <span class="bi">:args</span> (mapcar (<span class="k">lambda</span> (arg)
+                      (majutsu-template--substitute-var arg name replacement))
+                    (majutsu-template-node-args node))
+      <span class="bi">:props</span> (majutsu-template-node-props node)))
+    (_ node)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

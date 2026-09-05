@@ -1,0 +1,251 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb-request-spec-from-string – Emacs Documentation Online</title>
+<meta name="description" content="verb-request-spec-from-string is a natively compiled function defined
+in verb.el.
+Create and return a request specification from string TEXT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb-request-spec-from-string</code></h1><p><span class="m"><code>verb-request-spec-from-string</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">verb.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb-request-spec-from-string <a href="#:~:text=string-,TEXT"><span class="arg">TEXT</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=to-,METADATA"><span class="arg">METADATA</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create and return a request specification from string <span class="arg">TEXT</span>.
+<p>The text format for request specifications is the following:
+<p>[COMMENT]...
+<br>METHOD [URL]
+<br>[HEADER]...
+<p>[BODY]
+<p>Each COMMENT must start with "#" or ":" (see Org mode comments and
+headline property syntax).  All comments will be discarded after being
+read (they are not part of the returned value).  COMMENT may also be a
+blank line.
+<p>METHOD must be a method matched by <a href="../fun/verb--http-methods-regexp.html"><code>verb--http-methods-regexp</code></a> (that
+is, an HTTP method or the value of <a href="../var/verb--template-keyword.html"><code>verb--template-keyword</code></a>).
+Matching is case-insensitive.
+<p>URL must be a full URL, or a part of it.  If present, the scheme must
+be "http" or "https".  If the scheme is not present, the URL will
+be interpreted as a path, plus (if present) query string and fragment.
+Therefore, using just "example.org" (note no scheme present) as URL
+will result in a URL with its path set to "example.org", not as its
+host.  URL may end in a backslash, in which case the following line
+will be appended to it (ignoring its leading whitespace).  The process
+is repeated as long as the current line ends with a backslash.
+<p>Each HEADER must be in the form of KEY: VALUE.  KEY must be a nonempty
+string, VALUE can be the empty string.  HEADER may also start with
+<br>"#", in which case it will be ignored.
+<p>BODY can contain arbitrary data.  Note that there must be a blank
+line between the HEADER list and BODY.  If BODY contains a properly
+formatted Babel source block, the block beginning and end lines will
+be removed.
+<p>As a special case, if the text specification consists exclusively of
+comments and/or whitespace, or is the empty string, signal
+<span class="m"><code>verb-empty-spec</code></span>.
+<p>If <span class="arg">TEXT</span> does not conform to the request specification text format,
+signal an error.
+<p>Before returning the request specification, set its metadata to
+<span class="arg">METADATA</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb.el</span>
+(<span class="k">defun</span> <span class="f">verb-request-spec-from-string</span> (text <span class="ty">&amp;optional</span> metadata)
+  <span class="doc">"Create and return a request specification from string TEXT.
+
+The text format for request specifications is the following:
+
+[COMMENT]...
+METHOD [URL]
+[HEADER]...
+
+[BODY]
+
+Each COMMENT must start with \"#\" or \":\" (see Org mode comments and
+headline property syntax).  All comments will be discarded after being
+read (they are not part of the returned value).  COMMENT may also be a
+blank line.
+
+METHOD must be a method matched by `</span><span class="m doc">verb--http-methods-regexp</span><span class="doc">' (that
+is, an HTTP method or the value of `</span><span class="m doc">verb--template-keyword</span><span class="doc">').
+Matching is case-insensitive.
+
+URL must be a full URL, or a part of it.  If present, the scheme must
+be \"http\" or \"https\".  If the scheme is not present, the URL will
+be interpreted as a path, plus (if present) query string and fragment.
+Therefore, using just \"example.org\" (note no scheme present) as URL
+will result in a URL with its path set to \"example.org\", not as its
+host.  URL may end in a backslash, in which case the following line
+will be appended to it (ignoring its leading whitespace).  The process
+is repeated as long as the current line ends with a backslash.
+
+Each HEADER must be in the form of KEY: VALUE.  KEY must be a nonempty
+string, VALUE can be the empty string.  HEADER may also start with
+\"#\", in which case it will be ignored.
+
+BODY can contain arbitrary data.  Note that there must be a blank
+line between the HEADER list and BODY.  If BODY contains a properly
+formatted Babel source block, the block beginning and end lines will
+be removed.
+
+As a special case, if the text specification consists exclusively of
+comments and/or whitespace, or is the empty string, signal
+`</span><span class="m doc">verb-empty-spec</span><span class="doc">'.
+
+If TEXT does not conform to the request specification text format,
+signal an error.
+
+Before returning the request specification, set its metadata to
+METADATA."</span>
+  (<span class="k">let</span> ((context (current-buffer))
+        method url headers headers-start body backslash)
+    (<span class="k">with-temp-buffer</span>
+      (insert text)
+      (goto-char (point-min))
+
+      <span class="cd">;;; </span><span class="c">COMMENTS + PROPERTIES
+</span>
+      <span class="cd">;; </span><span class="c">Skip initial blank lines, comments and properties.
+</span>      (<span class="k">while</span> (<span class="k">and</span> (re-search-forward <span class="s">"^\\s-*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">:</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">#</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?$"</span>
+                                     (line-end-position) t)
+                  (not (eobp)))
+        (forward-char))
+      <span class="cd">;; </span><span class="c">Check if the entire specification was just comments or empty.
+</span>      (<span class="k">when</span> (string-empty-p (string-trim (buffer-substring (point)
+                                                           (point-max))))
+        <span class="cd">;; </span><span class="c">Signal `</span><span class="m c">verb-empty-spec</span><span class="c">' if so
+</span>        (<span class="w">signal</span> 'verb-empty-spec nil))
+
+      <span class="cd">;;; </span><span class="c">METHOD + URL
+</span>
+      <span class="cd">;; </span><span class="c">Read HTTP method and URL line.
+</span>      <span class="cd">;; </span><span class="c">First, expand any code tags on it (if any):
+</span>      (<span class="k">let*</span> ((case-fold-search t)
+             (get-line-fn (<span class="k">lambda</span> ()
+                            (verb--eval-code-tags-in-string
+                             (buffer-substring-no-properties
+                              (point) (line-end-position))
+                             context)))
+             (line (funcall get-line-fn)))
+        <span class="cd">;; </span><span class="c">Try to match:
+</span>        <span class="cd">;; </span><span class="c">A) METHOD URL
+</span>        <span class="cd">;; </span><span class="c">B) METHOD
+</span>        (<span class="k">if</span> (string-match (concat <span class="s">"^\\s-*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">"</span>
+                                  (verb--http-methods-regexp)
+                                  <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\s-+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">$"</span>)
+                          line)
+            <span class="cd">;; </span><span class="c">A) Matched method + URL, store them.
+</span>            (<span class="k">progn</span>
+              (<span class="k">setq</span> method (upcase (match-string 1 line))
+                    url (string-remove-suffix <span class="s">"\\"</span> (match-string 2 line)))
+
+              <span class="cd">;; </span><span class="c">Subcase:
+</span>              <span class="cd">;; </span><span class="c">If URL ends with '\', append following lines to it
+</span>              <span class="cd">;; </span><span class="c">until one of them does not end with '\' (ignoring
+</span>              <span class="cd">;; </span><span class="c">leading whitespace, for alignment).
+</span>              (<span class="k">while</span> (string-suffix-p <span class="s">"\\"</span> line)
+                (end-of-line)
+                (<span class="k">if</span> (eobp)
+                    (<span class="w">user-error</span>
+                     <span class="s">"Backslash in URL not followed by additional line"</span>)
+                  (forward-char))
+                (back-to-indentation)
+                (<span class="k">setq</span> line (funcall get-line-fn))
+                (<span class="k">when</span> (string-empty-p line)
+                  (<span class="w">user-error</span>
+                   <span class="s">"Backslash in URL not followed by additional content"</span>))
+
+                (<span class="k">setq</span> backslash t)
+                (<span class="k">setq</span> url (concat url (string-remove-suffix <span class="s">"\\"</span> line)))))
+
+          (<span class="k">when</span> (string-match (concat <span class="s">"^\\s-*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">"</span>
+                                      (verb--http-methods-regexp)
+                                      <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\s-*$"</span>)
+                              line)
+            <span class="cd">;; </span><span class="c">B) Matched method only, store it.
+</span>            (<span class="k">setq</span> method (upcase (match-string 1 line))))))
+
+      <span class="cd">;; </span><span class="c">We've processed the URL line, move to the end of it.
+</span>      (end-of-line)
+
+      (<span class="k">if</span> method
+          (<span class="k">when</span> (string= method verb--template-keyword)
+            (<span class="k">setq</span> method nil))
+        (<span class="w">user-error</span> (concat <span class="s">"Could not read a valid HTTP method (%s)\n"</span>
+                            <span class="s">"Additionally, you can also specify %s "</span>
+                            <span class="s">"(matching is case insensitive)"</span>)
+                    (mapconcat #'identity verb--http-methods <span class="s">", "</span>)
+                    verb--template-keyword))
+
+      <span class="cd">;; </span><span class="c">Skip newline after URL line.
+</span>      (<span class="k">unless</span> (eobp) (forward-char))
+      (<span class="k">setq</span> headers-start (point))
+
+      <span class="cd">;;; </span><span class="c">HEADERS
+</span>
+      <span class="cd">;; </span><span class="c">Scan forward until we find a blank line (headers end).  In
+</span>      <span class="cd">;; </span><span class="c">the region covered, delete all lines starting with '#', as
+</span>      <span class="cd">;; </span><span class="c">these headers have been commented out.  Finally, go back to
+</span>      <span class="cd">;; </span><span class="c">where we started.
+</span>      (<span class="k">save-excursion</span>
+        (<span class="k">while</span> (re-search-forward <span class="s">"^.+$"</span> (line-end-position) t)
+          (<span class="k">unless</span> (eobp) (forward-char)))
+        (delete-matching-lines <span class="s">"^[[:blank:]]*#"</span> headers-start (point)))
+
+      <span class="cd">;; </span><span class="c">Expand code tags in the rest of the buffer (if any).
+</span>      (<span class="k">save-excursion</span>
+        (verb--eval-code-tags-in-buffer (current-buffer) context))
+
+      <span class="cd">;; </span><span class="c">Parse HTTP headers, stop as soon as we find a blank line.
+</span>      (<span class="k">while</span> (re-search-forward <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">$"</span> (line-end-position) t)
+        (<span class="k">let</span> ((line (match-string 1)))
+          <span class="cd">;; </span><span class="c">Check if line matches KEY: VALUE.
+</span>          (<span class="k">if</span> (string-match verb-util--http-header-parse-regexp line)
+              <span class="cd">;; </span><span class="c">Line matches, trim KEY and VALUE and store them.
+</span>              (<span class="k">push</span> (cons (string-trim (match-string 1 line))
+                          (string-trim (match-string 2 line)))
+                    headers)
+            (<span class="k">let</span> ((msg (concat <span class="s">"Invalid HTTP header: \"%s\"\n"</span>
+                               <span class="s">"Make sure there's a blank line between"</span>
+                               <span class="s">" the headers and the request body"</span>)))
+              (<span class="k">when</span> (<span class="k">and</span> backslash (string-match-p <span class="s">"^\\s-+"</span> line))
+                (<span class="k">setq</span> msg (concat msg <span class="s">" (did you forget a backslash '</span><span class="m s">\\</span><span class="s">'?)"</span>)))
+              (<span class="w">user-error</span> msg line))))
+        (<span class="k">unless</span> (eobp) (forward-char)))
+      (<span class="k">setq</span> headers (nreverse headers))
+
+      <span class="cd">;;; </span><span class="c">BODY
+</span>
+      <span class="cd">;; </span><span class="c">Allow users to include Babel source blocks in their request
+</span>      <span class="cd">;; </span><span class="c">bodies. This allows them to have font locking and other
+</span>      <span class="cd">;; </span><span class="c">features that depend on specific content types (e.g JSON,
+</span>      <span class="cd">;; </span><span class="c">XML, etc.). Here we delete the source block delimiters so
+</span>      <span class="cd">;; </span><span class="c">that they are not included in the actual request.
+</span>      (delete-matching-lines <span class="s">"^[[:blank:]]*#\\+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">begin</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">end</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">_src"</span>)
+
+      <span class="cd">;; </span><span class="c">Skip blank line after headers.
+</span>      (<span class="k">unless</span> (eobp) (forward-char))
+
+      <span class="cd">;; </span><span class="c">The rest of the buffer is the request body.
+</span>      (<span class="k">let</span> ((rest (buffer-substring (point) (point-max))))
+        <span class="cd">;; </span><span class="c">Only read body if it isn't comprised entirely of
+</span>        <span class="cd">;; </span><span class="c">whitespace, but if it's not and has leading/trailing
+</span>        <span class="cd">;; </span><span class="c">whitespace, include it.
+</span>        (<span class="k">unless</span> (string-empty-p (string-trim rest))
+          <span class="cd">;; </span><span class="c">Now we know body isn't comprised entirely of whitespace,
+</span>          <span class="cd">;; </span><span class="c">check if the user wants to delete any trailing characters.
+</span>          (<span class="k">setq</span> body (<span class="k">if</span> verb-trim-body-end
+                         (replace-regexp-in-string
+                          (concat verb-trim-body-end <span class="s">"$"</span>) <span class="s">""</span> rest)
+                       rest))))
+      (<span class="k">when</span> (buffer-local-value 'verb--multipart-boundary context)
+        (verb-util--log nil 'W <span class="s">"Detected an unfinished multipart form"</span>))
+      <span class="cd">;; </span><span class="c">Return a `</span><span class="m c">verb-request-spec</span><span class="c">'.
+</span>      (verb-request-spec <span class="bi">:method</span> method
+                         <span class="bi">:url</span> (<span class="k">unless</span> (string-empty-p (<span class="k">or</span> url <span class="s">""</span>))
+                                (verb--clean-url url))
+                         <span class="bi">:headers</span> headers
+                         <span class="bi">:body</span> body
+                         <span class="bi">:metadata</span> metadata))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

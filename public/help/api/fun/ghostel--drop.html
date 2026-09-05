@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--drop – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--drop is an interactive and natively compiled function defined
+in ghostel.el.
+Handle a drag-and-drop EVENT into the terminal.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--drop</code></h1><p><span class="m"><code>ghostel--drop</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--drop <a href="#:~:text=drop-,EVENT"><span class="arg">EVENT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle a drag-and-drop <span class="arg">EVENT</span> into the terminal.
+<p>File drops paste their shell-quoted paths, text drops paste as-is,
+into the terminal shown in the event's window.
+<h2>Key Bindings</h2>
+<p><span class="v">ghostel--dnd-area-map</span> <span class="key">&lt;header-line&gt; &lt;drag-n-drop&gt;</span>
+<span class="v">ghostel--dnd-area-map</span> <span class="key">&lt;left-fringe&gt; &lt;drag-n-drop&gt;</span>
+<span class="v">ghostel--dnd-area-map</span> <span class="key">&lt;mode-line&gt; &lt;drag-n-drop&gt;</span>
+<span class="v">ghostel--dnd-area-map</span> <span class="key">&lt;right-fringe&gt; &lt;drag-n-drop&gt;</span>
+<span class="v">ghostel-char-mode-map</span> <span class="key">&lt;drag-n-drop&gt;</span>
+<span class="v">ghostel-mode-map</span> <span class="key">&lt;drag-n-drop&gt;</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--drop</span> (event)
+  <span class="doc">"Handle a drag-and-drop EVENT into the terminal.
+File drops paste their shell-quoted paths, text drops paste as-is,
+into the terminal shown in the event's window."</span>
+  (<span class="k">interactive</span> <span class="s">"e"</span>)
+  <span class="cd">;; </span><span class="c">On macOS (NS port) the event structure is:
+</span>  <span class="cd">;;   </span><span class="c">(drag-n-drop POSN (TYPE OPERATIONS . OBJECTS))
+</span>  <span class="cd">;; </span><span class="c">where (nth 2 event) carries the drop data, not the position.
+</span>  <span class="cd">;; </span><span class="c">Not `</span><span class="m c">event-start</span><span class="c">': its posn-at-point fallback would invent a
+</span>  <span class="cd">;; </span><span class="c">selected-window position for a posn-less synthetic event.
+</span>  (<span class="k">let</span> ((arg (nth 2 event))
+        (window (posn-window (nth 1 event))))
+    (<span class="k">when</span> (<span class="k">and</span> arg (not (eq arg 'lambda)))
+      (<span class="k">let</span> ((type (car arg))
+            (objects (cddr arg)))
+        <span class="cd">;; </span><span class="c">Drop events arrive with the selected window's buffer current.
+</span>        (<span class="k">with-current-buffer</span> (<span class="k">if</span> (windowp window)
+                                 (window-buffer window)
+                               (current-buffer))
+          (<span class="k">if</span> (eq type 'file)
+              (ghostel--dnd-send-files objects)
+            (ghostel-paste-string (mapconcat #'identity objects <span class="s">"\n"</span>))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

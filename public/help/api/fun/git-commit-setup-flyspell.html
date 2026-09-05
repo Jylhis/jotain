@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: git-commit-setup-flyspell – Emacs Documentation Online</title>
+<meta name="description" content="git-commit-setup-flyspell is a natively compiled function defined in
+git-commit.el.
+Unconditionally turn on Flyspell mode.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>git-commit-setup-flyspell</code></h1><p><span class="m"><code>git-commit-setup-flyspell</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">git-commit.el</span>.
+<h2>Signature</h2>
+<pre><code>(git-commit-setup-flyspell)
+</code></pre>
+<h2>Documentation</h2>
+<p>Unconditionally turn on Flyspell mode.
+<p>Also check text that is already in the buffer, while avoiding to check
+most text that Git will strip from the final message, such as the last
+comment and anything below the cut line ("--- &gt;8 ---").
+<h2>Aliases</h2>
+<p><a href="../fun/git-commit-turn-on-flyspell.html"><code>git-commit-turn-on-flyspell</code></a> (obsolete since git-commit 4.6.0)
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/git-commit.el</span>
+(<span class="k">defun</span> <span class="f">git-commit-setup-flyspell</span> ()
+  <span class="doc">"Unconditionally turn on Flyspell mode.
+Also check text that is already in the buffer, while avoiding to check
+most text that Git will strip from the final message, such as the last
+comment and anything below the cut line (\"--- &gt;8 ---\")."</span>
+  (<span class="k">require</span> '<span class="m">flyspell</span>)
+  (flyspell-mode 1)
+  (<span class="k">setq</span> flyspell-generic-check-word-predicate #'git-commit--flyspell-verify)
+  (<span class="k">let</span> ((end nil)
+        <span class="cd">;; </span><span class="c">The "cut line" is defined in "git/wt-status.c".  It appears
+</span>        <span class="cd">;; </span><span class="c">in the commit message when `</span><span class="m c">commit.verbose</span><span class="c">' is set to true.
+</span>        (cut-line-regex (format <span class="s">"^%s -\\{8,\\} &gt;8 -\\{8,\\}$"</span> comment-start))
+        (comment-start-regex (format <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">%s</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">$</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> comment-start)))
+    (<span class="k">save-excursion</span>
+      (goto-char (<span class="k">or</span> (re-search-forward cut-line-regex nil t)
+                     (point-max)))
+      (<span class="k">while</span> (<span class="k">and</span> (not (bobp)) (looking-at comment-start-regex))
+        (forward-line -1))
+      (<span class="k">unless</span> (looking-at comment-start-regex)
+        (forward-line))
+      (<span class="k">setq</span> end (point)))
+    (flyspell-region (point-min) end)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

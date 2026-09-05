@@ -1,0 +1,55 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg--fill-string – Emacs Documentation Online</title>
+<meta name="description" content="tuareg--fill-string is a natively compiled function defined in
+tuareg.el.
+Assume the point is inside a string delimited by &quot; and jusfify it.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg--fill-string</code></h1><p><span class="m"><code>tuareg--fill-string</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg--fill-string)
+</code></pre>
+<h2>Documentation</h2>
+<p>Assume the point is inside a string delimited by " and jusfify it.
+<p>This function moves the point.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg--fill-string</span> ()
+  <span class="doc">"Assume the point is inside a string delimited by \" and jusfify it.
+This function moves the point."</span>
+  <span class="cd">;; </span><span class="c">FIXME: be more subtle: detect lists and @param
+</span>  (<span class="k">let*</span> ((start-end (tuareg--string-boundaries))
+         (start (set-marker (make-marker) (car start-end)))
+         (end   (set-marker (make-marker) (cdr start-end)))
+         fill-prefix
+         (fill-individual-varying-indent t)
+         (use-hard-newlines t))
+    (indent-region (marker-position start) (marker-position end))
+    <span class="cd">;; </span><span class="c">Delete all backslash protected newlines except those without
+</span>    <span class="cd">;; </span><span class="c">a preceding space that serve to cut a long word.
+</span>    (goto-char (marker-position start))
+    <span class="cd">;;</span><span class="c">(indent-according-to-mode)
+</span>    (<span class="k">setq</span> fill-prefix (make-string (1+ (current-column)) ?\ ))
+    (<span class="k">if</span> (looking-at <span class="s">"\"\\\\ *[\n\r] *"</span>)
+        (replace-match <span class="s">"\""</span>))
+    (<span class="k">while</span> (re-search-forward <span class="s">" +\\\\ *[\n\r] *"</span> (marker-position end) t)
+      (replace-match <span class="s">" "</span>))
+    (set-hard-newline-properties (marker-position start)
+                                 (marker-position end))
+    <span class="cd">;; </span><span class="c">Do not include the final \" not to remove space before it:
+</span>    (fill-region (marker-position start) (1- (marker-position end)))
+    <span class="cd">;; </span><span class="c">Protect all soft newlines
+</span>    (goto-char (marker-position start))
+    (end-of-line)
+    (<span class="k">while</span> (&lt; (point) (marker-position end))
+      (<span class="k">unless</span> (get-char-property (point) 'hard)
+        (insert <span class="s">" \\"</span>))
+      (forward-char)
+      (end-of-line))
+    (set-marker start nil)
+    (set-marker end nil)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

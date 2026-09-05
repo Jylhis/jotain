@@ -1,0 +1,45 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: avy-tree – Emacs Documentation Online</title>
+<meta name="description" content="avy-tree is a natively compiled function defined in avy.el.
+Coerce LST into a balanced tree.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>avy-tree</code></h1><p><span class="m"><code>avy-tree</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">avy.el</span>.
+<h2>Signature</h2>
+<pre><code>(avy-tree <a href="#:~:text=Coerce-,LST"><span class="arg">LST</span></a> <a href="#:~:text=of-,KEYS"><span class="arg">KEYS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Coerce <span class="arg">LST</span> into a balanced tree.
+<p>The degree of the tree is the length of <span class="arg">KEYS</span>.
+<span class="arg">KEYS</span> are placed appropriately on internal nodes.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w15jf1dbl3fxkx8c35ym39v09hnaxjw9-emacs-packages-deps/share/emacs/site-lisp/elpa/avy-20241101.1357/avy.el</span>
+(<span class="k">defun</span> <span class="f">avy-tree</span> (lst keys)
+  <span class="doc">"Coerce LST into a balanced tree.
+The degree of the tree is the length of KEYS.
+KEYS are placed appropriately on internal nodes."</span>
+  (<span class="k">let*</span> ((len (length keys))
+         (order-fn (cdr (assq avy-command avy-orders-alist)))
+         (lst (<span class="k">if</span> order-fn
+                  (cl-sort lst #'&lt; <span class="bi">:key</span> order-fn)
+                lst)))
+    (<span class="k">cl-labels</span>
+        ((rd (ls)
+           (<span class="k">let</span> ((ln (length ls)))
+             (<span class="k">if</span> (&lt; ln len)
+                 (cl-pairlis keys
+                             (mapcar (<span class="k">lambda</span> (x) (cons 'leaf x)) ls))
+               (<span class="k">let</span> ((ks (copy-sequence keys))
+                     res)
+                 (<span class="k">dolist</span> (s (avy-subdiv ln len))
+                   (<span class="k">push</span> (cons (<span class="k">pop</span> ks)
+                               (<span class="k">if</span> (eq s 1)
+                                   (cons 'leaf (<span class="k">pop</span> ls))
+                                 (rd (<span class="k">avy-multipop</span> ls s))))
+                         res))
+                 (nreverse res))))))
+      (rd lst))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

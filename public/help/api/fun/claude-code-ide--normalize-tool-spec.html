@@ -1,0 +1,48 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide--normalize-tool-spec – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide--normalize-tool-spec is a natively compiled function
+defined in claude-code-ide-mcp-server.el.
+Convert TOOL-SPEC to normalized format for processing.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide--normalize-tool-spec</code></h1><p><span class="m"><code>claude-code-ide--normalize-tool-spec</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide-mcp-server.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide--normalize-tool-spec <a href="#:~:text=Convert-,TOOL-SPEC"><span class="arg">TOOL-SPEC</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Convert <span class="arg">TOOL-SPEC</span> to normalized format for processing.
+<p>Handles both old format: (func :description ... :parameters ...)
+and new format: (:function func :name ... :args ...).
+Returns a consistent plist format with :args.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp-server.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide--normalize-tool-spec</span> (tool-spec)
+  <span class="doc">"Convert TOOL-SPEC to normalized format for processing.
+Handles both old format: (func :description ... :parameters ...)
+and new format: (:function func :name ... :args ...).
+Returns a consistent plist format with :args."</span>
+  (<span class="k">let</span> ((format (claude-code-ide--tool-format-p tool-spec)))
+    (<span class="k">cond</span>
+     ((eq format 'old)
+      <span class="cd">;; </span><span class="c">Convert old format to new normalized format with :args
+</span>      (<span class="k">let*</span> ((func (car tool-spec))
+             (plist (cdr tool-spec))
+             (description (plist-get plist <span class="bi">:description</span>))
+             (parameters (plist-get plist <span class="bi">:parameters</span>)))
+        <span class="cd">;; </span><span class="c">Emit deprecation warning
+</span>        (message <span class="s">"Warning: Tool '</span><span class="m s">%s</span><span class="s">' is using deprecated format. Please use `</span><span class="m s">claude-code-ide-make-tool</span><span class="s">' instead."</span>
+                 (symbol-name func))
+        (list <span class="bi">:function</span> func
+              <span class="bi">:name</span> (symbol-name func)
+              <span class="bi">:description</span> description
+              <span class="bi">:args</span> (claude-code-ide--parameters-to-args parameters))))
+     ((eq format 'new)
+      <span class="cd">;; </span><span class="c">New format - already in the right format, just return it
+</span>      tool-spec)
+     (t
+      (<span class="w">error</span> <span class="s">"Cannot normalize tool spec: %S"</span> tool-spec)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

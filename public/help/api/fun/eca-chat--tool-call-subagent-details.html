@@ -1,0 +1,100 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--tool-call-subagent-details – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--tool-call-subagent-details is a natively compiled function
+defined in eca-chat.el.
+Update tool call UI for a subagent tool call.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--tool-call-subagent-details</code></h1><p><span class="m"><code>eca-chat--tool-call-subagent-details</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--tool-call-subagent-details <a href="#:~:text=call.-,ID"><span class="arg">ID</span></a> <a href="#:~:text=and-,ARGS"><span class="arg">ARGS</span></a> <a href="#:~:text=content.-,LABEL"><span class="arg">LABEL</span></a> <a href="#:~:text=optional-,APPROVAL-TEXT"><span class="arg">APPROVAL-TEXT</span></a> <a href="#:~:text=and-,TIME"><span class="arg">TIME</span></a> <a href="#:~:text=Append-,STATUS"><span class="arg">STATUS</span></a> <a href="#:~:text=Optional-,PARENT-ID"><span class="arg">PARENT-ID</span></a> <a href="#:~:text=label.-,DETAILS"><span class="arg">DETAILS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">OUTPUT-TEXT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update tool call UI for a subagent tool call.
+<p><span class="arg">ID</span> and <span class="arg">ARGS</span> are from the tool call content.
+<span class="arg">LABEL</span> is the expandable block label.
+<span class="arg">DETAILS</span> is the details of the tool call.
+Can include optional <span class="arg">APPROVAL-TEXT</span> and <span class="arg">TIME</span>.
+Append <span class="arg">STATUS</span> symbol.  Optional <span class="arg">PARENT-ID</span> for nested rendering.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--tool-call-subagent-details</span> (id args label approval-text time status parent-id details <span class="ty">&amp;optional</span> output-text)
+  <span class="doc">"Update tool call UI for a subagent tool call.
+ID and ARGS are from the tool call content.
+LABEL is the expandable block label.
+DETAILS is the details of the tool call.
+Can include optional APPROVAL-TEXT and TIME.
+Append STATUS symbol.  Optional PARENT-ID for nested rendering."</span>
+  (<span class="k">-let*</span> ((agent-name (plist-get args <span class="bi">:agent</span>))
+          (task (plist-get args <span class="bi">:task</span>))
+          (model (plist-get details <span class="bi">:model</span>))
+          (step (plist-get details <span class="bi">:step</span>))
+          (max-steps (plist-get details <span class="bi">:maxSteps</span>))
+          (usage-str (eca-chat--subagent-usage-str id))
+          (steps-info (eca-chat--subagent-steps-info step max-steps usage-str))
+          (existing-ov (eca-chat--get-expandable-content id))
+          <span class="cd">;; </span><span class="c">Preserve pending-approval status when a step update arrives with
+</span>          <span class="cd">;; </span><span class="c">loading status — an inner tool call may be waiting for approval.
+</span>          (status (<span class="k">if</span> (<span class="k">and</span> existing-ov
+                           (string= status eca-chat-mcp-tool-call-loading-symbol)
+                           (string= (overlay-get existing-ov 'eca-chat--tool-call-status)
+                                    eca-chat-mcp-tool-call-pending-approval-symbol))
+                      eca-chat-mcp-tool-call-pending-approval-symbol
+                    status))
+          (new-label (concat (propertize label 'font-lock-face 'eca-chat-subagent-tool-call-label-face)
+                             steps-info <span class="s">" "</span> status time
+                             (<span class="k">when</span> approval-text (concat <span class="s">"\n"</span> approval-text))))
+          (has-children? (<span class="k">and</span> existing-ov
+                              (eca-chat--segments-children
+                               (overlay-get existing-ov 'eca-chat--expandable-content-segments)))))
+    (<span class="k">if</span> has-children?
+        <span class="cd">;; </span><span class="c">Block already has nested child content (subagent tool calls, reasoning,
+</span>        <span class="cd">;; </span><span class="c">approval prompts, etc).  Only update the label line to reflect the new
+</span>        <span class="cd">;; </span><span class="c">step count / status, preserving all rendered children.
+</span>        (<span class="k">let*</span> ((ov-content (overlay-get existing-ov 'eca-chat--expandable-content-ov-content))
+               (open? (overlay-get existing-ov 'eca-chat--expandable-content-toggle))
+               (content (overlay-get ov-content 'eca-chat--expandable-content-content))
+               (has-content? (<span class="k">or</span> (<span class="k">and</span> content (not (string-empty-p content)))
+                                 has-children?))
+               (new-icon-face (get-text-property 0 'font-lock-face new-label))
+               (label-indent (<span class="k">when</span> (overlay-get existing-ov 'eca-chat--expandable-content-nested)
+                               eca-chat--expandable-content-base-indent))
+               (new-icons (eca-chat--make-expandable-icons new-icon-face label-indent)))
+          (overlay-put existing-ov 'eca-chat--expandable-content-open-icon (car new-icons))
+          (overlay-put existing-ov 'eca-chat--expandable-content-close-icon (cdr new-icons))
+          (<span class="k">save-excursion</span>
+            (goto-char (overlay-start existing-ov))
+            (delete-region (point) (1- (overlay-start ov-content)))
+            (eca-chat--insert
+             (propertize (eca-chat--propertize-only-first-word
+                          new-label
+                          'line-prefix (<span class="k">when</span> has-content?
+                                         (<span class="k">if</span> open?
+                                             (cdr new-icons)
+                                           (car new-icons))))
+                         'help-echo <span class="s">"mouse-1 / RET / tab: expand/collapse"</span>))
+            (eca-chat--paint-nested-label existing-ov)))
+      <span class="cd">;; </span><span class="c">No children yet — safe to replace the full content body
+</span>      (eca-chat--update-expandable-content
+       id
+       new-label
+       (eca-chat--content-table
+        `((<span class="s">"Agent"</span> . ,agent-name)
+          (<span class="s">"Model"</span> . ,model)
+          ,@(<span class="k">when</span> task `((<span class="s">"Task"</span> . ,(concat task <span class="s">"\n\n"</span>))))
+          ,@(<span class="k">when</span> output-text `((<span class="s">"Output"</span> . ,(concat <span class="s">"\n"</span> output-text))))))
+       nil
+       parent-id))
+    <span class="cd">;; </span><span class="c">Store status and label on the overlay so we can update them later
+</span>    (<span class="k">when-let*</span> ((ov (eca-chat--get-expandable-content id)))
+      (overlay-put ov 'eca-chat--tool-call-status status)
+      (overlay-put ov 'eca-chat--tool-call-label label)
+      (overlay-put ov 'eca-chat--tool-call-steps-info steps-info)
+      (overlay-put ov 'eca-chat--tool-call-step step)
+      (overlay-put ov 'eca-chat--tool-call-max-steps max-steps)
+      (overlay-put ov 'eca-chat--tool-call-time time))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

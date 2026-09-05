@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: meson-lookup-doc – Emacs Documentation Online</title>
+<meta name="description" content="meson-lookup-doc is an interactive and natively compiled function
+defined in meson-mode.el.
+Open Meson reference manual and find IDENTIFIER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>meson-lookup-doc</code></h1><p><span class="m"><code>meson-lookup-doc</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">meson-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(meson-lookup-doc <a href="#:~:text=find-,IDENTIFIER"><span class="arg">IDENTIFIER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Open Meson reference manual and find <span class="arg">IDENTIFIER</span>.
+<p>Return the buffer containing the reference manual.
+<span class="arg">IDENTIFIER</span> is the name of a Meson function or object as a string.
+Signal a <a href="../fun/user-error.html"><code>user-error</code></a> if the manual could not be found
+or does not contain <span class="arg">IDENTIFIER</span>.
+<h2>Key Bindings</h2>
+<p><span class="v">meson-mode-map</span> <span class="key">&lt;f1&gt;</span>
+<h2>Aliases</h2>
+<p><a href="../fun/meson-lookup-doc-at-point.html"><code>meson-lookup-doc-at-point</code></a>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ajn730848zmcji1jjy9y0s8x1mck32q9-emacs-packages-deps/share/emacs/site-lisp/elpa/meson-mode-20240601.1647/meson-mode.el</span>
+(<span class="k">defun</span> <span class="f">meson-lookup-doc</span> (identifier)
+  <span class="doc">"Open Meson reference manual and find IDENTIFIER.
+Return the buffer containing the reference manual.
+IDENTIFIER is the name of a Meson function or object as a string.
+Signal a `</span><span class="m doc">user-error</span><span class="doc">' if the manual could not be found
+or does not contain IDENTIFIER."</span>
+  (<span class="k">interactive</span> (list (<span class="k">or</span> (thing-at-point 'symbol)
+                         (meson-function-at-point)
+                         (<span class="w">user-error</span> <span class="s">"No identifier at point"</span>))))
+  (<span class="k">let</span> ((buf (find-file-noselect
+              (<span class="k">or</span> (meson--find-reference-manual)
+                  (<span class="w">user-error</span> <span class="s">"Meson reference manual not found"</span>)))))
+    (<span class="k">with-current-buffer</span> buf
+      <span class="cd">;; </span><span class="c">Set up buffer only once after creation.
+</span>      (<span class="k">unless</span> (string= (buffer-name) <span class="s">"*Meson Reference Manual*"</span>)
+        (rename-buffer <span class="s">"*Meson Reference Manual*"</span> 'unique)
+        (read-only-mode)
+        (<span class="k">when</span> (<span class="k">and</span> (<span class="k">require</span> '<span class="m">markdown-mode</span> nil t)
+                   (fboundp 'markdown-view-mode)
+                   (not (eq major-mode 'markdown-view-mode)))
+          (markdown-view-mode))
+        (local-set-key (kbd <span class="s">"q"</span>) 'bury-buffer)
+        (<span class="k">when</span> (<span class="k">bound-and-true-p</span> evil-mode)
+          (<span class="k">declare-function</span> evil-local-set-key nil) <span class="cd">;; </span><span class="c">suppress "undeclared" warning
+</span>          (evil-local-set-key 'normal (kbd <span class="s">"q"</span>) 'bury-buffer)))
+      (<span class="k">let*</span> ((position
+	      (<span class="k">or</span> (meson--search-in-reference-manual identifier)
+		  (<span class="w">user-error</span> <span class="s">"%s not found in Meson reference manual"</span> identifier)))
+	     (window (display-buffer buf meson-doc-display-buffer-action)))
+	(<span class="k">with-selected-window</span> window
+	  (goto-char position)
+	  (recenter 0))))
+    buf))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

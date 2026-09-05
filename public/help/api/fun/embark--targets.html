@@ -1,0 +1,81 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark--targets – Emacs Documentation Online</title>
+<meta name="description" content="embark--targets is a natively compiled function defined in embark.el.
+Retrieve current targets.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark--targets</code></h1><p><span class="m"><code>embark--targets</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark--targets)
+</code></pre>
+<h2>Documentation</h2>
+<p>Retrieve current targets.
+<p>An initial guess at the current targets and their types is
+determined by running the functions in <a href="../var/embark-target-finders.html"><code>embark-target-finders</code></a>.
+Each function should either return nil, a pair of a type symbol
+and target string or a triple of a type symbol, target string and
+target bounds.
+<p>In the minibuffer only the first target finder returning non-nil
+is taken into account.  When finding targets at point in other
+buffers, all target finder functions are executed.
+<p>For each target, the type is then looked up as a key in the
+variable <a href="../var/embark-transformer-alist.html"><code>embark-transformer-alist</code></a>.  If there is a transformer
+for the type, it is called with the type and target, and must
+return a <a href="../fun/cons.html"><code>cons</code></a> of the transformed type and transformed target.
+<p>The return value of <a href="../fun/embark--targets.html"><code>embark--targets</code></a> is a list of plists.  Each
+plist concerns one target, and has keys <span class="bi">:type</span>, <span class="bi">:target</span>,
+<br><span class="bi">:orig-type</span>, <span class="bi">:orig-target</span> and <span class="bi">:bounds</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+(<span class="k">defun</span> <span class="f">embark--targets</span> ()
+  <span class="doc">"Retrieve current targets.
+
+An initial guess at the current targets and their types is
+determined by running the functions in `</span><span class="m doc">embark-target-finders</span><span class="doc">'.
+Each function should either return nil, a pair of a type symbol
+and target string or a triple of a type symbol, target string and
+target bounds.
+
+In the minibuffer only the first target finder returning non-nil
+is taken into account.  When finding targets at point in other
+buffers, all target finder functions are executed.
+
+For each target, the type is then looked up as a key in the
+variable `</span><span class="m doc">embark-transformer-alist</span><span class="doc">'.  If there is a transformer
+for the type, it is called with the type and target, and must
+return a `</span><span class="m doc">cons</span><span class="doc">' of the transformed type and transformed target.
+
+The return value of `</span><span class="m doc">embark--targets</span><span class="doc">' is a list of plists.  Each
+plist concerns one target, and has keys `</span><span class="m doc">:type</span><span class="doc">', `</span><span class="m doc">:target</span><span class="doc">',
+`</span><span class="m doc">:orig-type</span><span class="doc">', `</span><span class="m doc">:orig-target</span><span class="doc">' and `</span><span class="m doc">:bounds</span><span class="doc">'."</span>
+  (<span class="k">let</span> (targets)
+    (run-hook-wrapped
+     'embark-target-finders
+     (<span class="k">lambda</span> (fun)
+       (<span class="k">dolist</span> (found (<span class="k">when-let*</span> ((result (funcall fun)))
+                        (<span class="k">if</span> (consp (car result)) result (list result))))
+         (<span class="k">let*</span> ((type (<span class="k">or</span> (car found) 'general))
+                (target+bounds (cdr found))
+                (target (<span class="k">if</span> (consp target+bounds)
+                            (car target+bounds)
+                          target+bounds))
+                (bounds (<span class="k">and</span> (consp target+bounds) (cdr target+bounds)))
+                (full-target
+                 (append
+                  (list <span class="bi">:orig-type</span> type <span class="bi">:orig-target</span> target <span class="bi">:bounds</span> bounds)
+                  (<span class="k">if-let*</span> ((transform (alist-get type embark-transformer-alist)))
+                      (<span class="k">let</span> ((trans (funcall transform type target)))
+                        (list <span class="bi">:type</span> (car trans) <span class="bi">:target</span> (cdr trans)))
+                    (list <span class="bi">:type</span> type <span class="bi">:target</span> target)))))
+           (<span class="k">push</span> full-target targets)))
+       (<span class="k">and</span> targets (minibufferp))))
+    (nreverse
+     (cl-delete-duplicates <span class="cd">; </span><span class="c">keeps last duplicate, but we reverse
+</span>      targets
+      <span class="bi">:test</span> (<span class="k">lambda</span> (t1 t2)
+              (<span class="k">and</span> (equal (plist-get t1 <span class="bi">:target</span>) (plist-get t2 <span class="bi">:target</span>))
+                   (eq (plist-get t1 <span class="bi">:type</span>) (plist-get t2 <span class="bi">:type</span>))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

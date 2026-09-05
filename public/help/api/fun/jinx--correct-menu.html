@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: jinx--correct-menu – Emacs Documentation Online</title>
+<meta name="description" content="jinx--correct-menu is a natively compiled function defined in jinx.el.
+Return popup mouse menu to correct misspelling.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>jinx--correct-menu</code></h1><p><span class="m"><code>jinx--correct-menu</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">jinx.el</span>.
+<h2>Signature</h2>
+<pre><code>(jinx--correct-menu <span class="ty">&amp;rest</span> _)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return popup mouse menu to correct misspelling.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a84p94snryc55wrv02kbf63qv5yqsxl8-emacs-packages-deps/share/emacs/site-lisp/elpa/jinx-20260813.954/jinx.el</span>
+(<span class="k">defun</span> <span class="f">jinx--correct-menu</span> (<span class="ty">&amp;rest</span> _)
+  <span class="doc">"Return popup mouse menu to correct misspelling."</span>
+  (<span class="k">when-let*</span> ((posn (event-start last-input-event))
+              (pt (posn-point posn))
+              (ov (car (jinx--get-overlays pt pt t))))
+    (<span class="k">let</span> ((menu nil)
+          (word (buffer-substring-no-properties
+                 (overlay-start ov) (overlay-end ov))))
+      (<span class="k">dolist</span> (dict jinx--dicts)
+        (<span class="k">when-let*</span> ((desc (jinx--mod-describe dict))
+                    (suggestions (jinx--mod-suggest dict word)))
+          (<span class="k">push</span> `[,(concat <span class="s">"── "</span> (car desc) <span class="s">" ─ "</span> (cdr desc) <span class="s">" ──"</span>) <span class="bi">:active</span> nil] menu)
+          (<span class="k">cl-loop</span> for w in suggestions repeat jinx-menu-suggestions do
+                   (<span class="k">push</span> `[,w (jinx--correct-replace ,ov ,w)] menu))))
+      (<span class="k">when-let*</span> ((suggestions (jinx--session-suggestions word)))
+        (<span class="k">push</span> [<span class="s">"── Session ──"</span> <span class="bi">:active</span> nil] menu)
+        (<span class="k">cl-loop</span> for w in suggestions repeat jinx-menu-suggestions do
+          (<span class="k">push</span> `[,w (jinx--correct-replace ,ov ,w)] menu)))
+      (<span class="k">let</span> ((submenu (list <span class="s">"Accept and save"</span>)))
+        (<span class="k">cl-loop</span> for (key . fun) in jinx--save-keys do
+                 (<span class="k">cl-loop</span> for (k w a) in (funcall fun 'format key word) do
+                          (<span class="k">push</span> `[,a (jinx-correct-word
+                                      ,(overlay-start ov) ,(overlay-end ov)
+                                      ,(concat k w))]
+                                submenu)))
+        (<span class="k">push</span> (nreverse submenu) menu))
+      (easy-menu-create-menu (format <span class="s">"Correct \"%s\""</span> word)
+                             (delete-dups (nreverse menu))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

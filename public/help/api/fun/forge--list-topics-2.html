@@ -1,0 +1,93 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--list-topics-2 – Emacs Documentation Online</title>
+<meta name="description" content="forge--list-topics-2 is a natively compiled function defined in
+forge-topic.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--list-topics-2</code></h1><p><span class="m"><code>forge--list-topics-2</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">forge-topic.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--list-topics-2 <span class="arg">SPEC</span> <span class="arg">REPO</span> <span class="arg">TYPE</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-topic.el</span>
+(<span class="k">defun</span> <span class="f">forge--list-topics-2</span> (spec repo type)
+  (<span class="k">pcase-let</span> (((eieio active state status category milestone labels marks
+                      saved author assignee reviewer global order limit)
+               spec))
+    (<span class="k">cond</span> (active
+           (<span class="k">setq</span> state 'open)
+           (<span class="k">setq</span> status '(unread pending)))
+          ((eq status 'inbox)
+           (<span class="k">setq</span> status '(unread pending))))
+    (<span class="k">when</span> (eq state 'closed)
+      (<span class="k">setq</span> state '( completed merged unplanned duplicate outdated rejected)))
+    `[<span class="bi">:select</span> <span class="bi">:distinct</span> topic:*
+      <span class="bi">:from</span> [(as ,type topic)]
+      ,@(<span class="k">pcase</span> type
+          ((<span class="k">and</span> 'discussion (guard category))
+           `[<span class="bi">:join</span> discussion-category <span class="bi">:on</span> (= discussion-category:name ,category)])
+          ((<span class="k">and</span> (<span class="k">or</span> 'issue 'pullreq) (guard milestone))
+           `[<span class="bi">:join</span> milestone <span class="bi">:on</span> (= milestone:title ,milestone)]))
+      ,@(<span class="k">pcase</span> (<span class="k">and</span> labels type)
+          ('discussion
+           [<span class="bi">:join</span> discussion-label <span class="bi">:on</span> (= discussion-label:discussion  topic:id)
+            <span class="bi">:join</span>            label <span class="bi">:on</span> (= label:id          discussion-label:id)])
+          ('issue
+           [<span class="bi">:join</span>      issue-label <span class="bi">:on</span> (= issue-label:issue            topic:id)
+            <span class="bi">:join</span>            label <span class="bi">:on</span> (= label:id               issue-label:id)])
+          ('pullreq
+           [<span class="bi">:join</span>    pullreq-label <span class="bi">:on</span> (= pullreq-label:pullreq        topic:id)
+            <span class="bi">:join</span>            label <span class="bi">:on</span> (= label:id             pullreq-label:id)]))
+      ,@(<span class="k">pcase</span> (<span class="k">and</span> marks type)
+          ('discussion
+           [<span class="bi">:join</span> discussion-mark <span class="bi">:on</span> (= discussion-mark:discussion  topic:id)
+            <span class="bi">:join</span>            mark <span class="bi">:on</span> (= mark:id           discussion-mark:id)])
+          ('issue
+           [<span class="bi">:join</span>      issue-mark <span class="bi">:on</span> (= issue-mark:issue            topic:id)
+            <span class="bi">:join</span>            mark <span class="bi">:on</span> (= mark:id                issue-mark:id)])
+          ('pullreq
+           [<span class="bi">:join</span>    pullreq-mark <span class="bi">:on</span> (= pullreq-mark:pullreq        topic:id)
+            <span class="bi">:join</span>            mark <span class="bi">:on</span> (= mark:id              pullreq-mark:id)]))
+      ,@(<span class="k">pcase</span> (<span class="k">and</span> assignee type)
+          ('issue
+           [<span class="bi">:join</span>      issue-assignee <span class="bi">:on</span> (= issue-assignee:issue            topic:id)
+            <span class="bi">:join</span>            assignee <span class="bi">:on</span> (= assignee:id            issue-assignee:id)])
+          ('pullreq
+           [<span class="bi">:join</span>    pullreq-assignee <span class="bi">:on</span> (= pullreq-assignee:pullreq        topic:id)
+            <span class="bi">:join</span>            assignee <span class="bi">:on</span> (= assignee:id          pullreq-assignee:id)]))
+      ,@(<span class="k">and</span> reviewer
+             [<span class="bi">:join</span> (as pullreq-review-request r) <span class="bi">:on</span> (= r:pullreq  topic:id)
+              <span class="bi">:join</span> assignee                      <span class="bi">:on</span> (= assignee:id    r:id)])
+      <span class="bi">:where</span>
+      (<span class="k">and</span>
+       ,@(<span class="k">and</span> (not global) repo `((= topic:repository ,(<span class="k">oref</span> repo id))))
+       ,@(<span class="k">cond</span>
+           ((<span class="k">and</span> active state status)
+            `((<span class="k">or</span> (in topic:state  ,(vconcat (ensure-list state)))
+                  (in topic:status ,(vconcat (ensure-list status))))))
+           (`(,@(<span class="k">and</span> state  `((in topic:state  ,(vconcat (ensure-list state)))))
+              ,@(<span class="k">and</span> status `((in topic:status ,(vconcat (ensure-list status))))))))
+       ,@(<span class="k">pcase</span> type
+           ((<span class="k">and</span> 'discussion (guard category))
+            '((= topic:category discussion-category:id)))
+           ((<span class="k">and</span> (<span class="k">or</span> 'issue 'pullreq) (guard milestone))
+            '((= topic:milestone milestone:id))))
+       ,@(<span class="k">and</span> labels    `((<span class="k">or</span> ,@(mapcar (<span class="k">##</span>`(= label:name ,%)) labels))))
+       ,@(<span class="k">and</span> marks     `((<span class="k">or</span> ,@(mapcar (<span class="k">##</span>`(=  mark:name ,%))  marks))))
+       ,@(<span class="k">and</span> saved     '((= topic:saved-p  't)))
+       ,@(<span class="k">and</span> author    `((= topic:author   ,author)))
+       ,@(<span class="k">and</span> assignee (memq type '(issue pullreq))
+              `((= assignee:login ,assignee)))
+       ,@(<span class="k">and</span> reviewer (eq type 'pullreq)
+              `((= assignee:login ,reviewer))))
+      <span class="bi">:order-by</span> [,(<span class="k">pcase</span> order
+                    ('newest            '(desc topic:number))
+                    ('oldest            '(asc  topic:number))
+                    ('recently-updated  '(desc topic:updated))
+                    ('anciently-updated '(asc  topic:updated)))]
+      ,@(<span class="k">and</span> limit `(<span class="bi">:limit</span> ,limit))]))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

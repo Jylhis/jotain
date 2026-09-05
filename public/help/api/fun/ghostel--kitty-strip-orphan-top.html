@@ -1,0 +1,83 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--kitty-strip-orphan-top – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--kitty-strip-orphan-top is a natively compiled function
+defined in ghostel-kitty.el.
+Strip kitty image debris left at point-min by scrollback eviction.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--kitty-strip-orphan-top</code></h1><p><span class="m"><code>ghostel--kitty-strip-orphan-top</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">ghostel-kitty.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--kitty-strip-orphan-top)
+</code></pre>
+<h2>Documentation</h2>
+<p>Strip kitty image debris left at point-min by scrollback eviction.
+<p>Two distinct artifacts both surface here:
+<p>1. Collapsed overlays.  <a href="../fun/delete-region.html"><code>delete-region</code></a> clamps overlays inside the
+<br>&nbsp;&nbsp;&nbsp;deleted range to its start instead of deleting them, so an evicted
+<br>&nbsp;&nbsp;&nbsp;row's zero-width kitty overlays all snap onto the new point-min and
+<br>&nbsp;&nbsp;&nbsp;stack there (dozens for a tall image).  Detected by counting
+<br>&nbsp;&nbsp;&nbsp;zero-width kitty overlays per start-position — more than one at the
+<br>&nbsp;&nbsp;&nbsp;same position is never legitimate (the placement loop emits at most
+<br>&nbsp;&nbsp;&nbsp;one overlay per row).
+<p>2. Orphan text-property slices.  When eviction straddles an image, the
+<br>&nbsp;&nbsp;&nbsp;surviving rows keep their <span class="m"><code>display</code></span> slices into a now-incomplete
+<br>&nbsp;&nbsp;&nbsp;image.  Detected by a slice y-offset &gt; 0 at point-min (y=0 would
+<br>&nbsp;&nbsp;&nbsp;mean the row IS the image's top, so it's an intact image's first
+<br>&nbsp;&nbsp;&nbsp;row, not an orphan).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-kitty.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--kitty-strip-orphan-top</span> ()
+  <span class="doc">"Strip kitty image debris left at point-min by scrollback eviction.
+
+Two distinct artifacts both surface here:
+
+1. Collapsed overlays.  `</span><span class="m doc">delete-region</span><span class="doc">' clamps overlays inside the
+   deleted range to its start instead of deleting them, so an evicted
+   row's zero-width kitty overlays all snap onto the new point-min and
+   stack there (dozens for a tall image).  Detected by counting
+   zero-width kitty overlays per start-position — more than one at the
+   same position is never legitimate (the placement loop emits at most
+   one overlay per row).
+
+2. Orphan text-property slices.  When eviction straddles an image, the
+   surviving rows keep their `</span><span class="m doc">display</span><span class="doc">' slices into a now-incomplete
+   image.  Detected by a slice y-offset &gt; 0 at point-min (y=0 would
+   mean the row IS the image's top, so it's an intact image's first
+   row, not an orphan)."</span>
+  (<span class="k">let</span> ((inhibit-read-only t))
+    <span class="cd">;; </span><span class="c">(1) Eviction-collapsed overlay stacks.
+</span>    (<span class="k">let</span> ((counts (make-hash-table)))
+      (<span class="k">dolist</span> (ov (overlays-in (point-min) (point-max)))
+        (<span class="k">when</span> (<span class="k">and</span> (overlay-get ov 'ghostel-kitty)
+                   (= (overlay-start ov) (overlay-end ov)))
+          (<span class="k">let</span> ((pos (overlay-start ov)))
+            (puthash pos (1+ (gethash pos counts 0)) counts))))
+      (<span class="k">dolist</span> (ov (overlays-in (point-min) (point-max)))
+        (<span class="k">when</span> (<span class="k">and</span> (overlay-get ov 'ghostel-kitty)
+                   (= (overlay-start ov) (overlay-end ov))
+                   (&gt; (gethash (overlay-start ov) counts 0) 1))
+          (delete-overlay ov))))
+    <span class="cd">;; </span><span class="c">(2) Orphan text-property slices at point-min.
+</span>    (<span class="k">let</span> ((slice-y (ghostel--kitty-slice-y-at (point-min))))
+      (<span class="k">when</span> (<span class="k">and</span> slice-y (&gt; slice-y 0))
+        (<span class="k">let</span> ((start (point-min))
+              (end (<span class="k">save-excursion</span>
+                     (goto-char (point-min))
+                     (<span class="k">while</span> (<span class="k">and</span> (&lt; (point) (point-max))
+                                 (<span class="k">or</span> (get-text-property (point) 'ghostel-kitty)
+                                     (cl-some
+                                      (<span class="k">lambda</span> (ov) (overlay-get ov 'ghostel-kitty))
+                                      (overlays-at (point)))))
+                       (forward-line 1))
+                     (point))))
+          (<span class="k">when</span> (&gt; end start)
+            (remove-text-properties
+             start end '(display nil line-height nil ghostel-kitty nil))
+            (<span class="k">dolist</span> (ov (overlays-in start end))
+              (<span class="k">when</span> (overlay-get ov 'ghostel-kitty)
+                (delete-overlay ov)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

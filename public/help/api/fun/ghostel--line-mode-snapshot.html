@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--line-mode-snapshot – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--line-mode-snapshot is a natively compiled function defined in
+ghostel-line-mode.el.
+Capture in-progress input plus point/mark offsets and clear the input region.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--line-mode-snapshot</code></h1><p><span class="m"><code>ghostel--line-mode-snapshot</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel-line-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--line-mode-snapshot)
+</code></pre>
+<h2>Documentation</h2>
+<p>Capture in-progress input plus point/mark offsets and clear the input region.
+<p>Returns a plist (:input STR :point-offset N-or-nil :mark-offset N-or-nil)
+suitable for <a href="../fun/ghostel--line-mode-restore.html"><code>ghostel--line-mode-restore</code></a>, or nil when there is no
+live input marker.  The input region is bounded by
+<a href="../var/ghostel--line-input-start.html"><code>ghostel--line-input-start</code></a> and <a href="../var/ghostel--line-input-end.html"><code>ghostel--line-input-end</code></a> (not
+<a href="../fun/point-max.html"><code>point-max</code></a>) so any content drawn past the input — e.g. a status
+bar below the prompt — stays untouched.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-line-mode.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--line-mode-snapshot</span> ()
+  <span class="doc">"Capture in-progress input plus point/mark offsets and clear the input region.
+Returns a plist (:input STR :point-offset N-or-nil :mark-offset N-or-nil)
+suitable for `</span><span class="m doc">ghostel--line-mode-restore</span><span class="doc">', or nil when there is no
+live input marker.  The input region is bounded by
+`</span><span class="m doc">ghostel--line-input-start</span><span class="doc">' and `</span><span class="m doc">ghostel--line-input-end</span><span class="doc">' (not
+`</span><span class="m doc">point-max</span><span class="doc">') so any content drawn past the input — e.g. a status
+bar below the prompt — stays untouched."</span>
+  (<span class="k">let</span> ((start-pos (<span class="k">and</span> (markerp ghostel--line-input-start)
+                        (marker-position ghostel--line-input-start)))
+        (end-pos (<span class="k">and</span> (markerp ghostel--line-input-end)
+                      (marker-position ghostel--line-input-end))))
+    (<span class="k">when</span> (<span class="k">and</span> start-pos end-pos)
+      (<span class="k">let*</span> ((point-offset (<span class="k">and</span> (&gt;= (point) start-pos)
+                                (&lt;= (point) end-pos)
+                                (- (point) start-pos)))
+             (mark-pos (<span class="k">and</span> mark-active (mark)))
+             (mark-offset (<span class="k">and</span> mark-pos
+                               (&gt;= mark-pos start-pos)
+                               (&lt;= mark-pos end-pos)
+                               (- mark-pos start-pos)))
+             (input (buffer-substring-no-properties start-pos end-pos)))
+        <span class="cd">;; </span><span class="c">Disarm undo for the rest of the redraw pass: this delete, the
+</span>        <span class="cd">;; </span><span class="c">native redraw, and the re-insert in `</span><span class="m c">ghostel--line-mode-restore</span><span class="c">'
+</span>        <span class="cd">;; </span><span class="c">are renderer bookkeeping, not user edits.  `</span><span class="m c">restore</span><span class="c">' re-arms.
+</span>        (<span class="k">setq</span> buffer-undo-list t)
+        (<span class="k">let</span> ((inhibit-read-only t))
+          (delete-region start-pos end-pos))
+        (list <span class="bi">:input</span> input
+              <span class="bi">:point-offset</span> point-offset
+              <span class="bi">:mark-offset</span> mark-offset)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

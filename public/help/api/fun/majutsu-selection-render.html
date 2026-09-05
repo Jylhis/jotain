@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-selection-render – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-selection-render is a natively compiled function defined in
+majutsu-selection.el.
+Re-render selection overlays for the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-selection-render</code></h1><p><span class="m"><code>majutsu-selection-render</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-selection.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-selection-render <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">SESSION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Re-render selection overlays for the current buffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-selection.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-selection-render</span> (<span class="ty">&amp;optional</span> session)
+  <span class="doc">"Re-render selection overlays for the current buffer."</span>
+  (<span class="k">let*</span> ((session (<span class="k">or</span> session (transient-scope)))
+         (buf (<span class="k">and</span> session (majutsu-selection-session-buffer session))))
+    (<span class="k">when</span> (<span class="k">and</span> buf (buffer-live-p buf) (boundp 'transient--suffixes))
+      (<span class="k">let</span> ((overlays (majutsu-selection-session-overlays session))
+            (active-ids (make-hash-table <span class="bi">:test</span> 'equal)))
+        (<span class="k">dolist</span> (obj transient--suffixes)
+          (<span class="k">when</span> (cl-typep obj 'majutsu-selection-option)
+            (<span class="k">let</span> ((vals (<span class="k">oref</span> obj value))
+                  (label (<span class="k">oref</span> obj selection-label))
+                  (face (<span class="k">oref</span> obj selection-face)))
+              (<span class="k">when</span> vals
+                (<span class="k">unless</span> (listp vals) (<span class="k">setq</span> vals (list vals)))
+                (<span class="k">dolist</span> (id vals)
+                  (<span class="k">let</span> ((existing (gethash id active-ids)))
+                    (puthash id (cons (cons (propertize (<span class="k">or</span> label <span class="s">""</span>) 'face face)
+                                            (car existing))
+                                      obj)
+                             active-ids)))))))
+        (maphash (<span class="k">lambda</span> (id ov)
+                   (<span class="k">unless</span> (gethash id active-ids)
+                     (delete-overlay ov)
+                     (remhash id overlays)))
+                 overlays)
+        (maphash (<span class="k">lambda</span> (id data)
+                   (<span class="k">let*</span> ((obj (cdr data))
+                          (locate-fn (<span class="k">or</span> (majutsu-selection--resolve-locate-fn obj)
+                                         #'majutsu-selection--locate-default)))
+                     (majutsu-selection--render-overlay
+                      session id (car data) locate-fn)))
+                 active-ids)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

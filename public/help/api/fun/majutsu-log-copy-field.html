@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-log-copy-field – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-log-copy-field is an interactive and natively compiled
+function defined in majutsu-log.el.
+Copy the rendered value of the log field at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-log-copy-field</code></h1><p><span class="m"><code>majutsu-log-copy-field</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">majutsu-log.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-log-copy-field)
+</code></pre>
+<h2>Documentation</h2>
+<p>Copy the rendered value of the log field at point.
+<p>When the region is active, copy it literally using <a href="../fun/copy-region-as-kill.html"><code>copy-region-as-kill</code></a>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-log.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">majutsu-log-copy-field</span> ()
+  <span class="doc">"Copy the rendered value of the log field at point.
+
+When the region is active, copy it literally using `</span><span class="m doc">copy-region-as-kill</span><span class="doc">'."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">if</span> (use-region-p)
+      (call-interactively #'copy-region-as-kill)
+    (<span class="k">let*</span> ((compiled (majutsu-log--current-compiled))
+           (entry (majutsu-log--entry-at-point))
+           (instance (majutsu-log--text-property-near-point 'majutsu-log-column))
+           (field (majutsu-log--text-property-near-point 'majutsu-log-field))
+           (module (majutsu-log--text-property-near-point 'majutsu-log-module))
+           (column (<span class="k">or</span> (<span class="k">and</span> instance
+                            (majutsu-log--compiled-column-by-instance compiled instance))
+                       (<span class="k">and</span> field module
+                            (seq-find (<span class="k">lambda</span> (candidate)
+                                        (<span class="k">and</span> (eq (plist-get candidate <span class="bi">:field</span>) field)
+                                             (eq (plist-get candidate <span class="bi">:module</span>) module)))
+                                      (plist-get compiled <span class="bi">:columns</span>))))))
+      (<span class="k">unless</span> entry
+        (<span class="w">user-error</span> <span class="s">"No log entry at point"</span>))
+      (<span class="k">unless</span> column
+        (<span class="w">user-error</span> <span class="s">"No log field at point"</span>))
+      (majutsu-log--copy-string
+       (majutsu-log--render-column-text entry column t)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

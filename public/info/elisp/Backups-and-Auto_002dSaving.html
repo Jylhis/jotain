@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.1.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Backups and Auto-Saving (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Backups and Auto-Saving (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Backups and Auto-Saving (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Buffers.html#Buffers" rel="next" title="Buffers">
+<link href="Files.html#Files" rel="prev" title="Files">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+dt.def-line {font-size: 1rem}
+kbd.kbd {font-style: oblique}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold}
+ul.mark-bullet {list-style-type: disc}
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Backups-and-Auto_002dSaving">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Buffers.html#Buffers" rel="next">Buffers</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Files.html#Files" rel="prev">Files</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Emacs Lisp</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h2 class="chapter" id="Backups-and-Auto_002dSaving-1"><span>27 Backups and Auto-Saving<a class="copiable-link" href="#Backups-and-Auto_002dSaving-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-backups-and-auto_002dsaving"></a>
+
+<p>Backup files and auto-save files are two methods by which Emacs tries
+to protect the user from the consequences of crashes or of the user&rsquo;s
+own errors.  Auto-saving preserves the text from earlier in the current
+editing session; backup files preserve file contents prior to the
+current session.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Backup-Files">Backup Files</a></li>
+<li><a href="#Auto_002dSaving">Auto-Saving</a></li>
+<li><a href="#Reverting">Reverting</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Backup-Files">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Auto_002dSaving" rel="next">Auto-Saving</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Backups-and-Auto_002dSaving" rel="up">Backups and Auto-Saving</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Backup-Files-1"><span>27.1 Backup Files<a class="copiable-link" href="#Backup-Files-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-backup-file"></a>
+
+<p>A <em class="dfn">backup file</em> is a copy of the old contents of a file you are
+editing.  Emacs makes a backup file the first time you save a buffer
+into its visited file.  Thus, normally, the backup file contains the
+contents of the file as it was before the current editing session.
+The contents of the backup file normally remain unchanged once it
+exists.
+</p>
+<p>Backups are usually made by renaming the visited file to a new name.
+Optionally, you can specify that backup files should be made by copying
+the visited file.  This choice makes a difference for files with
+multiple names; it also can affect whether the edited file remains owned
+by the original owner or becomes owned by the user editing it.
+</p>
+<p>By default, Emacs makes a single backup file for each file edited.
+You can alternatively request numbered backups; then each new backup
+file gets a new name.  You can delete old numbered backups when you
+don&rsquo;t want them any more, or Emacs can delete them automatically.
+</p>
+<p>For performance, the operating system may not write the backup
+file&rsquo;s contents to secondary storage immediately, or may alias the
+backup data with the original until one or the other is later
+modified.  See <a class="xref" href="Files.html#Files-and-Storage">Files and Secondary Storage</a>.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Making-Backups">Making Backup Files</a></li>
+<li><a href="#Rename-or-Copy">Backup by Renaming or by Copying?</a></li>
+<li><a href="#Numbered-Backups">Making and Deleting Numbered Backup Files</a></li>
+<li><a href="#Backup-Names">Naming Backup Files</a></li>
+</ul>
+<hr>
+<div class="subsection-level-extent" id="Making-Backups">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Rename-or-Copy" rel="next">Backup by Renaming or by Copying?</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Backup-Files" rel="up">Backup Files</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Making-Backup-Files"><span>27.1.1 Making Backup Files<a class="copiable-link" href="#Making-Backup-Files"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-making-backup-files"></a>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-backup_002dbuffer"><span class="category-def">Function: </span><span><strong class="def-name">backup-buffer</strong><a class="copiable-link" href="#index-backup_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function makes a backup of the file visited by the current
+buffer, if appropriate.  It is called by <code class="code">save-buffer</code> before
+saving the buffer the first time.
+</p>
+<p>If a backup was made by renaming, the return value is a cons cell of
+the form (<var class="var">modes</var> <var class="var">extra-alist</var> <var class="var">backupname</var>), where
+<var class="var">modes</var> are the mode bits of the original file, as returned by
+<code class="code">file-modes</code> (see <a class="pxref" href="Files.html#Testing-Accessibility">Testing Accessibility</a>), <var class="var">extra-alist</var>
+is an alist describing the original file&rsquo;s extended attributes, as
+returned by <code class="code">file-extended-attributes</code> (see <a class="pxref" href="Files.html#Extended-Attributes">Extended File Attributes</a>), and <var class="var">backupname</var> is the name of the backup.
+</p>
+<p>In all other cases (i.e., if a backup was made by copying or if no
+backup was made), this function returns <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-buffer_002dbacked_002dup"><span class="category-def">Variable: </span><span><strong class="def-name">buffer-backed-up</strong><a class="copiable-link" href="#index-buffer_002dbacked_002dup"> &para;</a></span></dt>
+<dd><p>This buffer-local variable says whether this buffer&rsquo;s file has
+been backed up on account of this buffer.  If it is non-<code class="code">nil</code>,
+the backup file has been written.  Otherwise, the file should be backed
+up when it is next saved (if backups are enabled).  This is a
+permanent local; <code class="code">kill-all-local-variables</code> does not alter&nbsp;it.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-make_002dbackup_002dfiles"><span class="category-def">User Option: </span><span><strong class="def-name">make-backup-files</strong><a class="copiable-link" href="#index-make_002dbackup_002dfiles"> &para;</a></span></dt>
+<dd><p>This variable determines whether or not to make backup files.  If it
+is non-<code class="code">nil</code>, then Emacs creates a backup of each file when it is
+saved for the first time&mdash;provided that <code class="code">backup-inhibited</code>
+is <code class="code">nil</code> (see below).
+</p>
+<p>The following example shows how to change the <code class="code">make-backup-files</code>
+variable only in the Rmail buffers and not elsewhere.  Setting it
+<code class="code">nil</code> stops Emacs from making backups of these files, which may
+save disk space.  (You would put this code in your init file.)
+</p>
+<div class="example smallexample">
+<div class="group"><pre class="example-preformatted">(add-hook 'rmail-mode-hook
+          (lambda () (setq-local make-backup-files nil)))
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-backup_002denable_002dpredicate"><span class="category-def">Variable: </span><span><strong class="def-name">backup-enable-predicate</strong><a class="copiable-link" href="#index-backup_002denable_002dpredicate"> &para;</a></span></dt>
+<dd><p>This variable&rsquo;s value is a function to be called on certain occasions to
+decide whether a file should have backup files.  The function receives
+one argument, an absolute file name to consider.  If the function returns
+<code class="code">nil</code>, backups are disabled for that file.  Otherwise, the other
+variables in this section say whether and how to make backups.
+</p>
+<a class="index-entry-id" id="index-normal_002dbackup_002denable_002dpredicate"></a>
+<p>The default value is <code class="code">normal-backup-enable-predicate</code>, which checks
+for files in <code class="code">temporary-file-directory</code> and
+<code class="code">small-temporary-file-directory</code>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-backup_002dinhibited"><span class="category-def">Variable: </span><span><strong class="def-name">backup-inhibited</strong><a class="copiable-link" href="#index-backup_002dinhibited"> &para;</a></span></dt>
+<dd><p>If this variable is non-<code class="code">nil</code>, backups are inhibited.  It records
+the result of testing <code class="code">backup-enable-predicate</code> on the visited file
+name.  It can also coherently be used by other mechanisms that inhibit
+backups based on which file is visited.  For example, VC sets this
+variable non-<code class="code">nil</code> to prevent making backups for files managed
+with a version control system.
+</p>
+<p>This is a permanent local, so that changing the major mode does not lose
+its value.  Major modes should not set this variable&mdash;they should set
+<code class="code">make-backup-files</code> instead.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-backup_002ddirectory_002dalist"><span class="category-def">User Option: </span><span><strong class="def-name">backup-directory-alist</strong><a class="copiable-link" href="#index-backup_002ddirectory_002dalist"> &para;</a></span></dt>
+<dd><p>This variable&rsquo;s value is an alist of filename patterns and backup
+directories.  Each element looks like
+</p><div class="example smallexample">
+<pre class="example-preformatted">(<var class="var">regexp</var> . <var class="var">directory</var>)
+</pre></div>
+
+<p>Backups of files with names matching <var class="var">regexp</var> will be made in
+<var class="var">directory</var>.  <var class="var">directory</var> may be relative or absolute.  If it is
+absolute, so that all matching files are backed up into the same
+directory, the file names in this directory will be the full name of the
+file backed up with all directory separators changed to &lsquo;<samp class="samp">!</samp>&rsquo; to
+prevent clashes.  This will not work correctly if your filesystem
+truncates the resulting name.
+</p>
+<p>For the common case of all backups going into one directory, the alist
+should contain a single element pairing &lsquo;<samp class="samp">&quot;.&quot;</samp>&rsquo; with the appropriate
+directory.
+</p>
+<p>If this variable is <code class="code">nil</code> (the default), or it fails to match a
+filename, the backup is made in the original file&rsquo;s directory.
+</p>
+<p>On MS-DOS filesystems without long names this variable is always
+ignored.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-make_002dbackup_002dfile_002dname_002dfunction"><span class="category-def">User Option: </span><span><strong class="def-name">make-backup-file-name-function</strong><a class="copiable-link" href="#index-make_002dbackup_002dfile_002dname_002dfunction"> &para;</a></span></dt>
+<dd><p>This variable&rsquo;s value is a function to use for making backup file names.
+The function <code class="code">make-backup-file-name</code> calls it.
+See <a class="xref" href="#Backup-Names">Naming Backup Files</a>.
+</p>
+<p>This could be buffer-local to do something special for specific
+files.  If you change it, you may need to change
+<code class="code">backup-file-name-p</code> and <code class="code">file-name-sans-versions</code> too.
+</p></dd></dl>
+
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Rename-or-Copy">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Numbered-Backups" rel="next">Making and Deleting Numbered Backup Files</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Making-Backups" rel="prev">Making Backup Files</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Backup-Files" rel="up">Backup Files</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Backup-by-Renaming-or-by-Copying_003f"><span>27.1.2 Backup by Renaming or by Copying?<a class="copiable-link" href="#Backup-by-Renaming-or-by-Copying_003f"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-backup-files_002c-rename-or-copy"></a>
+
+<p>There are two ways that Emacs can make a backup file:
+</p>
+<ul class="itemize mark-bullet">
+<li>Emacs can rename the original file so that it becomes a backup file, and
+then write the buffer being saved into a new file.  After this
+procedure, any other names (i.e., hard links) of the original file now
+refer to the backup file.  The new file is owned by the user doing the
+editing, and its group is the default for new files written by the user
+in that directory.
+
+</li><li>Emacs can copy the original file into a backup file, and then overwrite
+the original file with new contents.  After this procedure, any other
+names (i.e., hard links) of the original file continue to refer to the
+current (updated) version of the file.  The file&rsquo;s owner and group will
+be unchanged.
+</li></ul>
+
+<p>The first method, renaming, is the default.
+</p>
+<p>The variable <code class="code">backup-by-copying</code>, if non-<code class="code">nil</code>, says to use
+the second method, which is to copy the original file and overwrite it
+with the new buffer contents.  The variable <code class="code">file-precious-flag</code>,
+if non-<code class="code">nil</code>, also has this effect (as a sideline of its main
+significance).  See <a class="xref" href="Files.html#Saving-Buffers">Saving Buffers</a>.
+</p>
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-backup_002dby_002dcopying"><span class="category-def">User Option: </span><span><strong class="def-name">backup-by-copying</strong><a class="copiable-link" href="#index-backup_002dby_002dcopying"> &para;</a></span></dt>
+<dd><p>If this variable is non-<code class="code">nil</code>, Emacs always makes backup files by
+copying.  The default is <code class="code">nil</code>.
+</p></dd></dl>
+
+<p>The following three variables, when non-<code class="code">nil</code>, cause the second
+method to be used in certain special cases.  They have no effect on the
+treatment of files that don&rsquo;t fall into the special cases.
+</p>
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-backup_002dby_002dcopying_002dwhen_002dlinked"><span class="category-def">User Option: </span><span><strong class="def-name">backup-by-copying-when-linked</strong><a class="copiable-link" href="#index-backup_002dby_002dcopying_002dwhen_002dlinked"> &para;</a></span></dt>
+<dd><p>If this variable is non-<code class="code">nil</code>, Emacs makes backups by copying for
+files with multiple names (hard links).  The default is <code class="code">nil</code>.
+</p>
+<p>This variable is significant only if <code class="code">backup-by-copying</code> is
+<code class="code">nil</code>, since copying is always used when that variable is
+non-<code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-backup_002dby_002dcopying_002dwhen_002dmismatch"><span class="category-def">User Option: </span><span><strong class="def-name">backup-by-copying-when-mismatch</strong><a class="copiable-link" href="#index-backup_002dby_002dcopying_002dwhen_002dmismatch"> &para;</a></span></dt>
+<dd><p>If this variable is non-<code class="code">nil</code> (the default), Emacs makes backups
+by copying in cases where renaming would change either the owner or
+the group of the file.
+</p>
+<p>The value has no effect when renaming would not alter the owner or
+group of the file; that is, for files which are owned by the user and
+whose group matches the default for a new file created there by the
+user.
+</p>
+<p>This variable is significant only if <code class="code">backup-by-copying</code> is
+<code class="code">nil</code>, since copying is always used when that variable is
+non-<code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-backup_002dby_002dcopying_002dwhen_002dprivileged_002dmismatch"><span class="category-def">User Option: </span><span><strong class="def-name">backup-by-copying-when-privileged-mismatch</strong><a class="copiable-link" href="#index-backup_002dby_002dcopying_002dwhen_002dprivileged_002dmismatch"> &para;</a></span></dt>
+<dd><p>This variable, if non-<code class="code">nil</code>, specifies the same behavior as
+<code class="code">backup-by-copying-when-mismatch</code>, but only for certain user-id
+and group-id values: namely, those less than or equal to a certain number.
+You set this variable to that number.
+</p>
+<p>Thus, if you set <code class="code">backup-by-copying-when-privileged-mismatch</code>
+to 0, backup by copying is done for the superuser and group 0 only,
+when necessary to prevent a change in the owner of the file.
+</p>
+<p>The default is 200.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Numbered-Backups">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Backup-Names" rel="next">Naming Backup Files</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Rename-or-Copy" rel="prev">Backup by Renaming or by Copying?</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Backup-Files" rel="up">Backup Files</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Making-and-Deleting-Numbered-Backup-Files"><span>27.1.3 Making and Deleting Numbered Backup Files<a class="copiable-link" href="#Making-and-Deleting-Numbered-Backup-Files"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-numbered-backups"></a>
+
+<p>If a file&rsquo;s name is <samp class="file">foo</samp>, the names of its numbered backup
+versions are <samp class="file">foo.~<var class="var">v</var>~</samp>, for various integers <var class="var">v</var>, like
+this: <samp class="file">foo.~1~</samp>, <samp class="file">foo.~2~</samp>, <samp class="file">foo.~3~</samp>, &hellip;,
+<samp class="file">foo.~259~</samp>, and so on.
+</p>
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-version_002dcontrol"><span class="category-def">User Option: </span><span><strong class="def-name">version-control</strong><a class="copiable-link" href="#index-version_002dcontrol"> &para;</a></span></dt>
+<dd><p>This variable controls whether to make a single non-numbered backup
+file or multiple numbered backups.
+</p>
+<dl class="table">
+<dt><code class="code">nil</code></dt>
+<dd><p>Make numbered backups if the visited file already has numbered backups;
+otherwise, do not.  This is the default.
+</p>
+</dd>
+<dt><code class="code">never</code></dt>
+<dd><p>Do not make numbered backups.
+</p>
+</dd>
+<dt><var class="var">anything else</var></dt>
+<dd><p>Make numbered backups.
+</p></dd>
+</dl>
+</dd></dl>
+
+<p>The use of numbered backups ultimately leads to a large number of
+backup versions, which must then be deleted.  Emacs can do this
+automatically or it can ask the user whether to delete them.
+</p>
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-kept_002dnew_002dversions"><span class="category-def">User Option: </span><span><strong class="def-name">kept-new-versions</strong><a class="copiable-link" href="#index-kept_002dnew_002dversions"> &para;</a></span></dt>
+<dd><p>The value of this variable is the number of newest versions to keep
+when a new numbered backup is made.  The newly made backup is included
+in the count.  The default value is&nbsp;2.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-kept_002dold_002dversions"><span class="category-def">User Option: </span><span><strong class="def-name">kept-old-versions</strong><a class="copiable-link" href="#index-kept_002dold_002dversions"> &para;</a></span></dt>
+<dd><p>The value of this variable is the number of oldest versions to keep
+when a new numbered backup is made.  The default value is&nbsp;2.
+</p></dd></dl>
+
+<p>If there are backups numbered 1, 2, 3, 5, and 7, and both of these
+variables have the value 2, then the backups numbered 1 and 2 are kept
+as old versions and those numbered 5 and 7 are kept as new versions;
+backup version 3 is excess.  The function <code class="code">find-backup-file-name</code>
+(see <a class="pxref" href="#Backup-Names">Naming Backup Files</a>) is responsible for determining which backup
+versions to delete, but does not delete them itself.
+</p>
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-delete_002dold_002dversions"><span class="category-def">User Option: </span><span><strong class="def-name">delete-old-versions</strong><a class="copiable-link" href="#index-delete_002dold_002dversions"> &para;</a></span></dt>
+<dd><p>If this variable is <code class="code">t</code>, then saving a file deletes excess
+backup versions silently.  If it is <code class="code">nil</code>, that means
+to ask for confirmation before deleting excess backups.
+Otherwise, they are not deleted at all.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-dired_002dkept_002dversions"><span class="category-def">User Option: </span><span><strong class="def-name">dired-kept-versions</strong><a class="copiable-link" href="#index-dired_002dkept_002dversions"> &para;</a></span></dt>
+<dd><p>This variable specifies how many of the newest backup versions to keep
+in the Dired command <kbd class="kbd">.</kbd> (<code class="code">dired-clean-directory</code>).  That&rsquo;s the
+same thing <code class="code">kept-new-versions</code> specifies when you make a new backup
+file.  The default is&nbsp;2.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Backup-Names">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Numbered-Backups" rel="prev">Making and Deleting Numbered Backup Files</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Backup-Files" rel="up">Backup Files</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h4 class="subsection" id="Naming-Backup-Files"><span>27.1.4 Naming Backup Files<a class="copiable-link" href="#Naming-Backup-Files"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-naming-backup-files"></a>
+
+<p>The functions in this section are documented mainly because you can
+customize the naming conventions for backup files by redefining them.
+If you change one, you probably need to change the rest.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-backup_002dfile_002dname_002dp"><span class="category-def">Function: </span><span><strong class="def-name">backup-file-name-p</strong> <var class="def-var-arguments">filename</var><a class="copiable-link" href="#index-backup_002dfile_002dname_002dp"> &para;</a></span></dt>
+<dd><p>This function returns a non-<code class="code">nil</code> value if <var class="var">filename</var> is a
+possible name for a backup file.  It just checks the name, not whether
+a file with the name <var class="var">filename</var> exists.
+</p>
+<div class="example smallexample">
+<div class="group"><pre class="example-preformatted">(backup-file-name-p &quot;foo&quot;)
+     &rArr; nil
+</pre></div><div class="group"><pre class="example-preformatted">(backup-file-name-p &quot;foo~&quot;)
+     &rArr; 3
+</pre></div></div>
+
+<p>The standard definition of this function is as follows:
+</p>
+<div class="example smallexample">
+<div class="group"><pre class="example-preformatted">(defun backup-file-name-p (file)
+  &quot;Return non-nil if FILE is a backup file \
+name (numeric or not)...&quot;
+  (string-match &quot;~\\'&quot; file))
+</pre></div></div>
+
+<p>Thus, the function returns a non-<code class="code">nil</code> value if the file name ends
+with a &lsquo;<samp class="samp">~</samp>&rsquo;.  (We use a backslash to split the documentation
+string&rsquo;s first line into two lines in the text, but produce just one
+line in the string itself.)
+</p>
+<p>This simple expression is placed in a separate function to make it easy
+to redefine for customization.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dbackup_002dfile_002dname"><span class="category-def">Function: </span><span><strong class="def-name">make-backup-file-name</strong> <var class="def-var-arguments">filename</var><a class="copiable-link" href="#index-make_002dbackup_002dfile_002dname"> &para;</a></span></dt>
+<dd><p>This function returns a string that is the name to use for a
+non-numbered backup file for file <var class="var">filename</var>.  On Unix, this is just
+<var class="var">filename</var> with a tilde appended.
+</p>
+<p>The standard definition of this function, on most operating systems, is
+as follows:
+</p>
+<div class="example smallexample">
+<div class="group"><pre class="example-preformatted">(defun make-backup-file-name (file)
+  &quot;Create the non-numeric backup file name for FILE...&quot;
+  (concat file &quot;~&quot;))
+</pre></div></div>
+
+<p>You can change the backup-file naming convention by redefining this
+function.  The following example redefines <code class="code">make-backup-file-name</code>
+to prepend a &lsquo;<samp class="samp">.</samp>&rsquo; in addition to appending a tilde:
+</p>
+<div class="example smallexample">
+<div class="group"><pre class="example-preformatted">(defun make-backup-file-name (filename)
+  (expand-file-name
+    (concat &quot;.&quot; (file-name-nondirectory filename) &quot;~&quot;)
+    (file-name-directory filename)))
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(make-backup-file-name &quot;backups.texi&quot;)
+     &rArr; &quot;.backups.texi~&quot;
+</pre></div></div>
+
+<p>Some parts of Emacs, including some Dired commands, assume that backup
+file names end with &lsquo;<samp class="samp">~</samp>&rsquo;.  If you do not follow that convention, it
+will not cause serious problems, but these commands may give
+less-than-desirable results.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-find_002dbackup_002dfile_002dname"><span class="category-def">Function: </span><span><strong class="def-name">find-backup-file-name</strong> <var class="def-var-arguments">filename</var><a class="copiable-link" href="#index-find_002dbackup_002dfile_002dname"> &para;</a></span></dt>
+<dd><p>This function computes the file name for a new backup file for
+<var class="var">filename</var>.  It may also propose certain existing backup files for
+deletion.  <code class="code">find-backup-file-name</code> returns a list whose <small class="sc">CAR</small> is
+the name for the new backup file and whose <small class="sc">CDR</small> is a list of backup
+files whose deletion is proposed.  The value can also be <code class="code">nil</code>,
+which means not to make a backup.
+</p>
+<p>Two variables, <code class="code">kept-old-versions</code> and <code class="code">kept-new-versions</code>,
+determine which backup versions should be kept.  This function keeps
+those versions by excluding them from the <small class="sc">CDR</small> of the value.
+See <a class="xref" href="#Numbered-Backups">Making and Deleting Numbered Backup Files</a>.
+</p>
+<p>In this example, the value says that <samp class="file">~rms/foo.~5~</samp> is the name
+to use for the new backup file, and <samp class="file">~rms/foo.~3~</samp> is an excess
+version that the caller should consider deleting now.
+</p>
+<div class="example smallexample">
+<div class="group"><pre class="example-preformatted">(find-backup-file-name &quot;~rms/foo&quot;)
+     &rArr; (&quot;~rms/foo.~5~&quot; &quot;~rms/foo.~3~&quot;)
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-file_002dbackup_002dfile_002dnames"><span class="category-def">Function: </span><span><strong class="def-name">file-backup-file-names</strong> <var class="def-var-arguments">filename</var><a class="copiable-link" href="#index-file_002dbackup_002dfile_002dnames"> &para;</a></span></dt>
+<dd><p>This function returns a list of all the backup file names for
+<var class="var">filename</var>, or <code class="code">nil</code> if there are none.  The files are sorted
+by modification time, descending, so that the most recent files are
+first.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-file_002dnewest_002dbackup"><span class="category-def">Function: </span><span><strong class="def-name">file-newest-backup</strong> <var class="def-var-arguments">filename</var><a class="copiable-link" href="#index-file_002dnewest_002dbackup"> &para;</a></span></dt>
+<dd><p>This function returns the first element of the list returned by
+<code class="code">file-backup-file-names</code>.
+</p>
+<p>Some file comparison commands use this function so that they can
+automatically compare a file with its most recent backup.
+</p></dd></dl>
+
+<hr>
+</div>
+</div>
+<div class="section-level-extent" id="Auto_002dSaving">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Reverting" rel="next">Reverting</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Backup-Files" rel="prev">Backup Files</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Backups-and-Auto_002dSaving" rel="up">Backups and Auto-Saving</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Auto_002dSaving-1"><span>27.2 Auto-Saving<a class="copiable-link" href="#Auto_002dSaving-1"> &para;</a></span></h3>
+
+<p>Emacs periodically saves all files that you are visiting; this is
+called <em class="dfn">auto-saving</em>.  Auto-saving prevents you from losing more
+than a limited amount of work if the system crashes.  By default,
+auto-saves happen every 300 keystrokes, or after around 30 seconds of
+idle time.  See <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Auto-Save.html#Auto-Save">Auto-Saving: Protection Against
+Disasters</a> in <cite class="cite">The GNU Emacs Manual</cite>, for information on auto-save
+for users.  Here we describe the functions used to implement auto-saving
+and the variables that control them.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-buffer_002dauto_002dsave_002dfile_002dname"><span class="category-def">Variable: </span><span><strong class="def-name">buffer-auto-save-file-name</strong><a class="copiable-link" href="#index-buffer_002dauto_002dsave_002dfile_002dname"> &para;</a></span></dt>
+<dd><p>This buffer-local variable is the name of the file used for
+auto-saving the current buffer.  It is <code class="code">nil</code> if the buffer
+should not be auto-saved.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">buffer-auto-save-file-name
+     &rArr; &quot;/xcssun/users/rms/lewis/#backups.texi#&quot;
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-auto_002dsave_002dmode"><span class="category-def">Command: </span><span><strong class="def-name">auto-save-mode</strong> <var class="def-var-arguments">arg</var><a class="copiable-link" href="#index-auto_002dsave_002dmode"> &para;</a></span></dt>
+<dd><p>This is the mode command for Auto Save mode, a buffer-local minor
+mode.  When Auto Save mode is enabled, auto-saving is enabled in the
+buffer.  The calling convention is the same as for other minor mode
+commands (see <a class="pxref" href="Modes.html#Minor-Mode-Conventions">Conventions for Writing Minor Modes</a>).
+</p>
+<p>Unlike most minor modes, there is no <code class="code">auto-save-mode</code> variable.
+Auto Save mode is enabled if <code class="code">buffer-auto-save-file-name</code> is
+non-<code class="code">nil</code> and <code class="code">buffer-saved-size</code> (see below) is non-zero.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-auto_002dsave_002dfile_002dname_002dtransforms"><span class="category-def">Variable: </span><span><strong class="def-name">auto-save-file-name-transforms</strong><a class="copiable-link" href="#index-auto_002dsave_002dfile_002dname_002dtransforms"> &para;</a></span></dt>
+<dd><p>This variable lists transforms to apply to buffer&rsquo;s file name before
+making the auto-save file name.
+</p>
+<p>Each transform is a list of the form <code class="code">(<var class="var">regexp</var>&nbsp;<var class="var">replacement</var>&nbsp;[<var class="var">uniquify</var>])</code><!-- /@w -->.  <var class="var">regexp</var> is a regular
+expression to match against the file name; if it matches,
+<code class="code">replace-match</code> is used to replace the matching part with
+<var class="var">replacement</var>.  If the optional element <var class="var">uniquify</var> is non-<code class="code">nil</code>,
+the auto-save file name is constructed by concatenating the directory
+part of the transformed file name with the buffer&rsquo;s file name in which
+all directory separators were changed to &lsquo;<samp class="samp">!</samp>&rsquo; to prevent clashes.
+(This will not work correctly if your filesystem truncates the
+resulting name.)
+</p>
+<p>If <var class="var">uniquify</var> is one of the members of
+<code class="code">secure-hash-algorithms</code>, Emacs constructs the nondirectory part
+of the auto-save file name by applying that <code class="code">secure-hash</code> to the
+buffer file name.  This avoids any risk of excessively long file
+names.
+</p>
+<p>All the transforms in the list are tried, in the order they are listed.
+When one transform applies, its result is final;
+no further transforms are tried.
+</p>
+<p>The default value is set up to put the auto-save files of remote files
+into the temporary directory (see <a class="pxref" href="Files.html#Unique-File-Names">Generating Unique File Names</a>).
+</p>
+<p>On MS-DOS filesystems without long names this variable is always
+ignored.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-auto_002dsave_002dfile_002dname_002dp"><span class="category-def">Function: </span><span><strong class="def-name">auto-save-file-name-p</strong> <var class="def-var-arguments">filename</var><a class="copiable-link" href="#index-auto_002dsave_002dfile_002dname_002dp"> &para;</a></span></dt>
+<dd><p>This function returns a non-<code class="code">nil</code> value if <var class="var">filename</var> is a
+string that could be the name of an auto-save file.  It assumes
+the usual naming convention for auto-save files: a name that
+begins and ends with hash marks (&lsquo;<samp class="samp">#</samp>&rsquo;) is a possible auto-save file
+name.  The argument <var class="var">filename</var> should not contain a directory part.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(make-auto-save-file-name)
+     &rArr; &quot;/xcssun/users/rms/lewis/#backups.texi#&quot;
+</pre></div><div class="group"><pre class="example-preformatted">(auto-save-file-name-p &quot;#backups.texi#&quot;)
+     &rArr; 0
+</pre></div><div class="group"><pre class="example-preformatted">(auto-save-file-name-p &quot;backups.texi&quot;)
+     &rArr; nil
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dauto_002dsave_002dfile_002dname"><span class="category-def">Function: </span><span><strong class="def-name">make-auto-save-file-name</strong><a class="copiable-link" href="#index-make_002dauto_002dsave_002dfile_002dname"> &para;</a></span></dt>
+<dd><p>This function returns the file name to use for auto-saving the current
+buffer.  This is just the file name with hash marks (&lsquo;<samp class="samp">#</samp>&rsquo;) prepended
+and appended to it.  This function does not look at the variable
+<code class="code">auto-save-visited-file-name</code> (described below); callers of this
+function should check that variable first.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(make-auto-save-file-name)
+     &rArr; &quot;/xcssun/users/rms/lewis/#backups.texi#&quot;
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-auto_002dsave_002dvisited_002dfile_002dname"><span class="category-def">User Option: </span><span><strong class="def-name">auto-save-visited-file-name</strong><a class="copiable-link" href="#index-auto_002dsave_002dvisited_002dfile_002dname"> &para;</a></span></dt>
+<dd><p>If this variable is non-<code class="code">nil</code>, Emacs auto-saves buffers in
+the files they are visiting.  That is, the auto-save is done in the same
+file that you are editing.  Normally, this variable is <code class="code">nil</code>, so
+auto-save files have distinct names that are created by
+<code class="code">make-auto-save-file-name</code>.
+</p>
+<p>When you change the value of this variable, the new value does not take
+effect in an existing buffer until the next time auto-save mode is
+reenabled in it.  If auto-save mode is already enabled, auto-saves
+continue to go in the same file name until <code class="code">auto-save-mode</code> is
+called again.
+</p>
+<p>Note that setting this variable to a non-<code class="code">nil</code> value does not
+change the fact that auto-saving is different from saving the buffer;
+e.g., the hooks described in <a class="ref" href="Files.html#Saving-Buffers">Saving Buffers</a> are <em class="emph">not</em> run
+when a buffer is auto-saved.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-recent_002dauto_002dsave_002dp"><span class="category-def">Function: </span><span><strong class="def-name">recent-auto-save-p</strong><a class="copiable-link" href="#index-recent_002dauto_002dsave_002dp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if the current buffer has been
+auto-saved since the last time it was read in or saved.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dbuffer_002dauto_002dsaved"><span class="category-def">Function: </span><span><strong class="def-name">set-buffer-auto-saved</strong><a class="copiable-link" href="#index-set_002dbuffer_002dauto_002dsaved"> &para;</a></span></dt>
+<dd><p>This function marks the current buffer as auto-saved.  The buffer will
+not be auto-saved again until the buffer text is changed again.  The
+function returns <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-auto_002dsave_002dinterval"><span class="category-def">User Option: </span><span><strong class="def-name">auto-save-interval</strong><a class="copiable-link" href="#index-auto_002dsave_002dinterval"> &para;</a></span></dt>
+<dd><p>The value of this variable specifies how often to do auto-saving, in
+terms of number of input events.  Each time this many additional input
+events are read, Emacs does auto-saving for all buffers in which that is
+enabled.  Setting this to zero disables autosaving based on the
+number of characters typed.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-auto_002dsave_002dtimeout"><span class="category-def">User Option: </span><span><strong class="def-name">auto-save-timeout</strong><a class="copiable-link" href="#index-auto_002dsave_002dtimeout"> &para;</a></span></dt>
+<dd><p>The value of this variable is the number of seconds of idle time that
+should cause auto-saving.  Each time the user pauses for this long,
+Emacs does auto-saving for all buffers in which that is enabled.  (If
+the current buffer is large, the specified timeout is multiplied by a
+factor that increases as the size increases; for a million-byte
+buffer, the factor is almost 4.)
+</p>
+<p>If the value is zero or <code class="code">nil</code>, then auto-saving is not done as a
+result of idleness, only after a certain number of input events as
+specified by <code class="code">auto-save-interval</code>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-auto_002dsave_002dhook"><span class="category-def">Variable: </span><span><strong class="def-name">auto-save-hook</strong><a class="copiable-link" href="#index-auto_002dsave_002dhook"> &para;</a></span></dt>
+<dd><p>This normal hook is run whenever an auto-save is about to happen.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-auto_002dsave_002ddefault"><span class="category-def">User Option: </span><span><strong class="def-name">auto-save-default</strong><a class="copiable-link" href="#index-auto_002dsave_002ddefault"> &para;</a></span></dt>
+<dd><p>If this variable is non-<code class="code">nil</code>, buffers that are visiting files
+have auto-saving enabled by default.  Otherwise, they do not.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-do_002dauto_002dsave"><span class="category-def">Command: </span><span><strong class="def-name">do-auto-save</strong> <var class="def-var-arguments">&amp;optional no-message current-only</var><a class="copiable-link" href="#index-do_002dauto_002dsave"> &para;</a></span></dt>
+<dd><p>This function auto-saves all buffers that need to be auto-saved.  It
+saves all buffers for which auto-saving is enabled and that have been
+changed since the previous auto-save.
+</p>
+<p>If any buffers are auto-saved, <code class="code">do-auto-save</code> normally displays a
+message saying &lsquo;<samp class="samp">Auto-saving...</samp>&rsquo; in the echo area while
+auto-saving is going on.  However, if <var class="var">no-message</var> is
+non-<code class="code">nil</code>, the message is inhibited.
+</p>
+<p>If <var class="var">current-only</var> is non-<code class="code">nil</code>, only the current buffer
+is auto-saved.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-delete_002dauto_002dsave_002dfile_002dif_002dnecessary"><span class="category-def">Function: </span><span><strong class="def-name">delete-auto-save-file-if-necessary</strong> <var class="def-var-arguments">&amp;optional force</var><a class="copiable-link" href="#index-delete_002dauto_002dsave_002dfile_002dif_002dnecessary"> &para;</a></span></dt>
+<dd><p>This function deletes the current buffer&rsquo;s auto-save file if
+<code class="code">delete-auto-save-files</code> is non-<code class="code">nil</code>.  It is called every
+time a buffer is saved.
+</p>
+<p>Unless <var class="var">force</var> is non-<code class="code">nil</code>, this function only deletes the
+file if it was written by the current Emacs session since the last
+true save.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-delete_002dauto_002dsave_002dfiles"><span class="category-def">User Option: </span><span><strong class="def-name">delete-auto-save-files</strong><a class="copiable-link" href="#index-delete_002dauto_002dsave_002dfiles"> &para;</a></span></dt>
+<dd><p>This variable is used by the function
+<code class="code">delete-auto-save-file-if-necessary</code>.  If it is non-<code class="code">nil</code>,
+Emacs deletes auto-save files when a true save is done (in the visited
+file).  This saves disk space and unclutters your directory.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-rename_002dauto_002dsave_002dfile"><span class="category-def">Function: </span><span><strong class="def-name">rename-auto-save-file</strong><a class="copiable-link" href="#index-rename_002dauto_002dsave_002dfile"> &para;</a></span></dt>
+<dd><p>This function adjusts the current buffer&rsquo;s auto-save file name if the
+visited file name has changed.  It also renames an existing auto-save
+file, if it was made in the current Emacs session.  If the visited
+file name has not changed, this function does nothing.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-buffer_002dsaved_002dsize"><span class="category-def">Variable: </span><span><strong class="def-name">buffer-saved-size</strong><a class="copiable-link" href="#index-buffer_002dsaved_002dsize"> &para;</a></span></dt>
+<dd><p>The value of this buffer-local variable is the length of the current
+buffer, when it was last read in, saved, or auto-saved.  This is
+used to detect a substantial decrease in size, and turn off auto-saving
+in response.
+</p>
+<p>If it is &minus;1, that means auto-saving is temporarily shut off in
+this buffer due to a substantial decrease in size.  Explicitly saving
+the buffer stores a positive value in this variable, thus reenabling
+auto-saving.  Turning auto-save mode off or on also updates this
+variable, so that the substantial decrease in size is forgotten.
+</p>
+<p>If it is &minus;2, that means this buffer should disregard changes in
+buffer size; in particular, it should not shut off auto-saving
+temporarily due to changes in buffer size.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-auto_002dsave_002dlist_002dfile_002dname"><span class="category-def">Variable: </span><span><strong class="def-name">auto-save-list-file-name</strong><a class="copiable-link" href="#index-auto_002dsave_002dlist_002dfile_002dname"> &para;</a></span></dt>
+<dd><p>This variable (if non-<code class="code">nil</code>) specifies a file for recording the
+names of all the auto-save files.  Each time Emacs does auto-saving, it
+writes two lines into this file for each buffer that has auto-saving
+enabled.  The first line gives the name of the visited file (it&rsquo;s empty
+if the buffer has none), and the second gives the name of the auto-save
+file.
+</p>
+<p>When Emacs exits normally, it deletes this file; if Emacs crashes, you
+can look in the file to find all the auto-save files that might contain
+work that was otherwise lost.  The <code class="code">recover-session</code> command uses
+this file to find them.
+</p>
+<p>The default name for this file specifies your home directory and starts
+with &lsquo;<samp class="samp">.saves-</samp>&rsquo;.  It also contains the Emacs process <abbr class="acronym">ID</abbr> and the
+host name.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-auto_002dsave_002dlist_002dfile_002dprefix"><span class="category-def">User Option: </span><span><strong class="def-name">auto-save-list-file-prefix</strong><a class="copiable-link" href="#index-auto_002dsave_002dlist_002dfile_002dprefix"> &para;</a></span></dt>
+<dd><p>After Emacs reads your init file, it initializes
+<code class="code">auto-save-list-file-name</code> (if you have not already set it
+non-<code class="code">nil</code>) based on this prefix, adding the host name and process
+ID.  If you set this to <code class="code">nil</code> in your init file, then Emacs does
+not initialize <code class="code">auto-save-list-file-name</code>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Reverting">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Auto_002dSaving" rel="prev">Auto-Saving</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Backups-and-Auto_002dSaving" rel="up">Backups and Auto-Saving</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Reverting-1"><span>27.3 Reverting<a class="copiable-link" href="#Reverting-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-reverting-buffers"></a>
+
+<p>If you have made extensive changes to a file and then change your mind
+about them, you can get rid of them by reading in the previous version
+of the file with the <code class="code">revert-buffer</code> command.  See <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Reverting.html#Reverting">Reverting a Buffer</a> in <cite class="cite">The GNU Emacs Manual</cite>.
+</p>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-revert_002dbuffer"><span class="category-def">Command: </span><span><strong class="def-name">revert-buffer</strong> <var class="def-var-arguments">&amp;optional ignore-auto noconfirm preserve-modes</var><a class="copiable-link" href="#index-revert_002dbuffer"> &para;</a></span></dt>
+<dd><p>This command replaces the buffer text with the text of the visited
+file on disk.  This action undoes all changes since the file was visited
+or saved.
+</p>
+<p>By default, if the latest auto-save file is more recent than the visited
+file, and the argument <var class="var">ignore-auto</var> is <code class="code">nil</code>,
+<code class="code">revert-buffer</code> asks the user whether to use that auto-save
+instead.  When you invoke this command interactively, <var class="var">ignore-auto</var>
+is <code class="code">t</code> if there is no numeric prefix argument; thus, the
+interactive default is not to check the auto-save file.
+</p>
+<p>Normally, <code class="code">revert-buffer</code> asks for confirmation before it changes
+the buffer; but if the argument <var class="var">noconfirm</var> is non-<code class="code">nil</code>,
+<code class="code">revert-buffer</code> does not ask for confirmation.
+</p>
+<p>Normally, this command reinitializes the buffer&rsquo;s major and minor modes
+using <code class="code">normal-mode</code>.  But if <var class="var">preserve-modes</var> is
+non-<code class="code">nil</code>, the modes remain unchanged.
+</p>
+<p>Reverting tries to preserve marker positions in the buffer by using the
+replacement feature of <code class="code">insert-file-contents</code>.  If the buffer
+contents and the file contents are identical before the revert
+operation, reverting preserves all the markers.  If they are not
+identical, reverting does change the buffer; in that case, it preserves
+the markers in the unchanged text (if any) at the beginning and end of
+the buffer.  Preserving any additional markers would be problematic.
+</p>
+<p>When reverting from non-file sources, markers are usually not
+preserved, but this is up to the specific <code class="code">revert-buffer-function</code>
+implementation.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-revert_002dbuffer_002din_002dprogress"><span class="category-def">Variable: </span><span><strong class="def-name">revert-buffer-in-progress</strong><a class="copiable-link" href="#index-revert_002dbuffer_002din_002dprogress"> &para;</a></span></dt>
+<dd><p><code class="code">revert-buffer</code> binds this variable to a non-<code class="code">nil</code> value
+while it is working.
+</p></dd></dl>
+
+<p>You can customize how <code class="code">revert-buffer</code> does its work by setting
+the variables described in the rest of this section.
+</p>
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-revert_002dwithout_002dquery"><span class="category-def">User Option: </span><span><strong class="def-name">revert-without-query</strong><a class="copiable-link" href="#index-revert_002dwithout_002dquery"> &para;</a></span></dt>
+<dd><p>This variable holds a list of files that should be reverted without
+query.  The value is a list of regular expressions.  If the visited file
+name matches one of these regular expressions, and the file has changed
+on disk but the buffer is not modified, then <code class="code">revert-buffer</code>
+reverts the file without asking the user for confirmation.
+</p></dd></dl>
+
+<p>Some major modes customize <code class="code">revert-buffer</code> by making
+buffer-local bindings for these variables:
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-revert_002dbuffer_002dfunction"><span class="category-def">Variable: </span><span><strong class="def-name">revert-buffer-function</strong><a class="copiable-link" href="#index-revert_002dbuffer_002dfunction"> &para;</a></span></dt>
+<dd><a class="anchor" id="Definition-of-revert_002dbuffer_002dfunction"></a><p>The value of this variable is the function to use to revert this
+buffer.  It should be a function with two optional
+arguments to do the work of reverting.  The two optional arguments,
+<var class="var">ignore-auto</var> and <var class="var">noconfirm</var>, are the arguments that
+<code class="code">revert-buffer</code> received.
+</p>
+<p>Modes such as Dired mode, in which the text being edited does not
+consist of a file&rsquo;s contents but can be regenerated in some other
+fashion, can give this variable a buffer-local value that is a special
+function to regenerate the contents.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-revert_002dbuffer_002dinsert_002dfile_002dcontents_002dfunction"><span class="category-def">Variable: </span><span><strong class="def-name">revert-buffer-insert-file-contents-function</strong><a class="copiable-link" href="#index-revert_002dbuffer_002dinsert_002dfile_002dcontents_002dfunction"> &para;</a></span></dt>
+<dd><p>The value of this variable specifies the function to use to
+insert the updated contents when reverting this buffer.  The function
+receives two arguments: first the file name to use; second, <code class="code">t</code> if
+the user has asked to read the auto-save file.
+</p>
+<p>The reason for a mode to change this variable instead of
+<code class="code">revert-buffer-function</code> is to avoid duplicating or replacing the
+rest of what <code class="code">revert-buffer</code> does: asking for confirmation,
+clearing the undo list, deciding the proper major mode, and running the
+hooks listed below.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-before_002drevert_002dhook"><span class="category-def">Variable: </span><span><strong class="def-name">before-revert-hook</strong><a class="copiable-link" href="#index-before_002drevert_002dhook"> &para;</a></span></dt>
+<dd><p>This normal hook is run by the default <code class="code">revert-buffer-function</code>
+before inserting the modified contents.  A custom <code class="code">revert-buffer-function</code>
+may or may not run this hook.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-after_002drevert_002dhook"><span class="category-def">Variable: </span><span><strong class="def-name">after-revert-hook</strong><a class="copiable-link" href="#index-after_002drevert_002dhook"> &para;</a></span></dt>
+<dd><p>This normal hook is run by the default <code class="code">revert-buffer-function</code>
+after inserting the modified contents.  A custom <code class="code">revert-buffer-function</code>
+may or may not run this hook.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-revert_002dbuffer_002drestore_002dfunctions"><span class="category-def">Variable: </span><span><strong class="def-name">revert-buffer-restore-functions</strong><a class="copiable-link" href="#index-revert_002dbuffer_002drestore_002dfunctions"> &para;</a></span></dt>
+<dd><p>The value of this variable specifies a list of functions that preserve
+the state of the buffer.  Before the revert operation each function from
+this list is called without arguments, and it should return a lambda
+that preserves some particular state (for example, the read-only state).
+After the revert operation each lambda will be called one by one in the
+order of the list, and it should restore the saved state in the reverted
+buffer.
+</p></dd></dl>
+
+<p>Emacs can revert buffers automatically.  It does that by default for
+buffers visiting files.  The following describes how to add support
+for auto-reverting new types of buffers.
+</p>
+<p>First, such buffers must have a suitable <code class="code">revert-buffer-function</code>
+and <code class="code">buffer-stale-function</code> defined.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-buffer_002dstale_002dfunction"><span class="category-def">Variable: </span><span><strong class="def-name">buffer-stale-function</strong><a class="copiable-link" href="#index-buffer_002dstale_002dfunction"> &para;</a></span></dt>
+<dd><p>The value of this variable specifies a function to call to check
+whether a buffer needs reverting.  The default value only handles
+buffers that are visiting files, by checking their modification time.
+Buffers that are not visiting files require a custom function of one
+optional argument <var class="var">noconfirm</var>.  The function should return
+non-<code class="code">nil</code> if the buffer should be reverted.  The buffer is
+current when this function is called.
+</p>
+<p>While this function is mainly intended for use in auto-reverting, it
+could be used for other purposes as well.  For instance, if
+auto-reverting is not enabled, it could be used to warn the user that
+the buffer needs reverting.  The idea behind the <var class="var">noconfirm</var>
+argument is that it should be <code class="code">t</code> if the buffer is going to be
+reverted without asking the user and <code class="code">nil</code> if the function is
+just going to be used to warn the user that the buffer is out of date.
+In particular, for use in auto-reverting, <var class="var">noconfirm</var> is <code class="code">t</code>.
+If the function is only going to be used for auto-reverting, you can
+ignore the <var class="var">noconfirm</var> argument.
+</p>
+<p>If you just want to automatically auto-revert every
+<code class="code">auto-revert-interval</code> seconds (like the Buffer Menu), use:
+</p>
+<div class="example">
+<pre class="example-preformatted">(setq-local buffer-stale-function
+     (lambda (&amp;optional noconfirm) 'fast))
+</pre></div>
+
+<p>in the buffer&rsquo;s mode function.
+</p>
+<p>The special return value &lsquo;<samp class="samp">fast</samp>&rsquo; tells the caller that the need
+for reverting was not checked, but that reverting the buffer is fast.
+It also tells Auto Revert not to print any revert messages, even if
+<code class="code">auto-revert-verbose</code> is non-<code class="code">nil</code>.  This is important, as
+getting revert messages every <code class="code">auto-revert-interval</code> seconds can
+be very annoying.  The information provided by this return value could
+also be useful if the function is consulted for purposes other than
+auto-reverting.
+</p></dd></dl>
+
+<p>Once the buffer has a suitable <code class="code">revert-buffer-function</code> and
+<code class="code">buffer-stale-function</code>, several problems usually remain.
+</p>
+<p>The buffer will only auto-revert if it is marked unmodified.  Hence,
+you will have to make sure that various functions mark the buffer
+modified if and only if either the buffer contains information that
+might be lost by reverting, or there is reason to believe that the user
+might be inconvenienced by auto-reverting, because he is actively
+working on the buffer.  The user can always override this by manually
+adjusting the modified status of the buffer.  To support this, calling
+the <code class="code">revert-buffer-function</code> on a buffer that is marked
+unmodified should always keep the buffer marked unmodified.
+</p>
+<p>It is important to assure that point does not continuously jump around
+as a consequence of auto-reverting.  Of course, moving point might be
+inevitable if the buffer radically changes.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-auto_002drevert_002dbuffer_002din_002dprogress"><span class="category-def">Variable: </span><span><strong class="def-name">auto-revert-buffer-in-progress</strong><a class="copiable-link" href="#index-auto_002drevert_002dbuffer_002din_002dprogress"> &para;</a></span></dt>
+<dd><p><code class="code">auto-revert-buffer</code> binds this variable to a non-<code class="code">nil</code> value
+while it is working.  This can be used by major mode
+<code class="code">revert-buffer-function</code> implementations to suppress messages in
+Auto Revert modes, for example.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-inhibit_002dauto_002drevert_002dbuffers"><span class="category-def">Variable: </span><span><strong class="def-name">inhibit-auto-revert-buffers</strong><a class="copiable-link" href="#index-inhibit_002dauto_002drevert_002dbuffers"> &para;</a></span></dt>
+<dd><p>When the current buffer is member of this variable (a list of buffers),
+auto-reverting is suppressed for that buffer.  This is useful if serious
+changes are applied to that buffer which would be poisoned by an
+unexpected auto-revert.  After the change is finished, the buffer shall
+be removed from <code class="code">inhibit-auto-revert-buffers</code>.
+</p>
+<p>The check of membership in <code class="code">inhibit-auto-revert-buffers</code> is applied
+prior to the call of <code class="code">buffer-stale-function</code>; any heavy check in
+that function is avoided, therefore.
+</p>
+<p>If auto-reverting is triggered by file notification while
+<code class="code">inhibit-auto-revert-buffers</code> prevents this, auto-revert will
+happen next time the buffer is polled for changes, unless
+<code class="code">auto-revert-avoid-polling</code> is non-<code class="code">nil</code>.  see <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Auto-Revert.html#Auto-Revert">(emacs)Auto
+Revert</a>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-inhibit_002dauto_002drevert"><span class="category-def">Macro: </span><span><strong class="def-name">inhibit-auto-revert</strong> <var class="def-var-arguments">&amp;rest body</var><a class="copiable-link" href="#index-inhibit_002dauto_002drevert"> &para;</a></span></dt>
+<dd><p>This macro adds the current buffer to
+<code class="code">inhibit-auto-revert-buffers</code>, runs <var class="var">body</var>, and removes the
+current buffer from <code class="code">inhibit-auto-revert-buffers</code> afterwards.
+</p></dd></dl>
+
+<p>You should make sure that the <code class="code">revert-buffer-function</code> does not
+print messages that unnecessarily duplicate Auto Revert&rsquo;s own messages,
+displayed if <code class="code">auto-revert-verbose</code> is <code class="code">t</code>, and effectively
+override a <code class="code">nil</code> value for <code class="code">auto-revert-verbose</code>.  Hence,
+adapting a mode for auto-reverting often involves getting rid of such
+messages.  This is especially important for buffers that automatically
+revert every <code class="code">auto-revert-interval</code> seconds.
+</p>
+<p>If the new auto-reverting is part of Emacs, you should mention it
+in the documentation string of <code class="code">global-auto-revert-non-file-buffers</code>.
+</p>
+<p>Similarly, you should document the additions in the Emacs manual.
+</p>
+
+
+</div>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Buffers.html#Buffers" rel="next">Buffers</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Files.html#Files" rel="prev">Files</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">Emacs Lisp</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Index.html" title="Index" rel="index">Index</a>]</span></p>
+
+
+
+</body>
+</html>

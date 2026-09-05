@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--buffer-identification – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--buffer-identification is a natively compiled function defined
+in ghostel.el.
+Return a mode-line-buffer-identification value built from FORMAT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--buffer-identification</code></h1><p><span class="m"><code>ghostel--buffer-identification</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--buffer-identification <a href="#:~:text=from-,FORMAT"><span class="arg">FORMAT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a <a href="../var/mode-line-buffer-identification.html"><code>mode-line-buffer-identification</code></a> value built from <span class="arg">FORMAT</span>.
+<p>See <a href="../var/ghostel-buffer-identification-format.html"><code>ghostel-buffer-identification-format</code></a> for the specs.
+<br>%b stays a live mode-line construct.
+<br>A <span class="arg">FORMAT</span> with %t returns the plain buffer name while the terminal has no title.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--buffer-identification</span> (format)
+  <span class="doc">"Return a `</span><span class="m doc">mode-line-buffer-identification</span><span class="doc">' value built from FORMAT.
+See `</span><span class="m doc">ghostel-buffer-identification-format</span><span class="doc">' for the specs.
+%b stays a live mode-line construct.
+A FORMAT with %t returns the plain buffer name while the terminal has no title."</span>
+  (<span class="k">if</span> (<span class="k">and</span> (null ghostel--title)
+           <span class="cd">;; </span><span class="c">Skip quoted percents so e.g. "50%%tests" is not read as a
+</span>           <span class="cd">;; </span><span class="c">title reference.
+</span>           (string-match-p <span class="s">"%[ 0&lt;&gt;^_-]*[0-9]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">\\.[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?t"</span>
+                           (string-replace <span class="s">"%%"</span> <span class="s">""</span> format)))
+      (propertized-buffer-identification <span class="s">"%b"</span>)
+    (<span class="k">let*</span> ((expanded
+            <span class="cd">;; </span><span class="c">%b is passed through to the mode line, where `</span><span class="m c">format-spec</span><span class="c">'
+</span>            <span class="cd">;; </span><span class="c">modifiers have no meaning; drop them so they cannot pad or
+</span>            <span class="cd">;; </span><span class="c">truncate the placeholder instead of the buffer name.
+</span>            (format-spec (replace-regexp-in-string
+                          <span class="s">"%[ 0&lt;&gt;^_-]*[0-9]*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">\\.[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?b"</span> <span class="s">"%b"</span> format)
+                         `((?b . <span class="s">"\0"</span>)
+                           (?t . ,(propertize (<span class="k">or</span> ghostel--title <span class="s">""</span>)
+                                              'help-echo ghostel--title))
+                           (?d . ,(abbreviate-file-name
+                                   (directory-file-name default-directory))))
+                         'ignore))
+           (name (propertized-buffer-identification <span class="s">"%b"</span>))
+           (parts (split-string expanded <span class="s">"\0"</span>))
+           (construct (list (string-replace <span class="s">"%"</span> <span class="s">"%%"</span> (car parts)))))
+      (<span class="k">dolist</span> (part (cdr parts))
+        (<span class="k">push</span> name construct)
+        (<span class="k">push</span> (string-replace <span class="s">"%"</span> <span class="s">"%%"</span> part) construct))
+      (nreverse construct))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

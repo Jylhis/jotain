@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.3, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Manual,
+updated for Emacs version 31.1.
+
+Copyright © 1985-2026 Free Software Foundation, Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "The GNU Manifesto," "Distribution" and
+"GNU GENERAL PUBLIC LICENSE," with the Front-Cover Texts being "A GNU
+Manual," and with the Back-Cover Texts as in (a) below.  A copy of the
+license is included in the section entitled "GNU Free Documentation
+License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Keyboard Macros (GNU Emacs Manual)</title>
+
+<meta name="description" content="Keyboard Macros (GNU Emacs Manual)">
+<meta name="keywords" content="Keyboard Macros (GNU Emacs Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Files.html#Files" rel="next" title="Files">
+<link href="Fixit.html#Fixit" rel="prev" title="Fixit">
+<style type="text/css">
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+kbd.kbd {font-style: oblique}
+kbd.key {font-style: normal}
+span.r {font-family: initial; font-weight: normal; font-style: normal}
+span:hover a.copiable-link {visibility: visible}
+ul.mark-bullet {list-style-type: disc}
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Keyboard-Macros">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Files.html#Files" rel="next">File Handling</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Fixit.html#Fixit" rel="prev">Commands for Fixing Typos</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">The Emacs Editor</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h2 class="chapter" id="Keyboard-Macros-1"><span>19 Keyboard Macros<a class="copiable-link" href="#Keyboard-Macros-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-defining-keyboard-macros"></a>
+<a class="index-entry-id" id="index-keyboard-macro"></a>
+
+<p>In this chapter we describe how to record a sequence of editing
+commands so you can repeat it conveniently later.
+</p>
+<p>A <em class="dfn">keyboard macro</em> is a command defined by an Emacs user to stand for
+another sequence of keys.  For example, if you discover that you are
+about to type <kbd class="kbd">C-n M-d C-d</kbd> forty times, you can speed your work by
+defining a keyboard macro to do <kbd class="kbd">C-n M-d C-d</kbd>, and then executing
+it 39 more times.
+</p>
+<p>You define a keyboard macro by executing and recording the commands
+which are its definition.  Put differently, as you define a keyboard
+macro, the definition is being executed for the first time.  This way,
+you can see the effects of your commands, so that you don&rsquo;t have to
+figure them out in your head.  When you close the definition, the
+keyboard macro is defined and also has been, in effect, executed once.
+You can then do the whole thing over again by invoking the macro.
+</p>
+<p>Keyboard macros differ from ordinary Emacs commands in that they are
+written in the Emacs command language rather than in Lisp.  This makes it
+easier for the novice to write them, and makes them more convenient as
+temporary hacks.  However, the Emacs command language is not powerful
+enough as a programming language to be useful for writing anything
+intelligent or general.  For such things, Lisp must be used.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Basic-Keyboard-Macro">Basic Use</a></li>
+<li><a href="#Keyboard-Macro-Ring">The Keyboard Macro Ring</a></li>
+<li><a href="#Keyboard-Macro-Counter">The Keyboard Macro Counter</a></li>
+<li><a href="#Keyboard-Macro-Query">Executing Macros with Variations</a></li>
+<li><a href="#Save-Keyboard-Macro">Naming and Saving Keyboard Macros</a></li>
+<li><a href="#Edit-Keyboard-Macro">Editing a Keyboard Macro</a></li>
+<li><a href="#Keyboard-Macro-Step_002dEdit">Stepwise Editing a Keyboard Macro</a></li>
+<li><a href="#Kmacro-Menu">Listing and Editing Keyboard Macros</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Basic-Keyboard-Macro">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Keyboard-Macro-Ring" rel="next">The Keyboard Macro Ring</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Keyboard-Macros" rel="up">Keyboard Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Basic-Use"><span>19.1 Basic Use<a class="copiable-link" href="#Basic-Use"> &para;</a></span></h3>
+
+<dl class="table">
+<dt><kbd class="kbd"><kbd class="key">F3</kbd></kbd></dt>
+<dd><p>Start defining a keyboard macro
+(<code class="code">kmacro-start-macro-or-insert-counter</code>).
+</p></dd>
+<dt><kbd class="kbd"><kbd class="key">F4</kbd></kbd></dt>
+<dd><p>If a keyboard macro is being defined, end the definition; otherwise,
+execute the most recent keyboard macro
+(<code class="code">kmacro-end-or-call-macro</code>).
+</p></dd>
+<dt><kbd class="kbd">C-u <kbd class="key">F3</kbd></kbd></dt>
+<dd><p>Re-execute last keyboard macro, then append keys to its definition.
+</p></dd>
+<dt><kbd class="kbd">C-u C-u <kbd class="key">F3</kbd></kbd></dt>
+<dd><p>Append keys to the last keyboard macro without re-executing it.
+</p></dd>
+<dt><kbd class="kbd">C-x C-k r</kbd></dt>
+<dd><p>Run the last keyboard macro on each line that begins in the region
+(<code class="code">apply-macro-to-region-lines</code>).
+</p></dd>
+<dt><kbd class="kbd">C-x (</kbd></dt>
+<dd><p>Start defining a keyboard macro (old style)
+(<code class="code">kmacro-start-macro</code>); with a prefix argument, append keys to
+the last macro.
+</p></dd>
+<dt><kbd class="kbd">C-x )</kbd></dt>
+<dd><p>End a macro definition (old style) (<code class="code">kmacro-end-macro</code>); prefix
+argument serves as the repeat count for executing the macro.
+</p></dd>
+<dt><kbd class="kbd">C-x e</kbd></dt>
+<dd><p>Execute the most recently defined keyboard macro
+(<code class="code">kmacro-end-and-call-macro</code>); prefix argument serves as repeat
+count.
+</p></dd>
+</dl>
+
+<a class="index-entry-id" id="index-F3"></a>
+<a class="index-entry-id" id="index-F4"></a>
+<a class="index-entry-id" id="index-kmacro_002dstart_002dmacro_002dor_002dinsert_002dcounter"></a>
+<a class="index-entry-id" id="index-kmacro_002dend_002dor_002dcall_002dmacro"></a>
+<a class="index-entry-id" id="index-kmacro_002dend_002dand_002dcall_002dmacro"></a>
+<p>To start defining a keyboard macro, type <kbd class="key">F3</kbd>.  From then on,
+your keys continue to be executed, but also become part of the
+definition of the macro.  &lsquo;<samp class="samp">Def</samp>&rsquo; appears in the mode line to
+remind you of what is going on.  When you are finished, type <kbd class="key">F4</kbd>
+(<code class="code">kmacro-end-or-call-macro</code>) to terminate the definition.  For
+example,
+</p>
+<div class="example">
+<pre class="example-preformatted"><kbd class="key">F3</kbd> M-f foo <kbd class="key">F4</kbd>
+</pre></div>
+
+<p>defines a macro to move forward a word and then insert &lsquo;<samp class="samp">foo</samp>&rsquo;.
+Note that <kbd class="key">F3</kbd> and <kbd class="key">F4</kbd> do not become part of the macro.
+</p>
+<p>After defining the macro, you can call it with <kbd class="key">F4</kbd>.  For the
+above example, this has the same effect as typing <kbd class="kbd">M-f foo</kbd> again.
+(Note the two roles of the <kbd class="key">F4</kbd> command: it ends the macro if you
+are in the process of defining one, or calls the last macro
+otherwise.)  You can also supply <kbd class="key">F4</kbd> with a numeric prefix
+argument &lsquo;<samp class="samp">n</samp>&rsquo;, which means to invoke the macro &lsquo;<samp class="samp">n</samp>&rsquo; times.  An
+argument of zero repeats the macro indefinitely, until it gets an
+error or you type <kbd class="kbd">C-g</kbd> (or, on MS-DOS, <kbd class="kbd">C-<kbd class="key">Break</kbd></kbd>).
+</p>
+<p>The above example demonstrates a handy trick that you can employ
+with keyboard macros: if you wish to repeat an operation at regularly
+spaced places in the text, include a motion command as part of the
+macro.  In this case, repeating the macro inserts the string
+&lsquo;<samp class="samp">foo</samp>&rsquo; after each successive word.
+</p>
+<p>After terminating the definition of a keyboard macro, you can append
+more keystrokes to its definition by typing <kbd class="kbd">C-u <kbd class="key">F3</kbd></kbd>.  This
+is equivalent to plain <kbd class="key">F3</kbd> followed by retyping the whole
+definition so far.  As a consequence, it re-executes the macro as
+previously defined.  If you change the variable
+<code class="code">kmacro-execute-before-append</code> to <code class="code">nil</code>, the existing macro
+will not be re-executed before appending to it (the default is
+<code class="code">t</code>).  You can also add to the end of the definition of the last
+keyboard macro without re-executing it by typing <kbd class="kbd">C-u C-u
+<kbd class="key">F3</kbd></kbd>.
+</p>
+<p>When a command reads an argument with the minibuffer, your
+minibuffer input becomes part of the macro along with the command.  So
+when you replay the macro, the command gets the same argument as when
+you entered the macro.  For example,
+</p>
+<div class="example">
+<pre class="example-preformatted"><kbd class="key">F3</kbd> C-a C-k C-x b foo <kbd class="key">RET</kbd> C-y C-x b <kbd class="key">RET</kbd> <kbd class="key">F4</kbd>
+</pre></div>
+
+<p>defines a macro that kills the current line, yanks it into the buffer
+&lsquo;<samp class="samp">foo</samp>&rsquo;, then returns to the original buffer.
+</p>
+<p>Most keyboard commands work as usual in a keyboard macro definition,
+with some exceptions.  Typing <kbd class="kbd">C-g</kbd> (<code class="code">keyboard-quit</code>) quits
+the keyboard macro definition.  Typing <kbd class="kbd">C-M-c</kbd>
+(<code class="code">exit-recursive-edit</code>) can be unreliable: it works as you&rsquo;d
+expect if exiting a recursive edit that started within the macro, but
+if it exits a recursive edit that started before you invoked the
+keyboard macro, it also necessarily exits the keyboard macro too.
+Mouse events are also unreliable, even though you can use them in a
+keyboard macro: when the macro replays the mouse event, it uses the
+original mouse position of that event, the position that the mouse had
+while you were defining the macro.  The effect of this may be hard to
+predict.
+</p>
+<a class="index-entry-id" id="index-apply_002dmacro_002dto_002dregion_002dlines"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-r"></a>
+<p>The command <kbd class="kbd">C-x C-k r</kbd> (<code class="code">apply-macro-to-region-lines</code>)
+repeats the last defined keyboard macro on each line that begins in
+the region.  It does this line by line, by moving point to the
+beginning of the line and then executing the macro.
+</p>
+<a class="index-entry-id" id="index-C_002dx-_0028"></a>
+<a class="index-entry-id" id="index-C_002dx-_0029"></a>
+<a class="index-entry-id" id="index-C_002dx-e"></a>
+<a class="index-entry-id" id="index-kmacro_002dstart_002dmacro"></a>
+<a class="index-entry-id" id="index-kmacro_002dend_002dmacro"></a>
+<p>In addition to the <kbd class="key">F3</kbd> and <kbd class="key">F4</kbd> commands described above,
+Emacs also supports an older set of key bindings for defining and
+executing keyboard macros.  To begin a macro definition, type <kbd class="kbd">C-x
+(</kbd> (<code class="code">kmacro-start-macro</code>); as with <kbd class="key">F3</kbd>, a prefix argument
+appends this definition to the last keyboard macro.  To end a macro
+definition, type <kbd class="kbd">C-x )</kbd> (<code class="code">kmacro-end-macro</code>).  To execute
+the most recent macro, type <kbd class="kbd">C-x e</kbd>
+(<code class="code">kmacro-end-and-call-macro</code>).  If you enter <kbd class="kbd">C-x e</kbd> while
+defining a macro, the macro is terminated and executed immediately.
+Immediately after typing <kbd class="kbd">C-x e</kbd>, you can type <kbd class="kbd">e</kbd> repeatedly
+to immediately repeat the macro one or more times.  You can also give
+<kbd class="kbd">C-x e</kbd> a repeat argument, just like <kbd class="key">F4</kbd> (when it is used to
+execute a macro).
+</p>
+<p><kbd class="kbd">C-x )</kbd> can be given a repeat count as an argument.  This means
+to repeat the macro right after defining it.  The macro definition
+itself counts as the first repetition, since it is executed as you
+define it, so <kbd class="kbd">C-u 4 C-x )</kbd> executes the macro immediately 3
+additional times.
+</p>
+<a class="index-entry-id" id="index-kmacro_002dredisplay"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-d"></a>
+<p>While executing a long-running keyboard macro, it can sometimes be
+useful to trigger a redisplay (to show how far we&rsquo;ve gotten).  The
+<kbd class="kbd">C-x C-k d</kbd> command can be used for this.  As a not very useful
+example, <kbd class="kbd">C-x ( M-f C-x C-k d C-x )</kbd> will create a macro that will
+redisplay once per iteration when saying <kbd class="kbd">C-u 42 C-x e</kbd>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Keyboard-Macro-Ring">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Keyboard-Macro-Counter" rel="next">The Keyboard Macro Counter</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Basic-Keyboard-Macro" rel="prev">Basic Use</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Keyboard-Macros" rel="up">Keyboard Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="The-Keyboard-Macro-Ring"><span>19.2 The Keyboard Macro Ring<a class="copiable-link" href="#The-Keyboard-Macro-Ring"> &para;</a></span></h3>
+
+<p>All defined keyboard macros are recorded in the <em class="dfn">keyboard macro
+ring</em>.  There is only one keyboard macro ring, shared by all buffers.
+</p>
+<dl class="table">
+<dt><kbd class="kbd">C-x C-k C-k</kbd></dt>
+<dd><p>Execute the keyboard macro at the head of the ring (<code class="code">kmacro-end-or-call-macro-repeat</code>).
+</p></dd>
+<dt><kbd class="kbd">C-x C-k C-n</kbd></dt>
+<dd><p>Rotate the keyboard macro ring to the next macro (defined earlier)
+(<code class="code">kmacro-cycle-ring-next</code>).
+</p></dd>
+<dt><kbd class="kbd">C-x C-k C-p</kbd></dt>
+<dd><p>Rotate the keyboard macro ring to the previous macro (defined later)
+(<code class="code">kmacro-cycle-ring-previous</code>).
+</p></dd>
+</dl>
+
+<p>All commands which operate on the keyboard macro ring use the
+same <kbd class="kbd">C-x C-k</kbd> prefix.  Most of these commands can be executed and
+repeated immediately after each other without repeating the <kbd class="kbd">C-x
+C-k</kbd> prefix.  For example,
+</p>
+<div class="example">
+<pre class="example-preformatted">C-x C-k C-p C-p C-k C-k C-k C-n C-n C-k C-p C-k C-d
+</pre></div>
+
+<p>will rotate the keyboard macro ring to the second-previous macro,
+execute the resulting head macro three times, rotate back to the
+original head macro, execute that once, rotate to the previous
+macro, execute that, and finally delete it from the macro ring.
+</p>
+<a class="index-entry-id" id="index-kmacro_002dend_002dor_002dcall_002dmacro_002drepeat"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-C_002dk"></a>
+<p>The command <kbd class="kbd">C-x C-k C-k</kbd> (<code class="code">kmacro-end-or-call-macro-repeat</code>)
+executes the keyboard macro at the head of the macro ring.  You can
+repeat the macro immediately by typing another <kbd class="kbd">C-k</kbd>, or you can
+rotate the macro ring immediately by typing <kbd class="kbd">C-n</kbd> or <kbd class="kbd">C-p</kbd>.
+</p>
+<p>When a keyboard macro is being defined, <kbd class="kbd">C-x C-k C-k</kbd> behaves
+like <kbd class="key">F4</kbd> except that, immediately afterward, you can use most key
+bindings of this section without the <kbd class="kbd">C-x C-k</kbd> prefix.  For
+instance, another <kbd class="kbd">C-k</kbd> will re-execute the macro.
+</p>
+<a class="index-entry-id" id="index-kmacro_002dcycle_002dring_002dnext"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-C_002dn"></a>
+<a class="index-entry-id" id="index-kmacro_002dcycle_002dring_002dprevious"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-C_002dp"></a>
+<p>The commands <kbd class="kbd">C-x C-k C-n</kbd> (<code class="code">kmacro-cycle-ring-next</code>) and
+<kbd class="kbd">C-x C-k C-p</kbd> (<code class="code">kmacro-cycle-ring-previous</code>) rotate the
+macro ring, bringing the next or previous keyboard macro to the head
+of the macro ring.  The definition of the new head macro is displayed
+in the echo area.  You can continue to rotate the macro ring
+immediately by repeating just <kbd class="kbd">C-n</kbd> and <kbd class="kbd">C-p</kbd> until the
+desired macro is at the head of the ring.  To execute the new macro
+ring head immediately, just type <kbd class="kbd">C-k</kbd>.
+</p>
+<p>Note that Emacs treats the head of the macro ring as the last
+defined keyboard macro.  For instance, <kbd class="key">F4</kbd> will execute that
+macro, and <kbd class="kbd">C-x C-k n</kbd> will give it a name.
+</p>
+<a class="index-entry-id" id="index-kmacro_002dring_002dmax"></a>
+<p>The maximum number of macros stored in the keyboard macro ring is
+determined by the customizable variable <code class="code">kmacro-ring-max</code>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Keyboard-Macro-Counter">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Keyboard-Macro-Query" rel="next">Executing Macros with Variations</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Keyboard-Macro-Ring" rel="prev">The Keyboard Macro Ring</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Keyboard-Macros" rel="up">Keyboard Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="The-Keyboard-Macro-Counter"><span>19.3 The Keyboard Macro Counter<a class="copiable-link" href="#The-Keyboard-Macro-Counter"> &para;</a></span></h3>
+
+<p>Each keyboard macro has an associated counter, which is initialized
+to 0 when you start defining the macro.  This <em class="dfn">current counter</em>
+allows you to insert a number into the buffer that depends on the
+number of times the macro has been called.  The counter is normally
+incremented each time its value is inserted into the buffer.
+</p>
+<p>In addition to the current counter, keyboard macros also maintain the
+<em class="dfn">previous counter</em>, which records the value the current counter
+had last time it was incremented or set.  Note that incrementing the
+current counter by zero, e.g., with <kbd class="kbd">C-u&nbsp;0&nbsp;C-x&nbsp;C-k&nbsp;C-i</kbd><!-- /@w -->, also
+records the value of the current counter as the previous counter
+value.
+</p>
+<dl class="table">
+<dt><kbd class="kbd"><kbd class="key">F3</kbd></kbd></dt>
+<dd><p>In a keyboard macro definition, insert the keyboard macro counter
+value in the buffer (<code class="code">kmacro-start-macro-or-insert-counter</code>).
+</p></dd>
+<dt><kbd class="kbd">C-x C-k C-i</kbd></dt>
+<dd><p>Insert the keyboard macro counter value in the buffer
+(<code class="code">kmacro-insert-counter</code>).
+</p></dd>
+<dt><kbd class="kbd">C-x C-k C-c</kbd></dt>
+<dd><p>Set the keyboard macro counter (<code class="code">kmacro-set-counter</code>).
+</p></dd>
+<dt><kbd class="kbd">C-x C-k C-a</kbd></dt>
+<dd><p>Add the prefix arg to the keyboard macro counter (<code class="code">kmacro-add-counter</code>).
+</p></dd>
+<dt><kbd class="kbd">C-x C-k C-f</kbd></dt>
+<dd><p>Specify the format for inserting the keyboard macro counter
+(<code class="code">kmacro-set-format</code>).
+</p></dd>
+</dl>
+
+<a class="index-entry-id" id="index-kmacro_002dinsert_002dcounter"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-C_002di"></a>
+<p>When you are defining a keyboard macro, the command <kbd class="key">F3</kbd>
+(<code class="code">kmacro-start-macro-or-insert-counter</code>) inserts the current
+value of the keyboard macro&rsquo;s counter into the buffer, and increments
+the counter by 1.  (If you are not defining a macro, <kbd class="key">F3</kbd> begins a
+macro definition instead.  See <a class="xref" href="#Basic-Keyboard-Macro">Basic Use</a>.)  You can use
+a numeric prefix argument to specify a different increment.  If you
+just specify a <kbd class="kbd">C-u</kbd> prefix, that inserts the previous counter
+value, and doesn&rsquo;t change the current value.
+</p>
+<p>As an example, let us show how the keyboard macro counter can be
+used to build a numbered list.  Consider the following key sequence:
+</p>
+<div class="example">
+<pre class="example-preformatted"><kbd class="key">F3</kbd> C-a <kbd class="key">F3</kbd> . <kbd class="key">SPC</kbd> <kbd class="key">F4</kbd>
+</pre></div>
+
+<p>As part of this keyboard macro definition, the string &lsquo;<samp class="samp">0. </samp>&rsquo; was
+inserted into the beginning of the current line.  If you now move
+somewhere else in the buffer and type <kbd class="key">F4</kbd> to invoke the macro,
+the string &lsquo;<samp class="samp">1. </samp>&rsquo; is inserted at the beginning of that line.
+Subsequent invocations insert &lsquo;<samp class="samp">2. </samp>&rsquo;, &lsquo;<samp class="samp">3. </samp>&rsquo;, and so forth.
+</p>
+<p>The command <kbd class="kbd">C-x C-k C-i</kbd> (<code class="code">kmacro-insert-counter</code>) does
+the same thing as <kbd class="key">F3</kbd>, but it can be used outside a keyboard
+macro definition.  When no keyboard macro is being defined or
+executed, it inserts and increments the counter of the macro at the
+head of the keyboard macro ring.
+</p>
+<a class="index-entry-id" id="index-kmacro_002dset_002dcounter"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-C_002dc"></a>
+<p>The command <kbd class="kbd">C-x C-k C-c</kbd> (<code class="code">kmacro-set-counter</code>) sets the
+current macro counter to the value of the numeric argument.  If you use
+it inside the macro, it operates on each repetition of the macro.  If
+you specify just <kbd class="kbd">C-u</kbd> as the prefix, while executing the macro,
+that resets the counter to the value it had at the beginning of the
+current repetition of the macro (undoing any increments so far in this
+repetition).
+</p>
+<a class="index-entry-id" id="index-kmacro_002dadd_002dcounter"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-C_002da"></a>
+<p>The command <kbd class="kbd">C-x C-k C-a</kbd> (<code class="code">kmacro-add-counter</code>) adds the
+prefix argument to the current macro counter.  With just <kbd class="kbd">C-u</kbd> as
+argument, it resets the counter to the last value inserted by any
+keyboard macro.  (Normally, when you use this, the last insertion
+will be in the same macro and it will be the same counter.)
+</p>
+<a class="index-entry-id" id="index-kmacro_002dset_002dformat"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-C_002df"></a>
+<p>The command <kbd class="kbd">C-x C-k C-f</kbd> (<code class="code">kmacro-set-format</code>) prompts for
+the format to use when inserting the macro counter.  The default
+format is &lsquo;<samp class="samp">%d</samp>&rsquo;, which means to insert the number in decimal
+without any padding.  You can exit with empty minibuffer to reset the
+format to this default.  You can specify any format string that the
+<code class="code">format</code> function accepts and that makes sense with a single
+integer extra argument (see <a data-manual="elisp" href="https://www.gnu.org/software/emacs/manual/html_node/elisp/Formatting-Strings.html#Formatting-Strings">Formatting Strings</a> in <cite class="cite">The Emacs
+Lisp Reference Manual</cite>).  Do not put the format string inside double
+quotes when you insert it in the minibuffer.
+</p>
+<p>If you use this command while no keyboard macro is being defined or
+executed, the new format affects all subsequent macro definitions.
+Existing macros continue to use the format in effect when they were
+defined.  If you set the format while defining a keyboard macro, this
+affects the macro being defined from that point on, but it does not
+affect subsequent macros.  Execution of the macro will, at each step,
+use the format in effect at that step during its definition.  Changes
+to the macro format during execution of a macro, like the
+corresponding changes during its definition, have no effect on
+subsequent macros.
+</p>
+<p>The format set by <kbd class="kbd">C-x C-k C-f</kbd> does not affect insertion of
+numbers stored in registers.
+</p>
+<p>If you use a register as a counter, incrementing it on each
+repetition of the macro, that accomplishes the same thing as a
+keyboard macro counter.  See <a class="xref" href="Registers.html#Number-Registers">Keeping Numbers in Registers</a>.  For most purposes,
+it is simpler to use a keyboard macro counter.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Keyboard-Macro-Query">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Save-Keyboard-Macro" rel="next">Naming and Saving Keyboard Macros</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Keyboard-Macro-Counter" rel="prev">The Keyboard Macro Counter</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Keyboard-Macros" rel="up">Keyboard Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Executing-Macros-with-Variations"><span>19.4 Executing Macros with Variations<a class="copiable-link" href="#Executing-Macros-with-Variations"> &para;</a></span></h3>
+
+<p>In a keyboard macro, you can create an effect similar to that of
+<code class="code">query-replace</code>, in that the macro asks you each time around
+whether to make a change.
+</p>
+<dl class="table">
+<dt><kbd class="kbd">C-x q</kbd></dt>
+<dd><p>When this point is reached during macro execution, ask for confirmation
+(<code class="code">kbd-macro-query</code>).
+</p></dd>
+</dl>
+
+<a class="index-entry-id" id="index-C_002dx-q"></a>
+<a class="index-entry-id" id="index-kbd_002dmacro_002dquery"></a>
+<p>While defining the macro, type <kbd class="kbd">C-x q</kbd> at the point where you
+want the query to occur.  During macro definition, the <kbd class="kbd">C-x q</kbd>
+does nothing, but when you run the macro later, <kbd class="kbd">C-x q</kbd> asks you
+interactively whether to continue.
+</p>
+<p>The valid responses when <kbd class="kbd">C-x q</kbd> asks are:
+</p>
+<dl class="table">
+<dt><kbd class="key">SPC</kbd> (or <kbd class="kbd">y</kbd>)</dt>
+<dd><p>Continue executing the keyboard macro.
+</p>
+</dd>
+<dt><kbd class="key">DEL</kbd> (or <kbd class="kbd">n</kbd>)</dt>
+<dd><p>Skip the remainder of this repetition of the macro, and start right
+away with the next repetition.
+</p>
+</dd>
+<dt><kbd class="key">RET</kbd> (or <kbd class="kbd">q</kbd>)</dt>
+<dd><p>Skip the remainder of this repetition and cancel further repetitions.
+</p>
+</dd>
+<dt><kbd class="kbd">C-r</kbd></dt>
+<dd><p>Enter a recursive editing level, in which you can perform editing
+which is not part of the macro.  When you exit the recursive edit
+using <kbd class="kbd">C-M-c</kbd>, you are asked again how to continue with the
+keyboard macro.  If you type a <kbd class="key">SPC</kbd> at this time, the rest of the
+macro definition is executed.  It is up to you to leave point and the
+text in a state such that the rest of the macro will do what you want.
+</p></dd>
+</dl>
+
+<p><kbd class="kbd">C-u C-x q</kbd>, which is <kbd class="kbd">C-x q</kbd> with a prefix argument,
+performs a completely different function.  It enters a recursive edit
+reading input from the keyboard, both when you type it during the
+definition of the macro, and when it is executed from the macro.  During
+definition, the editing you do inside the recursive edit does not become
+part of the macro.  During macro execution, the recursive edit gives you
+a chance to do some particularized editing on each repetition.
+See <a class="xref" href="Recursive-Edit.html">Recursive Editing Levels</a>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Save-Keyboard-Macro">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Edit-Keyboard-Macro" rel="next">Editing a Keyboard Macro</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Keyboard-Macro-Query" rel="prev">Executing Macros with Variations</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Keyboard-Macros" rel="up">Keyboard Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Naming-and-Saving-Keyboard-Macros"><span>19.5 Naming and Saving Keyboard Macros<a class="copiable-link" href="#Naming-and-Saving-Keyboard-Macros"> &para;</a></span></h3>
+
+<dl class="table">
+<dt><kbd class="kbd">C-x C-k n</kbd></dt>
+<dd><p>Give a command name (for the duration of the Emacs session) to the most
+recently defined keyboard macro (<code class="code">kmacro-name-last-macro</code>).
+</p></dd>
+<dt><kbd class="kbd">C-x C-k b</kbd></dt>
+<dd><p>Bind the most recently defined keyboard macro to a key sequence (for
+the duration of the session) (<code class="code">kmacro-bind-to-key</code>).
+</p></dd>
+<dt><kbd class="kbd">M-x insert-kbd-macro</kbd></dt>
+<dd><p>Insert in the buffer a keyboard macro&rsquo;s definition, as Lisp code.
+</p></dd>
+</dl>
+
+<a class="index-entry-id" id="index-saving-keyboard-macros"></a>
+<a class="index-entry-id" id="index-kmacro_002dname_002dlast_002dmacro"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-n"></a>
+<p>If you wish to save a keyboard macro for later use, you can give it
+a name using <kbd class="kbd">C-x C-k n</kbd> (<code class="code">kmacro-name-last-macro</code>).
+This reads a name as an argument using the minibuffer and defines that
+name to execute the last keyboard macro, in its current form.  (If you
+later add to the definition of this macro, that does not alter the
+name&rsquo;s definition as a macro.)  The macro name is a Lisp symbol, and
+defining it in this way makes it a valid command name for calling with
+<kbd class="kbd">M-x</kbd> or for binding a key to with <code class="code">keymap-global-set</code>
+(see <a class="pxref" href="Customization.html#Keymaps">Keymaps</a>).  If you specify a name that has a prior definition
+other than a keyboard macro, an error message is shown and nothing is
+changed.
+</p>
+<a class="index-entry-id" id="index-binding-keyboard-macros"></a>
+<a class="index-entry-id" id="index-kmacro_002dbind_002dto_002dkey"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-b"></a>
+<p>You can also bind the last keyboard macro (in its current form) to a
+key, using <kbd class="kbd">C-x C-k b</kbd> (<code class="code">kmacro-bind-to-key</code>) followed by the
+key sequence you want to bind.  You can bind to any key sequence in
+the global keymap, but since most key sequences already have other
+bindings, you should select the key sequence carefully.  If you try to
+bind to a key sequence with an existing binding (in any keymap), this
+command asks you for confirmation before replacing the existing binding.
+</p>
+<p>To avoid problems caused by overriding existing bindings, the key
+sequences <kbd class="kbd">C-x C-k 0</kbd> through <kbd class="kbd">C-x C-k 9</kbd> and <kbd class="kbd">C-x C-k A</kbd>
+through <kbd class="kbd">C-x C-k Z</kbd> are reserved for your own keyboard macro
+bindings.  In fact, to bind to one of these key sequences, you only
+need to type the digit or letter rather than the whole key sequences.
+For example,
+</p>
+<div class="example">
+<pre class="example-preformatted">C-x C-k b 4
+</pre></div>
+
+<p>will bind the last keyboard macro to the key sequence <kbd class="kbd">C-x C-k 4</kbd>.
+</p>
+<a class="index-entry-id" id="index-insert_002dkbd_002dmacro"></a>
+<p>You can save a macro&rsquo;s definition in a file.  Then it can be used in
+another editing session.  First, visit the file you want to save the
+definition in.  Then use this command:
+</p>
+<div class="example">
+<pre class="example-preformatted">M-x insert-kbd-macro <kbd class="key">RET</kbd> <var class="var">macroname</var> <kbd class="key">RET</kbd>
+</pre></div>
+
+<p>This inserts some Lisp code that, when executed later, will define the
+same macro with the same definition it has now.  (You don&rsquo;t need to
+understand Lisp code to do this, because <code class="code">insert-kbd-macro</code> writes
+the Lisp code for you.)  Then save the file.  You can load the file
+later with <code class="code">load-file</code> (see <a class="pxref" href="Building.html#Lisp-Libraries">Libraries of Lisp Code for Emacs</a>).  If the file you
+save in is your init file <samp class="file">~/.emacs</samp> (see <a class="pxref" href="Customization.html#Init-File">The Emacs Initialization File</a>) then the
+macro will be defined each time you run Emacs.
+</p>
+<p>If you give <code class="code">insert-kbd-macro</code> a prefix argument, it makes
+additional Lisp code to record the keys (if any) that you have bound
+to <var class="var">macroname</var>, so that the macro will be reassigned the same keys
+when you load the file.
+</p>
+<p>If you do not give <code class="code">insert-kbd-macro</code> a macro name, it will
+insert Lisp code to restore the <code class="code">last-kdb-macro</code>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Edit-Keyboard-Macro">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Keyboard-Macro-Step_002dEdit" rel="next">Stepwise Editing a Keyboard Macro</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Save-Keyboard-Macro" rel="prev">Naming and Saving Keyboard Macros</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Keyboard-Macros" rel="up">Keyboard Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Editing-a-Keyboard-Macro"><span>19.6 Editing a Keyboard Macro<a class="copiable-link" href="#Editing-a-Keyboard-Macro"> &para;</a></span></h3>
+
+<dl class="table">
+<dt><kbd class="kbd">C-x C-k C-e</kbd></dt>
+<dd><p>Edit the last defined keyboard macro (<code class="code">kmacro-edit-macro</code>).
+</p></dd>
+<dt><kbd class="kbd">C-x C-k e <var class="var">name</var> <kbd class="key">RET</kbd></kbd></dt>
+<dd><p>Edit a previously defined keyboard macro <var class="var">name</var> (<code class="code">edit-kbd-macro</code>).
+</p></dd>
+<dt><kbd class="kbd">C-x C-k l</kbd></dt>
+<dd><p>Edit the last 300 keystrokes as a keyboard macro
+(<code class="code">kmacro-edit-lossage</code>).
+</p></dd>
+</dl>
+
+<a class="index-entry-id" id="index-kmacro_002dedit_002dmacro"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-C_002de"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-RET"></a>
+<p>You can edit the last keyboard macro by typing <kbd class="kbd">C-x C-k C-e</kbd> or
+<kbd class="kbd">C-x C-k <kbd class="key">RET</kbd></kbd> (<code class="code">kmacro-edit-macro</code>).  This formats the
+macro definition in a buffer and enters a specialized major mode for
+editing it.  Type <kbd class="kbd">C-h m</kbd> once in that buffer to display details
+of how to edit the macro.  When you are finished editing, type
+<kbd class="kbd">C-c C-c</kbd>.
+</p>
+<a class="index-entry-id" id="index-edmacro_002dinsert_002dkey"></a>
+<a class="index-entry-id" id="index-edmacro_002dset_002dmacro_002dto_002dregion_002dlines"></a>
+<p><code class="code">edmacro-mode</code>, the major mode used by
+<code class="code">kmacro-edit-macro</code>, provides commands for more easily editing
+the formatted macro.  Use <kbd class="kbd">C-c C-q</kbd> (<code class="code">edmacro-insert-key</code>) to
+insert the next key sequence that you type into the buffer using the
+correct format, similar to <kbd class="kbd">C-q</kbd> (<code class="code">quoted-insert</code>).  Use
+<kbd class="kbd">C-c C-r</kbd> (<code class="code">edmacro-set-macro-to-region-lines</code>) to replace
+the macro&rsquo;s text with the text in the region.  If the region does not
+begin at the start of a line or if it does not end at the end of a
+line, the region is extended to include complete lines.  If the region
+ends at the beginning of a line, that final line is excluded.
+</p>
+<a class="index-entry-id" id="index-edit_002dkbd_002dmacro"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-e"></a>
+<p>You can edit a named keyboard macro or a macro bound to a key by typing
+<kbd class="kbd">C-x C-k e</kbd> (<code class="code">edit-kbd-macro</code>).  Follow that with the
+keyboard input that you would use to invoke the macro&mdash;<kbd class="kbd">C-x e</kbd> or
+<kbd class="kbd">M-x <var class="var">name</var></kbd> or some other key sequence.
+</p>
+<a class="index-entry-id" id="index-kmacro_002dedit_002dlossage"></a>
+<a class="index-entry-id" id="index-edmacro_002dreverse_002dmacro_002dlines"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-l"></a>
+<p>You can edit the last 300 keystrokes as a macro by typing
+<kbd class="kbd">C-x C-k l</kbd> (<code class="code">kmacro-edit-lossage</code>).  By default,
+your most recent keystrokes are listed at the bottom of the buffer.
+To list a macro&rsquo;s key sequences in reverse order, set
+<code class="code">edmacro-reverse-macro-lines</code> to <code class="code">t</code>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Keyboard-Macro-Step_002dEdit">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="#Kmacro-Menu" rel="next">Listing and Editing Keyboard Macros</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Edit-Keyboard-Macro" rel="prev">Editing a Keyboard Macro</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Keyboard-Macros" rel="up">Keyboard Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Stepwise-Editing-a-Keyboard-Macro"><span>19.7 Stepwise Editing a Keyboard Macro<a class="copiable-link" href="#Stepwise-Editing-a-Keyboard-Macro"> &para;</a></span></h3>
+
+<a class="index-entry-id" id="index-kmacro_002dstep_002dedit_002dmacro"></a>
+<a class="index-entry-id" id="index-C_002dx-C_002dk-SPC"></a>
+<p>You can interactively replay and edit the last keyboard
+macro, one command at a time, by typing <kbd class="kbd">C-x C-k <kbd class="key">SPC</kbd></kbd>
+(<code class="code">kmacro-step-edit-macro</code>).  Unless you quit the macro using
+<kbd class="kbd">q</kbd> or <kbd class="kbd">C-g</kbd>, the edited macro replaces the last macro on the
+macro ring.
+</p>
+<p>This macro editing feature shows the last macro in the minibuffer
+together with the first (or next) command to be executed, and prompts
+you for an action.  You can enter <kbd class="kbd">?</kbd> to get a summary of your
+options.  These actions are available:
+</p>
+<ul class="itemize mark-bullet">
+<li><kbd class="key">SPC</kbd> and <kbd class="kbd">y</kbd> execute the current command, and advance to the
+next command in the keyboard macro.
+</li><li><kbd class="kbd">n</kbd>, <kbd class="kbd">d</kbd>, and <kbd class="key">DEL</kbd> skip and delete the current command.
+</li><li><kbd class="kbd">f</kbd> skips the current command in this execution of the keyboard
+macro, but doesn&rsquo;t delete it from the macro.
+</li><li><kbd class="key">TAB</kbd> executes the current command, as well as all similar
+commands immediately following the current command; for example, <kbd class="key">TAB</kbd>
+may be used to insert a sequence of characters (corresponding to a
+sequence of <code class="code">self-insert-command</code> commands).
+</li><li><kbd class="kbd">c</kbd> continues execution (without further editing) until the end of
+the keyboard macro.  If execution terminates normally, the edited
+macro replaces the original keyboard macro.
+</li><li><kbd class="kbd">C-k</kbd> skips and deletes the rest of the keyboard macro,
+terminates step-editing, and replaces the original keyboard macro
+with the edited macro.
+</li><li><kbd class="kbd">q</kbd> and <kbd class="kbd">C-g</kbd> cancels the step-editing of the keyboard macro;
+discarding any changes made to the keyboard macro.
+</li><li><kbd class="kbd">i <var class="var">key</var>&hellip; C-j</kbd> reads and executes a series of key sequences (not
+including the final <kbd class="kbd">C-j</kbd>), and inserts them before the current
+command in the keyboard macro, without advancing over the current
+command.
+</li><li><kbd class="kbd">I <var class="var">key</var>&hellip;</kbd> reads one key sequence, executes it, and inserts it
+before the current command in the keyboard macro, without advancing
+over the current command.
+</li><li><kbd class="kbd">r <var class="var">key</var>&hellip; C-j</kbd> reads and executes a series of key sequences (not
+including the final <kbd class="kbd">C-j</kbd>), and replaces the current command in
+the keyboard macro with them, advancing over the inserted key
+sequences.
+</li><li><kbd class="kbd">R <var class="var">key</var>&hellip;</kbd> reads one key sequence, executes it, and replaces the
+current command in the keyboard macro with that key sequence,
+advancing over the inserted key sequence.
+</li><li><kbd class="kbd">a <var class="var">key</var>&hellip; C-j</kbd> executes the current command, then reads and
+executes a series of key sequences (not including the final
+<kbd class="kbd">C-j</kbd>), and inserts them after the current command in the keyboard
+macro; it then advances over the current command and the inserted key
+sequences.
+</li><li><kbd class="kbd">A <var class="var">key</var>&hellip; C-j</kbd> executes the rest of the commands in the keyboard
+macro, then reads and executes a series of key sequences (not
+including the final <kbd class="kbd">C-j</kbd>), and appends them at the end of the
+keyboard macro; it then terminates the step-editing and replaces the
+original keyboard macro with the edited macro.
+</li></ul>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Kmacro-Menu">
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="#Keyboard-Macro-Step_002dEdit" rel="prev">Stepwise Editing a Keyboard Macro</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="#Keyboard-Macros" rel="up">Keyboard Macros</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+<h3 class="section" id="Listing-and-Editing-Keyboard-Macros"><span>19.8 Listing and Editing Keyboard Macros<a class="copiable-link" href="#Listing-and-Editing-Keyboard-Macros"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-Kmacro-Menu"></a>
+
+<a class="index-entry-id" id="index-listing-current-keyboard-macros"></a>
+<a class="index-entry-id" id="index-M_002dx-list_002dkeyboard_002dmacros-RET"></a>
+<a class="index-entry-id" id="index-kmacro_002dmenu"></a>
+<a class="index-entry-id" id="index-list_002dkeyboard_002dmacros"></a>
+<p>To display a list of existing keyboard macros, type <kbd class="kbd">M-x
+list-keyboard-macros <kbd class="key">RET</kbd></kbd>.  This pops up the <em class="dfn">Kmacro Menu</em> in
+a buffer named <samp class="file">*Keyboard Macro List*</samp>.  Each line in the list
+shows one macro&rsquo;s position, counter value, counter format, that counter
+value using that format, and macro keys.  Here is an example of a macro
+list:
+</p>
+<div class="example smallexample">
+<pre class="example-preformatted">Position  Counter  Format  Formatted  Keys
+0               8  %02d    08         N : SPC &lt;F3&gt; RET
+1               0  %d      0          l o n g SPC p h r a s e
+</pre></div>
+
+<p>The macros are listed with the current macro at the top in position
+number zero and the older macros in the order in which they are found in
+the keyboard macro ring (see <a class="pxref" href="#Keyboard-Macro-Ring">The Keyboard Macro Ring</a>).  Using the Kmacro
+Menu, you can change the order of the macros and change their counters,
+counter formats, and keys.  The Kmacro Menu is a read-only buffer, and
+can be changed only through the special commands described in this
+section.  After a command is run, the Kmacro Menu displays changes to
+reflect the new values of the macro properties and the macro ring.  You
+can use the usual cursor motion commands in this buffer, as well as
+special motion commands for navigating the table.  To view a list of the
+special commands, type <kbd class="kbd">C-h m</kbd> or <kbd class="kbd">?</kbd> (<code class="code">describe-mode</code>) in
+the Kmacro Menu.
+</p>
+<p>You can use the following commands to change a macro&rsquo;s properties:
+</p>
+<dl class="table">
+<dt><a class="index-entry-id" id="index-_0023-_0028Kmacro-Menu_0029"></a>
+<a id="index-kmacro_002dmenu_002dedit_002dposition"></a><span><kbd class="kbd">#</kbd><a class="copiable-link" href="#index-kmacro_002dmenu_002dedit_002dposition"> &para;</a></span></dt>
+<dd><p>Change the position of the macro on the current line
+(see <a class="pxref" href="#Keyboard-Macro-Ring">The Keyboard Macro Ring</a>).
+</p>
+</dd>
+<dt><a class="index-entry-id" id="index-C_002dx-C_002dt-_0028Kmacro-Menu_0029"></a>
+<a id="index-kmacro_002dmenu_002dtranspose"></a><span><kbd class="kbd">C-x C-t</kbd><a class="copiable-link" href="#index-kmacro_002dmenu_002dtranspose"> &para;</a></span></dt>
+<dd><p>Move the macro on the current line to the line above, like in
+<code class="code">transpose-lines</code>.
+</p>
+</dd>
+<dt><a class="index-entry-id" id="index-c-_0028Kmacro-Menu_0029"></a>
+<a id="index-kmacro_002dmenu_002dedit_002dcounter"></a><span><kbd class="kbd">c</kbd><a class="copiable-link" href="#index-kmacro_002dmenu_002dedit_002dcounter"> &para;</a></span></dt>
+<dd><p>Change the counter value of the macro on the current line
+(see <a class="pxref" href="#Keyboard-Macro-Counter">The Keyboard Macro Counter</a>).
+</p>
+</dd>
+<dt><a class="index-entry-id" id="index-f-_0028Kmacro-Menu_0029"></a>
+<a id="index-kmacro_002dmenu_002dedit_002dformat"></a><span><kbd class="kbd">f</kbd><a class="copiable-link" href="#index-kmacro_002dmenu_002dedit_002dformat"> &para;</a></span></dt>
+<dd><p>Change the counter format of the macro on the current line.
+</p>
+</dd>
+<dt><a class="index-entry-id" id="index-e-_0028Kmacro-Menu_0029"></a>
+<a id="index-kmacro_002dmenu_002dedit_002dkeys"></a><span><kbd class="kbd">e</kbd><a class="copiable-link" href="#index-kmacro_002dmenu_002dedit_002dkeys"> &para;</a></span></dt>
+<dd><p>Change the keys of the macro on the current line using
+<code class="code">edit-kbd-macro</code> (see <a class="pxref" href="#Edit-Keyboard-Macro">Editing a Keyboard Macro</a>).
+</p>
+</dd>
+<dt><a class="index-entry-id" id="index-RET-_0028Kmacro-Menu_0029"></a>
+<a id="index-kmacro_002dmenu_002dedit_002dcolumn"></a><span><kbd class="kbd"><kbd class="key">RET</kbd></kbd><a class="copiable-link" href="#index-kmacro_002dmenu_002dedit_002dcolumn"> &para;</a></span></dt>
+<dd><p>Change the value in the current column of the macro on the current line
+using commands above.
+</p></dd>
+</dl>
+
+<p>The following commands delete or duplicate macros in the list:
+</p>
+<dl class="table">
+<dt><a id="index-kmacro_002dmenu_002dflag_002dfor_002ddeletion"></a><span><kbd class="kbd">d</kbd><a class="copiable-link" href="#index-kmacro_002dmenu_002dflag_002dfor_002ddeletion"> &para;</a></span></dt>
+<dt><kbd class="kbd">d <span class="r">(Kmacro Menu)</span></kbd></dt>
+<dd><p>Flag the macro on the current line for deletion, then move point to the
+next line (<code class="code">kmacro-menu-flag-for-deletion</code>).  The deletion flag is
+indicated by the character &lsquo;<samp class="samp">D</samp>&rsquo; at the start of line.  The deletion
+occurs only when you type the <kbd class="kbd">x</kbd> command (see below).
+</p>
+<p>If the region is active, this command flags all of the macros in the
+region.
+</p>
+</dd>
+<dt><a id="index-kmacro_002dmenu_002ddo_002dflagged_002ddelete"></a><span><kbd class="kbd">x</kbd><a class="copiable-link" href="#index-kmacro_002dmenu_002ddo_002dflagged_002ddelete"> &para;</a></span></dt>
+<dt><kbd class="kbd">x <span class="r">(Kmacro Menu)</span></kbd></dt>
+<dd><p>Delete the macros in the list that have been flagged for deletion
+(<code class="code">kmacro-menu-do-flagged-delete</code>).
+</p>
+</dd>
+<dt><a id="index-kmacro_002dmenu_002dmark"></a><span><kbd class="kbd">m</kbd><a class="copiable-link" href="#index-kmacro_002dmenu_002dmark"> &para;</a></span></dt>
+<dt><kbd class="kbd">m <span class="r">(Kmacro Menu)</span></kbd></dt>
+<dd><p>Mark the macro on the current line, then move point to the next line
+(<code class="code">kmacro-menu-mark</code>).  Marked macros are indicated by the character
+&lsquo;<samp class="samp">*</samp>&rsquo; at the start of line.  Marked macros can be operated on by the
+<kbd class="kbd">C</kbd> and <kbd class="kbd">D</kbd> commands (see below).
+</p>
+<p>If the region is active, this command marks all of the macros in the
+region.
+</p>
+</dd>
+<dt><a id="index-kmacro_002dmenu_002ddo_002dcopy"></a><span><kbd class="kbd">C</kbd><a class="copiable-link" href="#index-kmacro_002dmenu_002ddo_002dcopy"> &para;</a></span></dt>
+<dt><kbd class="kbd">C <span class="r">(Kmacro Menu)</span></kbd></dt>
+<dd><p>This command copies macros by duplicating them at their current
+positions in the list (<code class="code">kmacro-menu-do-copy</code>).  For example,
+running this command on the macro at position number zero will insert a
+copy of that macro into position number one and move the remaining
+macros down.
+</p>
+<p>If the region is active, this command duplicates the macros in the
+region.  Otherwise, if there are marked macros, this command duplicates
+the marked macros.  If there is no region nor are there marked macros,
+this command duplicates the macro on the current line.  In the first two
+cases, the command prompts for confirmation before duplication.
+</p>
+</dd>
+<dt><a id="index-kmacro_002dmenu_002ddo_002ddelete"></a><span><kbd class="kbd">D</kbd><a class="copiable-link" href="#index-kmacro_002dmenu_002ddo_002ddelete"> &para;</a></span></dt>
+<dt><kbd class="kbd">D <span class="r">(Kmacro Menu)</span></kbd></dt>
+<dd><p>This command deletes macros, removing them from the ring
+(<code class="code">kmacro-menu-do-delete</code>).  For example, running this command on
+the macro at position number zero will delete the current macro and then
+make the first macro in the macro ring (previously at position number
+one) the new current macro, popping it from the ring.
+</p>
+<p>If the region is active, this command deletes the macros in the
+region.  Otherwise, if there are marked macros, this command deletes the
+marked macros.  If there is no region nor are there marked macros, this
+command deletes the macro on the current line.  In all cases, the
+command prompts for confirmation before deletion.
+</p>
+<p>This command is an alternative to the <kbd class="kbd">d</kbd> and <kbd class="kbd">x</kbd> commands
+(see above).
+</p>
+</dd>
+<dt><a id="index-kmacro_002dmenu_002dunmark"></a><span><kbd class="kbd">u</kbd><a class="copiable-link" href="#index-kmacro_002dmenu_002dunmark"> &para;</a></span></dt>
+<dt><kbd class="kbd">u <span class="r">(Kmacro Menu)</span></kbd></dt>
+<dd><p>Unmark and unflag the macro on the current line, then move point down
+to the next line (<code class="code">kmacro-menu-unmark</code>).  If there is an active
+region, this command unmarks and unflags all of the macros in the
+region.
+</p>
+</dd>
+<dt><a id="index-kmacro_002dmenu_002dunmark_002dbackward"></a><span><kbd class="kbd"><kbd class="key">DEL</kbd></kbd><a class="copiable-link" href="#index-kmacro_002dmenu_002dunmark_002dbackward"> &para;</a></span></dt>
+<dt><kbd class="kbd"><kbd class="key">DEL</kbd> <span class="r">(Kmacro Menu)</span></kbd></dt>
+<dd><p>Like the <kbd class="kbd">u</kbd> command (see above), but move point up to the previous
+line when there is no active region
+(<code class="code">kmacro-menu-unmark-backward</code>).
+</p>
+</dd>
+<dt><a id="index-kmacro_002dmenu_002dunmark_002dall"></a><span><kbd class="kbd">U</kbd><a class="copiable-link" href="#index-kmacro_002dmenu_002dunmark_002dall"> &para;</a></span></dt>
+<dt><kbd class="kbd">U <span class="r">(Kmacro Menu)</span></kbd></dt>
+<dd><p>Unmark and unflag all macros in the list
+(<code class="code">kmacro-menu-unmark-all</code>).
+</p></dd>
+</dl>
+</div>
+</div>
+<hr>
+<p class="nav-panel">
+<span class="nav-button"><span class="nav-label">Next: </span><span class="nav-link"><a href="Files.html#Files" rel="next">File Handling</a></span></span>, <span class="nav-button"><span class="nav-label">Previous: </span><span class="nav-link"><a href="Fixit.html#Fixit" rel="prev">Commands for Fixing Typos</a></span></span>, <span class="nav-button"><span class="nav-label">Up: </span><span class="nav-link"><a href="index.html" rel="up">The Emacs Editor</a></span></span><span class="nav-button"> &nbsp; </span><span class="nav-button">[<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</span><span class="nav-button">[<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</span></p>
+
+
+
+</body>
+</html>

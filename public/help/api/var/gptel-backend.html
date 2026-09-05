@@ -1,0 +1,260 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: gptel-backend – Emacs Documentation Online</title>
+<meta name="description" content="gptel-backend is a customizable variable defined in gptel-request.el.
+LLM backend to use.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>gptel-backend</code></h1><p><span class="m"><code>gptel-backend</code></span> is a <a href="/info/elisp/variable-definitions.html">customizable</a> variable defined in <span class="bt">gptel-request.el</span>.
+<h2>Value</h2>
+<pre><code>nil
+</code></pre>
+<h2>Documentation</h2>
+<p>LLM backend to use.
+<p>This is the default "backend" used by gptel, an object specifying
+connection, authentication and model information required to send LLM
+requests.
+<p>There are two ways to set <a href="../var/gptel-backend.html"><code>gptel-backend</code></a>:
+<p>1. with <a href="../fun/setopt.html"><code>setopt</code></a> or the Customize interface,
+<br>2. and via constructors (such as <span class="m"><code>gptel-make-openai</code></span>) in Elisp code.
+<p>When using <a href="../fun/setopt.html"><code>setopt</code></a> or the customize interface, a backend may be
+specified in a list such as
+<p>&nbsp;&nbsp;(BACKEND-TYPE NAME . PLIST)
+<p>where:
+<p>BACKEND-TYPE is one of <span class="m"><code>gptel-openai</code></span> (all OpenAI-compatible
+services), <span class="m"><code>gptel-anthropic</code></span>, <span class="m"><code>gptel-gemini</code></span>, <span class="m"><code>gptel-ollama</code></span>,
+<span class="m"><code>gptel-kagi</code></span>, <span class="m"><code>gptel--gh</code></span> (GitHub Copilot), <span class="m"><code>gptel-bedrock</code></span> (AWS
+Bedrock), <span class="m"><code>gptel-perplexity</code></span>, <span class="m"><code>gptel-deepseek</code></span> or <span class="m"><code>gptel-privategpt</code></span>.
+<p>NAME is a string, any backend name of your choosing.
+<p>PLIST is an optional plist specifying connection and authentication
+information, with keys
+<p>:protocol       - "http" or "https"
+<br>:host           - Host, such as "api.openai.com" or "localhost:1616"
+<br>:endpoint       - connection endpoint, such as "/v1/chat/completions"
+<br>:header         - HTTP header to inclue with the request, a string
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;or function
+<br>:key            - API key, if required for authentication
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String, symbol or function, see <a href="../var/gptel-api-key.html"><code>gptel-api-key</code></a>
+<br>:models         - List of supported models (symbols, see
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="m"><code>gptel--openai-models</code></span> for an example)
+<br>:stream         - Whether to stream responses, boolean
+<br>:request-params - Additional parameters to send with backend queries, as
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a plist.  This plist is converted to JSON when sending.
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This is meant for request parameters that gptel does not
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;provide user options for.
+<br>:curl-args      - list of strings representing additional Curl arguments (if
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../var/gptel-use-curl.html"><code>gptel-use-curl</code></a> is set)
+<p>When using the OpenAI, Anthropic, Gemini, Kagi, Github Copilot,
+Perplexity or Deepseek backends, all plist keys are optional.  For other
+services, specifying some fields may be required.  Examples:
+<p>&nbsp;&nbsp;(<span class="k">setopt</span> gptel-backend '(gptel-openai <span class="s">"OpenAI"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:key</span> gptel-api-key-from-auth-source
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:stream</span> t))
+<p>&nbsp;&nbsp;(<span class="k">setopt</span> gptel-backend '(gptel-anthropic <span class="s">"Claude"</span> <span class="bi">:key</span> <span class="s">"sk-..."</span>))
+<p>&nbsp;&nbsp;(<span class="k">setopt</span> gptel-backend '(gptel-ollama <span class="s">"Ollama"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:host</span> <span class="s">"localhost:11434"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:models</span> (qwen3:4b llama3.1:8b)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:stream</span> t))
+<p>This list of keys is non-exhaustive.  Some backends (such as
+<span class="m"><code>gptel-bedrock</code></span>) recognize or require additional keys.  To see what
+other keys are available, check the corresponding constructor (such as
+<span class="m"><code>gptel-make-bedrock</code></span>).
+<p>When not using <a href="../fun/setopt.html"><code>setopt</code></a>, backends for LLM providers (local or remote)
+may be constructed and registered using one of the available backend
+constructor functions:
+<p>- <span class="m"><code>gptel-make-openai</code></span>
+<br>- <span class="m"><code>gptel-make-anthropic</code></span>
+<br>- <span class="m"><code>gptel-make-gemini</code></span>
+<br>- <span class="m"><code>gptel-make-ollama</code></span>
+<br>- <span class="m"><code>gptel-make-azure</code></span>
+<br>- <span class="m"><code>gptel-make-gpt4all</code></span>
+<br>- <span class="m"><code>gptel-make-kagi</code></span>
+<br>- <span class="m"><code>gptel-make-privategpt</code></span>
+<br>- <span class="m"><code>gptel-make-perplexity</code></span>
+<br>- <span class="m"><code>gptel-make-deepseek</code></span>
+<br>- <span class="m"><code>gptel-make-xai</code></span>
+<br>- <span class="m"><code>gptel-make-gh-copilot</code></span>
+<br>- <span class="m"><code>gptel-make-bedrock</code></span>
+<p>In addition, <a href="../var/gptel-backend.html"><code>gptel-backend</code></a> can be assigned to them.  Examples:
+<p>&nbsp;&nbsp;(<span class="k">setq</span> gptel-backend (gptel-make-openai <span class="s">"llamacpp"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:host</span> <span class="s">"localhost:8080"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:protocol</span> <span class="s">"http"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:models</span> '(gpt-oss-120b glm-4.7-flash)))
+<p>&nbsp;&nbsp;(<span class="k">setq</span> gptel-backend (gptel-make-gemini <span class="s">"Gemini"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:key</span> gptel-api-key <span class="bi">:stream</span> t))
+<p>&nbsp;&nbsp;(<span class="k">setq</span> gptel-backend (gptel-make-anthropic <span class="s">"Claude-think"</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:key</span> gptel-api-key
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:request-params</span>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'(<span class="bi">:thinking</span> (<span class="bi">:type</span> <span class="s">"enabled"</span> <span class="bi">:budget_tokens</span> 1024)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">:max_tokens</span> 2048)))
+<p>See their documentation for more information and the package README for
+examples.  Once registered, backends may be retrieved using
+<a href="../fun/gptel-get-backend.html"><code>gptel-get-backend</code></a> or switched to interactively from gptel's menu (see
+<span class="m"><code>gptel-menu</code></span>).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+(<span class="k">defcustom</span> <span class="v">gptel-backend</span> nil
+  <span class="doc">"LLM backend to use.
+
+This is the default \"backend\" used by gptel, an object specifying
+connection, authentication and model information required to send LLM
+requests.
+
+There are two ways to set `</span><span class="m doc">gptel-backend</span><span class="doc">':
+
+1. with `</span><span class="m doc">setopt</span><span class="doc">' or the Customize interface,
+2. and via constructors (such as `</span><span class="m doc">gptel-make-openai</span><span class="doc">') in Elisp code.
+
+When using `</span><span class="m doc">setopt</span><span class="doc">' or the customize interface, a backend may be
+specified in a list such as
+
+  (BACKEND-TYPE NAME . PLIST)
+
+where:
+
+BACKEND-TYPE is one of `</span><span class="m doc">gptel-openai</span><span class="doc">' (all OpenAI-compatible
+services), `</span><span class="m doc">gptel-anthropic</span><span class="doc">', `</span><span class="m doc">gptel-gemini</span><span class="doc">', `</span><span class="m doc">gptel-ollama</span><span class="doc">',
+`</span><span class="m doc">gptel-kagi</span><span class="doc">', `</span><span class="m doc">gptel--gh</span><span class="doc">' (GitHub Copilot), `</span><span class="m doc">gptel-bedrock</span><span class="doc">' (AWS
+Bedrock), `</span><span class="m doc">gptel-perplexity</span><span class="doc">', `</span><span class="m doc">gptel-deepseek</span><span class="doc">' or `</span><span class="m doc">gptel-privategpt</span><span class="doc">'.
+
+NAME is a string, any backend name of your choosing.
+
+PLIST is an optional plist specifying connection and authentication
+information, with keys
+
+:protocol       - \"http\" or \"https\"
+:host           - Host, such as \"api.openai.com\" or \"localhost:1616\"
+:endpoint       - connection endpoint, such as \"/v1/chat/completions\"
+:header         - HTTP header to inclue with the request, a string
+                  or function
+:key            - API key, if required for authentication
+                  String, symbol or function, see `</span><span class="m doc">gptel-api-key</span><span class="doc">'
+:models         - List of supported models (symbols, see
+                  `</span><span class="m doc">gptel--openai-models</span><span class="doc">' for an example)
+:stream         - Whether to stream responses, boolean
+:request-params - Additional parameters to send with backend queries, as
+                  a plist.  This plist is converted to JSON when sending.
+                  This is meant for request parameters that gptel does not
+                  provide user options for.
+:curl-args      - list of strings representing additional Curl arguments (if
+                  `</span><span class="m doc">gptel-use-curl</span><span class="doc">' is set)
+
+When using the OpenAI, Anthropic, Gemini, Kagi, Github Copilot,
+Perplexity or Deepseek backends, all plist keys are optional.  For other
+services, specifying some fields may be required.  Examples:
+
+  (setopt gptel-backend </span><span class="bi doc">\\=</span><span class="doc">'(gptel-openai \"OpenAI\"
+                          :key gptel-api-key-from-auth-source
+                          :stream t))
+
+  (setopt gptel-backend </span><span class="bi doc">\\=</span><span class="doc">'(gptel-anthropic \"Claude\" :key \"sk-...\"))
+
+  (setopt gptel-backend </span><span class="bi doc">\\=</span><span class="doc">'(gptel-ollama \"Ollama\"
+                          :host \"localhost:11434\"
+                          :models (qwen3:4b llama3.1:8b)
+                          :stream t))
+
+This list of keys is non-exhaustive.  Some backends (such as
+`</span><span class="m doc">gptel-bedrock</span><span class="doc">') recognize or require additional keys.  To see what
+other keys are available, check the corresponding constructor (such as
+`</span><span class="m doc">gptel-make-bedrock</span><span class="doc">').
+
+When not using `</span><span class="m doc">setopt</span><span class="doc">', backends for LLM providers (local or remote)
+may be constructed and registered using one of the available backend
+constructor functions:
+
+- `</span><span class="m doc">gptel-make-openai</span><span class="doc">'
+- `</span><span class="m doc">gptel-make-anthropic</span><span class="doc">'
+- `</span><span class="m doc">gptel-make-gemini</span><span class="doc">'
+- `</span><span class="m doc">gptel-make-ollama</span><span class="doc">'
+- `</span><span class="m doc">gptel-make-azure</span><span class="doc">'
+- `</span><span class="m doc">gptel-make-gpt4all</span><span class="doc">'
+- `</span><span class="m doc">gptel-make-kagi</span><span class="doc">'
+- `</span><span class="m doc">gptel-make-privategpt</span><span class="doc">'
+- `</span><span class="m doc">gptel-make-perplexity</span><span class="doc">'
+- `</span><span class="m doc">gptel-make-deepseek</span><span class="doc">'
+- `</span><span class="m doc">gptel-make-xai</span><span class="doc">'
+- `</span><span class="m doc">gptel-make-gh-copilot</span><span class="doc">'
+- `</span><span class="m doc">gptel-make-bedrock</span><span class="doc">'
+
+In addition, `</span><span class="m doc">gptel-backend</span><span class="doc">' can be assigned to them.  Examples:
+
+  (setq gptel-backend (gptel-make-openai \"llamacpp\"
+                        :host \"localhost:8080\"
+                        :protocol \"http\"
+                        :models </span><span class="bi doc">\\=</span><span class="doc">'(gpt-oss-120b glm-4.7-flash)))
+
+  (setq gptel-backend (gptel-make-gemini \"Gemini\"
+                        :key gptel-api-key :stream t))
+
+  (setq gptel-backend (gptel-make-anthropic \"Claude-think\"
+                        :key gptel-api-key
+                        :request-params
+                        </span><span class="bi doc">\\=</span><span class="doc">'(:thinking (:type \"enabled\" :budget_tokens 1024)
+                          :max_tokens 2048)))
+
+See their documentation for more information and the package README for
+examples.  Once registered, backends may be retrieved using
+`</span><span class="m doc">gptel-get-backend</span><span class="doc">' or switched to interactively from gptel's menu (see
+`</span><span class="m doc">gptel-menu</span><span class="doc">')."</span>
+  <span class="bi">:safe</span> #'always
+  <span class="bi">:type</span>
+  (<span class="k">let</span> ((types '( choice <span class="bi">:tag</span> <span class="s">"Type"</span>
+                  (const <span class="bi">:tag</span> <span class="s">"OpenAI compatible"</span> gptel-openai)
+                  (const gptel-anthropic)
+                  (const gptel-gemini)
+                  (const gptel-ollama)
+                  (const gptel-kagi)
+                  (const <span class="bi">:tag</span> <span class="s">"GitHub Copilot"</span> gptel-gh)
+                  (const gptel-bedrock)
+                  (const gptel-perplexity)
+                  (const gptel-deepseek)
+                  (const gptel-privategpt))))
+    `(choice
+      (restricted-sexp <span class="bi">:match-alternatives</span> (gptel-backend-p 'nil)
+                       <span class="bi">:tag</span> <span class="s">"No backend"</span>)
+      (cons <span class="bi">:tag</span> <span class="s">"(BACKEND-TYPE NAME . PLIST)"</span> <span class="cd">;</span><span class="c">accommodate (gptel-openai "chatgpt" . plist)
+</span>            ,types (cons string
+                         (plist <span class="bi">:value-type</span> (choice string symbol function
+                                                    (repeat symbol)))))
+      (cons <span class="bi">:tag</span> <span class="s">"(BACKEND-TYPE . PLIST)"</span> <span class="cd">;</span><span class="c">accommodate (gptel-openai :name "chatgpt" . plist)
+</span>            ,types (plist <span class="bi">:value-type</span> (choice string symbol function
+                                              (repeat symbol))))))
+  <span class="bi">:get</span>
+  (<span class="k">lambda</span> (sym)
+    (<span class="k">when-let*</span> ((backend (default-toplevel-value sym))
+                (type (type-of backend))
+                (plist (list <span class="bi">:protocol</span> (gptel-backend-protocol backend)
+                             <span class="bi">:host</span> (gptel-backend-host backend)
+                             <span class="bi">:endpoint</span> (gptel-backend-endpoint backend)
+                             <span class="bi">:header</span> (gptel-backend-header backend)
+                             <span class="bi">:key</span> (gptel-backend-key backend)
+                             <span class="bi">:models</span> (gptel-backend-models backend)
+                             <span class="bi">:stream</span> (gptel-backend-stream backend)
+                             <span class="bi">:curl-args</span> (gptel-backend-curl-args backend)
+                             <span class="bi">:request-params</span> (gptel-backend-request-params backend))))
+      (apply #'list type (gptel-backend-name backend)
+             (<span class="k">cl-loop</span> for (k v) on plist by #'cddr
+                      if (<span class="k">and</span> (readablep v) (not (null v)))
+                      collect k and collect v))))
+  <span class="bi">:set</span>
+  (<span class="k">lambda</span> (sym val)
+    (<span class="k">cond</span>
+     ((null val) (set-default-toplevel-value sym val))
+     ((listp val)
+      (<span class="k">let*</span> ((name (<span class="k">if</span> (stringp (cadr val)) <span class="cd">;</span><span class="c">explicit and implicit :name specification
+</span>                       (cadr val) (plist-get (cdr val) <span class="bi">:name</span>)))
+             (args (<span class="k">if</span> name (cddr val) (cdr val)))
+             type)
+        (<span class="k">cl-remf</span> args <span class="bi">:name</span>)
+        (<span class="k">if</span> (memq (car val) '(gptel-gh gptel--gh))
+            (<span class="k">setq</span> type 'gptel-gh-copilot)
+          (<span class="k">setq</span> type (car val)))
+        (set-default-toplevel-value
+         sym (apply (intern (concat <span class="s">"gptel-make-"</span>
+                                    (substring (symbol-name type) 6)))
+                    name args))))
+     ((gptel-backend-p val) (set-default-toplevel-value sym val)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

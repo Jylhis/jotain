@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-insert-reference-definition – Emacs Documentation Online</title>
+<meta name="description" content="markdown-insert-reference-definition is a natively compiled function
+defined in markdown-mode.el.
+Add definition for reference LABEL with URL and TITLE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-insert-reference-definition</code></h1><p><span class="m"><code>markdown-insert-reference-definition</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-insert-reference-definition <a href="#:~:text=reference-,LABEL"><span class="arg">LABEL</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=with-,URL"><span class="arg">URL</span></a> <a href="#:~:text=and-,TITLE"><span class="arg">TITLE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Add definition for reference <span class="arg">LABEL</span> with <span class="arg">URL</span> and <span class="arg">TITLE</span>.
+<p><span class="arg">LABEL</span> is a Markdown reference label without square brackets.
+<span class="arg">URL</span> and <span class="arg">TITLE</span> are optional.  When given, the <span class="arg">TITLE</span> will
+be used to populate the title attribute when converted to XHTML.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-insert-reference-definition</span> (label <span class="ty">&amp;optional</span> url title)
+  <span class="doc">"Add definition for reference LABEL with URL and TITLE.
+LABEL is a Markdown reference label without square brackets.
+URL and TITLE are optional.  When given, the TITLE will
+be used to populate the title attribute when converted to XHTML."</span>
+  <span class="cd">;; </span><span class="c">END specifies where to leave the point upon return
+</span>  (<span class="k">let</span> ((end (point)))
+    (<span class="k">cl-case</span> markdown-reference-location
+      (end         (goto-char (point-max)))
+      (immediately (markdown-end-of-text-block))
+      (subtree     (markdown-end-of-subtree))
+      (header      (markdown-end-of-defun)))
+    <span class="cd">;; </span><span class="c">Skip backwards over local variables.  This logic is similar to the one
+</span>    <span class="cd">;; </span><span class="c">used in ‘</span><span class="m c">hack-local-variables</span><span class="c">’.
+</span>    (<span class="k">when</span> (<span class="k">and</span> enable-local-variables (eobp))
+      (search-backward <span class="s">"\n\f"</span> (max (- (point) 3000) (point-min)) <span class="bi">:move</span>)
+      (<span class="k">when</span> (<span class="k">let</span> ((case-fold-search t))
+              (search-forward <span class="s">"Local Variables:"</span> nil <span class="bi">:move</span>))
+        (beginning-of-line 0)
+        (<span class="k">when</span> (eq (char-before) ?\n) (backward-char))))
+    (<span class="k">unless</span> (<span class="k">or</span> (markdown-cur-line-blank-p)
+                (thing-at-point-looking-at markdown-regex-reference-definition))
+      (insert <span class="s">"\n"</span>))
+    (insert <span class="s">"\n["</span> label <span class="s">"]: "</span>)
+    (<span class="k">if</span> url
+        (insert url)
+      <span class="cd">;; </span><span class="c">When no URL is given, leave point at END following the colon
+</span>      (<span class="k">setq</span> end (point)))
+    (<span class="k">when</span> (&gt; (length title) 0)
+      (insert <span class="s">" \""</span> title <span class="s">"\""</span>))
+    (<span class="k">unless</span> (looking-at-p <span class="s">"\n"</span>)
+      (insert <span class="s">"\n"</span>))
+    (goto-char end)
+    (<span class="k">when</span> url
+      (message
+       (markdown--substitute-command-keys
+        <span class="s">"Reference [%s] was defined, press \\[</span><span class="m s">markdown-do</span><span class="s">] to jump there"</span>)
+       label))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

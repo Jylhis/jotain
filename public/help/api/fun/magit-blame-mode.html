@@ -1,0 +1,79 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-blame-mode – Emacs Documentation Online</title>
+<meta name="description" content="magit-blame-mode is a natively compiled function defined in
+magit-blame.el.
+Display blame information inline.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-blame-mode</code></h1><p><span class="m"><code>magit-blame-mode</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-blame.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-blame-mode <span class="ty">&amp;optional</span> <a href="#:~:text=if-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Display blame information inline.
+<p>This is a minor mode.  If called interactively, toggle the <span class="m"><code>Magit-Blame
+mode</code></span> mode.  If the prefix argument is positive, enable the mode, and if
+it is zero or negative, disable the mode.
+<p>If called from Lisp, toggle the mode if <span class="arg">ARG</span> is <span class="m"><code>toggle</code></span>.  Enable the
+mode if <span class="arg">ARG</span> is nil, omitted, or is a positive number.  Disable the mode
+if <span class="arg">ARG</span> is a negative number.
+<p>To check whether the minor mode is enabled in the current buffer,
+evaluate the variable <a class="v" href="../var/magit-blame-mode.html"><code>magit-blame-mode</code>(var)</a>/<a class="f" href="../fun/magit-blame-mode.html"><code>magit-blame-mode</code>(fun)</a>.
+<p>The mode's hook is called both when the mode is enabled and when it is
+disabled.
+<p>C-c C-q  <a href="../fun/magit-blame-quit.html"><code>magit-blame-quit</code></a>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-blame.el</span>
+<span class="cd">;;; </span><span class="c">Modes
+</span><span class="cd">;;;; </span><span class="c">Base Mode
+</span>
+(<span class="k">define-minor-mode</span> <span class="f">magit-blame-mode</span>
+  <span class="doc">"Display blame information inline."</span>
+  <span class="bi">:lighter</span> magit-blame-mode-lighter
+  <span class="bi">:interactive</span> nil
+  (<span class="k">cond</span> (magit-blame-mode
+         (add-hook 'after-save-hook     #'magit-blame--refresh t t)
+         (add-hook 'post-command-hook   #'magit-blame-goto-chunk-hook t t)
+         (add-hook 'before-revert-hook  #'magit-blame--remove-overlays t t)
+         (add-hook 'after-revert-hook   #'magit-blame--refresh t t)
+         (add-hook 'read-only-mode-hook #'magit-blame-toggle-read-only t t)
+         (<span class="k">setq</span> magit-blame-buffer-read-only buffer-read-only)
+         (<span class="k">when</span> (<span class="k">or</span> magit-blame-read-only magit-buffer-file-name)
+           (read-only-mode 1))
+         (<span class="k">dolist</span> (mode magit-blame-disable-modes)
+           (<span class="k">when</span> (<span class="k">and</span> (boundp mode) (symbol-value mode))
+             (funcall mode -1)
+             (<span class="k">push</span> mode magit-blame-disabled-modes)))
+         (<span class="k">setq</span> magit-blame-separator (magit-blame--format-separator))
+         (<span class="k">unless</span> magit-blame--style
+           (<span class="k">setq</span> magit-blame--style (car magit-blame-styles)))
+         (<span class="k">setq</span> magit-blame--make-margin-overlays
+               (<span class="k">and</span> (cl-find-if (##assq 'margin-format (cdr %))
+                                magit-blame-styles)
+                    t))
+         (magit-blame--update-margin 'enable))
+        (t
+         (<span class="k">when</span> (process-live-p magit-blame-process)
+           (kill-process magit-blame-process)
+           (<span class="k">while</span> magit-blame-process
+             (sit-for 0.01))) <span class="cd">; </span><span class="c">avoid racing the sentinel
+</span>         (remove-hook 'after-save-hook     #'magit-blame--refresh t)
+         (remove-hook 'post-command-hook   #'magit-blame-goto-chunk-hook t)
+         (remove-hook 'before-revert-hook  #'magit-blame--remove-overlays t)
+         (remove-hook 'after-revert-hook   #'magit-blame--refresh t)
+         (remove-hook 'read-only-mode-hook #'magit-blame-toggle-read-only t)
+         (<span class="k">unless</span> magit-blame-buffer-read-only
+           (read-only-mode -1))
+         (magit-blame-read-only-mode -1)
+         (<span class="k">dolist</span> (mode magit-blame-disabled-modes)
+           (funcall mode 1))
+         (kill-local-variable 'magit-blame-disabled-modes)
+         (kill-local-variable 'magit-blame-type)
+         (kill-local-variable 'magit-blame--style)
+         (magit-blame--update-margin 'disable)
+         (magit-blame--remove-overlays))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

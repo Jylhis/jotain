@@ -1,0 +1,112 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat-completion-at-point – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat-completion-at-point is a natively compiled function defined
+in eca-chat-context.el.
+Complete at point in the chat.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat-completion-at-point</code></h1><p><span class="m"><code>eca-chat-completion-at-point</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-chat-context.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat-completion-at-point)
+</code></pre>
+<h2>Documentation</h2>
+<p>Complete at point in the chat.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat-context.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat-completion-at-point</span> ()
+  <span class="doc">"Complete at point in the chat."</span>
+  (<span class="k">when-let</span> ((type (eca-chat--completion-type-at-point)))
+    (<span class="k">let*</span> ((bounds-start (<span class="k">pcase</span> type
+                           ('prompts (1+ (line-beginning-position)))
+                           ('files-from-prompt (<span class="k">or</span> (eca-chat--completion-prefix-end eca-chat-filepath-prefix)
+                                                   (point)))
+                           (_ (<span class="k">or</span> (eca-chat--completion-prefix-end eca-chat-context-prefix)
+                                  (point)))))
+           (candidates-fn (<span class="k">lambda</span> ()
+                            (<span class="k">eca-api-catch</span> 'input
+                                (<span class="k">eca-api-while-no-input</span>
+                                  (<span class="k">pcase</span> type
+                                    ((<span class="k">or</span> 'contexts-from-prompt
+                                         'contexts-from-new-context)
+                                     (<span class="k">let*</span> ((query (eca-chat--find-typed-query eca-chat-context-prefix))
+                                            (roots (eca--session-workspace-folders (eca-session)))
+                                            (server-items (eca-chat--completion-cached-items
+                                                           'eca-chat--context-completion-cache query
+                                                           (<span class="k">lambda</span> ()
+                                                             (eca-api-request-while-no-input
+                                                              (eca-session)
+                                                              <span class="bi">:method</span> <span class="s">"chat/queryContext"</span>
+                                                              <span class="bi">:params</span> (list <span class="bi">:chatId</span> eca-chat--id
+                                                                            <span class="bi">:query</span> query
+                                                                            <span class="bi">:contexts</span> (vconcat (mapcar #'eca-chat--refine-context
+                                                                                                       eca-chat--context)))))
+                                                           <span class="bi">:contexts</span>
+                                                           (<span class="k">lambda</span> (context)
+                                                             (eca-chat--context-to-completion query roots context))))
+                                            (buffer-items (eca-chat--buffer-completion-items)))
+                                       (append server-items buffer-items)))
+
+                                    ('files-from-prompt
+                                     (<span class="k">let</span> ((query (eca-chat--find-typed-query eca-chat-filepath-prefix))
+                                           (roots (eca--session-workspace-folders (eca-session))))
+                                       (eca-chat--completion-cached-items
+                                        'eca-chat--file-completion-cache query
+                                        (<span class="k">lambda</span> ()
+                                          (eca-api-request-while-no-input
+                                           (eca-session)
+                                           <span class="bi">:method</span> <span class="s">"chat/queryFiles"</span>
+                                           <span class="bi">:params</span> (list <span class="bi">:chatId</span> eca-chat--id
+                                                         <span class="bi">:query</span> query)))
+                                        <span class="bi">:files</span>
+                                        (<span class="k">lambda</span> (file)
+                                          (eca-chat--file-to-completion query roots file)))))
+
+                                    ('prompts
+                                     (<span class="k">let</span> ((query (buffer-substring-no-properties
+                                                   (1+ (line-beginning-position)) (point))))
+                                       (eca-chat--completion-cached-items
+                                        'eca-chat--command-completion-cache query
+                                        (<span class="k">lambda</span> ()
+                                          (eca-api-request-while-no-input
+                                           (eca-session)
+                                           <span class="bi">:method</span> <span class="s">"chat/queryCommands"</span>
+                                           <span class="bi">:params</span> (list <span class="bi">:chatId</span> eca-chat--id
+                                                         <span class="bi">:query</span> query)))
+                                        <span class="bi">:commands</span>
+                                        #'eca-chat--command-to-completion)))
+
+                                    (_ nil)))
+                              (<span class="bi">:interrupted</span> nil)
+                              (`,res res))))
+           (exit-fn (<span class="k">pcase</span> type
+                      ('contexts-from-new-context #'eca-chat--completion-context-from-new-context-exit-function)
+                      ('contexts-from-prompt #'eca-chat--completion-context-from-prompt-exit-function)
+                      ('files-from-prompt #'eca-chat--completion-file-from-prompt-exit-function)
+                      ('prompts #'eca-chat--completion-prompt-exit-function)
+                      (_ nil)))
+           (annotation-fn (<span class="k">pcase</span> type
+                            ((<span class="k">or</span> 'contexts-from-prompt
+                                 'contexts-from-new-context) <span class="w">(-partial #'eca-chat--completion-context-annotate (eca--session-workspace-folders (eca-session))))</span>
+                            ('files-from-prompt (-partial #'eca-chat--completion-file-annotate (eca--session-workspace-folders (eca-session))))
+                            ('prompts #'eca-chat--completion-prompts-annotate))))
+      (list
+       bounds-start
+       (point)
+       (<span class="k">lambda</span> (probe pred action)
+         (<span class="k">cond</span>
+          ((eq action 'metadata)
+           '(metadata (category . eca-capf)
+                      (display-sort-function . identity)
+                      (cycle-sort-function . identity)))
+          ((eq (car-safe action) 'boundaries) nil)
+          (t
+           (complete-with-action action (funcall candidates-fn) probe pred))))
+       <span class="bi">:company-kind</span> #'eca-chat--completion-item-label-kind
+       <span class="bi">:company-require-match</span> 'never
+       <span class="bi">:annotation-function</span> annotation-fn
+       <span class="bi">:exit-function</span> exit-fn))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

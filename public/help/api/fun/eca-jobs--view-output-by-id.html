@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-jobs--view-output-by-id – Emacs Documentation Online</title>
+<meta name="description" content="eca-jobs--view-output-by-id is a natively compiled function defined in
+eca-jobs.el.
+Fetch and display output for JOB-ID using SESSION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-jobs--view-output-by-id</code></h1><p><span class="m"><code>eca-jobs--view-output-by-id</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-jobs.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-jobs--view-output-by-id <a href="#:~:text=using-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=for-,JOB-ID"><span class="arg">JOB-ID</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Fetch and display output for <span class="arg">JOB-ID</span> using <span class="arg">SESSION</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-jobs.el</span>
+(<span class="k">defun</span> <span class="f">eca-jobs--view-output-by-id</span> (session job-id)
+  <span class="doc">"Fetch and display output for JOB-ID using SESSION."</span>
+  (eca-api-request-async session
+    <span class="bi">:method</span> <span class="s">"jobs/readOutput"</span>
+    <span class="bi">:params</span> (list <span class="bi">:job-id</span> job-id)
+    <span class="bi">:success-callback</span>
+    (<span class="k">lambda</span> (result)
+      (<span class="k">let*</span> ((buf-name (format <span class="s">"*eca-job-output: %s*"</span> job-id))
+             (lines (plist-get result <span class="bi">:lines</span>))
+             (status (plist-get result <span class="bi">:status</span>))
+             (exit-code (plist-get result <span class="bi">:exitCode</span>))
+             (buf (get-buffer-create buf-name)))
+        (<span class="k">with-current-buffer</span> buf
+          (<span class="k">let</span> ((inhibit-read-only t))
+            (erase-buffer)
+            (insert (propertize (format <span class="s">"Job: %s  Status: %s%s\n\n"</span>
+                                       job-id
+                                       (<span class="k">or</span> status <span class="s">"unknown"</span>)
+                                       (<span class="k">if</span> exit-code
+                                           (format <span class="s">"  Exit: %s"</span> exit-code)
+                                         <span class="s">""</span>))
+                               'font-lock-face 'bold))
+            (<span class="k">if</span> (<span class="k">and</span> lines (&gt; (length lines) 0))
+                (<span class="k">dolist</span> (line (append lines nil))
+                  (<span class="k">let</span> ((text (<span class="k">or</span> (plist-get line <span class="bi">:text</span>) <span class="s">""</span>))
+                        (stream (<span class="k">or</span> (plist-get line <span class="bi">:stream</span>) <span class="s">"stdout"</span>)))
+                    (insert (<span class="k">if</span> (string= stream <span class="s">"stderr"</span>)
+                                (propertize text 'font-lock-face 'eca-jobs-status-failed-face)
+                              text))
+                    (insert <span class="s">"\n"</span>)))
+              (insert (propertize <span class="s">"No output"</span> 'font-lock-face 'shadow))))
+          (special-mode)
+          (goto-char (point-max)))
+        (<span class="k">let</span> ((win (display-buffer buf '((display-buffer-reuse-window
+                                          display-buffer-below-selected)
+                                         (window-height . 0.4)))))
+          (<span class="k">when</span> win
+            (<span class="k">with-selected-window</span> win
+              (goto-char (point-max))
+              (recenter -1))))))
+    <span class="bi">:error-callback</span>
+    (<span class="k">lambda</span> (_err)
+      (<span class="w">user-error</span> <span class="s">"Failed to read output for job %s"</span> job-id))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

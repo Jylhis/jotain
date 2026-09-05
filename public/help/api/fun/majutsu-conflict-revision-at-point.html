@@ -1,0 +1,139 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-conflict-revision-at-point – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-conflict-revision-at-point is a natively compiled function
+defined in majutsu-conflict.el.
+Return conflict metadata at point as a plist.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-conflict-revision-at-point</code></h1><p><span class="m"><code>majutsu-conflict-revision-at-point</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-conflict.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-conflict-revision-at-point)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return conflict metadata at point as a plist.
+<p>Returns a plist with :change-id, :commit-id, and :side (add/remove/base),
+or nil when point is not inside a labeled section.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-conflict.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-conflict-revision-at-point</span> ()
+  <span class="doc">"Return conflict metadata at point as a plist.
+Returns a plist with :change-id, :commit-id, and :side (add/remove/base),
+or nil when point is not inside a labeled section."</span>
+  (<span class="k">let</span> ((conflict (majutsu-conflict-at-point)))
+    (<span class="k">when</span> conflict
+      (<span class="k">let</span> ((pos (point))
+            (begin (majutsu-conflict-begin-pos conflict))
+            (end (majutsu-conflict-end-pos conflict))
+            (style (majutsu-conflict-style conflict)))
+        (<span class="k">save-excursion</span>
+          (goto-char begin)
+          (<span class="k">let</span> ((done nil)
+                (state nil)
+                (add-count 0)
+                (current-label nil)
+                (diff-remove-label nil)
+                (diff-add-label nil)
+                (base-label nil)
+                (side nil)
+                (label nil))
+            (<span class="k">while</span> (<span class="k">and</span> (not done) (&lt; (point) end))
+              (<span class="k">let*</span> ((line-beg (line-beginning-position))
+                     (line-end (line-end-position))
+                     (line (buffer-substring-no-properties line-beg line-end))
+                     (on-line (<span class="k">and</span> (&lt;= line-beg pos) (&lt;= pos line-end))))
+                (<span class="k">cond</span>
+                 ((string-match majutsu-conflict-end-re line)
+                  (<span class="k">setq</span> state nil)
+                  (<span class="k">when</span> on-line
+                    (<span class="k">setq</span> done t)))
+                 ((string-match majutsu-conflict-diff-re line)
+                  (<span class="k">setq</span> state 'diff
+                        diff-remove-label
+                        (majutsu-conflict--normalize-diff-remove-label
+                         (match-string 2 line))
+                        diff-add-label nil)
+                  (<span class="k">when</span> on-line
+                    (<span class="k">setq</span> side 'remove
+                          label diff-remove-label
+                          done t)))
+                 ((string-match majutsu-conflict-begin-re line)
+                  (<span class="k">when</span> (eq style 'git)
+                    (<span class="k">setq</span> state 'remove
+                          current-label (match-string 2 line))
+                    (<span class="k">when</span> on-line
+                      (<span class="k">setq</span> side 'remove
+                            label current-label
+                            done t))))
+                 ((string-match majutsu-conflict-note-re line)
+                  (<span class="k">when</span> (eq state 'diff)
+                    (<span class="k">setq</span> diff-add-label
+                          (majutsu-conflict--normalize-diff-add-label
+                           (match-string 2 line))))
+                  (<span class="k">when</span> on-line
+                    (<span class="k">setq</span> side 'add
+                          label diff-add-label
+                          done t)))
+                 ((string-match majutsu-conflict-remove-re line)
+                  (<span class="k">setq</span> state 'remove
+                        current-label (match-string 2 line))
+                  (<span class="k">when</span> on-line
+                    (<span class="k">setq</span> side 'remove
+                          label current-label
+                          done t)))
+                 ((string-match majutsu-conflict-add-re line)
+                  (<span class="k">cl-incf</span> add-count)
+                  (<span class="k">setq</span> state (<span class="k">if</span> (<span class="k">or</span> (eq style 'jj-diff)
+                                      (<span class="k">and</span> (eq style 'jj-snapshot) (= add-count 1)))
+                                  'base
+                                'add)
+                        current-label (match-string 2 line))
+                  (<span class="k">when</span> on-line
+                    (<span class="k">setq</span> side state
+                          label current-label
+                          done t)))
+                 ((string-match majutsu-conflict-git-ancestor-re line)
+                  (<span class="k">setq</span> state 'base
+                        base-label (match-string 2 line)
+                        current-label base-label)
+                  (<span class="k">when</span> on-line
+                    (<span class="k">setq</span> side 'base
+                          label base-label
+                          done t)))
+                 ((string-match majutsu-conflict-git-separator-re line)
+                  (<span class="k">setq</span> state 'add)
+                  (<span class="k">when</span> on-line
+                    (<span class="k">setq</span> side 'add
+                          label nil
+                          done t)))
+                 (t
+                  (<span class="k">when</span> on-line
+                    (<span class="k">cond</span>
+                     ((eq state 'diff)
+                      (<span class="k">cond</span>
+                       ((string-prefix-p <span class="s">"-"</span> line)
+                        (<span class="k">setq</span> side 'remove
+                              label diff-remove-label))
+                       ((string-prefix-p <span class="s">"+"</span> line)
+                        (<span class="k">setq</span> side 'add
+                              label diff-add-label))))
+                     ((eq state 'remove)
+                      (<span class="k">setq</span> side 'remove
+                            label current-label))
+                     ((eq state 'add)
+                      (<span class="k">setq</span> side 'add
+                            label current-label))
+                     ((eq state 'base)
+                      (<span class="k">setq</span> side 'base
+                            label current-label)))
+                    (<span class="k">setq</span> done t))))
+                (forward-line 1)))
+            (<span class="k">let</span> ((parsed (majutsu-conflict-parse-label label)))
+              (<span class="k">when</span> (<span class="k">and</span> parsed side)
+                (list <span class="bi">:change-id</span> (plist-get parsed <span class="bi">:change-id</span>)
+                      <span class="bi">:commit-id</span> (plist-get parsed <span class="bi">:commit-id</span>)
+                      <span class="bi">:side</span> side)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

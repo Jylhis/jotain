@@ -1,0 +1,75 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-display-inline-images – Emacs Documentation Online</title>
+<meta name="description" content="markdown-display-inline-images is an interactive and natively compiled
+function defined in markdown-mode.el.
+Add inline image overlays to image links in the buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-display-inline-images</code></h1><p><span class="m"><code>markdown-display-inline-images</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-display-inline-images)
+</code></pre>
+<h2>Documentation</h2>
+<p>Add inline image overlays to image links in the buffer.
+<p>This can be toggled with <a href="../fun/markdown-toggle-inline-images.html"><code>markdown-toggle-inline-images</code></a>
+or <kbd>M-x markdown-toggle-inline-images</kbd> (<a href="../fun/markdown-toggle-inline-images.html"><code>markdown-toggle-inline-images</code></a>).
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-display-inline-images</span> ()
+  <span class="doc">"Add inline image overlays to image links in the buffer.
+This can be toggled with `</span><span class="m doc">markdown-toggle-inline-images</span><span class="doc">'
+or \\[</span><span class="m doc">markdown-toggle-inline-images</span><span class="doc">]."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">unless</span> (display-images-p)
+    (<span class="w">error</span> <span class="s">"Cannot show images"</span>))
+  (<span class="k">save-excursion</span>
+    (<span class="k">save-restriction</span>
+      (widen)
+      (goto-char (point-min))
+      (<span class="k">while</span> (re-search-forward markdown-regex-link-inline nil t)
+        (<span class="k">let*</span> ((start (match-beginning 0))
+               (imagep (match-beginning 1))
+               (end (match-end 0))
+               (file (match-string-no-properties 6)))
+          (<span class="k">when</span> (<span class="k">and</span> imagep
+                     (not (zerop (length file))))
+            (<span class="k">unless</span> (file-exists-p file)
+              (<span class="k">let*</span> ((download-file (funcall markdown-translate-filename-function file))
+                     (valid-url (<span class="k">ignore-errors</span>
+                                  (member (downcase (url-type (url-generic-parse-url download-file)))
+                                          markdown-remote-image-protocols))))
+                (<span class="k">if</span> (<span class="k">and</span> markdown-display-remote-images valid-url)
+                    (<span class="k">setq</span> file (markdown--get-remote-image download-file))
+                  (<span class="k">when</span> (not valid-url)
+                    <span class="cd">;; </span><span class="c">strip query parameter
+</span>                    (<span class="k">setq</span> file (replace-regexp-in-string <span class="s">"?.+\\'"</span> <span class="s">""</span> file))
+                    (<span class="k">unless</span> (file-exists-p file)
+                      (<span class="k">setq</span> file (url-unhex-string file)))))))
+            (<span class="k">when</span> (file-exists-p file)
+              (<span class="k">let*</span> ((abspath (<span class="k">if</span> (file-name-absolute-p file)
+                                  file
+                                (concat default-directory file)))
+                     (image
+                      (<span class="k">cond</span> ((<span class="k">and</span> markdown-max-image-size
+                                  (image-type-available-p 'imagemagick))
+                             (create-image
+                              abspath 'imagemagick nil
+                              <span class="bi">:max-width</span> (car markdown-max-image-size)
+                              <span class="bi">:max-height</span> (cdr markdown-max-image-size)))
+                            (markdown-max-image-size
+                             (create-image abspath nil nil
+                                           <span class="bi">:max-width</span> (car markdown-max-image-size)
+                                           <span class="bi">:max-height</span> (cdr markdown-max-image-size)))
+                            (t (create-image abspath)))))
+                (<span class="k">when</span> image
+                  (<span class="k">let</span> ((ov (make-overlay start end)))
+                    (overlay-put ov 'display image)
+                    (overlay-put ov 'face 'default)
+                    (<span class="k">push</span> ov markdown-inline-image-overlays)))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

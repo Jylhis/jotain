@@ -1,0 +1,99 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--temporary-files – Emacs Documentation Online</title>
+<meta name="description" content="consult--temporary-files is a natively compiled function defined in
+consult.el.
+Return a function to open files temporarily for preview.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--temporary-files</code></h1><p><span class="m"><code>consult--temporary-files</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--temporary-files)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a function to open files temporarily for preview.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--temporary-files</span> ()
+  <span class="doc">"Return a function to open files temporarily for preview."</span>
+  (<span class="k">let</span> ((dir default-directory)
+        (hook (make-symbol <span class="s">"consult--temporary-files-upgrade"</span>))
+        (orig-buffers (buffer-list))
+        temporary-buffers)
+    (fset hook
+          (<span class="k">lambda</span> (_)
+            <span class="cd">;; </span><span class="c">Fully initialize previewed files and keep them alive.
+</span>            (<span class="k">unless</span> (consult--completion-window-p)
+              (<span class="k">let</span> (live-files)
+                (<span class="k">pcase-dolist</span> (`(,file . ,buf) temporary-buffers)
+                  (<span class="k">when-let*</span> ((wins (<span class="k">and</span> (buffer-live-p buf)
+                                         (get-buffer-window-list buf))))
+                    (<span class="k">push</span> (cons file (mapcar
+                                      (<span class="k">lambda</span> (win)
+                                        (cons win (window-state-get win t)))
+                                      wins))
+                          live-files)))
+                (<span class="k">pcase-dolist</span> (`(,_ . ,buf) temporary-buffers)
+                  (kill-buffer buf))
+                (<span class="k">setq</span> temporary-buffers nil)
+                (<span class="k">pcase-dolist</span> (`(,file . ,wins) live-files)
+                  (<span class="k">when-let*</span> ((buf (consult--file-action file)))
+                    (<span class="k">push</span> buf orig-buffers)
+                    (<span class="k">pcase-dolist</span> (`(,win . ,state) wins)
+                      (<span class="k">setf</span> (car (alist-get 'buffer state)) buf)
+                      (window-state-put state win))))))))
+    (<span class="k">lambda</span> (<span class="ty">&amp;optional</span> name)
+      (<span class="k">if</span> name
+          (<span class="k">let</span> ((default-directory dir))
+            (<span class="k">setq</span> name (<span class="k">let</span> (file-name-handler-alist)
+                         (abbreviate-file-name (expand-file-name name))))
+            (<span class="k">or</span>
+             <span class="cd">;; </span><span class="c">Find existing fully initialized buffer (non-previewed).  We have
+</span>             <span class="cd">;; </span><span class="c">to check for fully initialized buffer before accessing the
+</span>             <span class="cd">;; </span><span class="c">previewed buffers, since `</span><span class="m c">embark-act</span><span class="c">' can open a buffer which is
+</span>             <span class="cd">;; </span><span class="c">currently previewed, such that we end up with two buffers for
+</span>             <span class="cd">;; </span><span class="c">the same file - one previewed and only partially initialized and
+</span>             <span class="cd">;; </span><span class="c">one fully initialized.  In this case we prefer the fully
+</span>             <span class="cd">;; </span><span class="c">initialized buffer.  For directories `</span><span class="m c">get-file-buffer</span><span class="c">' returns nil,
+</span>             <span class="cd">;; </span><span class="c">therefore we have to special case Dired.
+</span>             (<span class="k">let</span> (file-name-handler-alist)
+               (<span class="k">if</span> (<span class="k">and</span> (fboundp 'dired-find-buffer-nocreate) (file-directory-p name))
+                   (dired-find-buffer-nocreate name)
+                 (get-file-buffer name)))
+             <span class="cd">;; </span><span class="c">Find existing previewed buffer.  Previewed buffers are not fully
+</span>             <span class="cd">;; </span><span class="c">initialized (hooks are delayed) in order to ensure fast preview.
+</span>             (cdr (assoc name temporary-buffers))
+             <span class="cd">;; </span><span class="c">If no existing buffer has been found, open the file for preview.
+</span>             (<span class="k">when-let*</span> (((not (seq-find (<span class="k">lambda</span> (x) (string-match-p x name))
+                                         consult-preview-excluded-files)))
+                         (buf (consult--find-file-temporarily name)))
+               <span class="cd">;; </span><span class="c">Only add new buffer if not already in the list
+</span>               (<span class="k">unless</span> (<span class="k">or</span> (rassq buf temporary-buffers) (memq buf orig-buffers))
+                 (add-hook 'window-selection-change-functions hook)
+                 (<span class="k">cl-callf</span> consult--preview-add-buffer temporary-buffers
+                   (cons name buf) (file-name-nondirectory (directory-file-name name)))
+                 <span class="cd">;; </span><span class="c">Disassociate buffer from file by setting `</span><span class="m c">buffer-file-name</span><span class="c">'
+</span>                 <span class="cd">;; </span><span class="c">and `</span><span class="m c">dired-directory</span><span class="c">' to nil.  This lets us open an already
+</span>                 <span class="cd">;; </span><span class="c">previewed buffer with the Embark default action C-. RET.
+</span>                 <span class="cd">;; </span><span class="c">The buffer disassociation is delayed to avoid breaking modes
+</span>                 <span class="cd">;; </span><span class="c">like `</span><span class="m c">pdf-view-mode</span><span class="c">' or `</span><span class="m c">doc-view-mode</span><span class="c">' which rely on
+</span>                 <span class="cd">;; </span><span class="c">`</span><span class="m c">buffer-file-name</span><span class="c">'.  Executing (set-visited-file-name nil)
+</span>                 <span class="cd">;; </span><span class="c">early also prevents the major mode initialization.
+</span>                 (<span class="k">let</span> ((hook (make-symbol <span class="s">"consult--temporary-files-disassociate"</span>)))
+                   (fset hook (<span class="k">lambda</span> ()
+                                (<span class="k">when</span> (buffer-live-p buf)
+                                  (<span class="k">with-current-buffer</span> buf
+                                    (remove-hook 'pre-command-hook hook)
+                                    (<span class="k">setq-local</span> buffer-read-only t
+                                                dired-directory nil
+                                                buffer-file-name nil)))))
+                   (add-hook 'pre-command-hook hook)))
+               buf)))
+        (remove-hook 'window-selection-change-functions hook)
+        (<span class="k">pcase-dolist</span> (`(,_ . ,buf) temporary-buffers)
+          (kill-buffer buf))
+        (<span class="k">setq</span> temporary-buffers nil)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

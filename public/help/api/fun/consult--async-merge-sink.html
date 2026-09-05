@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--async-merge-sink – Emacs Documentation Online</title>
+<meta name="description" content="consult--async-merge-sink is a natively compiled function defined in
+consult.el.
+Create sink for the async sub-functions which merges the sub-lists.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--async-merge-sink</code></h1><p><span class="m"><code>consult--async-merge-sink</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--async-merge-sink <a href="#:~:text=lists.-,SINK"><span class="arg">SINK</span></a> <a href="#:~:text=sink.-,INDICATOR"><span class="arg">INDICATOR</span></a> <a href="#:~:text=symbols.-,TAIL"><span class="arg">TAIL</span></a> <a href="#:~:text=list.-,IDX"><span class="arg">IDX</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create sink for the async sub-functions which merges the sub-lists.
+<p><span class="arg">SINK</span> is the joined sink.
+<span class="arg">INDICATOR</span> is a vector of indicator symbols.
+<span class="arg">TAIL</span> is a vector of list tail links for each sub-list.
+<span class="arg">IDX</span> is the index of the corresponding link in <span class="arg">TAIL</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--async-merge-sink</span> (sink indicator tail idx)
+  <span class="doc">"Create sink for the async sub-functions which merges the sub-lists.
+SINK is the joined sink.
+INDICATOR is a vector of indicator symbols.
+TAIL is a vector of list tail links for each sub-list.
+IDX is the index of the corresponding link in TAIL."</span>
+  (<span class="k">lambda</span> (action)
+    (<span class="k">pcase</span> action
+      (`[indicator ,state]
+       (aset indicator (1- idx) state)
+       (<span class="k">let*</span> ((severity [nil finished running killed failed])
+              (state (aref severity (<span class="k">cl-loop</span> for i across indicator maximize
+                                             (<span class="k">or</span> (seq-position severity i) 0)))))
+         (funcall sink `[indicator ,state])))
+      ('flush
+       <span class="cd">;; </span><span class="c">Flush items if sub-list exists.
+</span>       (<span class="k">when-let*</span> ((tl (aref tail idx)) (pre t))
+         (<span class="k">let</span> ((i idx)) (<span class="k">while</span> (not (<span class="k">setq</span> pre (aref tail (<span class="k">decf</span> i))))))
+         (setcdr pre (cdr tl))
+         (aset tail idx nil)
+         (funcall sink 'flush)
+         (funcall sink (cdr (aref tail 0)))))
+      ((pred consp)
+       (<span class="k">let</span> ((tl (aref tail idx))
+             (last (last action))
+             pre)
+         (aset tail idx last)
+         (<span class="k">if</span> tl <span class="cd">;; </span><span class="c">Append items if sub-list exists.
+</span>             (<span class="k">progn</span>
+               (setcdr last (cdr tl))
+               (setcdr tl action))
+           <span class="cd">;; </span><span class="c">Otherwise insert new sub-list.
+</span>           (<span class="k">let</span> ((i idx)) (<span class="k">while</span> (not (<span class="k">setq</span> pre (aref tail (<span class="k">decf</span> i))))))
+           (setcdr last (cdr pre))
+           (setcdr pre action))
+         (funcall sink 'flush)
+         (funcall sink (cdr (aref tail 0))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

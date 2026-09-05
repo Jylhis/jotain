@@ -1,0 +1,70 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: orderless-compile – Emacs Documentation Online</title>
+<meta name="description" content="orderless-compile is a natively compiled function defined in
+orderless.el.
+Build regexps to match the components of PATTERN.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>orderless-compile</code></h1><p><span class="m"><code>orderless-compile</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">orderless.el</span>.
+<h2>Signature</h2>
+<pre><code>(orderless-compile <a href="#:~:text=of-,PATTERN"><span class="arg">PATTERN</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=matching-,STYLES"><span class="arg">STYLES</span></a> <a href="#:~:text=style-,DISPATCHERS"><span class="arg">DISPATCHERS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Build regexps to match the components of <span class="arg">PATTERN</span>.
+<p>Split <span class="arg">PATTERN</span> on <a href="../var/orderless-component-separator.html"><code>orderless-component-separator</code></a> and compute
+matching styles for each component.  For each component the style
+<span class="arg">DISPATCHERS</span> are run to determine the matching styles to be used;
+they are called with arguments the component, the 0-based index
+of the component and the total number of components.  If the
+<span class="arg">DISPATCHERS</span> decline to handle the component, then the list of
+matching <span class="arg">STYLES</span> is used.  See <a href="../fun/orderless--dispatch.html"><code>orderless--dispatch</code></a> for details
+on dispatchers.
+<p>The <span class="arg">STYLES</span> default to <a href="../var/orderless-matching-styles.html"><code>orderless-matching-styles</code></a>, and the
+<span class="arg">DISPATCHERS</span> default to <span class="m"><code>orderless-dipatchers</code></span>.  Since nil gets
+you the default, if you want no dispatchers to be run, use
+<br>'(ignore) as the value of <span class="arg">DISPATCHERS</span>.
+<p>The return value is a pair of a predicate function and a list of
+regexps.  The predicate function can also be nil.  It takes a
+string as argument.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w4nd3vqafwr5yv9m3q76kmi7a9pr8jas-emacs-packages-deps/share/emacs/site-lisp/elpa/orderless-20260830.1156/orderless.el</span>
+(<span class="k">defun</span> <span class="f">orderless-compile</span> (pattern <span class="ty">&amp;optional</span> styles dispatchers)
+  <span class="doc">"Build regexps to match the components of PATTERN.
+Split PATTERN on `</span><span class="m doc">orderless-component-separator</span><span class="doc">' and compute
+matching styles for each component.  For each component the style
+DISPATCHERS are run to determine the matching styles to be used;
+they are called with arguments the component, the 0-based index
+of the component and the total number of components.  If the
+DISPATCHERS decline to handle the component, then the list of
+matching STYLES is used.  See `</span><span class="m doc">orderless--dispatch</span><span class="doc">' for details
+on dispatchers.
+
+The STYLES default to `</span><span class="m doc">orderless-matching-styles</span><span class="doc">', and the
+DISPATCHERS default to `</span><span class="m doc">orderless-dipatchers</span><span class="doc">'.  Since nil gets
+you the default, if you want no dispatchers to be run, use
+</span><span class="bi doc">\\=</span><span class="doc">'(ignore) as the value of DISPATCHERS.
+
+The return value is a pair of a predicate function and a list of
+regexps.  The predicate function can also be nil.  It takes a
+string as argument."</span>
+  (<span class="k">unless</span> styles (<span class="k">setq</span> styles orderless-matching-styles))
+  (<span class="k">unless</span> dispatchers (<span class="k">setq</span> dispatchers orderless-style-dispatchers))
+  (<span class="k">cl-loop</span>
+   with predicate = nil
+   with sep = orderless-component-separator
+   with temp = (<span class="k">cond</span> ((functionp sep) (funcall sep pattern))
+                     ((consp sep) (apply (car sep) pattern (cdr sep)))
+                     (t (split-string pattern sep)))
+   with components = (<span class="k">if</span> (equal (car (last temp)) <span class="s">""</span>) (nbutlast temp) temp)
+   with total = (length components)
+   for comp in components and index from 0
+   for (pred . regexp) = (orderless--compile-component
+                          comp index total styles dispatchers)
+   when regexp collect regexp into regexps
+   when pred do (<span class="k">cl-callf</span> orderless--predicate-and predicate pred)
+   finally return (cons predicate regexps)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,121 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate--place-node-or-text – Emacs Documentation Online</title>
+<meta name="description" content="combobulate--place-node-or-text is a natively compiled function
+defined in combobulate-manipulation.el.
+Place NODE-OR-TEXT at POSITION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate--place-node-or-text</code></h1><p><span class="m"><code>combobulate--place-node-or-text</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">combobulate-manipulation.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate--place-node-or-text <a href="#:~:text=at-,POSITION"><span class="arg">POSITION</span></a> <a href="#:~:text=Place-,NODE-OR-TEXT"><span class="arg">NODE-OR-TEXT</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,MODE"><span class="arg">MODE</span></a> <a href="#:~:text=If-,NO-TRAILING-NEWLINE"><span class="arg">NO-TRAILING-NEWLINE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Place <span class="arg">NODE-OR-TEXT</span> at <span class="arg">POSITION</span>.
+<p><span class="arg">NODE-OR-TEXT</span> must be a valid node or a string.
+<p>If <span class="arg">NODE-OR-TEXT</span> is a NODE, then its first-line indentation is
+calculated first and the text indented properly relative to
+<span class="arg">POSITION</span>.
+<p>If <span class="arg">NODE-OR-TEXT</span> is a string, then all indentation must be handled
+by the caller. The string is inserted at <span class="arg">POSITION</span>.
+<p>If <span class="arg">MODE</span> is non-nil, then it must be either <a href="../fun/newline.html"><code>newline</code></a> or
+<a href="../fun/inline.html"><code>inline</code></a>. Where <a href="../fun/newline.html"><code>newline</code></a> forces the placement of <span class="arg">NODE-OR-TEXT</span> on
+a new line. If <span class="arg">MODE</span> is <a href="../fun/inline.html"><code>inline</code></a> then it is places inline
+alongside other nodes around <span class="arg">POSITION</span>.
+<p>If <span class="arg">NO-TRAILING-NEWLINE</span> is non-nil, then no trailing newline is inserted
+after <span class="arg">NODE-OR-TEXT</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-manipulation.el</span>
+(<span class="k">defun</span> <span class="f">combobulate--place-node-or-text</span> (position node-or-text <span class="ty">&amp;optional</span> mode no-trailing-newline)
+  <span class="doc">"Place NODE-OR-TEXT at POSITION.
+
+NODE-OR-TEXT must be a valid node or a string.
+
+If NODE-OR-TEXT is a NODE, then its first-line indentation is
+calculated first and the text indented properly relative to
+POSITION.
+
+If NODE-OR-TEXT is a string, then all indentation must be handled
+by the caller. The string is inserted at POSITION.
+
+If MODE is non-nil, then it must be either `</span><span class="m doc">newline</span><span class="doc">' or
+`</span><span class="m doc">inline</span><span class="doc">'. Where `</span><span class="m doc">newline</span><span class="doc">' forces the placement of NODE-OR-TEXT on
+a new line. If MODE is `</span><span class="m doc">inline</span><span class="doc">' then it is places inline
+alongside other nodes around POSITION.
+
+If NO-TRAILING-NEWLINE is non-nil, then no trailing newline is inserted
+after NODE-OR-TEXT."</span>
+  (<span class="k">let*</span> ((col (<span class="k">save-excursion</span> (goto-char position)
+                              (current-column)))
+         (node-text)
+         (newline-insert (<span class="k">and</span> (<span class="k">or</span> (eq mode 'newline) (null mode))
+                              (combobulate-before-point-blank-p position))))
+    (<span class="k">cond</span>
+     ((stringp node-or-text)
+      (<span class="k">setq</span> node-text (combobulate-indent-string
+                       node-or-text
+                       <span class="bi">:first-line-amount</span> col
+                       <span class="bi">:first-line-operation</span> 'absolute
+                       <span class="bi">:rest-lines-amount</span> 'relative)))
+     ((<span class="k">or</span> (combobulate-node-p node-or-text)
+          (combobulate-proxy-node-p node-or-text))
+      (<span class="k">let</span> ((sequence-separator
+             <span class="cd">;; </span><span class="c">attempt to guess the sequence separator, almost always
+</span>             <span class="cd">;; </span><span class="c">an anonymous node, that (usually!) follows nodes --
+</span>             <span class="cd">;; </span><span class="c">think array/list separators; semicolons after
+</span>             <span class="cd">;; </span><span class="c">expressions, etc. -- and ensure it is appended to the
+</span>             <span class="cd">;; </span><span class="c">cloned text. This is of course not the proper way to
+</span>             <span class="cd">;; </span><span class="c">do this: the `</span><span class="m c">xxx-grammar.json</span><span class="c">' files contain the
+</span>             <span class="cd">;; </span><span class="c">rules for sequences and the character to use. This is
+</span>             <span class="cd">;; </span><span class="c">merely the 90% solution that works for most, but not
+</span>             <span class="cd">;; </span><span class="c">all, instances.
+</span>             (<span class="k">save-excursion</span>
+               (combobulate--goto-node node-or-text t)
+               (<span class="k">when-let</span> ((node-after (<span class="k">condition-case</span> nil
+                                          (combobulate-node-on (point) (1+ (point)) nil nil)
+                                        (<span class="w">error</span> nil))))
+                 (<span class="k">cond</span>
+                  <span class="cd">;; </span><span class="c">named nodes get no sequence separator
+</span>                  ((combobulate-node-named-p node-after) <span class="s">""</span>)
+                  ((<span class="k">and</span> (combobulate-node-anonymous-p node-after)
+                        (member (combobulate-node-text node-after)
+                                (<span class="k">combobulate-read</span> plausible-separators)))
+                   (combobulate-node-text node-after))
+                  (t <span class="s">""</span>)))))
+            (node-col (<span class="k">save-excursion</span>
+                        (combobulate--goto-node node-or-text)
+                        (current-indentation))))
+        (<span class="k">setq</span> node-text (<span class="k">if</span> newline-insert
+                            (combobulate-indent-string
+                             <span class="cd">;; </span><span class="c">the first line may not include all of its
+</span>                             <span class="cd">;; </span><span class="c">indentation because the node extents won't
+</span>                             <span class="cd">;; </span><span class="c">include it. This fixes it so it does.
+</span>                             (combobulate-indent-string-first-line
+                              (concat (combobulate-node-text node-or-text) sequence-separator)
+                              node-col)
+                             <span class="bi">:first-line-amount</span> (- col node-col)
+                             <span class="bi">:first-line-operation</span> 'add)
+                          (concat (combobulate-node-text node-or-text) sequence-separator)))))
+     (t (<span class="w">error</span> <span class="s">"Cannot place node or text `</span><span class="m s">%s</span><span class="s">'"</span> node-or-text)))
+    (goto-char position)
+    <span class="cd">;; </span><span class="c">If a node has nothing but whitespace preceding it, then it's a
+</span>    <span class="cd">;; </span><span class="c">"newline-delimited" node. Newline-delimited nodes are regular
+</span>    <span class="cd">;; </span><span class="c">nodes that exist, usually, on a line of their own. That is on
+</span>    <span class="cd">;; </span><span class="c">contrast to inline-delimited nodes that are placed to the left
+</span>    <span class="cd">;; </span><span class="c">or right on a line with other nodes.
+</span>    (<span class="k">if</span> newline-insert
+        <span class="cd">;; </span><span class="c">newline-delimited node
+</span>        (<span class="k">progn</span>
+          (<span class="k">unless</span> no-trailing-newline (split-line 0))
+          (combobulate--refactor-insert-copied-values
+           (list (string-trim-right node-text))))
+      <span class="cd">;; </span><span class="c">inline-delimited node
+</span>      (<span class="k">save-excursion</span>
+        (insert node-text)
+        (just-one-space 0)
+        (<span class="k">unless</span> (looking-at <span class="s">"\\s-"</span>)
+          (insert <span class="s">" "</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

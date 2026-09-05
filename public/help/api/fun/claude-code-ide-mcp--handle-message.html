@@ -1,0 +1,97 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp--handle-message – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp--handle-message is a natively compiled function
+defined in claude-code-ide-mcp.el.
+Handle incoming JSON-RPC MESSAGE from SESSION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp--handle-message</code></h1><p><span class="m"><code>claude-code-ide-mcp--handle-message</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide-mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp--handle-message <a href="#:~:text=RPC-,MESSAGE"><span class="arg">MESSAGE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=from-,SESSION"><span class="arg">SESSION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle incoming JSON-RPC <span class="arg">MESSAGE</span> from <span class="arg">SESSION</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp--handle-message</span> (message <span class="ty">&amp;optional</span> session)
+  <span class="doc">"Handle incoming JSON-RPC MESSAGE from SESSION."</span>
+  (<span class="k">when</span> message
+    (<span class="k">claude-code-ide-debug</span> <span class="s">"Processing message with method: %s, id: %s"</span>
+                           (alist-get 'method message)
+                           (alist-get 'id message))
+    (<span class="k">let*</span> ((method (alist-get 'method message))
+           (id (alist-get 'id message))
+           (params (alist-get 'params message))
+           (response
+            (<span class="k">cond</span>
+             <span class="cd">;; </span><span class="c">Request handlers
+</span>             ((string= method <span class="s">"initialize"</span>)
+              (<span class="k">claude-code-ide-debug</span> <span class="s">"Handling initialize request"</span>)
+              (claude-code-ide-mcp--handle-initialize id params))
+             ((string= method <span class="s">"tools/list"</span>)
+              (<span class="k">claude-code-ide-debug</span> <span class="s">"Handling tools/list request"</span>)
+              (claude-code-ide-mcp--handle-tools-list id params))
+             ((string= method <span class="s">"tools/call"</span>)
+              (<span class="k">claude-code-ide-debug</span> <span class="s">"Handling tools/call request"</span>)
+              (claude-code-ide-mcp--handle-tools-call id params session))
+             ((string= method <span class="s">"prompts/list"</span>)
+              (<span class="k">claude-code-ide-debug</span> <span class="s">"Handling prompts/list request"</span>)
+              (claude-code-ide-mcp--handle-prompts-list id params))
+             <span class="cd">;; </span><span class="c">Unknown method
+</span>             (id
+              (<span class="k">claude-code-ide-debug</span> <span class="s">"Unknown method: %s (sending error response)"</span> method)
+              (claude-code-ide-mcp--make-error-response
+               id -32601 (format <span class="s">"Method not found: %s"</span> method)))
+             <span class="cd">;; </span><span class="c">Notification (no id) - ignore
+</span>             (t
+              (<span class="k">claude-code-ide-debug</span> <span class="s">"Received notification (no response needed): %s"</span> method)
+              nil))))
+      <span class="cd">;; </span><span class="c">Send response if we have one
+</span>      (<span class="k">cond</span>
+       <span class="cd">;; </span><span class="c">We have a response to send
+</span>       (response
+        (<span class="k">let</span> ((client (<span class="k">if</span> session
+                          (claude-code-ide-mcp-session-client session)
+                        <span class="cd">;; </span><span class="c">Fallback: try to find session from current buffer using cache
+</span>                        (<span class="k">when-let</span> ((s (<span class="k">or</span> (<span class="k">when</span> (<span class="k">and</span> claude-code-ide-mcp--buffer-cache-valid
+                                                     claude-code-ide-mcp--buffer-session-cache)
+                                            claude-code-ide-mcp--buffer-session-cache)
+                                          (<span class="k">when-let*</span> ((project-dir (claude-code-ide-mcp--get-buffer-project))
+                                                      (found-session (claude-code-ide-mcp--get-session-for-project project-dir)))
+                                            <span class="cd">;; </span><span class="c">Cache the session (only cache non-nil values)
+</span>                                            (<span class="k">when</span> found-session
+                                              (<span class="k">setq</span> claude-code-ide-mcp--buffer-session-cache found-session
+                                                    claude-code-ide-mcp--buffer-cache-valid t))
+                                            found-session))))
+                          (claude-code-ide-mcp-session-client s)))))
+          (<span class="k">if</span> client
+              (<span class="k">let</span> ((response-text (json-encode response)))
+                (<span class="k">claude-code-ide-debug</span> <span class="s">"Sending response for method %s (id %s): %s"</span> method id response-text)
+                (<span class="k">claude-code-ide-debug</span> <span class="s">"MCP sending response for %s: %s"</span> method response-text)
+                (<span class="k">condition-case</span> err
+                    (websocket-send-text client response-text)
+                  (<span class="w">error</span>
+                   (<span class="k">claude-code-ide-debug</span> <span class="s">"Error sending response: %s"</span> err)
+                   (<span class="k">claude-code-ide-debug</span> <span class="s">"Error sending MCP response: %s"</span> err))))
+            (<span class="k">claude-code-ide-debug</span> <span class="s">"No client connected, cannot send response"</span>))))
+       <span class="cd">;; </span><span class="c">No response but we have an ID (deferred response)
+</span>       ((<span class="k">and</span> id (not response))
+        (<span class="k">claude-code-ide-debug</span> <span class="s">"No response generated for method %s (id %s) - likely deferred"</span> method id)
+        <span class="cd">;; </span><span class="c">Check if it's stored as deferred in any session
+</span>        (<span class="k">let</span> ((tool-name (alist-get 'name params))
+              (found nil))
+          (<span class="k">when</span> tool-name
+            (maphash (<span class="k">lambda</span> (_proj-dir s)
+                       (<span class="k">when</span> (gethash tool-name (claude-code-ide-mcp-session-deferred s))
+                         (<span class="k">setq</span> found t)))
+                     claude-code-ide-mcp--sessions)
+            (<span class="k">when</span> found
+              (<span class="k">claude-code-ide-debug</span> <span class="s">"Confirmed: %s is waiting for deferred response"</span> tool-name)))))
+       <span class="cd">;; </span><span class="c">No response and no ID (notification)
+</span>       (t
+        (<span class="k">claude-code-ide-debug</span> <span class="s">"No response needed for notification: %s"</span> method))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

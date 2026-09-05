@@ -1,0 +1,100 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--with-preview – Emacs Documentation Online</title>
+<meta name="description" content="consult--with-preview is a macro defined in consult.el.
+Add preview support to BODY.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--with-preview</code></h1><p><span class="m"><code>consult--with-preview</code></span> is a macro defined in <span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">consult--with-preview</span> <a href="#:~:text=candidate.-,PREVIEW-KEY"><span class="arg">PREVIEW-KEY</span></a> <a href="#:~:text=BODY.-,STATE"><span class="arg">STATE</span></a> <a href="#:~:text=function.-,TRANSFORM"><span class="arg">TRANSFORM</span></a> <a href="#:~:text=function.-,CANDIDATE"><span class="arg">CANDIDATE</span></a> <a href="#:~:text=preview.-,SAVE-INPUT"><span class="arg">SAVE-INPUT</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=to-,BODY"><span class="arg">BODY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Add preview support to <span class="arg">BODY</span>.
+<p><span class="arg">STATE</span> is the state function.
+<span class="arg">TRANSFORM</span> is the transformation function.
+<span class="arg">CANDIDATE</span> is the function returning the current candidate.
+<span class="arg">PREVIEW-KEY</span> are the keys which triggers the preview.
+<span class="arg">SAVE-INPUT</span> can be a history variable symbol to save the input.
+<p>The state function takes two arguments, an action argument and the
+selected candidate.  The candidate argument can be nil if no candidate is
+selected or if the selection was aborted.  The function is called in
+sequence with the following arguments:
+<p>&nbsp;&nbsp;1. 'setup nil         After entering the mb (minibuffer-setup-hook).
+<br>⎧ 2. 'preview CAND/nil  Preview candidate CAND or reset if CAND is nil.
+<br>⎪    'preview CAND/nil
+<br>⎪    'preview CAND/nil
+<br>⎪    ...
+<br>⎩ 3. 'preview nil       Reset preview.
+<br>&nbsp;&nbsp;4. 'exit nil          Before exiting the mb (minibuffer-exit-hook).
+<br>&nbsp;&nbsp;5. 'return CAND/nil   After leaving the mb, CAND has been selected.
+<p>The state function is always executed with the original window selected,
+see <a href="../fun/consult--original-window.html"><code>consult--original-window</code></a>.  The state function is called once in
+the beginning of the minibuffer setup with the <span class="m"><code>setup</code></span> argument.  This is
+useful in order to perform certain setup operations which require that
+the minibuffer is initialized.  During completion candidates are
+previewed.  Then the function is called with the <span class="m"><code>preview</code></span> argument and a
+candidate CAND or nil if no candidate is selected.  Furthermore if nil is
+passed for CAND, then the preview must be undone and the original state
+must be restored.  The call with the <span class="m"><code>exit</code></span> argument happens once at the
+end of the completion process, just before exiting the minibuffer.  The
+minibuffer is still alive at that point.  Both <span class="m"><code>setup</code></span> and <span class="m"><code>exit</code></span> are
+only useful for setup and cleanup operations.  They don't receive a
+candidate as argument.  After leaving the minibuffer, the selected
+candidate or nil is passed to the state function with the action
+argument <span class="m"><code>return</code></span>.  At this point the state function can perform the
+actual action on the candidate.  The state function with the <span class="m"><code>return</code></span>
+argument is the continuation of <a href="../fun/consult--read.html"><code>consult--read</code></a>.  Via <a href="../fun/unwind-protect.html"><code>unwind-protect</code></a> it
+is guaranteed, that if the <span class="m"><code>setup</code></span> action of a state function is
+invoked, the state function will also be called with <span class="m"><code>exit</code></span> and
+<span class="m"><code>return</code></span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defmacro</span> <span class="f">consult--with-preview</span> (preview-key state transform candidate save-input <span class="ty">&amp;rest</span> body)
+  <span class="doc">"Add preview support to BODY.
+
+STATE is the state function.
+TRANSFORM is the transformation function.
+CANDIDATE is the function returning the current candidate.
+PREVIEW-KEY are the keys which triggers the preview.
+SAVE-INPUT can be a history variable symbol to save the input.
+
+The state function takes two arguments, an action argument and the
+selected candidate.  The candidate argument can be nil if no candidate is
+selected or if the selection was aborted.  The function is called in
+sequence with the following arguments:
+
+  1. </span><span class="bi doc">\\=</span><span class="doc">'setup nil         After entering the mb (minibuffer-setup-hook).
+⎧ 2. </span><span class="bi doc">\\=</span><span class="doc">'preview CAND/nil  Preview candidate CAND or reset if CAND is nil.
+⎪    </span><span class="bi doc">\\=</span><span class="doc">'preview CAND/nil
+⎪    </span><span class="bi doc">\\=</span><span class="doc">'preview CAND/nil
+⎪    ...
+⎩ 3. </span><span class="bi doc">\\=</span><span class="doc">'preview nil       Reset preview.
+  4. </span><span class="bi doc">\\=</span><span class="doc">'exit nil          Before exiting the mb (minibuffer-exit-hook).
+  5. </span><span class="bi doc">\\=</span><span class="doc">'return CAND/nil   After leaving the mb, CAND has been selected.
+
+The state function is always executed with the original window selected,
+see `</span><span class="m doc">consult--original-window</span><span class="doc">'.  The state function is called once in
+the beginning of the minibuffer setup with the `</span><span class="m doc">setup</span><span class="doc">' argument.  This is
+useful in order to perform certain setup operations which require that
+the minibuffer is initialized.  During completion candidates are
+previewed.  Then the function is called with the `</span><span class="m doc">preview</span><span class="doc">' argument and a
+candidate CAND or nil if no candidate is selected.  Furthermore if nil is
+passed for CAND, then the preview must be undone and the original state
+must be restored.  The call with the `</span><span class="m doc">exit</span><span class="doc">' argument happens once at the
+end of the completion process, just before exiting the minibuffer.  The
+minibuffer is still alive at that point.  Both `</span><span class="m doc">setup</span><span class="doc">' and `</span><span class="m doc">exit</span><span class="doc">' are
+only useful for setup and cleanup operations.  They don't receive a
+candidate as argument.  After leaving the minibuffer, the selected
+candidate or nil is passed to the state function with the action
+argument `</span><span class="m doc">return</span><span class="doc">'.  At this point the state function can perform the
+actual action on the candidate.  The state function with the `</span><span class="m doc">return</span><span class="doc">'
+argument is the continuation of `</span><span class="m doc">consult--read</span><span class="doc">'.  Via `</span><span class="m doc">unwind-protect</span><span class="doc">' it
+is guaranteed, that if the `</span><span class="m doc">setup</span><span class="doc">' action of a state function is
+invoked, the state function will also be called with `</span><span class="m doc">exit</span><span class="doc">' and
+`</span><span class="m doc">return</span><span class="doc">'."</span>
+  (<span class="k">declare</span> (indent 5) (debug t))
+  `(consult--with-preview-f ,preview-key ,state ,transform ,candidate ,save-input (<span class="k">lambda</span> () ,@body)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

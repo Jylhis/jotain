@@ -1,0 +1,77 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: combobulate-procedure-expand-rules-1 – Emacs Documentation Online</title>
+<meta name="description" content="combobulate-procedure-expand-rules-1 is a natively compiled function
+defined in combobulate-procedure.el.
+Internal function that expands RULES into a set of node types.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>combobulate-procedure-expand-rules-1</code></h1><p><span class="m"><code>combobulate-procedure-expand-rules-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">combobulate-procedure.el</span>.
+<h2>Signature</h2>
+<pre><code>(combobulate-procedure-expand-rules-1 <a href="#:~:text=expands-,RULES"><span class="arg">RULES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Internal function that expands <span class="arg">RULES</span> into a set of node types.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/9y0jasyzsqjcbfkwqsgdyxcnskjnsypg-emacs-packages-deps/share/emacs/site-lisp/combobulate-procedure.el</span>
+(<span class="k">defun</span> <span class="f">combobulate-procedure-expand-rules-1</span> (rules)
+  <span class="doc">"Internal function that expands RULES into a set of node types."</span>
+  (<span class="k">let</span> ((collected-node-types))
+    (<span class="k">dolist</span> (element (ensure-list rules))
+      (<span class="k">pcase</span> element
+        <span class="cd">;; </span><span class="c">Match a regular expression against the node types and
+</span>        <span class="cd">;; </span><span class="c">expand each matching production rule with `(rule TYPE)'
+</span>        (`(rule-rx . ,regexp)
+         (<span class="k">setq</span> collected-node-types
+               (append collected-node-types
+                       (mapcan (<span class="k">lambda</span> (n)
+                                 (combobulate-procedure-expand-rules
+                                  (list 'rule n)))
+                               (combobulate-procedure-expand-rules
+                                `(<span class="k">rx</span> ,@(ensure-list regexp)))))))
+        <span class="cd">;; </span><span class="c">Match a regular expression against the node types and
+</span>        <span class="cd">;; </span><span class="c">collect the matching node types.
+</span>        (`(<span class="k">rx</span> . ,regexp)
+         (<span class="k">setq</span> collected-node-types
+               (append collected-node-types
+                       (seq-filter (<span class="k">lambda</span> (node-type)
+                                     (string-match-p (rx-to-string `(: ,@regexp)) node-type))
+                                   (combobulate-production-rules-get-types)))))
+        <span class="cd">;; </span><span class="c">A production rule with optional fields which defaults to
+</span>        <span class="cd">;; </span><span class="c">nil, because `</span><span class="m c">production-rules-get</span><span class="c">' interprets that to mean
+</span>        <span class="cd">;; </span><span class="c">all fields.
+</span>        ((<span class="k">or</span> `(rule ,rule-name . ,fields)
+             (<span class="k">and</span> `(rule ,rule-name) (<span class="k">let</span> fields nil)))
+         (<span class="k">setq</span> collected-node-types
+               (append collected-node-types
+                       (apply #'combobulate-production-rules-get rule-name (list (ensure-list fields))))))
+        <span class="cd">;; </span><span class="c">An inverted production rule that uses the inverse
+</span>        <span class="cd">;; </span><span class="c">production rule table instead.
+</span>        (`(irule ,inverted-rule-name)
+         (<span class="k">setq</span> collected-node-types
+               (append collected-node-types
+                       (combobulate-production-rules-get-inverted inverted-rule-name))))
+        <span class="cd">;; </span><span class="c">String nodes are pushed directly onto the list.
+</span>        ((<span class="k">and</span> (pred stringp) node-type)
+         (<span class="k">push</span> node-type collected-node-types))
+        <span class="cd">;; </span><span class="c">Lists of strings are treated as a list of node types and
+</span>        <span class="cd">;; </span><span class="c">merged with the already-collected node types.
+</span>        ((<span class="k">and</span> (pred list-of-strings-p) node-types)
+         (<span class="k">setq</span> collected-node-types (append collected-node-types node-types)))
+        <span class="cd">;; </span><span class="c">The value `</span><span class="m c">t</span><span class="c">' is a special case that, along with `(all)',
+</span>        <span class="cd">;; </span><span class="c">matches all node types
+</span>        ((<span class="k">or</span> '(all) 't '(t))
+         (<span class="k">setq</span> collected-node-types (append collected-node-types (combobulate-production-rules-get-types))))
+        <span class="cd">;; </span><span class="c">Exclusions are expanded recursively and the result is
+</span>        <span class="cd">;; </span><span class="c">subtracted from the already-collected node types.
+</span>        (`(exclude ,inclusions . ,exclusions)
+         (<span class="k">setq</span> collected-node-types
+               (append collected-node-types
+                       (seq-difference (combobulate-procedure-expand-rules inclusions)
+                                       (combobulate-procedure-expand-rules exclusions)))))
+        (_ (<span class="w">error</span> <span class="s">"Invalid node qualifier: %s"</span> element))))
+    (seq-uniq collected-node-types)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

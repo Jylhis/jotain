@@ -1,0 +1,81 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: denote-change-file-type-and-front-matter – Emacs Documentation Online</title>
+<meta name="description" content="denote-change-file-type-and-front-matter is an interactive and
+natively compiled function defined in denote.el.
+Change file type of FILE and add an appropriate front matter.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>denote-change-file-type-and-front-matter</code></h1><p><span class="m"><code>denote-change-file-type-and-front-matter</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and
+<a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">denote.el</span>.
+<h2>Signature</h2>
+<pre><code>(denote-change-file-type-and-front-matter <a href="#:~:text=of-,FILE"><span class="arg">FILE</span></a> <a href="#:~:text=the-,NEW-FILE-TYPE"><span class="arg">NEW-FILE-TYPE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Change file type of <span class="arg">FILE</span> and add an appropriate front matter.
+<p>If in Dired, consider <span class="arg">FILE</span> to be the one at point, else the
+current file, else prompt with minibuffer completion for one.
+<p>Add a front matter in the format of the <span class="arg">NEW-FILE-TYPE</span> at the
+beginning of the file.
+<p>Retrieve the title of <span class="arg">FILE</span> from a line starting with a title
+field in its front matter, depending on the previous file
+type (e.g.  #+title for Org).  The same process applies for
+keywords.
+<p>As a final step, ask for confirmation, showing the difference
+between old and new file names.
+<p>Important note: No attempt is made to modify any other elements
+of the file.  This needs to be done manually.
+<p>Construct the file name in accordance with the user option
+<a href="../var/denote-file-name-components-order.html"><code>denote-file-name-components-order</code></a>.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/5x9606vmybcj80x6qrajp43rma9pa1i7-emacs-packages-deps/share/emacs/site-lisp/elpa/denote-4.2.3/denote.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">denote-change-file-type-and-front-matter</span> (file new-file-type)
+  <span class="doc">"Change file type of FILE and add an appropriate front matter.
+
+If in Dired, consider FILE to be the one at point, else the
+current file, else prompt with minibuffer completion for one.
+
+Add a front matter in the format of the NEW-FILE-TYPE at the
+beginning of the file.
+
+Retrieve the title of FILE from a line starting with a title
+field in its front matter, depending on the previous file
+type (e.g.  #+title for Org).  The same process applies for
+keywords.
+
+As a final step, ask for confirmation, showing the difference
+between old and new file names.
+
+Important note: No attempt is made to modify any other elements
+of the file.  This needs to be done manually.
+
+Construct the file name in accordance with the user option
+`</span><span class="m doc">denote-file-name-components-order</span><span class="doc">'."</span>
+  (<span class="k">interactive</span>
+   (list
+    (denote--rename-dired-file-or-current-file-or-prompt)
+    (denote--valid-file-type (<span class="k">or</span> (denote-file-type-prompt) denote-file-type))))
+  (<span class="k">let*</span> ((initial-state (<span class="k">if</span> (find-buffer-visiting file) 'visited 'not-visited))
+         (dir (file-name-directory file))
+         (old-file-type (denote-filetype-heuristics file))
+         (id (<span class="k">or</span> (denote-retrieve-filename-identifier file) <span class="s">""</span>))
+         (date (denote-retrieve-front-matter-date-value file old-file-type))
+         (title (<span class="k">or</span> (denote-retrieve-title-or-filename file old-file-type) <span class="s">""</span>))
+         (keywords (denote-retrieve-front-matter-keywords-value file old-file-type))
+         (signature (<span class="k">or</span> (denote-retrieve-filename-signature file) <span class="s">""</span>))
+         (new-extension (denote--file-extension new-file-type))
+         (new-name (denote-format-file-name dir id keywords title new-extension signature))
+         (max-mini-window-height denote-rename-max-mini-window-height))
+    (<span class="k">when</span> (denote-rename-file-prompt file new-name)
+      (denote-rename-file-and-buffer file new-name)
+      (denote-update-dired-buffers)
+      (<span class="k">when</span> (<span class="k">and</span> (denote-file-is-writable-and-supported-p new-name)
+                 (denote-add-front-matter-prompt new-name))
+        (denote-prepend-front-matter new-name title keywords signature date id new-file-type)
+        (denote--handle-save-and-kill-buffer 'rename new-name initial-state)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

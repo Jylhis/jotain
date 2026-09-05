@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: avy-read – Emacs Documentation Online</title>
+<meta name="description" content="avy-read is a natively compiled function defined in avy.el.
+Select a leaf from TREE using consecutive read-key.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>avy-read</code></h1><p><span class="m"><code>avy-read</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">avy.el</span>.
+<h2>Signature</h2>
+<pre><code>(avy-read <a href="#:~:text=from-,TREE"><span class="arg">TREE</span></a> <a href="#:~:text=key.-,DISPLAY-FN"><span class="arg">DISPLAY-FN</span></a> <a href="#:~:text=position.-,CLEANUP-FN"><span class="arg">CLEANUP-FN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Select a leaf from <span class="arg">TREE</span> using consecutive <a href="../fun/read-key.html"><code>read-key</code></a>.
+<p><span class="arg">DISPLAY-FN</span> should take CHAR and LEAF and signify that LEAFs
+associated with CHAR will be selected if CHAR is pressed.  This is
+commonly done by adding a CHAR overlay at LEAF position.
+<p><span class="arg">CLEANUP-FN</span> should take no arguments and remove the effects of
+multiple <span class="arg">DISPLAY-FN</span> invocations.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w15jf1dbl3fxkx8c35ym39v09hnaxjw9-emacs-packages-deps/share/emacs/site-lisp/elpa/avy-20241101.1357/avy.el</span>
+(<span class="k">defun</span> <span class="f">avy-read</span> (tree display-fn cleanup-fn)
+  <span class="doc">"Select a leaf from TREE using consecutive `</span><span class="m doc">read-key</span><span class="doc">'.
+
+DISPLAY-FN should take CHAR and LEAF and signify that LEAFs
+associated with CHAR will be selected if CHAR is pressed.  This is
+commonly done by adding a CHAR overlay at LEAF position.
+
+CLEANUP-FN should take no arguments and remove the effects of
+multiple DISPLAY-FN invocations."</span>
+  (<span class="k">catch</span> '<span class="m">done</span>
+    (<span class="k">setq</span> avy-current-path <span class="s">""</span>)
+    (<span class="k">while</span> tree
+      (<span class="k">let</span> ((avy--leafs nil))
+        (avy-traverse tree
+                      (<span class="k">lambda</span> (path leaf)
+                        (<span class="k">push</span> (cons path leaf) avy--leafs)))
+        (<span class="k">dolist</span> (x avy--leafs)
+          (funcall display-fn (car x) (cdr x))))
+      (<span class="k">let</span> ((char (funcall avy-translate-char-function (read-key)))
+            window
+            branch)
+        (funcall cleanup-fn)
+        (<span class="k">if</span> (<span class="k">setq</span> window (avy-mouse-event-window char))
+            (<span class="k">throw</span> '<span class="m">done</span> (cons char window))
+          (<span class="k">if</span> (<span class="k">setq</span> branch (assoc char tree))
+              (<span class="k">progn</span>
+                <span class="cd">;; </span><span class="c">Ensure avy-current-path stores the full path prior to
+</span>                <span class="cd">;; </span><span class="c">exit so other packages can utilize its value.
+</span>                (<span class="k">setq</span> avy-current-path
+                      (concat avy-current-path (string (avy--key-to-char char))))
+                (<span class="k">if</span> (eq (car (<span class="k">setq</span> tree (cdr branch))) 'leaf)
+                    (<span class="k">throw</span> '<span class="m">done</span> (cdr tree))))
+            (funcall avy-handler-function char)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

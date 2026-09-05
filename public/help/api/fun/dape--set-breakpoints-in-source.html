@@ -1,0 +1,86 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--set-breakpoints-in-source – Emacs Documentation Online</title>
+<meta name="description" content="dape--set-breakpoints-in-source is a natively compiled function
+defined in dape.el.
+Set breakpoints in SOURCE for adapter CONN.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--set-breakpoints-in-source</code></h1><p><span class="m"><code>dape--set-breakpoints-in-source</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--set-breakpoints-in-source <a href="#:~:text=adapter-,CONN"><span class="arg">CONN</span></a> <a href="#:~:text=in-,SOURCE"><span class="arg">SOURCE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=expected-,CB"><span class="arg">CB</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Set breakpoints in <span class="arg">SOURCE</span> for adapter <span class="arg">CONN</span>.
+<p><span class="arg">SOURCE</span> is expected to be buffer or file name string.
+See <a href="../fun/dape-request.html"><code>dape-request</code></a> for expected <span class="arg">CB</span> signature.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--set-breakpoints-in-source</span> (conn source <span class="ty">&amp;optional</span> cb)
+  <span class="doc">"Set breakpoints in SOURCE for adapter CONN.
+SOURCE is expected to be buffer or file name string.
+See `</span><span class="m doc">dape-request</span><span class="doc">' for expected CB signature."</span>
+  (<span class="k">cl-flet</span>
+      ((objectify (breakpoint)
+         (<span class="k">let</span> ((plist `(<span class="bi">:line</span> ,(dape--breakpoint-line breakpoint))))
+           (<span class="k">pcase</span> (dape--source-breakpoint-type breakpoint)
+             ('log
+              (<span class="k">if</span> (dape--capable-p conn <span class="bi">:supportsLogPoints</span>)
+                  (plist-put plist <span class="bi">:logMessage</span>
+                             (dape--source-breakpoint-value breakpoint))
+                (dape--warn <span class="s">"Adapter does not support `</span><span class="m s">dape-breakpoint-log</span><span class="s">'"</span>)))
+             ('expression
+              (<span class="k">if</span> (dape--capable-p conn <span class="bi">:supportsConditionalBreakpoints</span>)
+                  (plist-put plist <span class="bi">:condition</span>
+                             (dape--source-breakpoint-value breakpoint))
+                (dape--warn
+                 <span class="s">"Adapter does not support `</span><span class="m s">dape-breakpoint-expression</span><span class="s">'"</span>)))
+             ('hits
+              (<span class="k">if</span> (dape--capable-p conn <span class="bi">:supportsHitConditionalBreakpoints</span>)
+                  (plist-put plist <span class="bi">:hitCondition</span>
+                             (dape--source-breakpoint-value breakpoint))
+                (dape--warn
+                 <span class="s">"Adapter does not support `</span><span class="m s">dape-breakpoint-hits</span><span class="s">'"</span>))))
+           plist)))
+    (<span class="k">let</span> ((<span class="cd">;; </span><span class="c">Importantly `</span><span class="m c">breakpoints</span><span class="c">' is not the same object as
+</span>           <span class="cd">;; </span><span class="c">`</span><span class="m c">dape--breakpoints</span><span class="c">' otherwise we would get hurt by
+</span>           <span class="cd">;; </span><span class="c">mutations while request-in-flight.
+</span>           breakpoints
+           (<span class="k">cl-loop</span> for b in dape--breakpoints
+                    when (<span class="k">and</span> (dape--source-breakpoint-p b)
+                              (equal (dape--breakpoint-source b) source)
+                              (not (dape--breakpoint-disabled b)))
+                    collect b))
+          (source-object
+           (<span class="k">pcase</span> source
+             ((pred stringp) `(<span class="bi">:path</span> ,(dape--file-name-remote conn source)))
+             ((pred bufferp)
+              (<span class="k">or</span>
+               <span class="cd">;; </span><span class="c">Is source buffer (see `</span><span class="m c">dape--source-make-buffer</span><span class="c">')?
+</span>               (<span class="k">cl-loop</span> with buffers = (dape--source-buffers (dape--root-of conn))
+                        for (reference buffer) on buffers by #'cddr
+                        when (eq buffer source)
+                        return `(<span class="bi">:sourceReference</span> ,reference))
+               <span class="cd">;; </span><span class="c">Other buffer?
+</span>               (<span class="k">when-let*</span> ((filename (dape--file-name-remote
+                                      conn (buffer-file-name source))))
+                 `(<span class="bi">:path</span> ,filename)))))))
+      (<span class="k">if</span> (not source-object)
+          (dape--request-continue cb)
+        (<span class="k">dape--with-request-bind</span>
+            ((<span class="ty">&amp;key</span> ((<span class="bi">:breakpoints</span> updates)) <span class="ty">&amp;allow-other-keys</span>) error)
+            (dape-request
+             conn <span class="bi">:setBreakpoints</span>
+             `( <span class="bi">:breakpoints</span> ,(cl-map 'vector #'objectify breakpoints)
+                <span class="bi">:lines</span> ,(cl-map 'vector #'dape--breakpoint-line breakpoints)
+                <span class="bi">:source</span> ,source-object))
+          (<span class="k">if</span> error
+              (dape--warn <span class="s">"Failed to set breakpoints in %s; %s"</span> source error)
+            (<span class="k">cl-loop</span> for breakpoint in breakpoints
+                     for update across updates
+                     do (dape--breakpoint-update conn breakpoint update))
+            (dape--request-continue cb error)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,75 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: yaml-font-lock-block-literals – Emacs Documentation Online</title>
+<meta name="description" content="yaml-font-lock-block-literals is a natively compiled function defined
+in yaml-mode.el.
+Find lines within block literals.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>yaml-font-lock-block-literals</code></h1><p><span class="m"><code>yaml-font-lock-block-literals</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">yaml-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(yaml-font-lock-block-literals <a href="#:~:text=to-,BOUND"><span class="arg">BOUND</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find lines within block literals.
+<p>Find the next line of the first (if any) block literal after point and
+prior to <span class="arg">BOUND</span>.  Returns the beginning and end of the block literal
+line in the match data, as consumed by <a href="../var/font-lock-keywords.html"><code>font-lock-keywords</code></a> matcher
+functions.  The function begins by searching backwards to determine
+whether or not the current line is within a block literal.  This could
+be time-consuming in large buffers, so the number of lines searched is
+artificially limited to the value of
+<a href="../var/yaml-block-literal-search-lines.html"><code>yaml-block-literal-search-lines</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/kfwdxlq9csqcyhcd7ifdnayvbydv25am-emacs-packages-deps/share/emacs/site-lisp/elpa/yaml-mode-20260830.2340/yaml-mode.el</span>
+(<span class="k">defun</span> <span class="f">yaml-font-lock-block-literals</span> (bound)
+  <span class="doc">"Find lines within block literals.
+Find the next line of the first (if any) block literal after point and
+prior to BOUND.  Returns the beginning and end of the block literal
+line in the match data, as consumed by `</span><span class="m doc">font-lock-keywords</span><span class="doc">' matcher
+functions.  The function begins by searching backwards to determine
+whether or not the current line is within a block literal.  This could
+be time-consuming in large buffers, so the number of lines searched is
+artificially limited to the value of
+`</span><span class="m doc">yaml-block-literal-search-lines</span><span class="doc">'."</span>
+  (<span class="k">if</span> (eolp) (goto-char (1+ (point))))
+  (<span class="k">unless</span> (<span class="k">or</span> (eobp) (&gt;= (point) bound))
+    (<span class="k">let</span> ((begin (point))
+          (end (min (1+ (line-end-position)) bound)))
+      (goto-char (line-beginning-position))
+      (<span class="k">while</span> (<span class="k">and</span> (looking-at yaml-blank-line-re)
+                  (not (bobp)))
+        (forward-line -1))
+      (<span class="k">let</span> ((nlines yaml-block-literal-search-lines)
+            (min-level (current-indentation)))
+        (forward-line -1)
+        (<span class="k">while</span> (<span class="k">and</span> (/= nlines 0)
+                    (/= min-level 0)
+                    (not (looking-at yaml-block-literal-re))
+                    (not (bobp)))
+          (<span class="k">setq</span> nlines (1- nlines))
+          (<span class="k">unless</span> (looking-at yaml-blank-line-re)
+            (<span class="k">setq</span> min-level (min min-level (current-indentation))))
+          (forward-line -1))
+        (<span class="k">when</span> (looking-at-p <span class="s">" *- "</span>)
+          (<span class="k">setq</span> min-level (- min-level 2)))
+        (<span class="k">cond</span>
+         ((<span class="k">and</span> (&lt; (current-indentation) min-level)
+               (looking-at yaml-block-literal-re))
+          (goto-char end)
+          (put-text-property begin end 'yaml-block-literal t)
+          (set-match-data (list begin end))
+          t)
+         ((<span class="k">progn</span>
+            (goto-char begin)
+            (re-search-forward (concat yaml-block-literal-re
+                                       <span class="s">" *</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\n"</span>)
+                               bound t))
+          (<span class="k">let</span> ((range (nthcdr 2 (match-data))))
+            (put-text-property (car range) (cadr range) 'yaml-block-literal t)
+            (set-match-data range))
+          t))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,174 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: csv-align-fields – Emacs Documentation Online</title>
+<meta name="description" content="csv-align-fields is an interactive and natively compiled function
+defined in csv-mode.el.
+Align all the fields in the region to form columns.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>csv-align-fields</code></h1><p><span class="m"><code>csv-align-fields</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">csv-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(csv-align-fields <a href="#:~:text=if-,HARD"><span class="arg">HARD</span></a> <a href="#:~:text=nil;-,BEG"><span class="arg">BEG</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Align all the fields in the region to form columns.
+<p>The alignment style is specified by <a href="../var/csv-align-style.html"><code>csv-align-style</code></a>.  The number of
+spaces specified by <a href="../var/csv-align-padding.html"><code>csv-align-padding</code></a> appears after each separator.
+Use soft alignment done by displaying virtual white space after the
+separators unless invoked with an argument, in which case insert real
+space characters into the buffer after the separators.
+Unalign first (see <a href="../fun/csv-unalign-fields.html"><code>csv-unalign-fields</code></a>).  Ignore blank and comment lines.
+<p>In hard-aligned records, separators become invisible whenever
+<a href="../var/buffer-invisibility-spec.html"><code>buffer-invisibility-spec</code></a> is non-nil.  In soft-aligned records, make
+separators invisible if and only if <a href="../var/buffer-invisibility-spec.html"><code>buffer-invisibility-spec</code></a> is
+non-nil when the records are aligned; this can be changed only by
+re-aligning.  (Unaligning always makes separators visible.)
+<p>When called non-interactively, use hard alignment if <span class="arg">HARD</span> is non-nil;
+<span class="arg">BEG</span> and <span class="arg">END</span> specify the region to align.
+If there is no selected region, default to the whole buffer.
+<h2>Key Bindings</h2>
+<p><span class="v">csv-mode-map</span> <span class="key">C-c C-a</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mrygxsladaca2yfyr2cy0am5zm9lzddg-emacs-packages-deps/share/emacs/site-lisp/elpa/csv-mode-1.27/csv-mode.el</span>
+(<span class="k">defun</span> <span class="f">csv-align-fields</span> (hard beg end)
+  <span class="doc">"Align all the fields in the region to form columns.
+The alignment style is specified by `</span><span class="m doc">csv-align-style</span><span class="doc">'.  The number of
+spaces specified by `</span><span class="m doc">csv-align-padding</span><span class="doc">' appears after each separator.
+Use soft alignment done by displaying virtual white space after the
+separators unless invoked with an argument, in which case insert real
+space characters into the buffer after the separators.
+Unalign first (see `</span><span class="m doc">csv-unalign-fields</span><span class="doc">').  Ignore blank and comment lines.
+
+In hard-aligned records, separators become invisible whenever
+`</span><span class="m doc">buffer-invisibility-spec</span><span class="doc">' is non-nil.  In soft-aligned records, make
+separators invisible if and only if `</span><span class="m doc">buffer-invisibility-spec</span><span class="doc">' is
+non-nil when the records are aligned; this can be changed only by
+re-aligning.  </span><span class="w doc">\</span><span class="doc">(Unaligning always makes separators visible.)
+
+When called non-interactively, use hard alignment if HARD is non-nil;
+BEG and END specify the region to align.
+If there is no selected region, default to the whole buffer."</span>
+  (<span class="k">interactive</span> (cons current-prefix-arg
+                     (<span class="k">if</span> (use-region-p)
+                         (list (region-beginning) (region-end))
+                       (list (point-min) (point-max)))))
+  <span class="cd">;; </span><span class="c">FIXME: Use csv--jit-align when applicable!
+</span>  (<span class="k">setq</span> end (copy-marker end))
+  (csv-unalign-fields hard beg end) <span class="cd">; </span><span class="c">If hard then barfs if buffer read only.
+</span>  (<span class="k">save-excursion</span>
+    (<span class="k">pcase-let</span> ((`(,column-widths ,field-widths) (csv--column-widths beg end)))
+      (<span class="k">save-restriction</span>
+        (narrow-to-region beg end)
+        (set-marker end nil)
+
+	<span class="cd">;; </span><span class="c">Align fields:
+</span>	(goto-char (point-min))
+	(<span class="k">while</span> (not (eobp))		<span class="cd">; </span><span class="c">for each record...
+</span>	  (<span class="k">unless</span> (csv-not-looking-at-record)
+            (<span class="k">let</span> ((w column-widths)
+                  (column 0))    <span class="cd">;</span><span class="c">Desired position of left-side of this column.
+</span>              (<span class="k">while</span> (<span class="k">and</span> w (not (eolp)))
+                (<span class="k">let*</span> ((beg (point))
+                       (align-padding (<span class="k">if</span> (bolp) 0 csv-align-padding))
+                       (left-padding 0) (right-padding 0)
+                       (field-width (<span class="k">pop</span> field-widths))
+                       (column-width (car (<span class="k">pop</span> w)))
+                       (x (- column-width field-width))) <span class="cd">; </span><span class="c">Required padding.
+</span>                  (csv-end-of-field)
+                  (set-marker end (point)) <span class="cd">; </span><span class="c">End of current field.
+</span>                  <span class="cd">;; </span><span class="c">beg = beginning of current field
+</span>                  <span class="cd">;; </span><span class="c">end = (point) = end of current field
+</span>
+                  <span class="cd">;; </span><span class="c">Compute required padding:
+</span>                  (<span class="k">cond</span>
+                   ((eq csv-align-style 'left)
+                    <span class="cd">;; </span><span class="c">Left align -- pad on the right:
+</span>                    (<span class="k">setq</span> left-padding align-padding
+                          right-padding x))
+                   ((eq csv-align-style 'right)
+                    <span class="cd">;; </span><span class="c">Right align -- pad on the left:
+</span>                    (<span class="k">setq</span> left-padding (+ align-padding x)))
+                   ((eq csv-align-style 'auto)
+                    <span class="cd">;; </span><span class="c">Auto align -- left align text, right align numbers:
+</span>                    (<span class="k">if</span> (string-match <span class="s">"\\`[-+.[:digit:]]+\\'"</span>
+                                      (buffer-substring beg (point)))
+                        <span class="cd">;; </span><span class="c">Right align -- pad on the left:
+</span>                        (<span class="k">setq</span> left-padding (+ align-padding x))
+                      <span class="cd">;; </span><span class="c">Left align -- pad on the right:
+</span>                      (<span class="k">setq</span> left-padding align-padding
+                            right-padding x)))
+                   ((eq csv-align-style 'centre)
+                    <span class="cd">;; </span><span class="c">Centre -- pad on both left and right:
+</span>                    (<span class="k">let</span> ((y (/ x 2)))  <span class="cd">; </span><span class="c">truncated integer quotient
+</span>                      (<span class="k">setq</span> left-padding (+ align-padding y)
+                            right-padding (- x y)))))
+
+                  (<span class="k">cond</span>
+                   (hard <span class="cd">;; </span><span class="c">Hard alignment...
+</span>                    (<span class="k">when</span> (&gt; left-padding 0) <span class="cd">; </span><span class="c">Pad on the left.
+</span>                      <span class="cd">;; </span><span class="c">Insert spaces before field:
+</span>                      (<span class="k">if</span> (= beg end)   <span class="cd">; </span><span class="c">null field
+</span>                          (insert (make-string left-padding ?\ ))
+                        (goto-char beg) <span class="cd">; </span><span class="c">beginning of current field
+</span>                        (insert (make-string left-padding ?\ ))
+                        (goto-char end))) <span class="cd">; </span><span class="c">end of current field
+</span>                    (<span class="k">unless</span> (eolp)
+                      (<span class="k">if</span> (&gt; right-padding 0) <span class="cd">; </span><span class="c">pad on the right
+</span>                          <span class="cd">;; </span><span class="c">Insert spaces after field:
+</span>                          (insert (make-string right-padding ?\ )))
+                      <span class="cd">;; </span><span class="c">Make separator (potentially) invisible;
+</span>                      <span class="cd">;; </span><span class="c">in Emacs 21.3, neighbouring overlays
+</span>                      <span class="cd">;; </span><span class="c">conflict, so use the following only
+</span>                      <span class="cd">;; </span><span class="c">with hard alignment:
+</span>		      (csv--make-overlay (point) (1+ (point)) nil t nil
+					 '(invisible csv evaporate t))
+                      (forward-char)))  <span class="cd">; </span><span class="c">skip separator
+</span>
+                   <span class="cd">;; </span><span class="c">Soft alignment...
+</span>                   ((<span class="k">or</span> (memq 'csv buffer-invisibility-spec)
+                        <span class="cd">;; </span><span class="c">For TSV, hidden or not doesn't make much difference,
+</span>                        <span class="cd">;; </span><span class="c">but the behavior is slightly better when we "hide"
+</span>                        <span class="cd">;; </span><span class="c">the TABs with a `</span><span class="m c">display</span><span class="c">' property than if we add
+</span>                        <span class="cd">;; </span><span class="c">before/after-strings.
+</span>                        (tsv--mode-p))
+
+                    <span class="cd">;; </span><span class="c">Hide separators...
+</span>                    <span class="cd">;; </span><span class="c">Merge right-padding from previous field
+</span>                    <span class="cd">;; </span><span class="c">with left-padding from this field:
+</span>                    (<span class="k">if</span> (zerop column)
+                        (<span class="k">when</span> (&gt; left-padding 0)
+                          <span class="cd">;; </span><span class="c">Display spaces before first field
+</span>                          <span class="cd">;; </span><span class="c">by overlaying first character:
+</span>			  (csv--make-overlay
+			   beg (1+ beg) nil nil nil
+			   `(before-string ,(make-string left-padding ?\ ))))
+                      <span class="cd">;; </span><span class="c">Display separator as spaces:
+</span>                      (<span class="k">with-silent-modifications</span>
+                        (put-text-property
+                         (1- beg) beg
+                         'display `(space <span class="bi">:align-to</span>
+                                          ,(+ left-padding column)))))
+                    (<span class="k">unless</span> (eolp) (forward-char)) <span class="cd">; </span><span class="c">Skip separator.
+</span>                    (<span class="k">setq</span> column (+ column column-width align-padding)))
+
+                   (t <span class="cd">;; </span><span class="c">Do not hide separators...
+</span>                    (<span class="k">let</span> ((overlay (csv--make-overlay beg (point) nil nil t)))
+                      (<span class="k">when</span> (&gt; left-padding 0) <span class="cd">; </span><span class="c">Pad on the left.
+</span>                        <span class="cd">;; </span><span class="c">Display spaces before field:
+</span>                        (overlay-put overlay 'before-string
+                                     (make-string left-padding ?\ )))
+                      (<span class="k">unless</span> (eolp)
+                        (<span class="k">if</span> (&gt; right-padding 0) <span class="cd">; </span><span class="c">Pad on the right.
+</span>                            <span class="cd">;; </span><span class="c">Display spaces after field:
+</span>                            (overlay-put
+                             overlay
+                             'after-string (make-string right-padding ?\ )))
+                        (forward-char)))) <span class="cd">; </span><span class="c">Skip separator.
+</span>
+                   )))))
+	  (forward-line)))))
+  (set-marker end nil))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,77 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: mcp-make-text-tool – Emacs Documentation Online</title>
+<meta name="description" content="mcp-make-text-tool is a natively compiled function defined in mcp.el.
+Create a gptel tool with the given NAME, TOOL-NAME, and ASYNCP.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>mcp-make-text-tool</code></h1><p><span class="m"><code>mcp-make-text-tool</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">mcp.el</span>.
+<h2>Signature</h2>
+<pre><code>(mcp-make-text-tool <a href="#:~:text=given-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=NAME,-,TOOL-NAME"><span class="arg">TOOL-NAME</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=and-,ASYNCP"><span class="arg">ASYNCP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create a <span class="m"><code>gptel</code></span> tool with the given <span class="arg">NAME</span>, <span class="arg">TOOL-NAME</span>, and <span class="arg">ASYNCP</span>.
+<p><span class="arg">NAME</span> is the name of the server connection.
+<span class="arg">TOOL-NAME</span> is the name of the tool to be created.
+<p>Currently, only synchronous messages are supported.
+<p>This function retrieves the tool definition from the server connection,
+constructs a basic tool with the appropriate properties, and returns it.
+The tool is configured to handle input arguments, call the server, and process
+the response to extract and return text content.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a854ba0xan3il3xqm2sx95la5018xp8i-emacs-packages-deps/share/emacs/site-lisp/elpa/mcp-20260615.940/mcp.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">mcp-make-text-tool</span> (name tool-name <span class="ty">&amp;optional</span> asyncp)
+  <span class="doc">"Create a `</span><span class="m doc">gptel</span><span class="doc">' tool with the given NAME, TOOL-NAME, and ASYNCP.
+
+NAME is the name of the server connection.
+TOOL-NAME is the name of the tool to be created.
+
+Currently, only synchronous messages are supported.
+
+This function retrieves the tool definition from the server connection,
+constructs a basic tool with the appropriate properties, and returns it.
+The tool is configured to handle input arguments, call the server, and process
+the response to extract and return text content."</span>
+  (<span class="k">when-let*</span> ((connection (gethash name mcp-server-connections))
+              (tools (mcp--tools connection))
+              (tool (cl-find tool-name tools <span class="bi">:test</span> #'equal <span class="bi">:key</span> (<span class="k">lambda</span> (tool) (plist-get tool <span class="bi">:name</span>)))))
+    (<span class="k">cl-destructuring-bind</span> (<span class="ty">&amp;key</span> description ((<span class="bi">:inputSchema</span> input-schema)) <span class="ty">&amp;allow-other-keys</span>) tool
+      (<span class="k">cl-destructuring-bind</span> (<span class="ty">&amp;key</span> properties required <span class="ty">&amp;allow-other-keys</span>) input-schema
+        (list
+         <span class="bi">:function</span> (<span class="k">if</span> asyncp
+                       (<span class="k">lambda</span> (callback <span class="ty">&amp;rest</span> args)
+                         (<span class="k">when</span> (&lt; (length args) (length required))
+                           (<span class="w">error</span> <span class="s">"Error: args not match: %s -&gt; %s"</span> required args))
+                         (<span class="k">if-let*</span> ((connection (gethash name mcp-server-connections)))
+                             (mcp-async-call-tool connection
+                                                  tool-name
+                                                  (mcp--generate-tool-call-args args properties)
+                                                  (<span class="k">lambda</span> (res)
+                                                    (funcall callback
+                                                             (mcp--parse-tool-call-result res)))
+                                                  (<span class="k">lambda</span> (code message)
+                                                    (funcall callback
+                                                             (format <span class="s">"call %s tool error with %s: %s"</span>
+                                                                     tool-name
+                                                                     code
+                                                                     message))))
+                           (<span class="w">error</span> <span class="s">"Error: %s server not connect"</span> name)))
+                     (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> args)
+                       (<span class="k">when</span> (&lt; (length args) (length required))
+                         (<span class="w">error</span> <span class="s">"Error: args not match: %s -&gt; %s"</span> required args))
+                       (<span class="k">if-let*</span> ((connection (gethash name mcp-server-connections)))
+                           (<span class="k">if-let*</span> ((res (mcp-call-tool connection
+                                                         tool-name
+                                                         (mcp--generate-tool-call-args args properties))))
+                               (mcp--parse-tool-call-result res)
+                             (<span class="w">error</span> <span class="s">"Error: call %s tool error"</span> tool-name))
+                         (<span class="w">error</span> <span class="s">"Error: %s server not connect"</span> name))))
+         <span class="bi">:name</span> tool-name
+         <span class="bi">:async</span> asyncp
+         <span class="bi">:description</span> description
+         <span class="bi">:args</span>
+         (mcp--parse-tool-args properties (<span class="k">or</span> required '())))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

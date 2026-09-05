@@ -1,0 +1,78 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: expreg-expand – Emacs Documentation Online</title>
+<meta name="description" content="expreg-expand is an interactive and natively compiled function defined
+in expreg.el.
+Expand region.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>expreg-expand</code></h1><p><span class="m"><code>expreg-expand</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">expreg.el</span>.
+<h2>Signature</h2>
+<pre><code>(expreg-expand)
+</code></pre>
+<h2>Documentation</h2>
+<p>Expand region.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ryq27wm6zz42wjg7mgw3mayap8817nnz-emacs-packages-deps/share/emacs/site-lisp/elpa/expreg-1.4.1/expreg.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">expreg-expand</span> ()
+  <span class="doc">"Expand region."</span>
+  (<span class="k">interactive</span>)
+  <span class="cd">;; </span><span class="c">Initialize states if this is the first call to expreg functions.
+</span>  (<span class="k">when</span> (not (<span class="k">and</span> (use-region-p)
+                  (eq (region-beginning)
+                      (cadr (car expreg--prev-regions)))
+                  (eq (region-end)
+                      (cddr (car expreg--prev-regions)))))
+    (<span class="k">setq-local</span> expreg--next-regions nil)
+    (<span class="k">setq-local</span> expreg--prev-regions nil)
+    (<span class="k">setq-local</span> expreg--initial-point (point))
+    (<span class="k">when</span> expreg-restore-point-on-quit
+      <span class="cd">;; </span><span class="c">We have to add the advice using :before. :after doesn’t work
+</span>      <span class="cd">;; </span><span class="c">(advice doesn’t get called). ‘</span><span class="m c">set-transient-map</span><span class="c">’ doesn’t work
+</span>      <span class="cd">;; </span><span class="c">either because of how special ‘</span><span class="m c">keyboard-quit</span><span class="c">’ is.
+</span>      (advice-add 'keyboard-quit <span class="bi">:before</span> #'expreg--keyboard-quit-advice)))
+
+  <span class="cd">;; </span><span class="c">If we are not already in the middle of expansions, compute them.
+</span>  (<span class="k">when</span> (<span class="k">and</span> (null expreg--next-regions)
+             (null expreg--prev-regions))
+    (<span class="k">let*</span> ((orig (point))
+           (regions (mapcan (<span class="k">lambda</span> (fn) (<span class="k">save-excursion</span>
+                                           (funcall fn)))
+                            expreg-functions))
+           (regions (expreg--filter-regions regions orig))
+           (regions (expreg--sort-regions regions))
+           (regions (cl-remove-duplicates regions <span class="bi">:test</span> #'equal)))
+      (<span class="k">setq-local</span> expreg--next-regions regions)))
+
+  <span class="cd">;; </span><span class="c">Go past all the regions that are smaller than the current region,
+</span>  <span class="cd">;; </span><span class="c">if region is active.
+</span>  (<span class="k">when</span> (use-region-p)
+    (<span class="k">while</span> (<span class="k">and</span> expreg--next-regions
+                (<span class="k">let</span> ((beg (cadr (car expreg--next-regions)))
+                      (end (cddr (car expreg--next-regions))))
+                  (<span class="k">and</span> (&lt;= (region-beginning) beg)
+                       (&lt;= end (region-end)))))
+      <span class="cd">;; </span><span class="c">Pop from next-regions, push into prev-regions.
+</span>      (<span class="k">push</span> (<span class="k">pop</span> expreg--next-regions)
+            expreg--prev-regions)))
+
+  <span class="cd">;; </span><span class="c">Expand to the next expansion.
+</span>  (<span class="k">when</span> expreg--next-regions
+    (<span class="k">let</span> ((region (<span class="k">pop</span> expreg--next-regions)))
+      (set-mark (cddr region))
+      (goto-char (cadr region))
+      (<span class="k">push</span> region expreg--prev-regions)
+      (<span class="k">unless</span> transient-mark-mode
+        (activate-mark))))
+
+  (<span class="k">when</span> expreg--verbose
+    (message <span class="s">"blame: %s\nnext: %S\nprev: %S"</span>
+             (caar expreg--prev-regions)
+             expreg--next-regions expreg--prev-regions)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

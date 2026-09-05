@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca--initialize – Emacs Documentation Online</title>
+<meta name="description" content="eca--initialize is a natively compiled function defined in eca.el.
+Send the initialize request for SESSION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca--initialize</code></h1><p><span class="m"><code>eca--initialize</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">eca.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca--initialize <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Send the initialize request for <span class="arg">SESSION</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca.el</span>
+(<span class="k">defun</span> <span class="f">eca--initialize</span> (session)
+  <span class="doc">"Send the initialize request for SESSION."</span>
+  (run-hooks 'eca-before-initialize-hook)
+  (<span class="k">setf</span> (eca--session-status session) 'starting)
+  (eca-api-request-async
+   session
+   <span class="bi">:method</span> <span class="s">"initialize"</span>
+   <span class="bi">:params</span> (append (<span class="k">when-let*</span> ((pid (<span class="k">and</span> eca-send-process-id
+                                        (<span class="k">unless</span> (<span class="k">-some-&gt;</span> (buffer-file-name)
+                                                  (file-remote-p))
+                                          (emacs-pid)))))
+                     (list <span class="bi">:processId</span> pid))
+                   (list <span class="bi">:clientInfo</span> (list <span class="bi">:name</span> <span class="s">"emacs"</span>
+                                          <span class="bi">:version</span> (emacs-version))
+                         <span class="bi">:capabilities</span> (list <span class="bi">:codeAssistant</span> (list <span class="bi">:chat</span> t
+                                                                  <span class="bi">:chatCapabilities</span> (list <span class="bi">:askQuestion</span> t)
+                                                                  <span class="bi">:editor</span> (list <span class="bi">:diagnostics</span> t
+                                                                                <span class="bi">:definition</span> t
+                                                                                <span class="bi">:references</span> t)))
+                         <span class="bi">:initializationOptions</span> (list <span class="bi">:chatAgent</span> eca-chat-custom-agent)
+                         <span class="bi">:workspaceFolders</span> (vconcat (-map (<span class="k">lambda</span> (folder)
+                                                           (list <span class="bi">:uri</span> (eca--path-to-uri folder)
+                                                                 <span class="bi">:name</span> (file-name-nondirectory (directory-file-name folder))))
+                                                         (eca--session-workspace-folders session)))))
+   <span class="bi">:success-callback</span> (<span class="k">-lambda</span> (res)
+                       (<span class="k">setf</span> (eca--session-status session) 'started)
+                       (<span class="k">setf</span> (eca--session-chat-welcome-message session) (plist-get res <span class="bi">:chatWelcomeMessage</span>))
+                       (eca-api-notify session <span class="bi">:method</span> <span class="s">"initialized"</span>)
+                       (eca-info <span class="s">"Started with workspaces: %s"</span> (string-join (eca--session-workspace-folders session) <span class="s">","</span>))
+                       (eca-chat-open session)
+                       (run-hooks 'eca-after-initialize-hook))
+   <span class="bi">:error-callback</span> (<span class="k">lambda</span> (e) (eca-error e))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

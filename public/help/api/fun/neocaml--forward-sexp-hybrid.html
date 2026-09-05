@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: neocaml--forward-sexp-hybrid – Emacs Documentation Online</title>
+<meta name="description" content="neocaml--forward-sexp-hybrid is a natively compiled function defined
+in neocaml.el.
+Hybrid forward-sexp-function combining tree-sitter and syntax table.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>neocaml--forward-sexp-hybrid</code></h1><p><span class="m"><code>neocaml--forward-sexp-hybrid</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">neocaml.el</span>.
+<h2>Signature</h2>
+<pre><code>(neocaml--forward-sexp-hybrid <a href="#:~:text=settings.-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Hybrid <a href="../var/forward-sexp-function.html"><code>forward-sexp-function</code></a> combining tree-sitter and syntax table.
+<p>When point is on a delimiter character (paren, bracket, brace),
+fall back to syntax-table-based matching so that commands like
+<a href="../fun/delete-pair.html"><code>delete-pair</code></a> find the correct matching delimiter.  Otherwise,
+use tree-sitter sexp navigation.
+<p>This function is used on Emacs 29 and 30.  Emacs 31+ handles
+this natively via the <a href="../fun/list.html"><code>list</code></a> thing in <a href="../var/treesit-thing-settings.html"><code>treesit-thing-settings</code></a>.
+<p><span class="arg">ARG</span> is as in <a href="../var/forward-sexp-function.html"><code>forward-sexp-function</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/6yvzbjq5ljnchx97n8s5w91crk1nh47b-emacs-packages-deps/share/emacs/site-lisp/elpa/neocaml-20260710.532/neocaml.el</span>
+         (memq (syntax-class syntax) '(4 5)))))  <span class="cd">; </span><span class="c">4=open, 5=close
+</span>
+(<span class="k">defun</span> <span class="f">neocaml--forward-sexp-hybrid</span> (arg)
+  <span class="doc">"Hybrid `</span><span class="m doc">forward-sexp-function</span><span class="doc">' combining tree-sitter and syntax table.
+When point is on a delimiter character (paren, bracket, brace),
+fall back to syntax-table-based matching so that commands like
+`</span><span class="m doc">delete-pair</span><span class="doc">' find the correct matching delimiter.  Otherwise,
+use tree-sitter sexp navigation.
+
+This function is used on Emacs 29 and 30.  Emacs 31+ handles
+this natively via the `</span><span class="m doc">list</span><span class="doc">' thing in `</span><span class="m doc">treesit-thing-settings</span><span class="doc">'.
+
+ARG is as in `</span><span class="m doc">forward-sexp-function</span><span class="doc">'."</span>
+  (<span class="k">let</span> ((arg (<span class="k">or</span> arg 1)))
+    (<span class="k">if</span> (<span class="k">or</span> (neocaml--delimiter-p)
+            <span class="cd">;; </span><span class="c">Moving backward: check if the character before point
+</span>            <span class="cd">;; </span><span class="c">(skipping whitespace) is a closing delimiter.
+</span>            (<span class="k">and</span> (&lt; arg 0)
+                 (<span class="k">save-excursion</span>
+                   (skip-chars-backward <span class="s">" \t"</span>)
+                   (not (bobp))
+                   (<span class="k">let</span> ((syntax (syntax-after (1- (point)))))
+                     (<span class="k">and</span> syntax (eq (syntax-class syntax) 5))))))
+        <span class="cd">;; </span><span class="c">On a delimiter: use syntax-table paren matching.
+</span>        <span class="cd">;; </span><span class="c">`</span><span class="m c">forward-sexp-default-function</span><span class="c">' wraps `</span><span class="m c">scan-sexps</span><span class="c">' but is
+</span>        <span class="cd">;; </span><span class="c">only available from Emacs 30; fall back to raw `</span><span class="m c">scan-sexps</span><span class="c">'
+</span>        <span class="cd">;; </span><span class="c">on Emacs 29.
+</span>        (<span class="k">if</span> (fboundp 'forward-sexp-default-function)
+            (forward-sexp-default-function arg)
+          (goto-char (<span class="k">or</span> (scan-sexps (point) arg) (buffer-end arg))))
+      <span class="cd">;; </span><span class="c">Not on a delimiter: use tree-sitter node navigation.
+</span>      <span class="cd">;; </span><span class="c">`</span><span class="m c">treesit-forward-sexp</span><span class="c">' is available from Emacs 30; on Emacs 29
+</span>      <span class="cd">;; </span><span class="c">fall back to the simpler `</span><span class="m c">neocaml-forward-sexp</span><span class="c">'.
+</span>      (<span class="k">if</span> (fboundp 'treesit-forward-sexp)
+          (treesit-forward-sexp arg)
+        (neocaml-forward-sexp arg)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

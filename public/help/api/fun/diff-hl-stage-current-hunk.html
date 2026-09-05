@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: diff-hl-stage-current-hunk – Emacs Documentation Online</title>
+<meta name="description" content="diff-hl-stage-current-hunk is an interactive and natively compiled
+function defined in diff-hl.el.
+Stage the hunk at or near point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>diff-hl-stage-current-hunk</code></h1><p><span class="m"><code>diff-hl-stage-current-hunk</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">diff-hl.el</span>.
+<h2>Signature</h2>
+<pre><code>(diff-hl-stage-current-hunk)
+</code></pre>
+<h2>Documentation</h2>
+<p>Stage the hunk at or near point.
+<p>Only supported with Git.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/742jfhd6j9y7y1gqxy624dchx31gwmax-emacs-packages-deps/share/emacs/site-lisp/elpa/diff-hl-20260830.1400/diff-hl.el</span>
+(<span class="k">defun</span> <span class="f">diff-hl-stage-current-hunk</span> ()
+  <span class="doc">"Stage the hunk at or near point.
+
+Only supported with Git."</span>
+  (<span class="k">interactive</span>)
+  (diff-hl--ensure-staging-supported)
+  (diff-hl-find-current-hunk)
+  (<span class="k">let*</span> ((line (line-number-at-pos))
+         (file (diff-hl--buffer-file-name))
+         (dest-buffer (get-buffer-create <span class="s">" *diff-hl-stage*"</span>))
+         (orig-buffer (current-buffer))
+         <span class="cd">;; </span><span class="c">FIXME: If the file name has double quotes, these need to be quoted.
+</span>         (file-base (file-name-nondirectory file))
+         success)
+    (<span class="k">with-current-buffer</span> dest-buffer
+      (<span class="k">let</span> ((inhibit-read-only t))
+        (erase-buffer)))
+    (<span class="k">let</span> (diff-hl-reference-revision
+          diff-hl-update-async)
+      (diff-hl-diff-buffer-with-reference file dest-buffer nil 3))
+    (<span class="k">with-current-buffer</span> dest-buffer
+      (diff-hl-diff-skip-to line)
+      (<span class="k">let</span> ((inhibit-read-only t))
+        (diff-hl-split-away-changes 3)
+        (<span class="k">save-excursion</span>
+          (diff-end-of-hunk)
+          (delete-region (point) (point-max)))
+        (diff-beginning-of-hunk)
+        (delete-region (point-min) (point))
+        <span class="cd">;; </span><span class="c">diff-no-select creates a very ugly header; Git rejects it
+</span>        (insert (format <span class="s">"diff a/%s b/%s\n"</span> file-base file-base))
+        (insert (format <span class="s">"--- a/%s\n"</span> file-base))
+        (insert (format <span class="s">"+++ b/%s\n"</span> file-base)))
+      (<span class="k">setq</span> success (diff-hl-stage-diff orig-buffer)))
+    (<span class="k">when</span> success
+      (<span class="k">if</span> diff-hl-show-staged-changes
+          (message (concat <span class="s">"Hunk staged; customize `</span><span class="m s">diff-hl-show-staged-changes</span><span class="s">'"</span>
+                           <span class="s">" to highlight only unstaged changes"</span>))
+        (message <span class="s">"Hunk staged"</span>))
+      (<span class="k">unless</span> diff-hl-show-staged-changes
+        (diff-hl-update)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

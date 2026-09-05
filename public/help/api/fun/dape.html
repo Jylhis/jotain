@@ -1,0 +1,87 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape – Emacs Documentation Online</title>
+<meta name="description" content="dape is an interactive and natively compiled function defined in
+dape.el.
+Start debugging session with selected configuration.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape</code></h1><p><span class="m"><code>dape</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape <a href="#:~:text=bin&quot;.-,CONFIG"><span class="arg">CONFIG</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=alist.-,SKIP-COMPILE"><span class="arg">SKIP-COMPILE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Start debugging session with selected configuration.
+<p>When called interactively, the command prompts for a alist KEY from
+<a href="../var/dape-configs.html"><code>dape-configs</code></a>, followed by additional property-value pairs.  These
+pairs override the properties in the plist associated with the key
+in <a href="../var/dape-configs.html"><code>dape-configs</code></a>.
+<p>For example, interactively invoking:
+<br>&nbsp;&nbsp;launch :program "bin"
+<br>executes the <span class="m"><code>launch</code></span> configuration from <a href="../var/dape-configs.html"><code>dape-configs</code></a>, overriding
+the <span class="bi">:program</span> option with "bin".
+<p><span class="arg">CONFIG</span> is an keyword-value plist, see VALUEs in <span class="m"><code>dape-config</code></span> alist.
+<span class="arg">SKIP-COMPILE</span> argument is used internally for recursive calls
+and should not be specified manually.
+<p>For more information see <a href="../var/dape-configs.html"><code>dape-configs</code></a>.
+<h2>Key Bindings</h2>
+<p><span class="v">ctl-x-map</span> <span class="key">C-a d</span>
+<span class="v">dape-global-map</span> <span class="key">d</span>
+<span class="v">global-map</span> <span class="key">C-x C-a d</span>
+<span class="v">help-quick-use-map</span> <span class="key">C-x C-a d</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">dape</span> (config <span class="ty">&amp;optional</span> skip-compile)
+  <span class="doc">"Start debugging session with selected configuration.
+When called interactively, the command prompts for a alist KEY from
+`</span><span class="m doc">dape-configs</span><span class="doc">', followed by additional property-value pairs.  These
+pairs override the properties in the plist associated with the key
+in `</span><span class="m doc">dape-configs</span><span class="doc">'.
+
+For example, interactively invoking:
+  launch :program \"bin\"
+executes the `</span><span class="m doc">launch</span><span class="doc">' configuration from `</span><span class="m doc">dape-configs</span><span class="doc">', overriding
+the `</span><span class="m doc">:program</span><span class="doc">' option with \"bin\".
+
+CONFIG is an keyword-value plist, see VALUEs in `</span><span class="m doc">dape-config</span><span class="doc">' alist.
+SKIP-COMPILE argument is used internally for recursive calls
+and should not be specified manually.
+
+For more information see `</span><span class="m doc">dape-configs</span><span class="doc">'."</span>
+  (<span class="k">interactive</span>
+   (<span class="k">let*</span> ((config (dape--read-config)))
+     (<span class="k">when-let*</span> ((live (dape--live-connections-root)))
+       (<span class="k">let</span> (<span class="cd">;; </span><span class="c">XXX Save and restore `</span><span class="m c">last-command-event</span><span class="c">' to ignore
+</span>             <span class="cd">;; </span><span class="c">yes/no inputs to keep transient `</span><span class="m c">repeat-mode</span><span class="c">' map.
+</span>             (saved-event last-command-event))
+         (<span class="k">when</span> (yes-or-no-p
+                (format <span class="s">"Session(s) %s running; kill? "</span>
+                        (mapconcat
+                         (<span class="k">lambda</span> (c)
+                           (string-remove-prefix <span class="s">"dape-"</span> (jsonrpc-name c)))
+                         live <span class="s">", "</span>)))
+           (dape--kill-busy-wait))
+         (<span class="k">setq</span> last-command-event saved-event)))
+     (list config)))
+  (dape--config-ensure config t)
+  (<span class="k">when-let*</span> ((fn (<span class="k">or</span> (plist-get config 'fn) 'identity))
+              (fns (<span class="k">or</span> (<span class="k">and</span> (functionp fn) (list fn))
+                       (<span class="k">and</span> (listp fn) fn))))
+    (<span class="k">setq</span> config
+          (seq-reduce (<span class="k">lambda</span> (config fn) (funcall fn config))
+                      (append fns dape-default-config-functions)
+                      (copy-tree config))))
+  (<span class="k">if</span> (<span class="k">and</span> (not skip-compile) (plist-get config 'compile))
+      (dape--compile config (<span class="k">lambda</span> () (dape config 'skip-compile)))
+    <span class="cd">;; </span><span class="c">Run start hooks before connection creation so that the REPL
+</span>    <span class="cd">;; </span><span class="c">buffer exists when `</span><span class="m c">dape--create-connection</span><span class="c">' emits messages.
+</span>    (run-hooks 'dape-start-hook)
+    (<span class="k">let</span> ((conn (dape--create-connection config)))
+      (<span class="k">push</span> conn dape--connections)
+      (<span class="k">setq</span> dape--connection-selected conn)
+      (dape--start-debugging conn))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

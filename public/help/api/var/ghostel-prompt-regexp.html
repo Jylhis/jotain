@@ -1,0 +1,79 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Variable: ghostel-prompt-regexp – Emacs Documentation Online</title>
+<meta name="description" content="ghostel-prompt-regexp is a customizable variable defined in
+ghostel.el.
+Regexp matching a prompt prefix at the beginning of a line.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Variable: <code>ghostel-prompt-regexp</code></h1><p><span class="m"><code>ghostel-prompt-regexp</code></span> is a <a href="/info/elisp/variable-definitions.html">customizable</a> variable defined in
+<span class="bt">ghostel.el</span>.
+<h2>Value</h2>
+<pre><code><span class="s">"^[</span><span class="neg s">^</span><span class="s">#$%&gt;λ❯→➜\n]\\{0,60\\}[#$%&gt;λ❯→➜]+[  ]*"</span>
+</code></pre>
+<h2>Documentation</h2>
+<p>Regexp matching a prompt prefix at the beginning of a line.
+<p>Consulted as a fallback by <a href="../fun/ghostel-input-start-point.html"><code>ghostel-input-start-point</code></a> and
+<a href="../fun/ghostel-beginning-of-input-or-line.html"><code>ghostel-beginning-of-input-or-line</code></a> when the row has no
+<span class="m"><code>ghostel-prompt</code></span> text property (i.e. no OSC 133 shell integration).
+<p>The default recognizes:
+<br>- Standard shell prompts: <span class="m"><code>$ </code></span>, <span class="m"><code># </code></span>, <span class="m"><code>% </code></span>, <span class="m"><code>&gt;</code></span>
+<br>- Python and similar REPLs: <span class="m"><code>&gt;&gt;&gt;</code></span>
+<br>- Themed prompts: <span class="m"><code>λ </code></span>, <span class="m"><code>❯ </code></span> (Starship/Pure/Powerlevel10k),
+<br>&nbsp;&nbsp;<span class="m"><code>➜ </code></span> (oh-my-zsh robbyrussell), <span class="m"><code>→</code></span>
+<br>- Prompts padded with a no-break space (U+00A0) instead of a
+<br>&nbsp;&nbsp;plain space, e.g. Claude Code's <span class="m"><code>&gt;</code></span>
+<p>The negated character class <span class="m"><code>[^#$%&gt;λ❯→➜\n]\{0,60\}</code></span> forces the match to
+stop at the *first* prompt character on the line, so command lines echoed into
+scrollback (e.g. <span class="m"><code>$ echo $foo</code></span>) are detected by their leading prompt prefix
+rather than a <span class="m"><code>$</code></span> deeper in the line.  The <span class="m"><code>\{0,60\}</code></span> bound caps that prefix
+at 60 columns: a prompt character only counts near the start of a line, so
+a stray <a href="../fun/%25.html"><code>%</code></a>/<span class="m"><code>#</code></span> deep in command output (e.g. the <a href="../fun/%25.html"><code>%</code></a> in a <span class="m"><code>100%</code></span> progress line)
+is treated as output, not a prompt.
+<p>Trade-off: any line that *starts* with one of these characters is
+treated as a prompt line.  Diff output (<span class="m"><code>&gt; excluded</code></span>), markdown
+headings (<span class="m"><code># Heading</code></span>), and lines like <span class="m"><code>5 &gt; 3</code></span> will yield false
+positives for column-aware motions.  OSC 133 integration is the
+robust fix - see the README's shell-integration section.
+<p>Customize this variable to add or replace prompt characters for
+prompts the default doesn't catch (e.g., <span class="m"><code>▶ </code></span>, <span class="m"><code>» </code></span>, <span class="m"><code>🦀 </code></span>).  Set
+to nil to disable the regex fallback entirely (OSC 133 only).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defcustom</span> <span class="v">ghostel-prompt-regexp</span>
+  <span class="s">"^[</span><span class="neg s">^</span><span class="s">#$%&gt;λ❯→➜\n]\\{0,60\\}[#$%&gt;λ❯→➜]+[ \u00a0]*"</span>
+  <span class="doc">"Regexp matching a prompt prefix at the beginning of a line.
+Consulted as a fallback by `</span><span class="m doc">ghostel-input-start-point</span><span class="doc">' and
+`</span><span class="m doc">ghostel-beginning-of-input-or-line</span><span class="doc">' when the row has no
+`</span><span class="m doc">ghostel-prompt</span><span class="doc">' text property (i.e. no OSC 133 shell integration).
+
+The default recognizes:
+- Standard shell prompts: `$ ', `# ', `% ', `&gt; '
+- Python and similar REPLs: `&gt;&gt;&gt; '
+- Themed prompts: `λ ', `❯ ' (Starship/Pure/Powerlevel10k),
+  `➜ ' (oh-my-zsh robbyrussell), `→ '
+- Prompts padded with a no-break space (U+00A0) instead of a
+  plain space, e.g. Claude Code's `&gt; '
+
+The negated character class `[</span><span class="neg doc">^</span><span class="doc">#$%&gt;λ❯→➜\\n]\\{0,60\\}' forces the match to
+stop at the *first* prompt character on the line, so command lines echoed into
+scrollback (e.g. `$ echo $foo') are detected by their leading prompt prefix
+rather than a `</span><span class="m doc">$</span><span class="doc">' deeper in the line.  The `\\{0,60\\}' bound caps that prefix
+at 60 columns: a prompt character only counts near the start of a line, so
+a stray `</span><span class="m doc">%</span><span class="doc">'/`#' deep in command output (e.g. the `</span><span class="m doc">%</span><span class="doc">' in a `</span><span class="m doc">100%</span><span class="doc">' progress line)
+is treated as output, not a prompt.
+
+Trade-off: any line that *starts* with one of these characters is
+treated as a prompt line.  Diff output (`&gt; excluded'), markdown
+headings (`# Heading'), and lines like `5 &gt; 3' will yield false
+positives for column-aware motions.  OSC 133 integration is the
+robust fix - see the README's shell-integration section.
+
+Customize this variable to add or replace prompt characters for
+prompts the default doesn't catch (e.g., `▶ ', `» ', `🦀 ').  Set
+to nil to disable the regex fallback entirely (OSC 133 only)."</span>
+  <span class="bi">:type</span> '(choice (const <span class="bi">:tag</span> <span class="s">"Disable"</span> nil)
+                 (regexp <span class="bi">:tag</span> <span class="s">"Regexp"</span>)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-call-smerge – Emacs Documentation Online</title>
+<meta name="description" content="magit-call-smerge is a natively compiled function defined in
+magit-apply.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-call-smerge</code></h1><p><span class="m"><code>magit-call-smerge</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-apply.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-call-smerge <span class="arg">FN</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-apply.el</span>
+(<span class="k">defun</span> <span class="f">magit-call-smerge</span> (fn)
+  (<span class="k">pcase-let*</span> ((file (magit-file-at-point t t))
+               (keep (get-file-buffer file))
+               (`(,buf ,pos) (magit-diff-visit-file--noselect))
+               (keep (eq keep buf)))
+    (<span class="k">with-current-buffer</span> buf
+      (<span class="k">save-excursion</span>
+        (<span class="k">save-restriction</span>
+          (<span class="k">unless</span> (&lt;= (point-min) pos (point-max))
+            (widen))
+          (goto-char pos)
+          (<span class="k">condition-case</span> nil
+              (smerge-match-conflict)
+            (<span class="w">error</span>
+             (<span class="k">if</span> (eq fn #'smerge-keep-current)
+                 (<span class="k">when</span> (eq this-command #'magit-discard)
+                   (re-search-forward smerge-begin-re nil t)
+                   (<span class="k">setq</span> fn
+                         (<span class="k">magit-read-char-case</span> <span class="s">"Keep side: "</span> t
+                           (?o <span class="s">"[o]urs/upper"</span>   #'smerge-keep-upper)
+                           (?b <span class="s">"[b]ase"</span>         #'smerge-keep-base)
+                           (?t <span class="s">"[t]heirs/lower"</span> #'smerge-keep-lower))))
+               (re-search-forward smerge-begin-re nil t))))
+          (funcall fn)))
+      (<span class="k">when</span> (<span class="k">and</span> keep (magit-anything-unmerged-p file))
+        (smerge-start-session))
+      (save-buffer))
+    (<span class="k">unless</span> keep
+      (kill-buffer buf))
+    (magit-refresh)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

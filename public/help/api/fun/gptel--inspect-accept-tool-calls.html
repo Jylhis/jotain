@@ -1,0 +1,77 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--inspect-accept-tool-calls – Emacs Documentation Online</title>
+<meta name="description" content="gptel--inspect-accept-tool-calls is an interactive and natively
+compiled function defined in gptel.el.
+Run possibly edited tool-calls read from the tool call inspection buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--inspect-accept-tool-calls</code></h1><p><span class="m"><code>gptel--inspect-accept-tool-calls</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively
+compiled</code></a> function defined in <span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--inspect-accept-tool-calls <span class="ty">&amp;optional</span> _)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run possibly edited tool-calls read from the tool call inspection buffer.
+<h2>Key Bindings</h2>
+<p><span class="v">gptel-tool-call-inspection-map</span> <span class="key">C-c C-c</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel--inspect-accept-tool-calls</span> (<span class="ty">&amp;optional</span> _)
+  <span class="doc">"Run possibly edited tool-calls read from the tool call inspection buffer."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> ((call) (index)
+        (read-error
+         (<span class="k">lambda</span> () (<span class="w">user-error</span>
+                <span class="s">"Cannot read modified arguments, please check modifications"</span>)))
+        (apply-error
+         (<span class="k">lambda</span> () (message <span class="s">"Cannot apply argument modifications.  \
+This is a bug, please report it!"</span>))))
+    (<span class="k">unless</span> (gptel-fsm-p gptel--fsm-last) (funcall apply-error))
+    (<span class="k">cond</span>
+     ((buffer-modified-p)
+      (<span class="k">let*</span> ((info (gptel-fsm-info gptel--fsm-last))
+             (backend (plist-get info <span class="bi">:backend</span>))
+             (tool-use (plist-get info <span class="bi">:tool-use</span>))
+             (tool-spec-args-cb) (name)
+             (tool-calls))
+        (<span class="k">dolist</span> (o (cl-remove-if-not (<span class="k">lambda</span> (ov) (overlay-get ov 'gptel-overlay))
+                                     (overlays-in (point-min) (point-max))))
+          (goto-char (overlay-start o))
+          (<span class="k">condition-case</span> nil
+              (<span class="k">save-restriction</span>
+                (narrow-to-region (point) (overlay-end o))
+                (skip-chars-forward <span class="s">"\n\r\ "</span>)
+                (<span class="k">unless</span> (eobp)
+                  (<span class="k">setq</span> call (read (current-buffer))
+                        name (plist-get call <span class="bi">:name</span>))))
+            (<span class="w">error</span> (funcall read-error)))
+          (<span class="k">unless</span> (integerp (<span class="k">setq</span> index (overlay-get o 'gptel-overlay)))
+            (funcall read-error))
+          <span class="cd">;; </span><span class="c">Merge with or remove from messages array...
+</span>          (gptel--inject-tool-call
+           backend (plist-get info <span class="bi">:data</span>) (nth index tool-use) call)
+          (<span class="k">if</span> (not call)
+              <span class="cd">;; </span><span class="c">Remove from tool-use
+</span>              (plist-put info <span class="bi">:tool-use</span>
+                         (append (cl-subseq tool-use 0 index)
+                                 (cl-subseq tool-use (1+ index))))
+            <span class="cd">;; </span><span class="c">...before modifying the tool use block
+</span>            (gptel--merge-plists (nth index tool-use) call)
+            (<span class="k">setq</span> tool-spec-args-cb (overlay-get o 'gptel-tool))
+            <span class="cd">;; </span><span class="c">and modifying the arguments sent to the callback
+</span>            (<span class="k">setf</span> (nth 0 tool-spec-args-cb)
+                  (<span class="k">or</span> (cl-find name (plist-get info <span class="bi">:tools</span>)
+                               <span class="bi">:key</span> #'gptel-tool-name <span class="bi">:test</span> #'string=)
+                      (gptel-get-tool name)))
+            (<span class="k">setf</span> (nth 1 tool-spec-args-cb) (plist-get call <span class="bi">:args</span>))
+            (<span class="k">push</span> tool-spec-args-cb tool-calls)))
+        (gptel--accept-tool-calls   <span class="cd">;</span><span class="c">include overlay to clean up if there is one
+</span>         tool-calls (cadr (plist-get info <span class="bi">:tool-display</span>)))))
+     (t (<span class="k">let*</span> ((tool-display (plist-get (gptel-fsm-info gptel--fsm-last)
+                                        <span class="bi">:tool-display</span>)))
+          (apply #'gptel--accept-tool-calls tool-display)))))
+  (quit-window t))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

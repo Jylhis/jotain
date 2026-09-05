@@ -1,0 +1,91 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-diff--dwim – Emacs Documentation Online</title>
+<meta name="description" content="magit-diff--dwim is a natively compiled function defined in
+magit-diff.el.
+Return information for performing DWIM diff.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-diff--dwim</code></h1><p><span class="m"><code>magit-diff--dwim</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-diff--dwim)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return information for performing DWIM diff.
+<p>The information can be in three forms:
+<br>1. TYPE
+<br>&nbsp;&nbsp;&nbsp;A symbol describing a type of diff where no additional information
+<br>&nbsp;&nbsp;&nbsp;is needed to generate the diff.  One of <span class="m"><code>staged</code></span>, <span class="m"><code>unstaged</code></span>,
+<br>&nbsp;&nbsp;&nbsp;<span class="m"><code>unmerged</code></span>, and <a href="../fun/undefined.html"><code>undefined</code></a>.
+<br>2. (TYPE . VALUE)
+<br>&nbsp;&nbsp;&nbsp;Like #1 but the diff requires additional information, which is
+<br>&nbsp;&nbsp;&nbsp;given by VALUE.  Currently, this includes <span class="m"><code>commit</code></span> and <span class="m"><code>stash</code></span>,
+<br>&nbsp;&nbsp;&nbsp;where VALUE is the given commit or stash, respectively.
+<br>3. RANGE
+<br>&nbsp;&nbsp;&nbsp;A string indicating a diff range.
+<p>If no DWIM context is found, nil is returned.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-diff.el</span>
+(<span class="k">defun</span> <span class="f">magit-diff--dwim</span> ()
+  <span class="doc">"Return information for performing DWIM diff.
+
+The information can be in three forms:
+1. TYPE
+   A symbol describing a type of diff where no additional information
+   is needed to generate the diff.  One of `</span><span class="m doc">staged</span><span class="doc">', `</span><span class="m doc">unstaged</span><span class="doc">',
+   `</span><span class="m doc">unmerged</span><span class="doc">', and `</span><span class="m doc">undefined</span><span class="doc">'.
+2. (TYPE . VALUE)
+   Like #1 but the diff requires additional information, which is
+   given by VALUE.  Currently, this includes `</span><span class="m doc">commit</span><span class="doc">' and `</span><span class="m doc">stash</span><span class="doc">',
+   where VALUE is the given commit or stash, respectively.
+3. RANGE
+   A string indicating a diff range.
+
+If no DWIM context is found, nil is returned."</span>
+  (<span class="k">cond-let</span>
+    ([commits (magit-region-values '(commit branch) t)]
+     (deactivate-mark)
+     (concat (car (last commits)) <span class="s">".."</span> (car commits)))
+    ((derived-mode-p 'magit-stash-mode)
+     (cons 'commit
+           (<span class="k">magit-section-case</span>
+             (commit (<span class="k">oref</span> it value))
+             (file (<span class="k">thread-first</span> it
+                     (<span class="k">oref</span> parent)
+                     (<span class="k">oref</span> value)))
+             (hunk (<span class="k">thread-first</span> it
+                     (<span class="k">oref</span> parent)
+                     (<span class="k">oref</span> parent)
+                     (<span class="k">oref</span> value))))))
+    (magit-buffer-revision
+     (cons 'commit magit-buffer-revision))
+    ((derived-mode-p 'magit-diff-mode)
+     (<span class="k">pcase-exhaustive</span> magit-buffer-diff-type
+       ('committed magit-buffer-diff-range)
+       ((<span class="k">or</span> 'unstaged 'staged 'undefined) magit-buffer-diff-type)))
+    ((<span class="k">magit-section-case</span>
+       ([* unstaged] 'unstaged)
+       ([* staged] 'staged)
+       (unmerged 'unmerged)
+       (unpushed (magit-diff--range-to-endpoints (<span class="k">oref</span> it value)))
+       (unpulled (magit-diff--range-to-endpoints (<span class="k">oref</span> it value)))
+       (branch (<span class="k">cond-let</span>
+                 [[current (magit-get-current-branch)]
+                  [atpoint (<span class="k">oref</span> it value)]]
+                 ((not (equal atpoint current))
+                  (format <span class="s">"%s...%s"</span> (<span class="k">or</span> current <span class="s">"HEAD"</span>) atpoint))
+                 ([upstream (magit-get-upstream-branch)]
+                  (format <span class="s">"%s...%s"</span> upstream current))
+                 ((magit-anything-modified-p)
+                  current)
+                 ((cons 'commit current))))
+       (commit (cons 'commit (<span class="k">oref</span> it value)))
+       ([file commit] (cons 'commit (<span class="k">oref</span> (<span class="k">oref</span> it parent) value)))
+       ([hunk file commit]
+        (cons 'commit (<span class="k">oref</span> (<span class="k">oref</span> (<span class="k">oref</span> it parent) parent) value)))
+       (stash (cons 'stash (<span class="k">oref</span> it value)))
+       (pullreq (forge--pullreq-range (<span class="k">oref</span> it value) t))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

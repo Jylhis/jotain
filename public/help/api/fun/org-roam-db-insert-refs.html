@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-db-insert-refs – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-db-insert-refs is a natively compiled function defined in
+org-roam-db.el.
+Insert refs for node at point into Org-roam cache.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-db-insert-refs</code></h1><p><span class="m"><code>org-roam-db-insert-refs</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">org-roam-db.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-db-insert-refs)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert refs for node at point into Org-roam cache.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-db.el</span>
+(<span class="k">defun</span> <span class="f">org-roam-db-insert-refs</span> ()
+  <span class="doc">"Insert refs for node at point into Org-roam cache."</span>
+  (<span class="k">when-let*</span> ((node-id (org-id-get))
+              (refs (org-entry-get (point) <span class="s">"ROAM_REFS"</span>))
+              (refs (split-string-and-unquote refs)))
+    (<span class="k">let</span> (rows)
+      (<span class="k">dolist</span> (ref refs)
+        (<span class="k">save-match-data</span>
+          (<span class="k">cond</span> (<span class="cd">;; </span><span class="c">@citeKey
+</span>                 (string-prefix-p <span class="s">"@"</span> ref)
+                 (<span class="k">push</span> (vector node-id (substring ref 1) <span class="s">"cite"</span>) rows))
+                (<span class="cd">;; </span><span class="c">[cite:@citeKey]
+</span>                 (string-prefix-p <span class="s">"[cite:"</span> ref)
+                 (<span class="k">condition-case</span> nil
+                     (<span class="k">let</span> ((cite-obj (org-cite-parse-objects ref)))
+                       (org-element-map cite-obj 'citation-reference
+                         (<span class="k">lambda</span> (cite)
+                           (<span class="k">let</span> ((key (org-element-property <span class="bi">:key</span> cite)))
+                             (<span class="k">push</span> (vector node-id key <span class="s">"cite"</span>) rows)))))
+                   (<span class="w">error</span>
+                    (lwarn '(org-roam) <span class="bi">:warning</span>
+                           <span class="s">"%s:%s\tInvalid cite %s, skipping..."</span> (buffer-file-name) (point) ref))))
+                (<span class="cd">;; </span><span class="c">https://google.com, cite:citeKey
+</span>                 <span class="cd">;; </span><span class="c">Note: we use string-match here because it matches any link: e.g. [[cite:abc][abc]]
+</span>                 <span class="cd">;; </span><span class="c">But this form of matching is loose, and can accept invalid links e.g. [[cite:abc]
+</span>                 (string-match org-link-any-re (org-link-encode ref '(#x20)))
+                 (<span class="k">setq</span> ref (org-link-encode ref '(#x20)))
+                 (<span class="k">let</span> ((ref-url (url-generic-parse-url (<span class="k">or</span> (match-string 2 ref) (match-string 0 ref))))
+                       (link-type ()) <span class="cd">;; </span><span class="c">clear url-type for backward compatible.
+</span>                       (path ()))
+                   (<span class="k">setq</span> link-type (url-type ref-url))
+                   (<span class="k">setf</span> (url-type ref-url) nil)
+                   (<span class="k">setq</span> path (org-link-decode (url-recreate-url ref-url)))
+                   (<span class="k">if</span> (<span class="k">and</span> (boundp 'org-ref-cite-types)
+                            (<span class="k">or</span> (assoc link-type org-ref-cite-types)
+                                (member link-type org-ref-cite-types)))
+                       (<span class="k">dolist</span> (key (org-roam-org-ref-path-to-keys path))
+                         (<span class="k">push</span> (vector node-id key link-type) rows))
+                     (<span class="k">push</span> (vector node-id path link-type) rows))))
+                (t
+                 (lwarn '(org-roam) <span class="bi">:warning</span>
+                        <span class="s">"%s:%s\tInvalid ref %s, skipping..."</span> (buffer-file-name) (point) ref)))))
+      (<span class="k">when</span> rows
+        (org-roam-db-query [<span class="bi">:insert</span> <span class="bi">:into</span> refs
+                            <span class="bi">:values</span> $v1]
+                           rows)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

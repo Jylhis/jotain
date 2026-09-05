@@ -1,0 +1,224 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-fontify-block – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-fontify-block is a natively compiled function defined in
+web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-fontify-block</code></h1><p><span class="m"><code>web-mode-fontify-block</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-fontify-block <span class="arg">REG-BEG</span> <span class="arg">REG-END</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-fontify-block</span> (reg-beg reg-end)
+  (<span class="k">when</span> web-mode-trace
+    (message <span class="s">"fontify-block: reg-beg(%S) reg-end(%S) engine(%S) keywords(%S)"</span>
+             reg-beg reg-end web-mode-engine (not (null web-mode-engine-font-lock-keywords))))
+
+  (<span class="k">let</span> (sub1 sub2 sub3 continue char keywords token-type face beg end (buffer (current-buffer)))
+
+    <span class="cd">;; </span><span class="c">NOTE: required for blocks inside tag attrs
+</span>    <span class="cd">;; </span><span class="c">NOTE: ajout de face dans la liste pour sucharger la couleur définie par
+</span>    <span class="cd">;;       </span><span class="c">un prealable web-mode-fontity-part (2022-12-25 #1230)
+</span>    (remove-list-of-text-properties reg-beg reg-end '(font-lock-face face))
+    <span class="cd">;;</span><span class="c">(message "reg-beg=%S reg-end=%S" reg-beg reg-end)
+</span>
+    (goto-char reg-beg)
+
+    (<span class="k">when</span> (null web-mode-engine-font-lock-keywords)
+      (<span class="k">setq</span> sub1 (buffer-substring-no-properties
+                  reg-beg (+ reg-beg 1))
+            sub2 (buffer-substring-no-properties
+                  reg-beg (+ reg-beg 2))
+            sub3 (buffer-substring-no-properties
+                  reg-beg (+ reg-beg (<span class="k">if</span> (&gt;= (point-max) (+ reg-beg 3)) 3 2))))
+      )
+
+    (<span class="k">cond</span>
+
+      ((<span class="k">and</span> (get-text-property reg-beg 'block-beg)
+            (eq (get-text-property reg-beg 'block-token) 'comment))
+       (put-text-property reg-beg reg-end 'font-lock-face 'web-mode-comment-face)
+       ) <span class="cd">;</span><span class="c">comment block
+</span>
+      (web-mode-engine-font-lock-keywords
+       (<span class="k">setq</span> keywords web-mode-engine-font-lock-keywords))
+
+      ((string= web-mode-engine <span class="s">"django"</span>)
+       (<span class="k">cond</span>
+         ((string= sub2 <span class="s">"{{"</span>)
+          (<span class="k">setq</span> keywords web-mode-django-expr-font-lock-keywords))
+         ((string= sub2 <span class="s">"{%"</span>)
+          (<span class="k">setq</span> keywords web-mode-django-code-font-lock-keywords))
+         ((string= sub1 <span class="s">"#"</span>)
+          (<span class="k">setq</span> keywords web-mode-django-code-font-lock-keywords))
+         )) <span class="cd">;</span><span class="c">django
+</span>
+      ((string= web-mode-engine <span class="s">"mako"</span>)
+       (<span class="k">cond</span>
+         ((member sub3 '(<span class="s">"&lt;% "</span> <span class="s">"&lt;%\n"</span> <span class="s">"&lt;%!"</span>))
+          (<span class="k">setq</span> keywords web-mode-mako-block-font-lock-keywords))
+         ((eq (aref sub2 0) ?\%)
+          (<span class="k">setq</span> keywords web-mode-mako-block-font-lock-keywords))
+         ((member sub2 '(<span class="s">"&lt;%"</span> <span class="s">"&lt;/"</span>))
+          (<span class="k">setq</span> keywords web-mode-mako-tag-font-lock-keywords))
+         ((member sub2 '(<span class="s">"${"</span>))
+          (<span class="k">setq</span> keywords web-mode-uel-font-lock-keywords))
+         )) <span class="cd">;</span><span class="c">mako
+</span>
+      ((string= web-mode-engine <span class="s">"mason"</span>)
+       <span class="cd">;;</span><span class="c">(message "%S %S" sub2 sub3)
+</span>       (<span class="k">cond</span>
+         ((member sub3 '(<span class="s">"&lt;% "</span> <span class="s">"&lt;%\n"</span> <span class="s">"&lt;&amp;|"</span>))
+          (<span class="k">setq</span> keywords web-mode-mason-code-font-lock-keywords))
+         ((eq (aref sub2 0) ?\%)
+          (<span class="k">setq</span> keywords web-mode-mason-code-font-lock-keywords))
+         ((<span class="k">and</span> (<span class="k">or</span> (string= sub2 <span class="s">"&lt;%"</span>) (string= sub3 <span class="s">"&lt;/%"</span>))
+               (not (member sub3 '(<span class="s">"&lt;%c"</span> <span class="s">"&lt;%i"</span> <span class="s">"&lt;%p"</span>))))
+          (<span class="k">setq</span> keywords web-mode-mason-block-font-lock-keywords))
+         (t
+          (<span class="k">setq</span> keywords web-mode-mason-code-font-lock-keywords))
+         )) <span class="cd">;</span><span class="c">mason
+</span>
+      ((string= web-mode-engine <span class="s">"jsp"</span>)
+       (<span class="k">cond</span>
+         ((string= sub3 <span class="s">"&lt;%@"</span>)
+          (<span class="k">setq</span> keywords web-mode-directive-font-lock-keywords))
+         ((member sub2 '(<span class="s">"${"</span> <span class="s">"#{"</span>))
+          (<span class="k">setq</span> keywords web-mode-uel-font-lock-keywords))
+         ((string= sub2 <span class="s">"&lt;%"</span>)
+          (<span class="k">setq</span> keywords web-mode-jsp-font-lock-keywords))
+         )) <span class="cd">;</span><span class="c">jsp
+</span>
+      ((string= web-mode-engine <span class="s">"asp"</span>)
+       (<span class="k">cond</span>
+         ((<span class="k">or</span> (string= sub2 <span class="s">"&lt;%"</span>)
+              (not (string= sub1 <span class="s">"&lt;"</span>)))
+          (<span class="k">setq</span> keywords web-mode-asp-font-lock-keywords))
+         (t
+          (<span class="k">setq</span> keywords web-mode-engine-tag-font-lock-keywords))
+         )) <span class="cd">;</span><span class="c">asp
+</span>
+      ((string= web-mode-engine <span class="s">"clip"</span>)
+       (<span class="k">setq</span> keywords web-mode-engine-tag-font-lock-keywords)
+       ) <span class="cd">;</span><span class="c">clip
+</span>
+      ((string= web-mode-engine <span class="s">"perl"</span>)
+       (<span class="k">setq</span> keywords web-mode-engine-tag-font-lock-keywords)
+       ) <span class="cd">;</span><span class="c">perl
+</span>
+      ((string= web-mode-engine <span class="s">"aspx"</span>)
+       (<span class="k">cond</span>
+         ((string= sub3 <span class="s">"&lt;%@"</span>)
+          (<span class="k">setq</span> keywords web-mode-directive-font-lock-keywords))
+         ((string= sub3 <span class="s">"&lt;%$"</span>)
+          (<span class="k">setq</span> keywords web-mode-expression-font-lock-keywords))
+         (t
+          (<span class="k">setq</span> keywords web-mode-aspx-font-lock-keywords))
+         )) <span class="cd">;</span><span class="c">aspx
+</span>
+      ((string= web-mode-engine <span class="s">"freemarker"</span>)
+       (<span class="k">cond</span>
+         ((member sub2 '(<span class="s">"${"</span> <span class="s">"#{"</span>))
+          (<span class="k">setq</span> keywords web-mode-uel-font-lock-keywords))
+         ((<span class="k">or</span> (member sub2 '(<span class="s">"&lt;@"</span> <span class="s">"[@"</span> <span class="s">"&lt;#"</span> <span class="s">"[#"</span>))
+              (member sub3 '(<span class="s">"&lt;/@"</span> <span class="s">"[/@"</span> <span class="s">"&lt;/#"</span> <span class="s">"[/#"</span>)))
+          (<span class="k">setq</span> keywords (<span class="k">if</span> (eq ?\[ (aref sub2 0))
+                             web-mode-freemarker-square-font-lock-keywords
+                             web-mode-freemarker-font-lock-keywords)))
+         (t
+          (<span class="k">setq</span> keywords web-mode-engine-tag-font-lock-keywords))
+         )) <span class="cd">;</span><span class="c">freemarker
+</span>
+      ) <span class="cd">;</span><span class="c">cond
+</span>
+    (<span class="k">when</span> keywords
+      (web-mode-fontify-region reg-beg reg-end keywords)
+      (<span class="k">setq</span> continue t)
+      (<span class="k">setq</span> end reg-beg)
+      (<span class="k">while</span> continue
+        (<span class="k">if</span> (get-text-property end 'block-token)
+            (<span class="k">setq</span> beg end)
+            (<span class="k">setq</span> beg (next-single-property-change end 'block-token buffer reg-end)))
+        (<span class="k">setq</span> end nil)
+        (<span class="k">when</span> beg (<span class="k">setq</span> char (char-after beg)))
+        (<span class="k">if</span> (<span class="k">and</span> beg (&lt; beg reg-end))
+            (<span class="k">progn</span>
+              (<span class="k">setq</span> token-type (get-text-property beg 'block-token))
+              (<span class="k">setq</span> face (<span class="k">cond</span>
+                           ((eq token-type 'string)  'web-mode-block-string-face)
+                           ((eq token-type 'comment) 'web-mode-block-comment-face)
+                           ((eq token-type 'symbol)  'web-mode-symbol-face)
+                           (t                        'web-mode-block-delimiter-face)))
+              (<span class="k">setq</span> end (next-single-property-change beg 'block-token buffer reg-end))
+              <span class="cd">;;              </span><span class="c">(message "end=%S" end)
+</span>              (<span class="k">if</span> (<span class="k">and</span> end (&lt;= end reg-end))
+                  (<span class="k">progn</span>
+                    <span class="cd">;;</span><span class="c">(message "%S &gt; %S face(%S)" beg end face)
+</span>                    (remove-list-of-text-properties beg end '(face))
+                    (put-text-property beg end 'font-lock-face face)
+                    )
+                  (<span class="k">setq</span> continue nil
+                        end nil)
+                  ) <span class="cd">;</span><span class="c">if end
+</span>              ) <span class="cd">;</span><span class="c">progn beg
+</span>            (<span class="k">setq</span> continue nil
+                  end nil)
+            ) <span class="cd">;</span><span class="c">if beg
+</span>        (<span class="k">when</span> (<span class="k">and</span> beg end)
+          (<span class="k">save-match-data</span>
+            (<span class="k">when</span> (<span class="k">and</span> web-mode-enable-heredoc-fontification
+                       (eq char ?\&lt;)
+                       (&gt; (- end beg) 8)
+                       (string-match-p <span class="s">"JS</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">JAVASCRIPT</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">HTM</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">CSS"</span> (buffer-substring-no-properties beg end)))
+              (<span class="k">setq</span> keywords
+                    (<span class="k">cond</span>
+                      ((string-match-p <span class="s">"H"</span> (buffer-substring-no-properties beg (+ beg 8)))
+                       web-mode-html-font-lock-keywords)
+                      (t
+                       web-mode-javascript-font-lock-keywords)
+                      ))
+              (web-mode-fontify-region beg end keywords)
+              )
+            ) <span class="cd">;</span><span class="c">save-match-data
+</span>          (<span class="k">when</span> (<span class="k">and</span> web-mode-enable-string-interpolation
+                     (member char '(?\" ?\&lt;))
+                     (member web-mode-engine '(<span class="s">"php"</span> <span class="s">"erb"</span>))
+                     (&gt; (- end beg) 4))
+            (web-mode-interpolate-block-string beg end)
+            ) <span class="cd">;</span><span class="c">when
+</span>          (<span class="k">when</span> (<span class="k">and</span> web-mode-enable-comment-interpolation
+                     (eq token-type 'comment)
+                     (&gt; (- end beg) 3))
+            (web-mode-interpolate-comment beg end t)
+            ) <span class="cd">;</span><span class="c">when
+</span>          (<span class="k">when</span> (<span class="k">and</span> web-mode-enable-comment-annotation
+                     (eq token-type 'comment)
+                     (&gt; (- end beg) 3))
+            (web-mode-annotate-comment beg end)
+            ) <span class="cd">;</span><span class="c">when
+</span>          (<span class="k">when</span> (<span class="k">and</span> web-mode-enable-sql-detection
+                     (eq token-type 'string)
+                     (&gt; (- end beg) 6)
+                     (web-mode-looking-at-p (concat <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">&lt;&lt;&lt;[[:alnum:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">[ \n]*"</span> web-mode-sql-queries) beg)
+                     )
+            (web-mode-interpolate-sql-string beg end)
+            ) <span class="cd">;</span><span class="c">when
+</span>          ) <span class="cd">;</span><span class="c">when beg end
+</span>        ) <span class="cd">;</span><span class="c">while continue
+</span>      ) <span class="cd">;</span><span class="c">when keywords
+</span>
+    (<span class="k">when</span> (<span class="k">and</span> (member web-mode-engine '(<span class="s">"mako"</span>))
+               (&gt; (- reg-end reg-beg) 12)
+               (eq ?\&lt; (char-after reg-beg)))
+      (web-mode-interpolate-block-tag reg-beg reg-end))
+
+    (<span class="k">when</span> web-mode-enable-block-face
+      (font-lock-append-text-property reg-beg reg-end 'face 'web-mode-block-face))
+
+    ))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

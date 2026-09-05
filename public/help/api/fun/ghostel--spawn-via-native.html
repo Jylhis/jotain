@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--spawn-via-native – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--spawn-via-native is a natively compiled function defined in
+ghostel.el.
+Spawn COMMAND through the native PTY implementation.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--spawn-via-native</code></h1><p><span class="m"><code>ghostel--spawn-via-native</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--spawn-via-native <a href="#:~:text=Spawn-,COMMAND"><span class="arg">COMMAND</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Spawn <span class="arg">COMMAND</span> through the native PTY implementation.
+<p><span class="arg">COMMAND</span> is a list of argv strings.  Returns the event pipe process used
+as the Emacs-side handle for the native child process.  The native
+reader writes terminal events to the pipe, and its detached reaper
+writes a final exit status before closing it.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--spawn-via-native</span> (command)
+  <span class="doc">"Spawn COMMAND through the native PTY implementation.
+COMMAND is a list of argv strings.  Returns the event pipe process used
+as the Emacs-side handle for the native child process.  The native
+reader writes terminal events to the pipe, and its detached reaper
+writes a final exit status before closing it."</span>
+  (<span class="k">let*</span> ((pipe (make-pipe-process
+                <span class="bi">:name</span> <span class="s">"ghostel-native-process"</span>
+                <span class="bi">:buffer</span> (current-buffer)
+                <span class="bi">:filter</span> #'ghostel--events-filter
+                <span class="bi">:noquery</span> t))
+         (pid (ghostel--spawn-native-process ghostel--term command pipe)))
+    (<span class="k">setq</span> ghostel--pid pid)
+    (process-put pipe 'ghostel--native-pid pid)
+
+    (set-process-sentinel pipe
+                          (<span class="k">lambda</span> (process event)
+                            <span class="cd">;; </span><span class="c">The pipe stands in for the native child process.
+</span>                            <span class="cd">;; </span><span class="c">If Emacs deletes it before normal exit, make sure
+</span>                            <span class="cd">;; </span><span class="c">the child is not left running.  After normal exit
+</span>                            <span class="cd">;; </span><span class="c">the reaper has already waited, so this is a no-op.
+</span>                            (signal-process
+                             (process-get process 'ghostel--native-pid) 9)
+                            (ghostel--sentinel process event)))
+    (add-hook 'kill-buffer-hook #'ghostel--kill-native-process-hook nil t)
+    pipe))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

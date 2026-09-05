@@ -1,0 +1,64 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--fake-cursor-update – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--fake-cursor-update is a natively compiled function defined in
+ghostel.el.
+Refresh the hint cursor overlay.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--fake-cursor-update</code></h1><p><span class="m"><code>ghostel--fake-cursor-update</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--fake-cursor-update <span class="ty">&amp;optional</span> <a href="#:~:text=unused-,WINDOW"><span class="arg">WINDOW</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Refresh the hint cursor overlay.
+<p>Draws an overlay at the live terminal cursor position when in
+copy or Emacs mode, point is somewhere other than the live cursor,
+and <a href="../var/ghostel-readonly-fake-cursor.html"><code>ghostel-readonly-fake-cursor</code></a> is non-nil with a non-nil
+resolved style.  Otherwise clears the overlay.
+<p>Accepts an optional unused <span class="arg">WINDOW</span> argument so it can serve as a
+<a href="../var/pre-redisplay-functions.html"><code>pre-redisplay-functions</code></a> entry.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--fake-cursor-update</span> (<span class="ty">&amp;optional</span> _window)
+  <span class="doc">"Refresh the hint cursor overlay.
+Draws an overlay at the live terminal cursor position when in
+copy or Emacs mode, point is somewhere other than the live cursor,
+and `</span><span class="m doc">ghostel-readonly-fake-cursor</span><span class="doc">' is non-nil with a non-nil
+resolved style.  Otherwise clears the overlay.
+
+Accepts an optional unused WINDOW argument so it can serve as a
+`</span><span class="m doc">pre-redisplay-functions</span><span class="doc">' entry."</span>
+  (<span class="k">let</span> ((style (<span class="k">and</span> ghostel-readonly-fake-cursor
+                    (memq ghostel--input-mode '(copy emacs))
+                    (ghostel--fake-cursor-style)))
+        (pos ghostel--cursor-char-pos))
+    (<span class="k">cond</span>
+     ((<span class="k">or</span> (null style) (null pos) (= pos (point)))
+      (ghostel--fake-cursor-clear))
+     (t
+      (<span class="k">let*</span> ((face (<span class="k">if</span> (eq style 'box)
+                       'ghostel-fake-cursor-box
+                     'ghostel-fake-cursor))
+             (eol (<span class="k">or</span> (= pos (point-max))
+                      (= pos (<span class="k">save-excursion</span>
+                               (goto-char pos)
+                               (line-end-position)))))
+             (ov (<span class="k">or</span> ghostel--fake-cursor-overlay
+                     (<span class="k">let</span> ((new (make-overlay 1 1 nil t nil)))
+                       (overlay-put new 'priority 100)
+                       (<span class="k">setq</span> ghostel--fake-cursor-overlay new)))))
+        (<span class="k">cond</span>
+         (eol
+          (move-overlay ov pos pos)
+          (overlay-put ov 'face nil)
+          (overlay-put ov 'after-string
+                       (propertize <span class="s">" "</span> 'face face)))
+         (t
+          (move-overlay ov pos (1+ pos))
+          (overlay-put ov 'after-string nil)
+          (overlay-put ov 'face face))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

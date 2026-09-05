@@ -1,0 +1,53 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-template--lambda-from-form – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-template--lambda-from-form is a natively compiled function
+defined in majutsu-template.el.
+Return lambda node from PARAMS and BODY forms.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-template--lambda-from-form</code></h1><p><span class="m"><code>majutsu-template--lambda-from-form</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-template.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-template--lambda-from-form <a href="#:~:text=from-,PARAMS"><span class="arg">PARAMS</span></a> <a href="#:~:text=and-,BODY"><span class="arg">BODY</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=When-,PARAM-TYPE"><span class="arg">PARAM-TYPE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return lambda node from <span class="arg">PARAMS</span> and <span class="arg">BODY</span> forms.
+<p>When <span class="arg">PARAM-TYPE</span> is non-nil, bind the single lambda parameter to that type.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-template.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-template--lambda-from-form</span> (params body <span class="ty">&amp;optional</span> param-type)
+  <span class="doc">"Return lambda node from PARAMS and BODY forms.
+When PARAM-TYPE is non-nil, bind the single lambda parameter to that type."</span>
+  (<span class="k">let*</span> ((parsed-params (majutsu-template--parse-lambda-params params))
+         (self-param (car parsed-params))
+         (param-type (majutsu-template--type-ref-normalize param-type))
+         (bound-type (<span class="k">unless</span> (memq (majutsu-template--type-ref-base-type param-type)
+                                   '(Unknown Template))
+                       param-type))
+         (self-node (<span class="k">and</span> self-param
+                         (majutsu-template--var-node
+                          self-param bound-type
+                          (<span class="k">unless</span> bound-type '(<span class="bi">:deferred-type</span> t)))))
+         (bindings (mapcar (<span class="k">lambda</span> (param)
+                             (majutsu-template--make-binding
+                              <span class="bi">:name</span> param
+                              <span class="bi">:type</span> (<span class="k">and</span> (eq param self-param) bound-type)
+                              <span class="bi">:node</span> (<span class="k">when</span> (eq param self-param) self-node)))
+                           parsed-params))
+         (body-node (majutsu-template--call-with-bindings
+                     bindings
+                     (<span class="k">lambda</span> ()
+                       (majutsu-template--call-with-self-binding
+                        self-node bound-type
+                        (<span class="k">lambda</span> ()
+                          (majutsu-template--sugar-transform body))))))
+         (lambda-type (list <span class="bi">:lambda</span>
+                            (list (<span class="k">or</span> bound-type 'Unknown))
+                            (<span class="k">or</span> (majutsu-template-node-type body-node) 'Unknown))))
+    (majutsu-template--lambda-node parsed-params body-node
+                                   (list <span class="bi">:body-form</span> body)
+                                   lambda-type)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

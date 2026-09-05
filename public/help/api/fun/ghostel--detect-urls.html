@@ -1,0 +1,140 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--detect-urls – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--detect-urls is a natively compiled function defined in
+ghostel-links.el.
+Scan a buffer region for plain-text URLs and file:line references.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--detect-urls</code></h1><p><span class="m"><code>ghostel--detect-urls</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel-links.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--detect-urls <span class="ty">&amp;optional</span> <a href="#:~:text=references.-,BEGIN"><span class="arg">BEGIN</span></a> <a href="#:~:text=and-,END"><span class="arg">END</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Scan a buffer region for plain-text URLs and file:line references.
+<p><span class="arg">BEGIN</span> and <span class="arg">END</span> default to <a href="../fun/point-min.html"><code>point-min</code></a> and <a href="../fun/point-max.html"><code>point-max</code></a> respectively.
+Skips regions that already have a <span class="m"><code>help-echo</code></span> property (e.g. from OSC 8)
+and the user's active input on the current prompt line.
+Bounding the scan keeps streaming output from re-scanning the entire
+materialized scrollback on every redraw.
+Binds <a href="../var/inhibit-read-only.html"><code>inhibit-read-only</code></a> and suppresses modification hooks so the scan
+can attach text properties when called from the deferred-detection timer
+outside the redraw scope.
+<p>Returns the (<span class="arg">BEGIN</span> . <span class="arg">END</span>) actually covered, which the caller-supplied
+bounds widened to whole logical lines.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-links.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--detect-urls</span> (<span class="ty">&amp;optional</span> begin end)
+  <span class="doc">"Scan a buffer region for plain-text URLs and file:line references.
+BEGIN and END default to `</span><span class="m doc">point-min</span><span class="doc">' and `</span><span class="m doc">point-max</span><span class="doc">' respectively.
+Skips regions that already have a `</span><span class="m doc">help-echo</span><span class="doc">' property (e.g. from OSC 8)
+and the user's active input on the current prompt line.
+Bounding the scan keeps streaming output from re-scanning the entire
+materialized scrollback on every redraw.
+Binds `</span><span class="m doc">inhibit-read-only</span><span class="doc">' and suppresses modification hooks so the scan
+can attach text properties when called from the deferred-detection timer
+outside the redraw scope.
+
+Returns the (BEGIN . END) actually covered, which the caller-supplied
+bounds widened to whole logical lines."</span>
+  (<span class="k">let*</span> (<span class="cd">;; </span><span class="c">Whole logical lines: a value the terminal split across rows is
+</span>         <span class="cd">;; </span><span class="c">only recognisable once the rows are joined, and starting mid-line
+</span>         <span class="cd">;; </span><span class="c">would let the `</span><span class="m c">^</span><span class="c">' anchor below match where there is no line start.
+</span>         (begin (ghostel--soft-wrap-line-beginning
+                 (<span class="k">or</span> begin (point-min)) ghostel--soft-wrap-row-limit))
+         (end (ghostel--soft-wrap-line-end
+               (<span class="k">or</span> end (point-max)) ghostel--soft-wrap-row-limit))
+         (inhibit-read-only t)
+         (inhibit-modification-hooks t)
+         <span class="cd">;; </span><span class="c">`</span><span class="m c">ghostel--cursor-char-pos</span><span class="c">' is the live terminal cursor after a redraw;
+</span>         <span class="cd">;; </span><span class="c">its line is the prompt the user is currently editing.  Capture as
+</span>         <span class="cd">;; </span><span class="c">buffer-position bounds so the per-match skip check is O(1).
+</span>         (active-bounds
+          (<span class="k">unless</span> ghostel--inhibit-active-line-skip
+            (<span class="k">let</span> ((active-pos (<span class="k">or</span> ghostel--cursor-char-pos (point))))
+              (cons (ghostel--soft-wrap-line-beginning
+                     active-pos ghostel--soft-wrap-row-limit)
+                    (ghostel--soft-wrap-line-end
+                     active-pos ghostel--soft-wrap-row-limit)))))
+         (joined (ghostel--wrap-joined-region
+                  begin end ghostel--soft-wrap-row-limit))
+         (text (car joined))
+         (chunks (cdr joined))
+         <span class="cd">;; </span><span class="c">Disable file detection over TRAMP
+</span>         (files (<span class="k">and</span> ghostel-enable-file-detection
+                     (not (file-remote-p default-directory))))
+         <span class="cd">;; </span><span class="c">Every range a pattern matched, whether or not it was linkified.
+</span>         <span class="cd">;; </span><span class="c">What no pattern covers any more is a leftover to clear.
+</span>         (matched nil)
+         (url-ranges nil))
+    <span class="cd">;; </span><span class="c">Pass 1: http(s) URLs
+</span>    (<span class="k">when</span> ghostel-enable-url-detection
+      (<span class="k">let</span> ((offset 0))
+        (<span class="k">while</span> (string-match ghostel--url-regex text offset)
+          (<span class="k">setq</span> offset (match-end 0))
+          (<span class="k">let*</span> ((beg (ghostel--wrap-offset-to-pos (match-beginning 0) chunks))
+                 (mend (ghostel--wrap-offset-to-pos (match-end 0) chunks))
+                 (url (match-string-no-properties 0 text))
+                 (fragments (ghostel--wrap-fragments beg mend))
+                 (range (cons beg mend)))
+            (<span class="k">push</span> range url-ranges)
+            (<span class="k">push</span> range matched)
+            (<span class="k">unless</span> (ghostel--skip-match-p fragments url active-bounds)
+              (ghostel--linkify fragments url url))))))
+    <span class="cd">;; </span><span class="c">Pass 2: file:line[:col] references (e.g. "./foo.el:42",
+</span>    <span class="cd">;; </span><span class="c">"/tmp/bar.rs:10", or bare relative paths like "src/main.rs:42:4"
+</span>    <span class="cd">;; </span><span class="c">from compiler output).  The full regex is assembled from fixed anchor
+</span>    <span class="cd">;; </span><span class="c">+ user-tunable path + fixed `:LINE[:COL]' tail so group 1 (path) and
+</span>    <span class="cd">;; </span><span class="c">group 2 (line[:col]) are always present — no nil-guarding needed in
+</span>    <span class="cd">;; </span><span class="c">the hot loop.  A small hash memoizes `</span><span class="m c">file-exists-p</span><span class="c">' so repeated paths
+</span>    <span class="cd">;; </span><span class="c">in a redraw (common in multi-line compiler diagnostics) don't re-stat.
+</span>    (<span class="k">when</span> files
+      (<span class="k">let</span> ((full-regex (concat ghostel--file-detection-leading-anchor
+                                <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">"</span> ghostel-file-detection-path-regex <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>
+                                <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">"</span> ghostel--file-detection-tail <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>))
+            (seen (make-hash-table <span class="bi">:test</span> 'equal))
+            (offset 0))
+        (<span class="k">while</span> (string-match full-regex text offset)
+          (<span class="k">setq</span> offset (match-end 2))
+          (<span class="k">let*</span> ((beg (ghostel--wrap-offset-to-pos (match-beginning 1) chunks))
+                 (mend (ghostel--wrap-offset-to-pos (match-end 2) chunks))
+                 (path (match-string-no-properties 1 text))
+                 (loc (match-string-no-properties 2 text))
+                 (raw (concat path loc))
+                 (fragments (ghostel--wrap-fragments beg mend)))
+            <span class="cd">;; </span><span class="c">A URL owns its whole span: its `</span><span class="m c">//host/path</span><span class="c">' half also looks
+</span>            <span class="cd">;; </span><span class="c">like a path, and re-marking it would replace the link with a
+</span>            <span class="cd">;; </span><span class="c">local file — and stat that file on every scan.
+</span>            (<span class="k">unless</span> (<span class="k">or</span> (ghostel--range-overlaps-p beg mend url-ranges)
+                        <span class="cd">;; </span><span class="c">With the URL pass switched off nothing recorded a
+</span>                        <span class="cd">;; </span><span class="c">range, so fall back to the link already there.
+</span>                        <span class="cd">;; </span><span class="c">When it did run its ranges are the whole truth,
+</span>                        <span class="cd">;; </span><span class="c">and a leftover URL link is about to be cleared.
+</span>                        (<span class="k">and</span> (not ghostel-enable-url-detection)
+                             (ghostel--url-link-p beg)))
+              (<span class="k">if</span> (ghostel--skip-match-p fragments raw active-bounds)
+                  <span class="cd">;; </span><span class="c">Whatever is there stays; it must not count as stranded.
+</span>                  (<span class="k">push</span> (cons beg mend) matched)
+                (<span class="k">let*</span> ((abs-path (expand-file-name path))
+                       (cached (gethash abs-path seen 'unset))
+                       (exists (<span class="k">if</span> (eq cached 'unset)
+                                   (puthash abs-path (file-exists-p abs-path) seen)
+                                 cached)))
+                  <span class="cd">;; </span><span class="c">A candidate that names no file leaves the range
+</span>                  <span class="cd">;; </span><span class="c">uncovered, so a link left over from the text it used
+</span>                  <span class="cd">;; </span><span class="c">to hold is cleared.
+</span>                  (<span class="k">when</span> exists
+                    (<span class="k">push</span> (cons beg mend) matched)
+                    (ghostel--linkify
+                     fragments
+                     (<span class="k">if</span> (&gt; (length loc) 0)
+                         (concat <span class="s">"fileref:"</span> abs-path <span class="s">":"</span> (substring loc 1))
+                       (concat <span class="s">"fileref:"</span> abs-path))
+                     raw)))))))))
+    (ghostel--drop-stranded-links
+     begin end matched ghostel-enable-url-detection files)
+    (cons begin end)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

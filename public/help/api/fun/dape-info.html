@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape-info – Emacs Documentation Online</title>
+<meta name="description" content="dape-info is an interactive and natively compiled function defined in
+dape.el.
+Display debug info buffers showing variables, stack, etc.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape-info</code></h1><p><span class="m"><code>dape-info</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape-info <span class="ty">&amp;optional</span> <a href="#:~:text=If-,MAYBE-KILL"><span class="arg">MAYBE-KILL</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Display debug info buffers showing variables, stack, etc.
+<p>If <span class="arg">MAYBE-KILL</span> is non-nil (which is always true when called
+interactively) and all info buffers are already displayed, kill each
+buffer info buffer.
+See <a href="../var/dape-info-buffer-window-groups.html"><code>dape-info-buffer-window-groups</code></a> for how to customize which
+buffers get displayed and how they are grouped.
+<h2>Key Bindings</h2>
+<p><span class="v">ctl-x-map</span> <span class="key">C-a i</span>
+<span class="v">dape-global-map</span> <span class="key">i</span>
+<span class="v">global-map</span> <span class="key">C-x C-a i</span>
+<span class="v">help-quick-use-map</span> <span class="key">C-x C-a i</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape-info</span> (<span class="ty">&amp;optional</span> maybe-kill)
+  <span class="doc">"Display debug info buffers showing variables, stack, etc.
+If MAYBE-KILL is non-nil (which is always true when called
+interactively) and all info buffers are already displayed, kill each
+buffer info buffer.
+See `</span><span class="m doc">dape-info-buffer-window-groups</span><span class="doc">' for how to customize which
+buffers get displayed and how they are grouped."</span>
+  (<span class="k">interactive</span> (list t))
+  (<span class="k">let</span> (buffer-displayed-p)
+    (<span class="k">cl-loop</span> with displayed-buffers =
+             (cl-remove-if-not #'get-buffer-window
+                               (dape--info-buffer-list))
+             for group in dape-info-buffer-window-groups unless
+             (<span class="k">cl-loop</span> for spec in group thereis
+                      (cl-some (<span class="k">lambda</span> (buffer)
+                                 (<span class="k">with-current-buffer</span> buffer
+                                   (apply #'dape--info-buffer-p
+                                          (ensure-list spec))))
+                               displayed-buffers))
+             do
+             (<span class="k">setq</span> buffer-displayed-p t)
+             (dape--display-buffer
+              (apply #'dape--info-get-buffer-create
+                     (<span class="k">or</span>
+                      <span class="cd">;; </span><span class="c">Try to re-create the last window setup
+</span>                      (cl-find-if
+                       (<span class="k">pcase-lambda</span> (`(,hist-mode ,hist-index))
+                         (cl-find-if
+                          (<span class="k">pcase-lambda</span> (`(,spec-mode ,spec-index))
+                            (<span class="k">and</span> (eq hist-mode spec-mode)
+                                 (<span class="k">or</span> (not spec-index)
+                                     (eq hist-index spec-index))))
+                          group
+                          <span class="bi">:key</span> #'ensure-list))
+                       dape--info-buffer-display-history)
+                      <span class="cd">;; </span><span class="c">...or fallback to car if no history
+</span>                      (ensure-list (car group))))))
+    (<span class="k">when</span> (<span class="k">and</span> maybe-kill (not buffer-displayed-p))
+      (<span class="k">cl-loop</span> for buffer in (dape--info-buffer-list)
+               do (kill-buffer buffer)))
+    (dape-info-update)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

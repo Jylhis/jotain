@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-thingatpt--jj-revision – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-thingatpt--jj-revision is a natively compiled function defined
+in majutsu-jj.el.
+Return the JJ revision at point, or nil if none is found.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-thingatpt--jj-revision</code></h1><p><span class="m"><code>majutsu-thingatpt--jj-revision</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">majutsu-jj.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-thingatpt--jj-revision <span class="ty">&amp;optional</span> <a href="#:~:text=Optional-,DISALLOW"><span class="arg">DISALLOW</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the JJ revision at point, or nil if none is found.
+<p>Optional <span class="arg">DISALLOW</span> is a string of characters that should not appear
+in the revision identifier (used for recursive refinement).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-jj.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-thingatpt--jj-revision</span> (<span class="ty">&amp;optional</span> disallow)
+  <span class="doc">"Return the JJ revision at point, or nil if none is found.
+Optional DISALLOW is a string of characters that should not appear
+in the revision identifier (used for recursive refinement)."</span>
+  (<span class="k">and-let*</span> ((bounds
+              (<span class="k">let</span> ((c (majutsu--regexp-char-class
+                        (concat <span class="s">" \n\t~^:?*[</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">()&lt;&gt;"</span> disallow))))
+                (<span class="k">cl-letf</span>
+                    (((get 'jj-revision 'beginning-op)
+                      (<span class="k">lambda</span> ()
+                        (<span class="k">if</span> (re-search-backward (format <span class="s">"[%s]"</span> c) nil t)
+                            (forward-char)
+                          (goto-char (point-min)))))
+                     ((get 'jj-revision 'end-op)
+                      (<span class="k">lambda</span> ()
+                        (re-search-forward (format <span class="s">"</span><span class="bi s">\\=</span><span class="s">[</span><span class="neg s">^</span><span class="s">%s]*"</span> c) nil t))))
+                  (bounds-of-thing-at-point 'jj-revision))))
+             (string (buffer-substring-no-properties (car bounds) (cdr bounds)))
+             (string (<span class="k">thread-first</span> string
+                                   (string-trim-left  <span class="s">"[][()&lt;/\"']+"</span>)
+                                   (string-trim-right <span class="s">"[])&gt;\"'.,;:!]+"</span>))))
+    (<span class="k">let*</span> ((revision-face (majutsu--face-at-point-p majutsu-revision-faces))
+           (explicit-syntax (majutsu--explicit-jj-revision-syntax-p string)))
+      (<span class="k">when</span> (<span class="k">or</span> (string-match-p <span class="s">"\\.\\."</span> string)
+                (string-match-p <span class="s">"/\\."</span> string))
+        (<span class="k">setq</span> disallow (concat disallow <span class="s">"."</span>)))
+      (<span class="k">when</span> (&gt; (cl-count ?@ string) 1)
+        (<span class="k">setq</span> disallow (concat disallow <span class="s">"@"</span>)))
+      (<span class="k">when</span> (<span class="k">and</span> (string-match-p <span class="s">"/[0-9]"</span> string)
+                 (&gt; (cl-count ?/ string) 1))
+        (<span class="k">setq</span> disallow (concat disallow <span class="s">"/"</span>)))
+      (<span class="k">if</span> disallow
+          (majutsu-thingatpt--jj-revision disallow)
+        (<span class="k">and</span> (not (string-match-p <span class="s">"</span><span class="w s">\</span><span class="s">`[[:space:]]*</span><span class="w s">\</span><span class="s">'"</span> string))
+             (<span class="k">or</span>
+              (<span class="k">and</span> (string-match-p <span class="s">"^[k-z]+$"</span> string)
+                   (&gt;= (length string) (<span class="k">if</span> revision-face 1 4))
+                   (majutsu-jj-revision-p string))
+              (<span class="k">and</span> (&gt;= (length string) 4)
+                   (string-match-p <span class="s">"^[0-9a-fA-F]+$"</span> string)
+                   (majutsu-jj-revision-p string))
+              (string-equal string <span class="s">"@"</span>)
+              (<span class="k">and</span> explicit-syntax
+                   (majutsu-jj-revision-p string))
+              (<span class="k">and</span> revision-face
+                   (majutsu-jj-revision-p string)))
+             string)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

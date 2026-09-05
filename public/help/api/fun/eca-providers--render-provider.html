@@ -1,0 +1,110 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-providers--render-provider – Emacs Documentation Online</title>
+<meta name="description" content="eca-providers--render-provider is a natively compiled function defined
+in eca-providers.el.
+Render a single PROVIDER card for SESSION using KEYMAP for buttons.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-providers--render-provider</code></h1><p><span class="m"><code>eca-providers--render-provider</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-providers.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-providers--render-provider <a href="#:~:text=single-,PROVIDER"><span class="arg">PROVIDER</span></a> <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a> <a href="#:~:text=using-,KEYMAP"><span class="arg">KEYMAP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Render a single <span class="arg">PROVIDER</span> card for <span class="arg">SESSION</span> using <span class="arg">KEYMAP</span> for buttons.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-providers.el</span>
+(<span class="k">defun</span> <span class="f">eca-providers--render-provider</span> (provider session keymap)
+  <span class="doc">"Render a single PROVIDER card for SESSION using KEYMAP for buttons."</span>
+  (<span class="k">let*</span> ((id (plist-get provider <span class="bi">:id</span>))
+         (label (<span class="k">or</span> (plist-get provider <span class="bi">:label</span>) id))
+         (configured (plist-get provider <span class="bi">:configured</span>))
+         (auth (plist-get provider <span class="bi">:auth</span>))
+         (status (plist-get auth <span class="bi">:status</span>))
+         (login-methods (plist-get (plist-get provider <span class="bi">:login</span>) <span class="bi">:methods</span>))
+         (models (plist-get provider <span class="bi">:models</span>))
+         (model-count (length models))
+         (expanded (<span class="k">and</span> eca-providers--expanded
+                        (member id eca-providers--expanded)))
+         (has-login (<span class="k">and</span> login-methods (&gt; (length login-methods) 0)))
+         (is-authed (member status '(<span class="s">"authenticated"</span> <span class="s">"expiring"</span> <span class="s">"expired"</span> <span class="s">"local"</span>))))
+    <span class="cd">;; </span><span class="c">Line 1: indicator + name + status label
+</span>    (<span class="k">let</span> ((start (point)))
+      (insert <span class="s">" "</span> (eca-providers--status-indicator status) <span class="s">" "</span>)
+      (insert (propertize label 'face 'bold))
+      (<span class="k">let</span> ((status-label (eca-providers--status-label status (plist-get auth <span class="bi">:source</span>))))
+        (insert (make-string (max 1 (- 35 (length label))) ?\s))
+        (insert status-label))
+      (insert <span class="s">"\n"</span>)
+      <span class="cd">;; </span><span class="c">Line 2: auth info (if any)
+</span>      (<span class="k">when-let*</span> ((info (eca-providers--auth-info-text auth)))
+        (insert <span class="s">"   "</span> (propertize info 'face 'eca-providers-auth-info-face) <span class="s">"\n"</span>))
+      <span class="cd">;; </span><span class="c">Provider settings
+</span>      (eca-providers--render-settings (plist-get provider <span class="bi">:settings</span>) <span class="s">"   "</span>)
+      <span class="cd">;; </span><span class="c">Line 3: models count + actions
+</span>      (<span class="k">when</span> configured
+        (<span class="k">let*</span> ((toggle-fn (<span class="k">lambda</span> (<span class="ty">&amp;rest</span> _)
+                            (<span class="k">interactive</span>)
+                            (eca-providers--toggle-expand)))
+               (expand-km (<span class="k">let</span> ((km (make-composed-keymap (make-sparse-keymap) keymap)))
+                            (define-key km (kbd <span class="s">"RET"</span>) toggle-fn)
+                            (define-key km (kbd <span class="s">"&lt;return&gt;"</span>) toggle-fn)
+                            (define-key km (kbd <span class="s">"TAB"</span>) toggle-fn)
+                            (define-key km (kbd <span class="s">"&lt;tab&gt;"</span>) toggle-fn)
+                            (<span class="k">when</span> eca-buttons-allow-mouse
+                              (define-key km (kbd <span class="s">"&lt;mouse-1&gt;"</span>) toggle-fn))
+                            km))
+               (models-text (concat <span class="s">"   "</span>
+                                    (propertize (<span class="k">if</span> expanded <span class="s">"▾"</span> <span class="s">"▸"</span>) 'face 'bold)
+                                    <span class="s">" "</span>
+                                    (propertize (format <span class="s">"%d model%s"</span> model-count (<span class="k">if</span> (= model-count 1) <span class="s">""</span> <span class="s">"s"</span>))
+                                                'face 'font-lock-doc-face))))
+          (insert (propertize models-text
+                              'keymap expand-km
+                              'pointer 'hand
+                              'help-echo <span class="s">"RET / TAB / mouse-1: expand/collapse"</span>)))
+        <span class="cd">;; </span><span class="c">Action buttons
+</span>        (<span class="k">let</span> ((btn-col (max (+ (current-column) 2) 40))
+              (source (plist-get auth <span class="bi">:source</span>)))
+          (insert (make-string (max 1 (- btn-col (current-column))) ?\s))
+          (<span class="k">cond</span>
+           ((<span class="k">and</span> is-authed (string= source <span class="s">"login"</span>))
+            (insert (eca-buttonize
+                     keymap
+                     (propertize <span class="s">"Logout"</span>
+                                 'font-lock-face 'eca-providers-button-logout-face)
+                     (<span class="k">lambda</span> ()
+                       (<span class="k">when</span> (y-or-n-p (format <span class="s">"Logout from %s? "</span> label))
+                         (eca-api-request-async session
+                           <span class="bi">:method</span> <span class="s">"providers/logout"</span>
+                           <span class="bi">:params</span> (list <span class="bi">:provider</span> id)
+                           <span class="bi">:success-callback</span> (<span class="k">lambda</span> (_) (eca-info <span class="s">"Logged out of %s"</span> label))
+                           <span class="bi">:error-callback</span> (<span class="k">lambda</span> (err) (eca-warn <span class="s">"Logout failed: %s"</span> err))))))))
+           ((<span class="k">and</span> has-login (not is-authed))
+            (<span class="k">let</span> ((btn-label (<span class="k">if</span> (eca-providers--has-oauth-login-p login-methods) <span class="s">"Login"</span> <span class="s">"Add Key"</span>)))
+              (insert (eca-buttonize
+                       keymap
+                       (propertize btn-label
+                                   'font-lock-face 'eca-providers-button-face)
+                       (<span class="k">lambda</span> () (eca-providers--do-login session id nil))))))))
+        (insert <span class="s">"\n"</span>)
+        <span class="cd">;; </span><span class="c">Expanded models
+</span>        (<span class="k">when</span> (<span class="k">and</span> expanded (&gt; model-count 0))
+          (eca-providers--render-models models)))
+      <span class="cd">;; </span><span class="c">Unconfigured: show login/add-key button
+</span>      (<span class="k">when</span> (<span class="k">and</span> (not configured) has-login)
+        (<span class="k">let</span> ((btn-label (<span class="k">if</span> (eca-providers--has-oauth-login-p login-methods) <span class="s">"Login"</span> <span class="s">"Add Key"</span>)))
+          (insert <span class="s">"   "</span>
+                  (eca-buttonize
+                   keymap
+                   (propertize btn-label
+                               'font-lock-face 'eca-providers-button-face)
+                   (<span class="k">lambda</span> () (eca-providers--do-login session id nil)))
+                  <span class="s">"\n"</span>)))
+      <span class="cd">;; </span><span class="c">Tag the whole card with provider id
+</span>      (put-text-property start (point) 'eca-provider-id id))
+    (insert <span class="s">"\n"</span>)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

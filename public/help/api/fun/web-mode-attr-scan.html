@@ -1,0 +1,75 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-attr-scan – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-attr-scan is a natively compiled function defined in
+web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-attr-scan</code></h1><p><span class="m"><code>web-mode-attr-scan</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-attr-scan <span class="arg">POS</span> <span class="arg">STATE</span> <span class="arg">CHAR</span> <span class="arg">NAME-BEG</span> <span class="arg">NAME-END</span> <span class="arg">VAL-BEG</span> <span class="arg">ATTR-FLAGS</span> <span class="arg">EQUAL-OFFSET</span> <span class="arg">TAG-FLAGS</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-attr-scan</span> (pos state char name-beg name-end val-beg attr-flags equal-offset tag-flags)
+  <span class="cd">;;</span><span class="c">(message "point(%S) state(%S) c(%c) name-beg(%S) name-end(%S) val-beg(%S) attr-flags(%S) equal-offset(%S) tag-flags(%S)" pos state char name-beg name-end val-beg attr-flags equal-offset tag-flags)
+</span>  (<span class="k">when</span> (null attr-flags) (<span class="k">setq</span> attr-flags 0))
+  (<span class="k">when</span> (<span class="k">and</span> name-beg name-end web-mode-engine-attr-regexp)
+    (<span class="k">let</span> (name)
+      (<span class="k">setq</span> name (buffer-substring-no-properties name-beg (1+ name-end)))
+      (<span class="k">cond</span>
+        ((string-match-p <span class="s">"^data[-]"</span> name)
+         (<span class="k">setq</span> attr-flags (logior attr-flags 1))
+         )
+        ((string-match-p web-mode-engine-attr-regexp name)
+         (<span class="k">setq</span> attr-flags (logior attr-flags 2))
+         )
+        )
+      ) <span class="cd">;</span><span class="c">name
+</span>    )
+  <span class="cd">;;</span><span class="c">(message "%S" name)
+</span>  (<span class="k">cond</span>
+    ((null name-beg)
+     0)
+    ((<span class="k">or</span> (<span class="k">and</span> (= state 8) (not (eq ?\" char)))
+         (<span class="k">and</span> (= state 7) (not (eq ?\' char))))
+     (put-text-property name-beg (1+ name-beg) 'tag-attr-beg attr-flags)
+     (put-text-property name-beg val-beg 'tag-attr t)
+     (put-text-property (1- val-beg) val-beg 'tag-attr-end equal-offset)
+     1)
+    ((<span class="k">and</span> (member state '(4 5)) (null val-beg))
+     (put-text-property name-beg (1+ name-beg) 'tag-attr-beg attr-flags)
+     (put-text-property name-beg (+ name-beg equal-offset 1) 'tag-attr t)
+     (put-text-property (+ name-beg equal-offset) (+ name-beg equal-offset 1) 'tag-attr-end equal-offset)
+     1)
+    (t
+     (<span class="k">let</span> (val-end)
+       (<span class="k">if</span> (null val-beg)
+           (<span class="k">setq</span> val-end name-end)
+           (<span class="k">setq</span> val-end pos)
+           (<span class="k">cond</span>
+             ((null char)
+              (<span class="k">setq</span> val-end (1- val-end)))
+             ((member char '(?\s ?\n ?\/))
+              (<span class="k">setq</span> val-end (1- val-end)))
+             ((eq char ?\&gt;)
+              (<span class="k">if</span> (= (logand tag-flags 8) 8)
+                  (<span class="k">progn</span>
+                    <span class="cd">;;</span><span class="c">(message "tag-flags=%S %S" tag-flags (logand tag-flags 8))
+</span>                    (<span class="k">setq</span> val-end (- val-end 2)))
+                  (<span class="k">setq</span> val-end (- val-end 1)))
+              <span class="cd">;; </span><span class="c">(message "val-end=%S" val-end)
+</span>              )
+             )
+           )
+       (put-text-property name-beg (1+ name-beg) 'tag-attr-beg attr-flags)
+       (put-text-property name-beg (1+ val-end) 'tag-attr t)
+       (put-text-property val-end (1+ val-end) 'tag-attr-end equal-offset)
+       ) <span class="cd">;</span><span class="c">let
+</span>     1) <span class="cd">;</span><span class="c">t
+</span>    ) <span class="cd">;</span><span class="c">cond
+</span>  )</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

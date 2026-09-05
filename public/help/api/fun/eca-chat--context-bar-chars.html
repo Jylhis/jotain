@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--context-bar-chars – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--context-bar-chars is a natively compiled function defined in
+eca-chat.el.
+Build the block-character context bar string for terminal frames.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--context-bar-chars</code></h1><p><span class="m"><code>eca-chat--context-bar-chars</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--context-bar-chars <a href="#:~:text=frames.-,CATEGORIES"><span class="arg">CATEGORIES</span></a> <a href="#:~:text=CATEGORIES/-,BREAKDOWN"><span class="arg">BREAKDOWN</span></a> <a href="#:~:text=data,-,WIDTH"><span class="arg">WIDTH</span></a> <a href="#:~:text=and-,FRAC"><span class="arg">FRAC</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=precision.-,MARKER-FRAC"><span class="arg">MARKER-FRAC</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Build the block-character context bar string for terminal frames.
+<p><span class="arg">CATEGORIES</span>/<span class="arg">BREAKDOWN</span> carry the usage data, <span class="arg">WIDTH</span> is the cell count and
+<span class="arg">FRAC</span> the used fraction (0..1).  The used/free edge uses a fractional
+block for sub-cell precision.  <span class="arg">MARKER-FRAC</span>, when non-nil, draws the
+auto-compaction threshold marker on the matching cell.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--context-bar-chars</span> (categories breakdown width frac <span class="ty">&amp;optional</span> marker-frac)
+  <span class="doc">"Build the block-character context bar string for terminal frames.
+CATEGORIES/BREAKDOWN carry the usage data, WIDTH is the cell count and
+FRAC the used fraction (0..1).  The used/free edge uses a fractional
+block for sub-cell precision.  MARKER-FRAC, when non-nil, draws the
+auto-compaction threshold marker on the matching cell."</span>
+  (<span class="k">let*</span> ((colored-exact (* width frac))
+         (colored-cells (min width (floor colored-exact)))
+         (edge-eighths (<span class="k">if</span> (&lt; colored-cells width)
+                           (min 7 (max 0 (round (* 8 (- colored-exact colored-cells)))))
+                         0))
+         (tokens (mapcar (<span class="k">lambda</span> (c) (max 0 (<span class="k">or</span> (plist-get c <span class="bi">:tokens</span>) 0))) categories))
+         (alloc (eca-chat--context-bar-allocate tokens colored-cells))
+         (bar <span class="s">""</span>))
+    (<span class="k">cl-loop</span> for cat in categories for n in alloc
+             when (&gt; n 0)
+             do (<span class="k">setq</span> bar (concat bar (propertize (make-string n ?█)
+                                                  'face (eca-chat--context-category-face-spec cat)))))
+    (<span class="k">when</span> (&gt; edge-eighths 0)
+      (<span class="k">setq</span> bar (concat bar (propertize (aref eca-chat--context-bar-eighths edge-eighths)
+                                        'face (eca-chat--context-bar-edge-spec categories alloc)))))
+    (<span class="k">let</span> ((free-cells (- width (length bar))))
+      (<span class="k">when</span> (&gt; free-cells 0)
+        (<span class="k">setq</span> bar (concat bar (propertize (make-string free-cells ?█)
+                                          'face (eca-chat--context-free-face-spec breakdown))))))
+    (<span class="k">when</span> (<span class="k">and</span> marker-frac (&gt; (length bar) 0))
+      (<span class="k">let</span> ((idx (min (1- (length bar))
+                      (max 0 (floor (* width (min 1.0 (max 0.0 marker-frac))))))))
+        (<span class="k">setq</span> bar (concat (substring bar 0 idx)
+                          (propertize <span class="s">"│"</span> 'face 'eca-chat-context-compaction-marker-face)
+                          (substring bar (1+ idx))))))
+    bar))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

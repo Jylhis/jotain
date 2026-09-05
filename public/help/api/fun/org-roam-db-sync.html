@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-db-sync – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-db-sync is an interactive and natively compiled function
+defined in org-roam-db.el.
+Synchronize the cache state with the current Org files on-disk.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-db-sync</code></h1><p><span class="m"><code>org-roam-db-sync</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">org-roam-db.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-db-sync <span class="ty">&amp;optional</span> <a href="#:~:text=If-,FORCE"><span class="arg">FORCE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Synchronize the cache state with the current Org files on-disk.
+<p>If <span class="arg">FORCE</span>, force a rebuild of the cache from scratch.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-db.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">org-roam-db-sync</span> (<span class="ty">&amp;optional</span> force)
+  <span class="doc">"Synchronize the cache state with the current Org files on-disk.
+If FORCE, force a rebuild of the cache from scratch."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (org-roam-db--close) <span class="cd">;; </span><span class="c">Force a reconnect
+</span>  (<span class="k">when</span> force (delete-file org-roam-db-location))
+  (org-roam-db) <span class="cd">;; </span><span class="c">To initialize the database, no-op if already initialized
+</span>  (<span class="k">require</span> '<span class="m">org-ref</span> nil t)
+  (<span class="k">require</span> '<span class="m">oc</span> nil t)
+  (<span class="k">let*</span> ((gc-cons-threshold org-roam-db-gc-threshold)
+         (org-agenda-files nil)
+         (org-roam-files (org-roam-list-files))
+         (current-files (org-roam-db--get-current-files))
+         (modified-files nil))
+    (<span class="k">dolist</span> (file org-roam-files)
+      (<span class="k">let</span> ((contents-hash (org-roam-db--file-hash file)))
+        (<span class="k">unless</span> (string= (gethash file current-files)
+                         contents-hash)
+          (<span class="k">push</span> file modified-files)))
+      (remhash file current-files))
+    (<span class="k">emacsql-with-transaction</span> (org-roam-db)
+      (<span class="k">dolist-with-progress-reporter</span> (file (hash-table-keys current-files))
+          <span class="s">"Clearing removed files..."</span>
+        (org-roam-db-clear-file file))
+      (<span class="k">dolist-with-progress-reporter</span> (file modified-files)
+          <span class="s">"Processing modified files..."</span>
+        (<span class="k">condition-case</span> err
+            (org-roam-db-update-file file)
+          (<span class="w">error</span>
+           (org-roam-db-clear-file file)
+           (lwarn 'org-roam <span class="bi">:error</span> <span class="s">"Failed to process %s with error %s, skipping..."</span>
+                  file (error-message-string err))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

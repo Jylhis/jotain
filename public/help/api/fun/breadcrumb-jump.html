@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: breadcrumb-jump – Emacs Documentation Online</title>
+<meta name="description" content="breadcrumb-jump is an interactive and natively compiled function
+defined in breadcrumb.el.
+Like M-x imenu, but breadcrumb-powered.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>breadcrumb-jump</code></h1><p><span class="m"><code>breadcrumb-jump</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">breadcrumb.el</span>.
+<h2>Signature</h2>
+<pre><code>(breadcrumb-jump)
+</code></pre>
+<h2>Documentation</h2>
+<p>Like <kbd>M-x</kbd> (<a href="../fun/execute-extended-command.html"><code>execute-extended-command</code></a>) <a href="../fun/imenu.html"><code>imenu</code></a>, but breadcrumb-powered.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/rgffxr4a6vz8lckbp4wfm9fkh23cafc3-emacs-packages-deps/share/emacs/site-lisp/elpa/breadcrumb-1.0.1/breadcrumb.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">breadcrumb-jump</span> ()
+  <span class="doc">"Like \\[</span><span class="m doc">execute-extended-command</span><span class="doc">] `</span><span class="m doc">imenu</span><span class="doc">', but breadcrumb-powered."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let</span> (cands choice)
+    (<span class="k">cl-labels</span>
+        ((fmt (strs)
+           (mapconcat #'identity strs <span class="s">" &gt; "</span>))
+         (dfs (nodes <span class="ty">&amp;optional</span> ipath)
+           (<span class="k">cl-loop</span>
+            for n in nodes
+            for newpath = (cons (car n) ipath)
+            for pos = (<span class="k">or</span> (car (get-text-property 0 'breadcrumb-region (car n)))
+                          (<span class="k">and</span> (number-or-marker-p (cdr n)) (cdr n)))
+            when pos do (<span class="k">push</span> (cons (fmt (reverse newpath)) pos)
+                              cands)
+            do (dfs (cdr n) newpath))))
+      (imenu--make-index-alist)
+      (dfs imenu--index-alist)
+      (<span class="k">unless</span> cands (<span class="w">user-error</span> <span class="s">"Sorry, no breadcrumb items to jump to"</span>))
+      (<span class="k">setq</span> choice (cdr (assoc (completing-read <span class="s">"Index item? "</span> cands nil t)
+                               cands #'string=)))
+      (push-mark)
+      (bc--goto (selected-window) choice))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

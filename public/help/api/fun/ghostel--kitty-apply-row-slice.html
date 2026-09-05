@@ -1,0 +1,75 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--kitty-apply-row-slice – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--kitty-apply-row-slice is a natively compiled function defined
+in ghostel-kitty.el.
+Apply one row of the sliced image at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--kitty-apply-row-slice</code></h1><p><span class="m"><code>ghostel--kitty-apply-row-slice</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">ghostel-kitty.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--kitty-apply-row-slice <a href="#:~:text=point.-,ROW"><span class="arg">ROW</span></a> <a href="#:~:text=cells.-,CW"><span class="arg">CW</span></a> <a href="#:~:text=CW /-,CH"><span class="arg">CH</span></a> <a href="#:~:text=dimensions.-,IMG"><span class="arg">IMG</span></a> <a href="#:~:text=object.-,VP-COL-CLAMPED"><span class="arg">VP-COL-CLAMPED</span></a> <a href="#:~:text=0;-,VISIBLE-COLS"><span class="arg">VISIBLE-COLS</span></a> <a href="#:~:text=screen;-,SLICE-X"><span class="arg">SLICE-X</span></a> <a href="#:~:text=left);-,SLICE-W"><span class="arg">SLICE-W</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Apply one row of the sliced image at point.
+<p><span class="arg">ROW</span> is the slice index (0-based) into the image's grid of cells.
+<span class="arg">CW</span> / <span class="arg">CH</span> are the cell pixel dimensions.  <span class="arg">IMG</span> is the Emacs image object.
+<span class="arg">VP-COL-CLAMPED</span> is the placement's column origin clamped to &gt;= 0;
+<span class="arg">VISIBLE-COLS</span> is how many columns of that row are on-screen; <span class="arg">SLICE-X</span> is
+the slice's x-origin in image pixels (non-zero only when the placement
+is partially scrolled off the left); <span class="arg">SLICE-W</span> is the fallback slice
+width when the buffer line is shorter than the placement.
+<p>Decides between the text-property and overlay paths based on whether
+the buffer line is long enough to hold the placement's column range.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-kitty.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--kitty-apply-row-slice</span> (row cw ch img
+                                           vp-col-clamped visible-cols
+                                           slice-x slice-w)
+  <span class="doc">"Apply one row of the sliced image at point.
+ROW is the slice index (0-based) into the image's grid of cells.
+CW / CH are the cell pixel dimensions.  IMG is the Emacs image object.
+VP-COL-CLAMPED is the placement's column origin clamped to &gt;= 0;
+VISIBLE-COLS is how many columns of that row are on-screen; SLICE-X is
+the slice's x-origin in image pixels (non-zero only when the placement
+is partially scrolled off the left); SLICE-W is the fallback slice
+width when the buffer line is shorter than the placement.
+
+Decides between the text-property and overlay paths based on whether
+the buffer line is long enough to hold the placement's column range."</span>
+  (<span class="k">let*</span> ((line-pos (point))
+         (line-end-pos (line-end-position))
+         (start (min (+ line-pos vp-col-clamped) line-end-pos))
+         (end (min (+ line-pos vp-col-clamped visible-cols) line-end-pos))
+         <span class="cd">;; </span><span class="c">The slice's pixel width must match the cell-range width Emacs
+</span>         <span class="cd">;; </span><span class="c">gives us; otherwise the display engine renders the slice at
+</span>         <span class="cd">;; </span><span class="c">its declared size and either overlaps subsequent cells or
+</span>         <span class="cd">;; </span><span class="c">truncates.  This bites when `vp-col + g-cols' exceeds the
+</span>         <span class="cd">;; </span><span class="c">terminal width (line-end-pos clamps `end` shorter than the
+</span>         <span class="cd">;; </span><span class="c">slice the placement asked for) and shows up as a ghosted
+</span>         <span class="cd">;; </span><span class="c">copy of the image bleeding to the right.
+</span>         (range-cols (- end start))
+         (clamped-slice-w (* range-cols cw))
+         (slice (list 'slice slice-x (* row ch)
+                      (<span class="k">if</span> (&gt; range-cols 0) clamped-slice-w slice-w)
+                      ch))
+         (spec (list slice img)))
+    (<span class="k">cond</span>
+     <span class="cd">;; </span><span class="c">Range is empty (line shorter than vp-col) — use an overlay so we
+</span>     <span class="cd">;; </span><span class="c">don't eat the newline.
+</span>     ((&lt;= end start)
+      (<span class="k">let</span> ((ov (make-overlay start start)))
+        (overlay-put ov 'before-string (propertize <span class="s">" "</span> 'display spec))
+        (overlay-put ov 'ghostel-kitty t)))
+     <span class="cd">;; </span><span class="c">Line has enough text — use text property.
+</span>     (t
+      (add-text-properties start end
+                           (list 'display spec 'ghostel-kitty t))))
+    (<span class="k">when</span> (&lt; line-end-pos (point-max))
+      (add-text-properties line-end-pos (1+ line-end-pos)
+                           (list 'line-height ch 'ghostel-kitty t)))
+    (<span class="k">setq</span> ghostel--kitty-active t)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

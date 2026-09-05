@@ -1,0 +1,273 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-todos-defscanner – Emacs Documentation Online</title>
+<meta name="description" content="magit-todos-defscanner is a macro defined in magit-todos.el.
+Define a magit-todos scanner named NAME.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-todos-defscanner</code></h1><p><span class="m"><code>magit-todos-defscanner</code></span> is a macro defined in <span class="bt">magit-todos.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">magit-todos-defscanner</span> <a href="#:~:text=named-,NAME"><span class="arg">NAME</span></a> <span class="ty">&amp;key</span> <a href="#:~:text=purposes.-,AVAILABLEP"><span class="arg">AVAILABLEP</span></a> <a href="#:~:text=command.-,COMMAND"><span class="arg">COMMAND</span></a> <a href="#:~:text=functions.-,RESULTS-REGEXP"><span class="arg">RESULTS-REGEXP</span></a> (<a href="#:~:text=item.-,ALLOW-EXIT-CODES"><span class="arg">ALLOW-EXIT-CODES</span></a> '(0)) (<a href="#:~:text=automatically.-,DIRECTORY-FORM"><span class="arg">DIRECTORY-FORM</span></a> '(f-relative directory default-directory)) (<a href="#:~:text=filenames.)-,CALLBACK"><span class="arg">CALLBACK</span></a> #''magit-todos--scan-callback))
+</code></pre>
+<h2>Documentation</h2>
+<p>Define a <span class="m"><code>magit-todos</code></span> scanner named <span class="arg">NAME</span>.
+<p><span class="arg">NAME</span> is a string, which may contain spaces.  It is only used for
+descriptive purposes.
+<p><span class="arg">AVAILABLEP</span> is a predicate which is used to determine whether the
+scanner is usable.  In most cases, it should use
+<a href="../fun/executable-find.html"><code>executable-find</code></a> to look for the scanner command.
+<p><span class="arg">COMMAND</span> is a sexp which should evaluate to the scanner command,
+i.e. a list of strings to be eventually passed to
+<a href="../fun/start-process.html"><code>start-process</code></a>.  Nil elements are removed, numbers are converted
+to strings, and nested lists are flattened into a single list.
+It is evaluated each time the scanner is run.  If <span class="arg">COMMAND</span>
+evaluates to nil, it is not run.
+<p>Within the <span class="arg">COMMAND</span> list these variables are available:
+<p><span class="m"><code>depth</code></span>: When non-nil, an integer, which is the depth that should
+be passed to the scanner's max-depth option (i.e. <a href="../var/magit-todos-depth.html"><code>magit-todos-depth</code></a>).
+<p><span class="m"><code>directory</code></span>: The directory in which the scan should be run.
+<p><span class="m"><code>extra-args</code></span>: The value of the customization variable
+<br>"magit-todos-<span class="arg">NAME</span>-extra-args" (see below).
+<p><span class="m"><code>keywords</code></span>: List of item keywords defined in
+<a href="../var/magit-todos-keywords-list.html"><code>magit-todos-keywords-list</code></a>.
+<p><span class="m"><code>search-regexp-pcre</code></span>: PCRE-compatible regular expression to be passed
+to the scanner process.
+<p><span class="m"><code>search-regexp-elisp</code></span>: Emacs regular expression, which may be
+used for scanners written as Emacs Lisp functions.
+<p><span class="arg">RESULTS-REGEXP</span> is an optional string or unquoted sexp which is
+used to match results in the scanner process's output buffer.
+Typically this will be a sexp which calls <a href="../fun/rx-to-string.html"><code>rx-to-string</code></a>.  It is
+evaluated each time the scanner is run.  If nil, the appropriate
+default is used which matches results in the form:
+<p>&nbsp;&nbsp;FILENAME:LINE:MATCH
+<p>Where MATCH may also match Org outline heading stars when
+appropriate.  Custom regexps may also match column numbers or
+byte offsets in the appropriate numbered groups; see
+<a href="../fun/make-magit-todos-item.html"><code>make-magit-todos-item</code></a>.
+<p><span class="arg">ALLOW-EXIT-CODES</span> is a list of integers corresponding to exit
+codes which should not be interpreted as errors (e.g. rg uses 1
+to indicate no match and no error, so its list should include 0
+and 1).  Note that TRAMP seems to use code 9 instead of 0, so 9
+is added to this list automatically.
+<p><span class="arg">DIRECTORY-FORM</span> may be a form within which the symbol <span class="m"><code>directory</code></span>
+is bound to the directory path being searched; it should evaluate
+to the directory path that should be passed to the
+command.  (Since some commands' output differs by the way the
+search directory is passed, like "./" or "." vs. a full path,
+this may be used to, e.g. ensure that the command does not
+include a leading "./" in filenames.)
+<p><span class="arg">CALLBACK</span> is called to process the process's output buffer.
+Normally the default should be used, which inserts items into the
+Magit status buffer which is passed as an argument to the scanner
+function.
+<p>The macro defines the following:
+<p>"magit-todos-<span class="arg">NAME</span>-extra-args": A customization setting, a list
+<br>of strings to be passed to the scanner as extra arguments.
+<p>"magit-todos--scan-with-<span class="arg">NAME</span>": The function which runs the
+<br>scanner command.
+<p>It also adds the scanner to the customization variable
+<a href="../var/magit-todos-scanner.html"><code>magit-todos-scanner</code></a>, and to the variable
+<a href="../var/magit-todos-scanners.html"><code>magit-todos-scanners</code></a> (which is used to set
+<a href="../var/magit-todos-scanner.html"><code>magit-todos-scanner</code></a> by calling <a href="../fun/magit-todos--choose-scanner.html"><code>magit-todos--choose-scanner</code></a>).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/na5pd87dpfy16i19v2xzgb9ry6gjpyvw-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-todos-20250928.1611/magit-todos.el</span>
+<span class="cd">;;;; </span><span class="c">Scanners
+</span>
+(<span class="k">cl-defmacro</span> <span class="f">magit-todos-defscanner</span> (name <span class="ty">&amp;key</span> availablep command results-regexp
+                                          (allow-exit-codes '(0))
+                                          (directory-form '(f-relative directory default-directory))
+                                          (callback (<span class="k">function</span> 'magit-todos--scan-callback)))
+  <span class="doc">"Define a `</span><span class="m doc">magit-todos</span><span class="doc">' scanner named NAME.
+
+NAME is a string, which may contain spaces.  It is only used for
+descriptive purposes.
+
+AVAILABLEP is a predicate which is used to determine whether the
+scanner is usable.  In most cases, it should use
+`</span><span class="m doc">executable-find</span><span class="doc">' to look for the scanner command.
+
+COMMAND is a sexp which should evaluate to the scanner command,
+i.e. a list of strings to be eventually passed to
+`</span><span class="m doc">start-process</span><span class="doc">'.  Nil elements are removed, numbers are converted
+to strings, and nested lists are flattened into a single list.
+It is evaluated each time the scanner is run.  If COMMAND
+evaluates to nil, it is not run.
+
+Within the COMMAND list these variables are available:
+
+`</span><span class="m doc">depth</span><span class="doc">': When non-nil, an integer, which is the depth that should
+be passed to the scanner's max-depth option (i.e. `</span><span class="m doc">magit-todos-depth</span><span class="doc">').
+
+`</span><span class="m doc">directory</span><span class="doc">': The directory in which the scan should be run.
+
+`</span><span class="m doc">extra-args</span><span class="doc">': The value of the customization variable
+\"magit-todos-NAME-extra-args\" (see below).
+
+`</span><span class="m doc">keywords</span><span class="doc">': List of item keywords defined in
+`</span><span class="m doc">magit-todos-keywords-list</span><span class="doc">'.
+
+`</span><span class="m doc">search-regexp-pcre</span><span class="doc">': PCRE-compatible regular expression to be passed
+to the scanner process.
+
+`</span><span class="m doc">search-regexp-elisp</span><span class="doc">': Emacs regular expression, which may be
+used for scanners written as Emacs Lisp functions.
+
+RESULTS-REGEXP is an optional string or unquoted sexp which is
+used to match results in the scanner process's output buffer.
+Typically this will be a sexp which calls `</span><span class="m doc">rx-to-string</span><span class="doc">'.  It is
+evaluated each time the scanner is run.  If nil, the appropriate
+default is used which matches results in the form:
+
+  FILENAME:LINE:MATCH
+
+Where MATCH may also match Org outline heading stars when
+appropriate.  Custom regexps may also match column numbers or
+byte offsets in the appropriate numbered groups; see
+`</span><span class="m doc">make-magit-todos-item</span><span class="doc">'.
+
+ALLOW-EXIT-CODES is a list of integers corresponding to exit
+codes which should not be interpreted as errors (e.g. rg uses 1
+to indicate no match and no error, so its list should include 0
+and 1).  Note that TRAMP seems to use code 9 instead of 0, so 9
+is added to this list automatically.
+
+DIRECTORY-FORM may be a form within which the symbol `</span><span class="m doc">directory</span><span class="doc">'
+is bound to the directory path being searched; it should evaluate
+to the directory path that should be passed to the
+command.  (Since some commands' output differs by the way the
+search directory is passed, like \"./\" or \".\" vs. a full path,
+this may be used to, e.g. ensure that the command does not
+include a leading \"./\" in filenames.)
+
+CALLBACK is called to process the process's output buffer.
+Normally the default should be used, which inserts items into the
+Magit status buffer which is passed as an argument to the scanner
+function.
+
+The macro defines the following:
+
+\"magit-todos-NAME-extra-args\": A customization setting, a list
+of strings to be passed to the scanner as extra arguments.
+
+\"magit-todos--scan-with-NAME\": The function which runs the
+scanner command.
+
+It also adds the scanner to the customization variable
+`</span><span class="m doc">magit-todos-scanner</span><span class="doc">', and to the variable
+`</span><span class="m doc">magit-todos-scanners</span><span class="doc">' (which is used to set
+`</span><span class="m doc">magit-todos-scanner</span><span class="doc">' by calling `</span><span class="m doc">magit-todos--choose-scanner</span><span class="doc">')."</span>
+  <span class="cd">;; </span><span class="c">TODO: Try to obviate the -scanners variable, let --choose-scanner use the
+</span>  <span class="cd">;; </span><span class="c">custom-type of -scanner directly.  Maybe, anyway--I don't want to ugly up the UI
+</span>  <span class="cd">;; </span><span class="c">for users.
+</span>  (<span class="k">declare</span> (indent defun) (debug (stringp [<span class="ty">&amp;rest</span> <span class="ty">&amp;or</span> [<span class="s">":test"</span> def-form]
+                                                 [<span class="s">":command"</span> def-form]
+                                                 [<span class="s">":results-regexp"</span> [<span class="ty">&amp;or</span> stringp def-form]]])))
+  (<span class="k">let*</span> ((name-without-spaces (s-replace <span class="s">" "</span> <span class="s">"-"</span> name))
+         (scan-fn-name (concat <span class="s">"magit-todos--scan-with-"</span> name-without-spaces))
+         (scan-fn-symbol (intern scan-fn-name))
+         (extra-args-var (intern (format <span class="s">"magit-todos-%s-extra-args"</span> name-without-spaces))))
+    (<span class="k">cl-pushnew</span> 9 allow-exit-codes)
+    (<span class="k">setf</span> allow-exit-codes (sort allow-exit-codes #'&lt;))
+    `(<span class="k">progn</span>
+       (<span class="k">defcustom</span> ,extra-args-var nil
+         ,(format <span class="s">"Extra arguments passed to %s."</span> name)
+         <span class="bi">:type</span> '(repeat string))
+
+       <span class="cd">;; </span><span class="c">NOTE: Both the macro and the macro-defined function have `</span><span class="m c">callback</span><span class="c">' arguments.  Pay attention to unquoting.
+</span>       <span class="cd">;; </span><span class="c">FIXME: That is confusing.
+</span>
+       (<span class="k">cl-defun</span> ,scan-fn-symbol (<span class="ty">&amp;key</span> magit-status-buffer directory depth heading sync callback)
+         ,(format <span class="s">"Scan for to-dos with %s.
+Then calls CALLBACK.  MAGIT-STATUS-BUFFER is what it says.  DIRECTORY
+is the directory in which to run the scan.  DEPTH should be an
+integer, typically the value of `</span><span class="m s">magit-todos-depth</span><span class="s">'.  HEADING is
+passed to CALLBACK.
+
+When SYNC is nil, the scanner process is returned, and CALLBACK
+is a function which is called by the process sentinel with one
+argument, a list of match items.
+
+When SYNC is non-nil, match items are returned."</span>
+                  name-without-spaces)
+         (<span class="k">let*</span> ((process-connection-type 'pipe)
+                (directory ,directory-form)
+                (extra-args (<span class="k">when</span> ,extra-args-var
+                              (<span class="k">--map</span> (s-split (<span class="k">rx</span> (1+ space)) it 'omit-nulls)
+                                     ,extra-args-var)))
+                (keywords magit-todos-keywords-list)
+                (search-regexp-elisp (rx-to-string
+                                      `(<span class="k">or</span>
+                                        <span class="cd">;; </span><span class="c">Org item
+</span>                                        (seq bol (group (1+ <span class="s">"*"</span>))
+                                             (1+ blank)
+                                             (group (<span class="k">or</span> ,@keywords))
+                                             (1+ space)
+                                             (group (1+ not-newline)))
+                                        <span class="cd">;; </span><span class="c">Non-Org
+</span>                                        (seq (<span class="k">or</span> bol (1+ blank))
+                                             (group (<span class="k">or</span> ,@keywords))
+                                             (regexp ,magit-todos-keyword-suffix)
+                                             (optional (1+ blank)
+                                                       (group (1+ not-newline)))))))
+                (search-regexp-pcre (rxt-elisp-to-pcre search-regexp-elisp))
+                (results-regexp (<span class="k">or</span> ,results-regexp
+                                    (rx-to-string
+                                     `(seq bol
+                                           <span class="cd">;; </span><span class="c">Filename
+</span>                                           (group-n 8 (1+ (not (any <span class="s">":"</span>)))) <span class="s">":"</span>
+                                           <span class="cd">;; </span><span class="c">Line
+</span>                                           (group-n 2 (1+ digit)) <span class="s">":"</span>
+                                           (<span class="k">or</span>
+                                            <span class="cd">;; </span><span class="c">Org item
+</span>                                            (seq (group-n 1 (1+ <span class="s">"*"</span>))
+                                                 (1+ blank)
+                                                 (group-n 4 (<span class="k">or</span> ,@keywords))
+                                                 (1+ blank)
+                                                 (group-n 5 (1+ not-newline)))
+                                            <span class="cd">;; </span><span class="c">Non-Org
+</span>                                            (seq (optional (1+ not-newline))
+                                                 (group-n 4 (<span class="k">or</span> ,@keywords))
+                                                 (optional (group-n 6 (regexp ,magit-todos-keyword-suffix)))
+                                                 (optional (1+ blank))
+                                                 (optional (group-n 5 (1+ not-newline)))))))))
+                (command (-flatten (-non-nil ,command))))
+           <span class="cd">;; </span><span class="c">Convert any numbers in command to strings (e.g. depth).
+</span>           (<span class="k">cl-loop</span> for elt in-ref command
+                    when (numberp elt)
+                    do (<span class="k">setf</span> elt (number-to-string elt)))
+           <span class="cd">;; </span><span class="c">Run command.
+</span>           (<span class="k">when</span> command
+             (<span class="k">when</span> magit-todos-nice
+               (<span class="k">setf</span> command (append (list <span class="s">"nice"</span> <span class="s">"-n5"</span>) command)))
+             (<span class="k">if</span> sync
+                 <span class="cd">;; </span><span class="c">Synchronous: return matching items.
+</span>                 (<span class="k">with-temp-buffer</span>
+                   (<span class="k">unless</span> (member (apply #'call-process (car command) nil (current-buffer) nil
+                                          (cdr command))
+                                   ',allow-exit-codes)
+                     (<span class="w">user-error</span> (concat (car command) <span class="s">" failed"</span>)))
+                   (magit-todos--buffer-items results-regexp))
+               <span class="cd">;; </span><span class="c">Async: return process.
+</span>               (<span class="k">let</span> ((process (magit-todos--async-start-process ,scan-fn-name
+                                <span class="bi">:command</span> command
+                                <span class="cd">;; </span><span class="c">NOTE: This callback chain.
+</span>                                <span class="bi">:finish-func</span> (apply-partially ,callback
+                                                              <span class="bi">:callback</span> callback
+                                                              <span class="bi">:magit-status-buffer</span> magit-status-buffer
+                                                              <span class="bi">:results-regexp</span> results-regexp
+                                                              <span class="bi">:search-regexp-elisp</span> search-regexp-elisp
+                                                              <span class="bi">:heading</span> heading
+                                                              <span class="bi">:exclude-globs</span> magit-todos-exclude-globs
+                                                              <span class="bi">:process</span>)))) <span class="cd">; </span><span class="c">Process is appended to the list.
+</span>                 (<span class="k">setf</span> (process-get process <span class="bi">:allow-exit-codes</span>) ',allow-exit-codes)
+                 process)))))
+       (magit-todos--add-to-custom-type 'magit-todos-scanner
+         (list 'const <span class="bi">:tag</span> ,name #',scan-fn-symbol))
+       (add-to-list 'magit-todos-scanners
+                    (list (cons 'name ,name)
+                          (cons 'function #',scan-fn-symbol)
+                          (cons 'availablep ,availablep))
+                    'append))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

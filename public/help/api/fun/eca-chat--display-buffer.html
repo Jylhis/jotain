@@ -1,0 +1,77 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--display-buffer – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--display-buffer is a natively compiled function defined in
+eca-chat.el.
+Display BUFFER according to customization.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--display-buffer</code></h1><p><span class="m"><code>eca-chat--display-buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--display-buffer <a href="#:~:text=Display-,BUFFER"><span class="arg">BUFFER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Display <span class="arg">BUFFER</span> according to customization.
+<p>When <a href="../var/eca-chat-window-side.html"><code>eca-chat-window-side</code></a> is nil, display <span class="arg">BUFFER</span> in the selected
+window unless it is already visible on the selected frame.  Otherwise,
+display it on the configured side using either a side window or a
+regular directional window.  If <a href="../var/eca-chat-focus-on-open.html"><code>eca-chat-focus-on-open</code></a> is non-nil,
+select the resulting window.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--display-buffer</span> (buffer)
+  <span class="doc">"Display BUFFER according to customization.
+When `</span><span class="m doc">eca-chat-window-side</span><span class="doc">' is nil, display BUFFER in the selected
+window unless it is already visible on the selected frame.  Otherwise,
+display it on the configured side using either a side window or a
+regular directional window.  If `</span><span class="m doc">eca-chat-focus-on-open</span><span class="doc">' is non-nil,
+select the resulting window."</span>
+  (<span class="k">let*</span> ((side eca-chat-window-side)
+         (size (<span class="k">when</span> side
+                 (<span class="k">if</span> (memq side '(left right))
+                     `((window-width . ,eca-chat-window-width))
+                   `((window-height . ,eca-chat-window-height)))))
+         (display-action
+          (<span class="k">when</span> side
+            (<span class="k">if</span> eca-chat-use-side-window
+                `((display-buffer-in-side-window)
+                  (side . ,side)
+                  (slot . 0)
+                  (dedicated . side)
+                  ,@size
+                  (window-parameters . ((no-delete-other-windows . t))))
+              `((display-buffer-in-direction)
+                (direction . ,(<span class="k">pcase</span> side
+                                ('top 'above)
+                                ('bottom 'below)
+                                (_ side)))
+                ,@size))))
+         (window
+          (<span class="k">or</span>
+           <span class="cd">;; </span><span class="c">Already visible: keep it where it is.
+</span>           (get-buffer-window buffer)
+           <span class="cd">;; </span><span class="c">Side-based modes reuse a visible chat (new-tab behavior).
+</span>           (<span class="k">when</span> side
+             (<span class="k">when-let*</span> ((win
+                          (<span class="k">if</span> (buffer-local-value
+                               'eca-chat--id
+                               (window-buffer (selected-window)))
+                              (selected-window)
+                            (get-window-with-predicate
+                             (<span class="k">lambda</span> (w)
+                               (buffer-local-value
+                                'eca-chat--id (window-buffer w)))))))
+               (set-window-buffer win buffer)
+               win))
+           <span class="cd">;; </span><span class="c">Nothing to reuse: open according to the configured mode.
+</span>           (<span class="k">if</span> side
+               (display-buffer buffer display-action)
+             (eca-chat--display-in-selected-window buffer)))))
+    <span class="cd">;; </span><span class="c">Select the window to give it focus if configured to do so.
+</span>    (<span class="k">when</span> (<span class="k">and</span> window eca-chat-focus-on-open)
+      (select-window window))
+    window))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

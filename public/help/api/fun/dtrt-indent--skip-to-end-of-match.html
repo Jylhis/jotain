@@ -1,0 +1,89 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dtrt-indent--skip-to-end-of-match – Emacs Documentation Online</title>
+<meta name="description" content="dtrt-indent--skip-to-end-of-match is a natively compiled function
+defined in dtrt-indent.el.
+Place point at the end of the current match.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dtrt-indent--skip-to-end-of-match</code></h1><p><span class="m"><code>dtrt-indent--skip-to-end-of-match</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">dtrt-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(dtrt-indent--skip-to-end-of-match <a href="#:~:text=match.-,END-REGEX"><span class="arg">END-REGEX</span></a> <a href="#:~:text=If-,SKIP-REGEX"><span class="arg">SKIP-REGEX</span></a> <a href="#:~:text=ignored.-,SYNTAX-REGEX-PAIRS"><span class="arg">SYNTAX-REGEX-PAIRS</span></a> <a href="#:~:text=table.-,MULTI-LINE"><span class="arg">MULTI-LINE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Place point at the end of the current match.
+<p><span class="arg">END-REGEX</span> is a regular expression matching the end.  If
+<span class="arg">SKIP-REGEX</span> matches though, <span class="arg">END-REGEX</span> is ignored.
+<span class="arg">SYNTAX-REGEX-PAIRS</span> is a list of syntax entries as described for
+<a href="../var/dtrt-indent-language-syntax-table.html"><code>dtrt-indent-language-syntax-table</code></a>.  <span class="arg">MULTI-LINE</span>, if false,
+constrains the search to the current line.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/07pi18l0q79xmgqf3amadq86iinldk0s-emacs-packages-deps/share/emacs/site-lisp/elpa/dtrt-indent-20260709.2011/dtrt-indent.el</span>
+(<span class="k">defun</span> <span class="f">dtrt-indent--skip-to-end-of-match</span> (end-regex
+                                          skip-regex
+                                          syntax-regex-pairs
+                                          multi-line)
+  <span class="doc">"Place point at the end of the current match.
+END-REGEX is a regular expression matching the end.  If
+SKIP-REGEX matches though, END-REGEX is ignored.
+SYNTAX-REGEX-PAIRS is a list of syntax entries as described for
+`</span><span class="m doc">dtrt-indent-language-syntax-table</span><span class="doc">'.  MULTI-LINE, if false,
+constrains the search to the current line."</span>
+  (<span class="k">let*</span> ((index-offset 1)
+         end-index
+         skip-index
+         (regexp
+          (mapconcat
+           (<span class="k">lambda</span> (el) (concat <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">"</span> el <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>))
+           (append (<span class="k">when</span> end-regex
+                     (<span class="k">setq</span> end-index index-offset)
+                     (<span class="k">setq</span> index-offset (1+ index-offset))
+                     (list end-regex))
+                   (<span class="k">when</span> skip-regex
+                     (<span class="k">setq</span> skip-index index-offset)
+                     (<span class="k">setq</span> index-offset (1+ index-offset))
+                     (list skip-regex))
+                   (mapcar (<span class="k">lambda</span> (x) (car x))
+                           syntax-regex-pairs))
+           <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">"</span>)))
+    (<span class="k">while</span>
+        (<span class="k">and</span>
+         (re-search-forward regexp
+                            (<span class="k">unless</span> multi-line
+                              (<span class="k">save-excursion</span> (end-of-line) (point))) <span class="w">t)</span>
+         (<span class="k">let</span> ((match-index 1)
+               (match-count (/ (length (match-data)) 2)))
+           (<span class="k">while</span> (<span class="k">and</span> (&lt;= match-index match-count)
+                       (null (match-beginning match-index)))
+             (<span class="k">setq</span> match-index (1+ match-index)))
+           (<span class="k">cond</span>
+            ((eq match-index end-index) nil)
+            ((eq match-index skip-index) t)
+            (t
+             (<span class="k">let</span> ((matching-syntax-entry
+                    (<span class="k">let</span> ((match-count (- match-index index-offset))
+                          (syntax-regex-iterator syntax-regex-pairs))
+                      (<span class="k">while</span> (&gt; match-count
+                                (nth 1 (car syntax-regex-iterator)))
+                        (<span class="k">setq</span> match-count
+                              (- match-count
+                                 (nth 1 (car syntax-regex-iterator)) 1))
+                        (<span class="k">setq</span> syntax-regex-iterator
+                              (cdr syntax-regex-iterator)))
+                      (car syntax-regex-iterator))))
+               (dtrt-indent--skip-to-end-of-match
+                (<span class="k">if</span> (&gt; (nth 1 matching-syntax-entry) 0)
+                    (dtrt-indent--replace-in-string
+                     (nth 2 matching-syntax-entry)
+                     <span class="s">"[\\][1]"</span> (regexp-quote
+                                                        (match-string-no-properties
+                                                         (1+ match-index))))
+                  (nth 2 matching-syntax-entry))
+                (nth 4 matching-syntax-entry)
+                (<span class="k">when</span> (nth 3 matching-syntax-entry) syntax-regex-pairs)
+                t)
+               t))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--source-ensure – Emacs Documentation Online</title>
+<meta name="description" content="dape--source-ensure is a natively compiled function defined in
+dape.el.
+Ensure that source object in PLIST exist for adapter CONN.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--source-ensure</code></h1><p><span class="m"><code>dape--source-ensure</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--source-ensure <a href="#:~:text=adapter-,CONN"><span class="arg">CONN</span></a> <a href="#:~:text=in-,PLIST"><span class="arg">PLIST</span></a> <a href="#:~:text=expected-,CB"><span class="arg">CB</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Ensure that source object in <span class="arg">PLIST</span> exist for adapter <span class="arg">CONN</span>.
+<p>See <a href="../fun/dape-request.html"><code>dape-request</code></a> for expected <span class="arg">CB</span> signature.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--source-ensure</span> (conn plist cb)
+  <span class="doc">"Ensure that source object in PLIST exist for adapter CONN.
+See `</span><span class="m doc">dape-request</span><span class="doc">' for expected CB signature."</span>
+  (<span class="k">let*</span> ((source (plist-get plist <span class="bi">:source</span>))
+         (filename (plist-get source <span class="bi">:path</span>))
+         (reference (plist-get source <span class="bi">:sourceReference</span>))
+         (buffer (plist-get (dape--source-buffers (dape--root-of conn))
+                            reference)))
+    (<span class="k">cond</span>
+     ((<span class="k">or</span> (<span class="k">and</span> (stringp filename)
+               (file-exists-p (dape--file-name-local conn filename)))
+          (<span class="k">and</span> (buffer-live-p buffer)))
+      (dape--request-continue cb))
+     ((<span class="k">and</span> (numberp reference)
+           (&lt; 0 reference))
+      (<span class="k">dape--with-request-bind</span>
+          ((<span class="ty">&amp;key</span> content mimeType <span class="ty">&amp;allow-other-keys</span>) error)
+          (dape-request conn <span class="bi">:source</span>
+                        (list <span class="bi">:source</span> source <span class="bi">:sourceReference</span> reference))
+        (<span class="k">cond</span> (<span class="w">error</span>
+               (dape--warn <span class="s">"%s"</span> error))
+              (content
+               (dape--source-make-buffer conn (plist-get source <span class="bi">:name</span>)
+                                         reference content mimeType)
+               (dape--request-continue cb))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

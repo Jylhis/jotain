@@ -1,0 +1,38 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg--syntax-quotation – Emacs Documentation Online</title>
+<meta name="description" content="tuareg--syntax-quotation is a natively compiled function defined in
+tuareg.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg--syntax-quotation</code></h1><p><span class="m"><code>tuareg--syntax-quotation</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(tuareg--syntax-quotation <span class="arg">END</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defun</span> <span class="f">tuareg--syntax-quotation</span> (end)
+  (<span class="k">let</span> ((ppss (syntax-ppss)))
+    (<span class="k">when</span> (eq t (nth 3 ppss))
+      (<span class="k">pcase</span> (char-after (nth 8 ppss))
+        (`?&lt;
+         <span class="cd">;; </span><span class="c">We're indeed inside a quotation.
+</span>         (<span class="k">when</span> (re-search-forward <span class="s">"&gt;&gt;"</span> end 'move)
+           (put-text-property (1- (point)) (point)
+                              'syntax-table (string-to-syntax <span class="s">"|"</span>))))
+        (`?\{
+         <span class="cd">;; </span><span class="c">We're inside a quoted string
+</span>         <span class="cd">;; </span><span class="c">https://v2.ocaml.org/manual/extn.html#sec244
+</span>         (<span class="k">let</span> ((id (<span class="k">save-excursion</span>
+                     (goto-char (1+ (nth 8 ppss)))
+                     (buffer-substring (point)
+                                       (<span class="k">progn</span> (skip-chars-forward <span class="s">"[:lower:]_"</span>)
+                                              (point))))))
+           (<span class="k">when</span> (search-forward (concat <span class="s">"|"</span> id <span class="s">"}"</span>) end 'move)
+             (put-text-property (1- (point)) (point)
+                                'syntax-table (string-to-syntax <span class="s">"|"</span>)))))
+        (c (<span class="w">error</span> <span class="s">"Unexpected char '</span><span class="m s">%c</span><span class="s">' starting delimited string"</span> c))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,87 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-lexeme-looking-at-quasi-quote-literal – Emacs Documentation Online</title>
+<meta name="description" content="haskell-lexeme-looking-at-quasi-quote-literal is a natively compiled
+function defined in haskell-lexeme.el.
+Non-nil when point is just in front of Template Haskell
+quaisquote literal.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-lexeme-looking-at-quasi-quote-literal</code></h1><p><span class="m"><code>haskell-lexeme-looking-at-quasi-quote-literal</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">haskell-lexeme.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-lexeme-looking-at-quasi-quote-literal)
+</code></pre>
+<h2>Documentation</h2>
+<p>Non-nil when point is just in front of Template Haskell
+quaisquote literal.
+<p>Quasi quotes start with '[xxx|' or '[$xxx|' sequence and end with
+<br>&nbsp;&nbsp;'|]'. The 'xxx' is a quoter name. There is no escaping mechanism
+<br>provided for the ending sequence.
+<p>Regexp has subgroup expressions:
+<br>&nbsp;(match-text 1) matches the quoter name (without $ sign if present).
+<br>&nbsp;(match-text 2) matches the opening vertical bar.
+<br>&nbsp;(match-text 3) matches the inside of the quoted string.
+<br>&nbsp;(match-text 4) matches the closing vertical bar
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;or nil if at the end of the buffer.
+<p>Note that this function excludes 'e', 't', 'd', 'p'
+as quoter names according to Template Haskell specification.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-lexeme.el</span>
+(<span class="k">defun</span> <span class="f">haskell-lexeme-looking-at-quasi-quote-literal</span> ()
+  <span class="doc">"Non-nil when point is just in front of Template Haskell
+quaisquote literal.
+
+Quasi quotes start with </span><span class="bi doc">\\=</span><span class="doc">'[xxx|</span><span class="bi doc">\\=</span><span class="doc">' or </span><span class="bi doc">\\=</span><span class="doc">'[$xxx|</span><span class="bi doc">\\=</span><span class="doc">' sequence and end with
+  </span><span class="bi doc">\\=</span><span class="doc">'|]</span><span class="bi doc">\\=</span><span class="doc">'. The </span><span class="bi doc">\\=</span><span class="doc">'</span><span class="m doc">xxx</span><span class="bi m doc">\\=</span><span class="doc">' is a quoter name. There is no escaping mechanism
+provided for the ending sequence.
+
+Regexp has subgroup expressions:
+ (match-text 1) matches the quoter name (without $ sign if present).
+ (match-text 2) matches the opening vertical bar.
+ (match-text 3) matches the inside of the quoted string.
+ (match-text 4) matches the closing vertical bar
+                or nil if at the end of the buffer.
+
+Note that this function excludes </span><span class="bi doc">\\=</span><span class="doc">'</span><span class="m doc">e</span><span class="bi m doc">\\=</span><span class="doc">', </span><span class="bi doc">\\=</span><span class="doc">'</span><span class="m doc">t</span><span class="bi m doc">\\=</span><span class="doc">', </span><span class="bi doc">\\=</span><span class="doc">'</span><span class="m doc">d</span><span class="doc">'</span><span class="bi doc">\\=</span><span class="doc">, </span><span class="bi doc">\\=</span><span class="doc">'</span><span class="m doc">p</span><span class="bi m doc">\\=</span><span class="doc">'
+as quoter names according to Template Haskell specification."</span>
+  (<span class="k">let</span> ((match-data-old (match-data t)))
+    (<span class="k">if</span> (<span class="k">and</span>
+         (looking-at (rx-to-string `(: <span class="s">"["</span> (optional <span class="s">"$"</span>)
+                                       (regexp ,haskell-lexeme-modid-opt-prefix)
+                                       (group (regexp ,haskell-lexeme-id))
+                                       (group <span class="s">"|"</span>))))
+         (equal (haskell-lexeme-classify-by-first-char (char-after (match-beginning 1)))
+                'varid)
+         (not (member (match-string 1) '(<span class="s">"e"</span> <span class="s">"t"</span> <span class="s">"d"</span> <span class="s">"p"</span>))))
+      (<span class="k">save-excursion</span>
+        <span class="cd">;; </span><span class="c">note that quasi quote syntax does not have any escaping
+</span>        <span class="cd">;; </span><span class="c">mechanism and if not closed it will span til lthe end of buffer
+</span>        (goto-char (match-end 0))
+        (<span class="k">let</span> ((match-data (match-data t))
+              (match-data-2 (<span class="k">and</span> (re-search-forward <span class="s">"|]"</span> nil t)
+                                 (match-data t))))
+          (<span class="k">if</span> match-data-2
+              (set-match-data
+               (list
+                (nth 0 match-data) (nth 1 match-data-2)          <span class="cd">;; </span><span class="c">whole match
+</span>                (nth 2 match-data) (nth 3 match-data)            <span class="cd">;; </span><span class="c">quoter name
+</span>                (nth 4 match-data) (nth 5 match-data)            <span class="cd">;; </span><span class="c">opening bar
+</span>                (nth 5 match-data) (nth 0 match-data-2)          <span class="cd">;; </span><span class="c">inner string
+</span>                (nth 0 match-data-2) (1+ (nth 0 match-data-2)))) <span class="cd">;; </span><span class="c">closing bar
+</span>
+            (set-match-data
+             (list
+              (nth 0 match-data) (point-max)                   <span class="cd">;; </span><span class="c">whole match
+</span>              (nth 2 match-data) (nth 3 match-data)            <span class="cd">;; </span><span class="c">quoter name
+</span>              (nth 4 match-data) (nth 5 match-data)            <span class="cd">;; </span><span class="c">opening bar
+</span>              (nth 5 match-data) (point-max)                   <span class="cd">;; </span><span class="c">inner string
+</span>              nil nil))                                        <span class="cd">;; </span><span class="c">closing bar
+</span>            ))
+        t)
+      <span class="cd">;; </span><span class="c">restore old match data if not matched
+</span>      (set-match-data match-data-old)
+      nil)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

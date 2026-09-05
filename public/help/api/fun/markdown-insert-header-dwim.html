@@ -1,0 +1,91 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-insert-header-dwim – Emacs Documentation Online</title>
+<meta name="description" content="markdown-insert-header-dwim is an interactive and natively compiled
+function defined in markdown-mode.el.
+Insert or replace header markup.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-insert-header-dwim</code></h1><p><span class="m"><code>markdown-insert-header-dwim</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-insert-header-dwim <span class="ty">&amp;optional</span> <a href="#:~:text=via-,ARG"><span class="arg">ARG</span></a> <a href="#:~:text=When-,SETEXT"><span class="arg">SETEXT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert or replace header markup.
+<p>The level and type of the header are determined automatically by
+the type and level of the previous header, unless a prefix
+argument is given via <span class="arg">ARG</span>.
+With a numeric prefix valued 1 to 6, insert a header of the given
+level, with the type being determined automatically (note that
+only level 1 or 2 setext headers are possible).
+<p>With a <kbd>C-u</kbd> (<a href="../fun/universal-argument.html"><code>universal-argument</code></a>) prefix (i.e., when <span class="arg">ARG</span> is (4)),
+promote the heading by one level.
+With two <kbd>C-u</kbd> (<a href="../fun/universal-argument.html"><code>universal-argument</code></a>) prefixes (i.e., when <span class="arg">ARG</span> is (16)),
+demote the heading by one level.
+When <span class="arg">SETEXT</span> is non-nil, prefer setext-style headers when
+possible (levels one and two).
+<p>When there is an active region, use it for the header text.  When
+the point is at an existing header, change the type and level
+according to the rules above.
+Otherwise, if the line is not empty, create a header using the
+text on the current line as the header text.
+Finally, if the point is on a blank line, insert empty header
+markup (atx) or prompt for text (setext).
+See <a href="../fun/markdown-insert-header.html"><code>markdown-insert-header</code></a> for more details about how the
+header text is determined.
+<h2>Key Bindings</h2>
+<p><span class="v">markdown-mode-map</span> <span class="key">C-c C-s h</span>
+<span class="v">markdown-mode-map</span> <span class="key">C-c C-t h</span>
+<span class="v">markdown-mode-style-map</span> <span class="key">h</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-insert-header-dwim</span> (<span class="ty">&amp;optional</span> arg setext)
+  <span class="doc">"Insert or replace header markup.
+The level and type of the header are determined automatically by
+the type and level of the previous header, unless a prefix
+argument is given via ARG.
+With a numeric prefix valued 1 to 6, insert a header of the given
+level, with the type being determined automatically (note that
+only level 1 or 2 setext headers are possible).
+
+With a \\[</span><span class="m doc">universal-argument</span><span class="doc">] prefix (i.e., when ARG is (4)),
+promote the heading by one level.
+With two \\[</span><span class="m doc">universal-argument</span><span class="doc">] prefixes (i.e., when ARG is (16)),
+demote the heading by one level.
+When SETEXT is non-nil, prefer setext-style headers when
+possible (levels one and two).
+
+When there is an active region, use it for the header text.  When
+the point is at an existing header, change the type and level
+according to the rules above.
+Otherwise, if the line is not empty, create a header using the
+text on the current line as the header text.
+Finally, if the point is on a blank line, insert empty header
+markup (atx) or prompt for text (setext).
+See `</span><span class="m doc">markdown-insert-header</span><span class="doc">' for more details about how the
+header text is determined."</span>
+  (<span class="k">interactive</span> <span class="s">"*P"</span>)
+  (<span class="k">let</span> (level)
+    (<span class="k">save-excursion</span>
+      (<span class="k">when</span> (<span class="k">or</span> (thing-at-point-looking-at markdown-regex-header)
+                (re-search-backward markdown-regex-header nil t))
+        <span class="cd">;; </span><span class="c">level of current or previous header
+</span>        (<span class="k">setq</span> level (markdown-outline-level))
+        <span class="cd">;; </span><span class="c">match group 1 indicates a setext header
+</span>        (<span class="k">setq</span> setext (match-end 1))))
+    <span class="cd">;; </span><span class="c">check prefix argument
+</span>    (<span class="k">cond</span>
+     ((<span class="k">and</span> (equal arg '(4)) level (&gt; level 1)) <span class="cd">;; </span><span class="c">C-u
+</span>      (<span class="k">cl-decf</span> level))
+     ((<span class="k">and</span> (equal arg '(16)) level (&lt; level 6)) <span class="cd">;; </span><span class="c">C-u C-u
+</span>      (<span class="k">cl-incf</span> level))
+     (arg <span class="cd">;; </span><span class="c">numeric prefix
+</span>      (<span class="k">setq</span> level (prefix-numeric-value arg))))
+    <span class="cd">;; </span><span class="c">setext headers must be level one or two
+</span>    (<span class="k">and</span> level (<span class="k">setq</span> setext (<span class="k">and</span> setext (&lt;= level 2))))
+    <span class="cd">;; </span><span class="c">insert the heading
+</span>    (markdown-insert-header level nil setext)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

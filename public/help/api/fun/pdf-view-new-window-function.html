@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-view-new-window-function – Emacs Documentation Online</title>
+<meta name="description" content="pdf-view-new-window-function is a natively compiled function defined
+in pdf-view.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-view-new-window-function</code></h1><p><span class="m"><code>pdf-view-new-window-function</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">pdf-view.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-view-new-window-function <span class="arg">WINPROPS</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-view.el</span>
+(<span class="k">defun</span> <span class="f">pdf-view-new-window-function</span> (winprops)
+  <span class="cd">;; </span><span class="c">TODO: write documentation!
+</span>  <span class="cd">;; </span><span class="c">(message "New window %s for buf %s" (car winprops) (current-buffer))
+</span>  (<span class="w">cl-assert</span> (<span class="k">or</span> (eq t (car winprops))
+                 (eq (window-buffer (car winprops)) (current-buffer))))
+  (<span class="k">let</span> ((ol (image-mode-window-get 'overlay winprops)))
+    (<span class="k">if</span> ol
+        (<span class="k">progn</span>
+          (<span class="k">setq</span> ol (copy-overlay ol))
+          <span class="cd">;; </span><span class="c">`</span><span class="m c">ol</span><span class="c">' might actually be dead.
+</span>          (move-overlay ol (point-min) (point-max)))
+      (<span class="k">setq</span> ol (make-overlay (point-min) (point-max) nil t))
+      (overlay-put ol 'pdf-view t))
+    (overlay-put ol 'window (car winprops))
+    (<span class="k">unless</span> (windowp (car winprops))
+      <span class="cd">;; </span><span class="c">It's a pseudo entry.  Let's make sure it's not displayed (the
+</span>      <span class="cd">;; </span><span class="c">`</span><span class="m c">window</span><span class="c">' property is only effective if its value is a window).
+</span>      (<span class="w">cl-assert</span> (eq t (car winprops)))
+      (delete-overlay ol))
+    (image-mode-window-put 'overlay ol)
+    <span class="cd">;; </span><span class="c">Clean up some overlays.
+</span>    (<span class="k">dolist</span> (ov (overlays-in (point-min) (point-max)))
+      (<span class="k">when</span> (<span class="k">and</span> (windowp (overlay-get ov 'window))
+                 (not (window-live-p (overlay-get ov 'window))))
+        (delete-overlay ov)))
+    (<span class="k">when</span> (<span class="k">and</span> (windowp (car winprops))
+               (null (image-mode-window-get 'image winprops)))
+      <span class="cd">;; </span><span class="c">We're not displaying an image yet, so let's do so.  This
+</span>      <span class="cd">;; </span><span class="c">happens when the buffer is displayed for the first time.
+</span>      (<span class="k">with-selected-window</span> (car winprops)
+        (pdf-view-goto-page
+         (<span class="k">or</span> (image-mode-window-get 'page t) 1))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

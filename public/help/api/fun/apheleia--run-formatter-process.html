@@ -1,0 +1,81 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apheleia--run-formatter-process – Emacs Documentation Online</title>
+<meta name="description" content="apheleia--run-formatter-process is a natively compiled function
+defined in apheleia-formatters.el.
+Run a formatter using a shell command.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apheleia--run-formatter-process</code></h1><p><span class="m"><code>apheleia--run-formatter-process</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">apheleia-formatters.el</span>.
+<h2>Signature</h2>
+<pre><code>(apheleia--run-formatter-process <a href="#:~:text=command.-,COMMAND"><span class="arg">COMMAND</span></a> <a href="#:~:text=COMMAND,-,BUFFER"><span class="arg">BUFFER</span></a> <a href="#:~:text=CALLBACK,-,REMOTE"><span class="arg">REMOTE</span></a> <a href="#:~:text=BUFFER,-,CALLBACK"><span class="arg">CALLBACK</span></a> <a href="#:~:text=and-,STDIN"><span class="arg">STDIN</span></a> <a href="#:~:text=STDIN.-,FORMATTER"><span class="arg">FORMATTER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run a formatter using a shell command.
+<p><span class="arg">COMMAND</span> should be a list of string or symbols for the formatter that
+will format the current buffer. See <a href="../fun/apheleia--run-formatters.html"><code>apheleia--run-formatters</code></a> for a
+description of <span class="arg">COMMAND</span>, <span class="arg">BUFFER</span>, <span class="arg">CALLBACK</span>, <span class="arg">REMOTE</span>, and <span class="arg">STDIN</span>. <span class="arg">FORMATTER</span>
+is the symbol of the current formatter being run, for diagnostic
+purposes.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbykkl13khzh84lv9vw1bf1vijzg30fr-emacs-packages-deps/share/emacs/site-lisp/elpa/apheleia-20260817.2331/apheleia-formatters.el</span>
+(<span class="k">defun</span> <span class="f">apheleia--run-formatter-process</span>
+    (command buffer remote callback stdin formatter)
+  <span class="doc">"Run a formatter using a shell command.
+COMMAND should be a list of string or symbols for the formatter that
+will format the current buffer. See `</span><span class="m doc">apheleia--run-formatters</span><span class="doc">' for a
+description of COMMAND, BUFFER, CALLBACK, REMOTE, and STDIN. FORMATTER
+is the symbol of the current formatter being run, for diagnostic
+purposes."</span>
+  <span class="cd">;; </span><span class="c">NOTE: We switch to the original buffer both to format the command
+</span>  <span class="cd">;; </span><span class="c">correctly and also to ensure any buffer local variables correctly
+</span>  <span class="cd">;; </span><span class="c">resolve for the whole formatting process (for example
+</span>  <span class="cd">;; </span><span class="c">`</span><span class="m c">apheleia--current-process</span><span class="c">').
+</span>  (<span class="k">with-current-buffer</span> buffer
+    (<span class="k">when-let*</span> ((script-dir (expand-file-name
+                             <span class="s">"scripts/formatters"</span>
+                             (file-name-directory
+                              (file-truename
+                               <span class="cd">;; </span><span class="c">Borrowed with love from Magit
+</span>                               (<span class="k">let</span> ((load-suffixes '(<span class="s">".el"</span>)))
+                                 (locate-library <span class="s">"apheleia"</span>))))))
+                <span class="cd">;; </span><span class="c">Gotta set both `</span><span class="m c">exec-path</span><span class="c">' and the PATH env-var,
+</span>                <span class="cd">;; </span><span class="c">the former is for Emacs itself while the latter is
+</span>                <span class="cd">;; </span><span class="c">for subprocesses of the proc we start.
+</span>                (exec-path (cons script-dir exec-path))
+                (process-environment
+                 (cons (concat <span class="s">"PATH="</span> script-dir <span class="s">":"</span> (getenv <span class="s">"PATH"</span>))
+                       process-environment))
+                (ctx
+                 (apheleia--formatter-context formatter command remote stdin)))
+      (<span class="k">if</span> (executable-find (apheleia-formatter--arg1 ctx)
+                           (eq apheleia-remote-algorithm 'remote))
+          (apheleia--execute-formatter-process
+           <span class="bi">:ctx</span> ctx
+           <span class="bi">:callback</span>
+           (<span class="k">lambda</span> (err stdout)
+             (<span class="k">if</span> err
+                 (funcall callback err stdout)
+               (<span class="k">when-let</span>
+                   ((output-fname (apheleia-formatter--output-fname ctx)))
+                 <span class="cd">;; </span><span class="c">Load output-fname contents into the stdout buffer.
+</span>                 (<span class="k">with-current-buffer</span> stdout
+                   (erase-buffer)
+                   (insert-file-contents-literally output-fname)))
+               (funcall callback nil stdout)))
+           <span class="bi">:ensure</span>
+           (<span class="k">lambda</span> ()
+             (<span class="k">dolist</span> (fname (list (apheleia-formatter--input-fname ctx)
+                                  (apheleia-formatter--output-fname ctx)))
+               (<span class="k">when</span> fname
+                 (<span class="k">ignore-errors</span> (delete-file fname))))))
+        (<span class="k">let</span> ((errmsg
+               (format
+                <span class="s">"Could not find executable for formatter %s, skipping"</span>
+                formatter)))
+          (apheleia--log 'process <span class="s">"%s"</span> errmsg)
+          (funcall callback (cons 'error errmsg) nil))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

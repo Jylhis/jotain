@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--ghub-massage-notification – Emacs Documentation Online</title>
+<meta name="description" content="forge--ghub-massage-notification is a natively compiled function
+defined in forge-github.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--ghub-massage-notification</code></h1><p><span class="m"><code>forge--ghub-massage-notification</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">forge-github.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--ghub-massage-notification <span class="arg">DATA</span> <span class="arg">GITHOST</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-github.el</span>
+(<span class="k">defun</span> <span class="f">forge--ghub-massage-notification</span> (data githost)
+  (<span class="k">let-alist</span> data
+    (<span class="k">let*</span> ((type (intern (downcase .subject.type)))
+           (type (<span class="k">if</span> (eq type 'pullrequest) 'pullreq type))
+           (_ (<span class="k">unless</span> (memq type '( discussion issue pullreq
+                                    commit release))
+                (<span class="w">error</span> <span class="s">"BUG: New unsupported notification type: %s"</span> type)))
+           (number-or-commit (<span class="k">and</span> .subject.url
+                                  (string-match <span class="s">"[</span><span class="neg s">^</span><span class="s">/]*\\'"</span> .subject.url)
+                                  (match-string 0 .subject.url)))
+           (number (<span class="k">and</span> (memq type '(discussion issue pullreq))
+                        (string-to-number number-or-commit)))
+           (repo   (forge-get-repository
+                    (list githost
+                          .repository.owner.login
+                          .repository.name)
+                    nil <span class="bi">:insert!</span>))
+           (repoid (<span class="k">oref</span> repo id))
+           (owner  (<span class="k">oref</span> repo owner))
+           (name   (<span class="k">oref</span> repo name))
+           (id     (forge--object-id repoid (string-to-number .id)))
+           (alias  (intern (concat <span class="s">"_"</span> (string-replace <span class="s">"="</span> <span class="s">"_"</span> id)))))
+      (<span class="k">and</span> number
+           (list alias id
+                 `((,alias repository)
+                   [(name ,name)
+                    (owner ,owner)]
+                   ,@(cddr
+                      (caddr
+                       (ghub--graphql-prepare-query
+                        forge--github-repository-query
+                        (<span class="k">pcase</span> type
+                          ('discussion `(repository
+                                         discussions
+                                         (discussion . ,number)))
+                          ('issue      `(repository
+                                         issues
+                                         (issue . ,number)))
+                          ('pullreq    `(repository
+                                         pullRequest
+                                         (pullRequest . ,number))))))))
+                 repo type data)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

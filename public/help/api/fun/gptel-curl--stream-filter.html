@@ -1,0 +1,112 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-curl--stream-filter – Emacs Documentation Online</title>
+<meta name="description" content="gptel-curl--stream-filter is a natively compiled function defined in
+gptel-request.el.
+Process OUTPUT from a Curl PROCESS for gptel.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-curl--stream-filter</code></h1><p><span class="m"><code>gptel-curl--stream-filter</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-curl--stream-filter <a href="#:~:text=Curl-,PROCESS"><span class="arg">PROCESS</span></a> <a href="#:~:text=Process-,OUTPUT"><span class="arg">OUTPUT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Process <span class="arg">OUTPUT</span> from a Curl <span class="arg">PROCESS</span> for gptel.
+<p>Run the response callback with any completed chunks in <span class="arg">OUTPUT</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+(<span class="k">defun</span> <span class="f">gptel-curl--stream-filter</span> (process output)
+  <span class="doc">"Process OUTPUT from a Curl PROCESS for gptel.
+
+Run the response callback with any completed chunks in OUTPUT."</span>
+  (<span class="k">let*</span> ((fsm (car (alist-get process gptel--request-alist)))
+         (proc-info (gptel-fsm-info fsm))
+         (callback (<span class="k">or</span> (plist-get proc-info <span class="bi">:callback</span>)
+                       #'gptel-curl--stream-insert-response)))
+    (<span class="k">with-current-buffer</span> (process-buffer process)
+      <span class="cd">;; </span><span class="c">Insert output
+</span>      (<span class="k">save-excursion</span>
+        (goto-char (process-mark process))
+        (insert output)
+        (set-marker (process-mark process) (point)))
+
+      <span class="cd">;; </span><span class="c">Find HTTP status
+</span>      (<span class="k">unless</span> (plist-get proc-info <span class="bi">:http-status</span>)
+        (<span class="k">save-excursion</span>
+          (goto-char (point-min))
+          (<span class="k">when-let*</span> (((not (= (line-end-position) (point-max))))
+                      (http-msg (buffer-substring (line-beginning-position)
+                                                  (line-end-position)))
+                      (http-status
+                       (<span class="k">save-match-data</span>
+                         (<span class="k">and</span> (string-match <span class="s">"HTTP/[.0-9]+ +</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[0-9]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> http-msg)
+                              (match-string 1 http-msg)))))
+            (plist-put proc-info <span class="bi">:http-status</span> http-status)
+            (plist-put proc-info <span class="bi">:status</span> (string-trim http-msg))
+            (gptel--fsm-transition fsm)))) <span class="cd">;</span><span class="c">Response started, WAIT -&gt; TYPE
+</span>
+      (<span class="k">when-let*</span> ((http-msg (plist-get proc-info <span class="bi">:status</span>))
+                  (http-status (plist-get proc-info <span class="bi">:http-status</span>)))
+        <span class="cd">;; </span><span class="c">Find data chunk(s) and run callback
+</span>        <span class="cd">;; </span><span class="c">FIXME Handle the case where HTTP 100 is followed by HTTP (not 200) BUG #194
+</span>        (<span class="k">when</span> (member http-status '(<span class="s">"200"</span> <span class="s">"100"</span>))
+          (<span class="k">let</span> ((response (gptel-curl--parse-stream
+                           (plist-get proc-info <span class="bi">:backend</span>) proc-info))
+                (reasoning-block (plist-get proc-info <span class="bi">:reasoning-block</span>)))
+            <span class="cd">;; </span><span class="c">Depending on the API, there are two modes that reasoning or
+</span>            <span class="cd">;; </span><span class="c">chain-of-thought content appears: as part of the main response
+</span>            <span class="cd">;; </span><span class="c">but surrounded by &lt;think&gt;...&lt;/think&gt; tags, or as a separate
+</span>            <span class="cd">;; </span><span class="c">JSON field in the response stream.
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">These cases are handled using two PROC-INFO keys:
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">:reasoning-block is nil before checking for reasoning, 'in when
+</span>            <span class="cd">;; </span><span class="c">in a reasoning block, t when we reach the end of the block, and
+</span>            <span class="cd">;; </span><span class="c">'done afterwards or if no reasoning block is found.  This
+</span>            <span class="cd">;; </span><span class="c">applies to both the modes above.
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">:reasoning contains the reasoning text parsed from the separate
+</span>            <span class="cd">;; </span><span class="c">JSON field.
+</span>            <span class="cd">;;</span><span class="c">
+</span>            <span class="cd">;; </span><span class="c">NOTE: We assume here that the reasoning block always
+</span>            <span class="cd">;; </span><span class="c">precedes the main response block.
+</span>            (<span class="k">unless</span> (eq reasoning-block 'done)
+              (<span class="k">let</span> ((reasoning (plist-get proc-info <span class="bi">:reasoning</span>)))
+                (<span class="k">cond</span>
+                 ((stringp reasoning)
+                  <span class="cd">;; </span><span class="c">Obtained from separate JSON field in response
+</span>                  (funcall callback (cons 'reasoning reasoning) proc-info)
+                  (<span class="k">unless</span> reasoning-block <span class="cd">;</span><span class="c">Record that we're in a reasoning block (#709)
+</span>                    (plist-put proc-info <span class="bi">:reasoning-block</span> 'in))
+                  (plist-put proc-info <span class="bi">:reasoning</span> nil)) <span class="cd">;</span><span class="c">Reset for next parsing round
+</span>                 ((<span class="k">and</span> (string-blank-p response) <span class="cd">;</span><span class="c">Defer checking if response is blank
+</span>                       (not reasoning-block))) <span class="cd">;</span><span class="c">unless we're in a reasoning block already
+</span>                 ((<span class="k">and</span> (null reasoning-block) (length&gt; response 0))
+                  <span class="cd">;; </span><span class="c">Obtained from main response stream: reasoning block start
+</span>                  (<span class="k">if-let*</span>  ((idx (string-match-p <span class="s">"&lt;think&gt;"</span> response)))
+                      (<span class="k">progn</span>
+                        (<span class="k">when</span> (&gt; idx 0) <span class="cd">;</span><span class="c">Collect leading whitespace before &lt;think&gt;
+</span>                          (funcall callback (substring response 0 idx) proc-info)
+                          (<span class="k">setq</span> response (substring response idx)))
+                        (<span class="k">setq</span> response (cons 'reasoning response))
+                        (plist-put proc-info <span class="bi">:reasoning-block</span> 'in))
+                    (plist-put proc-info <span class="bi">:reasoning-block</span> 'done)))
+                 ((<span class="k">and</span> (not (eq reasoning-block t)) (length&gt; response 0))
+                  (<span class="k">if-let*</span> ((idx (string-match-p <span class="s">"&lt;/think&gt;"</span> response)))
+                      (<span class="k">progn</span>
+                        (funcall callback
+                                 (cons 'reasoning (substring response nil (+ idx 8)))
+                                 proc-info)
+                        (<span class="k">setq</span> reasoning-block t) <span class="cd">;</span><span class="c">Signal end of reasoning stream
+</span>                        (plist-put proc-info <span class="bi">:reasoning-block</span> t)
+                        (<span class="k">setq</span> response (substring response (+ idx 8))))
+                    (<span class="k">setq</span> response (cons 'reasoning response)))))
+                (<span class="k">when</span> (eq reasoning-block t) <span class="cd">;</span><span class="c">End of reasoning block
+</span>                  (funcall callback '(reasoning . t) proc-info)
+                  (plist-put proc-info <span class="bi">:reasoning-block</span> 'done))))
+            (<span class="k">unless</span> (equal response <span class="s">""</span>) <span class="cd">;</span><span class="c">Response callback
+</span>              (funcall callback response proc-info))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

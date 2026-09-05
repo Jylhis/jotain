@@ -1,0 +1,100 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apheleia--create-rcs-patch – Emacs Documentation Online</title>
+<meta name="description" content="apheleia--create-rcs-patch is a natively compiled function defined in
+apheleia-formatters.el.
+Generate RCS patch from text in OLD-BUFFER to text in NEW-BUFFER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apheleia--create-rcs-patch</code></h1><p><span class="m"><code>apheleia--create-rcs-patch</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">apheleia-formatters.el</span>.
+<h2>Signature</h2>
+<pre><code>(apheleia--create-rcs-patch <a href="#:~:text=in-,OLD-BUFFER"><span class="arg">OLD-BUFFER</span></a> <a href="#:~:text=in-,NEW-BUFFER"><span class="arg">NEW-BUFFER</span></a> <a href="#:~:text=of-,REMOTE"><span class="arg">REMOTE</span></a> <a href="#:~:text=invoke-,CALLBACK"><span class="arg">CALLBACK</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Generate RCS patch from text in <span class="arg">OLD-BUFFER</span> to text in <span class="arg">NEW-BUFFER</span>.
+<p>Once finished, invoke <span class="arg">CALLBACK</span> with a buffer containing the patch
+as its sole argument.
+<p>See <a href="../fun/apheleia--run-formatters.html"><code>apheleia--run-formatters</code></a> for a description of <span class="arg">REMOTE</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbykkl13khzh84lv9vw1bf1vijzg30fr-emacs-packages-deps/share/emacs/site-lisp/elpa/apheleia-20260817.2331/apheleia-formatters.el</span>
+(<span class="k">defun</span> <span class="f">apheleia--create-rcs-patch</span> (old-buffer new-buffer remote callback)
+  <span class="doc">"Generate RCS patch from text in OLD-BUFFER to text in NEW-BUFFER.
+Once finished, invoke CALLBACK with a buffer containing the patch
+as its sole argument.
+
+See `</span><span class="m doc">apheleia--run-formatters</span><span class="doc">' for a description of REMOTE."</span>
+  (apheleia--log
+   'rcs <span class="s">"Creating RCS patch between buffers with %d and %d bytes"</span>
+   (buffer-size old-buffer) (buffer-size new-buffer))
+  <span class="cd">;; </span><span class="c">Make sure at least one of the two buffers is saved to a file. The
+</span>  <span class="cd">;; </span><span class="c">other one we can feed on stdin.
+</span>  (<span class="k">let</span> ((old-fname
+         (<span class="k">with-current-buffer</span> old-buffer
+           (<span class="k">and</span> (not (buffer-modified-p)) buffer-file-name)))
+        (new-fname
+         (<span class="k">with-current-buffer</span> new-buffer
+           (<span class="k">and</span> (not (buffer-modified-p)) buffer-file-name)))
+        <span class="cd">;; </span><span class="c">Place any temporary files we must delete in here.
+</span>        (clear-files nil)
+        (run-on-remote (<span class="k">and</span> (eq apheleia-remote-algorithm 'remote)
+                            remote)))
+    (<span class="k">cl-labels</span> ((<span class="cd">;; </span><span class="c">Weird indentation because of differences in Emacs
+</span>                 <span class="cd">;; </span><span class="c">indentation algorithm between 27 and 28
+</span>                 apheleia--make-temp-file-for-rcs-patch
+                 (buffer <span class="ty">&amp;optional</span> fname)
+                 <span class="cd">;; </span><span class="c">Ensure there's a file with the contents of `</span><span class="m c">buffer</span><span class="c">' on the
+</span>                 <span class="cd">;; </span><span class="c">target machine. `</span><span class="m c">fname</span><span class="c">', if given, refers to an existing
+</span>                 <span class="cd">;; </span><span class="c">file that may not exist on the target machine and needs
+</span>                 <span class="cd">;; </span><span class="c">to be copied over.
+</span>                 (<span class="k">let</span> ((fname-remote (<span class="k">and</span> fname (file-remote-p fname))))
+                   (<span class="k">when</span> (<span class="k">or</span> (not fname)
+                             (not (equal run-on-remote fname-remote)))
+                     (<span class="k">setq</span> fname
+                           (apheleia--make-temp-file run-on-remote <span class="s">"apheleia"</span>))
+                     (<span class="k">push</span> fname clear-files)
+                     (<span class="k">with-current-buffer</span> buffer
+                       (apheleia--write-region-silently
+                        (point-min) (point-max) fname)))
+                   (apheleia-formatters-local-buffer-file-name fname))))
+      <span class="cd">;; </span><span class="c">Ensure file is on target right machine, or create a copy of it.
+</span>      (<span class="k">when</span> old-fname
+        (<span class="k">setq</span> old-fname
+              (apheleia--make-temp-file-for-rcs-patch old-buffer old-fname)))
+      (<span class="k">when</span> new-fname
+        (<span class="k">setq</span> new-fname
+              (apheleia--make-temp-file-for-rcs-patch new-buffer new-fname)))
+      <span class="cd">;; </span><span class="c">When neither files have an open file-handle, create one.
+</span>      (<span class="k">unless</span> (<span class="k">or</span> old-fname new-fname)
+        (<span class="k">setq</span> new-fname (apheleia--make-temp-file-for-rcs-patch new-buffer))))
+
+    (<span class="k">let</span> ((ctx (apheleia-formatter--context)))
+      (<span class="k">setf</span> (apheleia-formatter--name ctx) nil <span class="cd">; </span><span class="c">Skip logging on failure
+</span>            (apheleia-formatter--arg1 ctx)
+            <span class="cd">;; </span><span class="c">Search gdiff in PATH, else use diff, useful for BSD
+</span>            (<span class="k">if</span> (executable-find <span class="s">"gdiff"</span>) <span class="s">"gdiff"</span>
+              <span class="s">"diff"</span>)
+            (apheleia-formatter--argv ctx) `(<span class="s">"--rcs"</span>
+                                             <span class="s">"--strip-trailing-cr"</span>
+                                             <span class="s">"--text"</span>
+                                             <span class="s">"--"</span>
+                                             ,(<span class="k">or</span> old-fname <span class="s">"-"</span>)
+                                             ,(<span class="k">or</span> new-fname <span class="s">"-"</span>))
+            (apheleia-formatter--remote ctx) remote
+            (apheleia-formatter--stdin ctx)
+            (<span class="k">if</span> new-fname old-buffer new-buffer))
+
+      (apheleia--execute-formatter-process
+       <span class="bi">:ctx</span> ctx
+       <span class="bi">:callback</span> callback
+       <span class="bi">:ensure</span>
+       (<span class="k">lambda</span> ()
+         (<span class="k">dolist</span> (file clear-files)
+           (<span class="k">ignore-errors</span>
+             (delete-file file))))
+       <span class="cd">;; </span><span class="c">Exit status is 0 if no changes, 1 if some changes, and 2 if
+</span>       <span class="cd">;; </span><span class="c">error.
+</span>       <span class="bi">:exit-status</span> (<span class="k">lambda</span> (status) (memq status '(0 1)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

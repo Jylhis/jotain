@@ -1,0 +1,124 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: neocaml--indent-rules – Emacs Documentation Online</title>
+<meta name="description" content="neocaml--indent-rules is a natively compiled function defined in
+neocaml.el.
+Return tree-sitter indentation rules for LANGUAGE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>neocaml--indent-rules</code></h1><p><span class="m"><code>neocaml--indent-rules</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">neocaml.el</span>.
+<h2>Signature</h2>
+<pre><code>(neocaml--indent-rules <a href="#:~:text=for-,LANGUAGE"><span class="arg">LANGUAGE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return tree-sitter indentation rules for <span class="arg">LANGUAGE</span>.
+<p>The return value is suitable for <a href="../var/treesit-simple-indent-rules.html"><code>treesit-simple-indent-rules</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/6yvzbjq5ljnchx97n8s5w91crk1nh47b-emacs-packages-deps/share/emacs/site-lisp/elpa/neocaml-20260710.532/neocaml.el</span>
+(<span class="k">defun</span> <span class="f">neocaml--indent-rules</span> (language)
+  <span class="doc">"Return tree-sitter indentation rules for LANGUAGE.
+The return value is suitable for `</span><span class="m doc">treesit-simple-indent-rules</span><span class="doc">'."</span>
+  `((,language
+     <span class="cd">;; </span><span class="c">Comment continuation lines: align with the body text after
+</span>     <span class="cd">;; </span><span class="c">the opening delimiter.  Must come before `</span><span class="m c">no-node</span><span class="c">' because
+</span>     <span class="cd">;; </span><span class="c">lines inside a multi-line comment have node=nil, parent=comment.
+</span>     ((parent-is <span class="s">"comment"</span>) neocaml--comment-body-anchor 0)
+
+     <span class="cd">;; </span><span class="c">Empty lines: use previous line's indentation, adding offset
+</span>     <span class="cd">;; </span><span class="c">when the previous line ends with a body-expecting token.
+</span>     <span class="cd">;; </span><span class="c">Must come before the top-level rule because Emacs sets
+</span>     <span class="cd">;; </span><span class="c">node=nil, parent=compilation_unit for empty lines.
+</span>     (no-node prev-line neocaml--empty-line-offset)
+
+     <span class="cd">;; </span><span class="c">Top-level definitions: column 0
+</span>     ((parent-is <span class="s">"compilation_unit"</span>) column-0 0)
+
+     <span class="cd">;; </span><span class="c">Closing delimiters align with the opening construct
+</span>     ((node-is <span class="s">")"</span>) parent-bol 0)
+     ((node-is <span class="s">"]"</span>) parent-bol 0)
+     ((node-is <span class="s">"}"</span>) parent-bol 0)
+     ((node-is <span class="s">"done"</span>) parent-bol 0)
+     ((node-is <span class="s">"end"</span>) parent-bol 0)
+     ((node-is <span class="s">";;"</span>) parent-bol 0)
+
+     <span class="cd">;; </span><span class="c">"with" keyword aligns with match/try
+</span>     ((node-is <span class="s">"with"</span>) parent-bol 0)
+
+     <span class="cd">;; </span><span class="c">then/else clauses align with their enclosing if
+</span>     ((node-is <span class="s">"then_clause"</span>) parent-bol 0)
+     ((node-is <span class="s">"else_clause"</span>) parent-bol 0)
+
+     <span class="cd">;; </span><span class="c">| pipe in match/try aligns with the keyword
+</span>     ((match <span class="s">"^|$"</span> <span class="s">"match_expression"</span>) parent-bol 0)
+     ((match <span class="s">"^|$"</span> <span class="s">"try_expression"</span>) parent-bol 0)
+
+     <span class="cd">;; </span><span class="c">Match cases: match_case node aligns with match/try keyword
+</span>     ((node-is <span class="s">"match_case"</span>) parent-bol 0)
+
+     <span class="cd">;; </span><span class="c">Bodies inside then/else are indented
+</span>     ((parent-is <span class="s">"then_clause"</span>) parent-bol neocaml-indent-offset)
+     ((parent-is <span class="s">"else_clause"</span>) parent-bol neocaml-indent-offset)
+
+     <span class="cd">;; </span><span class="c">Match case bodies (after -&gt;) are indented from |
+</span>     ((parent-is <span class="s">"match_case"</span>) parent-bol neocaml-indent-offset)
+
+     <span class="cd">;; </span><span class="c">let...in: body after "in" aligns with "let" (no accumulation)
+</span>     ((parent-is <span class="s">"let_expression"</span>) parent-bol 0)
+
+     <span class="cd">;; </span><span class="c">Binding operators: and* / and+ align with let* / let+
+</span>     ((node-is <span class="s">"let_and_operator"</span>) parent-bol 0)
+
+     <span class="cd">;; </span><span class="c">Let/type/external bindings: body after = is indented
+</span>     ((parent-is <span class="s">"let_binding"</span>) parent-bol neocaml-indent-offset)
+     ((parent-is <span class="s">"type_binding"</span>) parent-bol neocaml-indent-offset)
+     ((parent-is <span class="s">"external"</span>) parent-bol neocaml-indent-offset)
+     ((parent-is <span class="s">"value_specification"</span>) parent-bol neocaml-indent-offset)
+
+     <span class="cd">;; </span><span class="c">Type definition components — use grand-parent-bol to avoid
+</span>     <span class="cd">;; </span><span class="c">shifting when the declaration starts on the same line as
+</span>     <span class="cd">;; </span><span class="c">its first child
+</span>     ((parent-is <span class="s">"record_declaration"</span>) parent-bol neocaml-indent-offset)
+     ((parent-is <span class="s">"variant_declaration"</span>) neocaml--grand-parent-bol neocaml-indent-offset)
+
+     <span class="cd">;; </span><span class="c">Module structures and signatures
+</span>     ((parent-is <span class="s">"structure"</span>) parent-bol neocaml-indent-offset)
+     ((parent-is <span class="s">"signature"</span>) parent-bol neocaml-indent-offset)
+
+     <span class="cd">;; </span><span class="c">Loop bodies
+</span>     ((parent-is <span class="s">"do_clause"</span>) parent-bol neocaml-indent-offset)
+
+     <span class="cd">;; </span><span class="c">fun/function expressions
+</span>     ((parent-is <span class="s">"fun_expression"</span>) parent-bol neocaml-indent-offset)
+     ((parent-is <span class="s">"function_expression"</span>) parent-bol neocaml-indent-offset)
+
+     <span class="cd">;; </span><span class="c">try/with
+</span>     ((parent-is <span class="s">"try_expression"</span>) parent-bol neocaml-indent-offset)
+
+     <span class="cd">;; </span><span class="c">Compound expressions
+</span>     ((parent-is <span class="s">"parenthesized_expression"</span>) parent-bol neocaml-indent-offset)
+     ((parent-is <span class="s">"record_expression"</span>) parent-bol neocaml-indent-offset)
+     ((parent-is <span class="s">"list_expression"</span>) parent-bol neocaml-indent-offset)
+     ((parent-is <span class="s">"array_expression"</span>) parent-bol neocaml-indent-offset)
+
+     <span class="cd">;; </span><span class="c">Application and field access
+</span>     ((parent-is <span class="s">"application_expression"</span>) parent-bol neocaml-indent-offset)
+     ((parent-is <span class="s">"field_expression"</span>) parent-bol neocaml-indent-offset)
+
+     <span class="cd">;; </span><span class="c">Sequences (expr1; expr2) — keep aligned
+</span>     ((parent-is <span class="s">"sequence_expression"</span>) parent-bol 0)
+
+     <span class="cd">;; </span><span class="c">Object-oriented features
+</span>     ((parent-is <span class="s">"object_expression"</span>) parent-bol neocaml-indent-offset)
+     ((parent-is <span class="s">"class_body_type"</span>) parent-bol neocaml-indent-offset)
+
+     <span class="cd">;; </span><span class="c">Error recovery
+</span>     ((parent-is <span class="s">"ERROR"</span>) parent-bol neocaml-indent-offset)
+
+     <span class="cd">;; </span><span class="c">Comment continuation lines align with the body start
+</span>     ((node-is <span class="s">"comment"</span>) neocaml--comment-body-anchor 0)
+     <span class="cd">;; </span><span class="c">Strings preserve previous indentation
+</span>     ((node-is <span class="s">"string"</span>) prev-line 0))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

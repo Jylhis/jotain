@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--config-eval-value – Emacs Documentation Online</title>
+<meta name="description" content="dape--config-eval-value is a natively compiled function defined in
+dape.el.
+Return recursively evaluated VALUE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--config-eval-value</code></h1><p><span class="m"><code>dape--config-eval-value</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--config-eval-value <a href="#:~:text=evaluated-,VALUE"><span class="arg">VALUE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,SKIP-FUNCTIONS"><span class="arg">SKIP-FUNCTIONS</span></a> <a href="#:~:text=If-,SKIP-INTERACTIVE"><span class="arg">SKIP-INTERACTIVE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return recursively evaluated <span class="arg">VALUE</span>.
+<p>If <span class="arg">SKIP-FUNCTIONS</span> is non-nil return <span class="arg">VALUE</span> as is if <a href="../fun/functionp.html"><code>functionp</code></a> is
+non-nil.
+If <span class="arg">SKIP-INTERACTIVE</span> is non-nil return <span class="arg">VALUE</span> as is if <a href="../fun/functionp.html"><code>functionp</code></a> is
+non-nil and function uses the minibuffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--config-eval-value</span> (value <span class="ty">&amp;optional</span> skip-functions skip-interactive)
+  <span class="doc">"Return recursively evaluated VALUE.
+If SKIP-FUNCTIONS is non-nil return VALUE as is if `</span><span class="m doc">functionp</span><span class="doc">' is
+non-nil.
+If SKIP-INTERACTIVE is non-nil return VALUE as is if `</span><span class="m doc">functionp</span><span class="doc">' is
+non-nil and function uses the minibuffer."</span>
+  (<span class="k">pcase</span> value
+    <span class="cd">;; </span><span class="c">On function (or list that starts with a non keyword symbol)
+</span>    ((<span class="k">or</span> (pred functionp)
+         (<span class="k">and</span> `(,x . ,_) (guard (<span class="k">and</span> (symbolp x) (not (keywordp x))))))
+     (<span class="k">if</span> skip-functions
+         value
+       <span class="cd">;; </span><span class="c">Try to eval function, signal on minibuffer
+</span>       (<span class="k">let</span> ((enable-recursive-minibuffers (not skip-interactive)))
+         (<span class="k">if</span> (functionp value)
+             (funcall-interactively value)
+           (eval value t)))))
+    <span class="cd">;; </span><span class="c">On plist recursively evaluate
+</span>    ((pred dape--plistp)
+     (dape--config-eval-1 value skip-functions skip-interactive))
+    <span class="cd">;; </span><span class="c">On vector evaluate each item
+</span>    ((pred vectorp)
+     (cl-map 'vector
+             (<span class="k">lambda</span> (value)
+               (dape--config-eval-value value skip-functions skip-interactive))
+             value))
+    <span class="cd">;; </span><span class="c">On symbol evaluate symbol value
+</span>    ((<span class="k">and</span> (pred symbolp)
+          <span class="cd">;; </span><span class="c">Guard against infinite recursion
+</span>          (guard (not (eq (symbol-value value) value))))
+     (dape--config-eval-value (symbol-value value) skip-functions
+                              skip-interactive))
+    <span class="cd">;; </span><span class="c">Otherwise just value
+</span>    (_ value)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

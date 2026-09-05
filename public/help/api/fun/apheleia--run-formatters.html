@@ -1,0 +1,97 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apheleia--run-formatters – Emacs Documentation Online</title>
+<meta name="description" content="apheleia--run-formatters is a natively compiled function defined in
+apheleia-formatters.el.
+Run one or more code formatters on the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apheleia--run-formatters</code></h1><p><span class="m"><code>apheleia--run-formatters</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">apheleia-formatters.el</span>.
+<h2>Signature</h2>
+<pre><code>(apheleia--run-formatters <a href="#:~:text=buffer.-,FORMATTERS"><span class="arg">FORMATTERS</span></a> <a href="#:~:text=formatters.-,BUFFER"><span class="arg">BUFFER</span></a> <a href="#:~:text=nil.-,REMOTE"><span class="arg">REMOTE</span></a> <a href="#:~:text=called.-,CALLBACK"><span class="arg">CALLBACK</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=placed.-,STDIN"><span class="arg">STDIN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run one or more code formatters on the current buffer.
+<p><span class="arg">FORMATTERS</span> is a list of symbols that appear as keys in
+<a href="../var/apheleia-formatters.html"><code>apheleia-formatters</code></a>. <span class="arg">BUFFER</span> is the <a href="../fun/current-buffer.html"><code>current-buffer</code></a> when this
+function was first called.
+<p><span class="arg">CALLBACK</span> is always invoked unless there is a synchronous nonlocal
+exit, the first argument is nil or an error. In the case of no
+error, the second argument is a buffer containing the output of
+all the formatters, otherwise it is nil.
+<p><span class="arg">REMOTE</span> asserts whether the buffer being formatted is on a remote
+machine or the current machine. It should be the output of
+<a href="../fun/file-remote-p.html"><code>file-remote-p</code></a> on the current variable <a class="v" href="../var/buffer-file-name.html"><code>buffer-file-name</code>(var)</a>/<a class="f" href="../fun/buffer-file-name.html"><code>buffer-file-name</code>(fun)</a>.
+<span class="arg">REMOTE</span> is the remote part of the original buffers file-name or
+directory'. It's used alongside <a href="../var/apheleia-remote-algorithm.html"><code>apheleia-remote-algorithm</code></a> to
+determine where the formatter process and any temporary files it
+may need should be placed.
+<p><span class="arg">STDIN</span> is a buffer containing the standard input for the first
+formatter in COMMANDS. This should not be supplied by the caller
+and instead is supplied by this command when invoked recursively.
+The stdout of the previous formatter becomes the stdin of the
+next formatter.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbykkl13khzh84lv9vw1bf1vijzg30fr-emacs-packages-deps/share/emacs/site-lisp/elpa/apheleia-20260817.2331/apheleia-formatters.el</span>
+(<span class="k">cl-defun</span> <span class="f">apheleia--run-formatters</span>
+    (formatters buffer remote callback <span class="ty">&amp;optional</span> stdin)
+  <span class="doc">"Run one or more code formatters on the current buffer.
+FORMATTERS is a list of symbols that appear as keys in
+`</span><span class="m doc">apheleia-formatters</span><span class="doc">'. BUFFER is the `</span><span class="m doc">current-buffer</span><span class="doc">' when this
+function was first called.
+
+CALLBACK is always invoked unless there is a synchronous nonlocal
+exit, the first argument is nil or an error. In the case of no
+error, the second argument is a buffer containing the output of
+all the formatters, otherwise it is nil.
+
+REMOTE asserts whether the buffer being formatted is on a remote
+machine or the current machine. It should be the output of
+`</span><span class="m doc">file-remote-p</span><span class="doc">' on the current variable `</span><span class="m doc">buffer-file-name</span><span class="doc">'.
+REMOTE is the remote part of the original buffers file-name or
+directory'. It's used alongside `</span><span class="m doc">apheleia-remote-algorithm</span><span class="doc">' to
+determine where the formatter process and any temporary files it
+may need should be placed.
+
+STDIN is a buffer containing the standard input for the first
+formatter in COMMANDS. This should not be supplied by the caller
+and instead is supplied by this command when invoked recursively.
+The stdout of the previous formatter becomes the stdin of the
+next formatter."</span>
+  (apheleia--log
+   'run-formatter
+   <span class="s">"Running formatters %S on buffer %S"</span> formatters buffer)
+  (<span class="k">let</span> ((command (alist-get (car formatters) apheleia-formatters)))
+    (funcall
+     (<span class="k">cond</span>
+      ((consp command)
+       #'apheleia--run-formatter-process)
+      ((<span class="k">or</span> (functionp command)
+           (symbolp command))
+       #'apheleia--run-formatter-function)
+      (t
+       (<span class="w">error</span> <span class="s">"Formatter must be a shell command or a Lisp \
+function: %s"</span> command)))
+     command
+     buffer
+     remote
+     (<span class="k">lambda</span> (err stdout)
+       (<span class="k">if</span> err
+           (funcall callback err stdout)
+         (<span class="k">condition-case-unless-debug</span> err
+             (<span class="k">unless</span> (string-empty-p
+                      (<span class="k">with-current-buffer</span> stdout (buffer-string)))
+               (<span class="k">if</span> (cdr formatters)
+                   <span class="cd">;; </span><span class="c">Forward current stdout to remaining formatters,
+</span>                   <span class="cd">;; </span><span class="c">passing along the current callback and using the
+</span>                   <span class="cd">;; </span><span class="c">current formatters output as stdin.
+</span>                   (apheleia--run-formatters
+                    (cdr formatters) buffer remote callback stdout)
+                 (funcall callback nil stdout)))
+           (<span class="w">error</span> (funcall callback err nil)))))
+     stdin
+     (car formatters))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

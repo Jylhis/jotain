@@ -1,0 +1,154 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-comment – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-comment is a natively compiled function defined in
+web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-comment</code></h1><p><span class="m"><code>web-mode-comment</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-comment <span class="arg">POS</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-comment</span> (pos)
+  (<span class="k">let</span> (ctx language col sel beg end block-side single-line-block pos-after content)
+
+    (<span class="k">setq</span> pos-after pos)
+
+    (<span class="k">setq</span> block-side (get-text-property pos 'block-side))
+    (<span class="k">setq</span> single-line-block (web-mode-is-single-line-block pos))
+
+    (<span class="k">cond</span>
+
+      ((<span class="k">and</span> block-side (string= web-mode-engine <span class="s">"erb"</span>))
+       (web-mode-comment-erb-block pos)
+       )
+
+      ((<span class="k">and</span> block-side (string= web-mode-engine <span class="s">"artanis"</span>))
+       (web-mode-comment-artanis-block pos)
+       )
+
+      ((<span class="k">and</span> single-line-block block-side
+            (intern-soft (concat <span class="s">"web-mode-comment-"</span> web-mode-engine <span class="s">"-block"</span>)))
+       (funcall (intern (concat <span class="s">"web-mode-comment-"</span> web-mode-engine <span class="s">"-block"</span>)) pos)
+       )
+
+      (t
+       (<span class="k">setq</span> ctx (web-mode-point-context
+                  (<span class="k">if</span> mark-active (region-beginning) (line-beginning-position))))
+       <span class="cd">;;</span><span class="c">(message "%S" ctx)
+</span>       (<span class="k">setq</span> language (plist-get ctx <span class="bi">:language</span>))
+       (<span class="k">setq</span> col (current-column))
+       (<span class="k">cond</span>
+         (mark-active
+          <span class="cd">;;</span><span class="c">(message "%S %S" (point) col)
+</span>          )
+         ((<span class="k">and</span> (member language '(<span class="s">"html"</span> <span class="s">"xml"</span>))
+               (get-text-property (<span class="k">progn</span> (back-to-indentation) (point)) 'tag-beg))
+          (web-mode-element-select))
+         (t
+          (end-of-line)
+          (set-mark (line-beginning-position)))
+         ) <span class="cd">;</span><span class="c">cond
+</span>
+       (<span class="k">setq</span> beg (region-beginning)
+             end (region-end))
+
+       (<span class="k">when</span> (&gt; (point) (mark))
+         (exchange-point-and-mark))
+
+       (<span class="k">if</span> (<span class="k">and</span> (eq (char-before end) ?\n)
+                (not (eq (char-after end) ?\n)))
+           (<span class="k">setq</span> end (1- end)))
+
+       (<span class="k">setq</span> sel (buffer-substring-no-properties beg end))
+
+       (<span class="k">cond</span>
+
+         ((member language '(<span class="s">"html"</span> <span class="s">"xml"</span>))
+          (<span class="k">cond</span>
+            ((<span class="k">and</span> (= web-mode-comment-style 2) (string= web-mode-engine <span class="s">"django"</span>))
+             (<span class="k">setq</span> content (concat <span class="s">"{# "</span> sel <span class="s">" #}"</span>)))
+            ((<span class="k">and</span> (= web-mode-comment-style 2) (member web-mode-engine '(<span class="s">"ejs"</span> <span class="s">"erb"</span>)))
+             (<span class="k">setq</span> content (concat <span class="s">"&lt;%# "</span> sel <span class="s">" %&gt;"</span>)))
+            ((<span class="k">and</span> (= web-mode-comment-style 2) (string= web-mode-engine <span class="s">"artanis"</span>))
+             (<span class="k">setq</span> content (concat <span class="s">"&lt;%; "</span> sel <span class="s">" %&gt;"</span>)))
+            ((<span class="k">and</span> (= web-mode-comment-style 2) (string= web-mode-engine <span class="s">"aspx"</span>))
+             (<span class="k">setq</span> content (concat <span class="s">"&lt;%-- "</span> sel <span class="s">" --%&gt;"</span>)))
+            ((<span class="k">and</span> (= web-mode-comment-style 2) (string= web-mode-engine <span class="s">"smarty"</span>))
+             (<span class="k">setq</span> content (concat <span class="s">"{* "</span> sel <span class="s">" *}"</span>)))
+            ((<span class="k">and</span> (= web-mode-comment-style 2) (string= web-mode-engine <span class="s">"expressionengine"</span>))
+             (<span class="k">setq</span> content (concat <span class="s">"{!-- "</span> sel <span class="s">" --}"</span>)))
+            ((<span class="k">and</span> (= web-mode-comment-style 2) (string= web-mode-engine <span class="s">"xoops"</span>))
+             (<span class="k">setq</span> content (concat <span class="s">"&lt;{* "</span> sel <span class="s">" *}&gt;"</span>)))
+            ((<span class="k">and</span> (= web-mode-comment-style 2) (string= web-mode-engine <span class="s">"hero"</span>))
+             (<span class="k">setq</span> content (concat <span class="s">"&lt;%# "</span> sel <span class="s">" %&gt;"</span>)))
+            ((<span class="k">and</span> (= web-mode-comment-style 2) (string= web-mode-engine <span class="s">"blade"</span>))
+             (<span class="k">setq</span> content (concat <span class="s">"{{-- "</span> sel <span class="s">" --}}"</span>)))
+            ((<span class="k">and</span> (= web-mode-comment-style 2) (string= web-mode-engine <span class="s">"ctemplate"</span>))
+             (<span class="k">setq</span> content (concat <span class="s">"{{!-- "</span> sel <span class="s">" --}}"</span>)))
+            ((<span class="k">and</span> (= web-mode-comment-style 2) (string= web-mode-engine <span class="s">"antlers"</span>))
+             (<span class="k">setq</span> content (concat <span class="s">"{{# "</span> sel <span class="s">" #}}"</span>)))
+            ((<span class="k">and</span> (= web-mode-comment-style 2) (string= web-mode-engine <span class="s">"razor"</span>))
+             (<span class="k">setq</span> content (concat <span class="s">"@* "</span> sel <span class="s">" *@"</span>)))
+            (t
+             (<span class="k">setq</span> content (concat <span class="s">"&lt;!-- "</span> sel <span class="s">" --&gt;"</span>))
+             (<span class="k">when</span> (&lt; (length sel) 1)
+               (search-backward <span class="s">" --&gt;"</span>)
+               (<span class="k">setq</span> pos-after nil))
+             ))
+          ) <span class="cd">;</span><span class="c">case html
+</span>
+         ((member language '(<span class="s">"php"</span> <span class="s">"javascript"</span> <span class="s">"typescript"</span> <span class="s">"java"</span> <span class="s">"jsx"</span>))
+          (<span class="k">let</span> (alt)
+            (<span class="k">setq</span> alt (cdr (assoc language web-mode-comment-formats)))
+            <span class="cd">;;</span><span class="c">(message "language=%S alt=%S sel=%S col=%S" language alt sel col)
+</span>            (<span class="k">cond</span>
+              ((<span class="k">and</span> alt (string= alt <span class="s">"//"</span>))
+               (<span class="k">setq</span> content (replace-regexp-in-string (concat <span class="s">"\n[ ]\\{"</span> (number-to-string col) <span class="s">"\\}"</span>) <span class="s">"\n"</span> sel))
+               (<span class="k">setq</span> content (replace-regexp-in-string (concat <span class="s">"\n"</span>) <span class="s">"\n// "</span> content))
+               (<span class="k">setq</span> content (concat <span class="s">"// "</span> content)))
+              ((get-text-property pos 'jsx-depth)
+               (<span class="k">setq</span> content (concat <span class="s">"{/* "</span> sel <span class="s">" */}"</span>)))
+              (web-mode-comment-prefixing
+               (<span class="k">setq</span> content (replace-regexp-in-string (concat <span class="s">"\n[ ]\\{"</span> (number-to-string col) <span class="s">"\\}"</span>) <span class="s">"\n* "</span> sel))
+               (<span class="k">setq</span> content (concat <span class="s">"/* "</span> content <span class="s">" */"</span>)))
+              (t
+               (<span class="k">setq</span> content (concat <span class="s">"/* "</span> sel <span class="s">" */"</span>)))
+              ) <span class="cd">;</span><span class="c">cond
+</span>            ) <span class="cd">;</span><span class="c">let
+</span>          )
+
+         ((member language '(<span class="s">"erb"</span>))
+          (<span class="k">setq</span> content (replace-regexp-in-string <span class="s">"^[ ]*"</span> <span class="s">"#"</span> sel)))
+
+         ((member language '(<span class="s">"asp"</span>))
+          (<span class="k">setq</span> content (replace-regexp-in-string <span class="s">"^[ ]*"</span> <span class="s">"'"</span> sel)))
+
+         (t
+          (<span class="k">setq</span> content (concat <span class="s">"/* "</span> sel <span class="s">" */"</span>)))
+
+         ) <span class="cd">;</span><span class="c">cond
+</span>
+       (<span class="k">when</span> content
+         (delete-region beg end)
+         (deactivate-mark)
+         (<span class="k">let</span> (beg end)
+           (<span class="k">setq</span> beg (line-beginning-position))
+           (insert content)
+           (<span class="k">setq</span> end (line-end-position))
+           (indent-region beg end)
+           )
+         ) <span class="cd">;</span><span class="c">when
+</span>
+       ) <span class="cd">;</span><span class="c">t
+</span>      ) <span class="cd">;</span><span class="c">cond
+</span>
+    (<span class="k">when</span> pos-after (goto-char pos-after))
+
+    ))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

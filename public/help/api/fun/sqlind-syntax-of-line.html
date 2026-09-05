@@ -1,0 +1,108 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: sqlind-syntax-of-line – Emacs Documentation Online</title>
+<meta name="description" content="sqlind-syntax-of-line is a natively compiled function defined in
+sql-indent.el.
+Return the syntax at the start of the current line.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>sqlind-syntax-of-line</code></h1><p><span class="m"><code>sqlind-syntax-of-line</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">sql-indent.el</span>.
+<h2>Signature</h2>
+<pre><code>(sqlind-syntax-of-line)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the syntax at the start of the current line.
+<p>The function returns a list of (SYNTAX . ANCHOR) cons cells.
+SYNTAX is either a symbol or a list starting with a symbol,
+ANCHOR is a buffer position which is the reference for the
+SYNTAX.  <a href="../var/sqlind-indentation-syntax-symbols.html"><code>sqlind-indentation-syntax-symbols</code></a> lists the syntax
+symbols and their meaning.
+<p>The first element in the list is the most specific syntax for the
+line, the remaining elemens are more generic ones.  For example,
+a line can be inside an SELECT clause which itself is inside a
+procedure block.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vgm6xb2iy00bs19rdw9z3nfi5nf8g873-emacs-packages-deps/share/emacs/site-lisp/elpa/sql-indent-1.7/sql-indent.el</span>
+(<span class="k">defun</span> <span class="f">sqlind-syntax-of-line</span> ()
+  <span class="doc">"Return the syntax at the start of the current line.
+The function returns a list of (SYNTAX . ANCHOR) cons cells.
+SYNTAX is either a symbol or a list starting with a symbol,
+ANCHOR is a buffer position which is the reference for the
+SYNTAX.  `</span><span class="m doc">sqlind-indentation-syntax-symbols</span><span class="doc">' lists the syntax
+symbols and their meaning.
+
+The first element in the list is the most specific syntax for the
+line, the remaining elemens are more generic ones.  For example,
+a line can be inside an SELECT clause which itself is inside a
+procedure block."</span>
+  (<span class="k">save-excursion</span>
+    (<span class="k">with-syntax-table</span> sqlind-syntax-table
+      (<span class="k">let*</span> ((pos (<span class="k">progn</span> (back-to-indentation) (point)))
+             (sqlind-search-limit (sqlind-beginning-of-directive))
+             (context-start (<span class="k">progn</span> (sqlind-beginning-of-statement) (point)))
+             (context (list (cons 'statement-continuation context-start)))
+             (have-block-context nil))
+
+        (goto-char context-start)
+        (<span class="k">when</span> (<span class="k">or</span> (&gt;= context-start pos)
+                  (<span class="k">and</span> (looking-at sqlind-start-block-regexp)
+                       <span class="cd">;; </span><span class="c">create table/view/index statements are not block
+</span>                       <span class="cd">;; </span><span class="c">contexts
+</span>                       (<span class="k">or</span> (not (looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">create</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">alter</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>))
+                           (<span class="k">catch</span> '<span class="m">finished</span> (sqlind-maybe-create-statement) nil))
+                       <span class="cd">;; </span><span class="c">A declare statement may or may not be a block context
+</span>                       (<span class="k">or</span> (not (looking-at <span class="s">"declare"</span>))
+                           (<span class="k">catch</span> '<span class="m">finished</span> (sqlind-maybe-declare-statement) nil))
+                       (not (sqlind-looking-at-begin-transaction))))
+          (goto-char pos)
+          <span class="cd">;; </span><span class="c">if we are at the start of a statement, or the nearest statement
+</span>          <span class="cd">;; </span><span class="c">starts after us, make the enclosing block the starting context
+</span>          (<span class="k">setq</span> have-block-context t)
+          (<span class="k">let</span> ((block-info (sqlind-beginning-of-block)))
+
+            <span class="cd">;; </span><span class="c">certain kind of blocks end within a statement
+</span>            <span class="cd">;; </span><span class="c">(e.g. create view).  If we found one of those blocks and
+</span>            <span class="cd">;; </span><span class="c">it is not within our statement, we ignore the block info.
+</span>
+            (<span class="k">if</span> (<span class="k">and</span> (listp block-info)
+                     (eq (nth 0 block-info) 'create-statement)
+                     (not (memq (nth 1 block-info) '(function procedure)))
+                     (not (eql context-start (point))))
+                (<span class="k">progn</span>
+                  (<span class="k">setq</span> context-start (point-min))
+                  (<span class="k">setq</span> context (list (cons 'toplevel context-start))))
+              <span class="cd">;; </span><span class="c">else
+</span>              (<span class="k">setq</span> context-start (point))
+              (<span class="k">setq</span> context (list (cons block-info context-start))))))
+
+        (goto-char context-start)
+        (<span class="k">when</span> (<span class="k">and</span> (eq 'statement-continuation (sqlind-syntax-symbol context))
+                   (looking-at <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">create</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">alter</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>))
+          (<span class="k">let</span> ((create-info (<span class="k">catch</span> '<span class="m">finished</span> (sqlind-maybe-create-statement t) nil)))
+            (<span class="k">when</span> create-info
+              (<span class="k">pop</span> context)         <span class="cd">; </span><span class="c">remove the statement continuation syntax
+</span>              (<span class="k">push</span> (cons create-info context-start) context))))
+
+        (<span class="k">let</span> ((parse-info (syntax-ppss pos)))
+          (<span class="k">cond</span> ((nth 4 parse-info)   <span class="cd">; </span><span class="c">inside a comment
+</span>                 (<span class="k">push</span> (cons 'comment-continuation (nth 8 parse-info)) context))
+                ((nth 3 parse-info)   <span class="cd">; </span><span class="c">inside a string
+</span>                 (<span class="k">push</span> (cons 'string-continuation (nth 8 parse-info)) context))
+                ((&gt; (nth 0 parse-info) 0) <span class="cd">; </span><span class="c">nesting
+</span>                 (<span class="k">let</span> ((start (nth 1 parse-info)))
+                   (goto-char (1+ start))
+                   (skip-chars-forward <span class="s">" \t\r\n\f\v"</span> pos)
+                   (<span class="k">if</span> (eq (point) pos)
+                       (<span class="k">push</span> (cons 'nested-statement-open start) context)
+                     (goto-char pos)
+                     (<span class="k">if</span> (looking-at <span class="s">")"</span>)
+                         (<span class="k">push</span> (cons 'nested-statement-close start) context)
+                       (<span class="k">push</span> (cons 'nested-statement-continuation start) context)))))))
+
+        <span class="cd">;; </span><span class="c">now let's refine the syntax by adding info about the current line
+</span>        <span class="cd">;; </span><span class="c">into the mix.
+</span>        (sqlind-refine-syntax context pos have-block-context)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

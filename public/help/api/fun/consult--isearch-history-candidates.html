@@ -1,0 +1,44 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--isearch-history-candidates – Emacs Documentation Online</title>
+<meta name="description" content="consult--isearch-history-candidates is a natively compiled function
+defined in consult.el.
+Return Isearch history candidates.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--isearch-history-candidates</code></h1><p><span class="m"><code>consult--isearch-history-candidates</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--isearch-history-candidates)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return Isearch history candidates.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--isearch-history-candidates</span> ()
+  <span class="doc">"Return Isearch history candidates."</span>
+  <span class="cd">;; </span><span class="c">Do not throw an error on empty history, in order to allow starting a
+</span>  <span class="cd">;; </span><span class="c">search.  We do not :require-match here.
+</span>  (<span class="k">let</span> ((history (<span class="k">if</span> (eq t search-default-mode)
+                     (append regexp-search-ring search-ring)
+                   (append search-ring regexp-search-ring))))
+    (delete-dups
+     (mapcar
+      (<span class="k">lambda</span> (cand)
+        <span class="cd">;; </span><span class="c">The search type can be distinguished via text properties.
+</span>        (<span class="k">let*</span> ((props (plist-member (text-properties-at 0 cand)
+                                    'isearch-regexp-function))
+               (type (<span class="k">pcase</span> (cadr props)
+                       ((<span class="k">and</span> 'nil (guard (not props))) ?r)
+                       ('nil                           ?l)
+                       ('word-search-regexp            ?w)
+                       ('isearch-symbol-regexp         ?s)
+                       ('char-fold-to-regexp           ?c)
+                       (_                              ?u))))
+          <span class="cd">;; </span><span class="c">Disambiguate history items.  The same string could
+</span>          <span class="cd">;; </span><span class="c">occur with different search types.
+</span>          (consult--tofu-append cand type)))
+      history))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

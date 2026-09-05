@@ -1,0 +1,65 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--format-resource – Emacs Documentation Online</title>
+<meta name="description" content="forge--format-resource is a byte-compiled function defined in
+forge-core.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--format-resource</code></h1><p><span class="m"><code>forge--format-resource</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in
+<span class="bt">forge-core.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--format-resource <span class="ty">&amp;rest</span> <span class="arg">ARGS</span>)
+</code></pre>
+<h2>Implementations</h2>
+<p>(forge--format-resource (OBJECT forge-object) RESOURCE) in `<span class="bt">forge-core.el</span>'.
+<p>Return an API resource based on RESOURCE and slots of OBJECT.
+This is used by `forge--rest' and by extension `forge-rest'.
+RESOURCE is a string separated by slashes.  Each part that begins
+with a colon is replaced with a value from OBJECT.  `:repo' is a
+synonym for `:name'.  `:project' is a like `:owner/:name', but the
+slash is quoted on Gitlab.  `:topic' is a synonym for `:number'
+but only if OBJECT is a topic.  Any other `:SLOT' means to use
+the value of that slot in OBJECT, or if that doesn't exist in its
+parent object (determined using `forge-get-parent').
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-core.el</span>
+(<span class="k">cl-defmethod</span> <span class="f">forge--format-resource</span> ((object forge-object) resource)
+  <span class="doc">"Return an API resource based on RESOURCE and slots of OBJECT.
+This is used by `</span><span class="m doc">forge--rest</span><span class="doc">' and by extension `</span><span class="m doc">forge-rest</span><span class="doc">'.
+RESOURCE is a string separated by slashes.  Each part that begins
+with a colon is replaced with a value from OBJECT.  `</span><span class="m doc">:repo</span><span class="doc">' is a
+synonym for `</span><span class="m doc">:name</span><span class="doc">'.  `</span><span class="m doc">:project</span><span class="doc">' is a like `</span><span class="m doc">:owner/:name</span><span class="doc">', but the
+slash is quoted on Gitlab.  `</span><span class="m doc">:topic</span><span class="doc">' is a synonym for `</span><span class="m doc">:number</span><span class="doc">'
+but only if OBJECT is a topic.  Any other `</span><span class="m doc">:SLOT</span><span class="doc">' means to use
+the value of that slot in OBJECT, or if that doesn't exist in its
+parent object (determined using `</span><span class="m doc">forge-get-parent</span><span class="doc">')."</span>
+  (<span class="k">save-match-data</span>
+    (<span class="k">setq</span> resource
+          (replace-regexp-in-string
+           <span class="s">":</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s">/]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>
+           (<span class="k">lambda</span> (str)
+             (<span class="k">let</span> ((slot (intern (substring str 1))))
+               (<span class="k">or</span> (and$ (<span class="k">ignore-errors</span>
+                           (<span class="k">pcase</span> slot
+                             ('repo    (<span class="k">oref</span> object name))
+                             ('project (concat (string-replace
+                                                <span class="s">"/"</span> <span class="s">"%2F"</span> (<span class="k">oref</span> object owner))
+                                               <span class="s">"%2F"</span>
+                                               (<span class="k">oref</span> object name)))
+                             ('topic   (<span class="k">and</span> (<span class="k">forge--childp</span> object 'forge-topic)
+                                            (<span class="k">oref</span> object number)))
+                             (_        (eieio-oref object slot))))
+                         (format <span class="s">"%s"</span> $))
+                   str)))
+           resource t t))
+    (<span class="k">cond-let</span>
+      ((not (string-match <span class="s">":[</span><span class="neg s">^</span><span class="s">/]*"</span> resource))
+       resource)
+      ([parent (<span class="k">ignore-errors</span> (forge-get-parent object))]
+       (forge--format-resource parent resource))
+      ((<span class="w">error</span> <span class="s">"Cannot resolve %s for a %s"</span>
+              (match-string 0 resource)
+              (eieio-object-class object))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

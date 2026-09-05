@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: async-send – Emacs Documentation Online</title>
+<meta name="description" content="async-send is a natively compiled function defined in async.el.
+Send the given message to the asynchronous child or parent Emacs.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>async-send</code></h1><p><span class="m"><code>async-send</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">async.el</span>.
+<h2>Signature</h2>
+<pre><code>(async-send <a href="#:~:text=child,-,PROCESS-OR-KEY"><span class="arg">PROCESS-OR-KEY</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=object.-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Send the given message to the asynchronous child or parent Emacs.
+<p>To send messages from the parent to a child, <span class="arg">PROCESS-OR-KEY</span> is
+the child process object.  <span class="arg">ARGS</span> is a plist.  Example:
+<p>&nbsp;&nbsp;(async-send proc <span class="bi">:operation</span> <span class="bi">:load-file</span> <span class="bi">:file</span> <span class="s">"this file"</span>)
+<p>To send messages from the child to the parent, <span class="arg">PROCESS-OR-KEY</span> is
+the first key of the plist, <span class="arg">ARGS</span> is a value followed by
+optionally more key-value pairs.  Example:
+<p>&nbsp;&nbsp;(async-send <span class="bi">:status</span> <span class="s">"finished"</span> <span class="bi">:file-size</span> 123)
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vpxd64bbf27n3ziyqnh29vmak5xnpk2l-emacs-packages-deps/share/emacs/site-lisp/elpa/async-20260729.1431/async.el</span>
+(<span class="k">defun</span> <span class="f">async-send</span> (process-or-key <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Send the given message to the asynchronous child or parent Emacs.
+
+To send messages from the parent to a child, PROCESS-OR-KEY is
+the child process object.  ARGS is a plist.  Example:
+
+  (async-send proc :operation :load-file :file \"this file\")
+
+To send messages from the child to the parent, PROCESS-OR-KEY is
+the first key of the plist, ARGS is a value followed by
+optionally more key-value pairs.  Example:
+
+  (async-send :status \"finished\" :file-size 123)"</span>
+  (<span class="k">let</span> ((args (append args '(<span class="bi">:async-message</span> t))))
+    (<span class="k">if</span> async-in-child-emacs
+        <span class="cd">;; </span><span class="c">`</span><span class="m c">princ</span><span class="c">' because async--insert-sexp already quotes everything.
+</span>        (princ
+         (<span class="k">with-temp-buffer</span>
+           (async--insert-sexp (cons process-or-key args))
+           <span class="cd">;; </span><span class="c">always make sure that one message package has its own
+</span>           <span class="cd">;; </span><span class="c">line as there can be any random debug garbage printed
+</span>           <span class="cd">;; </span><span class="c">above it.
+</span>           (concat <span class="s">"\n"</span> (buffer-string))))
+      (async--transmit-sexp process-or-key (list 'quote args)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

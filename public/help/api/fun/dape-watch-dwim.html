@@ -1,0 +1,62 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape-watch-dwim – Emacs Documentation Online</title>
+<meta name="description" content="dape-watch-dwim is an interactive and natively compiled function
+defined in dape.el.
+Toggle watch for EXPRESSION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape-watch-dwim</code></h1><p><span class="m"><code>dape-watch-dwim</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape-watch-dwim <a href="#:~:text=for-,EXPRESSION"><span class="arg">EXPRESSION</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,REMOVE-ONLY-P"><span class="arg">REMOVE-ONLY-P</span></a> <a href="#:~:text=If-,ADD-ONLY-P"><span class="arg">ADD-ONLY-P</span></a> <a href="#:~:text=If-,DISPLAY-P"><span class="arg">DISPLAY-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Toggle watch for <span class="arg">EXPRESSION</span>.
+<p>When called interactively the EXRPRESSION defaults to symbol at point
+or active region.
+If <span class="arg">REMOVE-ONLY-P</span> is non-nil only allow removal of an existing watch.
+If <span class="arg">ADD-ONLY-P</span> is non-nil only allow adding a new watch.
+If <span class="arg">DISPLAY-P</span> is non-nil display-p the watch buffer.
+<h2>Key Bindings</h2>
+<p><span class="v">ctl-x-map</span> <span class="key">C-a w</span>
+<span class="v">dape-global-map</span> <span class="key">w</span>
+<span class="v">global-map</span> <span class="key">C-x C-a w</span>
+<span class="v">help-quick-use-map</span> <span class="key">C-x C-a w</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape-watch-dwim</span> (expression <span class="ty">&amp;optional</span> remove-only-p add-only-p display-p)
+  <span class="doc">"Toggle watch for EXPRESSION.
+When called interactively the EXRPRESSION defaults to symbol at point
+or active region.
+If REMOVE-ONLY-P is non-nil only allow removal of an existing watch.
+If ADD-ONLY-P is non-nil only allow adding a new watch.
+If DISPLAY-P is non-nil display-p the watch buffer."</span>
+  (<span class="k">interactive</span>
+   (<span class="k">let*</span> ((map (copy-keymap minibuffer-local-completion-map))
+          (minibuffer-local-completion-map map)
+          (default (<span class="k">or</span> (<span class="k">and</span> (region-active-p)
+                            (buffer-substring (region-beginning) (region-end)))
+                       (thing-at-point 'symbol))))
+     (define-key map <span class="s">" "</span> #'self-insert-command)
+     (define-key map <span class="s">"?"</span> #'self-insert-command)
+     (list (string-trim
+            (completing-read
+             (format-prompt <span class="s">"Toggle watch of expression"</span> default)
+             (mapcar (<span class="k">lambda</span> (plist) (plist-get plist <span class="bi">:name</span>)) dape--watched)
+             nil nil nil nil default))
+           nil nil t)))
+  (<span class="k">if-let*</span> ((watched
+             (cl-find expression dape--watched
+                      <span class="bi">:key</span> (<span class="k">lambda</span> (plist) (plist-get plist <span class="bi">:name</span>))
+                      <span class="bi">:test</span> #'equal)))
+      (<span class="k">unless</span> add-only-p
+        (<span class="k">setq</span> dape--watched (cl-delete watched dape--watched)))
+    (<span class="k">unless</span> remove-only-p
+      (<span class="k">push</span> (list <span class="bi">:name</span> expression) dape--watched)))
+  (<span class="k">when</span> display-p
+    (dape--display-buffer (dape--info-get-buffer-create 'dape-info-watch-mode)))
+  (run-hooks 'dape-update-ui-hook))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

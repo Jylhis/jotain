@@ -1,0 +1,99 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-view-extract-region-image – Emacs Documentation Online</title>
+<meta name="description" content="pdf-view-extract-region-image is an interactive and natively compiled
+function defined in pdf-view.el.
+Create a PNG image of REGIONS.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-view-extract-region-image</code></h1><p><span class="m"><code>pdf-view-extract-region-image</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">pdf-view.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-view-extract-region-image <a href="#:~:text=of-,REGIONS"><span class="arg">REGIONS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=see.-,PAGE"><span class="arg">PAGE</span></a> <a href="#:~:text=and-,SIZE"><span class="arg">SIZE</span></a> <a href="#:~:text=in-,OUTPUT-BUFFER"><span class="arg">OUTPUT-BUFFER</span></a> <a href="#:~:text=unless-,NO-DISPLAY-P"><span class="arg">NO-DISPLAY-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create a PNG image of <span class="arg">REGIONS</span>.
+<p><span class="arg">REGIONS</span> should have the same form as <a class="v" href="../var/pdf-view-active-region.html"><code>pdf-view-active-region</code>(var)</a>/<a class="f" href="../fun/pdf-view-active-region.html"><code>pdf-view-active-region</code>(fun)</a>,
+which see.  <span class="arg">PAGE</span> and <span class="arg">SIZE</span> are the page resp. base-size of the
+image from which the image-regions will be created; they default
+to <a href="../fun/pdf-view-current-page.html"><code>pdf-view-current-page</code></a> resp. <a href="../fun/pdf-view-image-size.html"><code>pdf-view-image-size</code></a>.
+<p>Put the image in <span class="arg">OUTPUT-BUFFER</span>, defaulting to "*PDF region
+image*" and display it, unless <span class="arg">NO-DISPLAY-P</span> is non-nil.
+<p>In case of multiple regions, the resulting image is constructed
+by joining them horizontally.  For this operation (and this only)
+the <span class="m"><code>convert</code></span> program is used.
+<h2>Key Bindings</h2>
+<p><span class="v">pdf-view-mode-map</span> <span class="key">C-c TAB</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-view.el</span>
+(<span class="k">defun</span> <span class="f">pdf-view-extract-region-image</span> (regions <span class="ty">&amp;optional</span> page size
+                                              output-buffer no-display-p)
+  <span class="cd">;; </span><span class="c">TODO: what is "resp."? Avoid contractions.
+</span>  <span class="doc">"Create a PNG image of REGIONS.
+
+REGIONS should have the same form as `</span><span class="m doc">pdf-view-active-region</span><span class="doc">',
+which see.  PAGE and SIZE are the page resp. base-size of the
+image from which the image-regions will be created; they default
+to `</span><span class="m doc">pdf-view-current-page</span><span class="doc">' resp. `</span><span class="m doc">pdf-view-image-size</span><span class="doc">'.
+
+Put the image in OUTPUT-BUFFER, defaulting to \"*PDF region
+image*\" and display it, unless NO-DISPLAY-P is non-nil.
+
+In case of multiple regions, the resulting image is constructed
+by joining them horizontally.  For this operation (and this only)
+the `</span><span class="m doc">convert</span><span class="doc">' program is used."</span>
+
+  (<span class="k">interactive</span>
+   (list (<span class="k">if</span> (pdf-view-active-region-p)
+             (pdf-view-active-region t)
+           '(,(<span class="k">pdf-view-current-page</span>) (0 0 1 1)))))
+  (<span class="k">unless</span> page
+    (<span class="k">setq</span> page (car regions)))
+  (<span class="k">unless</span> size
+    (<span class="k">setq</span> size (pdf-view-image-size nil nil page)))
+  (<span class="k">unless</span> output-buffer
+    (<span class="k">setq</span> output-buffer (get-buffer-create <span class="s">"*PDF image*"</span>)))
+  (<span class="k">let*</span> ((images (mapcar (<span class="k">lambda</span> (edges)
+                           (<span class="k">let</span> ((file (make-temp-file <span class="s">"pdf-view"</span>))
+                                 (coding-system-for-write 'binary))
+                             (write-region
+                              (pdf-info-renderpage
+                               page (car size)
+                               <span class="bi">:crop-to</span> edges)
+                              nil file nil 'no-message)
+                             file))
+                         (cdr regions)))
+         result)
+    (<span class="k">unwind-protect</span>
+        (<span class="k">progn</span>
+          (<span class="k">if</span> (= (length images) 1)
+              (<span class="k">setq</span> result (car images))
+            (<span class="k">setq</span> result (make-temp-file <span class="s">"pdf-view"</span>))
+            <span class="cd">;; </span><span class="c">Join the images horizontally with a gap of 10 pixel.
+</span>            (pdf-util-convert
+             <span class="s">"-noop"</span> <span class="cd">;; </span><span class="c">workaround limitations of this function
+</span>             result
+             <span class="bi">:commands</span> `(<span class="s">"("</span>
+                         ,@images
+                         <span class="s">"-background"</span> <span class="s">"white"</span>
+                         <span class="s">"-splice"</span> <span class="s">"0x10+0+0"</span>
+                         <span class="s">")"</span>
+                         <span class="s">"-gravity"</span> <span class="s">"Center"</span>
+                         <span class="s">"-append"</span>
+                         <span class="s">"+gravity"</span>
+                         <span class="s">"-chop"</span> <span class="s">"0x10+0+0"</span>)
+             <span class="bi">:apply</span> '((0 0 0 0))))
+          (<span class="k">with-current-buffer</span> output-buffer
+            (<span class="k">let</span> ((inhibit-read-only t))
+              (erase-buffer))
+            (set-buffer-multibyte nil)
+            (insert-file-contents-literally result)
+            (image-mode)
+            (<span class="k">unless</span> no-display-p
+              (pop-to-buffer (current-buffer)))))
+      (<span class="k">dolist</span> (f (cons result images))
+        (<span class="k">when</span> (file-exists-p f)
+          (delete-file f))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

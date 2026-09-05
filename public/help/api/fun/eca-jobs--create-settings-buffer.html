@@ -1,0 +1,45 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-jobs--create-settings-buffer – Emacs Documentation Online</title>
+<meta name="description" content="eca-jobs--create-settings-buffer is a natively compiled function
+defined in eca-jobs.el.
+Create the Jobs settings tab buffer for SESSION.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-jobs--create-settings-buffer</code></h1><p><span class="m"><code>eca-jobs--create-settings-buffer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-jobs.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-jobs--create-settings-buffer <a href="#:~:text=for-,SESSION"><span class="arg">SESSION</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create the Jobs settings tab buffer for <span class="arg">SESSION</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-jobs.el</span>
+<span class="cd">;; </span><span class="c">Settings tab
+</span>
+(<span class="k">defun</span> <span class="f">eca-jobs--create-settings-buffer</span> (session)
+  <span class="doc">"Create the Jobs settings tab buffer for SESSION."</span>
+  (<span class="k">let</span> ((buf (eca-settings--create-buffer <span class="s">"jobs"</span> session)))
+    (<span class="k">with-current-buffer</span> buf
+      (eca-settings-mode)
+      (use-local-map eca-jobs-mode-map)
+      (visual-line-mode)
+      (eca-settings--setup-tab-line <span class="s">"jobs"</span> session)
+      (eca-jobs--render session buf)
+      (add-hook 'kill-buffer-hook
+                (<span class="k">lambda</span> () (eca-jobs--stop-timer buf))
+                nil t)
+      (eca-api-request-async session
+        <span class="bi">:method</span> <span class="s">"jobs/list"</span>
+        <span class="bi">:params</span> nil
+        <span class="bi">:success-callback</span>
+        (<span class="k">lambda</span> (result)
+          (<span class="k">setf</span> (eca--session-jobs session)
+                (append (plist-get result <span class="bi">:jobs</span>) nil))
+          (<span class="k">when</span> (buffer-live-p buf)
+            (eca-jobs--render session buf)
+            (eca-jobs--ensure-timer session buf)))))
+    buf))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,112 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: corfu--make-frame – Emacs Documentation Online</title>
+<meta name="description" content="corfu--make-frame is a natively compiled function defined in corfu.el.
+Show current buffer in child frame at X/Y with WIDTH/HEIGHT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>corfu--make-frame</code></h1><p><span class="m"><code>corfu--make-frame</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">corfu.el</span>.
+<h2>Signature</h2>
+<pre><code>(corfu--make-frame <a href="#:~:text=HEIGHT.-,FRAME"><span class="arg">FRAME</span></a> <a href="#:~:text=at-,X"><span class="arg">X</span></a> <a href="#:~:text=X/-,Y"><span class="arg">Y</span></a> <a href="#:~:text=with-,WIDTH"><span class="arg">WIDTH</span></a> <a href="#:~:text=WIDTH/-,HEIGHT"><span class="arg">HEIGHT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Show current buffer in child frame at <span class="arg">X</span>/<span class="arg">Y</span> with <span class="arg">WIDTH</span>/<span class="arg">HEIGHT</span>.
+<p><span class="arg">FRAME</span> is the existing frame.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w8w9ybb6ad8ab6ghqfbq36v1kcp2igzi-emacs-packages-deps/share/emacs/site-lisp/elpa/corfu-20260828.932/corfu.el</span>
+<span class="cd">;; </span><span class="c">Function adapted from posframe.el by tumashu
+</span>(<span class="k">defun</span> <span class="f">corfu--make-frame</span> (frame x y width height)
+  <span class="doc">"Show current buffer in child frame at X/Y with WIDTH/HEIGHT.
+FRAME is the existing frame."</span>
+  (<span class="k">when-let*</span> (((frame-live-p frame))
+              (timer (frame-parameter frame 'corfu--hide-timer)))
+    (cancel-timer timer)
+    (set-frame-parameter frame 'corfu--hide-timer nil))
+  (<span class="k">let*</span> ((window-min-height 1)
+         (window-min-width 1)
+         (inhibit-redisplay t)
+         (x-fast-protocol-requests t)
+         (x-gtk-resize-child-frames corfu--gtk-resize-child-frames)
+         (before-make-frame-hook)
+         (after-make-frame-functions)
+         (parent (window-frame))
+         (graphic (display-graphic-p parent))
+         (params `((background-color
+                    . ,(face-attribute 'corfu-default <span class="bi">:background</span> nil 'default))
+                   (font . ,(frame-parameter parent 'font))
+                   (right-fringe . ,right-fringe-width)
+                   (left-fringe . ,left-fringe-width)
+                   (internal-border-width . ,corfu-border-width)
+                   (child-frame-border-width . ,corfu-border-width)
+                   ,@corfu--frame-parameters)))
+    (<span class="k">unless</span> (<span class="k">and</span> (frame-live-p frame)
+                 (eq (frame-parent frame)
+                     (<span class="k">and</span> (not (<span class="k">and</span> graphic (<span class="k">bound-and-true-p</span> exwm--connection)))
+                          parent))
+                 <span class="cd">;; </span><span class="c">Handle mixed tty/graphical sessions
+</span>                 (eq graphic (display-graphic-p frame))
+                 <span class="cd">;; </span><span class="c">If there is more than one window, `</span><span class="m c">frame-root-window</span><span class="c">' may
+</span>                 <span class="cd">;; </span><span class="c">return nil.  Recreate the frame in this case.
+</span>                 (window-live-p (frame-root-window frame)))
+      (<span class="k">when</span> frame (delete-frame frame))
+      (<span class="k">setq</span> frame (make-frame
+                   `((name . ,(<span class="k">if</span> graphic <span class="s">"EmacsCorfuGUI"</span> <span class="s">"EmacsCorfuTTY"</span>))
+                     (parent-frame . ,parent)
+                     (minibuffer . ,(minibuffer-window parent))
+                     (width . 0) (height . 0) (visibility . nil)
+                     ,@params))))
+    <span class="cd">;; </span><span class="c">HACK Setting the same frame-parameter/face-background is not a nop.
+</span>    <span class="cd">;; </span><span class="c">Check before applying the setting. Without the check, the frame flickers
+</span>    <span class="cd">;; </span><span class="c">on Mac. We have to apply the face background before adjusting the frame
+</span>    <span class="cd">;; </span><span class="c">parameter, otherwise the border is not updated.
+</span>    (<span class="k">let</span> ((new (face-attribute 'corfu-border <span class="bi">:background</span> nil 'default)))
+      (<span class="k">unless</span> (equal (face-attribute 'internal-border <span class="bi">:background</span> frame 'default) new)
+        (set-face-background 'internal-border new frame))
+      <span class="cd">;; </span><span class="c">HACK The Emacs Mac Port does not support `</span><span class="m c">internal-border</span><span class="c">', therefore
+</span>      <span class="cd">;; </span><span class="c">also set `</span><span class="m c">child-frame-border</span><span class="c">'.
+</span>      (<span class="k">unless</span> (equal (face-attribute 'child-frame-border <span class="bi">:background</span> frame 'default) new)
+        (set-face-background 'child-frame-border new frame)))
+    <span class="cd">;; </span><span class="c">Reset frame parameters if they changed.  For example `</span><span class="m c">tool-bar-mode</span><span class="c">'
+</span>    <span class="cd">;; </span><span class="c">overrides the parameter `</span><span class="m c">tool-bar-lines</span><span class="c">' for every frame, including child
+</span>    <span class="cd">;; </span><span class="c">frames.  The child frame API is a pleasure to work with.  It is full of
+</span>    <span class="cd">;; </span><span class="c">lovely surprises.
+</span>    (<span class="k">let*</span> ((win (frame-root-window frame))
+           (is (frame-parameters frame))
+           (params `((corfu--geometry ,x ,y ,width ,height) ,@params))
+           (diff (<span class="k">cl-loop</span> for p in params for (k . v) = p
+                          unless (equal (alist-get k is) v) collect p)))
+      (<span class="k">when</span> diff (modify-frame-parameters frame diff))
+      <span class="cd">;; </span><span class="c">HACK `</span><span class="m c">set-window-buffer</span><span class="c">' must be called to force fringe update.
+</span>      (<span class="k">when</span> (<span class="k">or</span> diff (not (eq (window-buffer win) (current-buffer))))
+        (set-window-buffer win (current-buffer)))
+      <span class="cd">;; </span><span class="c">Disallow selection of root window (gh:minad/corfu#63)
+</span>      (set-window-parameter win 'no-delete-other-windows t)
+      (set-window-parameter win 'no-other-window t)
+      <span class="cd">;; </span><span class="c">Mark window as dedicated to prevent frame reuse (gh:minad/corfu#60)
+</span>      (set-window-dedicated-p win t)
+      (redirect-frame-focus frame parent)
+      (<span class="k">pcase-let*</span> ((`(,ox ,oy ,ow ,oh) (alist-get 'corfu--geometry is '(0 0 0 0)))
+                   (pos-change (<span class="k">or</span> (/= x ox) (/= y oy)))
+                   (size-change (<span class="k">or</span> (/= ow width) (/= oh height))))
+        (<span class="k">cond</span>
+         ((<span class="k">and</span> pos-change size-change)
+          <span class="cd">;; </span><span class="c">New Emacs 31 function for faster resize and move in one go.
+</span>          (<span class="k">static-if</span> (fboundp 'set-frame-size-and-position-pixelwise)
+              (set-frame-size-and-position-pixelwise frame width height x y)
+            (set-frame-size frame width height t)
+            (set-frame-position frame x y)))
+         (pos-change (set-frame-position frame x y))
+         (size-change (set-frame-size frame width height t))))))
+  (make-frame-visible frame)
+  <span class="cd">;; </span><span class="c">Unparent child frame if EXWM is used, otherwise EXWM buffers are drawn on
+</span>  <span class="cd">;; </span><span class="c">top of the Corfu child frame.
+</span>  (<span class="k">when-let*</span> (((<span class="k">bound-and-true-p</span> exwm--connection))
+              ((display-graphic-p frame))
+              (parent (frame-parent frame)))
+    (redisplay t)
+    (modify-frame-parameters frame `((delete-before . ,parent)
+                                     (parent-frame . nil))))
+  frame)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

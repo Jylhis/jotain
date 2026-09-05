@@ -1,0 +1,47 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--answer-question – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--answer-question is a natively compiled function defined in
+eca-chat.el.
+Send ANSWER for the pending question and restore normal prompt.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--answer-question</code></h1><p><span class="m"><code>eca-chat--answer-question</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--answer-question <a href="#:~:text=Send-,ANSWER"><span class="arg">ANSWER</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Send <span class="arg">ANSWER</span> for the pending question and restore normal prompt.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--answer-question</span> (answer)
+  <span class="doc">"Send ANSWER for the pending question and restore normal prompt."</span>
+  (<span class="k">when-let*</span> ((pending eca-chat--pending-question))
+    (<span class="k">let</span> ((session (plist-get pending <span class="bi">:session</span>))
+          (request (plist-get pending <span class="bi">:request</span>))
+          (tool-call-id (plist-get pending <span class="bi">:tool-call-id</span>))
+          (allow-freeform (plist-get pending <span class="bi">:allow-freeform</span>)))
+      (<span class="k">setq</span> eca-chat--pending-question nil)
+      (<span class="k">when</span> allow-freeform
+        (eca-chat--set-question-prompt-prefix nil))
+      (<span class="k">eca-chat--allow-write</span>
+       (<span class="k">if</span> tool-call-id
+           (eca-chat--update-expandable-content
+            tool-call-id nil
+            (concat (propertize (concat <span class="s">"→ "</span> answer)
+                                'font-lock-face 'eca-chat-question-option-face)
+                    <span class="s">"\n"</span>))
+         (eca-chat--collapse-question-block
+          (concat (propertize (concat <span class="s">"→ "</span> answer)
+                              'font-lock-face 'eca-chat-question-option-face)
+                  <span class="s">"\n\n"</span>)))
+       (eca-chat--set-prompt <span class="s">""</span>)
+       (eca-chat--refresh-transient-area))
+      (eca-api-send-request-response
+       session request
+       (list <span class="bi">:answer</span> answer <span class="bi">:cancelled</span> <span class="bi">:json-false</span>))
+      (eca-chat--notify-status-changed session))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

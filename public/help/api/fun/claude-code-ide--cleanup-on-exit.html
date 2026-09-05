@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide--cleanup-on-exit – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide--cleanup-on-exit is a natively compiled function
+defined in claude-code-ide.el.
+Clean up MCP server and process tracking when Claude exits for DIRECTORY.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide--cleanup-on-exit</code></h1><p><span class="m"><code>claude-code-ide--cleanup-on-exit</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide--cleanup-on-exit <a href="#:~:text=for-,DIRECTORY"><span class="arg">DIRECTORY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Clean up MCP server and process tracking when Claude exits for <span class="arg">DIRECTORY</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide--cleanup-on-exit</span> (directory)
+  <span class="doc">"Clean up MCP server and process tracking when Claude exits for DIRECTORY."</span>
+  (<span class="k">unless</span> claude-code-ide--cleanup-in-progress
+    (<span class="k">setq</span> claude-code-ide--cleanup-in-progress t)
+    (<span class="k">unwind-protect</span>
+        (<span class="k">progn</span>
+          <span class="cd">;; </span><span class="c">Remove from process table
+</span>          (remhash directory claude-code-ide--processes)
+          <span class="cd">;; </span><span class="c">Check if this was the last session
+</span>          (<span class="k">when</span> (<span class="k">and</span> claude-code-ide-prevent-reflow-glitch
+                     (= (hash-table-count claude-code-ide--processes) 0))
+            <span class="cd">;; </span><span class="c">Remove advice globally when no sessions remain
+</span>            (advice-remove (claude-code-ide--terminal-resize-handler)
+                           #'claude-code-ide--terminal-reflow-filter))
+          <span class="cd">;; </span><span class="c">Remove vterm rendering optimization if no sessions remain
+</span>          (<span class="k">when</span> (<span class="k">and</span> (eq claude-code-ide-terminal-backend 'vterm)
+                     claude-code-ide-vterm-anti-flicker
+                     (= (hash-table-count claude-code-ide--processes) 0))
+            (advice-remove 'vterm--filter #'claude-code-ide--vterm-smart-renderer))
+          <span class="cd">;; </span><span class="c">Stop MCP server for this project directory
+</span>          (claude-code-ide-mcp-stop-session directory)
+          <span class="cd">;; </span><span class="c">Notify MCP tools server about session end with session ID
+</span>          (<span class="k">let</span> ((session-id (gethash directory claude-code-ide--session-ids)))
+            (claude-code-ide-mcp-server-session-ended session-id)
+            <span class="cd">;; </span><span class="c">Clean up session ID mapping
+</span>            (<span class="k">when</span> session-id
+              (remhash directory claude-code-ide--session-ids)))
+          <span class="cd">;; </span><span class="c">Kill the vterm buffer if it exists
+</span>          (<span class="k">let</span> ((buffer-name (claude-code-ide--get-buffer-name directory)))
+            (<span class="k">when-let</span> ((buffer (get-buffer buffer-name)))
+              (<span class="k">when</span> (buffer-live-p buffer)
+                (<span class="k">let</span> ((kill-buffer-hook nil) <span class="cd">; </span><span class="c">Disable hooks to prevent recursion
+</span>                      (kill-buffer-query-functions nil)) <span class="cd">; </span><span class="c">Don't ask for confirmation
+</span>                  (kill-buffer buffer)))))
+          (<span class="k">claude-code-ide-debug</span> <span class="s">"Cleaned up Claude Code session for %s"</span>
+                                 (file-name-nondirectory (directory-file-name directory))))
+      (<span class="k">setq</span> claude-code-ide--cleanup-in-progress nil))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

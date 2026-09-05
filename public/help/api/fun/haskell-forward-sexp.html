@@ -1,0 +1,84 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-forward-sexp – Emacs Documentation Online</title>
+<meta name="description" content="haskell-forward-sexp is an interactive and natively compiled function
+defined in haskell-mode.el.
+Haskell specific version of forward-sexp.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-forward-sexp</code></h1><p><span class="m"><code>haskell-forward-sexp</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">haskell-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-forward-sexp <span class="ty">&amp;optional</span> <a href="#:~:text=With-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Haskell specific version of <a href="../fun/forward-sexp.html"><code>forward-sexp</code></a>.
+<p>Move forward across one balanced expression (sexp).  With <span class="arg">ARG</span>, do
+it that many times.  Negative arg -N means move backward across N
+balanced expressions.  This command assumes point is not in a
+string or comment.
+<p>If unable to move over a sexp, signal <span class="m"><code>scan-error</code></span> with three
+arguments: a message, the start of the obstacle (a parenthesis or
+list marker of some kind), and end of the obstacle.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-mode.el</span>
+<span class="cd">;; </span><span class="c">(defun haskell-adaptive-fill ()
+</span><span class="cd">;;   </span><span class="c">;; We want to use "--  " as the prefix of "-- |", etc.
+</span><span class="cd">;;   </span><span class="c">(let* ((line-end (save-excursion (end-of-line) (point)))
+</span><span class="cd">;;          </span><span class="c">(line-start (point)))
+</span><span class="cd">;;     </span><span class="c">(save-excursion
+</span><span class="cd">;;       </span><span class="c">(unless (in-comment)
+</span><span class="cd">;;         </span><span class="c">;; Try to find the start of a comment. We only fill comments.
+</span><span class="cd">;;         </span><span class="c">(search-forward-regexp comment-start-skip line-end t))
+</span><span class="cd">;;       </span><span class="c">(when (in-comment)
+</span><span class="cd">;;         </span><span class="c">(let ();(prefix-start (point)))
+</span><span class="cd">;;           </span><span class="c">(skip-syntax-forward "^w")
+</span><span class="cd">;;           </span><span class="c">(make-string (- (point) line-start) ?\s))))))
+</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">haskell-forward-sexp</span> (<span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Haskell specific version of `</span><span class="m doc">forward-sexp</span><span class="doc">'.
+
+Move forward across one balanced expression (sexp).  With ARG, do
+it that many times.  Negative arg -N means move backward across N
+balanced expressions.  This command assumes point is not in a
+string or comment.
+
+If unable to move over a sexp, signal `</span><span class="m doc">scan-error</span><span class="doc">' with three
+arguments: a message, the start of the obstacle (a parenthesis or
+list marker of some kind), and end of the obstacle."</span>
+  (<span class="k">interactive</span> <span class="s">"^p"</span>)
+  (<span class="k">or</span> arg (<span class="k">setq</span> arg 1))
+  (<span class="k">if</span> (&lt; arg 0)
+      (<span class="k">while</span> (&lt; arg 0)
+        (skip-syntax-backward <span class="s">"-&gt;"</span>)
+        <span class="cd">;; </span><span class="c">Navigate backwards using plain `</span><span class="m c">backward-sexp</span><span class="c">', assume that it
+</span>        <span class="cd">;; </span><span class="c">skipped over at least one Haskell expression, and jump forward until
+</span>        <span class="cd">;; </span><span class="c">last possible point before the starting position. If applicable,
+</span>        <span class="cd">;; </span><span class="c">`</span><span class="m c">scan-error</span><span class="c">' is signalled by `</span><span class="m c">backward-sexp</span><span class="c">'.
+</span>        (<span class="k">let</span> ((end (point))
+              (forward-sexp-function nil))
+          (backward-sexp)
+          (<span class="k">let</span> ((cur (point)))
+            (<span class="k">while</span> (&lt; (point) end)
+              (<span class="k">setf</span> cur (point))
+              (haskell-forward-sexp)
+              (skip-syntax-forward <span class="s">"-&gt;"</span>))
+            (goto-char cur)))
+        (<span class="k">setf</span> arg (1+ arg)))
+    (<span class="k">save-match-data</span>
+      (<span class="k">while</span> (&gt; arg 0)
+        (<span class="k">when</span> (haskell-lexeme-looking-at-token)
+          (<span class="k">cond</span> ((member (match-string 0) (list <span class="s">"("</span> <span class="s">"["</span> <span class="s">"{"</span>))
+                 (goto-char (<span class="k">or</span> (scan-sexps (point) 1) (buffer-end 1))))
+                ((member (match-string 0) (list <span class="s">")"</span> <span class="s">"]"</span> <span class="s">"}"</span>))
+                 (<span class="w">signal</span> 'scan-error (list <span class="s">"Containing expression ends prematurely."</span>
+                                           (match-beginning 0)
+                                           (match-end 0))))
+                (t (goto-char (match-end 0)))))
+        (<span class="k">setf</span> arg (1- arg))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

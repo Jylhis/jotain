@@ -1,0 +1,96 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark-keymap-prompter – Emacs Documentation Online</title>
+<meta name="description" content="embark-keymap-prompter is a natively compiled function defined in
+embark.el.
+Let the user choose an action using the bindings in KEYMAP.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark-keymap-prompter</code></h1><p><span class="m"><code>embark-keymap-prompter</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark-keymap-prompter <a href="#:~:text=in-,KEYMAP"><span class="arg">KEYMAP</span></a> <a href="#:~:text=command.-,UPDATE"><span class="arg">UPDATE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Let the user choose an action using the bindings in <span class="arg">KEYMAP</span>.
+<p>Besides the bindings in <span class="arg">KEYMAP</span>, the user is free to use all their
+key bindings and even <kbd>M-x</kbd> (<a href="../fun/execute-extended-command.html"><code>execute-extended-command</code></a>) to select a command.
+<span class="arg">UPDATE</span> is the indicator update function.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+(<span class="k">defvar</span> <span class="v">embark-indicators</span>) <span class="cd">; </span><span class="c">forward declaration
+</span>
+(<span class="k">defun</span> <span class="f">embark-keymap-prompter</span> (keymap update)
+  <span class="doc">"Let the user choose an action using the bindings in KEYMAP.
+Besides the bindings in KEYMAP, the user is free to use all their
+key bindings and even \\[</span><span class="m doc">execute-extended-command</span><span class="doc">] to select a command.
+UPDATE is the indicator update function."</span>
+  (<span class="k">let*</span> ((keys (<span class="k">let</span> ((overriding-terminal-local-map keymap))
+                 (embark--read-key-sequence update)))
+         (cmd (<span class="k">let</span> ((overriding-terminal-local-map keymap))
+                (key-binding keys 'accept-default))))
+    <span class="cd">;; </span><span class="c">Set last-command-event as it would be from the command loop.
+</span>    <span class="cd">;; </span><span class="c">Previously we only set it locally for digit-argument and for
+</span>    <span class="cd">;; </span><span class="c">the mouse scroll commands handled in this function. But other
+</span>    <span class="cd">;; </span><span class="c">commands can need it too! For example, electric-pair-mode users
+</span>    <span class="cd">;; </span><span class="c">may wish to bind ( to self-insert-command in embark-region-map.
+</span>    <span class="cd">;; </span><span class="c">Also, as described in issue #402, there are circumstances where
+</span>    <span class="cd">;; </span><span class="c">you might run consult-narrow through the embark-keymap-prompter.
+</span>    (<span class="k">setq</span> last-command-event (aref keys (1- (length keys))))
+    (<span class="k">pcase</span> cmd
+      ((<span class="k">or</span> 'embark-keymap-help
+           (<span class="k">and</span> 'nil            <span class="cd">; </span><span class="c">cmd is nil but last key is help-char
+</span>                (guard (eq help-char (aref keys (1- (length keys)))))))
+       (<span class="k">let</span> ((embark-indicators
+              (cl-set-difference embark-indicators
+                                 '(embark-verbose-indicator
+                                   embark-mixed-indicator)))
+             (prefix-map
+              (<span class="k">if</span> (eq cmd 'embark-keymap-help)
+                  keymap
+                (<span class="k">let</span> ((overriding-terminal-local-map keymap))
+                  (key-binding (seq-take keys (1- (length keys)))
+                               'accept-default))))
+             (prefix-arg prefix-arg)) <span class="cd">; </span><span class="c">preserve prefix arg
+</span>         (<span class="k">when-let*</span> ((win (get-buffer-window embark--verbose-indicator-buffer
+                                             'visible)))
+           (quit-window 'kill-buffer win))
+         (embark-completing-read-prompter prefix-map update)))
+      ((<span class="k">or</span> 'universal-argument 'universal-argument-more
+           'negative-argument 'digit-argument 'embark-toggle-quit)
+       <span class="cd">;; </span><span class="c">prevent `</span><span class="m c">digit-argument</span><span class="c">' from modifying the overriding map
+</span>       (<span class="k">let</span> ((overriding-terminal-local-map overriding-terminal-local-map))
+         (command-execute cmd))
+       (embark-keymap-prompter
+        (make-composed-keymap universal-argument-map keymap)
+        update))
+      ((<span class="k">or</span> 'minibuffer-keyboard-quit 'abort-recursive-edit 'abort-minibuffers)
+       nil)
+      ((guard (<span class="k">let</span> ((def (lookup-key keymap keys))) <span class="cd">; </span><span class="c">if directly
+</span>                                                    <span class="cd">; </span><span class="c">bound, then obey
+</span>                (<span class="k">and</span> def (not (numberp def))))) <span class="cd">; </span><span class="c">number means "invalid prefix"
+</span>       cmd)
+      ((<span class="k">and</span> (pred symbolp)
+            (guard (string-suffix-p <span class="s">"self-insert-command"</span> (symbol-name cmd))))
+       (minibuffer-message <span class="s">"Not an action"</span>)
+       (embark-keymap-prompter keymap update))
+      ((<span class="k">or</span> 'scroll-other-window 'scroll-other-window-down)
+       (<span class="k">let</span> ((minibuffer-scroll-window
+              <span class="cd">;; </span><span class="c">NOTE: Here we special case the verbose indicator!
+</span>              (<span class="k">or</span> (get-buffer-window embark--verbose-indicator-buffer 'visible)
+                  minibuffer-scroll-window)))
+         (<span class="k">ignore-errors</span> (command-execute cmd)))
+       (embark-keymap-prompter keymap update))
+      ((<span class="k">or</span> 'scroll-bar-toolkit-scroll 'mwheel-scroll
+           'mac-mwheel-scroll 'pixel-scroll-precision)
+       (funcall cmd last-command-event)
+       (embark-keymap-prompter keymap update))
+      ('execute-extended-command
+       (<span class="k">let</span> ((prefix-arg prefix-arg)) <span class="cd">; </span><span class="c">preserve prefix arg
+</span>         (intern-soft (read-extended-command))))
+      ((<span class="k">or</span> 'keyboard-quit 'keyboard-escape-quit)
+       nil)
+      (_ cmd))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

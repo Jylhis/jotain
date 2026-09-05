@@ -1,0 +1,130 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--kitty-display-image – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--kitty-display-image is a natively compiled function defined
+in ghostel-kitty.el.
+Display a kitty graphics image placement in the buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--kitty-display-image</code></h1><p><span class="m"><code>ghostel--kitty-display-image</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">ghostel-kitty.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--kitty-display-image <a href="#:~:text=placement.-,DATA"><span class="arg">DATA</span></a> <a href="#:~:text=PPM).-,IS-PNG"><span class="arg">IS-PNG</span></a> <a href="#:~:text=PPM.-,ABS-ROW"><span class="arg">ABS-ROW</span></a> <a href="#:~:text=anchor).-,VP-COL"><span class="arg">VP-COL</span></a> <a href="#:~:text=left).-,GRID-COLS"><span class="arg">GRID-COLS</span></a> <a href="#:~:text=and-,GRID-ROWS"><span class="arg">GRID-ROWS</span></a> <a href="#:~:text=dimensions.-,PIXEL-W"><span class="arg">PIXEL-W</span></a> <a href="#:~:text=and-,PIXEL-H"><span class="arg">PIXEL-H</span></a> <a href="#:~:text=dimensions.-,SRC-X"><span class="arg">SRC-X</span></a> <a href="#:~:text=X /-,SRC-Y"><span class="arg">SRC-Y</span></a> <a href="#:~:text=Y /-,SRC-W"><span class="arg">SRC-W</span></a> <a href="#:~:text=W /-,SRC-H"><span class="arg">SRC-H</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Display a kitty graphics image placement in the buffer.
+<p>Called from the native module during redraw for each visible placement.
+<span class="arg">DATA</span> is a unibyte string (PNG or PPM).
+<span class="arg">IS-PNG</span> is non-nil for PNG, nil for PPM.
+<span class="arg">ABS-ROW</span> is the absolute buffer row (0-indexed from <a href="../fun/point-min.html"><code>point-min</code></a>),
+already accounting for materialized scrollback (the C side adds
+<span class="m"><code>scrollback_in_buffer</code></span> to libghostty's viewport-relative row before
+passing it here).  Without that pre-shift, an image at viewport row 0
+would render at the top of the scrollback, jumping into the past as
+soon as anything scrolled.  May be negative when the image's top is
+above the buffer's first line (rare — only when libghostty's scrollback
+got trimmed below the placement's anchor).
+<span class="arg">VP-COL</span> is the column (may be negative — image partially off the left).
+<span class="arg">GRID-COLS</span> and <span class="arg">GRID-ROWS</span> are the cell dimensions.
+<span class="arg">PIXEL-W</span> and <span class="arg">PIXEL-H</span> are the rendered pixel dimensions.
+<span class="arg">SRC-X</span> / <span class="arg">SRC-Y</span> / <span class="arg">SRC-W</span> / <span class="arg">SRC-H</span> are the source-rect crop in image pixels;
+all zero means the whole image (the common case from timg/yazi).
+<p>The image is sized to fill its grid cells and then sliced per row, with
+each slice applied on its own buffer line.  Slicing — rather than a
+single multi-line <span class="m"><code>display</code></span> property — is required for the image to
+actually occupy each cell row (otherwise Emacs draws the image once at
+the first character of the range and the remaining rows show the
+underlying text or stay blank).  Mirrors the virtual-placeholder path's
+<br><span class="bi">:ascent \=</span>center' and <span class="m"><code>line-height</code></span> clamping so slices tile flush
+<br>across rows.
+<p>Falls back to <span class="arg">PIXEL-W</span>/<span class="arg">PIXEL-H</span> when <span class="arg">GRID-COLS</span>/<span class="arg">GRID-ROWS</span> arrive as 0 —
+libghostty hasn't computed the cell layout yet on the first redraw
+after a placement (a subsequent layout change would fix it, but the
+user shouldn't have to trigger one).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-kitty.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--kitty-display-image</span> (data is-png abs-row vp-col grid-cols grid-rows pixel-w pixel-h
+                                          src-x src-y src-w src-h)
+  <span class="doc">"Display a kitty graphics image placement in the buffer.
+Called from the native module during redraw for each visible placement.
+DATA is a unibyte string (PNG or PPM).
+IS-PNG is non-nil for PNG, nil for PPM.
+ABS-ROW is the absolute buffer row (0-indexed from `</span><span class="m doc">point-min</span><span class="doc">'),
+already accounting for materialized scrollback (the C side adds
+`</span><span class="m doc">scrollback_in_buffer</span><span class="doc">' to libghostty's viewport-relative row before
+passing it here).  Without that pre-shift, an image at viewport row 0
+would render at the top of the scrollback, jumping into the past as
+soon as anything scrolled.  May be negative when the image's top is
+above the buffer's first line (rare — only when libghostty's scrollback
+got trimmed below the placement's anchor).
+VP-COL is the column (may be negative — image partially off the left).
+GRID-COLS and GRID-ROWS are the cell dimensions.
+PIXEL-W and PIXEL-H are the rendered pixel dimensions.
+SRC-X / SRC-Y / SRC-W / SRC-H are the source-rect crop in image pixels;
+all zero means the whole image (the common case from timg/yazi).
+
+The image is sized to fill its grid cells and then sliced per row, with
+each slice applied on its own buffer line.  Slicing — rather than a
+single multi-line `</span><span class="m doc">display</span><span class="doc">' property — is required for the image to
+actually occupy each cell row (otherwise Emacs draws the image once at
+the first character of the range and the remaining rows show the
+underlying text or stay blank).  Mirrors the virtual-placeholder path's
+`:ascent </span><span class="bi doc">\\=</span><span class="doc">'</span><span class="m doc">center</span><span class="doc">' and `</span><span class="m doc">line-height</span><span class="doc">' clamping so slices tile flush
+across rows.
+
+Falls back to PIXEL-W/PIXEL-H when GRID-COLS/GRID-ROWS arrive as 0 —
+libghostty hasn't computed the cell layout yet on the first redraw
+after a placement (a subsequent layout change would fix it, but the
+user shouldn't have to trigger one)."</span>
+  (<span class="k">when</span> (display-graphic-p)
+    (<span class="k">condition-case</span> err
+        (<span class="k">progn</span>
+          (ghostel--kitty-check-source-rect src-x src-y src-w src-h pixel-w pixel-h)
+          (<span class="k">let*</span> ((cw (default-font-width))
+                 (ch (default-font-height))
+                 (g-cols (<span class="k">if</span> (&gt; grid-cols 0) grid-cols
+                           (max 1 (/ (+ pixel-w cw -1) cw))))
+                 (g-rows (<span class="k">if</span> (&gt; grid-rows 0) grid-rows
+                           (max 1 (/ (+ pixel-h ch -1) ch))))
+                 (img (create-image data (<span class="k">if</span> is-png 'png 'pbm) t
+                                    <span class="bi">:width</span> (* g-cols cw)
+                                    <span class="bi">:height</span> (* g-rows ch)
+                                    <span class="bi">:scale</span> 1
+                                    <span class="bi">:ascent</span> 'center))
+                 (skip (max 0 abs-row))
+                 (start-row (max 0 (- abs-row)))
+                 <span class="cd">;; </span><span class="c">Clamp negative vp-col (image partially scrolled off
+</span>                 <span class="cd">;; </span><span class="c">the left edge): start the buffer range at column 0
+</span>                 <span class="cd">;; </span><span class="c">and skip the off-screen pixel columns inside the
+</span>                 <span class="cd">;; </span><span class="c">slice.
+</span>                 (vp-col-clamped (max 0 vp-col))
+                 (start-col (max 0 (- vp-col)))
+                 (slice-x (* start-col cw))
+                 (visible-cols (max 0 (- g-cols start-col)))
+                 (slice-w (* visible-cols cw)))
+            (<span class="k">when</span> (&gt; visible-cols 0)
+              (<span class="k">save-excursion</span>
+                (goto-char (point-min))
+                (<span class="k">when</span> (zerop (forward-line skip))
+                  <span class="cd">;; </span><span class="c">Skip rows already in materialized scrollback — they
+</span>                  <span class="cd">;; </span><span class="c">got their overlays in an earlier emit and
+</span>                  <span class="cd">;; </span><span class="c">`</span><span class="m c">kitty-clear</span><span class="c">' preserves scrollback overlays.
+</span>                  <span class="cd">;; </span><span class="c">Re-applying here would stack a second overlay on
+</span>                  <span class="cd">;; </span><span class="c">every scrolled-in row.
+</span>                  (<span class="k">let</span> ((row start-row)
+                        (more t)
+                        (vp-start (<span class="k">or</span> (ghostel--viewport-start) (point-min))))
+                    (<span class="k">while</span> (<span class="k">and</span> more (&lt; row g-rows))
+                      (<span class="k">when</span> (&gt;= (point) vp-start)
+                        (ghostel--kitty-apply-row-slice
+                         row cw ch img
+                         vp-col-clamped visible-cols slice-x slice-w))
+                      (<span class="k">setq</span> row (1+ row))
+                      (<span class="k">unless</span> (zerop (forward-line 1))
+                        (<span class="k">setq</span> more nil)))))))))
+      (<span class="w">error</span>
+       (<span class="k">setq</span> ghostel--kitty-last-error err)
+       (message <span class="s">"ghostel: kitty image error: %S"</span> err)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

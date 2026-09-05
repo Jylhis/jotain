@@ -1,0 +1,154 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-element-is-opened – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-element-is-opened is a natively compiled function defined in
+web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-element-is-opened</code></h1><p><span class="m"><code>web-mode-element-is-opened</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-element-is-opened <span class="arg">POS</span> <span class="arg">LIMIT</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+<span class="cd">;;</span><span class="c">TODO : prendre en compte part-token
+</span><span class="cd">;; </span><span class="c">state=t &lt;=&gt; start tag
+</span>(<span class="k">defun</span> <span class="f">web-mode-element-is-opened</span> (pos limit)
+  (<span class="k">let</span> (tag
+        last-end-tag
+        tag-pos block-pos
+        state
+        n
+        ret
+        (continue t)
+        controls
+        (h (make-hash-table <span class="bi">:test</span> 'equal))
+        (h2 (make-hash-table <span class="bi">:test</span> 'equal)))
+
+    <span class="cd">;;    </span><span class="c">(message "pos-ori=%S limit=%S" pos limit)
+</span>
+    (<span class="k">while</span> continue
+      (<span class="k">setq</span> controls nil
+            last-end-tag nil
+            tag nil)
+
+      (<span class="k">cond</span>
+        ((<span class="k">and</span> (eq (get-text-property pos 'tag-type) 'comment)
+              (web-mode-looking-at <span class="s">"&lt;!--#</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">endif</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">if</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> pos))
+         <span class="cd">;;</span><span class="c">(message "pos=%S" pos)
+</span>         (<span class="k">setq</span> tag <span class="s">"#if"</span>)
+         (<span class="k">setq</span> n (gethash tag h 0))
+         (<span class="k">if</span> (string= (match-string-no-properties 1) <span class="s">"if"</span>)
+             (puthash tag (1+ n) h)
+             (puthash tag (1- n) h))
+         <span class="cd">;;</span><span class="c">(setq tag-pos pos)
+</span>         )
+        ((get-text-property pos 'tag-beg)
+         (<span class="k">when</span> (member (get-text-property pos 'tag-type) '(start end))
+           (<span class="k">setq</span> tag (get-text-property pos 'tag-name)
+                 state (eq (get-text-property pos 'tag-type) 'start))
+           (<span class="k">if</span> (null state) (<span class="k">setq</span> last-end-tag (cons tag pos)))
+           (<span class="k">setq</span> n (gethash tag h 0))
+           (<span class="k">cond</span>
+             ((null state)
+              (<span class="k">when</span> (&gt; n 0) (puthash tag (1- n) h))
+              (puthash tag (1- n) h2))
+             ((member tag web-mode-offsetless-elements)
+              )
+             (t
+              (puthash tag (1+ n) h)
+              (puthash tag (1+ n) h2))
+             ) <span class="cd">;</span><span class="c">cond
+</span>           ) <span class="cd">;</span><span class="c">when
+</span>         (<span class="k">when</span> (<span class="k">setq</span> pos (web-mode-tag-end-position pos))
+           (<span class="k">setq</span> tag-pos nil)
+           (<span class="k">when</span> (<span class="k">and</span> block-pos (&gt; pos block-pos))
+             (<span class="k">setq</span> block-pos nil))
+           ) <span class="cd">;</span><span class="c">when
+</span>         )
+        ((<span class="k">and</span> web-mode-enable-control-block-indentation
+              (get-text-property pos 'block-beg))
+         (<span class="k">when</span> (<span class="k">setq</span> controls (web-mode-block-controls-get pos))
+           (<span class="k">dolist</span> (control controls)
+             (<span class="k">setq</span> tag (cdr control))
+             (<span class="k">setq</span> n (gethash tag h 0))
+             (<span class="k">cond</span>
+               ((eq (car control) 'inside)
+                )
+               ((eq (car control) 'open)
+                (puthash tag (1+ n) h))
+               ((&gt; n 0)
+                (puthash tag (1- n) h))
+               ) <span class="cd">;</span><span class="c">cond
+</span>             ) <span class="cd">;</span><span class="c">dolist
+</span>           )
+         (<span class="k">when</span> (<span class="k">setq</span> pos (web-mode-block-end-position pos))
+           (<span class="k">setq</span> block-pos nil)
+           (<span class="k">when</span> (<span class="k">and</span> tag-pos (&gt; pos tag-pos))
+             (<span class="k">setq</span> tag-pos nil))
+           )
+         )
+        ) <span class="cd">;</span><span class="c">cond
+</span>
+      <span class="cd">;;      </span><span class="c">(message "tag=%S end-pos=%S" tag pos)
+</span>
+      (<span class="k">when</span> (<span class="k">and</span> pos (&lt; pos limit))
+        (<span class="k">when</span> (<span class="k">or</span> (null tag-pos) (&gt;= pos tag-pos))
+          (<span class="k">setq</span> tag-pos (web-mode-tag-next-position pos limit))
+          <span class="cd">;;          </span><span class="c">(message "from=%S tag-next-pos=%S" pos tag-pos)
+</span>          )
+        (<span class="k">when</span> (<span class="k">or</span> (null block-pos) (&gt;= pos block-pos))
+          (<span class="k">setq</span> block-pos (web-mode-block-next-position pos limit))
+          <span class="cd">;;          </span><span class="c">(message "from=%S block-next-pos=%S" pos block-pos)
+</span>          )
+        )
+
+      (<span class="k">cond</span>
+        ((null pos)
+         )
+        ((<span class="k">and</span> (null tag-pos)
+              (null block-pos))
+         (<span class="k">setq</span> pos nil))
+        ((<span class="k">and</span> tag-pos block-pos)
+         (<span class="k">if</span> (&lt; tag-pos block-pos)
+             (<span class="k">progn</span>
+               (<span class="k">setq</span> pos tag-pos)
+               (<span class="k">setq</span> tag-pos nil))
+             (<span class="k">setq</span> pos block-pos)
+             (<span class="k">setq</span> block-pos nil))
+         )
+        ((null tag-pos)
+         (<span class="k">setq</span> pos block-pos)
+         (<span class="k">setq</span> block-pos nil))
+        (t
+         (<span class="k">setq</span> pos tag-pos)
+         (<span class="k">setq</span> tag-pos nil))
+        )
+
+      (<span class="k">when</span> (<span class="k">or</span> (null pos)
+                (&gt;= pos limit))
+        (<span class="k">setq</span> continue nil))
+      ) <span class="cd">;</span><span class="c">while
+</span>
+    <span class="cd">;;</span><span class="c">(message "hashtable=%S" h)
+</span>    (maphash (<span class="k">lambda</span> (_k v) (<span class="k">if</span> (&gt; v 0) (<span class="k">setq</span> ret t))) h)
+
+    (<span class="k">when</span> (<span class="k">and</span> (null ret)
+               last-end-tag
+               (&gt; (hash-table-count h2) 1)
+               (&lt; (gethash (car last-end-tag) h2) 0))
+      <span class="cd">;;      </span><span class="c">(message "last-end-tag=%S" last-end-tag)
+</span>      (<span class="k">save-excursion</span>
+        (goto-char (cdr last-end-tag))
+        (web-mode-tag-match)
+        (<span class="k">when</span> (not (= (point) (cdr last-end-tag)))
+          (<span class="k">setq</span> n (point))
+          (back-to-indentation)
+          (<span class="k">if</span> (= n (point)) (<span class="k">setq</span> ret (current-indentation))))
+        ))
+
+    ret))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

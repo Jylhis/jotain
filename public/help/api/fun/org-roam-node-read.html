@@ -1,0 +1,59 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: org-roam-node-read – Emacs Documentation Online</title>
+<meta name="description" content="org-roam-node-read is a natively compiled function defined in
+org-roam-node.el.
+Read and return an org-roam-node.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>org-roam-node-read</code></h1><p><span class="m"><code>org-roam-node-read</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">org-roam-node.el</span>.
+<h2>Signature</h2>
+<pre><code>(org-roam-node-read <span class="ty">&amp;optional</span> <a href="#:~:text=node.-,INITIAL-INPUT"><span class="arg">INITIAL-INPUT</span></a> <a href="#:~:text=value.-,FILTER-FN"><span class="arg">FILTER-FN</span></a> <a href="#:~:text=out.-,SORT-FN"><span class="arg">SORT-FN</span></a> <a href="#:~:text=If-,REQUIRE-MATCH"><span class="arg">REQUIRE-MATCH</span></a> <a href="#:~:text=match.-,PROMPT"><span class="arg">PROMPT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Read and return an <span class="m"><code>org-roam-node</code></span>.
+<p><span class="arg">INITIAL-INPUT</span> is the initial minibuffer prompt value.
+<span class="arg">FILTER-FN</span> is a function to filter out nodes: it takes an <span class="m"><code>org-roam-node</code></span>,
+and when nil is returned the node will be filtered out.
+<span class="arg">SORT-FN</span> is a function to sort nodes. See <a href="../fun/org-roam-node-read-sort-by-file-mtime.html"><code>org-roam-node-read-sort-by-file-mtime</code></a>
+for an example sort function.
+If <span class="arg">REQUIRE-MATCH</span>, the minibuffer prompt will require a match.
+<span class="arg">PROMPT</span> is a string to show at the beginning of the mini-buffer,
+defaulting to "Node: "
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qfyfp7k8wj4czdja2mlsqxrhlx7mvj76-emacs-packages-deps/share/emacs/site-lisp/elpa/org-roam-20260425.1623/org-roam-node.el</span>
+<span class="cd">;;;; </span><span class="c">Completing-read interface
+</span>(<span class="k">defun</span> <span class="f">org-roam-node-read</span> (<span class="ty">&amp;optional</span> initial-input filter-fn sort-fn require-match prompt)
+  <span class="doc">"Read and return an `</span><span class="m doc">org-roam-node</span><span class="doc">'.
+INITIAL-INPUT is the initial minibuffer prompt value.
+FILTER-FN is a function to filter out nodes: it takes an `</span><span class="m doc">org-roam-node</span><span class="doc">',
+and when nil is returned the node will be filtered out.
+SORT-FN is a function to sort nodes. See `</span><span class="m doc">org-roam-node-read-sort-by-file-mtime</span><span class="doc">'
+for an example sort function.
+If REQUIRE-MATCH, the minibuffer prompt will require a match.
+PROMPT is a string to show at the beginning of the mini-buffer,
+defaulting to \"Node: \""</span>
+  (<span class="k">let*</span> ((nodes (org-roam-node-read--completions filter-fn sort-fn))
+         (prompt (<span class="k">or</span> prompt <span class="s">"Node: "</span>))
+         (node (completing-read
+                prompt
+                (<span class="k">lambda</span> (string pred action)
+                  (<span class="k">if</span> (eq action 'metadata)
+                      `(metadata
+                        <span class="cd">;; </span><span class="c">Preserve sorting in the completion UI if a sort-fn is used
+</span>                        ,@(<span class="k">when</span> sort-fn
+                            '((display-sort-function . identity)
+                              (cycle-sort-function . identity)))
+                        (annotation-function
+                         . ,(<span class="k">lambda</span> (title)
+                              (funcall org-roam-node-annotation-function
+                                       (get-text-property 0 'node title))))
+                        (category . org-roam-node))
+                    (complete-with-action action nodes string pred)))
+                nil require-match initial-input 'org-roam-node-history)))
+    (<span class="k">or</span> (cdr (assoc node nodes))
+        (org-roam-node-create <span class="bi">:title</span> node))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

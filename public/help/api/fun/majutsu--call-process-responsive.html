@@ -1,0 +1,42 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu--call-process-responsive – Emacs Documentation Online</title>
+<meta name="description" content="majutsu--call-process-responsive is a natively compiled function
+defined in majutsu-process.el.
+Run PROGRAM with ARGS synchronously without blocking Emacs subprocesses.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu--call-process-responsive</code></h1><p><span class="m"><code>majutsu--call-process-responsive</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-process.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu--call-process-responsive <a href="#:~:text=Run-,PROGRAM"><span class="arg">PROGRAM</span></a> <a href="#:~:text=to-,PROCESS-BUF"><span class="arg">PROCESS-BUF</span></a> <a href="#:~:text=at-,SECTION"><span class="arg">SECTION</span></a> <a href="#:~:text="><span class="arg">ROOT</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=with-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run <span class="arg">PROGRAM</span> with <span class="arg">ARGS</span> synchronously without blocking Emacs subprocesses.
+<p>Output is appended to <span class="arg">PROCESS-BUF</span> at <span class="arg">SECTION</span>, using the same filter as
+<a href="../fun/majutsu-start-process.html"><code>majutsu-start-process</code></a>.  Return the process exit status.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-process.el</span>
+(<span class="k">defun</span> <span class="f">majutsu--call-process-responsive</span> (program process-buf section root <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Run PROGRAM with ARGS synchronously without blocking Emacs subprocesses.
+
+Output is appended to PROCESS-BUF at SECTION, using the same filter as
+`</span><span class="m doc">majutsu-start-process</span><span class="doc">'.  Return the process exit status."</span>
+  (<span class="k">let*</span> ((process-environment (majutsu-process-environment args))
+         (default-process-coding-system '(utf-8-unix . utf-8-unix))
+         (process (apply #'start-file-process (file-name-nondirectory program)
+                         process-buf program args))
+         exit)
+    <span class="cd">;; </span><span class="c">`</span><span class="m c">majutsu-call-jj</span><span class="c">' finalizes the section explicitly after this helper
+</span>    <span class="cd">;; </span><span class="c">returns, so suppress Emacs' default sentinel, which would otherwise
+</span>    <span class="cd">;; </span><span class="c">append "Process ... finished" status text to the Majutsu process buffer.
+</span>    (majutsu--process-setup process section root #'ignore)
+    (majutsu--process-display-buffer process)
+    (<span class="k">unwind-protect</span>
+        (<span class="k">setq</span> exit (majutsu--process-wait process))
+      (<span class="k">when</span> (process-live-p process)
+        (delete-process process)))
+    exit))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

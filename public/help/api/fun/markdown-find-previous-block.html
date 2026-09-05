@@ -1,0 +1,58 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-find-previous-block – Emacs Documentation Online</title>
+<meta name="description" content="markdown-find-previous-block is a natively compiled function defined
+in markdown-mode.el.
+Find previous block.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-find-previous-block</code></h1><p><span class="m"><code>markdown-find-previous-block</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-find-previous-block)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find previous block.
+<p>Detect whether <a href="../fun/markdown-syntax-propertize-fenced-block-constructs.html"><code>markdown-syntax-propertize-fenced-block-constructs</code></a> was
+unable to propertize the entire block, but was able to propertize the beginning
+of the block. If so, return a cons of (pos . property) where the beginning of
+the block was propertized.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-find-previous-block</span> ()
+  <span class="doc">"Find previous block.
+Detect whether `</span><span class="m doc">markdown-syntax-propertize-fenced-block-constructs</span><span class="doc">' was
+unable to propertize the entire block, but was able to propertize the beginning
+of the block. If so, return a cons of (pos . property) where the beginning of
+the block was propertized."</span>
+  (<span class="k">let</span> ((start-pt (point))
+        (closest-open
+         (markdown-max-of-seq
+          #'car
+          (cl-remove-if
+           #'null
+           (cl-mapcar
+            #'markdown-find-previous-prop
+            (markdown-get-fenced-block-begin-properties))))))
+    (<span class="k">when</span> closest-open
+      (<span class="k">let*</span> ((length-of-open-match
+              (<span class="k">let</span> ((match-d
+                     (get-text-property (car closest-open) (cdr closest-open))))
+                (- (cl-fourth match-d) (cl-third match-d))))
+             (end-regexp
+              (markdown-maybe-funcall-regexp
+               (cl-caadr
+                (cl-find-if
+                 (<span class="k">lambda</span> (entry) (eq (cl-cadar entry) (cdr closest-open)))
+                 markdown-fenced-block-pairs))
+               length-of-open-match))
+             (end-prop-loc
+              (<span class="k">save-excursion</span>
+                (<span class="k">save-match-data</span>
+                  (goto-char (car closest-open))
+                  (<span class="k">and</span> (re-search-forward end-regexp start-pt t)
+                       (match-beginning 0))))))
+        (<span class="k">and</span> (not end-prop-loc) closest-open)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

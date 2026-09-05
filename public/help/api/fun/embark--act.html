@@ -1,0 +1,114 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark--act – Emacs Documentation Online</title>
+<meta name="description" content="embark--act is a natively compiled function defined in embark.el.
+Perform ACTION injecting the TARGET.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark--act</code></h1><p><span class="m"><code>embark--act</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark--act <a href="#:~:text=Perform-,ACTION"><span class="arg">ACTION</span></a> <a href="#:~:text=the-,TARGET"><span class="arg">TARGET</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=nil-,QUIT"><span class="arg">QUIT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Perform <span class="arg">ACTION</span> injecting the <span class="arg">TARGET</span>.
+<p>If called from a minibuffer with non-nil <span class="arg">QUIT</span>, quit the
+minibuffer before executing the action.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+(<span class="k">defun</span> <span class="f">embark--act</span> (action target <span class="ty">&amp;optional</span> quit)
+  <span class="doc">"Perform ACTION injecting the TARGET.
+If called from a minibuffer with non-nil QUIT, quit the
+minibuffer before executing the action."</span>
+  (embark--record-target-in-history action target)
+  (<span class="k">if</span> (memq action '(embark-become       <span class="cd">; </span><span class="c">these actions should run in
+</span>                     embark-collect      <span class="cd">; </span><span class="c">the current buffer, not the
+</span>                     embark-live         <span class="cd">; </span><span class="c">target buffer
+</span>                     embark-export
+                     embark-select
+                     embark-act-all))
+      (<span class="k">progn</span>
+        (embark--run-action-hooks embark-pre-action-hooks action target quit)
+        (<span class="k">unwind-protect</span> (embark--run-around-action-hooks action target quit)
+          (embark--run-action-hooks embark-post-action-hooks
+                                    action target quit)))
+    (<span class="k">let*</span> ((command embark--command)
+           (prefix prefix-arg)
+           (action-window (embark--target-window t))
+           (directory default-directory)
+           (inject
+            (<span class="k">lambda</span> ()
+              (<span class="k">let</span> ((contents (minibuffer-contents)))
+                (delete-minibuffer-contents)
+                (insert
+                 (propertize
+                  (substring-no-properties (plist-get target <span class="bi">:target</span>))
+                  'embark--initial-input contents)))
+              (<span class="k">if</span> (memq 'ivy--queue-exhibit post-command-hook)
+                  <span class="cd">;; </span><span class="c">Ivy has special needs: (1) for file names
+</span>                  <span class="cd">;; </span><span class="c">ivy-immediate-done is not equivalent to
+</span>                  <span class="cd">;; </span><span class="c">exit-minibuffer, (2) it needs a chance to run
+</span>                  <span class="cd">;; </span><span class="c">its post command hook first, so use depth 10
+</span>                  (add-hook 'post-command-hook 'ivy-immediate-done 10 t)
+                (add-hook 'post-command-hook #'exit-minibuffer nil t))
+              (embark--run-action-hooks embark-target-injection-hooks
+                                        action target quit)))
+           (dedicate (<span class="k">and</span> (derived-mode-p 'embark-collect-mode)
+                          (not (window-dedicated-p))
+                          (selected-window)))
+           (multi (memq action embark-multitarget-actions))
+           (run-action
+            (<span class="k">if</span> (<span class="k">and</span> (commandp action) (not multi))
+                (<span class="k">lambda</span> ()
+                  (<span class="k">let</span> (final-window)
+                    (<span class="k">when</span> dedicate (set-window-dedicated-p dedicate t))
+                    (<span class="k">unwind-protect</span>
+                        (<span class="k">with-selected-window</span> action-window
+                          (<span class="k">let</span> ((enable-recursive-minibuffers t)
+                                (embark--command command)
+                                (prefix-arg prefix)
+                                <span class="cd">;; </span><span class="c">the next two avoid mouse dialogs
+</span>                                (use-dialog-box nil)
+                                (last-nonmenu-event 13)
+                                (default-directory directory))
+                            (embark--run-action-hooks embark-pre-action-hooks
+                                                      action target quit)
+                            (<span class="k">minibuffer-with-setup-hook</span> inject
+                              <span class="cd">;; </span><span class="c">HACK work around `</span><span class="m c">browse-url-interactive-arg</span><span class="c">'
+</span>                              <span class="cd">;; </span><span class="c">expecting a non-empty `</span><span class="m c">this-command-keys</span><span class="c">'
+</span>                              <span class="cd">;; </span><span class="c">output.
+</span>                              (<span class="k">when</span> (<span class="k">and</span> (eq action 'browse-url)
+                                         (= (length (this-command-keys)) 0))
+                                (set--this-command-keys
+                                 (<span class="k">if</span> (characterp last-command-event)
+                                     (string last-command-event)
+                                   <span class="s">"\r"</span>)))
+                              (<span class="k">setq</span> this-command action)
+                              (embark--run-around-action-hooks
+                               action target quit)))
+                          (<span class="k">setq</span> final-window (selected-window)))
+                      (embark--run-action-hooks embark-post-action-hooks
+                                                action target quit)
+                      (<span class="k">when</span> dedicate (set-window-dedicated-p dedicate nil)))
+                    (<span class="k">unless</span> (eq final-window action-window)
+                      (select-window final-window))))
+              (<span class="k">let</span> ((target
+                     (<span class="k">if</span> (<span class="k">and</span> multi (null (plist-get target <span class="bi">:candidates</span>)))
+                         (plist-put
+                          target <span class="bi">:candidates</span> (list (plist-get target <span class="bi">:target</span>)))
+                       target)))
+                (<span class="k">lambda</span> ()
+                  (<span class="k">with-selected-window</span> action-window
+                    (embark--run-action-hooks embark-pre-action-hooks
+                                              action target quit)
+                    (<span class="k">unwind-protect</span>
+                        (<span class="k">let</span> ((current-prefix-arg prefix)
+                              (default-directory directory))
+                          (embark--run-around-action-hooks
+                           action target quit <span class="bi">:non-interactive</span>))
+                      (embark--run-action-hooks embark-post-action-hooks
+                                                action target quit))))))))
+      (<span class="k">setq</span> prefix-arg nil)
+      (<span class="k">if</span> quit (embark--quit-and-run run-action) (funcall run-action)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

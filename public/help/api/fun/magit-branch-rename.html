@@ -1,0 +1,73 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-branch-rename – Emacs Documentation Online</title>
+<meta name="description" content="magit-branch-rename is an interactive and natively compiled function
+defined in magit-branch.el.
+Rename the branch named OLD to NEW.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-branch-rename</code></h1><p><span class="m"><code>magit-branch-rename</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-branch.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-branch-rename <a href="#:~:text=named-,OLD"><span class="arg">OLD</span></a> <a href="#:~:text=to-,NEW"><span class="arg">NEW</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=argument-,FORCE"><span class="arg">FORCE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Rename the branch named <span class="arg">OLD</span> to <span class="arg">NEW</span>.
+<p>With a prefix argument <span class="arg">FORCE</span>, rename even if a branch named <span class="arg">NEW</span>
+already exists.
+<p>If <span class="m"><code>branch.</code></span><span class="arg">OLD</span><span class="m"><code>.pushRemote</code></span> is set, then unset it.  Depending on
+the value of <a href="../var/magit-branch-rename-push-target.html"><code>magit-branch-rename-push-target</code></a> (which see) maybe
+set <span class="m"><code>branch.</code></span><span class="arg">NEW</span><span class="m"><code>.pushRemote</code></span> and maybe rename the push-target on
+the remote.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-branch.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">magit-branch-rename</span> (old new <span class="ty">&amp;optional</span> force)
+  <span class="doc">"Rename the branch named OLD to NEW.
+
+With a prefix argument FORCE, rename even if a branch named NEW
+already exists.
+
+If `</span><span class="m doc">branch.OLD.pushRemote</span><span class="doc">' is set, then unset it.  Depending on
+the value of `</span><span class="m doc">magit-branch-rename-push-target</span><span class="doc">' (which see) maybe
+set `</span><span class="m doc">branch.NEW.pushRemote</span><span class="doc">' and maybe rename the push-target on
+the remote."</span>
+  (<span class="k">interactive</span>
+    (<span class="k">let</span> ((branch (magit-read-local-branch <span class="s">"Rename branch"</span>)))
+      (list branch
+            (magit-read-string-ns (format <span class="s">"Rename branch '</span><span class="m s">%s</span><span class="s">' to"</span> branch)
+                                  nil 'magit-revision-history)
+            current-prefix-arg)))
+  (<span class="k">when</span> (string-match <span class="s">"\\`heads/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> old)
+    (<span class="k">setq</span> old (match-str 1 old)))
+  (<span class="k">cond</span> ((equal old new)
+         (<span class="w">user-error</span> <span class="s">"Old and new branch names are the same"</span>))
+        ((<span class="k">and</span> (magit-local-branch-p new) (not force))
+         (<span class="w">user-error</span> <span class="s">"Branch `</span><span class="m s">%s</span><span class="s">' already exists"</span> new)))
+  (<span class="k">let*</span> ((push-branch  (magit-get-push-branch old))
+         (push-remote  (magit-get <span class="s">"branch"</span> old <span class="s">"pushRemote"</span>))
+         (push-default (magit-get <span class="s">"remote.pushDefault"</span>))
+         (remote       (<span class="k">or</span> push-remote push-default)))
+    (magit-call-git <span class="s">"branch"</span> (<span class="k">if</span> force <span class="s">"-M"</span> <span class="s">"-m"</span>) old new)
+    (<span class="k">when</span> push-remote
+      (magit-set nil <span class="s">"branch"</span> old <span class="s">"pushRemote"</span>)
+      (magit-set push-remote <span class="s">"branch"</span> new <span class="s">"pushRemote"</span>))
+    (<span class="k">when</span> (<span class="k">and</span> (magit-rev-verify (concat remote <span class="s">"/"</span> old))
+               (not (magit-rev-verify (concat remote <span class="s">"/"</span> new)))
+               (<span class="k">or</span> (eq magit-branch-rename-push-target t)
+                   (and-let ((_(eq magit-branch-rename-push-target 'forge-only))
+                             (_(<span class="k">require</span> (<span class="k">quote</span> forge) nil t))
+                             (_(fboundp 'forge--split-forge-url))
+                             (url (magit-git-string <span class="s">"remote"</span> <span class="s">"get-url"</span> remote)))
+                     (forge--split-forge-url url)))
+               (magit-y-or-n-p (format <span class="s">"Also rename %S to %S on \"%s\"?"</span>
+                                       old new remote)))
+      (magit-call-git <span class="s">"push"</span> <span class="s">"-v"</span> remote
+                      (format <span class="s">"%s:refs/heads/%s"</span> push-branch new)
+                      (format <span class="s">":refs/heads/%s"</span> old))))
+  (magit-refresh))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-editor--flycheck-diagnostics – Emacs Documentation Online</title>
+<meta name="description" content="eca-editor--flycheck-diagnostics is a natively compiled function
+defined in eca-editor.el.
+Collect flycheck diagnostics from buffers in WORKSPACES.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-editor--flycheck-diagnostics</code></h1><p><span class="m"><code>eca-editor--flycheck-diagnostics</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">eca-editor.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-editor--flycheck-diagnostics <a href="#:~:text=If-,URI"><span class="arg">URI</span></a> <a href="#:~:text=in-,WORKSPACES"><span class="arg">WORKSPACES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Collect flycheck diagnostics from buffers in <span class="arg">WORKSPACES</span>.
+<p>Skips buffers where <span class="m"><code>lsp-mode</code></span> is active to avoid duplicates.
+If <span class="arg">URI</span> is non-nil, filter to that uri.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-editor.el</span>
+(<span class="k">defun</span> <span class="f">eca-editor--flycheck-diagnostics</span> (uri workspaces)
+  <span class="doc">"Collect flycheck diagnostics from buffers in WORKSPACES.
+Skips buffers where `</span><span class="m doc">lsp-mode</span><span class="doc">' is active to avoid duplicates.
+If URI is non-nil, filter to that uri."</span>
+  (<span class="k">let</span> ((diagnostics '()))
+    (<span class="k">dolist</span> (buf (buffer-list))
+      (<span class="k">when-let</span> ((file (buffer-file-name buf)))
+        (<span class="k">let</span> ((file-uri (eca--path-to-uri file)))
+          (<span class="k">when</span> (<span class="k">and</span> (<span class="k">or</span> (null uri) (string= uri file-uri))
+                     (seq-some (<span class="k">lambda</span> (ws)
+                                 (f-ancestor-of? ws file))
+                               workspaces))
+            (<span class="k">with-current-buffer</span> buf
+              (<span class="k">when</span> (<span class="k">and</span> (<span class="k">bound-and-true-p</span> flycheck-mode)
+                         (not (<span class="k">bound-and-true-p</span> lsp-mode)))
+                (<span class="k">dolist</span> (err flycheck-current-errors)
+                  (<span class="k">let*</span> ((err-file (<span class="k">or</span> (flycheck-error-filename err)
+                                       file))
+                         (err-uri (eca--path-to-uri err-file))
+                         (line (flycheck-error-line err))
+                         (col (flycheck-error-column err))
+                         (end-line (flycheck-error-end-line err))
+                         (end-col (flycheck-error-end-column err))
+                         (start-line (max 0 (1- (<span class="k">or</span> line 1))))
+                         (start-char (max 0 (1- (<span class="k">or</span> col 1))))
+                         (e-line (max 0 (1- (<span class="k">or</span> end-line line 1))))
+                         (e-char (max 0 (1- (<span class="k">or</span> end-col col 1)))))
+                    (<span class="k">push</span> (list <span class="bi">:uri</span> err-uri
+                                <span class="bi">:severity</span> (eca-editor--flycheck-to-eca-severity
+                                           (flycheck-error-level err))
+                                <span class="bi">:code</span> (<span class="k">when-let</span> ((id (flycheck-error-id err)))
+                                        (format <span class="s">"%s"</span> id))
+                                <span class="bi">:range</span> (list <span class="bi">:start</span> (list <span class="bi">:line</span> start-line
+                                                          <span class="bi">:character</span> start-char)
+                                             <span class="bi">:end</span> (list <span class="bi">:line</span> e-line
+                                                        <span class="bi">:character</span> e-char))
+                                <span class="bi">:source</span> (<span class="k">when-let</span> ((checker (flycheck-error-checker err)))
+                                          (symbol-name checker))
+                                <span class="bi">:message</span> (flycheck-error-message err))
+                          diagnostics)))))))))
+    diagnostics))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

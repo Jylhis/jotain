@@ -1,0 +1,142 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp-handle-open-diff – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp-handle-open-diff is a natively compiled function
+defined in claude-code-ide-mcp-handlers.el.
+Open a diff view using ediff.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp-handle-open-diff</code></h1><p><span class="m"><code>claude-code-ide-mcp-handle-open-diff</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide-mcp-handlers.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp-handle-open-diff <a href="#:~:text=ediff.-,ARGUMENTS"><span class="arg">ARGUMENTS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Open a diff view using ediff.
+<p><span class="arg">ARGUMENTS</span> should contain:
+<br>- <span class="m"><code>old_file_path</code></span>: Original file path
+<br>- <span class="m"><code>new_file_path</code></span>: New file path (usually same as old)
+<br>- <span class="m"><code>new_file_contents</code></span>: New content to diff against
+<br>- <span class="m"><code>tab_name</code></span>: Name for the diff tab
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-mcp-handlers.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp-handle-open-diff</span> (arguments)
+  <span class="doc">"Open a diff view using ediff.
+ARGUMENTS should contain:
+- `</span><span class="m doc">old_file_path</span><span class="doc">': Original file path
+- `</span><span class="m doc">new_file_path</span><span class="doc">': New file path (usually same as old)
+- `</span><span class="m doc">new_file_contents</span><span class="doc">': New content to diff against
+- `</span><span class="m doc">tab_name</span><span class="doc">': Name for the diff tab"</span>
+  (<span class="k">let</span> ((old-file-path (alist-get 'old_file_path arguments))
+        (new-file-path (alist-get 'new_file_path arguments))
+        (new-file-contents (alist-get 'new_file_contents arguments))
+        (tab-name (alist-get 'tab_name arguments))
+        session)
+    <span class="cd">;; </span><span class="c">Validate required parameters
+</span>    (<span class="k">unless</span> (<span class="k">and</span> old-file-path new-file-path new-file-contents tab-name)
+      (<span class="w">signal</span> 'mcp-error '(<span class="s">"Missing required parameters for openDiff"</span>)))
+
+    <span class="cd">;; </span><span class="c">Try to find session based on the file being diffed first
+</span>    (<span class="k">setq</span> session (<span class="k">or</span> (claude-code-ide-mcp--find-session-for-file old-file-path)
+                      <span class="cd">;; </span><span class="c">Fall back to current buffer's session
+</span>                      (claude-code-ide-mcp--get-current-session)))
+
+    <span class="cd">;; </span><span class="c">Ensure we have a valid session
+</span>    (<span class="k">unless</span> session
+      (<span class="w">signal</span> 'mcp-error '(<span class="s">"No active MCP session found"</span>)))
+
+    <span class="cd">;; </span><span class="c">Get the active diffs for this specific session
+</span>    (<span class="k">let</span> ((active-diffs (claude-code-ide-mcp--get-active-diffs session)))
+      <span class="cd">;; </span><span class="c">Check if there's already a diff with this tab_name
+</span>      (<span class="k">when-let</span> ((existing-diff (gethash tab-name active-diffs)))
+        <span class="cd">;; </span><span class="c">Clean up existing diff
+</span>        (claude-code-ide-mcp--cleanup-diff tab-name session)))
+
+    <span class="cd">;; </span><span class="c">Switch to original tab if we're on a different one (when configured)
+</span>    (<span class="k">when</span> (<span class="k">and</span> claude-code-ide-switch-tab-on-ediff
+               (claude-code-ide-mcp-session-original-tab session))
+      (<span class="k">let</span> ((original-tab (claude-code-ide-mcp-session-original-tab session)))
+        (<span class="k">when</span> (<span class="k">and</span> (fboundp 'tab-bar-mode)
+                   tab-bar-mode
+                   (fboundp 'tab-bar--current-tab)
+                   (fboundp 'tab-bar-select-tab-by-name))
+          (<span class="k">let</span> ((current-tab (tab-bar--current-tab)))
+            <span class="cd">;; </span><span class="c">Compare tab names or indices
+</span>            (<span class="k">when</span> (<span class="k">and</span> original-tab current-tab
+                       (not (equal (alist-get 'name original-tab)
+                                   (alist-get 'name current-tab))))
+              <span class="cd">;; </span><span class="c">Switch to the original tab
+</span>              (tab-bar-select-tab-by-name (alist-get 'name original-tab)))))))
+
+    <span class="cd">;; </span><span class="c">Save current window configuration
+</span>    (<span class="k">let*</span> ((saved-winconf (current-window-configuration))
+           (buffers (claude-code-ide-mcp--create-diff-buffers
+                     old-file-path new-file-contents tab-name))
+           (buffer-A (car buffers))
+           (buffer-B (cdr buffers))
+           (file-exists (file-exists-p old-file-path)))
+
+      <span class="cd">;; </span><span class="c">Store diff session info with session reference
+</span>      (<span class="k">let</span> ((active-diffs (claude-code-ide-mcp--get-active-diffs session)))
+        (puthash tab-name
+                 `((buffer-A . ,buffer-A)
+                   (buffer-B . ,buffer-B)
+                   (old-file-path . ,old-file-path)
+                   (new-file-path . ,new-file-path)
+                   (file-exists . ,file-exists)
+                   (saved-winconf . ,saved-winconf)
+                   (session . ,session)  <span class="cd">; </span><span class="c">Store the session reference
+</span>                   (created-at . ,(current-time)))
+                 active-diffs))
+
+      <span class="cd">;; </span><span class="c">Set up startup hook to configure ediff after it's fully initialized
+</span>      (<span class="k">let*</span> ((hooks (claude-code-ide-mcp--setup-diff-hooks tab-name session saved-winconf))
+             (before-setup-hook-fn (car hooks))
+             (startup-hook-fn (cdr hooks)))
+
+        <span class="cd">;; </span><span class="c">Add hooks
+</span>        (add-hook 'ediff-before-setup-hook before-setup-hook-fn)
+        (add-hook 'ediff-startup-hook startup-hook-fn)
+
+        <span class="cd">;; </span><span class="c">Start ediff
+</span>        (<span class="k">condition-case</span> err
+            (<span class="k">progn</span>
+              <span class="cd">;; </span><span class="c">Delete all side windows before starting ediff
+</span>              <span class="cd">;; </span><span class="c">This prevents "Cannot split side window" errors
+</span>              (<span class="k">dolist</span> (window (window-list))
+                (<span class="k">when</span> (window-parameter window 'window-side)
+                  (delete-window window)))
+
+              <span class="cd">;; </span><span class="c">Start ediff with plain window setup (control panel at bottom)
+</span>              <span class="cd">;; </span><span class="c">Set a unique control buffer suffix to avoid conflicts with other ediff sessions
+</span>              (<span class="k">let</span> ((old-setup-fn ediff-window-setup-function)
+                    (old-split-fn ediff-split-window-function)
+                    <span class="cd">;; </span><span class="c">Use tab-name to create a unique suffix for this ediff session
+</span>                    (ediff-control-buffer-suffix (format <span class="s">"&lt;%s&gt;"</span> tab-name)))
+                (<span class="k">unwind-protect</span>
+                    (<span class="k">progn</span>
+                      (<span class="k">setq</span> ediff-window-setup-function 'ediff-setup-windows-plain
+                            ediff-split-window-function 'split-window-horizontally)
+                      (ediff-buffers buffer-A buffer-B))
+                  <span class="cd">;; </span><span class="c">Restore original values
+</span>                  (<span class="k">setq</span> ediff-window-setup-function old-setup-fn
+                        ediff-split-window-function old-split-fn))))
+          (<span class="w">error</span>
+           <span class="cd">;; </span><span class="c">Handle ediff startup errors
+</span>           (<span class="k">when</span> buffer-B
+             (kill-buffer buffer-B))
+           (<span class="k">let</span> ((active-diffs (claude-code-ide-mcp--get-active-diffs session)))
+             (remhash tab-name active-diffs))
+           <span class="cd">;; </span><span class="c">Remove the hooks we added
+</span>           (remove-hook 'ediff-before-setup-hook before-setup-hook-fn)
+           (remove-hook 'ediff-startup-hook startup-hook-fn)
+           <span class="cd">;; </span><span class="c">Re-signal the error
+</span>           (<span class="w">signal</span> (car err) (cdr err))))
+
+        <span class="cd">;; </span><span class="c">Return deferred indicator with session
+</span>        `((deferred . t)
+          (unique-key . ,tab-name)
+          (session . ,session))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

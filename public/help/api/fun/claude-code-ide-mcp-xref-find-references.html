@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp-xref-find-references – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp-xref-find-references is a natively compiled
+function defined in claude-code-ide-emacs-tools.el.
+Find references to IDENTIFIER in the current session's project.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp-xref-find-references</code></h1><p><span class="m"><code>claude-code-ide-mcp-xref-find-references</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">claude-code-ide-emacs-tools.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp-xref-find-references <a href="#:~:text=to-,IDENTIFIER"><span class="arg">IDENTIFIER</span></a> <a href="#:~:text=project.-,FILE-PATH"><span class="arg">FILE-PATH</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Find references to <span class="arg">IDENTIFIER</span> in the current session's project.
+<p><span class="arg">FILE-PATH</span> specifies which file's buffer context to use for the search.
+This function uses the session context to operate in the correct project.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-emacs-tools.el</span>
+<span class="cd">;;; </span><span class="c">Tool Functions
+</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp-xref-find-references</span> (identifier file-path)
+  <span class="doc">"Find references to IDENTIFIER in the current session's project.
+FILE-PATH specifies which file's buffer context to use for the search.
+This function uses the session context to operate in the correct project."</span>
+  (<span class="k">if</span> (not file-path)
+      (<span class="w">error</span> <span class="s">"file_path parameter is required. Please specify the file where you want to search for %s"</span> identifier)
+    (<span class="k">claude-code-ide-mcp-server-with-session-context</span> nil
+      (<span class="k">let</span> ((target-buffer (<span class="k">or</span> (find-buffer-visiting file-path)
+                               (find-file-noselect file-path)))
+            (identifier-str (format <span class="s">"%s"</span> identifier)))
+        (<span class="k">with-current-buffer</span> target-buffer
+          (<span class="k">condition-case</span> err
+              (<span class="k">let</span> ((backend (xref-find-backend)))
+                (<span class="k">if</span> (not backend)
+                    (format <span class="s">"No xref backend available for %s"</span> file-path)
+                  (<span class="k">let</span> ((xref-items (xref-backend-references backend identifier-str)))
+                    (<span class="k">if</span> xref-items
+                        (mapcar (<span class="k">lambda</span> (item)
+                                  (<span class="k">let*</span> ((location (xref-item-location item))
+                                         (file (xref-location-group location))
+                                         (marker (xref-location-marker location))
+                                         (line (<span class="k">with-current-buffer</span> (marker-buffer marker)
+                                                 (<span class="k">save-excursion</span>
+                                                   (goto-char marker)
+                                                   (line-number-at-pos))))
+                                         (summary (xref-item-summary item)))
+                                    (format <span class="s">"%s:%d: %s"</span> file line summary)))
+                                xref-items)
+                      (format <span class="s">"No references found for '</span><span class="m s">%s</span><span class="s">'"</span> identifier-str)))))
+            (<span class="w">error</span>
+             (format <span class="s">"Error searching for '</span><span class="m s">%s</span><span class="s">' in %s: %s"</span>
+                     identifier-str file-path (error-message-string err)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

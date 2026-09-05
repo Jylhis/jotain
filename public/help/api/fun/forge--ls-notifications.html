@@ -1,0 +1,41 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--ls-notifications – Emacs Documentation Online</title>
+<meta name="description" content="forge--ls-notifications is a natively compiled function defined in
+forge-notify.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--ls-notifications</code></h1><p><span class="m"><code>forge--ls-notifications</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">forge-notify.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--ls-notifications <span class="arg">STATUS</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-notify.el</span>
+<span class="cd">;;;; </span><span class="c">List
+</span>
+(<span class="k">defun</span> <span class="f">forge--ls-notifications</span> (status)
+  (<span class="k">let*</span> ((status (ensure-list status))
+         (savedp (memq 'saved status))
+         (status (remq 'saved status)))
+    (mapcar
+     (partial #'closql--remake-instance 'forge-notification (forge-db))
+     (<span class="k">if</span> (seq-set-equal-p status '(unread pending done) #'eq)
+         (forge-sql [<span class="bi">:select</span> * <span class="bi">:from</span> notification <span class="bi">:order-by</span> [(desc updated)]])
+       (forge-sql
+        `[<span class="bi">:select</span> <span class="bi">:distinct</span> notification:*
+          <span class="bi">:from</span> [notification (as issue topic)]
+          <span class="bi">:where</span> (<span class="k">and</span> (= notification:topic topic:id)
+                      ,@(<span class="k">and</span> status '((in topic:status $v1)))
+                      ,@(<span class="k">and</span> savedp '((= topic:saved-p 't))))
+          <span class="bi">:union</span>
+          <span class="bi">:select</span> <span class="bi">:distinct</span> notification:*
+          <span class="bi">:from</span> [notification (as pullreq topic)]
+          <span class="bi">:where</span> (<span class="k">and</span> (= notification:topic topic:id)
+                      ,@(<span class="k">and</span> status '((in topic:status $v1)))
+                      ,@(<span class="k">and</span> savedp '((= topic:saved-p 't))))
+          <span class="bi">:order-by</span> [(desc notification:updated)]]
+        (vconcat status))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

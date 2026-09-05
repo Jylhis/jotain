@@ -1,0 +1,50 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-template--register-function – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-template--register-function is a natively compiled function
+defined in majutsu-template.el.
+Register custom function described by META (a majutsu-template--fn).">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-template--register-function</code></h1><p><span class="m"><code>majutsu-template--register-function</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-template.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-template--register-function <a href="#:~:text=by-,META"><span class="arg">META</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Register custom function described by <span class="arg">META</span> (a <span class="m"><code>majutsu-template--fn</code></span>).
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-template.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-template--register-function</span> (meta)
+  <span class="doc">"Register custom function described by META (a `</span><span class="m doc">majutsu-template--fn</span><span class="doc">')."</span>
+  (<span class="k">let*</span> ((name (majutsu-template--fn-name meta))
+         (fn-symbol (majutsu-template--fn-symbol meta))
+         (owner (majutsu-template--fn-owner meta))
+         (keyword-flag (majutsu-template--fn-keyword meta))
+         (sym (intern name))
+         (keyword (intern (concat <span class="s">":"</span> name)))
+         (pre-existing (gethash name majutsu-template--function-registry)))
+    (<span class="k">if</span> owner
+        (<span class="k">progn</span>
+          (<span class="k">unless</span> (majutsu-template--lookup-type
+                   (majutsu-template--type-ref-base-type owner))
+            (message <span class="s">"majutsu-template: warning – declaring %s for unknown type %S"</span>
+                     name owner))
+          (<span class="k">when</span> keyword-flag
+            <span class="cd">;; </span><span class="c">keywords are 0-argument methods; ensure signature reflects it
+</span>            (<span class="k">let</span> ((args (majutsu-template--fn-args meta)))
+              (<span class="k">when</span> (&gt; (length args) 1)
+                (message <span class="s">"majutsu-template: keyword %s on %S declares more than self argument"</span>
+                         name owner))))
+          (puthash (cons (majutsu-template--type-ref-dispatch-kind owner) name)
+                   meta
+                   majutsu-template--method-registry))
+      (<span class="k">when</span> pre-existing
+        (message <span class="s">"majutsu-template: redefining template helper %s"</span> name))
+      (puthash name meta majutsu-template--function-registry)
+      (puthash sym name majutsu-template--function-name-map)
+      (puthash keyword name majutsu-template--function-name-map))
+    fn-symbol))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

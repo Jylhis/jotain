@@ -1,0 +1,56 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--stack-frame-display – Emacs Documentation Online</title>
+<meta name="description" content="dape--stack-frame-display is a natively compiled function defined in
+dape.el.
+Update stack frame arrow marker for adapter CONN.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--stack-frame-display</code></h1><p><span class="m"><code>dape--stack-frame-display</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--stack-frame-display <a href="#:~:text=adapter-,CONN"><span class="arg">CONN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update stack frame arrow marker for adapter <span class="arg">CONN</span>.
+<p>Buffer is displayed with <a href="../var/dape-display-source-buffer-action.html"><code>dape-display-source-buffer-action</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape--stack-frame-display</span> (conn)
+  <span class="doc">"Update stack frame arrow marker for adapter CONN.
+Buffer is displayed with `</span><span class="m doc">dape-display-source-buffer-action</span><span class="doc">'."</span>
+  (dape--stack-frame-cleanup)
+  (<span class="k">when</span> (dape--stopped-threads conn)
+    (<span class="k">cl-labels</span>
+        ((displayable-p (source)
+           (<span class="k">or</span> (<span class="k">when-let*</span> ((reference
+                            (plist-get source <span class="bi">:sourceReference</span>)))
+                 (&lt; 0 reference))
+               (<span class="k">when-let*</span> ((remote-path (plist-get source <span class="bi">:path</span>))
+                           (filename
+                            (dape--file-name-local conn remote-path)))
+                 (file-exists-p filename))))
+         (displayable-frame-args ()
+           (<span class="k">cl-loop</span> with thread = (dape--current-thread conn)
+                    with thread-frames = (plist-get thread <span class="bi">:stackFrames</span>)
+                    with selected = (dape--current-stack-frame conn)
+                    for frames on thread-frames
+                    when (eq (car frames) selected) return
+                    (<span class="k">cl-loop</span> for frame in frames
+                             when (displayable-p (plist-get frame <span class="bi">:source</span>))
+                             return `(,frame
+                                      ,(eq frame selected)
+                                      ,(eq (car thread-frames) selected))))))
+      <span class="cd">;; </span><span class="c">Check if `</span><span class="m c">displayable-p</span><span class="c">' frame exist among frames,
+</span>      <span class="cd">;; </span><span class="c">otherwise fetch all (e.g. :supportsDelayedStackTraceLoading
+</span>      <span class="cd">;; </span><span class="c">but frame zero is not displayable)
+</span>      (<span class="k">if-let*</span> ((args (displayable-frame-args)))
+          (apply #'dape--stack-frame-display-1 conn args)
+        (<span class="k">dape--with-request</span>
+            (dape--stack-trace
+             conn (dape--current-thread conn) dape-stack-trace-levels)
+          (<span class="k">when-let*</span> ((args (displayable-frame-args)))
+            (apply #'dape--stack-frame-display-1 conn args)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

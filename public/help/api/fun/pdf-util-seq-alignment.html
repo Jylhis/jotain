@@ -1,0 +1,125 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: pdf-util-seq-alignment – Emacs Documentation Online</title>
+<meta name="description" content="pdf-util-seq-alignment is a natively compiled function defined in
+pdf-util.el.
+Return an alignment of sequences SEQ1 and SEQ2.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>pdf-util-seq-alignment</code></h1><p><span class="m"><code>pdf-util-seq-alignment</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">pdf-util.el</span>.
+<h2>Signature</h2>
+<pre><code>(pdf-util-seq-alignment <a href="#:~:text=sequences-,SEQ1"><span class="arg">SEQ1</span></a> <a href="#:~:text=and-,SEQ2"><span class="arg">SEQ2</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=SEQ2.-,SIMILARITY-FN"><span class="arg">SIMILARITY-FN</span></a> <a href="#:~:text=1.-,ALIGNMENT-TYPE"><span class="arg">ALIGNMENT-TYPE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return an alignment of sequences <span class="arg">SEQ1</span> and <span class="arg">SEQ2</span>.
+<p><span class="arg">SIMILARITY-FN</span> should be a function. It is called with two
+arguments: One element from <span class="arg">SEQ1</span> and one from <span class="arg">SEQ2</span>.  It should
+return a number determining how similar the elements are, where
+higher values mean <span class="m"><code>more similar</code></span>.  The default returns 1 if the
+elements are equal, else -1.
+<p><span class="arg">ALIGNMENT-TYPE</span> may be one of the symbols <span class="m"><code>prefix</code></span>, <span class="m"><code>suffix</code></span>,
+<span class="m"><code>infix</code></span> or nil.  If it is <span class="m"><code>prefix</code></span>, trailing elements in <span class="arg">SEQ2</span> may
+be ignored. For example the alignment of
+<p>(0 1) and (0 1 2)
+<p>using prefix matching is 0, since the prefixes are equal and the
+trailing 2 is ignored.  The other possible values have similar
+effects.  The default is nil, which means to match the whole
+sequences.
+<p>Return a cons (VALUE . ALIGNMENT), where VALUE says how similar
+the sequences are and ALIGNMENT is a list of (E1 . E2), where
+E1 is an element from <span class="arg">SEQ1</span> or nil, likewise for E2.  If one of
+them is nil, it means there is gap at this position in the
+respective sequence.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/wm0vc3dfi6c7pwjhcfpsnhyg4hd0b5yc-emacs-packages-deps/share/emacs/site-lisp/elpa/pdf-tools-20260102.1101/pdf-util.el</span>
+(<span class="k">defun</span> <span class="f">pdf-util-seq-alignment</span> (seq1 seq2 <span class="ty">&amp;optional</span> similarity-fn alignment-type)
+  <span class="doc">"Return an alignment of sequences SEQ1 and SEQ2.
+
+SIMILARITY-FN should be a function. It is called with two
+arguments: One element from SEQ1 and one from SEQ2.  It should
+return a number determining how similar the elements are, where
+higher values mean `more similar'.  The default returns 1 if the
+elements are equal, else -1.
+
+ALIGNMENT-TYPE may be one of the symbols `</span><span class="m doc">prefix</span><span class="doc">', `</span><span class="m doc">suffix</span><span class="doc">',
+`</span><span class="m doc">infix</span><span class="doc">' or nil.  If it is `</span><span class="m doc">prefix</span><span class="doc">', trailing elements in SEQ2 may
+be ignored. For example the alignment of
+
+\(0 1</span><span class="w doc">\</span><span class="doc">) and </span><span class="w doc">\</span><span class="doc">(0 1 2</span><span class="w doc">\</span><span class="doc">)
+
+using prefix matching is 0, since the prefixes are equal and the
+trailing 2 is ignored.  The other possible values have similar
+effects.  The default is nil, which means to match the whole
+sequences.
+
+Return a cons </span><span class="w doc">\</span><span class="doc">(VALUE . ALIGNMENT</span><span class="w doc">\</span><span class="doc">), where VALUE says how similar
+the sequences are and ALIGNMENT is a list of </span><span class="w doc">\</span><span class="doc">(E1 . E2</span><span class="w doc">\</span><span class="doc">), where
+E1 is an element from SEQ1 or nil, likewise for E2.  If one of
+them is nil, it means there is gap at this position in the
+respective sequence."</span>
+
+  (<span class="k">cl-macrolet</span> ((make-matrix (rows columns)
+                  `(apply #'vector
+                    (<span class="k">cl-loop</span> for i from 1 to ,rows
+                             collect (make-vector ,columns nil))))
+                (mset (matrix row column newelt)
+                  `(aset (aref ,matrix ,row) ,column ,newelt))
+                (mref (matrix row column)
+                  `(aref (aref ,matrix ,row) ,column)))
+    (<span class="k">let*</span> ((len1 (length seq1))
+           (len2 (length seq2))
+           (d (make-matrix (1+ len1) (1+ len2)))
+           (prefix-p (memq alignment-type '(prefix infix)))
+           (suffix-p (memq alignment-type '(suffix infix)))
+           (similarity-fn (<span class="k">or</span> similarity-fn
+                              (<span class="k">lambda</span> (a b)
+                                (<span class="k">if</span> (equal a b) 1 -1)))))
+
+      (<span class="k">cl-loop</span> for i from 0 to len1 do
+               (mset d i 0 (- i)))
+      (<span class="k">cl-loop</span> for j from 0 to len2 do
+               (mset d 0 j (<span class="k">if</span> suffix-p 0 (- j))))
+
+      (<span class="k">cl-loop</span> for i from 1 to len1 do
+               (<span class="k">cl-loop</span> for j from 1 to len2 do
+                        (<span class="k">let</span> ((max (max
+                                    (1- (mref d (1- i) j))
+                                    (+ (mref d i (1- j))
+                                       (<span class="k">if</span> (<span class="k">and</span> prefix-p (= i len1)) 0 -1))
+                                    (+ (mref d (1- i) (1- j))
+                                       (funcall similarity-fn
+                                                (elt seq1 (1- i))
+                                                (elt seq2 (1- j)))))))
+                          (mset d i j max))))
+
+      (<span class="k">let</span> ((i len1)
+            (j len2)
+            alignment)
+        (<span class="k">while</span> (<span class="k">or</span> (&gt; i 0)
+                   (&gt; j 0))
+          (<span class="k">cond</span>
+           ((<span class="k">and</span> (&gt; i 0)
+                 (= (mref d i j)
+                    (1- (mref d (1- i) j))))
+            (<span class="k">cl-decf</span> i)
+            (<span class="k">push</span> (cons (elt seq1 i) nil) alignment))
+           ((<span class="k">and</span> (&gt; j 0)
+                 (= (mref d i j)
+                    (+ (mref d i (1- j))
+                       (<span class="k">if</span> (<span class="k">or</span> (<span class="k">and</span> (= i 0) suffix-p)
+                               (<span class="k">and</span> (= i len1) prefix-p))
+                           0 -1))))
+            (<span class="k">cl-decf</span> j)
+            (<span class="k">push</span> (cons nil (elt seq2 j)) alignment))
+           (t
+            (<span class="w">cl-assert</span> (<span class="k">and</span> (&gt; i 0) (&gt; j 0)) t)
+            (<span class="k">cl-decf</span> i)
+            (<span class="k">cl-decf</span> j)
+            (<span class="k">push</span> (cons (elt seq1 i)
+                        (elt seq2 j))
+                  alignment))))
+        (cons (mref d len1 len2) alignment)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

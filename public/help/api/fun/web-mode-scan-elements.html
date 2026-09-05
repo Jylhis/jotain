@@ -1,0 +1,214 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-scan-elements – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-scan-elements is a natively compiled function defined in
+web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-scan-elements</code></h1><p><span class="m"><code>web-mode-scan-elements</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-scan-elements <span class="arg">REG-BEG</span> <span class="arg">REG-END</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+<span class="cd">;;</span><span class="c">---- LEXER PARTS -------------------------------------------------------------
+</span>
+(<span class="k">defun</span> <span class="f">web-mode-scan-elements</span> (reg-beg reg-end)
+  (<span class="k">save-excursion</span>
+    (<span class="k">let</span> (part-beg part-end flags limit close-expr props tname tbeg tend element-content-type (regexp web-mode-dom-regexp) part-close-tag char)
+      <span class="cd">;;</span><span class="c">(message "scan-elements: reg-beg(%S) reg-end(%S)" reg-beg reg-end)
+</span>      (goto-char reg-beg)
+
+      (<span class="k">while</span> (web-mode-dom-rsf regexp reg-end)
+
+        <span class="cd">;;</span><span class="c">(message "%S: %S (%S %S)" (point) (match-string-no-properties 0) reg-beg reg-end)
+</span>
+        (<span class="k">setq</span> flags 0
+              tnameraw (match-string-no-properties 1)
+              tname (downcase tnameraw)
+              char (aref tname 0)
+              tbeg (match-beginning 0)
+              tend nil
+              element-content-type nil
+              limit reg-end
+              part-beg nil
+              part-end nil
+              props nil
+              close-expr nil
+              part-close-tag nil)
+
+        <span class="cd">;;</span><span class="c">(message "tname[%S] tbeg(%S) point(%S)" tname tbeg (point))
+</span>
+        (<span class="k">cond</span>
+
+          ((member tname '(<span class="s">"/&gt;"</span> <span class="s">"&gt;"</span>)) <span class="cd">;;</span><span class="c">jsx fragment #952
+</span>           (<span class="k">setq</span> tname <span class="s">"_fragment_"</span>
+                 tend (point))
+           (<span class="k">if</span> (eq char ?\/)
+               (<span class="k">setq</span> props (list 'tag-name tname 'tag-type 'end)
+                     flags (logior flags 20)) <span class="cd">;; </span><span class="c">16 + 4
+</span>               (<span class="k">setq</span> props (list 'tag-name tname 'tag-type 'start)
+                     flags (logior flags 16))
+               ) <span class="cd">;</span><span class="c">if
+</span>           )
+
+          ((not (member char '(?\! ?\?)))
+           (<span class="k">cond</span>
+             ((<span class="k">or</span> (string-match-p <span class="s">"-"</span> tname)
+                  (<span class="k">let</span> ((case-fold-search nil))
+                    (string-match-p <span class="s">"^/?[[:upper:]][[:lower:]]"</span> tnameraw)))
+              (<span class="k">setq</span> flags (logior flags 2)))
+             <span class="cd">;;</span><span class="c">((string-match-p ":" tname)
+</span>             <span class="cd">;; </span><span class="c">(setq flags (logior flags 32)))
+</span>             ((string-match-p <span class="s">"[._:]"</span> tname)
+              (<span class="k">setq</span> flags (logior flags 32)))
+             )
+           (<span class="k">cond</span>
+             ((eq char ?\/)
+              (<span class="k">setq</span> props (list 'tag-name (substring tname 1) 'tag-type 'end)
+                    flags (logior flags 4)
+                    limit (<span class="k">if</span> (&gt; reg-end (line-end-position)) (line-end-position) reg-end))
+              )
+             ((web-mode-element-is-void tname)
+              <span class="cd">;;</span><span class="c">(message "void: tag=%S" tname)
+</span>              (<span class="k">setq</span> props (list 'tag-name tname 'tag-type 'void)))
+             (t
+              (<span class="k">setq</span> props (list 'tag-name tname 'tag-type 'start)))
+             ) <span class="cd">;</span><span class="c">cond
+</span>           ) <span class="cd">; </span><span class="c">not &lt;! &lt;?
+</span>          ((<span class="k">and</span> (eq char ?\!) (eq (aref tname 1) ?\-))
+           (<span class="k">setq</span> close-expr <span class="s">"--&gt;"</span>
+                 props '(tag-type comment)))
+          ((string= tname <span class="s">"?xml"</span>)
+           (<span class="k">setq</span> <span class="cd">;;</span><span class="c">regexp web-mode-tag-regexp2
+</span>            close-expr <span class="s">"?&gt;"</span>
+            props '(tag-type declaration)))
+          ((string= tname <span class="s">"![cdata["</span>)
+           (<span class="k">setq</span> close-expr <span class="s">"]]&gt;"</span>
+                 props '(tag-type cdata)))
+          ((string= tname <span class="s">"!doctype"</span>)
+           (<span class="k">setq</span> <span class="cd">;;</span><span class="c">regexp web-mode-tag-regexp2
+</span>            props '(tag-type doctype)))
+          ) <span class="cd">;</span><span class="c">cond - special tags
+</span>
+        (<span class="k">cond</span>
+
+          (tend
+           )
+
+          ((<span class="k">and</span> (null close-expr) (eq (char-after) ?\&gt;))
+           (<span class="k">setq</span> flags (logior flags 16)
+                 tend (1+ (point)))
+           <span class="cd">;;</span><span class="c">(message "end=%S" tend)
+</span>           )
+
+          ((<span class="k">and</span> (null close-expr)
+                (looking-at <span class="s">"[ ]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">class</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">id</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">href</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">style</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">=\"[[:alnum:]_=:/?;#. -]*\"&gt;"</span>))
+           (<span class="k">let</span> ((beg (1+ (point)))
+                 (end (+ (point) (length (match-string-no-properties 0)))))
+             (<span class="k">setq</span> flags (logior flags 17)
+                   tend end)
+             (put-text-property beg (1+ beg) 'tag-attr-beg 0)
+             (put-text-property beg (1- end) 'tag-attr t)
+             (put-text-property (- end 2) (1- end) 'tag-attr-end (length (match-string-no-properties 1)))
+             ) <span class="cd">;</span><span class="c">let
+</span>           )
+
+          ((null close-expr)
+           (<span class="k">setq</span> flags (logior flags (web-mode-attr-skip reg-end)))
+           (<span class="k">when</span> (&gt; (logand flags 8) 0)
+             (<span class="k">setq</span> props (plist-put props 'tag-type 'void)))
+           (<span class="k">setq</span> tend (point)))
+
+          ((web-mode-dom-sf close-expr limit t)
+           (<span class="k">setq</span> tend (point)))
+
+          (t
+           (<span class="k">setq</span> tend (line-end-position)))
+
+          ) <span class="cd">;</span><span class="c">cond
+</span>
+        (<span class="k">cond</span>
+          ((string= tname <span class="s">"style"</span>)
+           (<span class="k">let</span> (style)
+             (<span class="k">setq</span> style (buffer-substring-no-properties tbeg tend)
+                   part-close-tag <span class="s">"&lt;/style&gt;"</span>)
+             (<span class="k">cond</span>
+               ((string-match-p <span class="s">" lang[ ]*=[ ]*[\"']stylus"</span> style)
+                (<span class="k">setq</span> element-content-type <span class="s">"stylus"</span>))
+               ((string-match-p <span class="s">" lang[ ]*=[ ]*[\"']sass"</span> style)
+                (<span class="k">setq</span> element-content-type <span class="s">"sass"</span>))
+               (t
+                (<span class="k">setq</span> element-content-type <span class="s">"css"</span>))
+               ) <span class="cd">;</span><span class="c">cond
+</span>             ) <span class="cd">;</span><span class="c">let
+</span>           ) <span class="cd">;</span><span class="c">style
+</span>          ((string= tname <span class="s">"script"</span>)
+           (<span class="k">let</span> (script)
+             (<span class="k">setq</span> script (buffer-substring-no-properties tbeg tend)
+                   part-close-tag <span class="s">"&lt;/script&gt;"</span>)
+             (<span class="k">cond</span>
+               ((string-match-p <span class="s">" type[ ]*=[ ]*[\"']text/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">jsx</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">babel</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> script)
+                (<span class="k">setq</span> element-content-type <span class="s">"jsx"</span>))
+               ((string-match-p <span class="s">" type[ ]*=[ ]*[\"']text/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">markdown</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">template</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> script)
+                (<span class="k">setq</span> element-content-type <span class="s">"markdown"</span>))
+               ((string-match-p <span class="s">" type[ ]*=[ ]*[\"']text/ruby"</span> script)
+                (<span class="k">setq</span> element-content-type <span class="s">"ruby"</span>))
+               ((seq-some (<span class="k">lambda</span> (x)
+                            (string-match-p (concat <span class="s">"type[ ]*=[ ]*[\"']"</span> x) script))
+                          web-mode-script-template-types)
+                (<span class="k">setq</span> element-content-type <span class="s">"html"</span>
+                      part-close-tag nil))
+               ((string-match-p <span class="s">" type[ ]*=[ ]*[\"']application/</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">ld\\+json</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">json</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> script)
+                (<span class="k">setq</span> element-content-type <span class="s">"json"</span>))
+               ((string-match-p <span class="s">" lang[ ]*=[ ]*[\"']</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">typescript</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">ts</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> script)
+                (<span class="k">setq</span> element-content-type <span class="s">"typescript"</span>))
+               (t
+                (<span class="k">setq</span> element-content-type <span class="s">"javascript"</span>))
+               ) <span class="cd">;</span><span class="c">cond
+</span>             ) <span class="cd">;</span><span class="c">let
+</span>           ) <span class="cd">;</span><span class="c">script
+</span>          ((string= tname <span class="s">"i18n"</span>)
+           (<span class="k">setq</span> element-content-type <span class="s">"javascript"</span>
+                 part-close-tag <span class="s">"&lt;/i18n&gt;"</span>))
+          ((<span class="k">and</span> (string= tname <span class="s">"template"</span>) (string-match-p <span class="s">" lang"</span> (buffer-substring-no-properties tbeg tend)))
+           (<span class="k">let</span> (template)
+             (<span class="k">setq</span> template (buffer-substring-no-properties tbeg tend)
+                   part-close-tag <span class="s">"&lt;/template&gt;"</span>)
+             (<span class="k">cond</span>
+               ((string-match-p <span class="s">" lang[ ]*=[ ]*[\"']pug"</span> template)
+                (<span class="k">setq</span> element-content-type <span class="s">"pug"</span>))
+               (t
+                (<span class="k">setq</span> element-content-type <span class="s">"html"</span>))
+               ) <span class="cd">;</span><span class="c">cond
+</span>             ) <span class="cd">;</span><span class="c">let
+</span>           ) <span class="cd">;</span><span class="c">style
+</span>          ((<span class="k">and</span> (string= web-mode-engine <span class="s">"archibus"</span>)
+                (string= tname <span class="s">"sql"</span>))
+           (<span class="k">setq</span> element-content-type <span class="s">"sql"</span>
+                 part-close-tag <span class="s">"&lt;/sql&gt;"</span>))
+          )
+
+        (add-text-properties tbeg tend props)
+        (put-text-property tbeg (1+ tbeg) 'tag-beg flags)
+        (put-text-property (1- tend) tend 'tag-end t)
+
+        (<span class="k">when</span> (<span class="k">and</span> part-close-tag
+                   (web-mode-dom-sf part-close-tag reg-end t)
+                   (<span class="k">setq</span> part-beg tend)
+                   (<span class="k">setq</span> part-end (match-beginning 0))
+                   (&gt; part-end part-beg))
+          (put-text-property part-beg part-end 'part-side
+                             (intern element-content-type web-mode-obarray))
+          (<span class="k">setq</span> tend part-end)
+          ) <span class="cd">;</span><span class="c">when
+</span>
+        (goto-char tend)
+
+        ) <span class="cd">;</span><span class="c">while
+</span>
+      )))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

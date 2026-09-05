@@ -1,0 +1,73 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: kkp--handle-u-or-tilde-terminators – Emacs Documentation Online</title>
+<meta name="description" content="kkp--handle-u-or-tilde-terminators is a natively compiled function
+defined in kkp.el.
+Handle input sequences ending with ?u or ?~ terminators.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>kkp--handle-u-or-tilde-terminators</code></h1><p><span class="m"><code>kkp--handle-u-or-tilde-terminators</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">kkp.el</span>.
+<h2>Signature</h2>
+<pre><code>(kkp--handle-u-or-tilde-terminators <a href="#:~:text=terminators.-,TERMINATOR"><span class="arg">TERMINATOR</span></a> <a href="#:~:text=the-,TERMINAL-INPUT"><span class="arg">TERMINAL-INPUT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Handle input sequences ending with ?u or ?~ terminators.
+<p><span class="arg">TERMINATOR</span> is the last character in the <span class="arg">TERMINAL-INPUT</span> sequence,
+indicating the end of the sequence. <span class="arg">TERMINAL-INPUT</span> is a list of
+characters representing the terminal input sequence. This function
+contains the specific logic for processing sequences terminated by ?u or
+<br>?~.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/m2b3xmgxg24a6yvrhn2hs2kx62d820n5-emacs-packages-deps/share/emacs/site-lisp/elpa/kkp-20260706.858/kkp.el</span>
+(<span class="k">defun</span> <span class="f">kkp--handle-u-or-tilde-terminators</span> (terminator terminal-input)
+  <span class="doc">"Handle input sequences ending with ?u or ?~ terminators.
+TERMINATOR is the last character in the TERMINAL-INPUT sequence,
+indicating the end of the sequence. TERMINAL-INPUT is a list of
+characters representing the terminal input sequence. This function
+contains the specific logic for processing sequences terminated by ?u or
+?~."</span>
+  (<span class="k">let*</span> ((terminator-alist (<span class="k">pcase</span> terminator
+                             (?u kkp--non-printable-keys-with-u-terminator)
+                             (?~ kkp--non-printable-keys-with-tilde-terminator)))
+         (input-string (mapconcat 'char-to-string (remq terminator terminal-input) <span class="s">""</span>))
+         (input-parts (split-string input-string <span class="s">";"</span>))
+         (keycode-parts (split-string (cl-first input-parts) <span class="s">":"</span>)) <span class="cd">;; </span><span class="c">get keycodes from sequence
+</span>         (primary-keycode (cl-first keycode-parts))
+         (secondary-keycode-str (cl-second keycode-parts))
+         (secondary-keycode (<span class="k">and</span> (stringp secondary-keycode-str)
+                                 (not (string-empty-p secondary-keycode-str))
+                                 secondary-keycode-str))
+         (modifier-parts (split-string (<span class="k">or</span> (cl-second input-parts) <span class="s">""</span>) <span class="s">":"</span>)) <span class="cd">;; </span><span class="c">list of modifiers and event types
+</span>         (modifier-string (cl-first modifier-parts))
+         (modifier-num (<span class="k">if</span> (not (string-empty-p modifier-string))
+                           (1- (string-to-number modifier-string))
+                         0))
+         (has-shift (/= 0 (logand modifier-num (kkp--mod-bits 'shift))))
+         (has-ctrl (/= 0 (logand modifier-num (kkp--mod-bits 'control))))
+         (is-ascii-letter (member (string-to-number primary-keycode) kkp--printable-ascii-letters))
+         <span class="cd">;; </span><span class="c">-------------------------------------------------------------
+</span>         <span class="cd">;; </span><span class="c">Shift-collapse rule:
+</span>         <span class="cd">;;   </span><span class="c">• Shift present
+</span>         <span class="cd">;;   </span><span class="c">• secondary code available
+</span>         <span class="cd">;;   </span><span class="c">• no Control *when key is an ASCII letter*
+</span>         <span class="cd">;; </span><span class="c">-------------------------------------------------------------
+</span>         (use-secondary (<span class="k">and</span> secondary-keycode
+                             has-shift
+                             (<span class="k">or</span> (not is-ascii-letter)
+                                 (not has-ctrl))))
+         (final-key-code (<span class="k">if</span> use-secondary secondary-keycode primary-keycode)))
+
+    <span class="cd">;; </span><span class="c">if we use the secondary keycode, remove shift from modifier number
+</span>    (<span class="k">when</span> use-secondary
+      (<span class="k">setq</span> modifier-num (logand modifier-num (lognot 1))))
+
+    <span class="cd">;; </span><span class="c">create keybinding by concatenating the modifier string with the key-name
+</span>    (<span class="k">let</span>
+        ((modifier-str (kkp--create-modifiers-string modifier-num))
+         (key-name (kkp--get-keycode-representation (string-to-number final-key-code)
+                                                    terminator-alist)))
+      (kbd (concat modifier-str key-name)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

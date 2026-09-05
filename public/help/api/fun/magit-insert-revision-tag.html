@@ -1,0 +1,72 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-insert-revision-tag – Emacs Documentation Online</title>
+<meta name="description" content="magit-insert-revision-tag is a natively compiled function defined in
+magit-diff.el.
+Insert tag message and headers into a revision buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-insert-revision-tag</code></h1><p><span class="m"><code>magit-insert-revision-tag</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-insert-revision-tag)
+</code></pre>
+<h2>Documentation</h2>
+<p>Insert tag message and headers into a revision buffer.
+<p>This function only inserts anything when <a href="../fun/magit-show-commit.html"><code>magit-show-commit</code></a> is
+called with a tag as argument, when that is called with a commit
+or a ref which is not a branch, then it inserts nothing.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-diff.el</span>
+(<span class="k">defun</span> <span class="f">magit-insert-revision-tag</span> ()
+  <span class="doc">"Insert tag message and headers into a revision buffer.
+This function only inserts anything when `</span><span class="m doc">magit-show-commit</span><span class="doc">' is
+called with a tag as argument, when that is called with a commit
+or a ref which is not a branch, then it inserts nothing."</span>
+  (<span class="k">when</span> (magit-annotated-tag-p magit-buffer-revision)
+    (<span class="k">magit-insert-section</span> (taginfo)
+      (<span class="k">let</span> ((beg (point)))
+        <span class="cd">;; </span><span class="c">"git verify-tag -v" would output what we need, but the gpg
+</span>        <span class="cd">;; </span><span class="c">output is send to stderr and we have no control over the
+</span>        <span class="cd">;; </span><span class="c">order in which stdout and stderr are inserted, which would
+</span>        <span class="cd">;; </span><span class="c">make parsing hard.  We are forced to use "git cat-file tag"
+</span>        <span class="cd">;; </span><span class="c">instead, which inserts the signature instead of verifying
+</span>        <span class="cd">;; </span><span class="c">it.  We remove that later and then insert the verification
+</span>        <span class="cd">;; </span><span class="c">output using "git verify-tag" (without the "-v").
+</span>        (magit-git-insert <span class="s">"cat-file"</span> <span class="s">"tag"</span> magit-buffer-revision)
+        (goto-char beg)
+        (forward-line 3)
+        (delete-region beg (point)))
+      (looking-at <span class="s">"^tagger </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s">&lt;]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> &lt;</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s">&gt;]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+      (<span class="k">let</span> ((heading (format <span class="s">"Tagger: %s &lt;%s&gt;"</span>
+                             (match-str 1)
+                             (match-str 2))))
+        (magit-delete-line)
+        (<span class="k">magit-insert-heading</span>
+          (propertize heading 'font-lock-face
+                      'magit-section-secondary-heading)))
+      (forward-line)
+      (<span class="k">magit-insert-section</span>
+          ( message nil nil
+            <span class="bi">:heading-highlight-face</span> 'magit-diff-revision-summary-highlight)
+        (<span class="k">let</span> ((beg (point)))
+          (forward-line)
+          (magit--add-face-text-property
+           beg (point) 'magit-diff-revision-summary))
+        (<span class="k">magit-insert-heading</span>)
+        (<span class="k">if</span> (re-search-forward <span class="s">"-----BEGIN PGP SIGNATURE-----"</span> nil t)
+            (goto-char (match-beginning 0))
+          (goto-char (point-max)))
+        (insert ?\n))
+      (<span class="k">cond</span> ((re-search-forward <span class="s">"-----BEGIN PGP SIGNATURE-----"</span> nil t)
+             (<span class="k">let</span> ((beg (match-beginning 0)))
+               (re-search-forward <span class="s">"-----END PGP SIGNATURE-----\n"</span>)
+               (delete-region beg (point)))
+             (<span class="k">save-excursion</span>
+               (magit-process-git t <span class="s">"verify-tag"</span> magit-buffer-revision))
+             (magit-diff-wash-signature magit-buffer-revision))
+            ((goto-char (point-max))))
+      (insert ?\n))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,70 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-bracket-up – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-bracket-up is a natively compiled function defined in
+web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-bracket-up</code></h1><p><span class="m"><code>web-mode-bracket-up</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-bracket-up <span class="arg">POS</span> <span class="arg">LANGUAGE</span> <span class="ty">&amp;optional</span> <span class="arg">LIMIT</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-bracket-up</span> (pos _language <span class="ty">&amp;optional</span> limit)
+  (<span class="k">unless</span> limit (<span class="k">setq</span> limit nil))
+  <span class="cd">;;</span><span class="c">(message "pos(%S) language(%S) limit(%S)" pos language limit)
+</span>  (<span class="k">save-excursion</span>
+    (goto-char pos)
+    (<span class="k">let</span> ((continue t)
+          (regexp <span class="s">"[</span><span class="w s">\</span><span class="s">]</span><span class="w s">\</span><span class="s">[}{)(]"</span>)
+          (char nil)
+          (column nil)
+          (indentation nil)
+          (map nil)
+          (key nil)
+          (value 0)
+          (open '(?\( ?\{ ?\[))
+          (searcher nil)
+          (opener nil))
+      (<span class="k">cond</span>
+        ((get-text-property pos 'block-side)
+         (<span class="k">setq</span> searcher 'web-mode-block-rsb
+               opener 'web-mode-block-opening-paren-position))
+        (t
+         (<span class="k">setq</span> searcher 'web-mode-part-rsb
+               opener 'web-mode-part-opening-paren-position))
+        )
+      (<span class="k">while</span> (<span class="k">and</span> continue (funcall searcher regexp limit))
+        (<span class="k">setq</span> char (aref (match-string-no-properties 0) 0))
+        (<span class="k">setq</span> key (<span class="k">cond</span> ((eq char ?\)) ?\()
+                        ((eq char ?\}) ?\{)
+                        ((eq char ?\]) ?\[)
+                        (t             char)))
+        (<span class="k">setq</span> value (<span class="k">or</span> (plist-get map key) 0))
+        (<span class="k">setq</span> value (<span class="k">if</span> (member char open) (1+ value) (1- value)))
+        (<span class="k">setq</span> map (plist-put map key value))
+        (<span class="k">setq</span> continue (&lt; value 1))
+        <span class="cd">;;</span><span class="c">(message "pos=%S char=%c key=%c value=%S map=%S" (point) char key value map)
+</span>        ) <span class="cd">;</span><span class="c">while
+</span>      (<span class="k">setq</span> column (current-column)
+            indentation (current-indentation))
+      (<span class="k">when</span> (<span class="k">and</span> (&gt; value 0)
+                 (eq char ?\{)
+                 (looking-back <span class="s">")[ ]*"</span> (point-min)))
+        (search-backward <span class="s">")"</span>)
+        (<span class="k">when</span> (<span class="k">setq</span> pos (funcall opener (point) limit))
+          (goto-char pos)
+          <span class="cd">;;</span><span class="c">(message "pos=%S" pos)
+</span>          (<span class="k">setq</span> indentation (current-indentation)))
+        ) <span class="cd">;</span><span class="c">when
+</span>      (list <span class="bi">:pos</span> (<span class="k">if</span> (&gt; value 0) (point) nil)
+            <span class="bi">:char</span> char
+            <span class="bi">:column</span> column
+            <span class="bi">:indentation</span> indentation)
+      ) <span class="cd">;</span><span class="c">let
+</span>    ))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

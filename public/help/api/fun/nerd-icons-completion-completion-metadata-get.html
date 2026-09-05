@@ -1,0 +1,68 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: nerd-icons-completion-completion-metadata-get – Emacs Documentation Online</title>
+<meta name="description" content="nerd-icons-completion-completion-metadata-get is a natively compiled
+function defined in nerd-icons-completion.el.
+Meant as :around advice for completion-metadata-get, Add icons as prefix.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>nerd-icons-completion-completion-metadata-get</code></h1><p><span class="m"><code>nerd-icons-completion-completion-metadata-get</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">nerd-icons-completion.el</span>.
+<h2>Signature</h2>
+<pre><code>(nerd-icons-completion-completion-metadata-get <a href="#:~:text=prefix.-,ORIG"><span class="arg">ORIG</span></a> <a href="#:~:text=get-,METADATA"><span class="arg">METADATA</span></a> <a href="#:~:text=metadata.-,PROP"><span class="arg">PROP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Meant as :around advice for <a href="../fun/completion-metadata-get.html"><code>completion-metadata-get</code></a>, Add icons as prefix.
+<p><span class="arg">ORIG</span> should be <a href="../fun/completion-metadata-get.html"><code>completion-metadata-get</code></a>
+<span class="arg">METADATA</span> is the metadata.
+<span class="arg">PROP</span> is the property which is looked up.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lqs1zpx0hj9i8ylfwhmxn80m4hp3sfkx-emacs-packages-deps/share/emacs/site-lisp/elpa/nerd-icons-completion-20260412.243/nerd-icons-completion.el</span>
+(<span class="k">defun</span> <span class="f">nerd-icons-completion-completion-metadata-get</span> (orig metadata prop)
+  <span class="doc">"Meant as :around advice for `</span><span class="m doc">completion-metadata-get</span><span class="doc">', Add icons as prefix.
+ORIG should be `</span><span class="m doc">completion-metadata-get</span><span class="doc">'
+METADATA is the metadata.
+PROP is the property which is looked up."</span>
+  (<span class="k">if</span> (eq prop 'affixation-function)
+      (<span class="k">let</span> ((cat (funcall orig metadata 'category))
+            (aff (<span class="k">or</span> (funcall orig metadata 'affixation-function)
+                     (<span class="k">when-let*</span> ((ann (funcall orig metadata 'annotation-function)))
+                       (<span class="k">lambda</span> (cands)
+                         (mapcar (<span class="k">lambda</span> (x) (list x <span class="s">""</span> (<span class="k">or</span> (funcall ann x) <span class="s">""</span>))) cands))))))
+        (<span class="k">cond</span>
+         ((<span class="k">and</span> (eq cat 'multi-category) aff)
+          (<span class="k">lambda</span> (cands)
+            (mapcar (<span class="k">lambda</span> (x)
+                      (<span class="k">pcase-exhaustive</span> x
+                        (`(,cand ,prefix ,suffix)
+                         (<span class="k">let</span> ((orig (get-text-property 0 'multi-category cand)))
+                           (list cand
+                                 (concat (nerd-icons-completion-get-icon (cdr orig) (car orig))
+                                         prefix)
+                                 suffix)))))
+                    (funcall aff cands))))
+         (aff
+          (<span class="k">lambda</span> (cands)
+            (mapcar (<span class="k">lambda</span> (x)
+                      (<span class="k">pcase-exhaustive</span> x
+                        (`(,cand ,prefix ,suffix)
+                         (list cand
+                               (concat (nerd-icons-completion-get-icon cand cat)
+                                       prefix)
+                               suffix))))
+                    (funcall aff cands))))
+         ((eq cat 'multi-category)
+          (<span class="k">lambda</span> (cands)
+            (mapcar (<span class="k">lambda</span> (x)
+                      (<span class="k">let</span> ((orig (get-text-property 0 'multi-category x)))
+                        (list x (nerd-icons-completion-get-icon (cdr orig) (car orig)) <span class="s">""</span>)))
+                    cands)))
+         (t
+          (<span class="k">lambda</span> (cands)
+            (mapcar (<span class="k">lambda</span> (x)
+                      (list x (nerd-icons-completion-get-icon x cat) <span class="s">""</span>))
+                    cands)))))
+    (funcall orig metadata prop)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

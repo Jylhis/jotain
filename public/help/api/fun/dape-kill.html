@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape-kill – Emacs Documentation Online</title>
+<meta name="description" content="dape-kill is an interactive and natively compiled function defined in
+dape.el.
+Kill debug session.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape-kill</code></h1><p><span class="m"><code>dape-kill</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape-kill <a href="#:~:text=DIS-,CONN"><span class="arg">CONN</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=session.-,CB"><span class="arg">CB</span></a> <a href="#:~:text=With-,WITH-DISCONNECT"><span class="arg">WITH-DISCONNECT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Kill debug session.
+<p><span class="arg">CB</span> will be called after adapter termination.  With <span class="arg">WITH-DISCONNECT</span> use
+disconnect instead of terminate used internally as a fallback to
+terminate.  <span class="arg">CONN</span> is inferred for interactive invocations.
+<h2>Key Bindings</h2>
+<p><span class="v">ctl-x-map</span> <span class="key">C-a K</span>
+<span class="v">dape-global-map</span> <span class="key">K</span>
+<span class="v">global-map</span> <span class="key">C-x C-a K</span>
+<span class="v">help-quick-use-map</span> <span class="key">C-x C-a K</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+(<span class="k">defun</span> <span class="f">dape-kill</span> (conn <span class="ty">&amp;optional</span> cb with-disconnect)
+  <span class="doc">"Kill debug session.
+CB will be called after adapter termination.  With WITH-DISCONNECT use
+disconnect instead of terminate used internally as a fallback to
+terminate.  CONN is inferred for interactive invocations."</span>
+  (<span class="k">interactive</span> (list (dape--live-connection 'parent)))
+  (<span class="k">cond</span>
+   ((<span class="k">and</span> conn (jsonrpc-running-p conn)
+         (not with-disconnect)
+         (dape--capable-p conn <span class="bi">:supportsTerminateRequest</span>))
+    (<span class="k">dape--with-request-bind</span> (_body error)
+        (dape-request conn <span class="bi">:terminate</span> nil)
+      <span class="cd">;; </span><span class="c">We have to give up trying to kill the debuggee in an correct
+</span>      <span class="cd">;; </span><span class="c">way if the request timeout, otherwise we might force the
+</span>      <span class="cd">;; </span><span class="c">user to kill the process in some other way.
+</span>      (<span class="k">if</span> (<span class="k">and</span> error (not (eq error dape--timeout-error)))
+          (dape-kill conn cb 'with-disconnect)
+        (dape--shutdown conn)
+        (dape--request-continue cb))))
+   ((<span class="k">and</span> conn (jsonrpc-running-p conn))
+    (<span class="k">dape--with-request</span>
+        (dape-request conn <span class="bi">:disconnect</span>
+                      `( <span class="bi">:restart</span> <span class="bi">:json-false</span>
+                         ,@(<span class="k">when</span> (dape--capable-p conn <span class="bi">:supportTerminateDebuggee</span>)
+                             '(<span class="bi">:terminateDebuggee</span> t))))
+      (dape--shutdown conn)
+      (dape--request-continue cb)))
+   (t
+    (dape--request-continue cb))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

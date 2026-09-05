@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit--branch-spinoff – Emacs Documentation Online</title>
+<meta name="description" content="magit--branch-spinoff is a natively compiled function defined in
+magit-branch.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit--branch-spinoff</code></h1><p><span class="m"><code>magit--branch-spinoff</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-branch.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit--branch-spinoff <span class="arg">BRANCH</span> <span class="arg">FROM</span> <span class="arg">CHECKOUT</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-branch.el</span>
+(<span class="k">defun</span> <span class="f">magit--branch-spinoff</span> (branch from checkout)
+  (<span class="k">when</span> (magit-branch-p branch)
+    (<span class="w">user-error</span> <span class="s">"Cannot spin off %s.  It already exists"</span> branch))
+  (<span class="k">when</span> (<span class="k">and</span> (not checkout)
+             (magit-anything-modified-p))
+    (message <span class="s">"Staying on HEAD due to uncommitted changes"</span>)
+    (<span class="k">setq</span> checkout t))
+  (<span class="k">cond-let</span>
+    ([current (magit-get-current-branch)]
+     (<span class="k">let</span> ((tracked (magit-get-upstream-branch current))
+           base)
+       (<span class="k">when</span> from
+         (<span class="k">unless</span> (magit-rev-ancestor-p from current)
+           (<span class="w">user-error</span> <span class="s">"Cannot spin off %s.  %s is not reachable from %s"</span>
+                       branch from current))
+         (<span class="k">when</span> (<span class="k">and</span> tracked
+                    (magit-rev-ancestor-p from tracked))
+           (<span class="w">user-error</span> <span class="s">"Cannot spin off %s.  %s is ancestor of upstream %s"</span>
+                       branch from tracked)))
+       (<span class="k">let</span> ((magit-process-raise-error t))
+         (<span class="k">if</span> checkout
+             (magit-call-git <span class="s">"checkout"</span> <span class="s">"-b"</span> branch current)
+           (magit-call-git <span class="s">"branch"</span> branch current)))
+       (when$ (magit-get-indirect-upstream-branch current)
+         (magit-call-git <span class="s">"branch"</span> <span class="s">"--set-upstream-to"</span> $ branch))
+       (<span class="k">when</span> (<span class="k">and</span> tracked
+                  (<span class="k">setq</span> base
+                        (<span class="k">if</span> from
+                            (concat from <span class="s">"^"</span>)
+                          (magit-merge-base current tracked)))
+                  (not (magit-rev-eq base current)))
+         (<span class="k">if</span> checkout
+             (magit-call-git <span class="s">"update-ref"</span> <span class="s">"-m"</span>
+                             (format <span class="s">"reset: moving to %s"</span> base)
+                             (concat <span class="s">"refs/heads/"</span> current) base)
+           (magit-call-git <span class="s">"reset"</span> <span class="s">"--hard"</span> base)))))
+    (checkout
+     (magit-call-git <span class="s">"checkout"</span> <span class="s">"-b"</span> branch))
+    ((magit-call-git <span class="s">"branch"</span> branch)))
+  (magit-refresh))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

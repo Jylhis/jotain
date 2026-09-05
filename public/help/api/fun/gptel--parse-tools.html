@@ -1,0 +1,77 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--parse-tools – Emacs Documentation Online</title>
+<meta name="description" content="gptel--parse-tools is a byte-compiled function defined in
+gptel-request.el.
+Parse TOOLS and return a list of prompts.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--parse-tools</code></h1><p><span class="m"><code>gptel--parse-tools</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--parse-tools <a href="#:~:text=br&gt;_-,BACKEND"><span class="arg">BACKEND</span></a> <a href="#:~:text=Parse-,TOOLS"><span class="arg">TOOLS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Parse <span class="arg">TOOLS</span> and return a list of prompts.
+<p><span class="arg">TOOLS</span> is a list of <span class="m"><code>gptel-tool</code></span> structs, which see.
+<p>_<span class="arg">BACKEND</span> is the LLM backend in use.  This is the default
+<br>implementation, used by OpenAI-compatible APIs and Ollama.
+<h2>Implementations</h2>
+<p>(gptel--parse-tools BACKEND TOOLS) in `<span class="bt">gptel-request.el</span>'.
+<p>Undocumented
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+(<span class="k">cl-defgeneric</span> <span class="f">gptel--parse-tools</span> (_backend tools)
+  <span class="doc">"Parse TOOLS and return a list of prompts.
+
+TOOLS is a list of `</span><span class="m doc">gptel-tool</span><span class="doc">' structs, which see.
+
+_BACKEND is the LLM backend in use.  This is the default
+implementation, used by OpenAI-compatible APIs and Ollama."</span>
+  (vconcat
+   (mapcar
+    (<span class="k">lambda</span> (tool)
+      (list
+       <span class="bi">:type</span> <span class="s">"function"</span>
+       <span class="bi">:function</span>
+       (append
+        (list
+         <span class="bi">:name</span> (gptel-tool-name tool)
+         <span class="bi">:description</span> (gptel-tool-description tool))
+        (<span class="k">if</span> (gptel-tool-args tool)
+            (list
+             <span class="bi">:parameters</span>
+             (list <span class="bi">:type</span> <span class="s">"object"</span>
+                   <span class="cd">;; </span><span class="c">gptel's tool args spec is close to the JSON schema, except
+</span>                   <span class="cd">;; </span><span class="c">that we use (:name "argname" ...)
+</span>                   <span class="cd">;; </span><span class="c">instead of  (:argname (...)), and
+</span>                   <span class="cd">;; </span><span class="c">(:optional t) for each arg instead of (:required [...])
+</span>                   <span class="cd">;; </span><span class="c">for all args at once.  Handle this difference by
+</span>                   <span class="cd">;; </span><span class="c">modifying a copy of the gptel tool arg spec.
+</span>                   <span class="bi">:properties</span>
+                   (<span class="k">cl-loop</span>
+                    for arg in (gptel-tool-args tool)
+                    for argspec = (copy-sequence arg)
+                    for name = (plist-get arg <span class="bi">:name</span>) <span class="cd">;</span><span class="c">handled differently
+</span>                    for newname = (<span class="k">or</span> (<span class="k">and</span> (keywordp name) name)
+                                      (make-symbol (concat <span class="s">":"</span> name)))
+                    do                <span class="cd">;</span><span class="c">ARGSPEC is ARG without unrecognized keys
+</span>                    (<span class="k">cl-remf</span> argspec <span class="bi">:name</span>)
+                    (<span class="k">cl-remf</span> argspec <span class="bi">:optional</span>)
+                    if (equal (plist-get arg <span class="bi">:type</span>) <span class="s">"object"</span>)
+                    do (<span class="k">unless</span> (plist-member argspec <span class="bi">:required</span>)
+                         (plist-put argspec <span class="bi">:required</span> []))
+                    (plist-put argspec <span class="bi">:additionalProperties</span> <span class="bi">:json-false</span>)
+                    append (list newname argspec))
+                   <span class="bi">:required</span>
+                   (vconcat
+                    (delq nil (mapcar
+                               (<span class="k">lambda</span> (arg) (<span class="k">and</span> (not (plist-get arg <span class="bi">:optional</span>))
+                                             (plist-get arg <span class="bi">:name</span>)))
+                               (gptel-tool-args tool))))
+                   <span class="bi">:additionalProperties</span> <span class="bi">:json-false</span>))
+          (list <span class="bi">:parameters</span> (list <span class="bi">:type</span> <span class="s">"object"</span> <span class="bi">:properties</span> nil))))))
+    (ensure-list tools))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

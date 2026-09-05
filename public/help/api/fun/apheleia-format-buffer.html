@@ -1,0 +1,174 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apheleia-format-buffer – Emacs Documentation Online</title>
+<meta name="description" content="apheleia-format-buffer is an interactive and natively compiled
+function defined in apheleia.el.
+Run code formatter asynchronously on current buffer, preserving point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apheleia-format-buffer</code></h1><p><span class="m"><code>apheleia-format-buffer</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">apheleia.el</span>.
+<h2>Signature</h2>
+<pre><code>(apheleia-format-buffer <a href="#:~:text=point.-,FORMATTER"><span class="arg">FORMATTER</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=changes),-,SUCCESS-CALLBACK"><span class="arg">SUCCESS-CALLBACK</span></a> <span class="ty">&amp;key</span> <a href="#:~:text=SUCCESS--,CALLBACK"><span class="arg">CALLBACK</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run code formatter asynchronously on current buffer, preserving point.
+<p><span class="arg">FORMATTER</span> is a symbol appearing as a key in
+<a href="../var/apheleia-formatters.html"><code>apheleia-formatters</code></a>, or a list of them to run multiple
+formatters in a chain. If called interactively, run the currently
+configured formatters (see <a href="../var/apheleia-formatter.html"><code>apheleia-formatter</code></a> and
+<a href="../var/apheleia-mode-alist.html"><code>apheleia-mode-alist</code></a>), or prompt from <a href="../var/apheleia-formatters.html"><code>apheleia-formatters</code></a> if
+there is none configured for the current buffer. With a prefix
+argument, prompt always.
+<p>After the formatters finish running, the diff utility is invoked to
+determine what changes it made. That diff is then used to apply the
+formatter's changes to the current buffer without moving point or
+changing the scroll position in any window displaying the buffer. If
+the buffer has been modified since the formatter started running,
+however, the operation is aborted.
+<p>If the formatter actually finishes running and the buffer is
+successfully updated (even if the formatter has not made any
+changes), <span class="arg">SUCCESS-CALLBACK</span>, if provided, is invoked with no
+arguments.
+<p>If provided, <span class="arg">CALLBACK</span> is invoked unconditionally (unless there is
+a synchronous nonlocal exit) with a plist. Callback function must
+accept unknown keywords. At present only <span class="bi">:error</span> is included,
+this is either an error or nil.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbykkl13khzh84lv9vw1bf1vijzg30fr-emacs-packages-deps/share/emacs/site-lisp/elpa/apheleia-20260817.2331/apheleia.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">cl-defun</span> <span class="f">apheleia-format-buffer</span>
+    (formatter <span class="ty">&amp;optional</span> success-callback <span class="ty">&amp;key</span> callback)
+  <span class="doc">"Run code formatter asynchronously on current buffer, preserving point.
+
+FORMATTER is a symbol appearing as a key in
+`</span><span class="m doc">apheleia-formatters</span><span class="doc">', or a list of them to run multiple
+formatters in a chain. If called interactively, run the currently
+configured formatters (see `</span><span class="m doc">apheleia-formatter</span><span class="doc">' and
+`</span><span class="m doc">apheleia-mode-alist</span><span class="doc">'), or prompt from `</span><span class="m doc">apheleia-formatters</span><span class="doc">' if
+there is none configured for the current buffer. With a prefix
+argument, prompt always.
+
+After the formatters finish running, the diff utility is invoked to
+determine what changes it made. That diff is then used to apply the
+formatter's changes to the current buffer without moving point or
+changing the scroll position in any window displaying the buffer. If
+the buffer has been modified since the formatter started running,
+however, the operation is aborted.
+
+If the formatter actually finishes running and the buffer is
+successfully updated (even if the formatter has not made any
+changes), SUCCESS-CALLBACK, if provided, is invoked with no
+arguments.
+
+If provided, CALLBACK is invoked unconditionally (unless there is
+a synchronous nonlocal exit) with a plist. Callback function must
+accept unknown keywords. At present only `</span><span class="m doc">:error</span><span class="doc">' is included,
+this is either an error or nil."</span>
+  (<span class="k">interactive</span> (<span class="k">progn</span>
+                 (<span class="k">when-let</span> ((err (apheleia--disallowed-p)))
+                   (<span class="w">user-error</span> err))
+                 (list (apheleia--get-formatters
+                        (<span class="k">if</span> current-prefix-arg
+                            'prompt
+                          'interactive)))))
+  (<span class="k">let</span> ((callback
+         (<span class="k">lambda</span> (err)
+           (<span class="k">unless</span> (listp err)
+             (<span class="k">setq</span> err (cons 'error err)))
+           (<span class="k">unless</span> err
+             (<span class="k">when</span> success-callback
+               (funcall success-callback)))
+           (<span class="k">when</span> callback
+             (funcall callback <span class="bi">:error</span> err)))))
+    (apheleia--log
+     'format-buffer
+     <span class="s">"Invoking apheleia-format-buffer on %S with formatter %S"</span>
+     (current-buffer)
+     formatter)
+    (<span class="k">let</span> ((formatters (apheleia--ensure-list formatter)))
+      <span class="cd">;; </span><span class="c">Check for this error ahead of time so we don't have to deal
+</span>      <span class="cd">;; </span><span class="c">with it anywhere in the internal machinery of Apheleia.
+</span>      (<span class="k">dolist</span> (formatter formatters)
+        (<span class="k">unless</span> (alist-get formatter apheleia-formatters)
+          (<span class="w">user-error</span>
+           <span class="s">"No such formatter defined in `</span><span class="m s">apheleia-formatters</span><span class="s">': %S"</span>
+           formatter)))
+      <span class="cd">;; </span><span class="c">Fail silently if disallowed, since we don't want to throw an
+</span>      <span class="cd">;; </span><span class="c">error on `</span><span class="m c">post-command-hook</span><span class="c">'. We already took care of throwing
+</span>      <span class="cd">;; </span><span class="c">`</span><span class="m c">user-error</span><span class="c">' on interactive usage above.
+</span>      (<span class="k">if-let</span> ((err (apheleia--disallowed-p)))
+          (<span class="k">progn</span>
+            (apheleia--log
+             'format-buffer
+             <span class="s">"Aborting in %S due to apheleia--disallowed-p: %s"</span>
+             (buffer-name (current-buffer))
+             err)
+            (<span class="k">when</span> callback
+              (funcall callback err)))
+        <span class="cd">;; </span><span class="c">It's important to store the saved buffer hash in a lexical
+</span>        <span class="cd">;; </span><span class="c">variable rather than a dynamic (global) one, else multiple
+</span>        <span class="cd">;; </span><span class="c">concurrent invocations of `</span><span class="m c">apheleia-format-buffer</span><span class="c">' can
+</span>        <span class="cd">;; </span><span class="c">overwrite each other, and get the wrong results about whether
+</span>        <span class="cd">;; </span><span class="c">the buffer was actually modified since the formatting
+</span>        <span class="cd">;; </span><span class="c">operation started, leading to data loss.
+</span>        <span class="cd">;;</span><span class="c">
+</span>        <span class="cd">;; </span><span class="c">https://github.com/radian-software/apheleia/issues/226
+</span>        (<span class="k">let</span> ((saved-buffer-hash (apheleia--buffer-hash)))
+          (<span class="k">let</span> ((cur-buffer (current-buffer))
+                (remote (file-remote-p (<span class="k">or</span> buffer-file-name
+                                           default-directory))))
+            (apheleia--run-formatters
+             formatters
+             cur-buffer
+             remote
+             (<span class="k">lambda</span> (err formatted-buffer)
+               (<span class="k">if</span> err
+                   (funcall callback err)
+                 (<span class="k">apheleia--with-on-error</span> callback
+                   (<span class="k">if</span> (not (buffer-live-p cur-buffer))
+                       (<span class="k">progn</span>
+                         (apheleia--log
+                          'format-buffer
+                          <span class="s">"Aborting in %S because buffer has died"</span>
+                          (buffer-name cur-buffer))
+                         (funcall callback <span class="s">"Buffer has died"</span>))
+                     (<span class="k">with-current-buffer</span> cur-buffer
+                       <span class="cd">;; </span><span class="c">Short-circuit.
+</span>                       (<span class="k">if</span> (not (equal
+                                 saved-buffer-hash (apheleia--buffer-hash)))
+                           (<span class="k">progn</span>
+                             (apheleia--log
+                              'format-buffer
+                              <span class="s">"Aborting in %S because contents have changed"</span>
+                              (buffer-name cur-buffer))
+                             (funcall callback <span class="s">"Contents have changed"</span>))
+                         (apheleia--create-rcs-patch
+                          cur-buffer formatted-buffer remote
+                          (<span class="k">lambda</span> (err patch-buffer)
+                            (<span class="k">if</span> err
+                                (funcall callback err)
+                              (<span class="k">apheleia--with-on-error</span> callback
+                                (<span class="k">when</span> (buffer-live-p cur-buffer)
+                                  (<span class="k">with-current-buffer</span> cur-buffer
+                                    (<span class="k">if</span> (not (equal
+                                              saved-buffer-hash
+                                              (apheleia--buffer-hash)))
+                                        (<span class="k">progn</span>
+                                          (apheleia--log
+                                           'format-buffer
+                                           (concat
+                                            <span class="s">"Aborting in %S because "</span>
+                                            <span class="s">"contents have changed"</span>)
+                                           (buffer-name cur-buffer))
+                                          (funcall
+                                           callback <span class="s">"Contents have changed"</span>))
+                                      (apheleia--apply-rcs-patch
+                                       (current-buffer) patch-buffer)
+                                      (funcall
+                                       callback nil)))))))))))))))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

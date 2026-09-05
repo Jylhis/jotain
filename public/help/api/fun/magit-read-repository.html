@@ -1,0 +1,67 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-read-repository – Emacs Documentation Online</title>
+<meta name="description" content="magit-read-repository is a natively compiled function defined in
+magit-repos.el.
+Read a Git repository in the minibuffer, with completion.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-read-repository</code></h1><p><span class="m"><code>magit-read-repository</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-repos.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-read-repository <span class="ty">&amp;optional</span> <a href="#:~:text=If-,READ-DIRECTORY-NAME"><span class="arg">READ-DIRECTORY-NAME</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Read a Git repository in the minibuffer, with completion.
+<p>The completion choices are the basenames of top-levels of
+repositories found in the directories specified by option
+<a href="../var/magit-repository-directories.html"><code>magit-repository-directories</code></a>.  In case of name conflicts
+the basenames are prefixed with the name of the respective
+parent directories.  The returned value is the actual path
+to the selected repository.
+<p>If <span class="arg">READ-DIRECTORY-NAME</span> is non-nil or no repositories can be
+found based on the value of <a href="../var/magit-repository-directories.html"><code>magit-repository-directories</code></a>,
+then read an arbitrary directory using <a href="../fun/read-directory-name.html"><code>read-directory-name</code></a>
+instead.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-repos.el</span>
+<span class="cd">;;; </span><span class="c">Read Repository
+</span>
+(<span class="k">defun</span> <span class="f">magit-read-repository</span> (<span class="ty">&amp;optional</span> read-directory-name)
+  <span class="doc">"Read a Git repository in the minibuffer, with completion.
+
+The completion choices are the basenames of top-levels of
+repositories found in the directories specified by option
+`</span><span class="m doc">magit-repository-directories</span><span class="doc">'.  In case of name conflicts
+the basenames are prefixed with the name of the respective
+parent directories.  The returned value is the actual path
+to the selected repository.
+
+If READ-DIRECTORY-NAME is non-nil or no repositories can be
+found based on the value of `</span><span class="m doc">magit-repository-directories</span><span class="doc">',
+then read an arbitrary directory using `</span><span class="m doc">read-directory-name</span><span class="doc">'
+instead."</span>
+  (<span class="k">if-let</span> ((repos (<span class="k">and</span> (not read-directory-name)
+                       magit-repository-directories
+                       (magit-repos-alist))))
+      (<span class="k">let</span> ((reply (magit-completing-read
+                    <span class="s">"Git repository"</span> repos nil 'any nil nil
+                    (<span class="k">and-let*</span> ((_(derived-mode-p 'dired-mode))
+                               (path (<span class="k">and</span> (fboundp 'dired-get-filename)
+                                          (dired-get-filename nil t)))
+                               (_(magit-git-repo-p path))
+                               (name (file-relative-name path)))
+                      (<span class="k">if</span> (member (cdr (assoc name repos)) (list path nil))
+                          name
+                        path)))))
+        (file-name-as-directory
+         (<span class="k">or</span> (cdr (assoc reply repos))
+             (<span class="k">if</span> (file-directory-p reply)
+                 (expand-file-name reply)
+               (<span class="w">user-error</span> <span class="s">"Not a repository or a directory: %s"</span> reply)))))
+    (file-name-as-directory
+     (read-directory-name <span class="s">"Git repository: "</span>
+                          (<span class="k">or</span> (magit-toplevel) default-directory)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

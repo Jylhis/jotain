@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dirvish--run-with-delay – Emacs Documentation Online</title>
+<meta name="description" content="dirvish--run-with-delay is a natively compiled function defined in
+dirvish.el.
+Run function FUN accroding to ACTION with delay.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dirvish--run-with-delay</code></h1><p><span class="m"><code>dirvish--run-with-delay</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dirvish.el</span>.
+<h2>Signature</h2>
+<pre><code>(dirvish--run-with-delay <a href="#:~:text=to-,ACTION"><span class="arg">ACTION</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=throttle.-,RECORD"><span class="arg">RECORD</span></a> <a href="#:~:text=function-,FUN"><span class="arg">FUN</span></a> <a href="#:~:text=delay.-,DEBOUNCE"><span class="arg">DEBOUNCE</span></a> <a href="#:~:text=debounce.-,THROTTLE"><span class="arg">THROTTLE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Run function <span class="arg">FUN</span> accroding to <span class="arg">ACTION</span> with delay.
+<p><span class="arg">DEBOUNCE</span> defaults to <a href="../var/dirvish-input-debounce.html"><code>dirvish-input-debounce</code></a>.
+<span class="arg">THROTTLE</span> defaults to <a href="../var/dirvish-input-throttle.html"><code>dirvish-input-throttle</code></a>.
+<span class="arg">RECORD</span> defaults to <span class="bi">:default</span> record in <a href="../var/dirvish--timers.html"><code>dirvish--timers</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/a7h73ip6x5m1pxn38j7f0al6n93w904q-emacs-packages-deps/share/emacs/site-lisp/elpa/dirvish-20260725.1520/dirvish.el</span>
+(<span class="k">defun</span> <span class="f">dirvish--run-with-delay</span> (action <span class="ty">&amp;optional</span> record fun debounce throttle)
+  <span class="doc">"Run function FUN accroding to ACTION with delay.
+DEBOUNCE defaults to `</span><span class="m doc">dirvish-input-debounce</span><span class="doc">'.
+THROTTLE defaults to `</span><span class="m doc">dirvish-input-throttle</span><span class="doc">'.
+RECORD defaults to `</span><span class="m doc">:default</span><span class="doc">' record in `</span><span class="m doc">dirvish--timers</span><span class="doc">'."</span>
+  (<span class="k">declare</span> (indent defun))
+  (<span class="k">unless</span> (plist-get dirvish--timers (<span class="k">setq</span> record (<span class="k">or</span> record <span class="bi">:default</span>)))
+    (<span class="k">cl-callf</span> append dirvish--timers
+      `(,record (,(timer-create) ,(float-time) nil))))
+  (<span class="k">setq</span> record (plist-get dirvish--timers record) fun (<span class="k">or</span> fun #'ignore)
+        debounce (<span class="k">or</span> debounce dirvish-input-debounce)
+        throttle (<span class="k">or</span> throttle dirvish-input-throttle))
+  (<span class="k">pcase</span> action
+    ((pred stringp)
+     (<span class="k">unless</span> (equal action (nth 2 record))
+       (cancel-timer (car record))
+       (timer-set-function
+        (car record)
+        (<span class="k">lambda</span> () (<span class="k">setf</span> (nth 1 record) (float-time)) (funcall fun action)))
+       (timer-set-time
+        (car record)
+        (timer-relative-time
+         nil (max debounce (- (+ (nth 1 record) throttle) (float-time)))))
+       (<span class="k">setf</span> (nth 2 record) action)
+       (timer-activate (car record))))
+    ('reset (<span class="k">setf</span> (nth 2 record) <span class="s">""</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,74 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dape--live-connection – Emacs Documentation Online</title>
+<meta name="description" content="dape--live-connection is a natively compiled function defined in
+dape.el.
+Return connection instance of TYPE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dape--live-connection</code></h1><p><span class="m"><code>dape--live-connection</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">dape.el</span>.
+<h2>Signature</h2>
+<pre><code>(dape--live-connection <a href="#:~:text=of-,TYPE"><span class="arg">TYPE</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,NOWARN"><span class="arg">NOWARN</span></a> <a href="#:~:text=If-,REQUIRE-SELECTED"><span class="arg">REQUIRE-SELECTED</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return connection instance of <span class="arg">TYPE</span>.
+<p><span class="arg">TYPE</span> is expected to be one of the following symbols:
+<br>- parent: Parent connection.
+<br>- last: Last created child connection or parent which has an active
+<br>&nbsp;&nbsp;thread.
+<br>- running: Last created child connection or parent which has an active
+<br>&nbsp;&nbsp;thread but no stopped threads.
+<br>- stopped: Last created child connection or parent which has stopped
+<br>&nbsp;&nbsp;threads.
+<p>If <span class="arg">NOWARN</span> is non-nil does not error on no active process.
+If <span class="arg">REQUIRE-SELECTED</span> is non-nil require returned connection to be the
+selected one, this has no effect when <span class="arg">TYPE</span> is parent.
+See <a href="../var/dape--connection-selected.html"><code>dape--connection-selected</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/l2knzmz5nqc323cf0hwsi3pa45p8w61v-emacs-packages-deps/share/emacs/site-lisp/elpa/dape-0.27.1/dape.el</span>
+<span class="cd">;;; </span><span class="c">Connection
+</span>
+(<span class="k">defun</span> <span class="f">dape--live-connection</span> (type <span class="ty">&amp;optional</span> nowarn require-selected)
+  <span class="doc">"Return connection instance of TYPE.
+TYPE is expected to be one of the following symbols:
+- parent: Parent connection.
+- last: Last created child connection or parent which has an active
+  thread.
+- running: Last created child connection or parent which has an active
+  thread but no stopped threads.
+- stopped: Last created child connection or parent which has stopped
+  threads.
+
+If NOWARN is non-nil does not error on no active process.
+If REQUIRE-SELECTED is non-nil require returned connection to be the
+selected one, this has no effect when TYPE is parent.
+See `</span><span class="m doc">dape--connection-selected</span><span class="doc">'."</span>
+  (<span class="k">let*</span> ((connections (dape--live-connections))
+         (selected (cl-find dape--connection-selected connections))
+         (ordered
+          `(,@(<span class="k">when</span> selected
+                (list selected))
+            ,@(<span class="k">unless</span> (<span class="k">and</span> require-selected selected)
+                (reverse connections))))
+         (conn
+          (<span class="k">pcase</span> type
+            ('parent (<span class="k">or</span> (<span class="k">and</span> selected (dape--root-of selected))
+                         (<span class="k">and</span> connections (dape--root-of (car connections)))))
+            ('last (cl-find-if #'dape--thread-id ordered))
+            ('running (cl-find-if (<span class="k">lambda</span> (conn)
+                                    (<span class="k">and</span> (dape--thread-id conn)
+                                         (not (dape--stopped-threads conn))))
+                                  ordered))
+            ('stopped (cl-find-if (<span class="k">lambda</span> (conn)
+                                    (<span class="k">and</span> (dape--stopped-threads conn)))
+                                  ordered)))))
+    (<span class="k">unless</span> (<span class="k">or</span> nowarn conn)
+      (<span class="w">user-error</span> <span class="s">"No %sdebug connection"</span>
+                  <span class="cd">;; </span><span class="c">`</span><span class="m c">parent</span><span class="c">' and `</span><span class="m c">last</span><span class="c">' does not make sense to the user
+</span>                  (<span class="k">if</span> (memq type '(running stopped))
+                      (format <span class="s">"%s "</span> type) <span class="s">""</span>)))
+    conn))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

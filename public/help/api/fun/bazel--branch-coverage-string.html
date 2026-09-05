@@ -1,0 +1,72 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--branch-coverage-string – Emacs Documentation Online</title>
+<meta name="description" content="bazel--branch-coverage-string is a natively compiled function defined
+in bazel.el.
+Return a branch coverage information string for BLOCK-TABLE.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--branch-coverage-string</code></h1><p><span class="m"><code>bazel--branch-coverage-string</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--branch-coverage-string <a href="#:~:text=for-,BLOCK-TABLE"><span class="arg">BLOCK-TABLE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a branch coverage information string for <span class="arg">BLOCK-TABLE</span>.
+<p><span class="arg">BLOCK-TABLE</span> must be a hashtable mapping block indices to
+hashtables mapping branch indices to branch hit counts (or nil,
+for unevaluated blocks).  The returned string is suitable for
+display in the buffer margins.  Return nil if there’s no branch
+coverage data in <span class="arg">BLOCK-TABLE</span>.
+See Info node <a href="/info/elisp/display-margins.html">(elisp) Display Margins</a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--branch-coverage-string</span> (block-table)
+  <span class="doc">"Return a branch coverage information string for BLOCK-TABLE.
+BLOCK-TABLE must be a hashtable mapping block indices to
+hashtables mapping branch indices to branch hit counts (or nil,
+for unevaluated blocks).  The returned string is suitable for
+display in the buffer margins.  Return nil if there’s no branch
+coverage data in BLOCK-TABLE.
+See Info node ‘(elisp) Display Margins’."</span>
+  (<span class="w">cl-check-type</span> block-table hash-table)
+  <span class="cd">;; </span><span class="c">Extract block and branch information into association lists, and sort them
+</span>  <span class="cd">;; </span><span class="c">for stability.
+</span>  (<span class="k">let</span> ((block-list ())
+        (plus (propertize <span class="s">"+"</span> 'face 'bazel-covered-line))
+        (minus (propertize <span class="s">"−"</span> 'face 'bazel-uncovered-line)))
+    (maphash
+     (<span class="k">lambda</span> (block-index branch-table)
+       (<span class="w">cl-check-type</span> block-index natnum)
+       (<span class="w">cl-check-type</span> branch-table hash-table)
+       (<span class="k">let</span> ((branch-list ())
+             (executedp nil))
+         (maphash
+          (<span class="k">lambda</span> (branch-index hits)
+            (<span class="w">cl-check-type</span> branch-index natnum)
+            (<span class="w">cl-check-type</span> hits (<span class="k">or</span> null natnum))
+            (<span class="k">push</span> (cons branch-index hits) branch-list)
+            (<span class="k">when</span> hits (<span class="k">setq</span> executedp t)))
+          branch-table)
+         <span class="cd">;; </span><span class="c">Ignore blocks that weren’t executed at all.
+</span>         (<span class="k">when</span> executedp
+           <span class="cd">;; </span><span class="c">Sort by branch index, then drop the arbitrary branch indices.  We
+</span>           <span class="cd">;; </span><span class="c">display branch coverage similar to the output of ‘</span><span class="m c">geninfo</span><span class="c">’: a plus
+</span>           <span class="cd">;; </span><span class="c">sign for a covered branch, a minus sign for an uncovered branch,
+</span>           <span class="cd">;; </span><span class="c">and a question mark for a branch in a basic block that was never
+</span>           <span class="cd">;; </span><span class="c">executed.  The latter case shouldn’t really happen in practice
+</span>           <span class="cd">;; </span><span class="c">since we drop unexecuted blocks in ‘</span><span class="m c">bazel--parse-coverage</span><span class="c">’.
+</span>           (<span class="k">let</span> ((string (<span class="k">cl-loop</span> for (_ . hits) in (sort branch-list
+                                                          #'car-less-than-car)
+                                  concat (<span class="k">cl-case</span> hits
+                                           ((nil) <span class="s">"?"</span>)
+                                           (0 minus)
+                                           (otherwise plus)))))
+             (<span class="k">push</span> (cons block-index string) block-list)))))
+     block-table)
+    (<span class="k">when</span> block-list
+      <span class="cd">;; </span><span class="c">Sort by block index, then drop the arbitrary block indices.
+</span>      (mapconcat #'cdr (sort block-list #'car-less-than-car) <span class="s">" "</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

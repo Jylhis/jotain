@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--add-history – Emacs Documentation Online</title>
+<meta name="description" content="consult--add-history is a natively compiled function defined in
+consult.el.
+Add ITEMS to the minibuffer future history.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--add-history</code></h1><p><span class="m"><code>consult--add-history</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--add-history <a href="#:~:text=history.-,ASYNC"><span class="arg">ASYNC</span></a> <a href="#:~:text=Add-,ITEMS"><span class="arg">ITEMS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Add <span class="arg">ITEMS</span> to the minibuffer future history.
+<p><span class="arg">ASYNC</span> must be non-nil for async completion functions.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--add-history</span> (async items)
+  <span class="doc">"Add ITEMS to the minibuffer future history.
+ASYNC must be non-nil for async completion functions."</span>
+  (<span class="k">setq</span> items
+        (delete-dups
+         (append
+          <span class="cd">;; </span><span class="c">Defaults are at the beginning of the future history
+</span>          (ensure-list minibuffer-default)
+          <span class="cd">;; </span><span class="c">Custom items
+</span>          (remove <span class="s">""</span> (remq nil (ensure-list items)))
+          <span class="cd">;; </span><span class="c">Add all completions for non-async commands.  For async commands
+</span>          <span class="cd">;; </span><span class="c">this feature is not useful, since if one selects a completion
+</span>          <span class="cd">;; </span><span class="c">candidate, the async search is restarted using that candidate
+</span>          <span class="cd">;; </span><span class="c">string.  This usually does not yield a desired result since the
+</span>          <span class="cd">;; </span><span class="c">async input uses a special format, e.g., `#grep#filter'.
+</span>          (<span class="k">unless</span> async
+            (all-completions <span class="s">""</span> minibuffer-completion-table
+                             minibuffer-completion-predicate)))))
+  <span class="cd">;; </span><span class="c">Prefix all items with the initial input from the async split style.
+</span>  (<span class="k">when</span> (<span class="k">and</span> async (get-text-property (minibuffer-prompt-end) 'consult--split))
+    (<span class="k">let*</span> ((beg (minibuffer-prompt-end))
+           (end (<span class="k">or</span> (text-property-any beg (point-max) 'consult--split nil)
+                    (point-max)))
+           (pre (buffer-substring beg end)))
+      (<span class="k">cl-loop</span> for item in-ref items do
+               (<span class="k">unless</span> (string-prefix-p pre item)
+                 (<span class="k">setf</span> item (concat pre item))))))
+  items)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

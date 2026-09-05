@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit--git-insert – Emacs Documentation Online</title>
+<meta name="description" content="magit--git-insert is a natively compiled function defined in
+magit-git.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit--git-insert</code></h1><p><span class="m"><code>magit--git-insert</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-git.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit--git-insert <span class="arg">RETURN-ERROR</span> <span class="ty">&amp;rest</span> <span class="arg">ARGS</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-git.el</span>
+(<span class="k">defun</span> <span class="f">magit--git-insert</span> (return-error <span class="ty">&amp;rest</span> args)
+  (<span class="k">setq</span> args (flatten-tree args))
+  (<span class="k">if</span> (<span class="k">or</span> return-error magit-git-debug)
+      (<span class="k">let</span> (log)
+        (<span class="k">unwind-protect</span>
+            (<span class="k">let</span> (exit errmsg)
+              (<span class="k">setq</span> log (make-temp-file <span class="s">"magit-stderr"</span>))
+              (delete-file log)
+              (<span class="k">setq</span> exit (magit-process-git (list t log) args))
+              (<span class="k">when</span> (<span class="k">or</span> (&gt; exit 0) (eq magit-git-debug 'include-success))
+                (<span class="k">when</span> (file-exists-p log)
+                  (<span class="k">with-temp-buffer</span>
+                    (insert-file-contents log)
+                    (goto-char (point-max))
+                    (<span class="k">setq</span> errmsg
+                          (<span class="k">cond</span>
+                            ((eq return-error 'full)
+                             (<span class="k">let</span> ((str (buffer-string)))
+                               (<span class="k">and</span> (not (equal str <span class="s">""</span>)) str)))
+                            ((functionp magit-git-debug)
+                             (funcall magit-git-debug (buffer-string)))
+                            ((magit--locate-error-message)))))
+                  (<span class="k">when</span> magit-git-debug
+                    (<span class="k">let</span> ((magit-git-debug nil))
+                      (<span class="k">with-current-buffer</span> (magit-process-buffer t)
+                        (magit-process-finish-section
+                         (magit-process-insert-section
+                          default-directory magit-git-executable
+                          (magit-process-git-arguments args)
+                          exit log 'magit-section-secondary-heading)
+                         exit)))))
+                (<span class="k">cond</span> ((not magit-git-debug))
+                      (errmsg (message <span class="s">"magit--git-insert: %S"</span> errmsg))
+                      ((zerop exit))
+                      ((message <span class="s">"magit--git-insert: %s %s"</span>
+                                <span class="s">"Git returned with exit-code"</span> exit))))
+              (<span class="k">or</span> (<span class="k">and</span> return-error errmsg)
+                  exit))
+          (<span class="k">ignore-errors</span> (delete-file log))))
+    (magit-process-git (list t nil) args)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

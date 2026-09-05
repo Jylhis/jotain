@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-match-italic – Emacs Documentation Online</title>
+<meta name="description" content="markdown-match-italic is a natively compiled function defined in
+markdown-mode.el.
+Match inline italics from the point to LAST.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-match-italic</code></h1><p><span class="m"><code>markdown-match-italic</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-match-italic <a href="#:~:text=to-,LAST"><span class="arg">LAST</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Match inline italics from the point to <span class="arg">LAST</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-match-italic</span> (last)
+  <span class="doc">"Match inline italics from the point to LAST."</span>
+  (<span class="k">let*</span> ((is-gfm (derived-mode-p 'gfm-mode))
+         (regex (<span class="k">if</span> is-gfm
+                    markdown-regex-gfm-italic
+                  markdown-regex-italic)))
+    (<span class="k">let</span> (done
+          retval
+          last-inline-code)
+      (<span class="k">while</span> (not done)
+        (<span class="k">if</span> (<span class="k">and</span> (markdown-match-inline-generic regex last)
+                   (not (markdown--face-p
+                         (match-beginning 1)
+                         '(markdown-html-attr-name-face markdown-html-attr-value-face))))
+            (<span class="k">let</span> ((begin (match-beginning 1))
+                  (end (match-end 1))
+                  (close-end (match-end 4)))
+              (<span class="k">if</span> (<span class="k">or</span> (eql (char-before begin) (char-after begin))
+                      (<span class="k">and</span> last-inline-code
+                           (&gt;= begin (car last-inline-code))
+                           (&lt; begin (cdr last-inline-code)))
+                      (<span class="k">save-match-data</span>
+                        (<span class="k">when</span> (markdown-inline-code-at-pos begin (cdr last-inline-code))
+                          (<span class="k">setq</span> last-inline-code `(,(match-beginning 0) . ,(match-end 0)))))
+
+                      (markdown-inline-code-at-pos-p (1- end))
+                      (markdown-in-comment-p)
+                      (markdown-range-property-any
+                       begin begin 'face '(markdown-url-face
+                                           markdown-plain-url-face
+                                           markdown-markup-face))
+                      (markdown-range-property-any
+                       begin end 'face '(markdown-bold-face
+                                         markdown-list-face
+                                         markdown-hr-face
+                                         markdown-math-face))
+                      (<span class="k">and</span> is-gfm
+                           (<span class="k">or</span> (char-equal (char-after begin) (char-after (1+ begin))) <span class="cd">;; </span><span class="c">check bold case
+</span>                               (not (markdown--gfm-markup-underscore-p begin close-end)))))
+                  (<span class="k">progn</span> (goto-char (min (1+ begin) last))
+                         (<span class="k">unless</span> (&lt; (point) last)
+                           (<span class="k">setq</span>
+                            done t)))
+                (set-match-data (list (match-beginning 1) (match-end 1)
+                                      (match-beginning 2) (match-end 2)
+                                      (match-beginning 3) (match-end 3)
+                                      (match-beginning 4) (match-end 4)))
+                (<span class="k">setq</span> done t
+                      retval t)))
+          (<span class="k">setq</span> done t)))
+      retval)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

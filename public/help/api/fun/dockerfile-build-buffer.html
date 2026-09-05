@@ -1,0 +1,74 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dockerfile-build-buffer – Emacs Documentation Online</title>
+<meta name="description" content="dockerfile-build-buffer is an interactive and natively compiled
+function defined in dockerfile-mode.el.
+Build an image called IMAGE-NAME based upon the buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dockerfile-build-buffer</code></h1><p><span class="m"><code>dockerfile-build-buffer</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">dockerfile-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(dockerfile-build-buffer <a href="#:~:text=called-,IMAGE-NAME"><span class="arg">IMAGE-NAME</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=arg-,NO-CACHE"><span class="arg">NO-CACHE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Build an image called <span class="arg">IMAGE-NAME</span> based upon the buffer.
+<p>If the prefix arg <span class="arg">NO-CACHE</span> is set, don't cache the image.
+<p>The shell command used to build the image is:
+<p>&nbsp;&nbsp;&nbsp;&nbsp;sudo docker build    \
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--no-cache         \
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--force-rm         \
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--pull             \
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--tag <span class="arg">IMAGE-NAME</span>   \
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--build-args args  \
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--progress type    \
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-f filename        \
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;directory
+<h2>Key Bindings</h2>
+<p><span class="v">dockerfile-mode-map</span> <span class="key">C-c C-b</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r1ar6k5jqxvw9mv0g6rq6h6hk8j9zhli-emacs-packages-deps/share/emacs/site-lisp/elpa/dockerfile-mode-20251221.1644/dockerfile-mode.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">dockerfile-build-buffer</span> (image-name <span class="ty">&amp;optional</span> no-cache)
+  <span class="doc">"Build an image called IMAGE-NAME based upon the buffer.
+
+If the prefix arg NO-CACHE is set, don't cache the image.
+
+The shell command used to build the image is:
+
+    sudo docker build    \\
+      --no-cache         \\
+      --force-rm         \\
+      --pull             \\
+      --tag IMAGE-NAME   \\
+      --build-args args  \\
+      --progress type    \\
+      -f filename        \\
+      directory"</span>
+
+  (<span class="k">interactive</span> (list (dockerfile-read-image-name) prefix-arg))
+  (save-buffer)
+    (compilation-start
+        (format
+            <span class="s">"%s%s%s build %s %s %s %s %s --progress %s %s -f %s %s"</span>
+            (<span class="k">if</span> dockerfile-use-buildkit <span class="s">"DOCKER_BUILDKIT=1 "</span> <span class="s">""</span>)
+            (<span class="k">if</span> dockerfile-use-sudo <span class="s">"sudo "</span> <span class="s">""</span>)
+            dockerfile-mode-command
+            (<span class="k">if</span> no-cache <span class="s">"--no-cache"</span> <span class="s">""</span>)
+            (<span class="k">if</span> dockerfile-build-force-rm <span class="s">"--force-rm "</span> <span class="s">""</span>)
+            (<span class="k">if</span> dockerfile-build-pull <span class="s">"--pull "</span> <span class="s">""</span>)
+            (dockerfile-tag-string image-name)
+            (dockerfile-build-arg-string)
+            dockerfile-build-progress
+            (<span class="k">or</span> dockerfile-build-extra-options <span class="s">""</span>)
+            (shell-quote-argument (dockerfile-standard-filename
+				   (<span class="k">or</span> (file-remote-p (buffer-file-name) 'localname)
+				       (buffer-file-name))))
+            (shell-quote-argument (dockerfile-standard-filename
+				   (<span class="k">or</span> (file-remote-p default-directory 'localname)
+				       default-directory))))
+    nil
+    (<span class="k">lambda</span> (_) (format <span class="s">"*docker-build-output: %s *"</span> image-name))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

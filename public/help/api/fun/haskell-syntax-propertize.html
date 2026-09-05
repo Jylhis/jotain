@@ -1,0 +1,141 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-syntax-propertize – Emacs Documentation Online</title>
+<meta name="description" content="haskell-syntax-propertize is a natively compiled function defined in
+haskell-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-syntax-propertize</code></h1><p><span class="m"><code>haskell-syntax-propertize</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">haskell-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-syntax-propertize <span class="arg">BEGIN</span> <span class="arg">END</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-mode.el</span>
+(<span class="k">defun</span> <span class="f">haskell-syntax-propertize</span> (begin end)
+  (<span class="k">save-excursion</span>
+    (<span class="k">when</span> haskell-literate
+      (goto-char begin)
+      <span class="cd">;; </span><span class="c">Algorithm (first matching rule wins):
+</span>      <span class="cd">;; </span><span class="c">- current line is latex code if previous non-empty line was
+</span>      <span class="cd">;;   </span><span class="c">latex code or was \begin{code} and current line is not
+</span>      <span class="cd">;;   </span><span class="c">\end{code}
+</span>      <span class="cd">;; </span><span class="c">- current line is bird code if it starts with &gt;
+</span>      <span class="cd">;; </span><span class="c">- else literate comment
+</span>      (<span class="k">let</span> ((previous-line-latex-code
+             (<span class="k">catch</span> '<span class="m">return</span>
+               (<span class="k">save-excursion</span>
+                 (<span class="k">when</span> (= (forward-line -1) 0)
+                   (<span class="k">while</span> (looking-at-p <span class="s">"^[\t ]*$"</span>)
+                     (<span class="k">unless</span> (= (forward-line -1) 0)
+                       (<span class="k">throw</span> '<span class="m">return</span> nil)))
+                   (<span class="k">or</span>
+                    (<span class="k">and</span>
+                     (not (equal (string-to-syntax <span class="s">"&lt;"</span>) (syntax-after (point))))
+                     (not (looking-at-p <span class="s">"^&gt;"</span>)))
+                    (looking-at-p <span class="s">"^\\\\begin{code}[\t ]*$"</span>)))))))
+        (<span class="k">while</span> (&lt; (point) end)
+          (<span class="k">unless</span> (looking-at-p <span class="s">"^[\t ]*$"</span>)
+            (<span class="k">if</span> previous-line-latex-code
+                (<span class="k">if</span> (looking-at-p <span class="s">"^\\\\end{code}[\t ]*$"</span>)
+                    (<span class="k">progn</span>
+                      (put-text-property (point) (1+ (point)) 'syntax-table (string-to-syntax <span class="s">"&lt;"</span>))
+                      (<span class="k">setq</span> previous-line-latex-code nil))
+                  <span class="cd">;; </span><span class="c">continue latex-code
+</span>                  )
+              (<span class="k">if</span> (looking-at-p <span class="s">"^&gt;"</span>)
+                  <span class="cd">;; </span><span class="c">this is a whitespace
+</span>                  (put-text-property (point) (1+ (point)) 'syntax-table (string-to-syntax <span class="s">"-"</span>))
+                <span class="cd">;; </span><span class="c">this is a literate comment
+</span>                (<span class="k">progn</span>
+                  (put-text-property (point) (1+ (point)) 'syntax-table (string-to-syntax <span class="s">"&lt;"</span>))
+                  (<span class="k">when</span> (looking-at-p <span class="s">"^\\\\begin{code}[\t ]*$"</span>)
+                    (<span class="k">setq</span> previous-line-latex-code t))))))
+          (forward-line 1))))
+
+    (goto-char begin)
+    (<span class="k">let</span> ((ppss (syntax-ppss)))
+      (<span class="k">when</span> (nth 4 ppss)
+        <span class="cd">;; </span><span class="c">go to the end of a comment, there is nothing to see inside
+</span>        <span class="cd">;; </span><span class="c">a comment so we might as well just skip over it
+</span>        <span class="cd">;; </span><span class="c">immediately
+</span>        (<span class="k">setq</span> ppss (parse-partial-sexp (point) (point-max) nil nil ppss
+                                       'syntax-table)))
+      (<span class="k">when</span> (nth 8 ppss)
+        <span class="cd">;; </span><span class="c">go to the beginning of a comment or string
+</span>        (goto-char (nth 8 ppss))
+        (<span class="k">when</span> (equal ?| (nth 3 ppss))
+          <span class="cd">;; </span><span class="c">if this is a quasi quote we need to backtrack even more
+</span>          <span class="cd">;; </span><span class="c">to the opening bracket
+</span>          (skip-chars-backward <span class="s">"^["</span>)
+          (goto-char (1- (point)))))
+
+      (<span class="k">while</span> (&lt; (point) end)
+        (<span class="k">let</span>
+            ((token-kind (haskell-lexeme-looking-at-token)))
+
+          (<span class="k">cond</span>
+           ((equal token-kind 'qsymid)
+            (<span class="k">when</span> (member
+                   (haskell-lexeme-classify-by-first-char (char-after (match-beginning 1)))
+                   '(varsym consym))
+              <span class="cd">;; </span><span class="c">we have to neutralize potential comments here
+</span>              (put-text-property (match-beginning 1) (match-end 1) 'syntax-table (string-to-syntax <span class="s">"."</span>))))
+           ((equal token-kind 'number)
+            (put-text-property (match-beginning 0) (match-end 0) 'syntax-table (string-to-syntax <span class="s">"w"</span>)))
+           ((equal token-kind 'char)
+            (<span class="k">save-excursion</span>
+              (goto-char (match-beginning 2))
+              (<span class="k">let</span> ((limit (match-end 2)))
+                (<span class="k">save-match-data</span>
+                  (<span class="k">while</span> (re-search-forward <span class="s">"\""</span> limit t)
+                    (put-text-property (match-beginning 0) (match-end 0) 'syntax-table (string-to-syntax <span class="s">"."</span>)))))
+              <span class="cd">;; </span><span class="c">Place a generic string delimeter only when an open
+</span>              <span class="cd">;; </span><span class="c">quote is closed by end-of-line Emacs acts strangely
+</span>              <span class="cd">;; </span><span class="c">when a generic delimiter is not closed so in case
+</span>              <span class="cd">;; </span><span class="c">string ends at the end of the buffer we will use
+</span>              <span class="cd">;; </span><span class="c">plain string
+</span>              (<span class="k">if</span> (<span class="k">and</span> (not (match-beginning 3))
+                       (not (equal (match-end 2) (point-max))))
+                  (<span class="k">progn</span>
+                    (put-text-property (match-beginning 1) (match-end 1) 'syntax-table (string-to-syntax <span class="s">"|"</span>))
+                    (put-text-property (match-end 2 ) (1+ (match-end 2)) 'syntax-table (string-to-syntax <span class="s">"|"</span>)))
+                (put-text-property (match-beginning 1) (match-end 1) 'syntax-table (string-to-syntax <span class="s">"\""</span>))
+                (<span class="k">when</span> (not (equal (match-end 2) (point-max)))
+                  (put-text-property (match-end 2 ) (1+ (match-end 2)) 'syntax-table (string-to-syntax <span class="s">"\""</span>))))))
+           ((equal token-kind 'string)
+            (<span class="k">save-excursion</span>
+              (goto-char (match-beginning 2))
+              (<span class="k">let</span> ((limit (match-end 2)))
+                (<span class="k">save-match-data</span>
+                  (<span class="k">while</span> (re-search-forward <span class="s">"\""</span> limit t)
+                    (put-text-property (match-beginning 0) (match-end 0) 'syntax-table (string-to-syntax <span class="s">"."</span>)))))
+              (<span class="k">when</span> (= (- (match-end 1) (match-beginning 1)) 3)
+                (put-text-property (1+ (match-beginning 1)) (match-end 1) 'syntax-table (string-to-syntax <span class="s">"."</span>))
+                (<span class="k">when</span> (match-beginning 3)
+                  (put-text-property (match-beginning 3) (1- (match-end 3)) 'syntax-table (string-to-syntax <span class="s">"."</span>))))
+              <span class="cd">;; </span><span class="c">Place a generic string delimeter only when an open
+</span>              <span class="cd">;; </span><span class="c">quote is closed by end-of-line Emacs acts strangely
+</span>              <span class="cd">;; </span><span class="c">when a generic delimiter is not closed so in case
+</span>              <span class="cd">;; </span><span class="c">string ends at the end of the buffer we will use
+</span>              <span class="cd">;; </span><span class="c">plain string
+</span>              (<span class="k">when</span> (<span class="k">and</span> (not (match-beginning 3))
+                         (not (equal (match-end 2) (point-max))))
+                (put-text-property (match-beginning 1) (match-end 1) 'syntax-table (string-to-syntax <span class="s">"|"</span>))
+                (put-text-property (match-end 2 ) (1+ (match-end 2)) 'syntax-table (string-to-syntax <span class="s">"|"</span>)))))
+           ((equal token-kind 'template-haskell-quasi-quote)
+            (put-text-property (match-beginning 2) (match-end 2) 'syntax-table (string-to-syntax <span class="s">"\""</span>))
+            (<span class="k">when</span> (match-beginning 4)
+              (put-text-property (match-beginning 4) (match-end 4) 'syntax-table (string-to-syntax <span class="s">"\""</span>)))
+            (<span class="k">save-excursion</span>
+              (goto-char (match-beginning 3))
+              (<span class="k">let</span> ((limit (match-end 3)))
+                (<span class="k">save-match-data</span>
+                  (<span class="k">while</span> (re-search-forward <span class="s">"\""</span> limit t)
+                    (put-text-property (match-beginning 0) (match-end 0) 'syntax-table (string-to-syntax <span class="s">"."</span>))))))))
+          (<span class="k">if</span> token-kind
+              (goto-char (match-end 0))
+            (goto-char end)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,82 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--tool-call-shell-command-details – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--tool-call-shell-command-details is a natively compiled
+function defined in eca-chat.el.
+Update tool call UI showing the shell command breakdown details.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--tool-call-shell-command-details</code></h1><p><span class="m"><code>eca-chat--tool-call-shell-command-details</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--tool-call-shell-command-details <a href="#:~:text=details.-,CONTENT"><span class="arg">CONTENT</span></a> <a href="#:~:text=content,-,LABEL"><span class="arg">LABEL</span></a> <a href="#:~:text=optional-,APPROVAL-TEXT"><span class="arg">APPROVAL-TEXT</span></a> <a href="#:~:text=and-,TIME"><span class="arg">TIME</span></a> <a href="#:~:text=Append-,STATUS"><span class="arg">STATUS</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=optional-,PARENT-ID"><span class="arg">PARENT-ID</span></a> <a href="#:~:text=and-,OUTPUT-TEXT"><span class="arg">OUTPUT-TEXT</span></a> APPROVED?)
+</code></pre>
+<h2>Documentation</h2>
+<p>Update tool call UI showing the shell command breakdown details.
+<p><span class="arg">CONTENT</span> is the tool call content, <span class="arg">LABEL</span> is the label.
+The raw command is always shown verbatim; the derived per-command
+breakdown lines are added only when they help: chained commands or
+always-asks annotations while pending approval.
+Can include optional <span class="arg">APPROVAL-TEXT</span> and <span class="arg">TIME</span>.
+Append <span class="arg">STATUS</span> and optional <span class="arg">PARENT-ID</span> and <span class="arg">OUTPUT-TEXT</span>.
+APPROVED? is non-nil when the tool call is already approved (trusted,
+auto-allowed or manually approved), coloring commands accordingly.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/53rcj4vx02sm8hj89vj9g7rhbbilbzvy-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260828.1422/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--tool-call-shell-command-details</span> (content label approval-text time status <span class="ty">&amp;optional</span> parent-id output-text approved?)
+  <span class="doc">"Update tool call UI showing the shell command breakdown details.
+CONTENT is the tool call content, LABEL is the label.
+The raw command is always shown verbatim; the derived per-command
+breakdown lines are added only when they help: chained commands or
+always-asks annotations while pending approval.
+Can include optional APPROVAL-TEXT and TIME.
+Append STATUS and optional PARENT-ID and OUTPUT-TEXT.
+APPROVED? is non-nil when the tool call is already approved (trusted,
+auto-allowed or manually approved), coloring commands accordingly."</span>
+  (<span class="k">-let*</span> (((<span class="ty">&amp;plist</span> <span class="bi">:arguments</span> args <span class="bi">:details</span> details <span class="bi">:id</span> id) content)
+          (commands (plist-get details <span class="bi">:commands</span>))
+          (raw-command (<span class="k">or</span> (plist-get args <span class="bi">:command</span>) <span class="s">""</span>))
+          (work-dir (plist-get args <span class="bi">:working_directory</span>))
+          (background (plist-get args <span class="bi">:background</span>))
+          (annotate? (<span class="k">and</span> approval-text t))
+          (show-breakdown? (<span class="k">or</span> (&gt; (length commands) 1)
+                               (<span class="k">and</span> annotate?
+                                    (seq-some (<span class="k">lambda</span> (cmd) (not (plist-get cmd <span class="bi">:approvalKey</span>)))
+                                              commands))))
+          (raw-face (<span class="k">if</span> (= 1 (length commands))
+                        <span class="cd">;; </span><span class="c">Single command: the raw line is the command itself,
+</span>                        <span class="cd">;; </span><span class="c">so it carries the approval-state color directly.
+</span>                        (eca-chat--shell-command-state-face (elt commands 0) approved?)
+                      'eca-chat--tool-call-argument-value-face))
+          (body (concat (propertize <span class="s">"$ "</span> 'font-lock-face 'eca-chat-shell-command-breakdown-prefix-face)
+                        (propertize raw-command
+                                    'font-lock-face raw-face
+                                    'eca-no-fontify t)
+                        (<span class="k">when</span> show-breakdown?
+                          (concat <span class="s">"\n\n"</span>
+                                  (mapconcat #'identity
+                                             (seq-map-indexed
+                                              (<span class="k">lambda</span> (cmd idx)
+                                                (eca-chat--shell-command-breakdown-line
+                                                 cmd (<span class="k">if</span> (zerop idx) <span class="s">"$ "</span> <span class="s">"↳ "</span>) annotate? approved?))
+                                              commands)
+                                             <span class="s">"\n"</span>)))
+                        (<span class="k">when</span> (<span class="k">and</span> work-dir (not (string-empty-p work-dir)))
+                          (concat <span class="s">"\n"</span> (propertize (concat <span class="s">"in "</span> work-dir)
+                                                   'font-lock-face 'eca-chat--tool-call-table-key-face)))
+                        (<span class="k">when</span> background
+                          (concat <span class="s">"\n"</span> (propertize (format <span class="s">"background: %s"</span> background)
+                                                   'font-lock-face 'eca-chat--tool-call-table-key-face)))
+                        (<span class="k">when</span> (<span class="k">and</span> output-text (not (string-empty-p output-text)))
+                          (concat <span class="s">"\n"</span> (eca-chat--content-table `((<span class="s">"Output"</span> . ,output-text))))))))
+    (eca-chat--update-expandable-content
+     id
+     (concat (propertize label 'font-lock-face 'eca-chat-mcp-tool-call-label-face)
+             <span class="s">" "</span> status time
+             approval-text)
+     body
+     nil
+     parent-id)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

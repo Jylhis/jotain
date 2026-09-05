@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: git-commit-prev-message – Emacs Documentation Online</title>
+<meta name="description" content="git-commit-prev-message is an interactive and natively compiled
+function defined in git-commit.el.
+Cycle backward through message history, after saving current message.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>git-commit-prev-message</code></h1><p><span class="m"><code>git-commit-prev-message</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">git-commit.el</span>.
+<h2>Signature</h2>
+<pre><code>(git-commit-prev-message <a href="#:~:text=prefix-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Cycle backward through message history, after saving current message.
+<p>With a numeric prefix <span class="arg">ARG</span>, go back <span class="arg">ARG</span> messages.
+<h2>Key Bindings</h2>
+<p><span class="v">git-commit-mode-map</span> <span class="key">M-p</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/git-commit.el</span>
+<span class="cd">;;; </span><span class="c">History
+</span>
+(<span class="k">defun</span> <span class="f">git-commit-prev-message</span> (arg)
+  <span class="doc">"Cycle backward through message history, after saving current message.
+With a numeric prefix ARG, go back ARG messages."</span>
+  (<span class="k">interactive</span> <span class="s">"*p"</span>)
+  (<span class="k">let</span> ((len (ring-length log-edit-comment-ring)))
+    (<span class="k">if</span> (&lt;= len 0)
+        (<span class="k">progn</span> (message <span class="s">"Empty comment ring"</span>) (ding))
+      <span class="cd">;; </span><span class="c">Unlike `</span><span class="m c">log-edit-previous-comment</span><span class="c">' we save the current
+</span>      <span class="cd">;; </span><span class="c">non-empty and newly written comment, because otherwise
+</span>      <span class="cd">;; </span><span class="c">it would be irreversibly lost.
+</span>      (<span class="k">when-let*</span> ((message (git-commit-buffer-message))
+                  (_(not (ring-member log-edit-comment-ring message))))
+        (ring-insert log-edit-comment-ring message)
+        (<span class="k">incf</span> arg)
+        (<span class="k">setq</span> len (ring-length log-edit-comment-ring)))
+      <span class="cd">;; </span><span class="c">Delete the message but not the instructions at the end.
+</span>      (<span class="k">save-restriction</span>
+        (goto-char (point-min))
+        (narrow-to-region
+         (point)
+         (<span class="k">if</span> (re-search-forward (concat <span class="s">"^"</span> comment-start) nil t)
+             (max 1 (- (point) 2))
+           (point-max)))
+        (delete-region (point-min) (point)))
+      (<span class="k">setq</span> log-edit-comment-ring-index (log-edit-new-comment-index arg len))
+      (message <span class="s">"Comment %d"</span> (1+ log-edit-comment-ring-index))
+      (insert (ring-ref log-edit-comment-ring log-edit-comment-ring-index)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

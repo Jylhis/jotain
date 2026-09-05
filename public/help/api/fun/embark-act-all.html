@@ -1,0 +1,114 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: embark-act-all – Emacs Documentation Online</title>
+<meta name="description" content="embark-act-all is an interactive and natively compiled function
+defined in embark.el.
+Prompt the user for an action and perform it on each candidate.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>embark-act-all</code></h1><p><span class="m"><code>embark-act-all</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">embark.el</span>.
+<h2>Signature</h2>
+<pre><code>(embark-act-all <span class="ty">&amp;optional</span> <a href="#:~:text=nil-,ARG"><span class="arg">ARG</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Prompt the user for an action and perform it on each candidate.
+<p>The candidates are chosen by <a href="../var/embark-candidate-collectors.html"><code>embark-candidate-collectors</code></a>.  By
+default, if <a href="../fun/embark-select.html"><code>embark-select</code></a> has been used to select some
+candidates, then <a href="../fun/embark-act-all.html"><code>embark-act-all</code></a> will act on those candidates;
+otherwise, if the selection is empty and <a href="../fun/embark-act-all.html"><code>embark-act-all</code></a> is
+called from a minibuffer, then the candidates are the completion
+candidates.
+<p>This command uses <a href="../var/embark-prompter.html"><code>embark-prompter</code></a> to ask the user to specify an
+action, and calls it injecting the target at the first minibuffer
+prompt.
+<p>If you call this from the minibuffer, it can optionally quit the
+minibuffer.  The variable <a href="../var/embark-quit-after-action.html"><code>embark-quit-after-action</code></a> controls
+whether calling <a href="../fun/embark-act.html"><code>embark-act</code></a> with nil <span class="arg">ARG</span> quits the minibuffer,
+and if <span class="arg">ARG</span> is non-nil it will do the opposite.  Interactively,
+<span class="arg">ARG</span> is the prefix argument.
+<h2>Key Bindings</h2>
+<p><span class="v">embark-collect-mode-map</span> <span class="key">A</span>
+<span class="v">embark-general-map</span> <span class="key">A</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/fs4fhphi5ajjmvzx1rm550ibr8slmvxd-emacs-packages-deps/share/emacs/site-lisp/elpa/embark-20260610.302/embark.el</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">embark-act-all</span> (<span class="ty">&amp;optional</span> arg)
+  <span class="doc">"Prompt the user for an action and perform it on each candidate.
+The candidates are chosen by `</span><span class="m doc">embark-candidate-collectors</span><span class="doc">'.  By
+default, if `</span><span class="m doc">embark-select</span><span class="doc">' has been used to select some
+candidates, then `</span><span class="m doc">embark-act-all</span><span class="doc">' will act on those candidates;
+otherwise, if the selection is empty and `</span><span class="m doc">embark-act-all</span><span class="doc">' is
+called from a minibuffer, then the candidates are the completion
+candidates.
+
+This command uses `</span><span class="m doc">embark-prompter</span><span class="doc">' to ask the user to specify an
+action, and calls it injecting the target at the first minibuffer
+prompt.
+
+If you call this from the minibuffer, it can optionally quit the
+minibuffer.  The variable `</span><span class="m doc">embark-quit-after-action</span><span class="doc">' controls
+whether calling `</span><span class="m doc">embark-act</span><span class="doc">' with nil ARG quits the minibuffer,
+and if ARG is non-nil it will do the opposite.  Interactively,
+ARG is the prefix argument."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (<span class="k">let*</span> ((transformed (embark--maybe-transform-candidates))
+         (type (plist-get transformed <span class="bi">:type</span>))
+         (orig-type (plist-get transformed <span class="bi">:orig-type</span>))
+         (candidates
+          (<span class="k">or</span> (cl-mapcar
+               (<span class="k">lambda</span> (cand orig-cand bounds)
+                 (list <span class="bi">:type</span> type <span class="bi">:target</span> cand
+                       <span class="bi">:bounds</span> (<span class="k">when</span> bounds
+                                 (cons (copy-marker (car bounds))
+                                       (copy-marker (cdr bounds))))
+                       <span class="bi">:orig-type</span> orig-type <span class="bi">:orig-target</span> orig-cand))
+               (plist-get transformed <span class="bi">:candidates</span>)
+               (plist-get transformed <span class="bi">:orig-candidates</span>)
+               (plist-get transformed <span class="bi">:bounds</span>))
+              (<span class="w">user-error</span> <span class="s">"No candidates to act on"</span>)))
+         (indicators (mapcar #'funcall embark-indicators)))
+    (<span class="k">when</span> arg (embark-toggle-quit))
+    (<span class="k">unwind-protect</span>
+        (<span class="k">let*</span> ((action
+                (<span class="k">or</span> (embark--prompt
+                     indicators (embark--action-keymap type nil)
+                     (list (list <span class="bi">:type</span> type <span class="bi">:multi</span> (length candidates))))
+                    (<span class="w">user-error</span> <span class="s">"Canceled"</span>)))
+               (prefix prefix-arg)
+               (act (<span class="k">lambda</span> (candidate)
+                      (<span class="k">cl-letf</span> (((symbol-function 'embark--restart) #'ignore)
+                                ((symbol-function 'embark--confirm) #'ignore))
+                        (<span class="k">let</span> ((prefix-arg prefix))
+                          (<span class="k">when-let*</span> ((bounds (plist-get candidate <span class="bi">:bounds</span>)))
+                            (goto-char (car bounds)))
+                          (embark--act action candidate)))))
+               (quit (embark--quit-p action)))
+          (<span class="k">when</span> (<span class="k">and</span> (eq action (embark--default-action type))
+                     (eq action embark--command))
+            (<span class="k">setq</span> candidates (mapcar #'embark--orig-target candidates)))
+          (<span class="k">when</span> (<span class="k">or</span> (not (<span class="k">or</span> embark-confirm-act-all
+                             (memq 'embark--confirm
+                                   (alist-get action embark-pre-action-hooks))))
+                    (y-or-n-p (format <span class="s">"Run %s on %d %ss? "</span>
+                                      action (length candidates) type)))
+            (<span class="k">if</span> (memq action embark-multitarget-actions)
+                (<span class="k">let</span> ((prefix-arg prefix))
+                  (embark--act action transformed quit))
+              (<span class="k">save-excursion</span>
+                (<span class="k">if</span> quit
+                    (embark--quit-and-run #'mapc act candidates)
+                  (mapc act candidates))))
+            (<span class="k">when</span> (<span class="k">and</span> (not quit)
+                       (memq 'embark--restart
+                             (alist-get action embark-post-action-hooks)))
+              (embark--restart))))
+      (<span class="k">dolist</span> (cand candidates)
+        (<span class="k">when-let*</span> ((bounds (plist-get cand <span class="bi">:bounds</span>)))
+          (set-marker (car bounds) nil) <span class="cd">; </span><span class="c">yay, manual memory management!
+</span>          (set-marker (cdr bounds) nil)))
+      (<span class="k">setq</span> prefix-arg nil)
+      (mapc #'funcall indicators))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

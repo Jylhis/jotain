@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: dired-async-after-file-create – Emacs Documentation Online</title>
+<meta name="description" content="dired-async-after-file-create is a natively compiled function defined
+in dired-async.el.
+Callback function used for operation handled by dired-create-file.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>dired-async-after-file-create</code></h1><p><span class="m"><code>dired-async-after-file-create</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">dired-async.el</span>.
+<h2>Signature</h2>
+<pre><code>(dired-async-after-file-create <a href="#:~:text="><span class="arg">TOTAL</span></a> <a href="#:~:text="><span class="arg">OPERATION</span></a> <a href="#:~:text="><span class="arg">FAILURES</span></a> <a href="#:~:text="><span class="arg">SKIPPED</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Callback function used for operation handled by <span class="m"><code>dired-create-file</code></span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/vpxd64bbf27n3ziyqnh29vmak5xnpk2l-emacs-packages-deps/share/emacs/site-lisp/elpa/async-20260729.1431/dired-async.el</span>
+(<span class="k">defun</span> <span class="f">dired-async-after-file-create</span> (total operation failures skipped)
+  <span class="doc">"Callback function used for operation handled by `</span><span class="m doc">dired-create-file</span><span class="doc">'."</span>
+  (<span class="k">unless</span> (dired-async-processes)
+    <span class="cd">;; </span><span class="c">Turn off mode-line notification
+</span>    <span class="cd">;; </span><span class="c">only when last process end.
+</span>    (dired-async--modeline-mode -1))
+  (<span class="k">when</span> operation
+    (<span class="k">if</span> (file-exists-p dired-async-log-file)
+        (<span class="k">progn</span>
+          (pop-to-buffer (get-buffer-create dired-log-buffer))
+          (goto-char (point-max))
+          (<span class="k">setq</span> inhibit-read-only t)
+          (insert <span class="s">"Error: "</span>)
+          (insert-file-contents dired-async-log-file)
+          (special-mode)
+          (shrink-window-if-larger-than-buffer)
+          (delete-file dired-async-log-file))
+      (run-with-timer
+       0.1 nil
+       (<span class="k">lambda</span> ()
+         <span class="cd">;; </span><span class="c">First send error messages.
+</span>         (<span class="k">cond</span> (failures
+                (funcall dired-async-message-function
+                         <span class="s">"%s failed for %d of %d file%s -- See *Dired log* buffer"</span>
+                         'dired-async-failures
+                         (car operation) (length failures)
+                         total (dired-plural-s total)))
+               (skipped
+                (funcall dired-async-message-function
+                         <span class="s">"%s: %d of %d file%s skipped -- See *Dired log* buffer"</span>
+                         'dired-async-failures
+                         (car operation) (length skipped) total
+                         (dired-plural-s total))))
+         (<span class="k">when</span> dired-buffers
+           (<span class="k">cl-loop</span> for (_f . b) in dired-buffers
+                    when (buffer-live-p b)
+                    do (<span class="k">with-current-buffer</span> b
+                         (<span class="k">when</span> (<span class="k">and</span> (not (file-remote-p default-directory nil t))
+                                    (file-exists-p default-directory))
+                           (revert-buffer nil t)))))
+         <span class="cd">;; </span><span class="c">Finally send the success message.
+</span>         (funcall dired-async-message-function
+                  <span class="s">"Asynchronous %s of %s on %s file%s done"</span>
+                  'dired-async-message
+                  (car operation) (cadr operation)
+                  total (dired-plural-s total)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,71 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--download-file – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--download-file is a natively compiled function defined in
+ghostel-module-install.el.
+Download URL to DEST atomically.  Return the final URL on success, else nil.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--download-file</code></h1><p><span class="m"><code>ghostel--download-file</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">ghostel-module-install.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--download-file <a href="#:~:text=Download-,URL"><span class="arg">URL</span></a> <a href="#:~:text=to-,DEST"><span class="arg">DEST</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Download <span class="arg">URL</span> to <span class="arg">DEST</span> atomically.  Return the final <span class="arg">URL</span> on success, else nil.
+<p>The returned <span class="arg">URL</span> reflects any HTTP redirects followed during the
+fetch, which lets callers resolve a <span class="m"><code>latest</code></span> alias to the actual
+release tag.  Writes to a sibling temp file in the same directory
+and renames it into place once the download succeeds.  Renaming
+swaps the directory entry to a new inode, so any process (notably
+a running Emacs) that has the previous <span class="arg">DEST</span> file mmap'd keeps a
+valid mapping to the old file content.  Writing to <span class="arg">DEST</span> directly
+would truncate the existing inode and corrupt that mapping.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-module-install.el</span>
+(<span class="k">defun</span> <span class="f">ghostel--download-file</span> (url dest)
+  <span class="doc">"Download URL to DEST atomically.  Return the final URL on success, else nil.
+The returned URL reflects any HTTP redirects followed during the
+fetch, which lets callers resolve a `</span><span class="m doc">latest</span><span class="doc">' alias to the actual
+release tag.  Writes to a sibling temp file in the same directory
+and renames it into place once the download succeeds.  Renaming
+swaps the directory entry to a new inode, so any process (notably
+a running Emacs) that has the previous DEST file mmap'd keeps a
+valid mapping to the old file content.  Writing to DEST directly
+would truncate the existing inode and corrupt that mapping."</span>
+  (<span class="k">let*</span> ((url-request-method <span class="s">"GET"</span>)
+         (url-show-status nil)
+         (tmp (make-temp-name (concat dest <span class="s">".tmp."</span>)))
+         (final-url nil))
+    (<span class="k">unwind-protect</span>
+        (<span class="k">let</span> ((buf (url-retrieve-synchronously url t t 30)))
+          (<span class="k">when</span> buf
+            (<span class="k">unwind-protect</span>
+                (<span class="k">with-current-buffer</span> buf
+                  (set-buffer-multibyte nil)
+                  (goto-char (point-min))
+                  (<span class="k">when</span> (re-search-forward <span class="s">"^HTTP/[0-9.]+ 200"</span> nil t)
+                    (<span class="k">when</span> (re-search-forward <span class="s">"\r?\n\r?\n"</span> nil t)
+                      (<span class="k">let</span> ((coding-system-for-write 'binary)
+                            (start (point)))
+                        (<span class="k">when</span> (&lt; start (point-max))
+                          (write-region start (point-max) tmp nil 'silent)
+                          (set-file-modes tmp #o755)
+                          (rename-file tmp dest t)
+                          <span class="cd">;; </span><span class="c">`</span><span class="m c">url-current-object</span><span class="c">' tracks the URL of the
+</span>                          <span class="cd">;; </span><span class="c">final response after redirect-following, so
+</span>                          <span class="cd">;; </span><span class="c">latest-asset URLs resolve to /download/vX.Y.Z/.
+</span>                          (<span class="k">setq</span> final-url
+                                (<span class="k">or</span> (<span class="k">and</span> (boundp 'url-current-object)
+                                         url-current-object
+                                         (url-recreate-url url-current-object))
+                                    url)))))))
+              (<span class="k">when</span> (buffer-live-p buf)
+                (kill-buffer buf)))))
+      (<span class="k">unless</span> final-url
+        (<span class="k">when</span> (file-exists-p tmp)
+          (<span class="k">ignore-errors</span> (delete-file tmp)))))
+    final-url))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

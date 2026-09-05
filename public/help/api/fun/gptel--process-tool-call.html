@@ -1,0 +1,49 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--process-tool-call – Emacs Documentation Online</title>
+<meta name="description" content="gptel--process-tool-call is a natively compiled function defined in
+gptel-request.el.
+Add tool RESULT to a TOOL-CALL and transition FSM if required.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--process-tool-call</code></h1><p><span class="m"><code>gptel--process-tool-call</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--process-tool-call <a href="#:~:text=transition-,FSM"><span class="arg">FSM</span></a> <a href="#:~:text=metadata.-,TOOL-SPEC"><span class="arg">TOOL-SPEC</span></a> <a href="#:~:text=a-,TOOL-CALL"><span class="arg">TOOL-CALL</span></a> <a href="#:~:text=tool-,RESULT"><span class="arg">RESULT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Add tool <span class="arg">RESULT</span> to a <span class="arg">TOOL-CALL</span> and transition <span class="arg">FSM</span> if required.
+<p><span class="arg">TOOL-CALL</span> is a plist with the tool :name, :args and other metadata.
+<span class="arg">TOOL-SPEC</span> is the <span class="m"><code>gptel-tool</code></span> object, and <span class="arg">FSM</span> is the request state.
+<p>If all pending tool calls in the current request have finished, it
+injects the results into the prompt data and transitions the <span class="arg">FSM</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+(<span class="k">defun</span> <span class="f">gptel--process-tool-call</span> (fsm tool-spec tool-call result)
+  <span class="doc">"Add tool RESULT to a TOOL-CALL and transition FSM if required.
+
+TOOL-CALL is a plist with the tool :name, :args and other metadata.
+TOOL-SPEC is the `</span><span class="m doc">gptel-tool</span><span class="doc">' object, and FSM is the request state.
+
+If all pending tool calls in the current request have finished, it
+injects the results into the prompt data and transitions the FSM."</span>
+  (<span class="k">let*</span> ((info (gptel-fsm-info fsm))
+         (tool-result-alist (plist-get info <span class="bi">:tool-result</span>))
+         <span class="cd">;; </span><span class="c">MAYBE(tool-hooks): Use plist-member for valid nil :result?
+</span>         (remaining (<span class="k">cl-loop</span> for call in (plist-get info <span class="bi">:tool-use</span>)
+                             count (not (plist-get call <span class="bi">:result</span>)))))
+    (<span class="k">let</span> ((result (gptel--to-string result)))
+      <span class="cd">;; </span><span class="c">FIXME(tool-hooks): If a hook has changed the tool that was called
+</span>      <span class="cd">;; </span><span class="c">tool-spec needs to be updated.
+</span>      (<span class="k">push</span> (list tool-spec (plist-get tool-call <span class="bi">:args</span>) result)
+            tool-result-alist)
+      (plist-put info <span class="bi">:tool-result</span> tool-result-alist) <span class="cd">;</span><span class="c">for the callback
+</span>      <span class="cd">;; </span><span class="c">NOTE: tool-call is a member of (plist-get info :tool-use), so :tool-use
+</span>      <span class="cd">;; </span><span class="c">is modified by side effect.
+</span>      <span class="cd">;; </span><span class="c">FIXME: Make the implicit addition to :tool-use explicit
+</span>      (plist-put tool-call <span class="bi">:result</span> result)) <span class="cd">;</span><span class="c">for the LLM
+</span>    <span class="cd">;; </span><span class="c">All tools have run
+</span>    (<span class="k">when</span> (&lt;= (<span class="k">cl-decf</span> remaining) 0) (gptel--fsm-transition fsm))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

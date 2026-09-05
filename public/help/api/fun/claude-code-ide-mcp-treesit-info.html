@@ -1,0 +1,125 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: claude-code-ide-mcp-treesit-info – Emacs Documentation Online</title>
+<meta name="description" content="claude-code-ide-mcp-treesit-info is a natively compiled function
+defined in claude-code-ide-emacs-tools.el.
+Get tree-sitter parse tree information for FILE-PATH.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>claude-code-ide-mcp-treesit-info</code></h1><p><span class="m"><code>claude-code-ide-mcp-treesit-info</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">claude-code-ide-emacs-tools.el</span>.
+<h2>Signature</h2>
+<pre><code>(claude-code-ide-mcp-treesit-info <a href="#:~:text=for-,FILE-PATH"><span class="arg">FILE-PATH</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=Optional-,LINE"><span class="arg">LINE</span></a> <a href="#:~:text=and-,COLUMN"><span class="arg">COLUMN</span></a> <a href="#:~:text=If-,WHOLE_FILE"><span class="arg">WHOLE_FILE</span></a> <a href="#:~:text=If-,INCLUDE_ANCESTORS"><span class="arg">INCLUDE_ANCESTORS</span></a> <a href="#:~:text=If-,INCLUDE_CHILDREN"><span class="arg">INCLUDE_CHILDREN</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Get tree-sitter parse tree information for <span class="arg">FILE-PATH</span>.
+<p>Optional <span class="arg">LINE</span> and <span class="arg">COLUMN</span> specify the position (1-based line, 0-based column).
+If <span class="arg">WHOLE_FILE</span> is non-nil, show the entire file's syntax tree.
+If neither position is specified, defaults to current cursor position (point).
+If <span class="arg">INCLUDE_ANCESTORS</span> is non-nil, include parent node hierarchy.
+If <span class="arg">INCLUDE_CHILDREN</span> is non-nil, include child nodes.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ca4a4maamih3h4ksbbhy6racb61djy6q-emacs-packages-deps/share/emacs/site-lisp/claude-code-ide-emacs-tools.el</span>
+(<span class="k">defun</span> <span class="f">claude-code-ide-mcp-treesit-info</span> (file-path <span class="ty">&amp;optional</span> line column whole_file include_ancestors include_children)
+  <span class="doc">"Get tree-sitter parse tree information for FILE-PATH.
+Optional LINE and COLUMN specify the position (1-based line, 0-based column).
+If WHOLE_FILE is non-nil, show the entire file's syntax tree.
+If neither position is specified, defaults to current cursor position (point).
+If INCLUDE_ANCESTORS is non-nil, include parent node hierarchy.
+If INCLUDE_CHILDREN is non-nil, include child nodes."</span>
+  (<span class="k">if</span> (not file-path)
+      (<span class="w">error</span> <span class="s">"file_path parameter is required"</span>)
+    (<span class="k">claude-code-ide-mcp-server-with-session-context</span> nil
+      (<span class="k">condition-case</span> err
+          (<span class="k">if</span> (not (treesit-available-p))
+              <span class="s">"Tree-sitter is not available in this Emacs build"</span>
+            (<span class="k">let</span> ((target-buffer (<span class="k">or</span> (find-buffer-visiting file-path)
+                                     (find-file-noselect file-path))))
+              (<span class="k">with-current-buffer</span> target-buffer
+                (<span class="k">let*</span> ((parsers (treesit-parser-list))
+                       (parser (car parsers)))
+                  (<span class="k">if</span> (not parser)
+                      (format <span class="s">"No tree-sitter parser available for %s"</span> file-path)
+                    (<span class="k">let*</span> ((root-node (treesit-parser-root-node parser))
+                           <span class="cd">;; </span><span class="c">Determine position from line/column or use current point
+</span>                           (pos (<span class="k">cond</span> (whole_file nil)
+                                      (line (claude-code-ide-mcp--line-column-to-point
+                                             line (<span class="k">or</span> column 0)))
+                                      <span class="cd">;; </span><span class="c">Use current point in the target buffer
+</span>                                      (t (point))))
+                           (node (<span class="k">if</span> whole_file
+                                     root-node
+                                   (treesit-node-at pos parser)))
+                           (results '()))
+                      (<span class="k">if</span> (not node)
+                          <span class="s">"No tree-sitter node found"</span>
+                        <span class="cd">;; </span><span class="c">For full tree, use a different display function
+</span>                        (<span class="k">if</span> whole_file
+                            (claude-code-ide-mcp-treesit--format-tree root-node 0 20)
+                          <span class="cd">;; </span><span class="c">Basic node information for specific position
+</span>                          (<span class="k">push</span> (format <span class="s">"Node Type: %s"</span> (treesit-node-type node)) results)
+                          (<span class="k">push</span> (format <span class="s">"Range: %d-%d"</span>
+                                        (treesit-node-start node)
+                                        (treesit-node-end node)) <span class="w">results)</span>
+                          (<span class="k">push</span> (format <span class="s">"Text: %s"</span>
+                                        (truncate-string-to-width
+                                         (treesit-node-text node t)
+                                         80 nil nil <span class="s">"..."</span>)) <span class="w">results)</span>
+
+                          <span class="cd">;; </span><span class="c">Check if node is named
+</span>                          (<span class="k">when</span> (treesit-node-check node 'named)
+                            (<span class="k">push</span> <span class="s">"Named: yes"</span> results))
+
+                          <span class="cd">;; </span><span class="c">Field name if available
+</span>                          (<span class="k">let</span> ((field-name (treesit-node-field-name node)))
+                            (<span class="k">when</span> field-name
+                              (<span class="k">push</span> (format <span class="s">"Field: %s"</span> field-name) results)))
+
+                          <span class="cd">;; </span><span class="c">Include ancestors if requested
+</span>                          (<span class="k">when</span> include_ancestors
+                            (<span class="k">push</span> <span class="s">"\nAncestors:"</span> results)
+                            (<span class="k">let</span> ((parent (treesit-node-parent node))
+                                  (level 1))
+                              (<span class="k">while</span> (<span class="k">and</span> parent (&lt; level 10))
+                                (<span class="k">push</span> (format <span class="s">"  %s[%d] %s (%d-%d)"</span>
+                                              (make-string level ?-)
+                                              level
+                                              (treesit-node-type parent)
+                                              (treesit-node-start parent)
+                                              (treesit-node-end parent))
+                                      results)
+                                (<span class="k">setq</span> parent (treesit-node-parent parent))
+                                (<span class="k">cl-incf</span> level))))
+
+                          <span class="cd">;; </span><span class="c">Include children if requested
+</span>                          (<span class="k">when</span> include_children
+                            (<span class="k">push</span> <span class="s">"\nChildren:"</span> results)
+                            (<span class="k">let</span> ((child-count (treesit-node-child-count node))
+                                  (i 0))
+                              (<span class="k">if</span> (= child-count 0)
+                                  (<span class="k">push</span> <span class="s">"  (no children)"</span> results)
+                                (<span class="k">while</span> (&lt; i (min child-count 20))
+                                  (<span class="k">let</span> ((child (treesit-node-child node i)))
+                                    (<span class="k">when</span> child
+                                      (<span class="k">push</span> (format <span class="s">"  [%d] %s%s (%d-%d)"</span>
+                                                    i
+                                                    (treesit-node-type child)
+                                                    (<span class="k">if</span> (treesit-node-check child 'named)
+                                                        <span class="s">" (named)"</span> <span class="s">""</span>)
+                                                    (treesit-node-start child)
+                                                    (treesit-node-end child))
+                                            results)))
+                                  (<span class="k">cl-incf</span> i))
+                                (<span class="k">when</span> (&gt; child-count 20)
+                                  (<span class="k">push</span> (format <span class="s">"  ... and %d more children"</span>
+                                                (- child-count 20))
+                                        results)))))
+
+                          <span class="cd">;; </span><span class="c">Return formatted results
+</span>                          (string-join (nreverse results) <span class="s">"\n"</span>)))))))))
+        (<span class="w">error</span>
+         (format <span class="s">"Error getting tree-sitter info for %s: %s"</span>
+                 file-path (error-message-string err)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

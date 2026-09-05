@@ -1,0 +1,68 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: vc-jj-print-log – Emacs Documentation Online</title>
+<meta name="description" content="vc-jj-print-log is a natively compiled function defined in vc-jj.el.
+Print commit log associated with FILES into specified BUFFER.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>vc-jj-print-log</code></h1><p><span class="m"><code>vc-jj-print-log</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">vc-jj.el</span>.
+<h2>Signature</h2>
+<pre><code>(vc-jj-print-log <a href="#:~:text=with-,FILES"><span class="arg">FILES</span></a> <a href="#:~:text=specified-,BUFFER"><span class="arg">BUFFER</span></a> <span class="ty">&amp;optional</span> <a href="#:~:text=If-,SHORTLOG"><span class="arg">SHORTLOG</span></a> <a href="#:~:text=If-,START-REVISION"><span class="arg">START-REVISION</span></a> <a href="#:~:text=If-,LIMIT"><span class="arg">LIMIT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Print commit log associated with <span class="arg">FILES</span> into specified <span class="arg">BUFFER</span>.
+<p>If <span class="arg">SHORTLOG</span> is non-nil, use a short log format similar to
+<a href="../var/vc-jj-root-log-format.html"><code>vc-jj-root-log-format</code></a>.  If <span class="arg">START-REVISION</span> is non-nil, it is a string
+of the newest revision in the log to show.  If <span class="arg">LIMIT</span> is a number, show
+no more than this many entries.  If <span class="arg">LIMIT</span> is a non-empty string, use it
+as a base revision.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/smb5w83hp9nz5jm5ish4kf6mshmmif86-emacs-packages-deps/share/emacs/site-lisp/elpa/vc-jj-0.5/vc-jj.el</span>
+<span class="cd">;;;; </span><span class="c">mark-resolved
+</span>
+<span class="cd">;;;; </span><span class="c">find-admin-dir
+</span>
+<span class="cd">;;; </span><span class="c">HISTORY FUNCTIONS
+</span>
+<span class="cd">;;;; </span><span class="c">print-log
+</span>
+(<span class="k">defun</span> <span class="f">vc-jj-print-log</span> (files buffer <span class="ty">&amp;optional</span> shortlog start-revision limit)
+  <span class="doc">"Print commit log associated with FILES into specified BUFFER.
+If SHORTLOG is non-nil, use a short log format similar to
+`</span><span class="m doc">vc-jj-root-log-format</span><span class="doc">'.  If START-REVISION is non-nil, it is a string
+of the newest revision in the log to show.  If LIMIT is a number, show
+no more than this many entries.  If LIMIT is a non-empty string, use it
+as a base revision."</span>
+  (vc-setup-buffer buffer)
+  (<span class="k">let</span> ((inhibit-read-only t)
+        (files
+         <span class="cd">;; </span><span class="c">There is a special case when FILES has just the root of
+</span>         <span class="cd">;; </span><span class="c">the project as its only element (e.g., when calling
+</span>         <span class="cd">;; </span><span class="c">`</span><span class="m c">vc-print-root-log</span><span class="c">').  In this case, we do not specify a
+</span>         <span class="cd">;; </span><span class="c">fileset to jj because doing do would cause the log to only
+</span>         <span class="cd">;; </span><span class="c">show ancestors of START-REVISION (even if the fileset is
+</span>         <span class="cd">;; </span><span class="c">"all()").  This behavior is undesirable in
+</span>         <span class="cd">;; </span><span class="c">`</span><span class="m c">vc-print-root-log</span><span class="c">' (in a JJ context of bookmarks), since
+</span>         <span class="cd">;; </span><span class="c">users expect to see descendants as well
+</span>         (<span class="k">unless</span> (file-equal-p (vc-jj-root (car files)) (car files))
+           files))
+        (args (append (<span class="k">pcase</span> limit
+                        <span class="cd">;; </span><span class="c">When LIMIT is a number, only show up to
+</span>                        <span class="cd">;; </span><span class="c">that many revisions
+</span>                        ((pred numberp)
+                         (list <span class="s">"-n"</span> (number-to-string limit)
+                               <span class="s">"-r"</span> (concat <span class="s">"::"</span> start-revision)))
+                        <span class="cd">;; </span><span class="c">When LIMIT is a string, it is a revision.
+</span>                        <span class="cd">;; </span><span class="c">In that case, show the revisions between
+</span>                        <span class="cd">;; </span><span class="c">LIMIT and START-REVISION, not including the
+</span>                        <span class="cd">;; </span><span class="c">revision LIMIT.
+</span>                        ((pred stringp)
+                         (list <span class="s">"-r"</span> (format <span class="s">"%s::%s &amp; ~%s"</span> limit start-revision limit))))
+                      (<span class="k">if</span> shortlog
+                          (list <span class="s">"-T"</span> (car vc-jj-root-log-format))
+                        (list <span class="s">"--no-graph"</span> <span class="s">"-T"</span> <span class="s">"builtin_log_detailed"</span>)))))
+    (<span class="k">with-current-buffer</span> buffer
+      (apply #'vc-jj--command-dispatched buffer 'async files <span class="s">"log"</span> args))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,61 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb-util--log – Emacs Documentation Online</title>
+<meta name="description" content="verb-util--log is a natively compiled function defined in
+verb-util.el.
+Log a message in the *Verb Log* buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb-util--log</code></h1><p><span class="m"><code>verb-util--log</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">verb-util.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb-util--log <a href="#:~:text=buffer.-,REQUEST"><span class="arg">REQUEST</span></a> <a href="#:~:text=made.-,LEVEL"><span class="arg">LEVEL</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=remaining-,ARGS"><span class="arg">ARGS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Log a message in the *Verb Log* buffer.
+<p><span class="arg">REQUEST</span> must be a number corresponding to an HTTP request made.  <span class="arg">LEVEL</span>
+must be a value in <a href="../var/verb-util--log-levels.html"><code>verb-util--log-levels</code></a>.  Use the remaining <span class="arg">ARGS</span> to call
+<a href="../fun/format.html"><code>format</code></a>, and then log the result in the log buffer.
+<p>If <a href="../var/verb-enable-log.html"><code>verb-enable-log</code></a> is nil, do not log anything.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb-util.el</span>
+(<span class="k">defun</span> <span class="f">verb-util--log</span> (request level <span class="ty">&amp;rest</span> args)
+  <span class="doc">"Log a message in the *Verb Log* buffer.
+REQUEST must be a number corresponding to an HTTP request made.  LEVEL
+must be a value in `</span><span class="m doc">verb-util--log-levels</span><span class="doc">'.  Use the remaining ARGS to call
+`</span><span class="m doc">format</span><span class="doc">', and then log the result in the log buffer.
+
+If `</span><span class="m doc">verb-enable-log</span><span class="doc">' is nil, do not log anything."</span>
+  (<span class="k">setq</span> request (<span class="k">if</span> request (number-to-string request) <span class="s">"-"</span>))
+  (<span class="k">unless</span> (member level verb-util--log-levels)
+    (<span class="w">user-error</span> <span class="s">"Invalid log level: \"%s\""</span> level))
+  (<span class="k">when</span> (<span class="k">bound-and-true-p</span> verb-enable-log) <span class="cd">; </span><span class="c">Var is defined in verb.el.
+</span>    (<span class="k">with-current-buffer</span> (get-buffer-create verb-util--log-buffer-name)
+      (<span class="k">unless</span> (derived-mode-p 'verb-util-log-mode)
+        (verb-util-log-mode))
+      (<span class="k">let</span> ((inhibit-read-only t)
+            (last <span class="s">""</span>)
+            (msg (apply #'format args)))
+        (<span class="k">unless</span> (= (buffer-size) 0)
+          (insert <span class="s">"\n"</span>))
+        <span class="cd">;; </span><span class="c">Get last logged request number.
+</span>        (<span class="k">when</span> (re-search-backward <span class="s">"^</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">-</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[[:digit:]]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\s-"</span>
+                                  nil t)
+          (<span class="k">setq</span> last (match-string 1)))
+        (goto-char (point-max))
+        <span class="cd">;; </span><span class="c">Log new message.
+</span>        (insert (format <span class="s">"%-5s %s  "</span>
+                        (<span class="k">if</span> (string= last request)
+                            (make-string (length request) ? )
+                          request)
+                        level)
+                msg)
+        <span class="cd">;; </span><span class="c">If logged messaged contained newlines, add a blank line
+</span>        <span class="cd">;; </span><span class="c">to make things more readable.
+</span>        (<span class="k">when</span> (string-match-p <span class="s">"\n"</span> msg)
+          (newline)))
+      (<span class="k">dolist</span> (w (get-buffer-window-list (current-buffer) nil t))
+        (set-window-point w (point-max))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

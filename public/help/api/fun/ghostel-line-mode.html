@@ -1,0 +1,78 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel-line-mode – Emacs Documentation Online</title>
+<meta name="description" content="ghostel-line-mode is an interactive and natively compiled function
+defined in ghostel-line-mode.el.
+Switch to line mode &#8212; edit input locally, send to shell on RET.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel-line-mode</code></h1><p><span class="m"><code>ghostel-line-mode</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">ghostel-line-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel-line-mode <span class="ty">&amp;optional</span> <a href="#:~:text=arg-,FORCE"><span class="arg">FORCE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Switch to line mode — edit input locally, send to shell on RET.
+<p>The user types into an editable region between the last prompt and
+<a href="../fun/point-max.html"><code>point-max</code></a>.  Full Emacs editing (yank, <a href="../fun/kill-word.html"><code>kill-word</code></a>, transpose,
+etc.) works.  Pressing <kbd>M-x ghostel-line-mode-send</kbd> (<a href="../fun/ghostel-line-mode-send.html"><code>ghostel-line-mode-send</code></a>) sends the input
+to the shell in one write.
+<p>Completion runs against the editable input and follows OSC 7 / TRAMP
+directory tracking.  The terminal stays live while output streams
+around the prompt.  The window follows new output while point rides
+the live edge (the input region, or the end of output while a command
+runs); move point into the scrollback and the view stays put until
+point returns.  After RET, line mode stays active for the next
+prompt.
+<p>On the alt screen, line mode enters at a shell prompt whose OSC 133
+markers reach Ghostel; over a raw TUI (vim, less) it arms and resumes
+when the TUI exits.  A prefix arg <span class="arg">FORCE</span> forces immediate entry.
+<h2>Key Bindings</h2>
+<p><span class="v">ghostel-mode-map</span> <span class="key">C-c C-l</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1jkgkg7y6y6hp0xia3dsmcl5zaj0bnhq-emacs-packages-deps/share/emacs/site-lisp/ghostel-line-mode.el</span>
+(<span class="k">defun</span> <span class="f">ghostel-line-mode</span> (<span class="ty">&amp;optional</span> force)
+  <span class="doc">"Switch to line mode — edit input locally, send to shell on RET.
+The user types into an editable region between the last prompt and
+`</span><span class="m doc">point-max</span><span class="doc">'.  Full Emacs editing (yank, `</span><span class="m doc">kill-word</span><span class="doc">', transpose,
+etc.) works.  Pressing \\[</span><span class="m doc">ghostel-line-mode-send</span><span class="doc">] sends the input
+to the shell in one write.
+
+Completion runs against the editable input and follows OSC 7 / TRAMP
+directory tracking.  The terminal stays live while output streams
+around the prompt.  The window follows new output while point rides
+the live edge (the input region, or the end of output while a command
+runs); move point into the scrollback and the view stays put until
+point returns.  After RET, line mode stays active for the next
+prompt.
+
+On the alt screen, line mode enters at a shell prompt whose OSC 133
+markers reach Ghostel; over a raw TUI (vim, less) it arms and resumes
+when the TUI exits.  A prefix arg FORCE forces immediate entry."</span>
+  (<span class="k">interactive</span> <span class="s">"P"</span>)
+  (ghostel--ensure-ghostel-buffer)
+  (<span class="k">unless</span> ghostel--term
+    (<span class="w">user-error</span> <span class="s">"No terminal in this buffer"</span>))
+  (<span class="k">cond</span>
+   ((eq ghostel--input-mode 'line))     <span class="cd">; </span><span class="c">already in line mode
+</span>   <span class="cd">;; </span><span class="c">Forced: trust the user, bypass the alt-screen gate.
+</span>   (force
+    (<span class="k">if</span> (ghostel--line-mode-enter)
+        (message <span class="s">"Line mode: RET sends the whole line; C-c C-j to exit"</span>)
+      (<span class="w">user-error</span> <span class="s">"Line mode could not locate the cursor or a prompt"</span>)))
+   <span class="cd">;; </span><span class="c">Alt screen with a real prompt on the cursor row (inner shell) — enter.
+</span>   ((<span class="k">and</span> (ghostel-alt-screen-p)
+         (ghostel--line-mode-prompt-on-screen-p)
+         (ghostel--line-mode-enter))
+    (message <span class="s">"Line mode: RET sends the whole line; C-c C-j to exit"</span>))
+   <span class="cd">;; </span><span class="c">Alt screen, no detectable prompt (raw TUI) — arm instead.
+</span>   ((ghostel-alt-screen-p)
+    (ghostel--line-mode-defer-entry))
+   <span class="cd">;; </span><span class="c">Primary screen — normal entry.
+</span>   ((ghostel--line-mode-enter)
+    (message <span class="s">"Line mode: RET sends the whole line; C-c C-j to exit"</span>))
+   (t
+    (<span class="w">user-error</span> <span class="s">"Line mode could not locate the cursor or a prompt"</span>))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

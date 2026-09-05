@@ -1,0 +1,91 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-diff-dwim – Emacs Documentation Online</title>
+<meta name="description" content="magit-diff-dwim is an interactive and natively compiled function
+defined in magit-diff.el.
+Show changes for the thing at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-diff-dwim</code></h1><p><span class="m"><code>magit-diff-dwim</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">magit-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-diff-dwim <span class="ty">&amp;optional</span> <a href="#:~:text="><span class="arg">ARGS</span></a> <a href="#:~:text="><span class="arg">FILES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Show changes for the thing at point.
+<p>For example, if point is on a commit, show the changes introduced by
+that commit.  Likewise if point is on the section titled "Unstaged
+changes", then show those changes in a separate buffer.  Generally
+speaking, compare the thing at point with the most logical, trivial
+and (in *any* situation) at least potentially useful other thing it
+could be compared to.
+<p>When the region selects commits, then compare the two commits at
+either end.  There are different ways two commits can be compared.
+In the buffer showing the diff, you can control how the comparison,
+is done, using "D r" and "D f".
+<p>This function does not always show the changes that you might want
+to view in any given situation.  You can think of the changes being
+shown as the smallest common denominator.  There is no AI involved.
+If this command never does what you want, then ignore it, and instead
+use the commands that allow you to explicitly specify what you need.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-diff.el</span>
+<span class="cd">;;;; </span><span class="c">Setup Commands
+</span>
+<span class="cd">;;;</span><span class="c">###</span><span class="w c">autoload</span><span class="c">
+</span>(<span class="k">defun</span> <span class="f">magit-diff-dwim</span> (<span class="ty">&amp;optional</span> args files)
+  <span class="doc">"Show changes for the thing at point.
+
+For example, if point is on a commit, show the changes introduced by
+that commit.  Likewise if point is on the section titled \"Unstaged
+changes\", then show those changes in a separate buffer.  Generally
+speaking, compare the thing at point with the most logical, trivial
+and (in *any* situation) at least potentially useful other thing it
+could be compared to.
+
+When the region selects commits, then compare the two commits at
+either end.  There are different ways two commits can be compared.
+In the buffer showing the diff, you can control how the comparison,
+is done, using \"D r\" and \"D f\".
+
+This function does not always show the changes that you might want
+to view in any given situation.  You can think of the changes being
+shown as the smallest common denominator.  There is no AI involved.
+If this command never does what you want, then ignore it, and instead
+use the commands that allow you to explicitly specify what you need."</span>
+  (<span class="k">interactive</span> (magit-diff-arguments))
+  (<span class="k">let</span> ((default-directory default-directory)
+        (section (magit-current-section)))
+    (<span class="k">cond</span>
+      ((magit-section-match 'module section)
+       (<span class="k">setq</span> default-directory
+             (expand-file-name
+              (file-name-as-directory (<span class="k">oref</span> section value))))
+       (magit-diff-range (<span class="k">oref</span> section range)))
+      (t
+       (<span class="k">when</span> (magit-section-match 'module-commit section)
+         (<span class="k">setq</span> args nil)
+         (<span class="k">setq</span> files nil)
+         (<span class="k">setq</span> default-directory
+               (expand-file-name
+                (file-name-as-directory (magit-section-parent-value section)))))
+       (<span class="k">pcase</span> (magit-diff--dwim)
+         ('unmerged (magit-diff-unmerged args files))
+         ('unstaged (magit-diff-unstaged args files))
+         ('staged
+          (<span class="k">let</span> ((file (magit-file-at-point)))
+            (<span class="k">if</span> (<span class="k">and</span> file (equal (cddr (car (magit-file-status file))) '(?D ?U)))
+                <span class="cd">;; </span><span class="c">File was deleted by us and modified by them.  Show the latter.
+</span>                (magit-diff-unmerged args (list file))
+              (magit-diff-staged nil args files))))
+         (`(stash . ,value) (magit-stash-show value args))
+         (`(commit . ,value)
+          (magit-diff-range (format <span class="s">"%s^..%s"</span> value value) args files))
+         ((<span class="k">and</span> range (pred stringp))
+          (magit-diff-range range args files))
+         (_ (call-interactively #'magit-diff-range)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-stash--apply-1 – Emacs Documentation Online</title>
+<meta name="description" content="magit-stash--apply-1 is a natively compiled function defined in
+magit-stash.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-stash--apply-1</code></h1><p><span class="m"><code>magit-stash--apply-1</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-stash.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-stash--apply-1 <span class="arg">ACTION</span> <span class="arg">STASH</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-stash.el</span>
+(<span class="k">defun</span> <span class="f">magit-stash--apply-1</span> (action stash)
+  (<span class="k">or</span>
+   (magit--run-git-stash action <span class="s">"--index"</span> stash)
+   <span class="cd">;; </span><span class="c">The stash's index could not be applied, so always keep the stash.
+</span>   (magit--run-git-stash <span class="s">"apply"</span> stash)
+   (<span class="k">let*</span> ((range (format <span class="s">"%s^..%s"</span> stash stash))
+          (stashed (magit-git-items <span class="s">"diff"</span> <span class="s">"-z"</span> <span class="s">"--name-only"</span> range <span class="s">"--"</span>))
+          (conflicts (<span class="k">compat-call</span>
+                      sort (cl-union (magit-unstaged-files t stashed)
+                                     (magit-untracked-files t stashed)
+                                     <span class="bi">:test</span> #'equal)
+                      <span class="bi">:lessp</span> #'string&lt;))
+          (arg (<span class="k">if</span> (<span class="k">or</span> (not conflicts)
+                       (memq 'stash-apply-3way magit-no-confirm))
+                   <span class="s">"--3way"</span>
+                 (<span class="k">magit-read-char-case</span>
+                     (concat
+                      <span class="s">"Could not apply stash because of unstaged changes.\n\n"</span>
+                      <span class="s">"To do a three-way merge, these files have to be staged\n"</span>
+                      (mapconcat (##format <span class="s">"  %s"</span> %) conflicts <span class="s">"\n"</span>)
+                      <span class="s">"\n"</span>)
+                     nil
+                   (?s (format
+                        <span class="s">"\n[s] stage file%s and apply with \"git apply --3way\""</span>
+                        (<span class="k">if</span> (length&gt; conflicts 1) <span class="s">"s"</span> <span class="s">""</span>))
+                       <span class="s">"--3way"</span>)
+                   (?r <span class="s">"\n[r] apply with \"git apply --reject\""</span> <span class="s">"--reject"</span>)
+                   (?c <span class="s">"\n[c] cancel"</span> nil)))))
+     (<span class="k">when</span> arg
+       (<span class="k">when</span> (<span class="k">and</span> (equal arg <span class="s">"--3way"</span>) conflicts)
+         (magit-stage-1 nil conflicts))
+       (<span class="k">with-temp-buffer</span>
+         (magit-git-insert <span class="s">"diff"</span> range)
+         (magit-run-git-with-input <span class="s">"apply"</span> arg <span class="s">"-"</span>))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

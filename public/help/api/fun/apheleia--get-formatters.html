@@ -1,0 +1,100 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: apheleia--get-formatters – Emacs Documentation Online</title>
+<meta name="description" content="apheleia--get-formatters is a natively compiled function defined in
+apheleia-formatters.el.
+Return the list of formatters to use for the current buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>apheleia--get-formatters</code></h1><p><span class="m"><code>apheleia--get-formatters</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">apheleia-formatters.el</span>.
+<h2>Signature</h2>
+<pre><code>(apheleia--get-formatters <span class="ty">&amp;optional</span> <a href="#:~:text=If-,INTERACTIVE"><span class="arg">INTERACTIVE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return the list of formatters to use for the current buffer.
+<p>This is a list of symbols that may appear as cars in
+<a href="../var/apheleia-formatters.html"><code>apheleia-formatters</code></a>, or nil if no formatter is configured for
+the current buffer.
+<p>Consult the values of <a href="../var/apheleia-mode-alist.html"><code>apheleia-mode-alist</code></a> and
+<a href="../var/apheleia-formatter.html"><code>apheleia-formatter</code></a> to determine which formatter is configured.
+Consult also <a href="../var/apheleia-mode-predicates.html"><code>apheleia-mode-predicates</code></a>, if non-nil.
+<p>If <span class="arg">INTERACTIVE</span> is non-nil, then prompt the user for which
+formatter to run if none is configured, instead of returning nil.
+If <span class="arg">INTERACTIVE</span> is the special symbol <span class="m"><code>prompt</code></span>, then prompt
+even if a formatter is configured.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbykkl13khzh84lv9vw1bf1vijzg30fr-emacs-packages-deps/share/emacs/site-lisp/elpa/apheleia-20260817.2331/apheleia-formatters.el</span>
+(<span class="k">defun</span> <span class="f">apheleia--get-formatters</span> (<span class="ty">&amp;optional</span> interactive)
+  <span class="doc">"Return the list of formatters to use for the current buffer.
+This is a list of symbols that may appear as cars in
+`</span><span class="m doc">apheleia-formatters</span><span class="doc">', or nil if no formatter is configured for
+the current buffer.
+
+Consult the values of `</span><span class="m doc">apheleia-mode-alist</span><span class="doc">' and
+`</span><span class="m doc">apheleia-formatter</span><span class="doc">' to determine which formatter is configured.
+Consult also `</span><span class="m doc">apheleia-mode-predicates</span><span class="doc">', if non-nil.
+
+If INTERACTIVE is non-nil, then prompt the user for which
+formatter to run if none is configured, instead of returning nil.
+If INTERACTIVE is the special symbol `</span><span class="m doc">prompt</span><span class="doc">', then prompt
+even if a formatter is configured."</span>
+  (<span class="k">or</span> (<span class="k">and</span> (not (eq interactive 'prompt))
+           (apheleia--ensure-list
+            (<span class="k">or</span> apheleia-formatter
+                <span class="cd">;; </span><span class="c">Go through the mode alist. There are two types of
+</span>                <span class="cd">;; </span><span class="c">entries, mode and regex. We should return whichever
+</span>                <span class="cd">;; </span><span class="c">entry matches first in the list. However, if two
+</span>                <span class="cd">;; </span><span class="c">modes match, then we should return the entry for
+</span>                <span class="cd">;; </span><span class="c">the more specific mode.
+</span>                <span class="cd">;;</span><span class="c">
+</span>                <span class="cd">;; </span><span class="c">Implementation: Iterate once. If we match a regex,
+</span>                <span class="cd">;; </span><span class="c">immediately return, unless we already matched a
+</span>                <span class="cd">;; </span><span class="c">mode (setting the `</span><span class="m c">formatters</span><span class="c">' variable), in which
+</span>                <span class="cd">;; </span><span class="c">case do not return, but also keep going to see if
+</span>                <span class="cd">;; </span><span class="c">there is a more specific mode later in the list. If
+</span>                <span class="cd">;; </span><span class="c">we match a mode, save the entry for later
+</span>                <span class="cd">;; </span><span class="c">reference, as well as the mode that matched it.
+</span>                <span class="cd">;; </span><span class="c">Update that saved entry only when we find a more
+</span>                <span class="cd">;; </span><span class="c">specific mode (i.e., a mode that is derived from
+</span>                <span class="cd">;; </span><span class="c">but not equal to the previously saved mode). Return
+</span>                <span class="cd">;; </span><span class="c">at the end of the loop the saved entry, if we
+</span>                <span class="cd">;; </span><span class="c">didn't exit early.
+</span>                (<span class="k">let*</span> ((unset (make-symbol <span class="s">"gensym-unset"</span>))
+                       (matched-mode nil)
+                       (formatters unset)
+                       (mode major-mode))
+                  (<span class="k">cl-dolist</span> (pred apheleia-mode-predicates)
+                    (<span class="k">when-let</span> ((new-mode (funcall pred)))
+                      (<span class="k">setq</span> mode new-mode)
+                      (<span class="k">cl-return</span>)))
+                  (<span class="k">cl-dolist</span> (entry apheleia-mode-alist
+                                    (<span class="k">unless</span> (eq formatters unset)
+                                      formatters))
+                    (<span class="k">when</span> (<span class="k">and</span> (stringp (car entry))
+                               buffer-file-name
+                               (string-match-p
+                                (car entry) buffer-file-name)
+                               (eq formatters unset))
+                      (<span class="k">cl-return</span> (cdr entry)))
+                    (<span class="k">when</span> (<span class="k">and</span> (symbolp (car entry))
+                               (provided-mode-derived-p mode (car entry))
+                               (<span class="k">or</span> (eq formatters unset)
+                                   (<span class="k">and</span>
+                                    (not (eq (car entry) matched-mode))
+                                    (provided-mode-derived-p
+                                     (car entry) matched-mode))))
+                      (<span class="k">setq</span> matched-mode (car entry))
+                      (<span class="k">setq</span> formatters (cdr entry))))))))
+      (<span class="k">and</span> interactive
+           (list
+            (intern
+             (completing-read
+              <span class="s">"Formatter: "</span>
+              (<span class="k">or</span> (map-keys apheleia-formatters)
+                  (<span class="w">user-error</span>
+                   <span class="s">"No formatters in `</span><span class="m s">apheleia-formatters</span><span class="s">'"</span>))
+              nil 'require-match))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

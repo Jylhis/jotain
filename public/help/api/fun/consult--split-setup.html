@@ -1,0 +1,52 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: consult--split-setup – Emacs Documentation Online</title>
+<meta name="description" content="consult--split-setup is a natively compiled function defined in
+consult.el.
+Setup splitting completion style with splitter function SPLIT.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>consult--split-setup</code></h1><p><span class="m"><code>consult--split-setup</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">consult.el</span>.
+<h2>Signature</h2>
+<pre><code>(consult--split-setup <a href="#:~:text=function-,SPLIT"><span class="arg">SPLIT</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Setup splitting completion style with splitter function <span class="arg">SPLIT</span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/lmzd2dhgxc9ssqcxwibyq6xrmrvf80a4-emacs-packages-deps/share/emacs/site-lisp/elpa/consult-20260829.1558/consult.el</span>
+(<span class="k">defun</span> <span class="f">consult--split-setup</span> (split)
+  <span class="doc">"Setup splitting completion style with splitter function SPLIT."</span>
+  (<span class="k">when</span> (equal completion-styles '(consult--split))
+    (<span class="w">error</span> <span class="s">"`</span><span class="m s">consult--async-split-input</span><span class="s">' initialized twice"</span>))
+  (<span class="k">let*</span> ((styles completion-styles)
+         (catdef completion-category-defaults)
+         (catovr completion-category-overrides)
+         (try (<span class="k">lambda</span> (str table pred point)
+                (<span class="k">let</span> ((completion-styles styles)
+                      (completion-category-defaults catdef)
+                      (completion-category-overrides catovr)
+                      (pos (cadr (funcall split str))))
+                  (<span class="k">pcase</span> (completion-try-completion (substring str pos) table pred
+                                                    (max 0 (- point pos)))
+                    ('t t)
+                    (`(,newstr . ,newpt)
+                     (<span class="k">setq</span> newstr (concat (substring str 0 pos) newstr))
+                     (<span class="k">if</span> (eq (cadr (funcall split newstr)) pos)
+                         (cons newstr (+ pos newpt))
+                       (cons str point)))))))
+         (all (<span class="k">lambda</span> (str table pred point)
+                (<span class="k">let</span> ((completion-styles styles)
+                      (completion-category-defaults catdef)
+                      (completion-category-overrides catovr)
+                      (pos (cadr (funcall split str))))
+                  (completion-all-completions (substring str pos) table pred
+                                              (max 0 (- point pos)))))))
+    (<span class="k">setq-local</span> completion-styles-alist (cons `(consult--split ,try ,all <span class="s">""</span>)
+                                              completion-styles-alist)
+                completion-styles '(consult--split)
+                completion-category-defaults nil
+                completion-category-overrides nil)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

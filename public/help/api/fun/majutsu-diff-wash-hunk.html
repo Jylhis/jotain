@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-diff-wash-hunk – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-diff-wash-hunk is a natively compiled function defined in
+majutsu-diff.el.
+Wrap the current hunk in a section for FILE without copying its body.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-diff-wash-hunk</code></h1><p><span class="m"><code>majutsu-diff-wash-hunk</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">majutsu-diff.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-diff-wash-hunk <a href="#:~:text=for-,FILE"><span class="arg">FILE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Wrap the current hunk in a section for <span class="arg">FILE</span> without copying its body.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-diff.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-diff-wash-hunk</span> (file)
+  <span class="doc">"Wrap the current hunk in a section for FILE without copying its body."</span>
+  (<span class="k">let*</span> ((header (buffer-substring-no-properties (line-beginning-position)
+                                                 (line-end-position)))
+         (ranges nil)
+         (about nil)
+         (combined nil)
+         (from-range nil)
+         (from-ranges nil)
+         (to-range nil))
+    (<span class="k">when</span> (string-match <span class="s">"^@\\{2,\\} </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> @\\{2,\\}</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?$"</span> header)
+      (<span class="k">setq</span> about (match-string 2 header))
+      (<span class="k">setq</span> ranges (mapcar (<span class="k">lambda</span> (str)
+                             (<span class="k">let</span> ((nums (mapcar #'string-to-number
+                                                 (split-string (substring str 1) <span class="s">","</span>))))
+                               (<span class="k">if</span> (= (length nums) 1)
+                                   (append nums (list 1))
+                                 nums)))
+                           (split-string (match-string 1 header))))
+      (<span class="k">setq</span> combined (= (length ranges) 3))
+      (<span class="k">setq</span> from-ranges (<span class="k">and</span> combined (butlast ranges)))
+      (<span class="k">setq</span> from-range (<span class="k">if</span> combined (car from-ranges) (car ranges)))
+      (<span class="k">setq</span> to-range (car (last ranges))))
+    <span class="cd">;; </span><span class="c">Remove original header and insert a propertized one.
+</span>    (majutsu-diff--delete-line)
+    <span class="cd">;; </span><span class="c">Use (file . from-range) as unique hunk identity to avoid collisions.
+</span>    (<span class="k">magit-insert-section</span>
+        (jj-hunk (cons file from-range) nil
+                 <span class="bi">:combined</span> combined
+                 <span class="bi">:from-range</span> from-range
+                 <span class="bi">:from-ranges</span> from-ranges
+                 <span class="bi">:to-range</span> to-range
+                 <span class="bi">:about</span> about)
+      (magit-insert-heading
+        (propertize header 'font-lock-face 'magit-diff-hunk-heading))
+      (<span class="k">let</span> ((body-start (point)))
+        <span class="cd">;; </span><span class="c">Advance over hunk lines already present in the buffer.
+</span>        (<span class="k">while</span> (<span class="k">and</span> (not (eobp))
+                    (not (looking-at <span class="s">"^@@ "</span>))
+                    (not (looking-at <span class="s">"^diff --git "</span>)))
+          (<span class="k">let</span> ((bol (point)))
+            (forward-line 1)
+            (<span class="k">let</span> ((face (<span class="k">cond</span>
+                         ((eq (char-after bol) ?+) 'magit-diff-added)
+                         ((eq (char-after bol) ?-) 'magit-diff-removed)
+                         (t 'magit-diff-context))))
+              (put-text-property bol (point) 'font-lock-face face))))
+        (<span class="k">when</span> majutsu-diff-paint-whitespace
+          (majutsu-diff--paint-hunk-whitespace body-start (point) file))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

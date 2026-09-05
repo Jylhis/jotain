@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-clone-internal – Emacs Documentation Online</title>
+<meta name="description" content="magit-clone-internal is a natively compiled function defined in
+magit-clone.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-clone-internal</code></h1><p><span class="m"><code>magit-clone-internal</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-clone.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-clone-internal <span class="arg">REPOSITORY</span> <span class="arg">DIRECTORY</span> <span class="arg">ARGS</span> <span class="ty">&amp;optional</span> <span class="arg">SPARSE</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-clone.el</span>
+(<span class="k">defun</span> <span class="f">magit-clone-internal</span> (repository directory args <span class="ty">&amp;optional</span> sparse)
+  (<span class="k">let*</span> ((checkout (not (member (car args) '(<span class="s">"--bare"</span> <span class="s">"--mirror"</span>))))
+         (remote (<span class="k">or</span> (transient-arg-value <span class="s">"--origin="</span> args)
+                     (magit-get <span class="s">"clone.defaultRemote"</span>)
+                     <span class="s">"origin"</span>))
+         (set-push-default
+          (<span class="k">and</span> checkout
+               (<span class="k">or</span> (eq  magit-clone-set-remote.pushDefault t)
+                   (<span class="k">and</span> magit-clone-set-remote.pushDefault
+                        (y-or-n-p (format <span class="s">"Set `</span><span class="m s">remote.pushDefault</span><span class="s">' to %S? "</span>
+                                          remote)))))))
+    (run-hooks 'magit-credential-hook)
+    (<span class="k">setq</span> directory (file-name-as-directory (expand-file-name directory)))
+    (<span class="k">when</span> (file-exists-p directory)
+      (<span class="k">if</span> (file-directory-p directory)
+          (<span class="k">when</span> (length&gt; (directory-files directory) 2)
+            (<span class="k">let</span> ((name (magit-clone--url-to-name repository)))
+              (<span class="k">unless</span> (<span class="k">and</span> name
+                           (<span class="k">setq</span> directory (file-name-as-directory
+                                            (expand-file-name name directory)))
+                           (not (file-exists-p directory)))
+                (<span class="w">user-error</span> <span class="s">"%s already exists"</span> directory))))
+        (<span class="w">user-error</span> <span class="s">"%s already exists and is not a directory"</span> directory)))
+    (magit-run-git-async <span class="s">"clone"</span> args <span class="s">"--"</span> repository
+                         (magit-convert-filename-for-git directory))
+    <span class="cd">;; </span><span class="c">Don't refresh the buffer we're calling from.
+</span>    (process-put magit-this-process 'inhibit-refresh t)
+    (set-process-sentinel
+     magit-this-process
+     (<span class="k">lambda</span> (process event)
+       (<span class="k">when</span> (memq (process-status process) '(exit signal))
+         (<span class="k">let</span> ((magit-process-raise-error t))
+           (magit-process-sentinel process event)))
+       (<span class="k">when</span> (<span class="k">and</span> (eq (process-status process) 'exit)
+                  (= (process-exit-status process) 0))
+         (<span class="k">when</span> checkout
+           (<span class="k">let</span> ((default-directory directory))
+             (<span class="k">when</span> set-push-default
+               (<span class="k">setf</span> (magit-get <span class="s">"remote.pushDefault"</span>) remote))
+             (<span class="k">unless</span> magit-clone-set-remote-head
+               (magit-remote-unset-head remote))))
+         (<span class="k">when</span> (<span class="k">and</span> sparse checkout)
+           (<span class="k">let</span> ((default-directory directory))
+             (magit-call-git <span class="s">"sparse-checkout"</span> <span class="s">"init"</span> <span class="s">"--cone"</span>)
+             (magit-call-git <span class="s">"checkout"</span> (magit-get-current-branch))))
+         (<span class="k">let</span> ((default-directory directory))
+           (run-hooks 'magit-post-clone-hook))
+         (<span class="k">with-current-buffer</span> (process-get process 'command-buf)
+           (magit-status-setup-buffer directory)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

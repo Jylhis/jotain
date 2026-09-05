@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-edit-code-block – Emacs Documentation Online</title>
+<meta name="description" content="markdown-edit-code-block is an interactive and natively compiled
+function defined in markdown-mode.el.
+Edit Markdown code block in an indirect buffer.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-edit-code-block</code></h1><p><span class="m"><code>markdown-edit-code-block</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-edit-code-block)
+</code></pre>
+<h2>Documentation</h2>
+<p>Edit Markdown code block in an indirect buffer.
+<h2>Key Bindings</h2>
+<p><span class="v">markdown-mode-map</span> <span class="key">C-c '</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-edit-code-block</span> ()
+  <span class="doc">"Edit Markdown code block in an indirect buffer."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">save-excursion</span>
+    (<span class="k">if</span> (fboundp 'edit-indirect-region)
+        (<span class="k">if-let*</span> ((bounds (markdown-get-enclosing-fenced-block-construct))
+                  (fence-begin (nth 0 bounds))
+                  (fence-end (nth 1 bounds)))
+            (<span class="k">let*</span> ((original-line (line-number-at-pos))
+                   (original-column (current-column))
+                   (begin (<span class="k">progn</span> (goto-char fence-begin) (line-beginning-position 2)))
+                   (line (max 0 (- original-line (line-number-at-pos) 1)))
+                   (indentation (current-indentation))
+                   (column (max 0 (- original-column indentation)))
+                   (end (<span class="k">progn</span> (goto-char fence-end) (line-beginning-position 1)))
+                   (lang (markdown-code-block-lang))
+                   (mode (<span class="k">or</span> (<span class="k">and</span> lang (markdown-get-lang-mode lang))
+                             markdown-edit-code-block-default-mode))
+                   (edit-indirect-guess-mode-function
+                    (<span class="k">lambda</span> (_parent-buffer _beg _end)
+                      (funcall mode)))
+                   (indirect-buf (edit-indirect-region begin end 'display-buffer)))
+              (<span class="k">with-current-buffer</span> indirect-buf
+                <span class="cd">;; </span><span class="c">reset `</span><span class="m c">sh-shell</span><span class="c">' when indirect buffer
+</span>                (<span class="k">when</span> (<span class="k">and</span> (not (member system-type '(ms-dos windows-nt)))
+                           (member mode '(shell-script-mode sh-mode))
+                           (member lang (append
+                                         (mapcar (<span class="k">lambda</span> (e) (symbol-name (car e)))
+                                                 sh-ancestor-alist)
+                                         '(<span class="s">"csh"</span> <span class="s">"rc"</span> <span class="s">"sh"</span>))))
+                  (sh-set-shell lang))
+                (<span class="k">when</span> (&gt; indentation 0) <span class="cd">;; </span><span class="c">un-indent in edit-indirect buffer
+</span>                  (indent-rigidly (point-min) (point-max) (- indentation)))
+                (goto-char (point-min))
+                (forward-line line)
+                (move-to-column column)))
+          (<span class="w">user-error</span> <span class="s">"Not inside a GFM or tilde fenced code block"</span>))
+      (<span class="k">when</span> (y-or-n-p <span class="s">"Package edit-indirect needed to edit code blocks. Install it now? "</span>)
+        (package-refresh-contents)
+        (package-install 'edit-indirect)
+        (markdown-edit-code-block)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

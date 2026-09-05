@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: tuareg--syntax-rules – Emacs Documentation Online</title>
+<meta name="description" content="tuareg--syntax-rules is a macro defined in tuareg.el.
+Generate a function to parse according to RULES.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>tuareg--syntax-rules</code></h1><p><span class="m"><code>tuareg--syntax-rules</code></span> is a macro defined in <span class="bt">tuareg.el</span>.
+<h2>Signature</h2>
+<pre><code>(<span class="k">tuareg--syntax-rules</span> <span class="ty">&amp;rest</span> <a href="#:~:text=to-,RULES"><span class="arg">RULES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Generate a function to parse according to <span class="arg">RULES</span>.
+<p>Each argument has the form (RE BODY...) where RE is a regexp to
+match and BODY what to execute upon match. BODY is executed with
+point at the end of the match, <span class="m"><code>start</code></span> bound to the start of the
+match and <span class="m"><code>group</code></span> to the number of the first group in RE, if any.
+The returned function takes the two arguments BEGIN and END
+delimiting the region of interest.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/4crqsgi9ghz21nvnb4xaz874d25s0ml0-emacs-packages-deps/share/emacs/site-lisp/elpa/tuareg-20260626.936/tuareg.el</span>
+(<span class="k">defmacro</span> <span class="f">tuareg--syntax-rules</span> (<span class="ty">&amp;rest</span> rules)
+  <span class="doc">"Generate a function to parse according to RULES.
+Each argument has the form (RE BODY...) where RE is a regexp to
+match and BODY what to execute upon match. BODY is executed with
+point at the end of the match, `</span><span class="m doc">start</span><span class="doc">' bound to the start of the
+match and `</span><span class="m doc">group</span><span class="doc">' to the number of the first group in RE, if any.
+The returned function takes the two arguments BEGIN and END
+delimiting the region of interest. "</span>
+  (<span class="k">let</span> ((group-number 1)
+        (clauses nil)
+        (regexps nil))
+    (<span class="k">dolist</span> (rule rules)
+      (<span class="k">let*</span> ((re (macroexpand (car rule)))
+             (body (cdr rule))
+             (re-ngroups (regexp-opt-depth re))
+             (clause-body
+              (<span class="k">if</span> (&gt; re-ngroups 0)
+                  `((<span class="k">let</span> ((group ,(1+ group-number)))
+                      ,@body))
+                body)))
+        (<span class="k">push</span> re regexps)
+        <span class="cd">;; </span><span class="c">We can just omit empty clauses since the conditions are
+</span>        <span class="cd">;; </span><span class="c">mutually exclusive by construction (and the value of the
+</span>        <span class="cd">;; </span><span class="c">clause bodies are ignored).
+</span>        (<span class="k">when</span> body
+          (<span class="k">push</span> `((match-beginning ,group-number) . ,clause-body)
+                clauses))
+        (<span class="k">setq</span> group-number (+ group-number 1 re-ngroups))))
+    (<span class="k">let</span> ((combined-re (mapconcat (<span class="k">lambda</span> (re) (concat <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">"</span> re <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>))
+                                  (nreverse regexps) <span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">"</span>))
+          (begin (make-symbol <span class="s">"begin"</span>))
+          (end (make-symbol <span class="s">"end"</span>)))
+      `(<span class="k">lambda</span> (,begin ,end)
+         (goto-char ,begin)
+         (<span class="k">while</span> (<span class="k">and</span> (&lt; (point) ,end)
+                     (re-search-forward ,combined-re ,end t)
+                     (<span class="k">let</span> ((start (match-beginning 0)))
+                       (<span class="k">cond</span> . ,(nreverse clauses))
+                       t)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

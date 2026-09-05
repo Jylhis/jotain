@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-list-refs – Emacs Documentation Online</title>
+<meta name="description" content="magit-list-refs is a natively compiled function defined in
+magit-git.el.
+Return list of references, excluding symbolic references.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-list-refs</code></h1><p><span class="m"><code>magit-list-refs</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-git.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-list-refs <span class="ty">&amp;optional</span> <a href="#:~:text=When-,NAMESPACES"><span class="arg">NAMESPACES</span></a> <a href="#:~:text=namespaces.-,FORMAT"><span class="arg">FORMAT</span></a> <a href="#:~:text=refname)&quot;.-,SORTBY"><span class="arg">SORTBY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return list of references, excluding symbolic references.
+<p>When <span class="arg">NAMESPACES</span> is non-nil, list refs from these namespaces
+rather than those from <a href="../var/magit-list-refs-namespaces.html"><code>magit-list-refs-namespaces</code></a>.
+<p><span class="arg">FORMAT</span> is passed to the "--format" flag of "git for-each-ref"
+and defaults to "%(refname)".
+<p><span class="arg">SORTBY</span> is a key or list of keys to pass to the "--sort" flag
+of "git for-each-ref" to sort the refs within each namespace.
+When nil, use <a href="../var/magit-list-refs-sortby.html"><code>magit-list-refs-sortby</code></a>.  If both are nil, use
+<br>"version:refname", but only for "refs/tags".
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/k1kwf51rwhxc2r08pvslpgkhbnr4nxnr-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260822.1158/magit-git.el</span>
+(<span class="k">defun</span> <span class="f">magit-list-refs</span> (<span class="ty">&amp;optional</span> namespaces format sortby)
+  <span class="doc">"Return list of references, excluding symbolic references.
+
+When NAMESPACES is non-nil, list refs from these namespaces
+rather than those from `</span><span class="m doc">magit-list-refs-namespaces</span><span class="doc">'.
+
+FORMAT is passed to the \"--format\" flag of \"git for-each-ref\"
+and defaults to \"%(refname)\".
+
+SORTBY is a key or list of keys to pass to the \"--sort\" flag
+of \"git for-each-ref\" to sort the refs within each namespace.
+When nil, use `</span><span class="m doc">magit-list-refs-sortby</span><span class="doc">'.  If both are nil, use
+\"version:refname\", but only for \"refs/tags\"."</span>
+  (<span class="k">let</span> ((format (concat <span class="s">"--format=%(symref)&#12;"</span> (<span class="k">or</span> format <span class="s">"%(refname)"</span>)))
+        (sortby (mapcar (##concat <span class="s">"--sort="</span> %)
+                        (ensure-list (<span class="k">or</span> sortby magit-list-refs-sortby)))))
+    (seq-keep (<span class="k">lambda</span> (line)
+                (<span class="k">pcase-let*</span> ((`(,symrefp ,value)
+                              (split-string line <span class="s">"&#12;"</span>))
+                             (symrefp (not (equal symrefp <span class="s">""</span>))))
+                  (<span class="k">and</span> (not symrefp) value)))
+              (mapcan (<span class="k">lambda</span> (ns)
+                        (<span class="k">if</span> (<span class="k">and</span> (not sortby)
+                                 (equal ns <span class="s">"refs/tags"</span>))
+                            (magit-git-lines <span class="s">"for-each-ref"</span> format
+                                             <span class="s">"--sort=-version:refname"</span> ns)
+                          (magit-git-lines <span class="s">"for-each-ref"</span> format sortby ns)))
+                      (ensure-list
+                       (<span class="k">or</span> namespaces magit-list-refs-namespaces))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

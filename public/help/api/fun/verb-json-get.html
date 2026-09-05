@@ -1,0 +1,89 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: verb-json-get – Emacs Documentation Online</title>
+<meta name="description" content="verb-json-get is a natively compiled function defined in verb.el.
+Interpret TEXT as a JSON object and return value under PATH.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>verb-json-get</code></h1><p><span class="m"><code>verb-json-get</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">verb.el</span>.
+<h2>Signature</h2>
+<pre><code>(verb-json-get <a href="#:~:text=Interpret-,TEXT"><span class="arg">TEXT</span></a> <span class="ty">&amp;rest</span> <a href="#:~:text=under-,PATH"><span class="arg">PATH</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Interpret <span class="arg">TEXT</span> as a JSON object and return value under <span class="arg">PATH</span>.
+<p>The outermost JSON element in <span class="arg">TEXT</span> must be an object.
+<span class="arg">PATH</span> must be a list of strings, symbols (which will be converted to
+strings), or integers.  The <span class="arg">PATH</span> list will be traversed from beginning
+to end, using each item to access a sub-value in the current JSON
+element (and setting the current JSON element to that new value).
+This is supposed to work in a similar way JSONPath does, more info at
+URL <a href="https://goessner.net/articles/JsonPath/">https://goessner.net/articles/JsonPath/</a>.
+<p>For example, for the following <span class="arg">TEXT</span>:
+<br>{
+<br>&nbsp;&nbsp;"test": {
+<br>&nbsp;&nbsp;&nbsp;&nbsp;"foo": ["apples", "oranges"]
+<br>&nbsp;&nbsp;}
+<br>}
+<p>Using <span class="arg">PATH</span> ("test" "foo" 1) will yield "oranges".
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/1vhkdxrkj0c423ijah8wn2d489dd8rgw-emacs-packages-deps/share/emacs/site-lisp/elpa/verb-20260818.1921/verb.el</span>
+(<span class="k">defun</span> <span class="f">verb-json-get</span> (text <span class="ty">&amp;rest</span> path)
+  <span class="doc">"Interpret TEXT as a JSON object and return value under PATH.
+The outermost JSON element in TEXT must be an object.
+PATH must be a list of strings, symbols (which will be converted to
+strings), or integers.  The PATH list will be traversed from beginning
+to end, using each item to access a sub-value in the current JSON
+element (and setting the current JSON element to that new value).
+This is supposed to work in a similar way JSONPath does, more info at
+URL `</span><span class="m doc">https://goessner.net/articles/JsonPath/</span><span class="doc">'.
+
+For example, for the following TEXT:
+{
+  \"test\": {
+    \"foo\": [\"apples\", \"oranges\"]
+  }
+}
+
+Using PATH (\"test\" \"foo\" 1) will yield \"oranges\"."</span>
+  (<span class="k">unless</span> path
+    (<span class="w">user-error</span> <span class="s">"%s"</span> <span class="s">"No path specified for JSON value"</span>))
+  (<span class="k">let</span> ((obj (json-read-from-string text)))
+    (<span class="k">dolist</span> (key path)
+      (<span class="k">setq</span>
+       obj
+       (<span class="k">cond</span>
+        (<span class="cd">;; </span><span class="c">Path element is a string (or symbol).
+</span>         (<span class="k">or</span> (stringp key) (symbolp key))
+         (<span class="k">when</span> (symbolp key)
+           (<span class="k">setq</span> key (symbol-name key)))
+         <span class="cd">;; </span><span class="c">Obj may be an alist, plist or hash-table.
+</span>         (<span class="k">pcase</span> json-object-type
+           ('alist
+            (cdr (assoc-string key obj)))
+           ('plist
+            (plist-get obj (intern (concat <span class="s">":"</span> key))))
+           ('hash-table
+            (gethash key obj))
+           (_
+            (<span class="w">user-error</span> <span class="s">"%s"</span> <span class="s">"Unknown value for `</span><span class="m s">json-object-type</span><span class="s">'"</span>))))
+        (<span class="cd">;; </span><span class="c">Path element is an integer.
+</span>         (integerp key)
+         <span class="cd">;; </span><span class="c">Handle negative indexes by adding the negative index to the size of
+</span>         <span class="cd">;; </span><span class="c">the sequence, and using that as the new index.
+</span>         (<span class="k">when</span> (<span class="k">and</span> (&lt; key 0) (seqp obj))
+           (<span class="k">setq</span> key (+ key (length obj))))
+         <span class="cd">;; </span><span class="c">Obj may be a list or a vector.
+</span>         (<span class="k">pcase</span> json-array-type
+           ('list
+            (nth key obj))
+           ('vector
+            (aref obj key))
+           (_
+            (<span class="w">user-error</span> <span class="s">"%s"</span> <span class="s">"Unknown value for `</span><span class="m s">json-array-type</span><span class="s">'"</span>))))
+        (<span class="cd">;; </span><span class="c">Invalid key type.
+</span>         t
+         (<span class="w">user-error</span> <span class="s">"Invalid key: %s"</span> key)))))
+    obj))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

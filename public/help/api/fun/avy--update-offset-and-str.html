@@ -1,0 +1,69 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: avy--update-offset-and-str – Emacs Documentation Online</title>
+<meta name="description" content="avy--update-offset-and-str is a natively compiled function defined in
+avy.el.
+Recalculate the length of the new overlay at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>avy--update-offset-and-str</code></h1><p><span class="m"><code>avy--update-offset-and-str</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">avy.el</span>.
+<h2>Signature</h2>
+<pre><code>(avy--update-offset-and-str <a href="#:~:text=point.-,OFFSET"><span class="arg">OFFSET</span></a> <a href="#:~:text=length.-,STR"><span class="arg">STR</span></a> <a href="#:~:text=add.-,LEP"><span class="arg">LEP</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Recalculate the length of the new overlay at point.
+<p><span class="arg">OFFSET</span> is the previous overlay length.
+<span class="arg">STR</span> is the overlay string that we wish to add.
+<span class="arg">LEP</span> is the line end position.
+<p>We want to add an overlay between point and END=point+<span class="arg">OFFSET</span>.
+When other overlays already exist between point and END, set
+<span class="arg">OFFSET</span> to be the difference between the start of the first
+overlay and point.  This is equivalent to truncating our new
+overlay, so that it doesn't intersect with overlays that already
+exist.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/w15jf1dbl3fxkx8c35ym39v09hnaxjw9-emacs-packages-deps/share/emacs/site-lisp/elpa/avy-20241101.1357/avy.el</span>
+(<span class="k">defun</span> <span class="f">avy--update-offset-and-str</span> (offset str lep)
+  <span class="doc">"Recalculate the length of the new overlay at point.
+
+OFFSET is the previous overlay length.
+STR is the overlay string that we wish to add.
+LEP is the line end position.
+
+We want to add an overlay between point and END=point+OFFSET.
+When other overlays already exist between point and END, set
+OFFSET to be the difference between the start of the first
+overlay and point.  This is equivalent to truncating our new
+overlay, so that it doesn't intersect with overlays that already
+exist."</span>
+  (<span class="k">let*</span> ((wnd (selected-window))
+         (beg (point))
+         (oov (delq nil
+                    (mapcar
+                     (<span class="k">lambda</span> (o)
+                       (<span class="k">and</span> (eq (overlay-get o 'category) 'avy)
+                            (eq (overlay-get o 'window) wnd)
+                            (overlay-start o)))
+                     (overlays-in beg (min (+ beg offset) lep))))))
+    (<span class="k">when</span> oov
+      (<span class="k">setq</span> offset (- (apply #'min oov) beg))
+      (<span class="k">setq</span> str (substring str 0 offset)))
+    (<span class="k">let</span> ((other-ov (cl-find-if
+                     (<span class="k">lambda</span> (o)
+                       (<span class="k">and</span> (eq (overlay-get o 'category) 'avy)
+                            (eq (overlay-start o) beg)
+                            (not (eq (overlay-get o 'window) wnd))))
+                     (overlays-in (point) (min (+ (point) offset) lep)))))
+      (<span class="k">when</span> (<span class="k">and</span> other-ov
+                 (&gt; (overlay-end other-ov)
+                    (+ beg offset)))
+        (<span class="k">setq</span> str (concat str (buffer-substring
+                               (+ beg offset)
+                               (overlay-end other-ov))))
+        (<span class="k">setq</span> offset (- (overlay-end other-ov)
+                        beg))))
+    (cons offset str)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,80 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit-todos--git-diff-callback – Emacs Documentation Online</title>
+<meta name="description" content="magit-todos--git-diff-callback is a natively compiled function defined
+in magit-todos.el.
+Callback for git diff scanner output.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit-todos--git-diff-callback</code></h1><p><span class="m"><code>magit-todos--git-diff-callback</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">magit-todos.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit-todos--git-diff-callback <span class="ty">&amp;key</span> <a href="#:~:text=into-,MAGIT-STATUS-BUFFER"><span class="arg">MAGIT-STATUS-BUFFER</span></a> <a href="#:~:text=BUFFER.-,RESULTS-REGEXP"><span class="arg">RESULTS-REGEXP</span></a> <a href="#:~:text=line.-,SEARCH-REGEXP-ELISP"><span class="arg">SEARCH-REGEXP-ELISP</span></a> <a href="#:~:text=results.-,PROCESS"><span class="arg">PROCESS</span></a> <a href="#:~:text=to-,HEADING"><span class="arg">HEADING</span></a> <a href="#:~:text=items.-,EXCLUDE-GLOBS"><span class="arg">EXCLUDE-GLOBS</span></a> <span class="ty">&amp;allow-other-keys</span>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Callback for git diff scanner output.
+<p>Insert into <span class="arg">MAGIT-STATUS-BUFFER</span>.  <span class="arg">RESULTS-REGEXP</span> matches a result
+on each line.  <span class="arg">SEARCH-REGEXP-ELISP</span> finds the next hunk of
+results.  <span class="arg">PROCESS</span> is the "git diff" process object.
+<a href="../var/magit-todos-section-heading.html"><code>magit-todos-section-heading</code></a> is bound to <span class="arg">HEADING</span> when inserting
+items.  <span class="arg">EXCLUDE-GLOBS</span> is a list of glob patterns matching
+filenames to be excluded.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/na5pd87dpfy16i19v2xzgb9ry6gjpyvw-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-todos-20250928.1611/magit-todos.el</span>
+(<span class="k">cl-defun</span> <span class="f">magit-todos--git-diff-callback</span> (<span class="ty">&amp;key</span> magit-status-buffer results-regexp search-regexp-elisp process heading
+                                               exclude-globs <span class="ty">&amp;allow-other-keys</span>)
+  <span class="doc">"Callback for git diff scanner output.
+Insert into MAGIT-STATUS-BUFFER.  RESULTS-REGEXP matches a result
+on each line.  SEARCH-REGEXP-ELISP finds the next hunk of
+results.  PROCESS is the \"git diff\" process object.
+`</span><span class="m doc">magit-todos-section-heading</span><span class="doc">' is bound to HEADING when inserting
+items.  EXCLUDE-GLOBS is a list of glob patterns matching
+filenames to be excluded."</span>
+  <span class="cd">;; </span><span class="c">NOTE: Doesn't handle newlines in filenames or diff.mnemonicPrefix.
+</span>  (<span class="k">cl-macrolet</span> ((next-diff () `(re-search-forward (<span class="k">rx</span> bol <span class="s">"diff --git "</span>) nil t))
+                (next-filename () `(<span class="k">when</span> (re-search-forward (<span class="k">rx</span> bol <span class="s">"+++ b/"</span> (group (1+ nonl))) nil t)
+                                     (match-string 1)))
+                (next-hunk-line-number () `(<span class="k">when</span> (re-search-forward (<span class="k">rx</span> bol <span class="s">"@@ -"</span>
+                                                                        (1+ digit) (optional <span class="s">","</span> (1+ digit)) (1+ space)
+                                                                        <span class="s">"+"</span> (group (1+ digit)) (optional <span class="s">","</span> (1+ digit)))
+                                                                    file-end t)
+                                             (string-to-number (match-string 1))))
+                (file-end () `(<span class="k">or</span> (<span class="k">save-excursion</span>
+                                    (<span class="k">when</span> (re-search-forward (<span class="k">rx</span> bol <span class="s">"diff --git "</span>)
+                                                             nil t)
+                                      (match-beginning 0)))
+                                  (point-max)))
+                (hunk-end () `(<span class="k">or</span> (<span class="k">save-excursion</span>
+                                    (<span class="k">when</span> (re-search-forward (<span class="k">rx</span> (<span class="k">or</span> (seq bol <span class="s">"diff --git "</span>)
+                                                                     (seq bol <span class="s">"@@ "</span>)))
+                                                             nil t)
+                                      (match-beginning 0)))
+                                  (point-max))))
+    (<span class="k">with-current-buffer</span> (process-buffer process)
+      (goto-char (point-min))
+      (<span class="k">let</span> ((glob-regexps (mapcar #'wildcard-to-regexp exclude-globs))
+            items filename file-end hunk-end line-number)
+        (<span class="k">while</span> (next-diff)
+          (<span class="k">while</span> (<span class="k">setf</span> filename (next-filename))
+            (<span class="k">unless</span> (<span class="k">--some?</span> (string-match it filename) glob-regexps)
+              (<span class="k">setf</span> file-end (file-end))
+              (<span class="k">while</span> (<span class="k">setf</span> line-number (next-hunk-line-number))
+                (<span class="k">setf</span> hunk-end (hunk-end))
+                (<span class="k">while</span> (re-search-forward (<span class="k">rx</span> bol <span class="s">"+"</span>) hunk-end t)
+                  <span class="cd">;; </span><span class="c">Since "git diff-index" doesn't accept PCREs to its "-G" option, we have to test the search regexp ourselves.
+</span>                  (<span class="k">when</span> (re-search-forward search-regexp-elisp (line-end-position) t)
+                    (<span class="k">when-let*</span> ((line (buffer-substring (line-beginning-position) (line-end-position)))
+                                (item (<span class="k">with-temp-buffer</span>
+                                        <span class="cd">;; </span><span class="c">NOTE: We fake grep output by inserting the filename, line number, position, etc.
+</span>                                        <span class="cd">;; </span><span class="c">This lets us use the same results regexp that's used for grep-like output.
+</span>                                        (<span class="k">save-excursion</span>
+                                          (insert filename <span class="s">":"</span> (number-to-string line-number) <span class="s">":0: "</span> line))
+                                        (magit-todos--line-item results-regexp filename))))
+                      (<span class="k">push</span> item items)))
+                  (<span class="k">cl-incf</span> line-number))))))
+        (<span class="k">let</span> ((magit-todos-section-heading heading))
+          (<span class="k">setf</span> (buffer-local-value 'magit-todos-branch-item-cache magit-status-buffer) items)
+          (magit-todos--insert-items magit-status-buffer items <span class="bi">:branch-p</span> t))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,97 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: haskell-lexeme--scan-string-literal – Emacs Documentation Online</title>
+<meta name="description" content="haskell-lexeme--scan-string-literal is a natively compiled function
+defined in haskell-lexeme.el.
+Scan the string literal at point delimited by QUOTES double quotes.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>haskell-lexeme--scan-string-literal</code></h1><p><span class="m"><code>haskell-lexeme--scan-string-literal</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">haskell-lexeme.el</span>.
+<h2>Signature</h2>
+<pre><code>(haskell-lexeme--scan-string-literal <a href="#:~:text=by-,QUOTES"><span class="arg">QUOTES</span></a> <a href="#:~:text=When-,NEWLINE-TERMINATES"><span class="arg">NEWLINE-TERMINATES</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Scan the string literal at point delimited by <span class="arg">QUOTES</span> double quotes.
+<p>Point must be at a run of at least <span class="arg">QUOTES</span> double quotes.  The
+literal ends at the earliest unescaped run of at least <span class="arg">QUOTES</span>
+double quotes; a shorter unescaped run is content.  When
+<span class="arg">NEWLINE-TERMINATES</span> is non-nil an unescaped newline leaves the
+literal unterminated, and otherwise a newline is content.
+<p>Always return non-nil, with match data:
+<br>&nbsp;(match-text 1) matches the opening delimiter.
+<br>&nbsp;(match-text 2) matches the inside of the string.
+<br>&nbsp;(match-text 3) matches the closing delimiter, or is nil when
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;the literal is unterminated.
+<p>An unterminated literal ends before an unescaped newline when
+<span class="arg">NEWLINE-TERMINATES</span> is non-nil, and otherwise at the end of the
+buffer.  When it ends at the end of the buffer, the whole match
+and the inside are guaranteed to extend to the end of the
+buffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/ccd92nyzdf3mi6kmi2pc75azlr90xvhk-emacs-packages-deps/share/emacs/site-lisp/elpa/haskell-mode-20260829.851/haskell-lexeme.el</span>
+(<span class="k">defun</span> <span class="f">haskell-lexeme--scan-string-literal</span> (quotes newline-terminates)
+  <span class="doc">"Scan the string literal at point delimited by QUOTES double quotes.
+
+Point must be at a run of at least QUOTES double quotes.  The
+literal ends at the earliest unescaped run of at least QUOTES
+double quotes; a shorter unescaped run is content.  When
+NEWLINE-TERMINATES is non-nil an unescaped newline leaves the
+literal unterminated, and otherwise a newline is content.
+
+Always return non-nil, with match data:
+ (match-text 1) matches the opening delimiter.
+ (match-text 2) matches the inside of the string.
+ (match-text 3) matches the closing delimiter, or is nil when
+                the literal is unterminated.
+
+An unterminated literal ends before an unescaped newline when
+NEWLINE-TERMINATES is non-nil, and otherwise at the end of the
+buffer.  When it ends at the end of the buffer, the whole match
+and the inside are guaranteed to extend to the end of the
+buffer."</span>
+  (<span class="k">save-excursion</span>
+    (<span class="k">let*</span> ((begin (point))
+           (content (+ begin quotes))
+           (closer-tail (make-string (1- quotes) ?\"))
+           (terminators (<span class="k">if</span> newline-terminates <span class="s">"[\"\n\\]"</span> <span class="s">"[\"\\]"</span>))
+           finish)
+      (goto-char content)
+      (<span class="k">while</span> (<span class="k">and</span> (not finish)
+                  (re-search-forward terminators nil 'goto-eob))
+        (<span class="k">cond</span>
+         ((equal (match-string 0) <span class="s">"\\"</span>)
+          (<span class="k">if</span> (looking-at <span class="s">"[ \t\n\r\v\f]+\\\\?"</span>)
+              (goto-char (match-end 0))
+            (goto-char (1+ (point)))))
+
+         ((equal (match-string 0) <span class="s">"\""</span>)
+          (<span class="k">let</span> ((q (match-beginning 0)))
+            (<span class="k">if</span> (looking-at closer-tail)
+                (<span class="k">progn</span>
+                  (set-match-data
+                   (list begin (+ q quotes)
+                         begin content
+                         content q
+                         q (+ q quotes)))
+                  (<span class="k">setq</span> finish t))
+              (skip-chars-forward <span class="s">"\""</span>))))
+
+         ((equal (match-string 0) <span class="s">"\n"</span>)
+          (set-match-data
+           (list begin (match-beginning 0)
+                 begin content
+                 content (match-beginning 0)
+                 nil nil))
+          (<span class="k">setq</span> finish t))))
+      (<span class="k">unless</span> finish
+        <span class="cd">;; </span><span class="c">string closed by end of buffer
+</span>        (set-match-data
+         (list begin (point)
+               begin content
+               content (point)
+               nil nil)))))
+  t)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: markdown-table-transpose – Emacs Documentation Online</title>
+<meta name="description" content="markdown-table-transpose is an interactive and natively compiled
+function defined in markdown-mode.el.
+Transpose table at point.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>markdown-table-transpose</code></h1><p><span class="m"><code>markdown-table-transpose</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">markdown-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(markdown-table-transpose)
+</code></pre>
+<h2>Documentation</h2>
+<p>Transpose table at point.
+<p>Horizontal separator lines will be eliminated.
+<h2>Key Bindings</h2>
+<p><span class="v">markdown-mode-command-map</span> <span class="key">t</span>
+<span class="v">markdown-mode-map</span> <span class="key">C-c C-c t</span>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/s4bvm9kdxw2hixpjqbqj3gi5xi7kr8wh-emacs-packages-deps/share/emacs/site-lisp/elpa/markdown-mode-20260827.909/markdown-mode.el</span>
+(<span class="k">defun</span> <span class="f">markdown-table-transpose</span> ()
+  <span class="doc">"Transpose table at point.
+Horizontal separator lines will be eliminated."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">unless</span> (markdown-table-at-point-p)
+    (<span class="w">user-error</span> <span class="s">"Not at a table"</span>))
+  (<span class="k">let*</span> ((table (buffer-substring-no-properties
+                 (markdown-table-begin) (markdown-table-end)))
+         <span class="cd">;; </span><span class="c">Convert table to Lisp structure
+</span>         (table (delq nil
+                      (mapcar
+                       (<span class="k">lambda</span> (x)
+                         (<span class="k">unless</span> (string-match-p
+                                  markdown-table-hline-regexp x)
+                           (markdown--table-line-to-columns x)))
+                       (markdown--split-string table <span class="s">"[ \t]*\n[ \t]*"</span>))))
+         (dline_old (markdown-table-get-dline))
+         (col_old (markdown-table-get-column))
+         (contents (mapcar (<span class="k">lambda</span> (_)
+                             (<span class="k">let</span> ((tp table))
+                               (mapcar
+                                (<span class="k">lambda</span> (_)
+                                  (<span class="k">prog1</span>
+                                      (<span class="k">pop</span> (car tp))
+                                    (<span class="k">setq</span> tp (cdr tp))))
+                                table)))
+                           (car table))))
+    (goto-char (markdown-table-begin))
+    (<span class="k">save-excursion</span>
+      (re-search-forward <span class="s">"|"</span>) (backward-char)
+      (delete-region (point) (markdown-table-end))
+      (insert (mapconcat
+               (<span class="k">lambda</span>(x)
+                 (concat <span class="s">"| "</span> (mapconcat 'identity x <span class="s">" | "</span> ) <span class="s">" |\n"</span>))
+               contents <span class="s">""</span>)))
+    (markdown-table-goto-dline col_old)
+    (markdown-table-goto-column dline_old))
+  (<span class="k">when</span> markdown-table-align-p
+    (markdown-table-align)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

@@ -1,0 +1,126 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: helpful--format-command-keys – Emacs Documentation Online</title>
+<meta name="description" content="helpful--format-command-keys is a natively compiled function defined
+in helpful.el.
+Convert command key references and keymap references
+in DOCSTRING to buttons.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>helpful--format-command-keys</code></h1><p><span class="m"><code>helpful--format-command-keys</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">helpful.el</span>.
+<h2>Signature</h2>
+<pre><code>(helpful--format-command-keys <a href="#:~:text=in-,DOCSTRING"><span class="arg">DOCSTRING</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Convert command key references and keymap references
+in <span class="arg">DOCSTRING</span> to buttons.
+<p>Emacs uses  to escape \[ references, so replace that
+<br>unescaping too.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/al1y9rq93c50r6aqa0749m04ilfnar06-emacs-packages-deps/share/emacs/site-lisp/elpa/helpful-20250408.334/helpful.el</span>
+(<span class="k">defun</span> <span class="f">helpful--format-command-keys</span> (docstring)
+  <span class="doc">"Convert command key references and keymap references
+in DOCSTRING to buttons.
+
+Emacs uses </span><span class="bi doc">\\=</span><span class="doc"> to escape \\[ references, so replace that
+unescaping too."</span>
+  <span class="cd">;; </span><span class="c">Loosely based on `</span><span class="m c">substitute-command-keys</span><span class="c">', but converts
+</span>  <span class="cd">;; </span><span class="c">references to buttons.
+</span>  (<span class="k">let</span> ((keymap nil))
+    (<span class="k">with-temp-buffer</span>
+      (insert docstring)
+      (goto-char (point-min))
+      (<span class="k">while</span> (not (eobp))
+        (<span class="k">cond</span>
+         ((looking-at
+           <span class="cd">;; </span><span class="c">Text of the form "foo"
+</span>           (<span class="k">rx</span> <span class="s">"\""</span>))
+          <span class="cd">;; </span><span class="c">For literal strings, escape backslashes so our output
+</span>          <span class="cd">;; </span><span class="c">shows copy-pasteable literals.
+</span>          (<span class="k">let*</span> ((start-pos (point))
+                 (end-pos (<span class="k">progn</span> (forward-char) (search-forward <span class="s">"\""</span> nil t)))
+                 contents)
+            (<span class="k">if</span> end-pos
+                (<span class="k">progn</span>
+                  (<span class="k">setq</span> contents (buffer-substring start-pos end-pos))
+                  (delete-region start-pos end-pos)
+                  (insert (s-replace <span class="s">"\\"</span> <span class="s">"\\\\"</span> contents)))
+              (forward-char 1))))
+         ((looking-at
+           <span class="cd">;; </span><span class="c">Text of the form \=X
+</span>           (<span class="k">rx</span> <span class="s">"</span><span class="bi s">\\=</span><span class="s">"</span>))
+          <span class="cd">;; </span><span class="c">Remove the escaping, then step over the escaped char.
+</span>          <span class="cd">;; </span><span class="c">Step over the escaped character.
+</span>          (delete-region (point) (+ (point) 2))
+          (forward-char 1))
+         ((looking-at
+           <span class="cd">;; </span><span class="c">Text of the form `</span><span class="m c">foo</span><span class="c">'
+</span>           (<span class="k">rx</span> <span class="s">"`"</span>))
+          (<span class="k">let*</span> ((start-pos (point))
+                 (end-pos (search-forward <span class="s">"'"</span> nil t))
+                 (contents
+                  (<span class="k">when</span> end-pos
+                    (buffer-substring (1+ start-pos) (1- end-pos)))))
+            (<span class="k">cond</span>
+             ((null contents)
+              <span class="cd">;; </span><span class="c">If there's no closing ' to match the opening `, just
+</span>              <span class="cd">;; </span><span class="c">leave it.
+</span>              (goto-char (1+ start-pos)))
+             ((s-contains-p <span class="s">"`"</span> contents)
+              <span class="cd">;; </span><span class="c">If we have repeated backticks `foo `</span><span class="m c">bar</span><span class="c">', leave the
+</span>              <span class="cd">;; </span><span class="c">first one.
+</span>              (goto-char (1+ start-pos)))
+             ((s-contains-p <span class="s">"\\["</span> contents)
+              (delete-region start-pos end-pos)
+              (insert (helpful--format-commands contents keymap)))
+             <span class="cd">;; </span><span class="c">Highlight a normal `</span><span class="m c">foo</span><span class="c">', extracting the surrounding
+</span>             <span class="cd">;; </span><span class="c">text so we can detect e.g. "function `</span><span class="m c">foo</span><span class="c">'".
+</span>             (t
+              (<span class="k">let</span> ((before (helpful--chars-before start-pos 10))
+                    (after (helpful--chars-after end-pos 10)))
+                (delete-region start-pos end-pos)
+                (insert (helpful--propertize-sym-ref contents before after)))))))
+         ((looking-at
+           <span class="cd">;; </span><span class="c">Text of the form \\&lt;</span><span class="v c">foo-keymap</span><span class="c">&gt;
+</span>           (<span class="k">rx</span> <span class="s">"\\&lt;"</span> (group (+ (not (in <span class="s">"&gt;"</span>)))) <span class="s">"&gt;"</span>
+               (? <span class="s">"\n"</span>)))
+          (<span class="k">let*</span> ((symbol-with-parens (match-string 0))
+                 (symbol-name (match-string 1)))
+            <span class="cd">;; </span><span class="c">Remove the original string.
+</span>            (delete-region (point)
+                           (+ (point) (length symbol-with-parens)))
+            <span class="cd">;; </span><span class="c">Set the new keymap.
+</span>            (<span class="k">setq</span> keymap (symbol-value (intern symbol-name)))))
+         ((looking-at
+           <span class="cd">;; </span><span class="c">Text of the form \\{</span><span class="v c">foo-mode-map</span><span class="c">}
+</span>           (<span class="k">rx</span> <span class="s">"\\{"</span> (group (+ (not (in <span class="s">"}"</span>)))) <span class="s">"}"</span>))
+          (<span class="k">let*</span> ((symbol-with-parens (match-string 0))
+                 (symbol-name (match-string 1))
+                 (keymap
+                  <span class="cd">;; </span><span class="c">Gracefully handle variables not being defined.
+</span>                  (<span class="k">ignore-errors</span>
+                    (symbol-value (intern symbol-name)))))
+            <span class="cd">;; </span><span class="c">Remove the original string.
+</span>            (delete-region (point)
+                           (+ (point) (length symbol-with-parens)))
+            (<span class="k">if</span> keymap
+                (insert (helpful--format-keymap keymap))
+              (insert (format <span class="s">"Keymap %s is not currently defined."</span>
+                              symbol-name)))))
+         ((looking-at
+           <span class="cd">;; </span><span class="c">Text of the form \\[</span><span class="m c">foo-command</span><span class="c">]
+</span>           (<span class="k">rx</span> <span class="s">"\\["</span> (group (+ (not (in <span class="s">"]"</span>)))) <span class="s">"]"</span>))
+          (<span class="k">let*</span> ((symbol-with-parens (match-string 0)))
+            <span class="cd">;; </span><span class="c">Remove the original string.
+</span>            (delete-region (point)
+                           (+ (point) (length symbol-with-parens)))
+            <span class="cd">;; </span><span class="c">Add a button.
+</span>            (insert (helpful--format-commands symbol-with-parens keymap))))
+         <span class="cd">;; </span><span class="c">Don't modify other characters.
+</span>         (t
+          (forward-char 1))))
+      (buffer-string))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

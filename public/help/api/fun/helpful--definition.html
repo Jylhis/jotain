@@ -1,0 +1,111 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: helpful--definition – Emacs Documentation Online</title>
+<meta name="description" content="helpful--definition is a natively compiled function defined in
+helpful.el.
+Return a list (BUF POS OPENED) where SYM is defined.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>helpful--definition</code></h1><p><span class="m"><code>helpful--definition</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">helpful.el</span>.
+<h2>Signature</h2>
+<pre><code>(helpful--definition <a href="#:~:text=where-,SYM"><span class="arg">SYM</span></a> <a href="#:~:text="><span class="arg">CALLABLE-P</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a list (BUF POS OPENED) where <span class="arg">SYM</span> is defined.
+<p>BUF is the buffer containing the definition. If the user wasn't
+already visiting this buffer, OPENED is t and callers should kill
+the buffer when done.
+<p>POS is the position of the start of the definition within the
+buffer.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/al1y9rq93c50r6aqa0749m04ilfnar06-emacs-packages-deps/share/emacs/site-lisp/elpa/helpful-20250408.334/helpful.el</span>
+(<span class="k">defun</span> <span class="f">helpful--definition</span> (sym callable-p)
+  <span class="doc">"Return a list (BUF POS OPENED) where SYM is defined.
+
+BUF is the buffer containing the definition. If the user wasn't
+already visiting this buffer, OPENED is t and callers should kill
+the buffer when done.
+
+POS is the position of the start of the definition within the
+buffer."</span>
+  (<span class="k">let</span> ((primitive-p (helpful--primitive-p sym callable-p))
+        (library-name nil)
+        (src-path nil)
+        (buf nil)
+        (pos nil)
+        (opened nil))
+    <span class="cd">;; </span><span class="c">We shouldn't be called on primitive functions if we don't have
+</span>    <span class="cd">;; </span><span class="c">a directory of Emacs C sourcecode.
+</span>    (<span class="w">cl-assert</span>
+     (<span class="k">or</span> find-function-C-source-directory
+         (not primitive-p)))
+
+    (<span class="k">when</span> (symbolp sym)
+      (<span class="k">if</span> callable-p
+          (<span class="k">setq</span> library-name (cdr (find-function-library sym)))
+        <span class="cd">;; </span><span class="c">Based on `</span><span class="m c">find-variable-noselect</span><span class="c">'.
+</span>        (<span class="k">setq</span> library-name
+              (<span class="k">or</span>
+               (symbol-file sym 'defvar)
+               (help-C-file-name sym 'var)))))
+
+    (<span class="k">when</span> library-name
+      (<span class="k">setq</span> src-path (helpful--library-path library-name)))
+
+    (<span class="k">cond</span>
+     ((<span class="k">and</span> (not (symbolp sym)) (functionp sym))
+      (list nil nil nil))
+     ((<span class="k">and</span> callable-p library-name)
+      (<span class="k">when</span> src-path
+        (<span class="k">-let</span> [(src-buf src-opened) (helpful--open-if-needed src-path)]
+          (<span class="k">setq</span> buf src-buf)
+          (<span class="k">setq</span> opened src-opened))
+
+        <span class="cd">;; </span><span class="c">Based on `</span><span class="m c">find-function-noselect</span><span class="c">'.
+</span>        (<span class="k">with-current-buffer</span> buf
+          <span class="cd">;; </span><span class="c">`</span><span class="m c">find-function-search-for-symbol</span><span class="c">' moves point. Prevent
+</span>          <span class="cd">;; </span><span class="c">that.
+</span>          (<span class="k">save-excursion</span>
+            <span class="cd">;; </span><span class="c">Narrowing has been fixed upstream:
+</span>            <span class="cd">;; </span><span class="c">http://git.savannah.gnu.org/cgit/emacs.git/commit/?id=abd18254aec76b26e86ae27e91d2c916ec20cc46
+</span>            (<span class="k">save-restriction</span>
+              (widen)
+              (<span class="k">setq</span> pos
+                    (cdr (find-function-search-for-symbol sym nil library-name))))))
+        <span class="cd">;; </span><span class="c">If we found the containing buffer, but not the symbol, attempt
+</span>        <span class="cd">;; </span><span class="c">to find it by macroexpanding interesting forms.
+</span>        (<span class="k">when</span> (<span class="k">and</span> buf (not pos))
+          (<span class="k">setq</span> pos (helpful--find-by-macroexpanding buf sym t)))))
+     <span class="cd">;; </span><span class="c">A function, but no file found.
+</span>     (callable-p
+      <span class="cd">;; </span><span class="c">Functions defined interactively may have an edebug property
+</span>      <span class="cd">;; </span><span class="c">that contains the location of the definition.
+</span>      (<span class="k">-when-let</span> (edebug-info (get sym 'edebug))
+        (<span class="k">-let</span> [marker (<span class="k">if</span> (consp edebug-info)
+                          (car edebug-info)
+                        edebug-info)]
+          (<span class="k">setq</span> buf (marker-buffer marker))
+          (<span class="k">setq</span> pos (marker-position marker)))))
+     ((<span class="k">and</span> (not callable-p) src-path)
+      (<span class="k">-let</span> [(src-buf src-opened) (helpful--open-if-needed src-path)]
+        (<span class="k">setq</span> buf src-buf)
+        (<span class="k">setq</span> opened src-opened)
+
+        (<span class="k">with-current-buffer</span> buf
+          <span class="cd">;; </span><span class="c">`</span><span class="m c">find-function-search-for-symbol</span><span class="c">' moves point. Prevent
+</span>          <span class="cd">;; </span><span class="c">that.
+</span>          (<span class="k">save-excursion</span>
+            (<span class="k">condition-case</span> _err
+                (<span class="k">setq</span> pos (cdr (find-variable-noselect sym library-name)))
+              (search-failed nil)
+              <span class="cd">;; </span><span class="c">If your current Emacs instance doesn't match the source
+</span>              <span class="cd">;; </span><span class="c">code configured in find-function-C-source-directory, we can
+</span>              <span class="cd">;; </span><span class="c">get an error about not finding source. Try
+</span>              <span class="cd">;; </span><span class="c">`</span><span class="m c">default-tab-width</span><span class="c">' against Emacs trunk.
+</span>              (<span class="w">error</span> nil)))))))
+
+    (list buf pos opened)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

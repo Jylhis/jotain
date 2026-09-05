@@ -1,0 +1,86 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: logview-filter-edit--font-lock-region – Emacs Documentation Online</title>
+<meta name="description" content="logview-filter-edit--font-lock-region is a natively compiled function
+defined in logview.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>logview-filter-edit--font-lock-region</code></h1><p><span class="m"><code>logview-filter-edit--font-lock-region</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">logview.el</span>.
+<h2>Signature</h2>
+<pre><code>(logview-filter-edit--font-lock-region <span class="arg">REGION-END</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/qid656ql5mh048bd0k84vvsbc2517lh9-emacs-packages-deps/share/emacs/site-lisp/elpa/logview-20260218.2013/logview.el</span>
+(<span class="k">defun</span> <span class="f">logview-filter-edit--font-lock-region</span> (region-end)
+  (<span class="k">save-excursion</span>
+    (<span class="k">save-match-data</span>
+      <span class="cd">;; </span><span class="c">Not even in a Logview mode buffer, not using `</span><span class="m c">std</span><span class="c">'.
+</span>      (<span class="k">logview--temporarily-widening</span>
+        (<span class="k">with-silent-modifications</span>
+          (forward-line 0)
+          <span class="cd">;; </span><span class="c">Never try to parse from the middle of a multiline filter.
+</span>          (<span class="k">while</span> (<span class="k">and</span> (not (bobp))
+                      (looking-at <span class="s">"\\.\\. "</span>))
+            (forward-line -1))
+          (logview--iterate-filter-buffer-lines
+           (<span class="k">lambda</span> (type line-begin begin end)
+             (<span class="k">unless</span> (<span class="k">pcase</span> type
+                       (`nil
+                        (<span class="k">when</span> (eq logview-filter-edit--mode 'views)
+                          (<span class="k">save-excursion</span>
+                            (goto-char line-begin)
+                            (<span class="k">cond</span> ((looking-at logview--view-header-regexp)
+                                   (put-text-property (match-beginning 1) (match-end 1) 'face 'font-lock-keyword-face)
+                                   (put-text-property (match-beginning 2) (match-end 2) 'face 'font-lock-function-name-face)
+                                   t)
+                                  ((looking-at logview--view-submode-regexp)
+                                   (put-text-property (match-beginning 1) (match-end 1) 'face 'font-lock-keyword-face)
+                                   (<span class="k">let</span> ((submode-name (match-string-no-properties 2)))
+                                     (put-text-property (match-beginning 2) (match-end 2) 'face (<span class="k">if</span> (<span class="k">or</span> (assoc submode-name logview-std-submodes)
+                                                                                                        (assoc submode-name logview-additional-submodes))
+                                                                                                    'font-lock-variable-name-face
+                                                                                                  'error)))
+                                   t)
+                                  ((looking-at logview--view-index-regexp)
+                                   (put-text-property (match-beginning 1) (match-end 1) 'face 'font-lock-keyword-face)
+                                   (put-text-property (match-beginning 2) (match-end 2) 'face 'font-lock-constant-face)
+                                   t)))))
+                       (<span class="s">"#"</span>
+                        (put-text-property begin end 'face 'font-lock-comment-face)
+                        t)
+                       (<span class="s">""</span>
+                        (put-text-property begin end 'face nil)
+                        t)
+                       ((<span class="k">or</span> <span class="s">"lv"</span> <span class="s">"LV"</span>)
+                        (<span class="k">when</span> (memq logview-filter-edit--mode '(main-filters views))
+                          (put-text-property line-begin begin 'face 'logview-edit-filters-type-prefix)
+                          (<span class="k">let</span> ((level-string (buffer-substring-no-properties begin end))
+                                (known-levels (<span class="k">with-current-buffer</span> logview-filter-edit--parent-buffer
+                                                logview--submode-level-data)))
+                            (<span class="k">while</span> (<span class="k">and</span> level-string known-levels)
+                              (<span class="k">if</span> (string= (caar known-levels) level-string)
+                                  (<span class="k">setq</span> level-string nil)
+                                (<span class="k">setq</span> known-levels (cdr known-levels))))
+                            (put-text-property begin end 'face (<span class="k">if</span> level-string 'error nil)))
+                          t))
+                       (_
+                        (<span class="k">when</span> (<span class="k">or</span> (memq logview-filter-edit--mode '(main-filters views)) (member type '(<span class="s">"t+"</span> <span class="s">"t-"</span>)))
+                          (<span class="k">let*</span> ((valid (logview--valid-regexp-p (logview--filter-regexp begin end))))
+                            (goto-char begin)
+                            (<span class="k">while</span> (<span class="k">let</span> ((from (point)))
+                                     (put-text-property (- from 3) from 'face 'logview-edit-filters-type-prefix)
+                                     (forward-line)
+                                     (put-text-property from (<span class="k">if</span> (bolp) (logview--character-back (point)) (point))
+                                                        'face (<span class="k">unless</span> valid 'error))
+                                     (<span class="k">when</span> (&lt; (point) end)
+                                       (forward-char 3)
+                                       t))))
+                          t)))
+               (put-text-property begin end 'face 'error))
+             (&lt; (point) region-end)))))))
+  <span class="cd">;; </span><span class="c">Tell font-lock that it's not worth calling us back for "further matches".
+</span>  nil)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

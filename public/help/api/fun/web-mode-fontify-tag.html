@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: web-mode-fontify-tag – Emacs Documentation Online</title>
+<meta name="description" content="web-mode-fontify-tag is a natively compiled function defined in
+web-mode.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>web-mode-fontify-tag</code></h1><p><span class="m"><code>web-mode-fontify-tag</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">web-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(web-mode-fontify-tag <span class="ty">&amp;optional</span> <span class="arg">BEG</span> <span class="arg">END</span>)
+</code></pre>
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/x925hd4kr65vw6221bf7bb2azagpjif5-emacs-packages-deps/share/emacs/site-lisp/elpa/web-mode-20260831.219/web-mode.el</span>
+(<span class="k">defun</span> <span class="f">web-mode-fontify-tag</span> (<span class="ty">&amp;optional</span> beg end)
+  (<span class="k">unless</span> beg (<span class="k">setq</span> beg (point)))
+  (<span class="k">unless</span> end (<span class="k">setq</span> end (1+ (web-mode-tag-end-position beg))))
+  (<span class="k">let</span> (name type face flags slash-beg slash-end bracket-end)
+    (<span class="k">setq</span> flags (get-text-property beg 'tag-beg)
+          type (get-text-property beg 'tag-type)
+          name (get-text-property beg 'tag-name))
+    (<span class="k">setq</span> bracket-end (&gt; (logand flags 16) 0))
+    (<span class="k">cond</span>
+      ((eq type 'comment)
+       (put-text-property beg end 'font-lock-face 'web-mode-comment-face)
+       (<span class="k">when</span> (<span class="k">and</span> web-mode-enable-comment-interpolation (&gt; (- end beg) 5))
+         (web-mode-interpolate-comment beg end nil)))
+      ((eq type 'cdata)
+       (put-text-property beg end 'font-lock-face 'web-mode-doctype-face))
+      ((eq type 'doctype)
+       (put-text-property beg end 'font-lock-face 'web-mode-doctype-face))
+      ((eq type 'declaration)
+       (put-text-property beg end 'font-lock-face 'web-mode-doctype-face))
+      (name
+       (<span class="k">setq</span> slash-beg (&gt; (logand flags 4) 0)
+             slash-end (&gt; (logand flags 8) 0)
+             bracket-end (&gt; (logand flags 16) 0))
+       (<span class="k">setq</span> face (<span class="k">cond</span>
+                    ((not bracket-end)       'web-mode-html-tag-unclosed-face)
+                    ((<span class="k">and</span> web-mode-enable-element-tag-fontification
+                          (<span class="k">setq</span> face (cdr (assoc name web-mode-element-tag-faces))))
+                     face)
+                    ((&gt; (logand flags 32) 0) 'web-mode-html-tag-namespaced-face)
+                    ((&gt; (logand flags 2) 0)  'web-mode-html-tag-custom-face)
+                    (t                       'web-mode-html-tag-face)))
+       (put-text-property beg (+ beg (<span class="k">if</span> slash-beg 2 1))
+                          'font-lock-face 'web-mode-html-tag-bracket-face)
+       (<span class="k">if</span> (string= name <span class="s">"_fragment_"</span>)
+           (<span class="k">progn</span>
+             <span class="cd">;;</span><span class="c">(message "beg=%S" beg)
+</span>             )
+           (put-text-property (+ beg (<span class="k">if</span> slash-beg 2 1))
+                              (+ beg (<span class="k">if</span> slash-beg 2 1) (length name))
+                              'font-lock-face face))
+       (<span class="k">when</span> (<span class="k">or</span> slash-end bracket-end)
+         (put-text-property (- end (<span class="k">if</span> slash-end 2 1)) end 'font-lock-face 'web-mode-html-tag-bracket-face)
+         ) <span class="cd">;</span><span class="c">when
+</span>       (<span class="k">when</span> (&gt; (logand flags 1) 0)
+         <span class="cd">;;</span><span class="c">(message "%S&gt;%S" beg end)
+</span>         (web-mode-fontify-attrs beg end))
+       ) <span class="cd">;</span><span class="c">case name
+</span>      ) <span class="cd">;</span><span class="c">cond
+</span>    ))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

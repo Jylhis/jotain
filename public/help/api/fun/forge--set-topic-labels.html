@@ -1,0 +1,57 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: forge--set-topic-labels – Emacs Documentation Online</title>
+<meta name="description" content="forge--set-topic-labels is a byte-compiled function defined in
+forge-github.el.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>forge--set-topic-labels</code></h1><p><span class="m"><code>forge--set-topic-labels</code></span> is a <a href="/info/elisp/byte-compilation.html">byte-compiled</a> function defined in
+<span class="bt">forge-github.el</span>.
+<h2>Signature</h2>
+<pre><code>(forge--set-topic-labels <span class="ty">&amp;rest</span> <span class="arg">ARGS</span>)
+</code></pre>
+<h2>Implementations</h2>
+<p>(forge--set-topic-labels (REPO forge-gitlab-repository) (TOPIC forge-topic) LABELS) in `<span class="bt">forge-gitlab.el</span>'.
+<p>Undocumented
+<p>(forge--set-topic-labels (REPO forge-github-repository) (TOPIC forge-topic) LABELS) in `<span class="bt">forge-github.el</span>'.
+<p>Undocumented
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/mx379q5y0bq6kkjqnaw6lj3jlzzqk7hb-emacs-packages-deps/share/emacs/site-lisp/elpa/forge-20260831.1655/forge-github.el</span>
+(<span class="k">cl-defmethod</span> <span class="f">forge--set-topic-labels</span>
+  ((repo  forge-github-repository)
+   (topic forge-topic)
+   labels)
+  (<span class="k">let*</span> ((topic-id (<span class="k">oref</span> topic their-id))
+         (their-id <span class="cd">; </span><span class="c">I really messed up IDs! :(
+</span>          (<span class="k">pcase-lambda</span> (`(,id))
+            (<span class="k">let*</span> ((parts (split-string (base64-decode-string id) <span class="s">":"</span>))
+                   (maybe-id (car (last parts))))
+              (<span class="k">if</span> (string-prefix-p <span class="s">"Label"</span> maybe-id)
+                  (base64-encode-string (string-join (last parts 2) <span class="s">":"</span>))
+                maybe-id))))
+         (old (mapcar their-id (<span class="k">oref</span> topic labels)))
+         (new (mapcar their-id
+                      (forge-sql [<span class="bi">:select</span> [id] <span class="bi">:from</span> label
+                                  <span class="bi">:where</span> (<span class="k">and</span> (= repository $s1)
+                                              (in name $v2))]
+                                 (<span class="k">oref</span> repo id)
+                                 (vconcat labels))))
+         (add (cl-set-difference new old <span class="bi">:test</span> #'equal))
+         (del (cl-set-difference old new <span class="bi">:test</span> #'equal)))
+    (<span class="k">when</span> (<span class="k">or</span> add del)
+      (forge--query repo
+        `(mutation
+          ,@(<span class="k">and</span> add '((addLabelsToLabelable
+                        [(input $add AddLabelsToLabelableInput!)]
+                        clientMutationId)))
+          ,@(<span class="k">and</span> del '((removeLabelsFromLabelable
+                        [(input $del RemoveLabelsFromLabelableInput!)]
+                        clientMutationId))))
+        `(,@(<span class="k">and</span> add `((add (labelableId . ,topic-id)
+                            (labelIds . ,(vconcat add)))))
+          ,@(<span class="k">and</span> del `((del (labelableId . ,topic-id)
+                            (labelIds . ,(vconcat del))))))
+        <span class="bi">:callback</span> (forge--set-field-callback topic)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

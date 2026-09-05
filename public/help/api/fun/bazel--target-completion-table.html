@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: bazel--target-completion-table – Emacs Documentation Online</title>
+<meta name="description" content="bazel--target-completion-table is a natively compiled function defined
+in bazel.el.
+Return a completion table for Bazel targets and target patterns.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>bazel--target-completion-table</code></h1><p><span class="m"><code>bazel--target-completion-table</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">bazel.el</span>.
+<h2>Signature</h2>
+<pre><code>(bazel--target-completion-table <a href="#:~:text=If-,PATTERN"><span class="arg">PATTERN</span></a> <a href="#:~:text=If-,ONLY-TESTS"><span class="arg">ONLY-TESTS</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Return a completion table for Bazel targets and target patterns.
+<p>See URL ‘https://bazel.build/run/build#specifying-build-targets’
+for a description of target patterns.  Completion starts with the
+package in ‘default-directory’.  Return a completion table that
+can be passed to ‘completing-read’.  See Info node <a href="/info/elisp/basic-completion.html">(elisp) Basic
+Completion</a> for more information about completion tables.  The
+completion is not exact and only includes potential packages and
+rule targets.  If <span class="arg">PATTERN</span> is non-nil, complete target patterns and skip
+files.  If <span class="arg">ONLY-TESTS</span> is non-nil, restrict rule target completion
+to test targets.  If ‘default-directory’ is not in a Bazel
+package or repository, return an empty completion table.  This
+function should always be fast and not access the filesystem, but
+the returned completion table can access the filesystem.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/r10y5b6qa35avdgxmn3dzmd6b9ibs9zi-emacs-packages-deps/share/emacs/site-lisp/elpa/bazel-20260826.1211/bazel.el</span>
+(<span class="k">defun</span> <span class="f">bazel--target-completion-table</span> (pattern only-tests)
+  <span class="doc">"Return a completion table for Bazel targets and target patterns.
+See URL ‘https://bazel.build/run/build#specifying-build-targets’
+for a description of target patterns.  Completion starts with the
+package in ‘</span><span class="m doc">default-directory</span><span class="doc">’.  Return a completion table that
+can be passed to ‘</span><span class="m doc">completing-read</span><span class="doc">’.  See Info node ‘(elisp) Basic
+Completion’ for more information about completion tables.  The
+completion is not exact and only includes potential packages and
+rule targets.  If PATTERN is non-nil, complete target patterns and skip
+files.  If ONLY-TESTS is non-nil, restrict rule target completion
+to test targets.  If ‘</span><span class="m doc">default-directory</span><span class="doc">’ is not in a Bazel
+package or repository, return an empty completion table.  This
+function should always be fast and not access the filesystem, but
+the returned completion table can access the filesystem."</span>
+  <span class="cd">;; </span><span class="c">We return a completion function so that we don’t have to find all targets
+</span>  <span class="cd">;; </span><span class="c">eagerly.  See Info node ‘(elisp) Programmed Completion’.
+</span>  (<span class="k">when-let*</span> ((directory default-directory))
+    (<span class="k">lambda</span> (string predicate action)
+      (<span class="w">cl-check-type</span> string string)
+      (<span class="w">cl-check-type</span> predicate (<span class="k">or</span> function null))
+      (<span class="k">when-let*</span> ((root (bazel--repository-root directory))
+                  (package (bazel--package-name directory root)))
+        (<span class="k">let</span> ((case-fold-search completion-ignore-case)
+              (search-spaces-regexp nil))
+          <span class="cd">;; </span><span class="c">We dynamically generate and use a helper completion table based on
+</span>          <span class="cd">;; </span><span class="c">the provided prefix pattern.
+</span>          (complete-with-action
+           action
+           (bazel--target-completion-table-1 root package pattern only-tests
+                                             string)
+           string predicate))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

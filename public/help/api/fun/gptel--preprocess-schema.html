@@ -1,0 +1,54 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel--preprocess-schema – Emacs Documentation Online</title>
+<meta name="description" content="gptel--preprocess-schema is a natively compiled function defined in
+gptel-request.el.
+Set additionalProperties for objects in SPEC destructively.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel--preprocess-schema</code></h1><p><span class="m"><code>gptel--preprocess-schema</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">gptel-request.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel--preprocess-schema <a href="#:~:text=in-,SPEC"><span class="arg">SPEC</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Set additionalProperties for objects in <span class="arg">SPEC</span> destructively.
+<p>Convert symbol :types to strings.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/dbn7jn19gz02qnwgx2fwbmi96iwzs7g5-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260826.2228/gptel-request.el</span>
+(<span class="k">defun</span> <span class="f">gptel--preprocess-schema</span> (spec)
+  <span class="doc">"Set additionalProperties for objects in SPEC destructively.
+
+Convert symbol :types to strings."</span>
+  <span class="cd">;; </span><span class="c">NOTE: Do not use `</span><span class="m c">sequencep</span><span class="c">' here, as that covers strings too and breaks
+</span>  <span class="cd">;; </span><span class="c">things.
+</span>  (<span class="k">when</span> (<span class="k">or</span> (listp spec) (vectorp spec))
+    (<span class="k">cond</span>
+     ((vectorp spec)
+      (<span class="k">cl-loop</span> for element across spec
+               for idx upfrom 0
+               do (aset spec idx (gptel--preprocess-schema element))))
+     ((keywordp (car spec))
+      (<span class="k">let</span> ((tail spec))
+        (<span class="k">while</span> tail
+          (<span class="k">when</span> (eq (car tail) <span class="bi">:type</span>)
+            (<span class="k">when</span> (symbolp (cadr tail)) <span class="cd">;</span><span class="c">Convert symbol :type to string
+</span>              (setcar (cdr tail) (symbol-name (cadr tail))))
+            (<span class="k">when</span> (equal (cadr tail) <span class="s">"object"</span>) <span class="cd">;</span><span class="c">Add additional object fields
+</span>              (plist-put tail <span class="bi">:additionalProperties</span> <span class="bi">:json-false</span>)
+              (<span class="k">let</span> ((vprops (vconcat
+                             (<span class="k">cl-loop</span>
+                              for prop in (plist-get tail <span class="bi">:properties</span>) by #'cddr
+                              collect (substring (symbol-name prop) 1)))))
+                (plist-put tail <span class="bi">:required</span> vprops)
+                (plist-put tail <span class="bi">:propertyOrdering</span> vprops))))
+          (<span class="k">when</span> (<span class="k">or</span> (listp (cadr tail)) (vectorp (cadr tail)))
+            (gptel--preprocess-schema (cadr tail)))
+          (<span class="k">setq</span> tail (cddr tail)))))
+     ((listp spec) (<span class="k">dolist</span> (element spec)
+                     (<span class="k">when</span> (listp element)
+                       (gptel--preprocess-schema element))))))
+  spec)</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

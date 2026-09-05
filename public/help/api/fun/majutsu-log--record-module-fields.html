@@ -1,0 +1,46 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: majutsu-log--record-module-fields – Emacs Documentation Online</title>
+<meta name="description" content="majutsu-log--record-module-fields is a natively compiled function
+defined in majutsu-log.el.
+Record MODULE PAYLOAD values into ENTRY using COMPILED module layout.">
+<meta name="color-scheme" content="light dark">
+<link href="/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>majutsu-log--record-module-fields</code></h1><p><span class="m"><code>majutsu-log--record-module-fields</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">majutsu-log.el</span>.
+<h2>Signature</h2>
+<pre><code>(majutsu-log--record-module-fields <a href="#:~:text=into-,ENTRY"><span class="arg">ENTRY</span></a> <a href="#:~:text=Record-,MODULE"><span class="arg">MODULE</span></a> <a href="#:~:text=MODULE-,PAYLOAD"><span class="arg">PAYLOAD</span></a> <a href="#:~:text=using-,COMPILED"><span class="arg">COMPILED</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Record <span class="arg">MODULE</span> <span class="arg">PAYLOAD</span> values into <span class="arg">ENTRY</span> using <span class="arg">COMPILED</span> module layout.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/bz86lcx20lhz4l1xw4qxxfrpzz1ibl7c-emacs-packages-deps/share/emacs/site-lisp/majutsu-log.el</span>
+(<span class="k">defun</span> <span class="f">majutsu-log--record-module-fields</span> (entry module payload compiled)
+  <span class="doc">"Record MODULE PAYLOAD values into ENTRY using COMPILED module layout."</span>
+  (<span class="k">let*</span> ((columns (majutsu-log--module-columns compiled module))
+         (values (majutsu-log--split-module-values payload (length columns)))
+         (stored nil))
+    (<span class="k">cl-loop</span> for column in columns
+             for raw-value in values
+             do (<span class="k">let*</span> ((field (plist-get column <span class="bi">:field</span>))
+                       (decoded (majutsu-log--decode-transport-value raw-value))
+                       (canonical (majutsu-log--canonical-field-value field decoded)))
+                  (<span class="k">setq</span> entry (majutsu-log--record-field entry field canonical))
+                  (<span class="k">let*</span> ((ctx (list <span class="bi">:field</span> field
+                                    <span class="bi">:module</span> module
+                                    <span class="bi">:column</span> column
+                                    <span class="bi">:entry</span> entry
+                                    <span class="bi">:raw-value</span> decoded
+                                    <span class="bi">:canonical-value</span> canonical))
+                         (out (majutsu-log--apply-postprocessors decoded
+                                                                 (plist-get column <span class="bi">:post</span>)
+                                                                 ctx)))
+                    (<span class="k">setq</span> entry (majutsu-log--record-column-value entry column out))
+                    (<span class="k">push</span> out stored))))
+    (<span class="k">let</span> ((modules (plist-get entry <span class="bi">:modules</span>)))
+      (<span class="k">setf</span> (alist-get module modules nil nil #'eq) (nreverse stored))
+      (<span class="k">setq</span> entry (plist-put entry <span class="bi">:modules</span> modules)))
+    entry))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>
