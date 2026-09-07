@@ -50,10 +50,16 @@
 ;;; C-c saves an encrypted edit; C-c C-d toggles into the editing
 ;;; view; C-c C-k cancels.
 (use-package sops
-  ;; The global mode hooks find-file; after-init runs before
-  ;; command-line file arguments are visited, so nothing is missed.
-  :hook (after-init . global-sops-mode)
+  :commands (global-sops-mode)
   :functions (sops-save-file sops-cancel sops-edit-file)
+  :init
+  ;; The global mode hooks find-file; after-init runs before command-line
+  ;; file arguments are visited, so nothing is missed.  Gated on the binary:
+  ;; the `sops' CLI is opt-in (module `services.jotain.sops.enable'), and a
+  ;; source-checkout launch without it made `global-sops-mode' log
+  ;; "executable not found: sops" on every candidate file.
+  (when (executable-find "sops")
+    (add-hook 'after-init-hook #'global-sops-mode))
   :config
   (define-key sops-mode-map (kbd "C-c C-c") #'sops-save-file)
   (define-key sops-mode-map (kbd "C-c C-k") #'sops-cancel)
