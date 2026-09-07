@@ -9,6 +9,19 @@
 
 (declare-function mixed-pitch-mode "mixed-pitch" (&optional arg))
 
+;; yaml-language-server workspace settings.  Buffer-local in a mode hook
+;; (like init-lang-go's gopls config) so no other language is clobbered and
+;; a project .dir-locals.el `eglot-workspace-configuration' still overrides.
+(defvar eglot-workspace-configuration) ; defined in eglot.el
+
+(defun jotain-lang-data--yaml-eglot-workspace-config ()
+  "Teach yaml-language-server GitLab's `!reference' custom tag.
+Without it eglot reports `Unresolved tag: !reference' on every
+`.gitlab-ci.yml' that composes jobs with `!reference'.  Declaring it as a
+sequence tag silences the diagnostic while leaving ordinary YAML alone."
+  (setq-local eglot-workspace-configuration
+              '(:yaml (:customTags ["!reference sequence"]))))
+
 (defun jotain-lang-data--enable-prog-mode-features ()
   "Run `prog-mode-hook' in a `text-mode'-derived config buffer.
 Both `yaml-mode' (MELPA) and the built-in `yaml-ts-mode' derive
@@ -41,7 +54,8 @@ like code, not prose."
 ;;; the full editor surface (line numbers, flymake, indent guides, …).
 (use-package yaml-mode
   :defer t
-  :hook (yaml-mode . jotain-lang-data--enable-prog-mode-features))
+  :hook ((yaml-mode . jotain-lang-data--enable-prog-mode-features)
+         (yaml-mode . jotain-lang-data--yaml-eglot-workspace-config)))
 
 ;;; @doc Built-in tree-sitter YAML mode (Emacs 29+). Same prog-mode
 ;;; hook tweak as `yaml-mode'; kept in its own use-package block so
@@ -50,7 +64,8 @@ like code, not prose."
 (use-package yaml-ts-mode
   :ensure nil
   :defer t
-  :hook (yaml-ts-mode . jotain-lang-data--enable-prog-mode-features))
+  :hook ((yaml-ts-mode . jotain-lang-data--enable-prog-mode-features)
+         (yaml-ts-mode . jotain-lang-data--yaml-eglot-workspace-config)))
 
 ;;; @doc CSV major mode with column alignment. csv-align-mode renders
 ;;; separators visually so wide files become readable without
