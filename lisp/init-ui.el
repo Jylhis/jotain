@@ -135,7 +135,17 @@ glyphs even though no graphical frame exists at daemon start (mirrors
   (doom-modeline-buffer-encoding nil)
   :config
   (jotain-ui--apply-modeline-icons)
-  (add-hook 'server-after-make-frame-hook #'jotain-ui--apply-modeline-icons))
+  (add-hook 'server-after-make-frame-hook #'jotain-ui--apply-modeline-icons)
+  ;; Upstream doom-modeline's git-worktree indicator calls
+  ;; `doom-modeline-vcs-icon' with the codicon "nf-cod-worktree" against the
+  ;; hardcoded `devicon' set (wrong set — the glyph is absent from every
+  ;; nerd-icons release), and `doom-modeline-icon' does not guard the
+  ;; missing-glyph lookup, so the VCS segment errors on every redisplay
+  ;; inside a worktree (where `.git' is a file).  Jotain already surfaces
+  ;; worktrees via `jotain-git-stats' (init-vc) and magit's worktree
+  ;; section, so neutralize the broken probe rather than the whole segment.
+  (when (fboundp 'doom-modeline--in-git-worktree-p)
+    (advice-add 'doom-modeline--in-git-worktree-p :override #'ignore)))
 
 ;; doom-modeline's minor-modes segment is off by default, so lighters
 ;; are hidden there without any diminish-style setup.  For the vanilla
