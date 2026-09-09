@@ -498,7 +498,14 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
   ;; layout without hand-editing every time; this one compiles with cargo
   ;; and prompts for the built binary under target/debug/.  `lldb-dap'
   ;; comes from `lldb' on the project/host PATH — same convention as
-  ;; `dlv' for Go, not bundled on the wrapper.
+  ;; `dlv' for Go, not bundled on the wrapper.  The `:program' prompt is
+  ;; guarded on `enable-recursive-minibuffers': dape's `dape--minibuffer-hint'
+  ;; evaluates every non-ignored property with that variable bound to nil,
+  ;; so an unconditional `read-file-name' there signals "Command attempted
+  ;; to use minibuffer while in minibuffer" and the hint row shows the error
+  ;; instead of a value.  At real launch the variable is t, so the prompt
+  ;; still runs.  The lambda is comma-unquoted so it byte-compiles to a
+  ;; closure rather than staying a quoted literal list.
   (add-to-list 'dape-configs
                `(cargo-lldb
                  modes (rust-ts-mode rust-mode)
@@ -509,9 +516,11 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
                  :type "lldb-dap"
                  :request "launch"
                  :cwd "."
-                 :program (lambda ()
-                            (read-file-name "Binary: " (dape-cwd) nil t
-                                            "target/debug/")))))
+                 :program ,(lambda ()
+                             (if enable-recursive-minibuffers
+                                 (read-file-name "Binary: " (dape-cwd) nil t
+                                                 "target/debug/")
+                               "target/debug/")))))
 
 ;;;; SonarLint (SonarCloud connected mode)
 
