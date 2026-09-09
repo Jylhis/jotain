@@ -15,49 +15,51 @@
 
 ;;; Code:
 
-;; gopls workspace settings.  Buffer-local in a mode hook rather than a
-;; global `setq-default' so no other language's workspace configuration
-;; is clobbered, and a project .dir-locals.el `eglot-workspace-configuration'
-;; entry still overrides it cleanly.
 (defvar eglot-workspace-configuration) ; defined in eglot.el
 
-(defun jotain-go--eglot-workspace-config ()
-  "Set buffer-local gopls workspace configuration for Go buffers.
-gopls only emits inlay hints when the hint kinds are enabled here;
-`eglot-inlay-hints-mode' (armed for Go in init-prog) then displays
-them.  `gofumpt' is left at its default (nil) so gopls agrees with the
-goimports/gofmt formatter apheleia runs on save."
-  (setq-local eglot-workspace-configuration
-              '(:gopls (:usePlaceholders t
-                        :completeUnimported t
-                        :staticcheck t
-                        :hints (:parameterNames t
-                                :assignVariableTypes t
-                                :constantValues t
-                                :functionTypeParameters t
-                                :rangeVariableTypes t
-                                :compositeLiteralTypes t
-                                :compositeLiteralFields t)
-                        :analyses (:unusedparams t
-                                   :shadow t
-                                   :nilness t
-                                   :unusedwrite t)))))
+;; gopls workspace settings.  Eglot only ever reads the GLOBAL value of
+;; `eglot-workspace-configuration' (it evaluates the variable in a fresh
+;; temp buffer, so a buffer-local mode-hook binding never reaches the
+;; server), so contribute our section to the default value keyed under
+;; `:gopls'.  Other languages own their own sections, so nothing is
+;; clobbered, and a project .dir-locals.el `eglot-workspace-configuration'
+;; entry still overrides it cleanly.  Wrapped in `with-eval-after-load' so
+;; the variable eglot defines is present (and the section is set before the
+;; first server connects).  gopls only emits inlay hints when the hint
+;; kinds are enabled here; `eglot-inlay-hints-mode' (armed for Go in
+;; init-prog) then displays them.  `gofumpt' is left at its default (nil)
+;; so gopls agrees with the goimports/gofmt formatter apheleia runs on save.
+(with-eval-after-load 'eglot
+  (setq-default eglot-workspace-configuration
+                (plist-put (copy-sequence
+                            (default-value 'eglot-workspace-configuration))
+                           :gopls
+                           '(:usePlaceholders t
+                             :completeUnimported t
+                             :staticcheck t
+                             :hints (:parameterNames t
+                                     :assignVariableTypes t
+                                     :constantValues t
+                                     :functionTypeParameters t
+                                     :rangeVariableTypes t
+                                     :compositeLiteralTypes t
+                                     :compositeLiteralFields t)
+                             :analyses (:unusedparams t
+                                        :shadow t
+                                        :nilness t
+                                        :unusedwrite t)))))
 
 ;;; @doc Built-in tree-sitter Go modes: `go-ts-mode` for source files,
 ;;; `go-mod-ts-mode` for go.mod, `go-work-ts-mode` (Emacs 31) for
-;;; go.work. Eglot wires gopls in init-prog; format-on-save runs
-;;; goimports through apheleia; dape drives dlv for debugging. All Go
-;;; tooling (go, gopls, goimports, dlv) comes from the project/host
-;;; PATH, not from this config.
+;;; go.work. Eglot wires gopls in init-prog, with gopls workspace
+;;; configuration contributed to the global `eglot-workspace-configuration`
+;;; above; format-on-save runs goimports through apheleia; dape drives
+;;; dlv for debugging. All Go tooling (go, gopls, goimports, dlv) comes
+;;; from the project/host PATH, not from this config.
 (use-package go-ts-mode
   :ensure nil
   :mode (("\\.go\\'"     . go-ts-mode)
          ("/go\\.mod\\'"  . go-mod-ts-mode))
-  :hook ((go-ts-mode      . jotain-go--eglot-workspace-config)
-         (go-mod-ts-mode  . jotain-go--eglot-workspace-config)
-         ;; Emacs 31 mode; on 30 the hook variable is created but never
-         ;; runs (go.work falls back to go-mod-ts-mode below).
-         (go-work-ts-mode . jotain-go--eglot-workspace-config))
   :custom
   ;; gofmt indents with tabs; a step of 8 (the default) matches the
   ;; default `tab-width' so one indent level renders as exactly one tab.
