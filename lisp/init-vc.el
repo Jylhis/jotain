@@ -37,7 +37,27 @@
   (when (boundp 'vc-allow-rewriting-published-history)
     (setopt vc-allow-rewriting-published-history t))
   (when (boundp 'vc-dir-auto-hide-up-to-date)
-    (setopt vc-dir-auto-hide-up-to-date 'revert)))
+    (setopt vc-dir-auto-hide-up-to-date 'revert))
+  ;; A few modern `vc' conveniences, guarded so the config still loads on
+  ;; the Emacs 30.1 floor: run `C-x v' commands from non-VC buffers by
+  ;; deducing the backend from `default-directory'; save modified buffers
+  ;; before a `vc-dir' revert; view old revisions without dropping temp
+  ;; files on disk; and adopt the incoming/outgoing keymap prefixes
+  ;; (`C-x v I' log-incoming, `C-x v O' log-outgoing, etc.).
+  (when (boundp 'vc-deduce-backend-nonvc-modes)
+    (setopt vc-deduce-backend-nonvc-modes t))
+  (when (boundp 'vc-dir-save-some-buffers-on-revert)
+    (setopt vc-dir-save-some-buffers-on-revert t))
+  (when (boundp 'vc-find-revision-no-save)
+    (setopt vc-find-revision-no-save t))
+  (when (boundp 'vc-use-incoming-outgoing-prefixes)
+    (setopt vc-use-incoming-outgoing-prefixes t))
+  ;; `vc-auto-revert-mode' (Emacs 31) reverts VC-controlled buffers when
+  ;; their file changes on disk. Largely subsumed by the global
+  ;; `auto-revert-mode' enabled in init-core.el, but adopted from the
+  ;; newcomers-presets theme for completeness; guarded for Emacs 30.
+  (when (fboundp 'vc-auto-revert-mode)
+    (vc-auto-revert-mode 1)))
 
 ;;; @doc Quick jump to a file git status reports as changed. Runs
 ;;; `git status --porcelain=v1 -z -uall' (-z keeps spaces and

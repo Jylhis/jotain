@@ -29,11 +29,21 @@
 ;;; 30, so it needs no config here.)
 (use-package simple
   :ensure nil
+  :custom
+  ;; `M-!' / `M-&' show the directory the command will run in as part of
+  ;; the prompt, so a shell command never lands in a surprising `cwd'.
+  (shell-command-prompt-show-cwd t)
   :config
   (when (boundp 'kill-region-dwim)
     (setopt kill-region-dwim 'emacs-word))
   (when (boundp 'delete-pair-push-mark)
     (setopt delete-pair-push-mark t)))
+
+;; Indent with spaces by default. `.editorconfig' and dtrt-indent (both
+;; in init-prog.el) still override per file/project, and modes that
+;; require tabs (makefile-mode, go-ts-mode) set it themselves — this only
+;; changes the fallback when nothing else has an opinion.
+(setopt indent-tabs-mode nil)
 
 ;;; @doc Strip trailing whitespace and stray tabs on save without
 ;;; reformatting the rest of the buffer. Built-in. Skipped during
