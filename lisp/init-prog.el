@@ -411,9 +411,11 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
   (add-to-list 'eglot-server-programs
                '((neocaml-mode neocaml-interface-mode) . ("ocamllsp")))
 
-  ;; gopls workspace configuration is set buffer-locally in init-lang-go
-  ;; (`jotain-go--eglot-workspace-config') rather than globally here, so
-  ;; it never leaks into other languages' eglot sessions.
+  ;; Per-language workspace configuration lives in each init-lang-* file,
+  ;; not here: each contributes its own section to the global
+  ;; `eglot-workspace-configuration' default (eglot only reads the global
+  ;; value, never a buffer-local one), keyed so it never leaks into other
+  ;; languages' sessions.  gopls' section is in init-lang-go.
 
   ;; rassumfrassum (`rass`) multiplexes several real LSP servers behind a
   ;; single stdio connection so eglot effectively drives multiple servers
