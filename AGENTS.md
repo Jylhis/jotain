@@ -18,10 +18,12 @@ Use the devenv shell: `devenv shell`, or prefix commands with `devenv shell --` 
 - `just docs-all`: build HTML docs and the bundled Info manual.
 - `just site` / `just serve-site`: build the full site or serve it at `http://localhost:8080/jotain/`.
 - `just lang-matrix`: build the live configuration-introspection language matrix; `just lang-eval-live` is the heavier end-to-end LSP probe.
+- `just bench-built [output]`: benchmark startup with the Nix-built Emacs via `bench/`; needs a display (pgtk), prefix `xvfb-run` for headless.
+- `just screenshot [out]`: headless frame capture under Xvfb (Linux, from the devenv shell); first run is slow (cache pull + MELPA bootstrap).
 
 ## Coding Style & Naming Conventions
 
-Elisp files use `-*- lexical-binding: t; -*-`, one concern per `lisp/init-*.el` module, and end with `(provide 'init-<concern>)`. Add new modules to `init.el` at the right load point. Prefer `setopt` for `defcustom` values. Built-ins and Nix-provided packages in `use-package` blocks should use `:ensure nil`. Keep LSP hooks and formatter wiring centralized in `lisp/init-prog.el`. Nix formatting is controlled by `nix/treefmt.nix` with `nixfmt`, `deadnix`, and `statix`.
+Elisp files use `-*- lexical-binding: t; -*-`, one concern per `lisp/init-*.el` module, and end with `(provide 'init-<concern>)`. Add new modules to `init.el` at the right load point. Prefer `setopt` for `defcustom` values. Built-ins and Nix-provided packages in `use-package` blocks should use `:ensure nil`. Keep LSP hooks and formatter wiring centralized in `lisp/init-prog.el`. `lisp/devenv.el` is the one file under `lisp/` that is not an `init-*` module: a standalone reusable package (own `devenv-` namespace, no `jotain-` dependencies) bound into the config by `lisp/init-devenv.el`. Nix formatting is controlled by `nix/treefmt.nix` with `nixfmt`, `deadnix`, and `statix`.
 
 For Emacs internals and Elisp practice, use the source-cited skills in `.claude/skills/` (`emacs-internals`, `elisp-dev`), indexed at `.claude/knowledge/emacs/README.md`, rather than answering from memory.
 
