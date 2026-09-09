@@ -28,7 +28,7 @@ efinal: eprev: {
   };
 
   # Pinned in nix/design-pin.nix, shared with the website's vendored CSS so
-  # the editor and jotain.j10s.io can never sit on different versions of the
+  # the editor and page.jylhis.com/jotain can never sit on different versions of the
   # design system.  v2.0.0 renamed the themes to
   # jylhis-{survey,mono}-{light,dark}; trivialBuild globs every *.el under
   # platforms/emacs, so the rename needs no change here.
@@ -64,6 +64,22 @@ efinal: eprev: {
       websocket
       web-server
     ];
+  };
+
+  # Boosts eglot by wrapping local stdio language servers in the
+  # emacs-lsp-booster binary (nix/runtime-deps.nix), which converts server
+  # JSON into Elisp bytecode Emacs reads directly and buffers I/O.  Wired in
+  # lisp/init-prog.el.  Not on MELPA/ELPA; requires only Emacs built-ins
+  # (eglot, jsonrpc, seq), so no packageRequires.
+  eglot-booster = efinal.trivialBuild {
+    pname = "eglot-booster";
+    version = "0.1.0";
+    src = pkgs.fetchFromGitHub {
+      owner = "jdtsmith";
+      repo = "eglot-booster";
+      rev = "510f579409627c333ef0e9157db713b1004da842";
+      sha256 = "0g9ld3dbhj7g5wbrbq21pp274givxpavc44zmql5fn7z93ir258y";
+    };
   };
 
   combobulate = efinal.trivialBuild {

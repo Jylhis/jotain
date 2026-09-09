@@ -2,18 +2,22 @@
 
 ## Project Structure & Module Organization
 
-Jotain is an Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer. Startup files are `early-init.el` and `init.el`; feature modules live in `lisp/init-*.el` and are loaded from `init.el` in order. Nix build and module code lives at the root (`flake.nix`, `emacs.nix`, `overlay.nix`, `module.nix`, `module-system.nix`) with helpers in `nix/` (`mk-overlay.nix` is the overlay implementation). Documentation sources are in `docs/`, the jotain.j10s.io site shell is in `website/` (assembled by `nix build .#site`, deployed from `main` via the orphan `site` branch), benchmark wrappers are in `bench/`, and ERT tests live in `test/` — every `test/*.el` file is loaded by the test check. `journal/`, `plan.md`, and `TODO.md` are working notes that may be stale — when they disagree with the code, the code wins.
+Jotain is an Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer. Startup files are `early-init.el` and `init.el`; feature modules live in `lisp/init-*.el` and are loaded from `init.el` in order. Nix build and module code lives at the root (`flake.nix`, `emacs.nix`, `overlay.nix`, `module.nix`, `module-system.nix`) with helpers in `nix/` (`mk-overlay.nix` is the overlay implementation). Documentation sources are in `docs/`, the page.jylhis.com/jotain site shell is in `website/` (assembled by `nix build .#site`, deployed from `main` to GitHub Pages), benchmark wrappers are in `bench/`, and ERT tests live in `test/` — every `test/*.el` file is loaded by the test check. `journal/`, `plan.md`, and `TODO.md` are working notes that may be stale — when they disagree with the code, the code wins.
 
 ## Build, Test, and Development Commands
 
 Use the devenv shell: `devenv shell`, or prefix commands with `devenv shell --` (no `.envrc` is tracked; direnv users create their own). In an environment with no Nix at all, run `scripts/bootstrap-agent-env.sh` first. The shell provides tooling only — Emacs itself is **not** in it, so the direct-launch and in-shell compile recipes (`just run`, `debug`, `tty`, `check-elisp`, `compile`, …) were removed; build and launch Emacs with `just run-built`, and rely on the `elisp-lint`/`elisp-compile`/`elisp-test` flake checks for paren/compile/test coverage.
 
 - `just run-built [ARGS]`: build Emacs via Nix for this platform, then launch `result/bin/emacs` using this repo as `--init-directory`.
-- `just run-built-debug [ARGS]`: same, with `--debug-init` and `debug-on-error`.
-- `just check`: run `nix flake check`, including package builds, Nix linting, Elisp paren checks, byte-compilation (warnings as errors), and the ERT tests.
+- `just run-built-debug [ARGS]`: same, with `--debug-init` and `debug-on-error`; `just run-built-debug-log [ARGS]` also writes diagnostics under `var/debug/<timestamp>/`.
+- `just run-built-fast [ARGS]`: rebuild and launch the AOT-compiled config from `var/fast-home`; use plain `run-built` while actively editing.
+- `just check`: run `nix flake check`, including package builds, Nix linting, Elisp paren checks, byte-compilation (warnings as errors), and the ERT tests. This is heavier than PR CI and can include the slow API-reference build.
 - `just test`: build only the `elisp-test` flake check (ERT tests from `test/`, loads every `test/*.el`).
+- `devenv test`: verify the dev-shell tools; this is separate from `just check`.
 - `just fmt`: format Nix files via the flake formatter.
 - `just docs-all`: build HTML docs and the bundled Info manual.
+- `just site` / `just serve-site`: build the full site or serve it at `http://localhost:8080/jotain/`.
+- `just lang-matrix`: build the live configuration-introspection language matrix; `just lang-eval-live` is the heavier end-to-end LSP probe.
 
 ## Coding Style & Naming Conventions
 
@@ -31,4 +35,8 @@ Commits use a `scope: subject` convention with a short, imperative subject — e
 
 ## Security & Configuration Tips
 
-`flake.lock` is the source of truth for pinned inputs. When updating pins, use `just update` and then `just verify` to keep `flake.lock` and `devenv.lock` aligned. `just sync-devenv` is the sync half alone, for when `flake.lock` moved without a `just update` — Dependabot's nix PRs are exactly that case, and `.github/workflows/sync-devenv.yml` runs it on them automatically so they land green. Lock drift is enforced by the `locks-in-sync` flake check as well as the PR CI step. Do not commit generated state such as `elpa/`, `var/`, `result*`, or compiled `*.elc` files.
+`flake.lock` is the source of truth for pinned inputs. When updating pins, use `just update` and then `just verify` to keep `flake.lock` and `devenv.lock` aligned. `just sync-devenv` is the sync half alone, for when `flake.lock` moved without a `just update` — Dependabot's nix PRs are exactly that case, and `.github/workflows/sync-devenv.yml` runs it on them automatically so they land green. Lock drift is enforced by the `locks-in-sync` flake check as well as the PR CI step.
+
+`docs/configuration/package-reference.mdx` is generated from `;;; @doc` blocks; refresh it with `just docs-refresh-packages`. `docs/reference/language-support.mdx` is generated from `etc/lang-eval/jotain-lang-registry.el`; edit the registry and run `just docs-refresh-lang-matrix`. After changing `nix/design-pin.nix`, run `just ds-sync` to refresh `website/public/ds`. The corresponding in-sync checks fail on drift.
+
+Do not commit generated state such as `elpa/`, `var/`, `result*`, or compiled `*.elc` files. In agent environments where GitHub tarball downloads are blocked, prefer flake-CLI builds such as `nix build .#default -o result`; the `nix-build`-based `just build` and `just run-built` paths can re-fetch through flake-compat despite the bootstrap script's source prefetch.

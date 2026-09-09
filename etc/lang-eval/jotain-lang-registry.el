@@ -164,7 +164,8 @@
      :servers ("likec4-lsp" "likec4") :override t)
 
     (:id html       :name "HTML"           :file "init-lang-web.el"
-     :sample "eval.html"           :mode mhtml-ts-mode :classic web-mode :grammar html)
+     :sample "eval.html"           :mode mhtml-ts-mode :classic web-mode :grammar html
+     :servers ("vscode-html-language-server" "html-languageserver") :override t)
 
     (:id csv        :name "CSV"            :file "init-lang-data.el"
      :sample "eval.csv"            :mode csv-mode :grammar nil)

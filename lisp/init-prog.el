@@ -210,6 +210,7 @@ These servers may evaluate project JavaScript configuration files."
   ;; eglot itself is not loaded at compile time.
   (declare-function eglot-ensure "eglot")
   (declare-function eglot--guess-contact "eglot")
+  (declare-function eglot-alternatives "eglot")
   (defvar eglot--managed-mode)
 
   (defun jotain-prog--eglot-guess-program ()
@@ -302,6 +303,16 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
     (if (executable-find "likec4-lsp")
         '("likec4-lsp" "--stdio")
       '("likec4" "lsp" "--stdio")))
+
+  (defun jotain-prog--robot-server (&optional _interactive)
+    "Resolve the Robot Framework server contact against the buffer's PATH.
+Prefers `robotcode' (its `language-server' subcommand), falling back to the
+`robotframework_ls' entry point.  Both speak stdio by default.  Resolved at
+eglot connect time, so it sees the project's devenv env — not Jotain's own
+shell.  A project with neither still gets `robot-mode' plus the cape capfs."
+    (if (executable-find "robotcode")
+        '("robotcode" "language-server")
+      '("robotframework_ls")))
   :init
   ;; Single devenv-aware auto-start for every project language.  It runs on
   ;; `prog-mode-hook' but defers the actual `eglot-ensure' to an idle timer,
@@ -382,6 +393,20 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
   (add-to-list 'eglot-server-programs
                '((qml-ts-mode) . ("qmlls" "-E")))
 
+  ;; HTML (init-lang-web).  `.html' opens in `mhtml-ts-mode' (Emacs 31),
+  ;; which does NOT derive from `html-mode'/`mhtml-mode' — so eglot's own
+  ;; default HTML entry (keyed on those classic modes) never matches it, and
+  ;; HTML buffers get no language server.  Key the tree-sitter modes on the
+  ;; same server, using `eglot-alternatives' exactly as eglot's default does
+  ;; so either vscode's server or the older `html-languageserver' resolves.
+  ;; The binary comes from the project/host PATH, like the other servers; a
+  ;; project without it just falls back to the cape capfs.
+  (add-to-list 'eglot-server-programs
+               (cons '(mhtml-ts-mode html-ts-mode)
+                     (eglot-alternatives
+                      '(("vscode-html-language-server" "--stdio")
+                        ("html-languageserver" "--stdio")))))
+
   ;; C/C++/CUDA (init-lang-systems).  clangd serves all three — it treats a
   ;; `.cu' buffer as CUDA by extension.  Keyed on the tree-sitter modes with
   ;; the classic modes kept so a grammarless build still resolves a server.
@@ -396,9 +421,11 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
   (add-to-list 'eglot-server-programs
                '((neocaml-mode neocaml-interface-mode) . ("ocamllsp")))
 
-  ;; gopls workspace configuration is set buffer-locally in init-lang-go
-  ;; (`jotain-go--eglot-workspace-config') rather than globally here, so
-  ;; it never leaks into other languages' eglot sessions.
+  ;; Per-language workspace configuration lives in each init-lang-* file,
+  ;; not here: each contributes its own section to the global
+  ;; `eglot-workspace-configuration' default (eglot only reads the global
+  ;; value, never a buffer-local one), keyed so it never leaks into other
+  ;; languages' sessions.  gopls' section is in init-lang-go.
 
   ;; rassumfrassum (`rass`) multiplexes several real LSP servers behind a
   ;; single stdio connection so eglot effectively drives multiple servers
@@ -417,7 +444,33 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
   ;; picks the standalone `likec4-lsp' (bundled on the wrapper PATH) or the
   ;; main `likec4' CLI, whichever the buffer's env provides.
   (add-to-list 'eglot-server-programs
-               (cons '(likec4-mode) #'jotain-prog--likec4-server)))
+               (cons '(likec4-mode) #'jotain-prog--likec4-server))
+  ;; Robot Framework (init-lang-devops).  Function-valued so it picks
+  ;; robotcode or the robotframework_ls entry point, whichever the buffer's
+  ;; project env provides on PATH.
+  (add-to-list 'eglot-server-programs
+               (cons '(robot-mode) #'jotain-prog--robot-server)))
+
+;;; @doc Wrap local stdio language servers in emacs-lsp-booster, which
+;;; converts server JSON into Elisp bytecode Emacs reads directly and
+;;; buffers I/O so a busy server can't block the UI. Function-valued
+;;; contacts (the `rass` resolvers above) are boosted at their result, so
+;;; multiplexed sessions are boosted too. The binary rides the distribution
+;;; wrapper PATH (nix/runtime-deps.nix), not a devenv: the mode resolves it
+;;; once at enable time, before any buffer-local exec-path exists. Only
+;;; local stdio servers are boosted — a server over TRAMP needs the binary
+;;; on the remote host (`eglot-booster-no-remote-boost' below leaves remote
+;;; contacts unboosted, since it defaults to nil and would otherwise prepend
+;;; the booster command and break remote `M-x eglot'), and network-port
+;;; servers are never boosted.
+;;; Provided by Nix (not on MELPA); `:if' skips the block cleanly in the
+;;; MELPA-fallback launch where the library is absent.
+(use-package eglot-booster
+  :ensure nil ; Provided by Nix
+  :if (locate-library "eglot-booster")
+  :after eglot
+  :custom (eglot-booster-no-remote-boost t)
+  :config (eglot-booster-mode))
 
 ;;; @doc Consult-driven workspace symbol search — C-M-. opens an
 ;;; orderless-filtered list of symbols across the LSP workspace.
@@ -453,7 +506,36 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
   ;; them at exit. Both run in :config, so a session that never loads
   ;; dape never touches the breakpoints file.
   (dape-breakpoint-load)
-  (add-hook 'kill-emacs-hook #'dape-breakpoint-save))
+  (add-hook 'kill-emacs-hook #'dape-breakpoint-save)
+
+  ;; Cargo-shaped Rust launch config.  dape's shipped `lldb-dap' config
+  ;; defaults to `:program "a.out"' / `:cwd "."', unusable on a cargo
+  ;; layout without hand-editing every time; this one compiles with cargo
+  ;; and prompts for the built binary under target/debug/.  `lldb-dap'
+  ;; comes from `lldb' on the project/host PATH — same convention as
+  ;; `dlv' for Go, not bundled on the wrapper.  The `:program' prompt is
+  ;; guarded on `enable-recursive-minibuffers': dape's `dape--minibuffer-hint'
+  ;; evaluates every non-ignored property with that variable bound to nil,
+  ;; so an unconditional `read-file-name' there signals "Command attempted
+  ;; to use minibuffer while in minibuffer" and the hint row shows the error
+  ;; instead of a value.  At real launch the variable is t, so the prompt
+  ;; still runs.  The lambda is comma-unquoted so it byte-compiles to a
+  ;; closure rather than staying a quoted literal list.
+  (add-to-list 'dape-configs
+               `(cargo-lldb
+                 modes (rust-ts-mode rust-mode)
+                 ensure dape-ensure-command
+                 command "lldb-dap"
+                 command-cwd dape-command-cwd
+                 compile "cargo build"
+                 :type "lldb-dap"
+                 :request "launch"
+                 :cwd "."
+                 :program ,(lambda ()
+                             (if enable-recursive-minibuffers
+                                 (read-file-name "Binary: " (dape-cwd) nil t
+                                                 "target/debug/")
+                               "target/debug/")))))
 
 ;;;; SonarLint (SonarCloud connected mode)
 
@@ -667,6 +749,12 @@ hard-error on every prog-mode buffer)."
   ;; ocamlformat (apheleia's built-in formatter keys on tuareg/caml modes).
   (add-to-list 'apheleia-mode-alist '(neocaml-mode . ocamlformat))
   (add-to-list 'apheleia-mode-alist '(neocaml-interface-mode . ocamlformat))
+  ;; Robot Framework (init-lang-devops): robotidy (now folded into Robocop)
+  ;; edits files in place rather than reading stdin, so hand it a temp copy
+  ;; via apheleia's `inplace' and read the result back — exactly like
+  ;; qmlformat above.  Binary comes from the project/host PATH.
+  (add-to-list 'apheleia-formatters '(robotidy . ("robotidy" inplace)))
+  (add-to-list 'apheleia-mode-alist '(robot-mode . robotidy))
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
 ;;; @doc Edit grep / ripgrep result buffers in place; saving propagates

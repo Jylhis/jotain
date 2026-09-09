@@ -21,6 +21,7 @@
 [
   "claude-code-ide"
   "combobulate"
+  "eglot-booster"
   "jylhis-emacs-themes"
   "majutsu"
   "nix-ts-mode"

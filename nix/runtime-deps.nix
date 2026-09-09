@@ -23,6 +23,10 @@ with pkgs;
   rsync # dired-rsync (C-c C-r)
   nixd # shipped Nix LSP fallback (devenv--nix-lsp-program) when a devenv
   # project's own env provides no nixd/nil for eglot
+  emacs-lsp-booster # eglot-booster (init-prog.el): `eglot-booster-mode'
+  # resolves this binary via `executable-find' ONCE at enable time, before
+  # any buffer-local exec-path exists, and disables itself if it is missing
+  # — so it must ride the wrapper PATH, never a per-project devenv.
   qt6.qtdeclarative # qmlls (LSP) + qmlformat (apheleia) for qml-ts-mode
   # (init-lang-qml). Large Qt closure, accepted so QML support is
   # launch-context-independent; a project/devenv qmlls still wins.

@@ -67,9 +67,17 @@ projects sharing a basename across different roots stay distinct."
   :custom
   (project-list-file (jotain-var-file "projects.el"))
   (project-buffers-viewer 'project-list-buffers-ibuffer)
+  ;; go.mod so a Go module under a larger git root is recognised as its
+  ;; own project — otherwise gopls, `project-find-file' and
+  ;; `consult-ripgrep' scope to the git root rather than the module.  Only
+  ;; go.mod, not go.work: `project-try-vc' joins every marker into one
+  ;; regexp for `locate-dominating-file', so the deepest match wins and a
+  ;; module's go.mod always shadows an ancestor go.work.  A go.work
+  ;; multi-module workspace therefore scopes per-module here; if the
+  ;; workspace root is wanted instead, drop go.mod and add "go.work".
   (project-vc-extra-root-markers
    '(".project" "package.json" "Cargo.toml" "pyproject.toml" "flake.nix"
-     "devenv.nix")))
+     "devenv.nix" "go.mod")))
 
 ;;;; projection — per-project commands keyed off .dir-locals.el
 

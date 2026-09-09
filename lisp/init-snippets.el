@@ -9,8 +9,9 @@
 ;; straight into `completion-at-point-functions' (snippet names surface
 ;; in the corfu popup) and adds tab-stop field navigation that the
 ;; built-ins lack.  Those fields move on `M-}'/`M-{' (tempel's own keys)
-;; or `C-M-n'/`C-M-p'; TAB is not involved anywhere, because in this
-;; configuration TAB indents and nothing else.
+;; or `C-M-n'/`C-M-p'; TAB is deliberately not a field-navigation key --
+;; here TAB indents and drives completion (`jotain-completion-free-tab'),
+;; never snippet fields, so the two never fight over it.
 ;;
 ;; The curated templates themselves live in `templates/jotain.eld', keyed
 ;; by major mode -- not in this file -- so adding a snippet never means
@@ -37,10 +38,11 @@
 ;;; Templates are read from `templates/*.eld' (keyed by major mode);
 ;;; `M-+' completes a snippet by name, `M-*' inserts one interactively,
 ;;; and once fields are active `M-}'/`M-{' or `C-M-n'/`C-M-p' move
-;;; between them, with `M-RET' to finish. TAB is deliberately not
-;;; involved: in this configuration TAB indents and nothing else. Set
-;;; `jotain-completion-snippets' to nil to keep snippet names out of the
-;;; completion popup; `M-+' and `M-*' still work.
+;;; between them, with `M-RET' to finish. TAB is deliberately not a
+;;; field-navigation key -- it indents and drives completion instead, so it
+;;; never fights the snippet fields. Set `jotain-completion-snippets' to nil
+;;; to keep snippet names out of the completion popup; `M-+' and `M-*' still
+;;; work.
 (use-package tempel
   :functions (tempel-complete cape-capf-super cape-capf-buster
               cape-capf-nonexclusive eglot-completion-at-point eglot-managed-p)
@@ -50,7 +52,8 @@
   (("M-+" . tempel-complete)
    ("M-*" . tempel-insert)
    :map tempel-map
-   ;; TAB is deliberately absent: it indents, always.  Upstream `tempel-map'
+   ;; TAB is deliberately absent here: snippet fields never use it (it
+   ;; indents and drives completion instead).  Upstream `tempel-map'
    ;; never bound it either -- the TAB/S-TAB pair that used to live here was
    ;; this config's own addition.  Removing it restores tempel's own
    ;; `M-}'/`M-{' (plus `M-RET' to finish and `M-<up>'/`M-<down>'), and the
