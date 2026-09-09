@@ -157,18 +157,18 @@ Read at load time; nil skips `corfu-popupinfo-mode' entirely."
 
 (defcustom jotain-completion-inline-preview t
   "When non-nil, show inline \"ghost text\" of the top candidate as you type.
-Enables the built-in `completion-preview-mode' in
-`jotain-completion-auto-modes' buffers -- the same modes that get the
-auto-popup -- so prose stays quiet (it inherits nothing) while code gains
-a greyed-out preview of the most likely completion after point, the way a
-modern editor does.  The popup still lists the alternatives; this is the
-single inline hint beside it.
+Enables the built-in `completion-preview-mode' globally via
+`global-completion-preview-mode' (Emacs 31; on the Emacs 30.1 floor,
+which lacks the globalized variant, it falls back to the
+`jotain-completion-auto-modes' hooks).  A greyed-out preview of the most
+likely completion after point appears as you type, the way a modern
+editor does.  The popup still lists the alternatives; this is the single
+inline hint beside it.
 
-TAB is kept safe: `completion-preview-active-mode-map' binds `C-i' (which
-IS the TAB event) to accept the preview, so this config unbinds it -- TAB
-still only indents while a preview shows.  RET is untouched by the mode
-and stays a newline.  Accept the whole preview with `M-RET'; `M-i'
-completes just the common prefix.
+`completion-preview-active-mode-map' binds `C-i' (which IS the TAB event)
+to accept the preview, so this config unbinds it -- TAB does not accept a
+candidate.  RET is untouched by the mode and stays a newline.  Accept the
+whole preview with `M-RET'; `M-i' completes just the common prefix.
 
 Read at load time; nil adds no preview mode.  `completion-preview-mode'
 also toggles it per-buffer on demand."
@@ -184,7 +184,20 @@ also toggles it per-buffer on demand."
   :custom
   (completions-detailed t)
   (completions-format 'one-column)
-  (completions-sort 'historical))
+  (completions-sort 'historical)
+  ;; Default *Completions*-buffer / minibuffer-completion knobs from the
+  ;; newcomers-presets theme.  Vertico replaces this surface in normal
+  ;; use, so these mostly govern the fallback default completion, but
+  ;; they are correct there: keep the typed input visible while
+  ;; completing, group candidates by category, and let a second TAB move
+  ;; point into the completions list.
+  (minibuffer-visible-completions t)
+  (completions-group t)
+  (completion-auto-select 'second-tab)
+  :config
+  ;; `completion-eager-update' is Emacs 31; guarded for the 30.1 floor.
+  (when (boundp 'completion-eager-update)
+    (setopt completion-eager-update t)))
 
 ;;; @doc Fuzzy, space-separated, order-independent completion. Pairs with
 ;;; partial-completion (path globbing) so `/u/s/a` matches
@@ -623,22 +636,28 @@ comments and docstrings."
 ;;; (Emacs 30, extended in 31). It greys out the most likely completion
 ;;; after point as you type, the way a modern editor does, drawing its
 ;;; candidate from the same `completion-at-point-functions' the corfu
-;;; popup uses. Enabled only in `jotain-completion-auto-modes' buffers (so
-;;; prose stays quiet), and only when `jotain-completion-inline-preview'
-;;; is non-nil. RET is never bound by the mode, so Enter always stays a
-;;; newline. TAB tracks `jotain-completion-free-tab': by default the mode's
-;;; shipped `C-i' (which IS the TAB event) → `completion-preview-insert'
-;;; binding is kept, so when only the ghost text shows (no popup yet) TAB
-;;; accepts it -- the modern-editor feel; with the strict "TAB indents only"
-;;; opt-in that binding is removed so TAB still only indents. `M-RET' also
-;;; accepts the whole preview, and `M-i' just the common prefix. The preview
-;;; is suppressed inside comments and strings, and its sort is paired with
-;;; corfu's so the ghost text matches the popup's top row.
+;;; popup uses. Enabled globally via `global-completion-preview-mode'
+;;; (adopted from the newcomers-presets theme), so the ghost text appears
+;;; in every buffer — prose, shells, and the minibuffer included; on the
+;;; Emacs 30.1 floor, which has no globalized variant, it falls back to
+;;; the per-mode `jotain-completion-auto-modes' hooks. Gated on
+;;; `jotain-completion-inline-preview'. RET is never bound by the mode, so
+;;; Enter always stays a newline. TAB tracks `jotain-completion-free-tab':
+;;; by default the mode's shipped `C-i' (which IS the TAB event) →
+;;; `completion-preview-insert' binding is kept, so when only the ghost
+;;; text shows (no popup yet) TAB accepts it -- the modern-editor feel;
+;;; with the strict "TAB indents only" opt-in that binding is removed so
+;;; TAB still only indents. `M-RET' also accepts the whole preview, and
+;;; `M-i' just the common prefix. The preview is suppressed inside comments
+;;; and strings, and its sort is paired with corfu's so the ghost text
+;;; matches the popup's top row.
 (use-package completion-preview
   :ensure nil
   :when jotain-completion-inline-preview
   :defer t
-  :functions (completion-preview-insert)
+  :functions (completion-preview-insert
+              completion-preview-mode
+              global-completion-preview-mode)
   :preface
   ;; Defined in completion-preview.el / corfu.el, neither loaded at
   ;; byte-compile time; declare them so the `:config' edits below compile
@@ -653,8 +672,18 @@ Added to `completion-preview-inhibit-functions' (Emacs 31) so the ghost
 text does not appear where symbol completion is meaningless."
     (nth 8 (syntax-ppss)))
   :init
-  (dolist (hook jotain-completion-auto-modes)
-    (add-hook hook #'completion-preview-mode))
+  ;; The newcomers-presets theme enables inline preview globally.  Load
+  ;; the library up front (enabling the global mode is what turns the
+  ;; preview on, so this block is no longer deferred): Emacs 31 ships the
+  ;; globalized `global-completion-preview-mode'; on the 30.1 floor (no
+  ;; globalized variant) fall back to the per-mode hooks so the feature
+  ;; still rides `jotain-completion-auto-modes'.  Requiring first makes
+  ;; the `fboundp' probe see the symbol that only exists once loaded.
+  (require 'completion-preview)
+  (if (fboundp 'global-completion-preview-mode)
+      (global-completion-preview-mode 1)
+    (dolist (hook jotain-completion-auto-modes)
+      (add-hook hook #'completion-preview-mode)))
   :config
   ;; Match the popup's debounce so the inline preview and corfu wait the
   ;; same beat, and one keystroke does not fire two capf passes at

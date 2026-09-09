@@ -88,6 +88,9 @@ immediately for writes."
   (use-short-answers t)
   (read-answer-short t)
   (list-matching-lines-jump-to-current-line nil)
+  ;; Visiting a read-only file drops you into `view-mode' (SPC/DEL to
+  ;; page, q to quit) instead of a normal read-only buffer.
+  (view-read-only t)
   (use-dialog-box nil)
   (create-lockfiles nil)
   (delete-by-moving-to-trash t)
@@ -98,6 +101,12 @@ immediately for writes."
   (ring-bell-function #'ignore)
   (scroll-preserve-screen-position 1)
   (mouse-yank-at-point t)
+  ;; Drag a region to move/copy it, including across a split (and, with
+  ;; the -cross-program knob, to and from other applications); drag the
+  ;; buffer name in the mode line to move that buffer to another window.
+  (mouse-drag-and-drop-region t)
+  (mouse-drag-and-drop-region-cross-program t)
+  (mouse-drag-mode-line-buffer t)
   (kill-do-not-save-duplicates t)
   (save-interprogram-paste-before-kill t)
   (set-mark-command-repeat-pop t)
@@ -193,6 +202,18 @@ immediately for writes."
       (fset 'ask-user-about-supersession-threat saved))))
 (advice-add 'custom-save-all :around
             #'jotain-core--custom-save-without-supersession)
+
+;;;; package.el conveniences (newcomers-presets theme)
+
+;; `package-autosuggest-mode' (Emacs 31) offers to install a package when
+;; you open a file type Emacs has no mode for; `package-menu-use-current-
+;; if-no-marks' nil makes the package-menu action keys act only on marked
+;; entries, never silently on the line at point. Both guarded for the
+;; Emacs 30.1 floor. `package' is already loaded (required in init.el).
+(when (boundp 'package-menu-use-current-if-no-marks)
+  (setopt package-menu-use-current-if-no-marks nil))
+(when (fboundp 'package-autosuggest-mode)
+  (package-autosuggest-mode 1))
 
 ;;; @doc Repeat-mode lets you press the trailing key alone after a prefix
 ;;; command (e.g. C-x o o o instead of C-x o C-x o). Built-in,

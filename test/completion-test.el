@@ -266,12 +266,16 @@ bound by the mode, so Enter stays a newline regardless."
   (should (eq (lookup-key completion-preview-active-mode-map (kbd "M-RET"))
               #'completion-preview-insert)))
 
-(ert-deftest completion-test-inline-preview-is-per-mode-like-auto ()
-  "Inline preview rides the same mode list as the auto-popup, so prose stays quiet.
-`completion-preview-mode' is enabled in `jotain-completion-auto-modes'
-buffers (prog-mode) and nowhere prose lives (text-mode)."
-  (should (memq #'completion-preview-mode prog-mode-hook))
-  (should-not (memq #'completion-preview-mode text-mode-hook)))
+(ert-deftest completion-test-inline-preview-is-global ()
+  "Inline preview is enabled globally (adopted from the newcomers-presets theme).
+On Emacs 31 `global-completion-preview-mode' is turned on, so the ghost text
+rides `completion-preview-mode' in every buffer rather than a per-mode hook
+list.  On the Emacs 30.1 floor, which lacks the globalized variant, the config
+falls back to the `jotain-completion-auto-modes' hooks; that path is asserted
+only when the global mode is unavailable."
+  (if (fboundp 'global-completion-preview-mode)
+      (should (bound-and-true-p global-completion-preview-mode))
+    (should (memq #'completion-preview-mode prog-mode-hook))))
 
 (ert-deftest completion-test-one-key-opens-and-accepts ()
   "`C-M-i' resolves to `completion-at-point', which `corfu-map' remaps.
