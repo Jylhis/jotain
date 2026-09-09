@@ -444,13 +444,17 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
 ;;; wrapper PATH (nix/runtime-deps.nix), not a devenv: the mode resolves it
 ;;; once at enable time, before any buffer-local exec-path exists. Only
 ;;; local stdio servers are boosted — a server over TRAMP needs the binary
-;;; on the remote host, and network-port servers are never boosted.
+;;; on the remote host (`eglot-booster-no-remote-boost' below leaves remote
+;;; contacts unboosted, since it defaults to nil and would otherwise prepend
+;;; the booster command and break remote `M-x eglot'), and network-port
+;;; servers are never boosted.
 ;;; Provided by Nix (not on MELPA); `:if' skips the block cleanly in the
 ;;; MELPA-fallback launch where the library is absent.
 (use-package eglot-booster
   :ensure nil ; Provided by Nix
   :if (locate-library "eglot-booster")
   :after eglot
+  :custom (eglot-booster-no-remote-boost t)
   :config (eglot-booster-mode))
 
 ;;; @doc Consult-driven workspace symbol search — C-M-. opens an
