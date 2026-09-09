@@ -28,10 +28,29 @@
 (use-package org
   :ensure nil
   :commands (org-mode org-capture org-agenda)
+  :preface
+  (defun jotain-org--disable-visual-wrap-prefix ()
+    "Turn off `visual-wrap-prefix-mode' in Org buffers.
+`text-mode' (init-writing.el) enables it for every prose buffer, and Org
+derives from `text-mode', so it fires here too.  But Org's own
+`org-indent-mode' (`org-startup-indented' below) already owns the
+`line-prefix'/`wrap-prefix' text properties it uses to draw virtual
+indentation.  With both modes on, two mechanisms write the same
+properties: as jit-lock refontifies while you type, the indentation of
+list items and wrapped lines visibly jumps between the two values.
+
+Disabling only the adaptive wrap prefix resolves it — `visual-line-mode'
+stays on for soft wrapping, and org-indent supplies the wrap prefix.
+Same reasoning as the YAML fix in init-lang-data.el, from the other
+direction: there prose niceties are stripped from code-shaped buffers;
+here one prose nicety is stripped where Org already provides it."
+    (when (bound-and-true-p visual-wrap-prefix-mode)
+      (visual-wrap-prefix-mode -1)))
   :bind
   (("C-c a" . org-agenda)
    ("C-c c" . org-capture)
    ("C-c l" . org-store-link))
+  :hook (org-mode . jotain-org--disable-visual-wrap-prefix)
   :custom
   ;; Shared notes root (`jotain-notes-directory', init-writing.el) so
   ;; org-capture and org-roam land next to denote notes instead of
