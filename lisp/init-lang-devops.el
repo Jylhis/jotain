@@ -91,6 +91,15 @@ name used by `dockerfile-mode'."
 (use-package bazel
   :defer t)
 
+;;; @doc Major mode for Robot Framework test suites and resource files
+;;; (`.robot`/`.resource`) — the keyword-driven acceptance-test / RPA
+;;; syntax, with font-lock and table-aware indentation. LSP and
+;;; format-on-save are wired in init-prog (server/formatter resolved from
+;;; the project PATH, like the other languages).
+(use-package robot-mode
+  :mode (("\\.robot\\'" . robot-mode)
+         ("\\.resource\\'" . robot-mode)))
+
 ;;; Structurizr DSL ---------------------------------------------------
 ;;
 ;; `.dsl' files otherwise fall to the built-in `dsssl-mode', which is

@@ -303,6 +303,16 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
     (if (executable-find "likec4-lsp")
         '("likec4-lsp" "--stdio")
       '("likec4" "lsp" "--stdio")))
+
+  (defun jotain-prog--robot-server (&optional _interactive)
+    "Resolve the Robot Framework server contact against the buffer's PATH.
+Prefers `robotcode' (its `language-server' subcommand), falling back to the
+`robotframework_ls' entry point.  Both speak stdio by default.  Resolved at
+eglot connect time, so it sees the project's devenv env — not Jotain's own
+shell.  A project with neither still gets `robot-mode' plus the cape capfs."
+    (if (executable-find "robotcode")
+        '("robotcode" "language-server")
+      '("robotframework_ls")))
   :init
   ;; Single devenv-aware auto-start for every project language.  It runs on
   ;; `prog-mode-hook' but defers the actual `eglot-ensure' to an idle timer,
@@ -434,7 +444,12 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
   ;; picks the standalone `likec4-lsp' (bundled on the wrapper PATH) or the
   ;; main `likec4' CLI, whichever the buffer's env provides.
   (add-to-list 'eglot-server-programs
-               (cons '(likec4-mode) #'jotain-prog--likec4-server)))
+               (cons '(likec4-mode) #'jotain-prog--likec4-server))
+  ;; Robot Framework (init-lang-devops).  Function-valued so it picks
+  ;; robotcode or the robotframework_ls entry point, whichever the buffer's
+  ;; project env provides on PATH.
+  (add-to-list 'eglot-server-programs
+               (cons '(robot-mode) #'jotain-prog--robot-server)))
 
 ;;; @doc Wrap local stdio language servers in emacs-lsp-booster, which
 ;;; converts server JSON into Elisp bytecode Emacs reads directly and
@@ -714,6 +729,12 @@ hard-error on every prog-mode buffer)."
   ;; ocamlformat (apheleia's built-in formatter keys on tuareg/caml modes).
   (add-to-list 'apheleia-mode-alist '(neocaml-mode . ocamlformat))
   (add-to-list 'apheleia-mode-alist '(neocaml-interface-mode . ocamlformat))
+  ;; Robot Framework (init-lang-devops): robotidy (now folded into Robocop)
+  ;; edits files in place rather than reading stdin, so hand it a temp copy
+  ;; via apheleia's `inplace' and read the result back — exactly like
+  ;; qmlformat above.  Binary comes from the project/host PATH.
+  (add-to-list 'apheleia-formatters '(robotidy . ("robotidy" inplace)))
+  (add-to-list 'apheleia-mode-alist '(robot-mode . robotidy))
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
 ;;; @doc Edit grep / ripgrep result buffers in place; saving propagates
