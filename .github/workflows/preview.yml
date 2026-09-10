@@ -55,17 +55,23 @@ jobs:
       - name: Build site
         run: nix build .#site -o result-site
 
-      - name: Assemble site tree
+      # Pack into a single tarball before uploading. The generated
+      # /help/api/ tree contains files whose names carry characters
+      # actions/upload-artifact@v4 rejects in paths (":" — e.g.
+      # org-babel-execute:python.html — and "*"/"?"/"<"/">"), so a
+      # directory upload fails. Archiving first sidesteps per-file path
+      # validation (the same trick upload-pages-artifact uses internally).
+      - name: Pack site tarball
         run: |
-          mkdir -p site
-          cp -rL result-site/public/. site/
+          mkdir -p out
+          tar -czf out/site.tgz -C result-site/public .
 
       - name: Upload preview artifact
         id: upload
         uses: actions/upload-artifact@v4
         with:
           name: site-preview-pr-${{ github.event.pull_request.number }}
-          path: site
+          path: out/site.tgz
           retention-days: 14
 
       # Point reviewers at the artifact. Skipped for forks, whose
@@ -82,7 +88,7 @@ jobs:
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const artUrl = process.env.ARTIFACT_URL || runUrl;
             const marker = '<!-- pr-preview -->';
-            const body = `${marker}\n### 🔎 Site preview built\n\nThe full site for this PR is a downloadable artifact: **[site-preview-pr-${pr}](${artUrl})** (from [the workflow run](${runUrl}), under **Artifacts**).\n\nUnzip and serve it locally mounted under \`/jotain/\` (baseHref) — e.g. \`ln -s "$PWD/<unzipped>" /tmp/site/jotain && python3 -m http.server -d /tmp/site 8080\` → http://localhost:8080/jotain/\n\n_Updated for ${context.sha.substring(0, 12)}._`;
+            const body = `${marker}\n### 🔎 Site preview built\n\nThe full site for this PR is a downloadable artifact: **[site-preview-pr-${pr}](${artUrl})** (from [the workflow run](${runUrl}), under **Artifacts**).\n\nUnzip it, extract the \`site.tgz\` inside, and serve it locally mounted under \`/jotain/\` (the baseHref):\n\n\`\`\`sh\nmkdir -p /tmp/site/jotain && tar xzf site.tgz -C /tmp/site/jotain\npython3 -m http.server -d /tmp/site 8080   # → http://localhost:8080/jotain/\n\`\`\`\n\n_Updated for ${context.sha.substring(0, 12)}._`;
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner, repo: context.repo.repo, issue_number: pr,
             });
