@@ -1,0 +1,73 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel--setup-local-integration – Emacs Documentation Online</title>
+<meta name="description" content="ghostel--setup-local-integration is a natively compiled function
+defined in ghostel-shell.el.
+Set up shell integration for a local SHELL-TYPE spawn.">
+<meta name="color-scheme" content="light dark">
+<link href="/jotain/pr-preview/pr-236/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/jotain/pr-preview/pr-236/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel--setup-local-integration</code></h1><p><span class="m"><code>ghostel--setup-local-integration</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function
+defined in <span class="bt">ghostel-shell.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel--setup-local-integration <a href="#:~:text=local-,SHELL-TYPE"><span class="arg">SHELL-TYPE</span></a> <a href="#:~:text=spawn.-,GHOSTEL-DIR"><span class="arg">GHOSTEL-DIR</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Set up shell integration for a local <span class="arg">SHELL-TYPE</span> spawn.
+<p><span class="arg">GHOSTEL-DIR</span> is the package resource root holding <span class="m"><code>etc/shell/</code></span>.
+Returns a plist (:env :args) for <a href="../fun/ghostel--start-process.html"><code>ghostel--start-process</code></a>, or nil for
+unrecognized shells or missing bootstrap assets.  Bash's <span class="m"><code>--posix</code></span>
+arg makes it honor ENV; the inject script then restores normal mode
+with <span class="m"><code>set +o posix</code></span>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/f0p83zlni48fq2rq5davhlx8p23xmc4v-emacs-packages-deps/share/emacs/site-lisp/ghostel-shell.el</span>
+<span class="cd">;;; </span><span class="c">Shell-integration injection
+</span>
+(<span class="k">defun</span> <span class="f">ghostel--setup-local-integration</span> (shell-type ghostel-dir)
+  <span class="doc">"Set up shell integration for a local SHELL-TYPE spawn.
+GHOSTEL-DIR is the package resource root holding `</span><span class="m doc">etc/shell/</span><span class="doc">'.
+Returns a plist (:env :args) for `</span><span class="m doc">ghostel--start-process</span><span class="doc">', or nil for
+unrecognized shells or missing bootstrap assets.  Bash's `</span><span class="m doc">--posix</span><span class="doc">'
+arg makes it honor ENV; the inject script then restores normal mode
+with `set +o posix'."</span>
+  (<span class="k">pcase</span> shell-type
+    ('bash
+     (<span class="k">let</span> ((inject-script (expand-file-name
+                           <span class="s">"etc/shell/bootstrap/bash/inject.bash"</span>
+                           ghostel-dir))
+           (env (list <span class="s">"GHOSTEL_BASH_INJECT=1"</span>)))
+       (<span class="k">when</span> (file-readable-p inject-script)
+         (<span class="k">let</span> ((old-env (getenv <span class="s">"ENV"</span>)))
+           (<span class="k">when</span> old-env
+             (<span class="k">push</span> (format <span class="s">"GHOSTEL_BASH_ENV=%s"</span> old-env) env)))
+         (<span class="k">push</span> (format <span class="s">"ENV=%s"</span> inject-script) env)
+         (<span class="k">unless</span> (getenv <span class="s">"HISTFILE"</span>)
+           (<span class="k">push</span> (format <span class="s">"HISTFILE=%s/.bash_history"</span>
+                         (expand-file-name <span class="s">"~"</span>))
+                 env)
+           (<span class="k">push</span> <span class="s">"GHOSTEL_BASH_UNEXPORT_HISTFILE=1"</span> env))
+         (list <span class="bi">:env</span> env <span class="bi">:args</span> (list <span class="s">"--posix"</span>)))))
+    ('zsh
+     (<span class="k">let</span> ((zsh-dir (expand-file-name
+                     <span class="s">"etc/shell/bootstrap/zsh"</span> ghostel-dir)))
+       (<span class="k">when</span> (file-directory-p zsh-dir)
+         (<span class="k">let</span> ((env nil)
+               (old-zdotdir (getenv <span class="s">"ZDOTDIR"</span>)))
+           (<span class="k">when</span> old-zdotdir
+             (<span class="k">push</span> (format <span class="s">"GHOSTEL_ZSH_ZDOTDIR=%s"</span> old-zdotdir) env))
+           (<span class="k">push</span> (format <span class="s">"ZDOTDIR=%s"</span> zsh-dir) env)
+           (list <span class="bi">:env</span> env)))))
+    <span class="cd">;; </span><span class="c">Fish and nushell both auto-load from XDG_DATA_DIRS
+</span>    ((<span class="k">or</span> 'fish 'nu)
+     (<span class="k">let</span> ((integ-dir (expand-file-name
+                       <span class="s">"etc/shell/bootstrap"</span> ghostel-dir)))
+       (<span class="k">when</span> (file-directory-p integ-dir)
+         (<span class="k">let</span> ((xdg (<span class="k">or</span> (getenv <span class="s">"XDG_DATA_DIRS"</span>)
+                        <span class="s">"/usr/local/share:/usr/share"</span>)))
+           (list <span class="bi">:env</span>
+                 (list
+                  (format <span class="s">"XDG_DATA_DIRS=%s:%s"</span> integ-dir xdg)
+                  (format <span class="s">"GHOSTEL_SHELL_INTEGRATION_XDG_DIR=%s"</span>
+                          integ-dir)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

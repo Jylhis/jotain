@@ -1,0 +1,66 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: magit--insert-modules-logs – Emacs Documentation Online</title>
+<meta name="description" content="magit--insert-modules-logs is a natively compiled function defined in
+magit-submodule.el.
+For internal use, don't add to a hook.">
+<meta name="color-scheme" content="light dark">
+<link href="/jotain/pr-preview/pr-236/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/jotain/pr-preview/pr-236/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>magit--insert-modules-logs</code></h1><p><span class="m"><code>magit--insert-modules-logs</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">magit-submodule.el</span>.
+<h2>Signature</h2>
+<pre><code>(magit--insert-modules-logs <a href="#:~:text="><span class="arg">HEADING</span></a> <a href="#:~:text="><span class="arg">TYPE</span></a> <a href="#:~:text="><span class="arg">RANGE</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>For internal use, don't add to a hook.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/rqkp2lh7vm8zcyvdxhp1vhpfx5k642sd-emacs-packages-deps/share/emacs/site-lisp/elpa/magit-20260907.1411/magit-submodule.el</span>
+(<span class="k">defun</span> <span class="f">magit--insert-modules-logs</span> (heading type range)
+  <span class="doc">"For internal use, don't add to a hook."</span>
+  (<span class="k">when-let</span> ((_(not (magit-ignore-submodules-p)))
+             (modules (magit-list-module-paths)))
+    (<span class="k">magit-insert-section</span> ((eval type) nil t)
+      (string-match <span class="s">"\\`</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">.+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s"> </span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[</span><span class="neg s">^</span><span class="s"> ]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">\\'"</span> heading)
+      (<span class="k">magit-insert-heading</span>
+        (propertize (match-str 1 heading)
+                    'font-lock-face 'magit-section-heading)
+        <span class="s">" "</span>
+        (propertize (match-str 2 heading)
+                    'font-lock-face 'magit-branch-remote)
+        <span class="s">":"</span>)
+      (<span class="k">dolist</span> (module modules)
+        (<span class="k">when-let*</span>
+            ((default-directory (expand-file-name module))
+             (_(file-exists-p (expand-file-name <span class="s">".git"</span>)))
+             (all-tags <span class="s">" "</span>)
+             (lines (mapcar (<span class="k">lambda</span> (line)
+                              (<span class="k">pcase-let*</span>
+                                  ((`(,rev ,msg ,tags)
+                                    (split-string line <span class="s">"&#12;"</span>))
+                                   (tags (<span class="k">and</span> (not (equal tags <span class="s">""</span>))
+                                              (magit-format-ref-labels tags))))
+                                (<span class="k">setq</span> all-tags (concat all-tags tags))
+                                (list rev msg tags)))
+                            (magit-git-lines
+                             <span class="s">"-c"</span> <span class="s">"push.default=current"</span>
+                             <span class="s">"log"</span> <span class="s">"--format=%h%x0c%s%x0c%D"</span>
+                             <span class="s">"--decorate=full"</span> <span class="s">"--decorate-refs=refs/tags/"</span>
+                             range)))
+             (count (length lines))
+             (_(&gt; count 0)))
+          (<span class="k">magit-insert-section</span>
+              ( module module t
+                <span class="bi">:range</span> range)
+            (<span class="k">magit-insert-heading</span> count
+              (propertize module 'font-lock-face 'magit-diff-file-heading)
+              (<span class="k">and</span> (not (equal all-tags <span class="s">" "</span>)) all-tags))
+            (<span class="k">pcase-dolist</span> (`(,rev ,msg ,tags) lines)
+              (<span class="k">magit-insert-section</span> (module-commit rev t)
+                (insert (propertize rev 'font-lock-face 'magit-hash) <span class="s">" "</span>
+                        (<span class="k">if</span> tags (concat tags <span class="s">" "</span>) <span class="s">""</span>)
+                        (magit-log--wash-summary msg) <span class="s">"\n"</span>))))))
+      (magit-cancel-section 'if-empty)
+      (insert ?\n))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

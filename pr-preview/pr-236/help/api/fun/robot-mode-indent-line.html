@@ -1,0 +1,110 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: robot-mode-indent-line – Emacs Documentation Online</title>
+<meta name="description" content="robot-mode-indent-line is an interactive and natively compiled
+function defined in robot-mode.el.
+Indent current line in Robot mode.">
+<meta name="color-scheme" content="light dark">
+<link href="/jotain/pr-preview/pr-236/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/jotain/pr-preview/pr-236/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>robot-mode-indent-line</code></h1><p><span class="m"><code>robot-mode-indent-line</code></span> is an <a href="/info/elisp/using-interactive.html">interactive</a> and <a href="../fun/native-compile.html"><code>natively compiled</code></a>
+function defined in <span class="bt">robot-mode.el</span>.
+<h2>Signature</h2>
+<pre><code>(robot-mode-indent-line)
+</code></pre>
+<h2>Documentation</h2>
+<p>Indent current line in Robot mode.
+<p>Used as <a href="../var/indent-line-function.html"><code>indent-line-function</code></a> of the mode.
+<h2>Key Bindings</h2>
+<p>This command is not in any keymaps.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/pvpsakkvd547ygqh6ngbxpmd6p705r2f-emacs-packages-deps/share/emacs/site-lisp/elpa/robot-mode-20240721.1023/robot-mode.el</span>
+(<span class="k">defun</span> <span class="f">robot-mode-indent-line</span> ()
+  <span class="doc">"Indent current line in Robot mode.
+
+Used as `</span><span class="m doc">indent-line-function</span><span class="doc">' of the mode."</span>
+  (<span class="k">interactive</span>)
+  (<span class="k">let*</span> ((indent 0)
+	 <span class="cd">;; </span><span class="c">Get the current section
+</span>	 (section
+	  (downcase (<span class="k">or</span> (<span class="k">save-excursion</span>
+			 (re-search-backward <span class="s">"^\\s-*\\*+\\s-*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">[a-zA-Z ]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> nil t)
+			 (match-string-no-properties 1)) <span class="w s">""</span><span class="w">)))</span>
+
+	 <span class="cd">;; </span><span class="c">The non-indented contents of previous non-empty line
+</span>	 previous-line
+
+	 <span class="cd">;; </span><span class="c">The amount of indent of previous non-empty line
+</span>	 (previous-indent
+	  (<span class="k">save-excursion</span>
+	    (robot-mode--back-to-previous-line)
+	    (<span class="k">setq</span> previous-line (buffer-substring-no-properties
+				 (point) (line-end-position)))
+	    (current-indentation)))
+
+	 <span class="cd">;; </span><span class="c">The non-indented contents of the current line
+</span>	 current-line
+
+	 <span class="cd">;; </span><span class="c">The indentation level of the current line
+</span>	 (current-indent
+	  (<span class="k">save-excursion</span>
+	    (back-to-indentation)
+	    (<span class="k">setq</span> current-line (buffer-substring-no-properties
+				(point) (line-end-position)))
+	    (current-indentation))))
+
+    (<span class="k">setq</span> indent
+	  (<span class="k">cond</span> ((<span class="k">or</span>
+		  <span class="cd">;; </span><span class="c">Don't indent if not in the below sections
+</span>		  (not (string-match <span class="s">"task.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">test case.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">keyword.*"</span> section))
+		  <span class="cd">;; </span><span class="c">Don't indent the section line
+</span>		  (string-match <span class="s">"^\\*"</span> current-line)
+		  <span class="cd">;; </span><span class="c">Don't indent the line after a section line
+</span>		  (string-match <span class="s">"^\\*"</span> previous-line))
+		 0)
+
+		<span class="cd">;; </span><span class="c">If the current line contains an inline IF, don't increase indent
+</span>		((string-match <span class="s">"^\\s-*IF\\s-\\{2,\\}[</span><span class="neg s">^</span><span class="s">[:space:]]+\\s-\\{2,\\}[</span><span class="neg s">^</span><span class="s">#[:space:]]"</span> previous-line)
+		 previous-indent)
+
+		<span class="cd">;; </span><span class="c">If previous line contains control structures, increase the
+</span>		<span class="cd">;; </span><span class="c">indentation level
+</span>		((string-match <span class="s">"^\\s-*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">IF</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">ELSE IF</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">ELSE</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">FOR</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">WHILE</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">TRY</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">EXCEPT</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">FINALLY</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\s-\\{2,\\}.*</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">\\s-*$</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> previous-line)
+		 (+ previous-indent robot-mode-basic-offset))
+
+		<span class="cd">;; </span><span class="c">Decrease indentation on control structures that end a block
+</span>		((string-match<span class="s">"</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">END</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">ELSE IF</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">ELSE</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">EXCEPT</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">FINALLY</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span> current-line)
+		 (max robot-mode-basic-offset (- previous-indent robot-mode-basic-offset)))
+
+		<span class="cd">;; </span><span class="c">If previous line is indented, indent to that level
+</span>		((&gt; previous-indent 0)
+		 previous-indent)
+
+		<span class="cd">;; </span><span class="c">Otherwise indent to basic offset
+</span>		(t
+		 robot-mode-basic-offset)))
+
+    <span class="cd">;; </span><span class="c">Toggle indentation if the line is already indented
+</span>    (<span class="k">when</span> (<span class="k">and</span> robot-mode-indent-toggle
+	       (&gt; indent 0)
+	       (= indent current-indent)
+	       <span class="cd">;; </span><span class="c">Prevent toggling if point is retained, TAB also does
+</span>	       <span class="cd">;; </span><span class="c">completion, point is after indentation and previous command
+</span>	       <span class="cd">;; </span><span class="c">was also an indentation.
+</span>	       (not (<span class="k">and</span> robot-mode-retain-point-on-indent
+			 (eq tab-always-indent 'complete)
+			 (&gt; (current-column) current-indent)
+			 (equal this-command last-command))))
+      (<span class="k">setq</span> indent 0))
+
+    (<span class="k">when</span> (not robot-mode-retain-point-on-indent)
+      (back-to-indentation))
+
+    <span class="cd">;; </span><span class="c">Save point if point retention is enabled and point is after indentation
+</span>    (<span class="k">if</span> (<span class="k">and</span> (&gt; (current-column) current-indent)
+	     robot-mode-retain-point-on-indent)
+	(<span class="k">save-excursion</span>
+	  (indent-line-to indent))
+      (indent-line-to indent))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

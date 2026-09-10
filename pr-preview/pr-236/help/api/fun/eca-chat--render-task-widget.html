@@ -1,0 +1,51 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: eca-chat--render-task-widget – Emacs Documentation Online</title>
+<meta name="description" content="eca-chat--render-task-widget is a natively compiled function defined
+in eca-chat.el.
+Render the task area widget from eca-chat--task-state.">
+<meta name="color-scheme" content="light dark">
+<link href="/jotain/pr-preview/pr-236/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/jotain/pr-preview/pr-236/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>eca-chat--render-task-widget</code></h1><p><span class="m"><code>eca-chat--render-task-widget</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined
+in <span class="bt">eca-chat.el</span>.
+<h2>Signature</h2>
+<pre><code>(eca-chat--render-task-widget <span class="ty">&amp;optional</span> LOADING?)
+</code></pre>
+<h2>Documentation</h2>
+<p>Render the task area widget from <a href="../var/eca-chat--task-state.html"><code>eca-chat--task-state</code></a>.
+<p>Without tasks the widget is removed, unless LOADING? is non-nil: a
+placeholder label is then shown while a task tool call is in flight.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/6xg7rg5nmkqjy9mxdg132vxa1l2jpv1j-emacs-packages-deps/share/emacs/site-lisp/elpa/eca-20260909.1305/eca-chat.el</span>
+(<span class="k">defun</span> <span class="f">eca-chat--render-task-widget</span> (<span class="ty">&amp;optional</span> loading?)
+  <span class="doc">"Render the task area widget from `</span><span class="m doc">eca-chat--task-state</span><span class="doc">'.
+Without tasks the widget is removed, unless LOADING? is non-nil: a
+placeholder label is then shown while a task tool call is in flight."</span>
+  (<span class="k">let</span> ((tasks (append (plist-get eca-chat--task-state <span class="bi">:tasks</span>) nil)))
+    (<span class="k">cond</span>
+     (tasks
+      (<span class="k">let*</span> ((active-summary (plist-get eca-chat--task-state <span class="bi">:activeSummary</span>))
+             (done-count (length (-filter (<span class="k">lambda</span> (task) (string= <span class="s">"done"</span> (plist-get task <span class="bi">:status</span>))) tasks)))
+             (total-count (length tasks))
+             (in-progress-task (-first (<span class="k">lambda</span> (task) (string= <span class="s">"in-progress"</span> (plist-get task <span class="bi">:status</span>))) tasks))
+             (label-text (<span class="k">or</span> active-summary
+                             (<span class="k">when</span> in-progress-task (plist-get in-progress-task <span class="bi">:subject</span>))
+                             <span class="s">""</span>))
+             (prefix-text (<span class="k">if</span> active-summary <span class="s">"Task: "</span> <span class="s">"Tasks "</span>))
+             (progress-text (format <span class="s">" (%d/%d)"</span> done-count total-count))
+             (label-face (<span class="k">if</span> in-progress-task 'eca-chat-task-label-in-progress-face 'eca-chat-task-label-face))
+             (label (concat
+                     (propertize prefix-text 'font-lock-face 'eca-chat-task-prefix-face)
+                     (propertize label-text 'font-lock-face label-face)
+                     (propertize progress-text 'font-lock-face 'eca-chat-task-progress-face))))
+        (eca-chat--set-task-widget label (eca-chat--task-build-content tasks))))
+     (loading?
+      (eca-chat--set-task-widget
+       (concat (propertize <span class="s">"Creating tasks... "</span> 'font-lock-face 'eca-chat-task-prefix-face)
+               eca-chat-mcp-tool-call-loading-symbol)
+       <span class="s">""</span>))
+     (t
+      (eca-chat--remove-expandable-content eca-chat--task-block-id)))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

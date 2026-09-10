@@ -1,0 +1,78 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: gptel-send--steer – Emacs Documentation Online</title>
+<meta name="description" content="gptel-send--steer is a natively compiled function defined in gptel.el.
+Mark active region or text following a response as a steering message.">
+<meta name="color-scheme" content="light dark">
+<link href="/jotain/pr-preview/pr-236/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/jotain/pr-preview/pr-236/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>gptel-send--steer</code></h1><p><span class="m"><code>gptel-send--steer</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">gptel.el</span>.
+<h2>Signature</h2>
+<pre><code>(gptel-send--steer)
+</code></pre>
+<h2>Documentation</h2>
+<p>Mark active region or text following a response as a steering message.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/y3ps83bmdb4l96g1xa0z66v3cbc7439z-emacs-packages-deps/share/emacs/site-lisp/elpa/gptel-20260909.353/gptel.el</span>
+(<span class="k">defun</span> <span class="f">gptel-send--steer</span> ()
+  <span class="doc">"Mark active region or text following a response as a steering message."</span>
+  (<span class="k">unless</span> (gptel--fsm-live-p)
+    (<span class="w">user-error</span> <span class="s">"No active gptel request in this buffer; nothing to steer"</span>))
+  (<span class="k">if-let*</span> (((eq (get-pos-property (point) 'gptel) 'steer))
+            (ov (<span class="k">or</span> (cdr (get-char-property-and-overlay (point) 'gptel))
+                    (cdr (get-char-property-and-overlay (1- (point)) 'gptel)))))
+      <span class="cd">;; </span><span class="c">Cancel pending steering message
+</span>      (<span class="k">progn</span> (delete-overlay ov) (message <span class="s">"Steering message canceled"</span>))
+    (<span class="k">let*</span> ((info (gptel-fsm-info gptel--fsm-last))
+           (sm (plist-get info <span class="bi">:position</span>))
+           (tracking-marker (plist-get info <span class="bi">:tracking-marker</span>))
+           (bounds                      <span class="cd">;</span><span class="c">Find the bounds of the steering prompt
+</span>            (<span class="k">cond</span>
+             ((use-region-p) (deactivate-mark) (car-safe (region-bounds)))
+             ((<span class="k">and</span> tracking-marker (&gt; (point) tracking-marker))
+              (cons (<span class="k">save-excursion</span>
+                      (goto-char tracking-marker) (skip-chars-forward <span class="s">" \t\n"</span>)
+                      (point))
+                    (point)))
+             ((<span class="k">and</span> (&gt;= (point) sm) (not (get-text-property (point) 'gptel)))
+              (cons (<span class="k">save-excursion</span>
+                      (goto-char        <span class="cd">;</span><span class="c">Go to start of steering message
+</span>                       (max (previous-single-property-change <span class="cd">;</span><span class="c">below response
+</span>                             (point) 'gptel nil (<span class="k">or</span> sm (point-min)))
+                            (previous-single-property-change <span class="cd">;</span><span class="c">below pending tool call
+</span>                             (point) 'read-only nil (<span class="k">or</span> sm (point-min)))))
+                      (skip-chars-forward <span class="s">" \r\t\n"</span>) (point))
+                    (point))))))
+      (<span class="k">unless</span> (<span class="k">and</span> bounds (&gt; (cdr bounds) (car bounds)))
+        (<span class="w">user-error</span> <span class="s">"No steering message at point"</span>))
+      (<span class="k">letrec</span> ((steer-ov (make-overlay (car bounds) (cdr bounds) nil t t))
+               (clear-steer-ov
+                (<span class="k">lambda</span> (req-info)
+                  (plist-put req-info <span class="bi">:post</span>
+                             (delete move-steer-msg (plist-get req-info <span class="bi">:post</span>)))
+                  (<span class="k">when-let*</span> ((obuf (overlay-buffer steer-ov))
+                              (beg (overlay-start steer-ov))
+                              (end (overlay-end steer-ov))
+                              (msg (string-trim-right
+                                    (buffer-substring-no-properties beg end))))
+                    (<span class="k">with-current-buffer</span> obuf
+                      (delete-region beg end) (delete-overlay steer-ov))
+                    (<span class="k">if</span> (string-blank-p msg)
+                        (message <span class="s">"Buffer \"%s\": steering message is blank, canceling"</span>
+                                 (buffer-name obuf))
+                      (plist-put req-info <span class="bi">:steering-message</span> msg)))))
+               (move-steer-msg (<span class="k">lambda</span> (req-info)
+                                 (funcall clear-steer-ov req-info)
+                                 (gptel-send--steer-relocate req-info))))
+        (overlay-put steer-ov 'gptel 'steer)
+        (overlay-put steer-ov 'evaporate t)
+        (overlay-put steer-ov 'face 'warning)
+        (overlay-put
+         steer-ov 'before-string
+         (concat (propertize <span class="s">"QUEUED"</span> 'face '(<span class="bi">:inherit</span> shadow <span class="bi">:box</span> -1))
+                 (propertize <span class="s">": "</span> 'face 'shadow)))
+        (plist-put info <span class="bi">:post</span> (cons move-steer-msg (plist-get info <span class="bi">:post</span>)))
+        (plist-put info <span class="bi">:post-tool</span>
+                   (cons clear-steer-ov (plist-get info <span class="bi">:post-tool</span>)))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

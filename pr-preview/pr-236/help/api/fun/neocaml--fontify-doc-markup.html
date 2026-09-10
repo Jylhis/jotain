@@ -1,0 +1,119 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: neocaml--fontify-doc-markup – Emacs Documentation Online</title>
+<meta name="description" content="neocaml--fontify-doc-markup is a natively compiled function defined in
+neocaml.el.
+Fontify ocamldoc markup inside the comment NODE.">
+<meta name="color-scheme" content="light dark">
+<link href="/jotain/pr-preview/pr-236/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/jotain/pr-preview/pr-236/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>neocaml--fontify-doc-markup</code></h1><p><span class="m"><code>neocaml--fontify-doc-markup</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in
+<span class="bt">neocaml.el</span>.
+<h2>Signature</h2>
+<pre><code>(neocaml--fontify-doc-markup <a href="#:~:text=comment-,NODE"><span class="arg">NODE</span></a> <a href="#:~:text=alone.-,OVERRIDE"><span class="arg">OVERRIDE</span></a> <a href="#:~:text="><span class="arg">START</span></a> <a href="#:~:text=past-,END"><span class="arg">END</span></a> <span class="ty">&amp;rest</span> _)
+</code></pre>
+<h2>Documentation</h2>
+<p>Fontify ocamldoc markup inside the comment <span class="arg">NODE</span>.
+<p>Only doc comments are touched; plain comments are left alone.
+<span class="arg">OVERRIDE</span> is the override flag from <a href="../fun/treesit-font-lock-rules.html"><code>treesit-font-lock-rules</code></a>.
+Scanning always starts from the beginning of the node - starting
+mid-comment could miss an opening marker - but stops once past <span class="arg">END</span>,
+the end of the region being fontified; jit-lock asks for the rest
+later.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/cibbvr6g52vrsn9h16zni7hpj80mpsh7-emacs-packages-deps/share/emacs/site-lisp/elpa/neocaml-20260907.2015/neocaml.el</span>
+(<span class="k">defun</span> <span class="f">neocaml--fontify-doc-markup</span> (node override _start end <span class="ty">&amp;rest</span> _)
+  <span class="doc">"Fontify ocamldoc markup inside the comment NODE.
+Only doc comments are touched; plain comments are left alone.
+OVERRIDE is the override flag from `</span><span class="m doc">treesit-font-lock-rules</span><span class="doc">'.
+Scanning always starts from the beginning of the node - starting
+mid-comment could miss an opening marker - but stops once past END,
+the end of the region being fontified; jit-lock asks for the rest
+later."</span>
+  (<span class="k">let</span> ((limit (treesit-node-end node)))
+    (<span class="k">save-excursion</span>
+      (goto-char (treesit-node-start node))
+      (<span class="k">when</span> (looking-at neocaml--doc-comment-regexp)
+        (forward-char 3)                <span class="cd">; </span><span class="c">skip the (**
+</span>        (<span class="k">while</span> (&lt; (point) (min limit end))
+          (<span class="k">let</span> ((c (char-after)))
+            (<span class="k">cond</span>
+             <span class="cd">;; </span><span class="c">Escape sequences: \{ \} \[ \] \@
+</span>             ((eq c ?\\)
+              (forward-char
+               (<span class="k">if</span> (memq (char-after (1+ (point))) '(?\{ ?\} ?\[ ?\] ?@)) 2 1)))
+             ((eq c ?\{)
+              (<span class="k">cond</span>
+               <span class="cd">;; </span><span class="c">{[ code block ]} and {v verbatim v} - no markup inside
+</span>               ((looking-at <span class="s">"{</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(</span><span class="s">\\[</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">v[ \t\n]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">"</span>)
+                (<span class="k">let*</span> ((open (point))
+                       (opener-end (match-end 0))
+                       (closer (<span class="k">if</span> (match-beginning 1) <span class="s">"]}"</span> <span class="s">"v}"</span>))
+                       (close (<span class="k">save-excursion</span>
+                                (search-forward closer limit t))))
+                  (<span class="k">if</span> (not close)
+                      (goto-char opener-end)
+                    (neocaml--doc-markup-fontify-span
+                     open opener-end (- close 2) close
+                     'neocaml-doc-code-face override)
+                    (goto-char close))))
+               <span class="cd">;; </span><span class="c">{!ref}, {:url}, {{!ref} ...}, {{:url} ...} - the target
+</span>               <span class="cd">;; </span><span class="c">runs to the brace closing the innermost opener
+</span>               ((looking-at <span class="s">"{{?[!:]"</span>)
+                (<span class="k">let*</span> ((open (point))
+                       (target-beg (match-end 0))
+                       (close (<span class="k">save-excursion</span>
+                                (goto-char target-beg)
+                                (neocaml--doc-markup-close ?\{ ?\} limit))))
+                  (<span class="k">if</span> (not close)
+                      (goto-char target-beg)
+                    (neocaml--doc-markup-fontify-span
+                     open target-beg close (1+ close)
+                     'neocaml-doc-reference-face override)
+                    (goto-char (1+ close)))))
+               <span class="cd">;; </span><span class="c">{b ...}, {i ...}, {e ...}, {2 ...} headings, {^ ...},
+</span>               <span class="cd">;; </span><span class="c">{_ ...}, {C ...}, {L ...}, {R ...}
+</span>               ((looking-at
+                 <span class="s">"{</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">[0-9]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">(?:</span><span class="s">:[</span><span class="neg s">^</span><span class="s"> \t\n{}]+</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">?</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">|</span><span class="s">[bie^_CLR]</span><span class="rx-gr-bs s">\\</span><span class="rx-gr s">)</span><span class="s">[ \t\n]"</span>)
+                (<span class="k">let*</span> ((open (point))
+                       (marker-end (match-end 0))
+                       (close (<span class="k">save-excursion</span>
+                                (goto-char marker-end)
+                                (neocaml--doc-markup-close ?\{ ?\} limit))))
+                  (<span class="k">if</span> (not close)
+                      (goto-char marker-end)
+                    (neocaml--doc-markup-fontify-span
+                     open marker-end close (1+ close)
+                     (neocaml--doc-markup-content-face (char-after (1+ open)))
+                     override)
+                    <span class="cd">;; </span><span class="c">Continue scanning inside the construct so that
+</span>                    <span class="cd">;; </span><span class="c">nested markup like {b ... {i ...}} stacks its faces.
+</span>                    (goto-char marker-end))))
+               (t (forward-char 1))))
+             <span class="cd">;; </span><span class="c">[inline code]
+</span>             ((eq c ?\[)
+              (<span class="k">let</span> ((open (point))
+                    (close (<span class="k">save-excursion</span>
+                             (forward-char 1)
+                             (neocaml--doc-markup-close ?\[ ?\] limit))))
+                (<span class="k">if</span> (not close)
+                    (forward-char 1)
+                  (neocaml--doc-markup-fontify-span
+                   open (1+ open) close (1+ close)
+                   'neocaml-doc-code-face override)
+                  (goto-char (1+ close)))))
+             <span class="cd">;; </span><span class="c">@tags, at the start of a line or after whitespace
+</span>             ((eq c ?@)
+              (<span class="k">if</span> (<span class="k">and</span> (memq (char-before) '(?\s ?\t ?\n ?*))
+                       (looking-at neocaml--doc-markup-tag-regexp))
+                  (<span class="k">progn</span>
+                    (treesit-fontify-with-override
+                     (point) (match-end 0) 'neocaml-doc-markup-face override)
+                    (goto-char (match-end 0)))
+                (forward-char 1)))
+             <span class="cd">;; </span><span class="c">Plain text: hop to the next markup candidate at C speed.
+</span>             (t
+              (forward-char 1)
+              (skip-chars-forward <span class="s">"^\\\\{[@"</span> limit)))))))))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>

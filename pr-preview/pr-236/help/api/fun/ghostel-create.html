@@ -1,0 +1,63 @@
+<html lang="en-US"><head><meta charset="UTF-8"><meta content="width=device-width" name="viewport">
+<title>Function: ghostel-create – Emacs Documentation Online</title>
+<meta name="description" content="ghostel-create is a natively compiled function defined in ghostel.el.
+Create and return a new ghostel terminal running ghostel-shell.">
+<meta name="color-scheme" content="light dark">
+<link href="/jotain/pr-preview/pr-236/help/api/style.css" rel="stylesheet" type="text/css">
+<link href="/jotain/pr-preview/pr-236/help/api/emacs.css" rel="stylesheet" type="text/css">
+</head><body><article><h1>Function: <code>ghostel-create</code></h1><p><span class="m"><code>ghostel-create</code></span> is a <a href="../fun/native-compile.html"><code>natively compiled</code></a> function defined in <span class="bt">ghostel.el</span>.
+<h2>Signature</h2>
+<pre><code>(ghostel-create <span class="ty">&amp;optional</span> <a href="#:~:text=shell.-,NAME"><span class="arg">NAME</span></a> <a href="#:~:text=taken.-,DISPLAY"><span class="arg">DISPLAY</span></a> <a href="#:~:text=job.-,IDENTITY"><span class="arg">IDENTITY</span></a>)
+</code></pre>
+<h2>Documentation</h2>
+<p>Create and return a new ghostel terminal running <a href="../var/ghostel-shell.html"><code>ghostel-shell</code></a>.
+<p><span class="arg">NAME</span> is the buffer name (default <a href="../var/ghostel-buffer-name.html"><code>ghostel-buffer-name</code></a>), uniquified
+when already taken.  <span class="arg">DISPLAY</span>, when non-nil, is a <a href="../fun/display-buffer.html"><code>display-buffer</code></a>
+ACTION used to show the buffer.  The terminal starts in
+<a href="../var/default-directory.html"><code>default-directory</code></a>.
+<p>Always creates a fresh terminal; reuse is the caller's job.
+<span class="arg">IDENTITY</span>, when non-nil, is stored verbatim as the buffer's <a href="../var/ghostel-identity.html"><code>ghostel-identity</code></a>;
+it defaults to the plain-terminal slot identity for <span class="arg">NAME</span> with the next free
+instance - the same slot <a href="../fun/ghostel.html"><code>ghostel</code></a> would allocate.
+To run a specific program instead of a shell, see <a href="../fun/ghostel-exec.html"><code>ghostel-exec</code></a>.
+<h2>Source Code</h2>
+<pre><code><span class="c">;; Defined in </span><span class="bt">/nix/store/f0p83zlni48fq2rq5davhlx8p23xmc4v-emacs-packages-deps/share/emacs/site-lisp/ghostel.el</span>
+(<span class="k">defun</span> <span class="f">ghostel-create</span> (<span class="ty">&amp;optional</span> name display identity)
+  <span class="doc">"Create and return a new ghostel terminal running `</span><span class="m doc">ghostel-shell</span><span class="doc">'.
+
+NAME is the buffer name (default `</span><span class="m doc">ghostel-buffer-name</span><span class="doc">'), uniquified
+when already taken.  DISPLAY, when non-nil, is a `</span><span class="m doc">display-buffer</span><span class="doc">'
+ACTION used to show the buffer.  The terminal starts in
+`</span><span class="m doc">default-directory</span><span class="doc">'.
+
+Always creates a fresh terminal; reuse is the caller's job.
+IDENTITY, when non-nil, is stored verbatim as the buffer's `</span><span class="m doc">ghostel-identity</span><span class="doc">';
+it defaults to the plain-terminal slot identity for NAME with the next free
+instance - the same slot `</span><span class="m doc">ghostel</span><span class="doc">' would allocate.
+To run a specific program instead of a shell, see `</span><span class="m doc">ghostel-exec</span><span class="doc">'."</span>
+  (ghostel--load-module t)
+  <span class="cd">;; </span><span class="c">An empty name (a create-on-miss minibuffer submission) would make
+</span>  <span class="cd">;; </span><span class="c">`</span><span class="m c">generate-new-buffer</span><span class="c">' signal; treat it as nil.
+</span>  (<span class="k">let*</span> ((name (<span class="k">if</span> (<span class="k">and</span> name (not (string= name <span class="s">""</span>))) name
+                 ghostel-buffer-name))
+         (buf-name name))
+    (<span class="k">unless</span> identity
+      (<span class="k">let*</span> ((context `((kind . term) (name . ,name)))
+             (instance (ghostel--next-instance context)))
+        (<span class="k">setq</span> identity `(,@context (instance . ,instance)))
+        <span class="cd">;; </span><span class="c">Keep `</span><span class="m c">ghostel--start</span><span class="c">'s NAME&lt;N&gt; = instance N convention, so the
+</span>        <span class="cd">;; </span><span class="c">name suffix and the slot number cannot drift apart after a
+</span>        <span class="cd">;; </span><span class="c">kill-then-create.
+</span>        (<span class="k">when</span> (&gt; instance 1)
+          (<span class="k">setq</span> buf-name (format <span class="s">"%s&lt;%d&gt;"</span> name instance)))))
+    (<span class="k">let</span> ((buffer (ghostel--create buf-name display)))
+      (<span class="k">with-current-buffer</span> buffer
+        (<span class="k">setq</span> ghostel--managed-buffer-name (buffer-name)
+              ghostel--initial-name (buffer-name)
+              ghostel-identity identity)
+        (ghostel--start-process)
+        (ghostel--apply-initial-input-mode))
+      buffer)))</code></pre>
+</article><footer>
+Content of the documentation pages is part of <a href="https://www.gnu.org/software/emacs/">GNU Emacs</a> and available under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL</a>.
+</footer></body></html>
