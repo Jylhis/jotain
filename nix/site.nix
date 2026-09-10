@@ -161,12 +161,6 @@ pkgs.runCommand "jotain-site"
     cp -r "$webSrc/website/public/." "$out/public/"
     chmod -R u+w "$out/public"
 
-    # Served from a GitHub Pages *branch* source (gh-pages): disable Jekyll
-    # so nothing under generated dirs (leading-underscore names, the
-    # /help/api/ tree) is silently dropped. Harmless under the Actions
-    # source too. The generator also drops one under /help/api/.
-    touch "$out/public/.nojekyll"
-
     ${lib.optionalString (!withApiDoc) ''
       # This variant (site-preview) omits /help/api/ and, with it, the
       # /packages/ search page. Drop the landing page's link to /packages/

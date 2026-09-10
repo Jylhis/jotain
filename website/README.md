@@ -51,29 +51,21 @@ adds everything the repo can generate:
 
 ## Deployment
 
-The site is published to **GitHub Pages** by `deploy.yml` on every push
-to main: the `deploy-pages` job runs `nix build .#site` and, via
-`scripts/publish-gh-pages.sh production`, commits the `public/` tree to
-the **root of the `gh-pages` branch**. Pages is served from that branch
-(**Settings → Pages → "Deploy from a branch" → `gh-pages` / root**), *not*
-the GitHub Actions source — that is what lets per-PR previews
-(`preview.yml`, published to `pr-preview/pr-<N>/`) live alongside
-production under one Pages site. A production publish preserves every
-`pr-preview/` directory.
+The site is published to **GitHub Pages** (Actions source) by `deploy.yml`
+on every push to main: the `build-pages` job runs `nix build .#site` and
+uploads the `public/` tree with `actions/upload-pages-artifact`, and
+`deploy-pages` publishes it with `actions/deploy-pages`. GitHub serves it
+as this repo's project site at **<https://page.jylhis.com/jotain/>** —
+`page.jylhis.com` is the account's Pages custom domain (a CNAME to
+`jylhis.github.io`), so every project repo's Pages appear under it at
+`/<repo>/`.
 
-The branch is pushed with the `PAGES_DEPLOY_TOKEN` secret (a fine-grained
-PAT with `contents: write`), **not** the default `GITHUB_TOKEN`: a
-branch-source Pages build is not triggered by a commit authored with
-`GITHUB_TOKEN`, so the live site would freeze while the branch moved. The
-workflows fall back to `GITHUB_TOKEN` if the secret is unset (the branch
-still updates; the site republishes on the next PAT-authored push or a
-manual Pages rebuild). This mirrors the `DEVENV_SYNC_TOKEN` pattern in
-`sync-devenv.yml`.
-
-GitHub serves the site as this repo's project site at
-**<https://page.jylhis.com/jotain/>** — `page.jylhis.com` is the account's
-Pages custom domain (a CNAME to `jylhis.github.io`), so every project
-repo's Pages appear under it at `/<repo>/`.
+Pages hosts a single deployment, so PR previews can't share this site.
+Instead `preview.yml` builds the full `.#site` on every pull request and
+uploads its `public/` tree as a **downloadable workflow artifact**
+(`site-preview-pr-<N>`); a bot comment links to it. Download and serve it
+locally mounted under `/jotain/` (the `baseHref`), the same as
+`just serve-site`.
 
 Because the site is served under the `/jotain/` subpath, `nix build .#site`
 bakes that base path into every internal absolute URL via `nix/site.nix`'s
