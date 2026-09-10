@@ -1,24 +1,20 @@
 # Full validation + deploy for protected branches.
 #
 # On push to main:  check (full nix flake check) → test (devenv test),
-#                   then deploy-pages builds the full site
-#                   (`nix build .#site`) and publishes it to the ROOT of the
-#                   `gh-pages` branch, served at page.jylhis.com/jotain/.
-#                   PR previews (pr-preview/pr-N/, published by
-#                   preview.yml) are preserved across a production publish.
-#                   The `jylhis` cachix cache (the owner's personal cache;
+#                   then build-pages → deploy-pages builds the full site
+#                   (`nix build .#site`) and publishes it to GitHub Pages
+#                   via the Actions source (upload-pages-artifact +
+#                   deploy-pages), served at page.jylhis.com/jotain/.  The
+#                   `jylhis` cachix cache (the owner's personal cache;
 #                   unrelated to any Emacs fork) is repopulated with any
 #                   newly built artifacts.
 #
 # On push to next:  check + test only (no deploys).
 #
-# GitHub Pages source: this repo serves Pages from the `gh-pages` BRANCH
-# (Settings → Pages → "Deploy from a branch", gh-pages / root), not the
-# GitHub Actions source. That is what lets PR previews live alongside
-# production under one Pages site (a subdirectory per PR); the Actions
-# source can only host one deployment. `scripts/publish-gh-pages.sh` writes
-# the branch; deploy.yml pushes production to its root and preview.yml
-# pushes previews to pr-preview/pr-N/.
+# GitHub Pages source: this repo serves Pages from the **GitHub Actions**
+# source (deploy-pages, below), not a branch. PR previews therefore cannot
+# share this Pages site as subdirectories; instead preview.yml uploads each
+# PR's built site as a downloadable workflow artifact (see that file).
 #
 # Every `uses:` here must be github-owned or match cachix/*: the repo
 # restricts Actions to those, and a disallowed action fails the entire
@@ -40,10 +36,10 @@ concurrency:
   group: deploy-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
-# contents: write so the deploy job can push the built site to the
-# gh-pages branch (branch-source Pages, not the Actions source).
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   check:
@@ -94,13 +90,13 @@ jobs:
       - name: devenv test
         run: devenv test
 
-  deploy-pages:
+  build-pages:
     # Build the full site (`nix build .#site`, including the /help/api/
-    # reference) and publish it to the ROOT of the gh-pages branch,
-    # preserving any pr-preview/ directories. GitHub serves the branch as
-    # this repo's project site at page.jylhis.com/jotain/ (the site is
-    # built with baseHref=/jotain to match).
-    name: Deploy site
+    # reference and the /packages/ search page) and upload its public/ tree
+    # as the GitHub Pages artifact. GitHub serves it as this repo's project
+    # site at page.jylhis.com/jotain/ (the site is built with baseHref=/jotain
+    # to match).
+    name: Build site
     if: github.ref == 'refs/heads/main'
     needs: check
     # 60 (not 15): builds the full `.#site` including the /help/api/
@@ -109,23 +105,13 @@ jobs:
     # as a cache hit; the extra headroom covers a cold cache.
     timeout-minutes: 60
     runs-on: ubuntu-latest
-    # Serialize gh-pages writers so concurrent main pushes queue instead of
-    # racing the branch tip (publish-gh-pages.sh also retries on rejection).
+    # Serialize Pages builds so concurrent main pushes queue instead of
+    # racing the upload-pages-artifact step.
     concurrency:
-      group: gh-pages-publish
+      group: pages
       cancel-in-progress: false
     steps:
-      # Push to gh-pages with PAGES_DEPLOY_TOKEN (a PAT), not the default
-      # GITHUB_TOKEN: a branch-source Pages build is NOT triggered by a
-      # commit pushed with GITHUB_TOKEN, so the branch would update while
-      # the live site stayed frozen. Same pattern the repo already uses for
-      # DEVENV_SYNC_TOKEN in sync-devenv.yml. Falls back to GITHUB_TOKEN if
-      # the secret is unset (branch updates; a manual Pages rebuild or the
-      # next PAT push then republishes). checkout persists this credential,
-      # so publish-gh-pages.sh's `git push origin` uses it.
       - uses: actions/checkout@v7
-        with:
-          token: ${{ secrets.PAGES_DEPLOY_TOKEN || secrets.GITHUB_TOKEN }}
 
       - uses: cachix/install-nix-action@v31
 
@@ -141,13 +127,27 @@ jobs:
         run: nix build .#site -o result-site
 
       # Copy out of the read-only Nix store into a writable tree
-      # (dereferencing symlinks) so it can be committed to gh-pages.
-      - name: Assemble site tree
+      # (dereferencing symlinks) so upload-pages-artifact can tar it.
+      - name: Assemble Pages artifact
         run: |
           mkdir -p site
           cp -rL result-site/public/. site/
 
-      - name: Publish to gh-pages (root, preserving PR previews)
-        run: |
-          scripts/publish-gh-pages.sh production site \
-            "deploy site @ ${GITHUB_SHA::12}"
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy-pages:
+    name: Deploy
+    if: github.ref == 'refs/heads/main'
+    needs: build-pages
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
