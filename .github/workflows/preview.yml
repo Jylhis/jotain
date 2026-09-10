@@ -1,61 +1,48 @@
-# PR preview deployments of the GitHub Pages site.
+# PR site previews as downloadable artifacts.
 #
-# On every pull request (open/update), build the full site under a per-PR
-# base path and publish it to the gh-pages branch under
-# pr-preview/pr-<N>/, served at page.jylhis.com/jotain/pr-preview/pr-N/.
-# When the PR closes, remove that directory again. Production (the branch
-# root, published by deploy.yml) is never touched — publish-gh-pages.sh
-# only ever writes the PR's own subdirectory here.
+# Production Pages is served from the GitHub Actions source (deploy.yml),
+# which hosts exactly one deployment, so PR previews can't live under it at
+# a stable URL. Instead, on every pull request this builds the full site
+# (`nix build .#site`, including /help/api/ and /packages/) and uploads its
+# public/ tree as a workflow artifact. A reviewer downloads it from the run
+# and serves it locally — e.g.:
 #
-# Pages must be served from the gh-pages BRANCH (see deploy.yml's header)
-# for these previews to coexist with production under one Pages site.
+#   unzip site-preview.zip -d preview
+#   d=$(mktemp -d); ln -s "$PWD/preview" "$d/jotain"
+#   python3 -m http.server -d "$d" 8080   # → http://localhost:8080/jotain/
 #
-# Only same-repo PRs deploy: a fork's pull_request run gets a read-only
-# GITHUB_TOKEN (the gh-pages push would fail) and no repository secrets
-# (so the cachix writer token is never exposed to fork code). The
-# same-repo guard skips those cleanly instead of failing.
+# (The site is built with baseHref=/jotain, so it must be mounted under
+# /jotain/ — the same as `just serve-site`.)
 #
-# Every `uses:` here must be github-owned or match cachix/* — the repo
-# restricts Actions to those.
+# No gh-pages branch, no PAT, no Pages settings change. Every `uses:` here
+# must be github-owned or match cachix/* — the repo restricts Actions to
+# those.
 name: PR preview
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened]
 
-# Serialize writers per PR; a new push supersedes an in-flight preview
-# build for the same PR. (The gh-pages push itself also retries on a race
-# with other PRs / the production deploy.)
+# A new push supersedes an in-flight preview build for the same PR.
 concurrency:
   group: preview-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
 
 jobs:
-  deploy-preview:
-    name: Deploy preview
-    # Same-repo, still-open PRs only.
-    if: >-
-      github.event.action != 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+  preview-artifact:
+    name: Build preview artifact
     # 90 (not 60): a PR that changes the elisp-doc engine or lisp/ forces a
-    # cold rebuild of the /help/api/ per-package fragments. Passing the
-    # cachix writer token (available on same-repo PRs) lets that first build
-    # populate the jylhis cache, so later preview runs pull it as a hit.
+    # cold rebuild of the /help/api/ per-package fragments. Same-repo PRs
+    # pass the cachix writer token (fork runs get none, staying pull-only),
+    # so that first build populates the jylhis cache for later runs.
     timeout-minutes: 90
     runs-on: ubuntu-latest
     steps:
-      # Push previews with PAGES_DEPLOY_TOKEN (a PAT): a branch-source Pages
-      # build is not triggered by a GITHUB_TOKEN commit, so the preview URL
-      # would 404 until the next PAT push. Falls back to GITHUB_TOKEN if
-      # unset. Same-repo only (guarded above), so the PAT is never exposed
-      # to fork code. checkout persists it for publish-gh-pages.sh's push.
       - uses: actions/checkout@v7
-        with:
-          token: ${{ secrets.PAGES_DEPLOY_TOKEN || secrets.GITHUB_TOKEN }}
 
       - uses: cachix/install-nix-action@v31
 
@@ -65,34 +52,37 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: nix-community
 
-      # The preview lives under a subdirectory, so it must be built with a
-      # matching base path (all internal absolute URLs carry it). The base
-      # path is read impurely from JOTAIN_PR_BASE_HREF by the
-      # legacyPackages.site-pr-preview output.
-      - name: Build preview site
-        env:
-          JOTAIN_PR_BASE_HREF: /jotain/pr-preview/pr-${{ github.event.pull_request.number }}
-        run: nix build --impure .#site-pr-preview -o result-site
+      - name: Build site
+        run: nix build .#site -o result-site
 
       - name: Assemble site tree
         run: |
           mkdir -p site
           cp -rL result-site/public/. site/
 
-      - name: Publish preview to gh-pages
-        run: |
-          scripts/publish-gh-pages.sh preview \
-            "${{ github.event.pull_request.number }}" site \
-            "deploy pr-preview/pr-${{ github.event.pull_request.number }} @ ${GITHUB_SHA::12}"
+      - name: Upload preview artifact
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-preview-pr-${{ github.event.pull_request.number }}
+          path: site
+          retention-days: 14
 
-      - name: Comment preview URL
+      # Point reviewers at the artifact. Skipped for forks, whose
+      # pull_request runs get a read-only token that can't comment (the
+      # artifact still uploads and is downloadable from the run).
+      - name: Comment artifact link
+        if: github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v7
+        env:
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
         with:
           script: |
             const pr = context.payload.pull_request.number;
-            const url = `https://page.jylhis.com/jotain/pr-preview/pr-${pr}/`;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const artUrl = process.env.ARTIFACT_URL || runUrl;
             const marker = '<!-- pr-preview -->';
-            const body = `${marker}\n### 🔎 Preview deployed\n\nThis PR's site preview is live at **${url}**\n\n_Updated for ${context.sha.substring(0, 12)}. Removed automatically when the PR closes._`;
+            const body = `${marker}\n### 🔎 Site preview built\n\nThe full site for this PR is a downloadable artifact: **[site-preview-pr-${pr}](${artUrl})** (from [the workflow run](${runUrl}), under **Artifacts**).\n\nUnzip and serve it locally mounted under \`/jotain/\` (baseHref) — e.g. \`ln -s "$PWD/<unzipped>" /tmp/site/jotain && python3 -m http.server -d /tmp/site 8080\` → http://localhost:8080/jotain/\n\n_Updated for ${context.sha.substring(0, 12)}._`;
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner, repo: context.repo.repo, issue_number: pr,
             });
@@ -105,43 +95,5 @@ jobs:
             } else {
               await github.rest.issues.createComment({
                 owner: context.repo.owner, repo: context.repo.repo, issue_number: pr, body,
-              });
-            }
-
-  cleanup-preview:
-    name: Remove preview
-    if: >-
-      github.event.action == 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    timeout-minutes: 10
-    runs-on: ubuntu-latest
-    steps:
-      # Same PAT rationale as deploy-preview: the removal commit must
-      # trigger a Pages rebuild so the taken-down preview stops serving.
-      - uses: actions/checkout@v7
-        with:
-          token: ${{ secrets.PAGES_DEPLOY_TOKEN || secrets.GITHUB_TOKEN }}
-
-      - name: Remove preview from gh-pages
-        run: |
-          scripts/publish-gh-pages.sh remove-preview \
-            "${{ github.event.pull_request.number }}" \
-            "remove pr-preview/pr-${{ github.event.pull_request.number }} (PR closed)"
-
-      - name: Comment removal
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const pr = context.payload.pull_request.number;
-            const marker = '<!-- pr-preview -->';
-            const body = `${marker}\n### 🔎 Preview removed\n\nThe site preview for this PR has been taken down (PR closed).`;
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner, repo: context.repo.repo, issue_number: pr,
-            });
-            const existing = comments.find(c => c.body && c.body.includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner, repo: context.repo.repo,
-                comment_id: existing.id, body,
               });
             }
