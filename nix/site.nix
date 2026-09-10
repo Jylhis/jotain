@@ -11,6 +11,8 @@
 #   /info/elisp/      the Emacs Lisp reference manual, same source
 #   /options/         Nix module options reference (options-doc.nix)
 #   /help/packages/   per-package reference (packages-doc.nix)
+#   /help/api/        generated docstring-level API reference (emacs-api-doc.nix)
+#   /packages/        third-party package search over /help/api/ (withApiDoc)
 #
 # Output layout ($out/public/ is uploaded as the GitHub Pages artifact):
 #   $out/public/          the site
@@ -53,6 +55,9 @@ let
   # The /help/ index row for the API reference, emitted only when the
   # reference is actually mounted (see withApiDoc).
   apiHelpRow = ''<div class="man-entry"><a href="${baseHref}/help/api/">C-h S — elisp API reference</a><span class="man-dots">·····································································</span><span class="man-desc">docstrings for every bundled package</span></div>'';
+  # The /packages/ search landing page — like apiHelpRow, only when the
+  # generated reference it searches over is actually mounted.
+  pkgSearchRow = ''<div class="man-entry"><a href="${baseHref}/packages/">M-x list-packages — package search</a><span class="man-dots">·····································································</span><span class="man-desc">search every third-party package and symbol</span></div>'';
   infoManual = import ./info-manual.nix { inherit pkgs src; };
   # The Emacs Jotain actually ships (emacs-unstable base, now the 31.1
   # release branch) — its man pages and manual sources feed /man and
@@ -142,6 +147,9 @@ pkgs.runCommand "jotain-site"
       pkgs.pandoc
       pkgs.mandoc
       pkgs.gzip
+      # Server-renders the /packages/ list from the generated
+      # search-index.json (only used under withApiDoc).
+      pkgs.jq
     ];
     inherit docsSrc webSrc;
     meta.description = "page.jylhis.com/jotain static site (landing SPA + generated docs)";
@@ -152,6 +160,12 @@ pkgs.runCommand "jotain-site"
     mkdir -p "$out/public"
     cp -r "$webSrc/website/public/." "$out/public/"
     chmod -R u+w "$out/public"
+
+    # Served from a GitHub Pages *branch* source (gh-pages): disable Jekyll
+    # so nothing under generated dirs (leading-underscore names, the
+    # /help/api/ tree) is silently dropped. Harmless under the Actions
+    # source too. The generator also drops one under /help/api/.
+    touch "$out/public/.nojekyll"
 
     # The shared design-system CSS is @import-ed with a root-absolute path;
     # rewrite it to the deploy base path. These stylesheets are copied to
@@ -343,6 +357,46 @@ pkgs.runCommand "jotain-site"
       mkdir -p "$out/public/help/api"
       cp -r "${emacsApiDoc}/html/." "$out/public/help/api/"
       chmod -R u+w "$out/public/help/api"
+
+      # /packages/ — a site-chrome landing page over the generated API
+      # reference: the full list of bundled third-party packages plus a
+      # client-side search across every package and symbol, powered by
+      # help/api/search-index.json (emitted by the emacs-api-doc aggregate
+      # pass). Server-render the list so the page works without JS; the
+      # search box (js/packages.js) enhances it.
+      api="$out/public/help/api"
+      if [ -f "$api/search-index.json" ]; then
+        pkg_count="$(jq '.packages | length' "$api/search-index.json")"
+        {
+          printf '<div class="man-label">PACKAGES (%s)</div>\n' "$pkg_count"
+          jq -r --arg base "${baseHref}/help/api" '
+            .packages[] |
+            "<div class=\"man-entry\"><a href=\"\($base)/\(.href)\"><code>\(.name|@html)</code></a>"
+            + "<span class=\"man-dots\">·····································································</span>"
+            + "<span class=\"man-desc\">\(.count) \(if .count == 1 then "symbol" else "symbols" end)</span></div>"
+          ' "$api/search-index.json"
+        } > pkg_list_body.html
+
+        {
+          echo '<h1 class="h1"><span class="star">*</span> Packages</h1>'
+          echo '<p class="docs-index-lede">Every third-party Emacs package this configuration bundles, with its full docstring-level API reference — every function, command, variable, user option and face, generated straight from their docstrings. Search across the packages and their symbols, or browse the list below. Each entry links into the <a href="${baseHref}/help/api/">generated reference</a>.</p>'
+          echo '<div class="pkg-search">'
+          echo '  <span class="pkg-search-prompt">M-x</span>'
+          echo '  <input id="pkg-q" type="search" autocomplete="off" spellcheck="false" aria-label="search packages and symbols" placeholder="loading index…">'
+          echo '  <span class="pkg-count" id="pkg-count"></span>'
+          echo '</div>'
+          echo '<div id="pkg-results" hidden></div>'
+          echo '<div id="pkg-list">'
+          cat pkg_list_body.html
+          echo '</div>'
+          echo '<script>window.JOTAIN_API_BASE = "${baseHref}/help/api";</script>'
+          echo '<script src="${baseHref}/js/packages.js"></script>'
+        } > packages_body.html
+
+        write_page "$out/public/packages/index.html" "Packages" "*Packages*" "(Package Menu)" \
+          packages_body.html \
+          '<a href="${baseHref}/help/">← Help</a><a href="${baseHref}/help/api/">full API reference →</a>'
+      fi
     ''}
 
     # /help/ index — C-h, as a directory listing.
@@ -350,6 +404,7 @@ pkgs.runCommand "jotain-site"
     <h1 class="h1"><span class="star">*</span> Help</h1>
     <p class="docs-index-lede">The <code>C-h</code> map, rendered for the web.</p>
     <div class="man-entry"><a href="${baseHref}/help/packages/">C-h P — package reference</a><span class="man-dots">·····································································</span><span class="man-desc">every package Jotain ships, and why</span></div>
+    ${lib.optionalString withApiDoc pkgSearchRow}
     ${lib.optionalString withApiDoc apiHelpRow}
     <div class="man-entry"><a href="${baseHref}/options/">nix options</a><span class="man-dots">·····································································</span><span class="man-desc">Home Manager · NixOS/nix-darwin · devenv</span></div>
     <div class="man-entry"><a href="${baseHref}/manual/">C-h i d m Jotain RET — the manual</a><span class="man-dots">·····································································</span><span class="man-desc">HTML, one page per chapter</span></div>
