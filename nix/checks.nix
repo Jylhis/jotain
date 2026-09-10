@@ -564,4 +564,66 @@ in
           -l ert -f ert-run-tests-batch-and-exit
         touch $out
       '';
+
+  # Full-startup smoke test
+  #
+  # elisp-compile only byte-compiles the config, and emacs-binaries runs
+  # --no-init-file, so a runtime `use-package' :config error (the
+  # xref/global-xref-mouse-mode shadow regression: a stale ELPA package
+  # shadowing an Emacs built-in, breaking a guarded autoloaded call) had no
+  # automated gate — only `just run-built' surfaced it, and only to a human.
+  #
+  # This actually *evaluates* every :config block against the full package
+  # closure (`elispEmacs' == jotainEmacsPackages.core, already realised by
+  # elisp-compile, so this adds only a batch launch, not a second closure).
+  # Recipe, tuned to be deterministic and network-free in the sandbox:
+  #   • `emacs --batch' does NOT auto-load init, so load early-init.el and
+  #     init.el explicitly (no -q, so emacsWithPackages' site activation
+  #     still puts every package on load-path);
+  #   • point user-emacs-directory at a WRITABLE copy and set HOME to it,
+  #     since the store $src is read-only and early-init.el / init-core
+  #     write under var/;
+  #   • force `use-package-always-ensure nil' AFTER early-init.el (which
+  #     sets it t): every package is already on load-path via the closure,
+  #     so :config still runs, but no :ensure fires `package-install', so no
+  #     network (unreachable in the sandbox anyway).
+  # use-package demotes a failing :config to `(display-warning 'use-package
+  # … :error)', printed as "Error (use-package)", so a clean exit is not
+  # enough; fail on that marker (and on the autoload-failure signature this
+  # bug class produces). A clean tree emits neither; the pre-existing benign
+  # `Warning (emacs)' type-check lines are intentionally not matched.
+  config-startup =
+    pkgs.runCommand "check-config-startup"
+      {
+        nativeBuildInputs = [ elispEmacs ];
+        src = elispSrc;
+      }
+      ''
+        set -euo pipefail
+        workdir="$(mktemp -d)"
+        cp -rL "$src"/. "$workdir"/
+        chmod -R u+w "$workdir"
+        export HOME="$workdir"
+
+        emacs --batch \
+          --eval "(setq user-emacs-directory (file-name-as-directory \"$workdir\"))" \
+          -l "$workdir/early-init.el" \
+          --eval '(setq use-package-always-ensure nil)' \
+          -l "$workdir/init.el" \
+          --eval '(message "jotain: config startup complete")' \
+          > "$workdir/startup.log" 2>&1
+
+        cat "$workdir/startup.log"
+
+        if grep -qE "Error \(use-package\)|failed to define function" "$workdir/startup.log"; then
+          echo "FAIL: a use-package :config block errored during startup" >&2
+          echo "(commonly a stale ELPA package shadowing an Emacs built-in)" >&2
+          exit 1
+        fi
+        if ! grep -qF "jotain: config startup complete" "$workdir/startup.log"; then
+          echo "FAIL: startup aborted before loading the whole config" >&2
+          exit 1
+        fi
+        touch $out
+      '';
 }
