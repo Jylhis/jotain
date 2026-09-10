@@ -11,9 +11,10 @@
 #
 #   check — formatting, statix, deadnix, module-eval,
 #           packages-doc-in-sync, ds-in-sync, packages-doc, options-doc, elisp-lint
-#           (paren check), elisp-compile (both transitively build the
-#           bare jotainEmacs from cache).  Skips the full grammar
-#           distribution — that runs in deploy.yml.
+#           (paren check), elisp-compile, config-startup (the last two build
+#           the jotainEmacsPackages.core closure from cache; config-startup
+#           then reuses it for a batch full-startup smoke test).  Skips the
+#           full grammar distribution — that runs in deploy.yml.
 #   test  — devenv test (dev environment assertions from devenv.nix).
 #
 # The jylhis cachix cache is pull-only here: PR runs (including from
@@ -107,6 +108,12 @@ jobs:
 
       - name: Check — elisp-compile
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.elisp-compile
+
+      # Reuses the jotainEmacsPackages.core closure elisp-compile just built,
+      # so this adds only a batch startup: it evaluates every use-package
+      # :config block (which elisp-compile's byte-compile never does).
+      - name: Check — config-startup
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.config-startup
 
   site:
     name: Site

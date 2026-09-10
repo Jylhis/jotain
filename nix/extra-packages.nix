@@ -2,7 +2,62 @@
 # GNU ELPA, NonGNU ELPA).  Shared between default.nix and devenv.nix.
 { pkgs }:
 
-efinal: eprev: {
+efinal: eprev:
+let
+  # Emacs 31 ships newer xref/project/eglot/flymake in-tree, but
+  # emacs-overlay's generated package set still publishes them as
+  # standalone GNU ELPA derivations. Transitive `Package-Requires' from
+  # installed packages (consult-eglot, eglot-tempel, projection, breadcrumb,
+  # and ELPA flymake) drag those ELPA copies into the distribution's
+  # site-lisp, whose dirs are prepended to `load-path' at startup and
+  # SHADOW the in-tree versions. The stale ELPA xref-1.7.0 lacks
+  # `global-xref-mouse-mode', so init-prog.el's guarded
+  # `(global-xref-mouse-mode 1)' hit a failing autoload and errored at
+  # startup (the others are latent shadows of the same kind).
+  #
+  # Replace each with an empty package so the in-tree copy wins.
+  # `trivialBuild' needs at least one .el, so we ship a single inert shim
+  # NOT named after the feature: the result is a valid derivation (so the
+  # transitive `packageRequires' still resolve) whose site-lisp dir carries
+  # no `xref.el'/`project.el'/`eglot.el'/`flymake.el' to shadow the
+  # built-in. A `(provide 'xref)' stub must NOT be used: it would
+  # re-shadow. Consumers still byte-compile against the base Emacs's
+  # in-tree copies (on load-path at build time), which are supersets.
+  # A source *directory* (not a bare .el, since trivialBuild's unpackPhase
+  # cp's a directory and mis-handles a store path whose name ends in
+  # `.el') holding one inert shim file.
+  shimSrc =
+    name:
+    pkgs.runCommand "${name}-builtin-shim-src" { } ''
+      mkdir -p "$out"
+      cat > "$out/${name}-nixpkgs-builtin-shim.el" <<'SHIM'
+      ;;; ${name}-nixpkgs-builtin-shim.el --- use Emacs's in-tree ${name} -*- lexical-binding: t; -*-
+      ;;; Commentary:
+      ;; Intentionally ships no `${name}.el'.  See nix/extra-packages.nix:
+      ;; this replaces the stale GNU ELPA ${name} so Emacs 31's in-tree
+      ;; ${name} is not shadowed on load-path.
+      ;;; Code:
+      (provide '${name}-nixpkgs-builtin-shim)
+      ;;; ${name}-nixpkgs-builtin-shim.el ends here
+      SHIM
+    '';
+
+  emptyElpaPackage =
+    name:
+    efinal.trivialBuild {
+      pname = "${name}-nixpkgs-builtin-shim";
+      version = "1";
+      src = shimSrc name;
+    };
+in
+{
+  # Stop stale GNU ELPA core packages from shadowing Emacs 31's in-tree
+  # versions (see `emptyElpaPackage' above).
+  xref = emptyElpaPackage "xref";
+  project = emptyElpaPackage "project";
+  eglot = emptyElpaPackage "eglot";
+  flymake = emptyElpaPackage "flymake";
+
   # TEMPORARY (2026-07-21): emacs-overlay's ghostel epkg builds the
   # libghostty-vt native module with zig, and the module's zig-deps
   # fixed-output fetch is currently unbuildable on GitHub CI runners —
