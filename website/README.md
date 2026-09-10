@@ -62,8 +62,10 @@ as this repo's project site at **<https://page.jylhis.com/jotain/>** —
 
 Pages hosts a single deployment, so PR previews can't share this site.
 Instead `preview.yml` builds the full `.#site` on every pull request and
-uploads its `public/` tree as a **downloadable workflow artifact**
-(`site-preview-pr-<N>`); a bot comment links to it. Download and serve it
+uploads it as a **downloadable workflow artifact** (`site-preview-pr-<N>`,
+a `site.tgz` tarball — `actions/upload-artifact` rejects the `:`/`*` in
+some generated `/help/api/` filenames, so the tree is archived first); a
+bot comment links to it. Download, extract `site.tgz`, and serve it
 locally mounted under `/jotain/` (the `baseHref`), the same as
 `just serve-site`.
 
