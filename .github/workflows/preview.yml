@@ -48,7 +48,14 @@ jobs:
     timeout-minutes: 90
     runs-on: ubuntu-latest
     steps:
+      # Push previews with PAGES_DEPLOY_TOKEN (a PAT): a branch-source Pages
+      # build is not triggered by a GITHUB_TOKEN commit, so the preview URL
+      # would 404 until the next PAT push. Falls back to GITHUB_TOKEN if
+      # unset. Same-repo only (guarded above), so the PAT is never exposed
+      # to fork code. checkout persists it for publish-gh-pages.sh's push.
       - uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.PAGES_DEPLOY_TOKEN || secrets.GITHUB_TOKEN }}
 
       - uses: cachix/install-nix-action@v31
 
@@ -109,7 +116,11 @@ jobs:
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
+      # Same PAT rationale as deploy-preview: the removal commit must
+      # trigger a Pages rebuild so the taken-down preview stops serving.
       - uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.PAGES_DEPLOY_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Remove preview from gh-pages
         run: |

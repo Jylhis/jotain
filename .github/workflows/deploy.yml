@@ -115,7 +115,17 @@ jobs:
       group: gh-pages-publish
       cancel-in-progress: false
     steps:
+      # Push to gh-pages with PAGES_DEPLOY_TOKEN (a PAT), not the default
+      # GITHUB_TOKEN: a branch-source Pages build is NOT triggered by a
+      # commit pushed with GITHUB_TOKEN, so the branch would update while
+      # the live site stayed frozen. Same pattern the repo already uses for
+      # DEVENV_SYNC_TOKEN in sync-devenv.yml. Falls back to GITHUB_TOKEN if
+      # the secret is unset (branch updates; a manual Pages rebuild or the
+      # next PAT push then republishes). checkout persists this credential,
+      # so publish-gh-pages.sh's `git push origin` uses it.
       - uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.PAGES_DEPLOY_TOKEN || secrets.GITHUB_TOKEN }}
 
       - uses: cachix/install-nix-action@v31
 
