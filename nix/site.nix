@@ -167,6 +167,14 @@ pkgs.runCommand "jotain-site"
     # source too. The generator also drops one under /help/api/.
     touch "$out/public/.nojekyll"
 
+    ${lib.optionalString (!withApiDoc) ''
+      # This variant (site-preview) omits /help/api/ and, with it, the
+      # /packages/ search page. Drop the landing page's link to /packages/
+      # so an API-free build advertises no 404 route (the /help/ index's
+      # rows for it are already withApiDoc-gated).
+      sed -i '\|href="packages/"|d' "$out/public/index.html"
+    ''}
+
     # The shared design-system CSS is @import-ed with a root-absolute path;
     # rewrite it to the deploy base path. These stylesheets are copied to
     # varying depths (/manual/, /options/, /info/, /help/packages/), so a
