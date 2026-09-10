@@ -425,7 +425,14 @@ skipped alist."
                 (syms (plist-get data :symbols))
                 (pkg (plist-get data :package))
                 (skip (plist-get data :skipped)))
-           (setq symbols (nconc symbols (copy-sequence syms)))
+           ;; Tag every symbol row with its owning package so the aggregate
+           ;; pass can build a package-aware search index (the merged list
+           ;; otherwise loses provenance). Prepending :package keeps
+           ;; `plist-get' happy and leaves the existing :kind/:name readers
+           ;; unaffected.
+           (setq symbols
+                 (nconc symbols
+                        (mapcar (lambda (s) `(:package ,pkg ,@s)) syms)))
            (when (and pkg syms) (cl-pushnew pkg packages :test #'equal))
            (setq skipped (nconc skipped (copy-sequence skip)))))))
     (list symbols (sort packages #'string-lessp) skipped)))
@@ -480,6 +487,53 @@ package needs to be loaded."
                (length rows) title))
       (write-region (point-min) (point-max)
                     (file-name-concat elisp-doc-output-dir (concat name ".html"))))))
+
+;;;; Search index (powers the site's /packages/ search page)
+
+(defun jotain-doc--pkg-page-href (pkg)
+  "Return PKG's generated package-index page href, relative to the html root."
+  (concat "pkg/" (url-hexify-string (elisp-doc--encode-url-part pkg t)) ".html"))
+
+(defun jotain-doc--sym-page-href (kind name)
+  "Return the per-symbol page href for NAME of KIND, relative to the html root.
+KIND is the short type string (\"fun\", \"var\", \"face\")."
+  (concat kind "/" (url-hexify-string (elisp-doc--encode-url-part name t)) ".html"))
+
+(defun jotain-doc--agg-search-index (symbols packages)
+  "Write search-index.json for the site's client-side package search.
+
+Shape (hrefs are relative to the /help/api/ mount so the page can prepend
+its base path):
+
+  {\"packages\": [{\"name\", \"href\", \"count\"}...],
+   \"symbols\":  [{\"name\", \"kind\", \"package\", \"href\", \"summary\"}...]}
+
+SYMBOLS are the merged listing rows (each tagged with :package by
+`jotain-doc--read-listings'); PACKAGES the sorted names that documented at
+least one symbol."
+  (let ((counts (make-hash-table :test 'equal))
+        sym-objs)
+    (dolist (s symbols)
+      (let ((name (plist-get s :name))
+            (kind (plist-get s :kind))
+            (pkg (or (plist-get s :package) ""))
+            (summary (or (plist-get s :summary) "")))
+        (puthash pkg (1+ (gethash pkg counts 0)) counts)
+        (push (list 'name name
+                    'kind kind
+                    'package pkg
+                    'href (jotain-doc--sym-page-href kind name)
+                    'summary summary)
+              sym-objs)))
+    (let ((pkg-objs
+           (mapcar (lambda (pkg)
+                     (list 'name pkg
+                           'href (jotain-doc--pkg-page-href pkg)
+                           'count (gethash pkg counts 0)))
+                   packages)))
+      (with-temp-file (file-name-concat elisp-doc-output-dir "search-index.json")
+        (json-insert (list 'packages (vconcat pkg-objs)
+                           'symbols (vconcat (nreverse sym-objs))))))))
 
 ;;;; The two generation modes
 
@@ -541,6 +595,7 @@ pass is independent of any package bump."
     (message "jotain-elisp-doc: aggregate — %d symbols, %d packages, %d skipped"
              (length symbols) (length packages) (length skipped))
     (jotain-doc--ignoring (jotain-doc--agg-json-index symbols))
+    (jotain-doc--ignoring (jotain-doc--agg-search-index symbols packages))
     (dolist (kind '("fun" "var" "face"))
       (jotain-doc--ignoring (jotain-doc--agg-type-index kind symbols)))
     (jotain-doc--ignoring (elisp-doc-export-shortdoc))
