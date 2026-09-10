@@ -196,6 +196,25 @@
             nativeCompile = true;
           };
 
+          # PR-preview build of the full site under a per-PR base path
+          # (page.jylhis.com/jotain/pr-preview/pr-N/). The base path is read
+          # impurely from JOTAIN_PR_BASE_HREF, so `.github/workflows/preview.yml`
+          # builds it with `nix build --impure`. Kept in legacyPackages (never
+          # evaluated by `nix flake check`): in pure eval `builtins.getEnv`
+          # yields "", falling back to the production "/jotain" base, so even
+          # an accidental evaluation is harmless. withApiDoc stays on (the
+          # heavy per-package fragments are base-path-independent, so a
+          # different PR base only re-runs the cheap aggregate + assembly and
+          # reuses the cached fragments).
+          site-pr-preview = import ./nix/site.nix {
+            pkgs = pkgsFor system;
+            baseHref =
+              let
+                e = builtins.getEnv "JOTAIN_PR_BASE_HREF";
+              in
+              if e == "" then "/jotain" else e;
+          };
+
           # Per-language IDE-feature evaluation (nix/lang-eval.nix). Kept in
           # legacyPackages, NOT packages: lang-eval-matrix loads the full config
           # in batch and lang-eval-live bundles heavy language servers, so
