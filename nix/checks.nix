@@ -549,9 +549,9 @@ in
       up = import ./use-package.nix { inherit lib; };
       scanned = up.scanDirectoryWithDoc ../lisp;
       docEntries = lib.filter (e: !e.ensureNil) (lib.concatMap (s: s.entries) scanned);
-      expected =
-        lib.unique ((map (e: e.name) docEntries) ++ (import ./nix-provided-packages.nix))
-        ++ [ "treesit-grammars" ];
+      expected = lib.unique ((map (e: e.name) docEntries) ++ (import ./nix-provided-packages.nix)) ++ [
+        "treesit-grammars"
+      ];
       missing = lib.filter (n: !(set.byName ? ${n})) expected;
       nonDrv = lib.filter (n: !lib.isDerivation set.byName.${n}) (
         lib.filter (n: set.byName ? ${n}) expected
