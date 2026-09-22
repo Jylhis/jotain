@@ -537,6 +537,41 @@ in
         touch $out
       '';
 
+  # legacyPackages.emacs-packages must cover every package the config
+  # declares, and every value must be a derivation. Ground truth is
+  # recomputed here from lisp/ + nix-provided-packages.nix directly
+  # (the same philosophy as scanner-fidelity), so a broken resolver or
+  # a silently dropped name fails instead of shipping a partial set.
+  # Eval-only: forces attribute lookups, never builds packages.
+  emacs-packages-eval =
+    let
+      set = import ./emacs-package-set.nix { inherit pkgs; };
+      up = import ./use-package.nix { inherit lib; };
+      scanned = up.scanDirectoryWithDoc ../lisp;
+      docEntries = lib.filter (e: !e.ensureNil) (lib.concatMap (s: s.entries) scanned);
+      expected =
+        lib.unique ((map (e: e.name) docEntries) ++ (import ./nix-provided-packages.nix))
+        ++ [ "treesit-grammars" ];
+      missing = lib.filter (n: !(set.byName ? ${n})) expected;
+      nonDrv = lib.filter (n: !lib.isDerivation set.byName.${n}) (
+        lib.filter (n: set.byName ? ${n}) expected
+      );
+    in
+    pkgs.runCommandLocal "check-emacs-packages-eval"
+      {
+        inherit missing nonDrv;
+        count = toString (
+          builtins.length (lib.filter (n: n != "recurseForDerivations") (builtins.attrNames set.byName))
+        );
+      }
+      ''
+        test -z "$missing" || { echo "missing from legacyPackages.emacs-packages:"; echo "$missing"; exit 1; }
+        test -z "$nonDrv" || { echo "not derivations:"; echo "$nonDrv"; exit 1; }
+        # Floor against scanner rot (mirrors elisp-lint's file-count guard).
+        test "$count" -ge 100 || { echo "only $count packages — the scan or resolver is broken"; exit 1; }
+        touch $out
+      '';
+
   # Elisp byte-compilation (warnings as errors)
   #
   # Shared with module.nix' `compiledConfig': on the default HM config
