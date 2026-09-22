@@ -72,6 +72,17 @@ The non-flake entry point — a thin flake-compat wrapper, not a distribution la
 
 Grammar bundling lives in `nix/mk-overlay.nix`, not in `default.nix`: the distribution's `withPackages` set includes `epkgs.treesit-grammars.with-all-grammars` (~275 grammars — a linkFarm over per-grammar derivations, so the full set costs closure size, never build time). Discovery is nixpkgs' own `site-start.el`, which sets `treesit-extra-load-path` to the bundled grammar directory — `early-init.el` deliberately does **no** `TREE_SITTER_DIR` handling (see its comment), and `init-prog.el` propagates `treesit-extra-load-path` to async native-comp workers, which run without site files.
 
+### emacs-packages
+
+`legacyPackages.<system>.emacs-packages` (nix/emacs-package-set.nix) exposes every Emacs package the configuration bundles — the `lisp/` use-package scan with `:ensure` aliases resolved, the Nix-provided extras (nix/nix-provided-packages.nix), and the full tree-sitter grammar set — each individually buildable:
+
+```bash
+nix build .#emacs-packages.magit
+nix build .#emacs-packages.treesit-grammars
+```
+
+Keys are the use-package head names, so `dired-async` holds the `async` derivation its `:ensure async` resolves to, and `ghostel` is the Elisp-only rebuild from nix/extra-packages.nix. The set lives in `legacyPackages` so `nix flake check` never builds it; the eval-only `emacs-packages-eval` check verifies every declared name resolves to a derivation. The packages mirror `packages.default` (the GUI-base scope), not `emacs-nox`.
+
 ## Key Build Options
 
 | Option | Default | Description |
