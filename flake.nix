@@ -188,8 +188,18 @@
           langEval = import ./nix/lang-eval.nix {
             pkgs = pkgsFor system;
           };
+          emacsPackageSet = import ./nix/emacs-package-set.nix {
+            pkgs = pkgsFor system;
+          };
         in
         {
+          # Every Emacs package the config bundles (nix/emacs-package-set.nix),
+          # individually buildable: nix build .#emacs-packages.magit. Kept in
+          # legacyPackages, NOT packages, so `nix flake check` never builds
+          # them; the eval-only emacs-packages-eval check (nix/checks.nix)
+          # gates that every declared name resolves to a derivation.
+          emacs-packages = emacsPackageSet.byName;
+
           config-compiled = import ./nix/config-compiled.nix {
             pkgs = pkgsFor system;
             emacs = (pkgsFor system).jotainEmacsPackages.core;
