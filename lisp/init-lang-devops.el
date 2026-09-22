@@ -3,7 +3,7 @@
 ;;; Commentary:
 
 ;; Major modes for files you edit when wiring up CI, containers, and
-;; infrastructure: Dockerfile, docker-compose, terraform, gitlab-ci,
+;; infrastructure: Dockerfile, terraform, gitlab-ci,
 ;; justfile, ansible. None of these are huge — they mostly exist to
 ;; pin a `:mode' regex and provide font-lock.
 ;;
@@ -51,11 +51,6 @@ name used by `dockerfile-mode'."
 (use-package dockerfile-mode
   :defer t
   :config (jotain--apply-docker-backend))
-
-;;; @doc YAML-flavoured docker-compose syntax with awareness of compose
-;;; keywords and service references.
-(use-package docker-compose-mode
-  :defer t)
 
 ;;; @doc HCL-aware Terraform mode for `.tf` files. Loaded by the mode
 ;;; regex; LSP comes from terraform-ls (configured in init-prog).
