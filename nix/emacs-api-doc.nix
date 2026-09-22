@@ -48,52 +48,19 @@
 let
   inherit (pkgs) lib;
 
-  up = import ./use-package.nix { inherit lib; };
-  extraPackages = import ./extra-packages.nix { inherit pkgs; };
-
-  # The epkgs scope for the config's Emacs, with the Nix-provided extras
-  # merged in — the same two steps `emacsWithPackagesFromUsePackage` does
-  # internally, hoisted here so every per-package Emacs reuses one scope.
-  scope = (pkgs.emacsPackagesFor pkgs.jotainEmacs).overrideScope extraPackages;
-
-  # Packages provided by Nix (not via a package archive), shared with
-  # nix/mk-overlay.nix's `extraEmacsPackages` through one source of truth.
-  # They are not found by the lisp/ scan, so we list them as features to
-  # document (they already resolve as attributes on `scope`).
-  extraFeatureNames = import ./nix-provided-packages.nix;
-
-  # The feature list to document: every fetched (`:ensure` non-nil) package
-  # from the lisp/ scan, plus the Nix-provided extras. `:ensure nil`
-  # built-ins are excluded — they are core Emacs, already covered by the
-  # bundled Emacs/Elisp manuals on the site.
-  scanned = up.scanDirectoryWithDoc (src + "/lisp");
-  allEntries = lib.concatMap (s: s.entries) scanned;
-  docEntries = lib.filter (e: !e.ensureNil) allEntries;
-  fetchedNames = lib.unique (map (e: e.name) docEntries);
-  featureNames = lib.sort (a: b: a < b) (lib.unique (fetchedNames ++ extraFeatureNames));
-
-  # Map a feature (head/require name) to its resolved `:ensure` name, so
-  # aliased declarations like `(use-package dired-async :ensure async)` look
-  # up the right epkgs attribute. Extras (not in the scan) map to themselves.
-  enameFor = lib.listToAttrs (map (e: lib.nameValuePair e.name e.ename) docEntries);
-
-  # Pair each feature with its resolved epkg derivation, dropping any name
-  # that does not resolve (it would be skipped by the driver anyway).
-  # `toEmacsPackage` applies the same `emacs` pseudo-package exclusion the
-  # build path uses. `feature` stays the head name — what the driver
-  # `require`s and keys package provenance by.
-  pairs = lib.filter (p: p.pkg != null) (
-    map (
-      feature:
-      let
-        ename = enameFor.${feature} or feature;
-      in
-      {
-        inherit feature;
-        pkg = up.toEmacsPackage { warnMissing = false; } scope ename;
-      }
-    ) featureNames
-  );
+  # Shared resolution of the config's package set (nix/emacs-package-set.nix):
+  # the lisp/ use-package scan (:ensure aliases resolved) plus the
+  # Nix-provided extras — the same set legacyPackages.emacs-packages
+  # exposes. The resolution logic lives there, not here. `lispDir` keeps
+  # this file's `src` parameter used (the flake passes src = self, the
+  # same store tree ../lisp resolves to).
+  packageSet = import ./emacs-package-set.nix {
+    inherit pkgs;
+    lispDir = src + "/lisp";
+  };
+  inherit (packageSet) scope;
+  pairs = packageSet.features;
+  featureNames = map (f: f.feature) pairs;
 
   # Tooling the vendored elisp-doc engine requires, on every doc Emacs.
   toolingPkgs =
