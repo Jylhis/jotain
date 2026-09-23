@@ -51,14 +51,14 @@
   var echoTimer = null;
 
   /* ── theme ──────────────────────────────────────────── */
-  function isDark() { return document.documentElement.dataset.theme === 'dark'; }
+  function isDark() { return document.documentElement.dataset.mode === 'dark'; }
   function renderTheme() { el.themeBtn.textContent = isDark() ? '☀' : '☾'; }
   function toggleTheme() {
     var dark = !isDark();
-    document.documentElement.dataset.theme = dark ? 'dark' : '';
+    document.documentElement.dataset.mode = dark ? 'dark' : '';
     try { localStorage.setItem('jotain-theme', dark ? 'dark' : 'light'); } catch (e) { /* private mode */ }
     renderTheme();
-    msg('Theme: ' + (dark ? 'jylhis-field (dark)' : 'jylhis-sheet (light)'), 2000);
+    msg('Theme: ' + (dark ? 'jylhis-dark (Negative)' : 'jylhis-light (Print)'), 2000);
   }
 
   /* ── echo area ──────────────────────────────────────── */

@@ -8,9 +8,10 @@
 ;; When they do, `load-theme' signals — and because `init.el' requires
 ;; init-ui unguarded, every module after it would silently never load.
 ;;
-;; v2.0.0 of the design system (the theming framework) renamed
-;; `jylhis-sheet'/`jylhis-field' to the theme×mode symbols
-;; `jylhis-survey-light'/`jylhis-survey-dark', which is exactly that
+;; v3.0.0 of the design system (one theme) renamed
+;; `jylhis-survey-light'/`jylhis-survey-dark' (v2.0.0's renaming of
+;; `jylhis-sheet'/`jylhis-field') to the mode symbols
+;; `jylhis-light'/`jylhis-dark', which is exactly that
 ;; failure.  Byte
 ;; compilation cannot catch it: the `load-theme' calls sit behind
 ;; `(unless noninteractive ...)' and are never evaluated in batch.
