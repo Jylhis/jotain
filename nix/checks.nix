@@ -278,7 +278,10 @@ in
   # nix/design-pin.nix, and this check makes the drift fatal.
   ds-in-sync =
     let
-      dsAssets = import ./ds-assets.nix { inherit pkgs; };
+      dsAssets = import ./ds-assets.nix {
+        inherit pkgs;
+        inherit (pkgs) bun;
+      };
     in
     pkgs.runCommandLocal "check-ds-in-sync"
       {

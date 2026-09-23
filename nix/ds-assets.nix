@@ -9,9 +9,17 @@
 # copy against it, so a stale vendored copy is a build failure instead of
 # something nobody notices.
 #
-# The CSS files are generated upstream from tokens.json and carry "Do not edit
-# by hand" headers — they are copied verbatim, with no local modifications.
-{ pkgs }:
+# Upstream 3.0.0 stops committing generated outputs, so the CSS files are
+# split across two sources: tokens.css and density.css are generator outputs
+# (the generator runs in-derivation; `tokens.core.json` is the source of
+# truth), while colors_and_type.css, motion.css and fonts.css are committed
+# files copied verbatim from the source tree.  The woff2/ttf fonts and their
+# OFL texts ship in `fonts/` — fonts.css points at them with relative
+# ./fonts/ URLs.  No local modifications to any of it.
+{
+  pkgs,
+  bun,
+}:
 let
   pin = import ./design-pin.nix;
   src = pkgs.fetchFromGitHub {
@@ -22,17 +30,32 @@ let
       sha256
       ;
   };
+  generated =
+    pkgs.runCommandLocal "jylhis-generated"
+      {
+        nativeBuildInputs = [ bun ];
+      }
+      ''
+        cp -r ${src}/. "$TMP/src/"
+        chmod -R u+w "$TMP/src"
+        export HOME="$TMPDIR"
+        cd "$TMP/src"
+        bun scripts/generate.mjs --out "$out"
+      '';
 in
 pkgs.runCommandLocal "jylhis-ds-assets"
   {
-    inherit src;
+    inherit src generated;
   }
   ''
     mkdir -p "$out/fonts"
-    for f in tokens.css colors_and_type.css motion.css fonts.css; do
-      cp "$src/$f" "$out/$f"
+    for f in tokens.css density.css colors_and_type.css motion.css fonts.css; do
+      case "$f" in
+        tokens.css|density.css) cp "$generated/$f" "$out/$f" ;;
+        *) cp "$src/$f" "$out/$f" ;;
+      esac
     done
-    # Self-hosted woff2 slices, plus the OFL texts fonts.css points at.
-    cp "$src"/fonts/*.woff2 "$src"/fonts/LICENSE-*.txt "$out/fonts/"
+    # Self-hosted woff2/ttf slices, plus the OFL texts fonts.css points at.
+    cp "$src"/fonts/*.woff2 "$src"/fonts/*.ttf "$src"/fonts/LICENSE-*.txt "$out/fonts/"
     chmod -R u+w "$out"
   ''

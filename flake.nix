@@ -161,6 +161,7 @@
         # copies from here; the ds-in-sync check diffs against it.
         ds-assets = import ./nix/ds-assets.nix {
           pkgs = pkgsFor system;
+          inherit ((pkgsFor system)) bun;
         };
       });
 
