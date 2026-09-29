@@ -59,8 +59,8 @@ let
   # generated reference it searches over is actually mounted.
   pkgSearchRow = ''<div class="man-entry"><a href="${baseHref}/packages/">M-x list-packages — package search</a><span class="man-dots">·····································································</span><span class="man-desc">search every third-party package and symbol</span></div>'';
   infoManual = import ./info-manual.nix { inherit pkgs src; };
-  # The Emacs Jotain actually ships (emacs-unstable base, now the 31.1
-  # release branch) — its man pages and manual sources feed /man and
+  # The Emacs Jotain actually ships (emacs-unstable base, the Emacs 31.1
+  # release branch): its man pages and manual sources feed /man and
   # /info, so the site documents the exact revision users get.
   emacs = pkgs.jotainEmacs;
 

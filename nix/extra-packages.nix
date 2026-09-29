@@ -172,12 +172,10 @@ in
   # `project.el' backend for the Nix (and Guix) store, wired in
   # lisp/init-project.el: each /nix/store path that is a directory becomes a
   # project root, so `project-find-file' works while visiting store files.
-  # Published on NonGNU ELPA as `project-nix-store' (after the upstream
-  # `project-store' -> `project-nix-store' rename at 0.10.0). emacs-overlay's
-  # epkgs now carries the name, but lags on version (0.10.0 as of the pinned
-  # snapshot), so this override pins ahead to the current tagged release.
-  # Package-Requires is ((emacs "29.1")) — only built-ins — so no
-  # packageRequires.
+  # emacs-overlay's epkgs carries `project-nix-store' but lags on version
+  # (0.10.0 as of the pinned snapshot), so this override pins ahead to the
+  # current tagged release. Package-Requires is ((emacs "29.1")) — only
+  # built-ins — so no packageRequires.
   project-nix-store = efinal.trivialBuild {
     pname = "project-nix-store";
     version = "0.13.0";

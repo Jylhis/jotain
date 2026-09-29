@@ -153,8 +153,7 @@ pkgs.runCommand "jotain-emacs-api-doc"
     passthru = {
       texinfoFragment = "jotain-elisp-api.texi";
       inherit featureNames perPackage;
-      # Kept for attribute compatibility; now the tooling-only aggregate
-      # Emacs rather than the (removed) full-closure doc Emacs.
+      # The tooling-only aggregate Emacs used for the doc passes.
       docEmacs = aggEmacs;
     };
     meta = {
@@ -179,7 +178,7 @@ pkgs.runCommand "jotain-emacs-api-doc"
     done
 
     # The driver writes per-package markdown under html/md; lift it out so it
-    # feeds the texi fragment but is never served (matches the old monolith).
+    # feeds the texi fragment but is never served.
     if [ -d "$out/html/md" ]; then mv "$out/html/md" "$out/md"; fi
     chmod -R u+w "$out/html"
     if [ -d "$out/md" ]; then chmod -R u+w "$out/md"; fi

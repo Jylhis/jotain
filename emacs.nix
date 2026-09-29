@@ -49,9 +49,9 @@
 # it on for a plain default-rev build that would otherwise hit the
 # binary cache.
 #
-# Adapted from the `next` branch. Source for nixpkgs is the flake.lock-pinned
-# nixpkgs-unstable channel; pass --arg pkgs '<nixpkgs>' or override `pkgs`
-# at the command line to use a different one.
+# Source for nixpkgs is the flake.lock-pinned nixpkgs-unstable channel;
+# pass --arg pkgs '<nixpkgs>' or override `pkgs` at the command line to use
+# a different one.
 #
 # Based on:
 #   - NixOS/nixpkgs       pkgs/applications/editors/emacs/ (make-emacs.nix)
@@ -96,9 +96,9 @@
       },
 
   # Source variant
-  #   "unstable"  — Emacs 31 release branch (currently the 31.1-rc1
-  #                 release candidate); the default here and for the distribution
-  #                 (mk-overlay.nix passes variant = "unstable")
+  #   "unstable"  — the Emacs 31.1 release branch; the default here and
+  #                 for the distribution (mk-overlay.nix passes
+  #                 variant = "unstable")
   #   "git"       — bleeding-edge master from git.savannah.gnu.org
   #   "igc"       — feature/igc3 incremental garbage collector branch
   #   "mainline"  — nixpkgs default emacs attr (Hydra-cached; the
@@ -157,9 +157,9 @@
   # the overlay's git/unstable/igc attrs, i.e. off everywhere in this
   # matrix — and forwards nothing, so cache parity cannot be disturbed.
   # An explicit bool is forwarded and (when it differs from the base)
-  # intentionally busts the cache, like a rev pin. This replaces the old
-  # mirrored-default scheme, whose mirror expression could drift from
-  # make-emacs.nix's own version-conditional default.
+  # intentionally busts the cache, like a rev pin. Following the base with
+  # `null` (rather than mirroring make-emacs.nix's version-conditional
+  # default here) means this file can never drift from that default.
 
   # Compilation
   withNativeCompilation ? (pkgs.stdenv.buildPlatform.canExecute pkgs.stdenv.hostPlatform),
@@ -402,12 +402,12 @@ let
       withGlibNetworking
       ;
   }
-  # The removed X11-era arguments (withX, withGTK3, withMotif, withAthena,
+  # The X11-era arguments (withX, withGTK3, withMotif, withAthena,
   # withCairo, withXinput2, withToolkitScrollBars) are deliberately NOT
   # forwarded: the base package's own defaults for them are exactly what
   # the cached artifacts were built with, so not passing them is
-  # parity-neutral — and there is no supported configuration in this
-  # matrix that would set them to anything else.
+  # parity-neutral, and no supported configuration in this matrix would set
+  # them to anything else.
   #
   # withXwidgets: null means "follow the base" and forwards nothing (see
   # the argument's doc comment); an explicit bool is forwarded and may

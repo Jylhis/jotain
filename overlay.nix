@@ -1,8 +1,8 @@
 # overlay.nix — Nixpkgs overlay for Jotain Emacs.
 #
 # Adds:
-#   jotainEmacs              — bare Emacs binary (unstable variant — the
-#                              Emacs 31.1 line; see nix/mk-overlay.nix)
+#   jotainEmacs              — bare Emacs binary (unstable variant, the
+#                              Emacs 31.1 release branch; see nix/mk-overlay.nix)
 #   jotainEmacsNoGui         — terminal-only (noGui) twin of jotainEmacs
 #   jotainInfo               — Jotain manual (share/info/jotain.info + dir)
 #   jotainEmacsPackages      — full distribution using jotainEmacs

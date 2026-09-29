@@ -1,8 +1,8 @@
 { pkgs, ... }:
 
 let
-  # Emacs is deliberately NOT installed into the devenv shell — the
-  # ~1 GB jotainEmacsPackages closure dominated `direnv allow` time.
+  # Emacs is deliberately NOT installed into the devenv shell: the ~1 GB
+  # jotainEmacsPackages closure would dominate `direnv allow` time.
   # The Nix-side builds (flake `packages.<system>.{default,emacs,…}`,
   # `just build*`, `nix flake check`) are unaffected; flake checks
   # still verify Emacs binaries via `checks.<system>.emacs-binaries`
@@ -137,12 +137,10 @@ in
   };
 
   # https://devenv.sh/tests/
-  # Emacs is no longer installed into the dev shell, so the previous
-  # seven Emacs-provenance assertions have moved into a Nix-side flake
-  # check — see `checks.<system>.emacs-binaries` in nix/checks.nix.
-  # The flake-check version builds jotainEmacs and verifies binaries
-  # exist + run cleanly without leaking host config, which is the
-  # build-side equivalent.
+  # The dev shell has no Emacs, so Emacs-provenance is checked build-side:
+  # `checks.<system>.emacs-binaries` in nix/checks.nix builds jotainEmacs
+  # and verifies its binaries exist and run cleanly without leaking host
+  # config.
   #
   # The remaining shell tooling still gets a sanity check so CI's
   # `devenv test` job doesn't pass green for the wrong reason.
@@ -207,11 +205,10 @@ in
       *) echo "FAIL: tagref resolved to $real_tagref"; exit 1 ;;
     esac
 
-    # NOTE: there's no longer a runtime assertion that `emacs` is absent
-    # from the dev shell — a host Emacs installed via home-manager would
-    # show up under /nix/store/ and trip the check on dev machines.
-    # The build-side guarantee (jotainEmacs produces working binaries)
-    # lives in `checks.<system>.emacs-binaries` in nix/checks.nix.
+    # No runtime assertion that `emacs` is absent from the dev shell: a
+    # host Emacs installed via home-manager sits under /nix/store/ and
+    # would false-trip it. The build-side guarantee (jotainEmacs produces
+    # working binaries) lives in `checks.<system>.emacs-binaries`.
 
     echo "Dev-shell tooling checks passed."
   '';

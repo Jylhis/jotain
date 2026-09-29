@@ -5,14 +5,11 @@
 #   • nix/checks.nix `elisp-compile' — the warnings-as-errors gate.
 #   • module.nix     `compiledConfig' — what the HM daemon loads.
 #
-# These used to be two copies of the same `emacs --batch' invocation
-# (nix/checks.nix and module.nix), so CI proved a byte-compile that the
-# deploy then redid from a different source root.  Now the artifact CI
-# builds — and that deploy.yml pushes to cachix — is the artifact the
-# daemon installs, so `home-manager switch' substitutes it instead of
-# running Emacs locally.
+# Sharing one derivation keeps the byte-compile CI gates and the artifact
+# the daemon installs identical: deploy.yml pushes this build to cachix, so
+# `home-manager switch' substitutes it instead of running Emacs locally.
 #
-# Two deliberate narrowings versus the old checks.nix version:
+# Two deliberate narrowings:
 #
 #   • The source is a `lib.fileset' of just the config's .el files
 #     rather than the whole flake tree, so a README/website/journal edit
@@ -83,7 +80,7 @@ pkgs.runCommand "jotain-config-compiled"
     #
     # The pcre2el require is load-bearing: magit-todos propagates
     # pcre2el, whose defadvice byte-compiles its advice body and fails
-    # under error-on-warn (see journal/2026-04-16.md).
+    # under error-on-warn.
     emacs --batch \
       -L lisp \
       --eval "(require 'pcre2el)" \
