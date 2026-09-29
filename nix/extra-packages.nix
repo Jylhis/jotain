@@ -207,23 +207,23 @@ in
   # MELPA.  `evil' is listed even though Jotain doesn't use it: trivialBuild
   # byte-compiles every .el in the source, including majutsu-evil.el whose
   # top-level `(require 'evil)' would otherwise fail to compile.
-  majutsu = efinal.trivialBuild {
-    pname = "majutsu";
-    # Past the v0.6.0 tag; the Version header still reads 0.6.0 in-dev.
-    version = "0.6.0-unstable-2026-09-14";
-    src = pkgs.fetchFromGitHub {
-      owner = "0WD0";
-      repo = "majutsu";
-      rev = "0fdb3c2b3ab826724949cd2cc714f2eff32ec152";
-      sha256 = "1wpfx3rq108kr2v1vg9wjgf11r52ai43w364fnlm31wkfi56kbp0";
-    };
-    packageRequires = with efinal; [
-      compat
-      transient
-      magit
-      evil
-    ];
-  };
+  # majutsu = efinal.trivialBuild {
+  #   pname = "majutsu";
+  #   # Past the v0.6.0 tag; the Version header still reads 0.6.0 in-dev.
+  #   version = "0.6.0-unstable-2026-09-14";
+  #   src = pkgs.fetchFromGitHub {
+  #     owner = "0WD0";
+  #     repo = "majutsu";
+  #     rev = "0fdb3c2b3ab826724949cd2cc714f2eff32ec152";
+  #     sha256 = "1wpfx3rq108kr2v1vg9wjgf11r52ai43w364fnlm31wkfi56kbp0";
+  #   };
+  #   packageRequires = with efinal; [
+  #     compat
+  #     transient
+  #     magit
+  #     evil
+  #   ];
+  # };
 
   # Emacs integration for the tagref CLI ([tag:x]/[ref:x] cross-references):
   # completion, xref navigation, and M-x tagref-check.  Not on MELPA; depends
