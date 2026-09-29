@@ -187,6 +187,10 @@ Use `just update` to update flake inputs first, then sync `devenv.yaml` URLs and
 
 `default.nix`, `emacs.nix`, and `overlay.nix` read their pins from `flake.lock` directly via `fetchTarball`, resolving nodes through the lock's root input map — no separate pinning tool is needed for non-flake consumers.
 
+#### Hand-pinned upstreams (not in `flake.lock`)
+
+Some upstreams are pinned outside the lock files and are therefore *not* bumped by `just update`/Dependabot: the extra Emacs packages built from GitHub (`nix/extra-packages.nix`), the prebuilt ECA server (`nix/eca-server.nix`), the vendored npm language servers (`nix/likec4-lsp.nix`, `nix/ellsp.nix`), and the design-system pin (`nix/design-pin.nix`). `just update-pins` bumps them, via `scripts/update-pins.sh`. It drives [Mic92/nix-update](https://github.com/Mic92/nix-update) for the plain `fetchFromGitHub` Emacs packages (exposed under `legacyPackages.<system>.emacs-packages.<name>`; tagged repos track the newest tag, untagged ones track the branch HEAD) and uses bespoke steps for the four pins nix-update cannot model: eca's four-platform sidecar-hash table, the two npm wrappers whose `package-lock.json` must be regenerated, and the design pin (which feeds several consumers and re-runs `just ds-sync`). Scope it with pin names (`just update-pins combobulate eca`); `just update-pins --list` prints them. Two pins stay manual by design and are excluded: `ghostel` (a temporary Elisp-only override tracking emacs-overlay's epkgs; revert, don't bump) and `etc/elisp-doc` (files vendored verbatim from a Codeberg fork).
+
 ### Shared treefmt configuration
 
 `nix/treefmt.nix` defines the formatter programs (currently `nixfmt`, `deadnix`, and `statix`). It is consumed by both `flake.nix` (via `treefmt-nix` for `nix fmt` and the formatting check) and `devenv.nix` (via devenv's treefmt module). Add new formatters to this single file.
