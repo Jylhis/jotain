@@ -8,7 +8,7 @@
 let
   inherit (pkgs) lib stdenv;
 
-  version = "0.136.2";
+  version = "0.161.2";
 
   baseUrl = "https://github.com/editor-code-assistant/eca/releases/download/${version}";
 
@@ -18,19 +18,19 @@ let
   sources = {
     x86_64-linux = {
       asset = "eca-native-static-linux-amd64.zip";
-      sha256 = "863b71c1b5ec97a77f0c33db99307401f623d5f05fbaa97ff29b7c2f3c860fdf";
+      sha256 = "cd3430cf1271a70c15745b552501a0e0f49bc88101e3ecfe5db5a99596dfe996";
     };
     aarch64-linux = {
       asset = "eca-native-linux-aarch64.zip";
-      sha256 = "56d620d0535cb30cc01391a95b8f127976cc7ca6d51810f1d4428cb29b3f1108";
+      sha256 = "86656ad949ee647fac9b80ebf55ea9b8088472d1ed311d3367d7dbb1194bcbf1";
     };
     aarch64-darwin = {
       asset = "eca-native-macos-aarch64.zip";
-      sha256 = "4e3f5e974d224109f7986228ff613d2feec1277b943c3259f402d7a875478ba2";
+      sha256 = "7e8aec7c4964d56a0772cb2015b22479a74be3bec5844e94ea9fc118c1881ff4";
     };
     x86_64-darwin = {
       asset = "eca-native-macos-amd64.zip";
-      sha256 = "128d4bc92ce4c4b3f5e90412429a49b5f2ca14d0e1746d696b0716492b42b08e";
+      sha256 = "d6fcaa9c67106573b1d9a633004fe67bff324ceb9ed2ebc655807c41529b9298";
     };
   };
 

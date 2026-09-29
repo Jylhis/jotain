@@ -8,13 +8,13 @@
 }:
 
 let
-  version = "0.1.0";
+  version = "0.2.0";
 
   src = fetchFromGitHub {
     owner = "elisp-lsp";
     repo = "Ellsp";
     rev = version;
-    hash = "sha256-yC36gyO/4jWKZwOaTl7RiMJaGCwACVAaB07UwSTqLP8=";
+    hash = "sha256-JlM7PeQyloYORA4CJgz+cbChrxWjEE7NJgvsHIjIUIY=";
   };
 
   epkgs = emacsPackagesFor emacs;
@@ -54,7 +54,7 @@ let
 
     sourceRoot = "${src.name}/proxy";
 
-    npmDepsHash = "sha256-D0ibHkVts3ZcL/uJoiNAg9M/Js1tLmgVrKLbkCIITvU=";
+    npmDepsHash = "sha256-9aIlBRFFgBcXdWfHYarWNSYLV9LPsxytBUr8xPmEp1o=";
 
     dontNpmBuild = true;
 
