@@ -1,8 +1,7 @@
 {
   # Emacs source variant for jotainEmacs / jotainEmacsNoGui (see
   # emacs.nix). Defaults to "unstable": emacs-overlay's emacs-unstable,
-  # the Emacs 31 release branch (currently the 31.1-rc1 release
-  # candidate), cached on nix-community.cachix.org.
+  # the Emacs 31.1 release branch, cached on nix-community.cachix.org.
   variant ? "unstable",
 }:
 final: _prev:
@@ -80,10 +79,9 @@ let
             # Full grammar set. Every grammar is its own upstream
             # derivation and this is a linkFarm over their store paths, so
             # the set costs closure size (~200 MB over a curated subset,
-            # measured 2026-08-01), never build time. The curated-subset
-            # variant (`emacs-lite`) was removed with the build-matrix
-            # narrowing; the full set keeps the `jotain-emacs-full` hash
-            # cache-stable.
+            # measured 2026-08-01), never build time. Shipping the full set
+            # (rather than a curated subset) keeps the `jotain-emacs-full`
+            # hash cache-stable.
             epkgs.treesit-grammars.with-all-grammars
           ];
       };

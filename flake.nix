@@ -109,9 +109,8 @@
       # `emacs` (bare: pgtk/Wayland GUI on Linux, patched NS GUI on
       # Darwin) inside `default` (the full distribution), and
       # `emacs-nox` (terminal-only distribution) — on {x86_64, aarch64}
-      # × {Linux, Darwin}. The former emacs-mainline / emacs-x11 /
-      # emacs-lite escape hatches are gone; emacs.nix asserts the
-      # unsupported GUI combinations away.
+      # × {Linux, Darwin}. emacs.nix asserts the unsupported GUI
+      # combinations away.
       packages = forAllSystems (system: {
         default = (pkgsFor system).jotainEmacsPackages;
         emacs = (pkgsFor system).jotainEmacs;

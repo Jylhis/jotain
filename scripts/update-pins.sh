@@ -1,37 +1,14 @@
 #!/usr/bin/env bash
-# Bump the hand-pinned upstream sources in nix/ to their latest release.
-#
-# These are the pins that flake.lock does NOT manage: the extra Emacs
-# packages built from GitHub (nix/extra-packages.nix), the prebuilt ECA
-# server (nix/eca-server.nix), the vendored npm language servers
-# (nix/likec4-lsp.nix, nix/ellsp.nix) and the design-system pin
-# (nix/design-pin.nix). `just update` handles the flake inputs; this
-# script handles everything else.
-#
-# Two mechanisms:
-#   * Mic92/nix-update <https://github.com/Mic92/nix-update> drives the
-#     plain fetchFromGitHub Emacs packages exposed under
-#     legacyPackages.<system>.emacs-packages.<name>. It reads `src`,
-#     resolves the newest tag (or the branch HEAD for untagged repos) and
-#     rewrites rev+hash+version in place.
-#   * Bespoke steps for the four pins nix-update cannot model: eca's
-#     four-platform sidecar-hash table, the two npm wrappers whose
-#     package-lock.json must be regenerated, and the design pin that feeds
-#     several consumers and needs `just ds-sync` afterwards.
-#
-# nix-update is fetched on demand with `nix run nixpkgs#nix-update`.
+# Bump the hand-pinned upstream sources in nix/ (the pins flake.lock does
+# not manage) to their latest release. See "Hand-pinned upstreams" in
+# AGENTS.md for the list of pins, how each is bumped, and the two that
+# stay manual by design.
 #
 # Usage:
 #   scripts/update-pins.sh                 # update everything
 #   scripts/update-pins.sh combobulate eca # update only the named pins
 #   scripts/update-pins.sh --list          # list the known pin names
 #   NO_BUILD=1 scripts/update-pins.sh ...  # skip the post-update build
-#
-# NOT covered (manual, by design):
-#   * ghostel       (a temporary Elisp-only override in extra-packages.nix
-#                    tracking emacs-overlay's epkgs; revert it, don't bump)
-#   * etc/elisp-doc  (files vendored verbatim from a Codeberg fork; re-vendor
-#                    by hand and re-read its NOTICE.md)
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -91,7 +68,6 @@ update_eca() {
     asset="${assets[$sys]}"
     hex="$(curl -fsSL "${base}/${asset}.sha256" | awk '{print $1}')"
     [ "${#hex}" -eq 64 ] || { echo "eca: bad sha for $asset" >&2; exit 1; }
-    # Replace the sha256 on the line following this asset's line.
     perl -0pi -e "s/(asset = \"\Q${asset}\E\";\s*\n\s*sha256 = \")[0-9a-f]{64}(\")/\${1}${hex}\${2}/" "$file"
   done
   perl -pi -e "s/^(  version = \")[^\"]*(\";)/\${1}${tag}\${2}/" "$file"

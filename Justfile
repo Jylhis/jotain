@@ -417,8 +417,8 @@ ds-sync:
     set -euo pipefail
     cd "{{config_dir}}"
     out=$(nix build --no-link --print-out-paths .#ds-assets)
-    # Wipe first: this is what removes fonts retired by an upstream type
-    # change (v2 dropped all eight Literata/JetBrains Mono slices).
+    # Wipe first so fonts retired by an upstream type change are removed,
+    # not left behind.
     rm -rf website/public/ds
     mkdir -p website/public/ds
     cp -r "$out/." website/public/ds/

@@ -273,9 +273,8 @@ in
   # Vendored design system must match the pinned upstream rev
   #
   # website/public/ds is committed so website/public stays a no-build
-  # shell, which is exactly how it drifted a whole major version behind
-  # the Emacs themes built from the same repo. Both now read
-  # nix/design-pin.nix, and this check makes the drift fatal.
+  # shell, which risks drifting from the Emacs themes built from the same
+  # repo. Both read nix/design-pin.nix, and this check makes drift fatal.
   ds-in-sync =
     let
       dsAssets = import ./ds-assets.nix {
@@ -361,11 +360,9 @@ in
         touch $out
       '';
 
-  # Build-side equivalent of the Emacs-provenance assertions that used
-  # to live in devenv.nix `enterTest`. Emacs is no longer installed in
-  # the dev shell, so we verify here that the jotainEmacs derivation
-  # ships the expected binaries and that they run cleanly without
-  # touching anything outside the store.
+  # Emacs is not installed in the dev shell, so its provenance is verified
+  # here on the build side: the jotainEmacs derivation ships the expected
+  # binaries and they run cleanly without touching anything outside the store.
   emacs-binaries =
     pkgs.runCommandLocal "check-emacs-binaries"
       {
@@ -480,7 +477,7 @@ in
   # reads lisp/*.el with Emacs' own reader, collects the use-package
   # heads that appear as actual code, and diffs them against the
   # scanner's output. A divergence means the regex is over- or
-  # under-matching. Implements deferred review Finding 48(c).
+  # under-matching.
   scanner-fidelity =
     let
       usePackage = import ./use-package.nix { inherit lib; };
@@ -606,10 +603,8 @@ in
   # Full-startup smoke test
   #
   # elisp-compile only byte-compiles the config, and emacs-binaries runs
-  # --no-init-file, so a runtime `use-package' :config error (the
-  # xref/global-xref-mouse-mode shadow regression: a stale ELPA package
-  # shadowing an Emacs built-in, breaking a guarded autoloaded call) had no
-  # automated gate — only `just run-built' surfaced it, and only to a human.
+  # --no-init-file, so a runtime `use-package' :config error (e.g. a stale
+  # ELPA package shadowing an Emacs built-in) has no other automated gate.
   #
   # This actually *evaluates* every :config block against the full package
   # closure (`elispEmacs' == jotainEmacsPackages.core, already realised by
