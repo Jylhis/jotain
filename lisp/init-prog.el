@@ -317,10 +317,9 @@ shell.  A project with neither still gets `robot-mode' plus the cape capfs."
   ;; Single devenv-aware auto-start for every project language.  It runs on
   ;; `prog-mode-hook' but defers the actual `eglot-ensure' to an idle timer,
   ;; so it fires *after* `after-change-major-mode-hook' has turned on
-  ;; `devenv-env-mode' and begun applying the project env.  A curated
-  ;; per-mode `:hook . eglot-ensure' used to live here as well; it was
-  ;; removed on purpose because it fired inside the major-mode hook —
-  ;; *before* `devenv-env-mode' registered the buffer — so eglot connected
+  ;; `devenv-env-mode' and begun applying the project env.  A per-mode
+  ;; `:hook . eglot-ensure' would instead fire inside the major-mode hook,
+  ;; *before* `devenv-env-mode' registers the buffer, so eglot would connect
   ;; with the global (toolchain-less) environment instead of the devenv one.
   (add-hook 'prog-mode-hook #'jotain-prog--maybe-eglot-ensure)
   :custom

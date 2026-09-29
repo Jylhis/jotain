@@ -278,7 +278,6 @@ immediately for writes."
     (setopt world-clock-sort-order "%FT%T")))
 
 ;; Standalone command for viewing logs that contain raw ANSI escapes.
-;; M-x jotain-display-ansi-colors.
 (defun jotain-display-ansi-colors ()
   "Render ANSI escape sequences in the current buffer."
   (interactive)

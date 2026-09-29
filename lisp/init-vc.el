@@ -5,13 +5,6 @@
 ;; Built-in `vc' bits live next to `magit' because in practice you tweak
 ;; them as a unit ("when I open a git file, what happens?"). diff-hl
 ;; ties the two together with fringe indicators.
-;;
-;; Future ideas (not yet wired up):
-;;   - mergiraf      — syntax-aware structural merge driver
-;;   - magit-delta   — render magit diffs through `delta' for syntax
-;;                     highlighting (the same engine git-delta uses)
-;;   - smerge / vc.el integration with the above for syntax-aware
-;;     conflict resolution
 
 ;;; Code:
 
@@ -634,7 +627,6 @@ invalidation after `magit-post-refresh-hook'."
             (user-position . t)
             (vertical-scroll-bars . nil)
             (scrollbar-width . 0)
-            ;; (menu-bar-lines . 0)
             (tool-bar-lines . 0))))
 
 (provide 'init-vc)

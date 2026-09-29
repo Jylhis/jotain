@@ -53,14 +53,13 @@
    ("M-*" . tempel-insert)
    :map tempel-map
    ;; TAB is deliberately absent here: snippet fields never use it (it
-   ;; indents and drives completion instead).  Upstream `tempel-map'
-   ;; never bound it either -- the TAB/S-TAB pair that used to live here was
-   ;; this config's own addition.  Removing it restores tempel's own
-   ;; `M-}'/`M-{' (plus `M-RET' to finish and `M-<up>'/`M-<down>'), and the
-   ;; two below are added as a mnemonic alias.  Neither collides with
-   ;; corfu's `M-n'/`M-p', which matters because `tempel-map' rides on an
-   ;; overlay `keymap' property and so outranks corfu's minor-mode map while
-   ;; a snippet is live.
+   ;; indents and drives completion instead).  Upstream `tempel-map' leaves
+   ;; TAB unbound too, so field navigation stays on tempel's own
+   ;; `M-}'/`M-{' (plus `M-RET' to finish and `M-<up>'/`M-<down>'); the two
+   ;; below are added as a mnemonic alias.  Neither collides with corfu's
+   ;; `M-n'/`M-p', which matters because `tempel-map' rides on an overlay
+   ;; `keymap' property and so outranks corfu's minor-mode map while a
+   ;; snippet is live.
    ("C-M-n" . tempel-next)
    ("C-M-p" . tempel-previous))
   :init
