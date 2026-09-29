@@ -45,9 +45,8 @@
 ;; `package-install' downloads only when the on-disk cache is empty, and
 ;; `M-x package-refresh-contents' / `list-packages' refresh on demand.
 ;;
-;; There was a staleness-gated background warm-up here. It fired on every
-;; fresh host and every 7 days after, i.e. exactly the Nix deployments
-;; where nothing was missing. Don't add it back.
+;; Don't add a launch-time package warm-up: on a Nix deployment nothing
+;; is ever missing, so it would only slow startup for no gain.
 
 (require 'init-core)         ; GC, encoding, var/ paths, sane defaults
 (require 'init-keys)         ; Global keymap and leader-key setup

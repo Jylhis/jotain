@@ -53,8 +53,8 @@ REASON is reported so the downgrade is visible in *Messages*."
           jotain-theme-dark 'modus-vivendi)
   (message "jotain: %s; falling back to Modus themes" reason))
 
-;; Register the Jylhis theme directory on custom-theme-load-path.
-;; The package ships jylhis-themes.el as the entry point for this.
+;; Requiring jylhis-themes (its jylhis-themes.el entry point) is what puts
+;; the Jylhis themes on custom-theme-load-path.
 (if (not (require 'jylhis-themes nil t))
     (jotain-ui--fall-back-to-modus "jylhis-themes is unavailable")
   ;; Pre-load both themes so auto-dark can flip between them without

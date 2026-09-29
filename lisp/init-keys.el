@@ -86,7 +86,6 @@ Region active → deactivate it.  Otherwise call regular
 
 ;; Disable the commands so invoking them via M-x prompts first.
 (dolist (cmd '(rmail gnus describe-distribution
-               ;; Games submenu commands.
                doctor 5x5 blackbox bubbles dunnet gomoku hanoi life
                mpuz pong snake solitaire tetris zone))
   (put cmd 'disabled t))
