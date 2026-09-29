@@ -128,12 +128,13 @@ in
 
   claude-code-ide = efinal.trivialBuild {
     pname = "claude-code-ide";
-    version = "0.2.6";
+    # Upstream cuts no tags; the Version header reads 0.3.0 in-dev.
+    version = "0.3.0-unstable-2026-09-14";
     src = pkgs.fetchFromGitHub {
       owner = "manzaltu";
       repo = "claude-code-ide.el";
-      rev = "5f12e60c6d2d1802c8c1b7944bbdf935d5db1364";
-      sha256 = "148xcrqff6khpwf8nnadcyvz8h6mk45xz1498k0wbzy80yzd2axn";
+      rev = "50a3d55262805d7207889ed429ff30da96fbf68b";
+      sha256 = "0dgccddi71gghjzw23y4d2k61dzjz5p0rvy91cxwgl7168z3pvxv";
     };
     packageRequires = with efinal; [
       websocket
@@ -159,32 +160,32 @@ in
 
   combobulate = efinal.trivialBuild {
     pname = "combobulate";
-    version = "0-unstable-2026-01-26";
+    version = "1.0.0";
     src = pkgs.fetchFromGitHub {
       owner = "mickeynp";
       repo = "combobulate";
-      rev = "38773810b5e532f25d11c6d1af02c3a8dffeacd7";
-      sha256 = "0j647m17bwj4hia32nq650z7bpnxcg5bflk0z8r867qzmg8j6vc1";
+      rev = "69b74248aeaefa06ea0e4da6f93a65b51956820d"; # tag v1.0.0
+      sha256 = "0fnqwkd83ll5cbfp86pa20aifns0lm88xn4hm6dkml9kdbkivca5";
     };
   };
 
   # `project.el' backend for the Nix (and Guix) store, wired in
   # lisp/init-project.el: each /nix/store path that is a directory becomes a
   # project root, so `project-find-file' works while visiting store files.
-  # Published on NonGNU ELPA as `project-nix-store', but the pinned
-  # emacs-overlay snapshot (2026-08-24) predates the upstream
-  # `project-store' -> `project-nix-store' rename (0.10.0), so the base epkgs
-  # scope does not carry this name yet; build it from the tagged release.
+  # Published on NonGNU ELPA as `project-nix-store' (after the upstream
+  # `project-store' -> `project-nix-store' rename at 0.10.0). emacs-overlay's
+  # epkgs now carries the name, but lags on version (0.10.0 as of the pinned
+  # snapshot), so this override pins ahead to the current tagged release.
   # Package-Requires is ((emacs "29.1")) — only built-ins — so no
   # packageRequires.
   project-nix-store = efinal.trivialBuild {
     pname = "project-nix-store";
-    version = "0.10.0";
+    version = "0.13.0";
     src = pkgs.fetchFromGitHub {
       owner = "jian-lin";
       repo = "project-nix-store";
-      rev = "ae6c743f98f2f46222cec670d96b1d125db1c7c5"; # tag 0.10.0
-      sha256 = "184hy7jy1zq97xr4ddgxi2mppj25gv53j0k692mx74lwlbxic5cd";
+      rev = "f56570285fa07bb15aa51d7c9d3b1c1a561a5317"; # tag 0.13.0
+      sha256 = "1z9ad6ivskiff4j8105y4jj6ij23qs9zvlhmll1f0h18w7b0s3p7";
     };
   };
 
@@ -210,12 +211,13 @@ in
   # top-level `(require 'evil)' would otherwise fail to compile.
   majutsu = efinal.trivialBuild {
     pname = "majutsu";
-    version = "0.6.0";
+    # Past the v0.6.0 tag; the Version header still reads 0.6.0 in-dev.
+    version = "0.6.0-unstable-2026-09-14";
     src = pkgs.fetchFromGitHub {
       owner = "0WD0";
       repo = "majutsu";
-      rev = "97169be899dca13d08212dc88993fbb7b8272b2f";
-      sha256 = "043d3vcd19wzc7hpr20d83kwi5973wii08wfbhp69lab8shzaimn";
+      rev = "0fdb3c2b3ab826724949cd2cc714f2eff32ec152";
+      sha256 = "1wpfx3rq108kr2v1vg9wjgf11r52ai43w364fnlm31wkfi56kbp0";
     };
     packageRequires = with efinal; [
       compat

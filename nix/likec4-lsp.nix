@@ -9,7 +9,7 @@
 #
 # Not in nixpkgs, so packaged from the npm registry with buildNpmPackage.
 # The published tarball ships no lockfile, so `nix/likec4-lsp/{package.json,
-# package-lock.json}` vendors a wrapper pinning `@likec4/lsp@1.59.2`; the
+# package-lock.json}` vendors a wrapper pinning `@likec4/lsp@1.59.4`; the
 # lock was generated with
 #   nix shell nixpkgs#nodejs_22 --command \
 #     npm install --package-lock-only --ignore-scripts
@@ -27,11 +27,11 @@ let
 in
 pkgs.buildNpmPackage {
   pname = "likec4-lsp";
-  version = "1.59.2";
+  version = "1.59.4";
 
   src = ./likec4-lsp;
 
-  npmDepsHash = "sha256-dGhd1MDk8rGRJfd+9Ud0BOlIMh9CSnAq1J5P+BGoZ/M=";
+  npmDepsHash = "sha256-l2NrBh1O3P/oKy9DpW5XER7OlZq4GZXmQyoxrTcwJGM=";
 
   inherit nodejs;
 
