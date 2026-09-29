@@ -344,6 +344,15 @@ update:
     just sync-devenv all
     echo "Done."
 
+# Bump the hand-pinned upstreams that flake.lock does NOT manage (the
+# extra Emacs packages, the ECA server, the vendored npm LSPs, the design
+# pin). Uses Mic92/nix-update where it fits and bespoke steps otherwise.
+# Pass pin names to scope it (e.g. `just update-pins combobulate eca`);
+# `just update-pins --list` shows the known names.
+[group('pins')]
+update-pins *PINS:
+    bash scripts/update-pins.sh {{ PINS }}
+
 # Sync devenv.yaml/devenv.lock to the revs already in flake.lock.
 [group('pins')]
 sync-devenv scope="shared":
