@@ -44,9 +44,9 @@ happens (macport breaks pixel-scroll; igc), replace it with `ultra-scroll`
 
 ## Verification (for the open work)
 
-1. Baseline: `just bench bench-before.txt` (currently a disabled stub —
-   re-enable it first); profile a freeze with `M-x jotain-profile-toggle`.
-2. After build changes: re-run `just bench`, diff load times; confirm the
+1. Baseline: `just bench-built var/bench/before.txt`; profile a freeze with
+   `M-x jotain-profile-toggle`.
+2. After build changes: re-run `just bench-built`, diff load times; confirm the
    eln-cache holds `init-*.eln`.
 3. GC: `(setq garbage-collection-messages t)`, exercise completion/LSP under
    release vs igc daemons; compare pause counts.
