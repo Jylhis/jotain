@@ -1,32 +1,30 @@
 # TODO
 
-- https://github.com/federicotdn/verb
-- Disable "Process zoxide finished" messages in zoxide buffer
-- Fix themes in terminal
-
 ## Deferred review findings (docs/reviews/2026-07-emacs-nix-deep-review.md)
 
-- ~~**Finding 12, option (b)** — adopt `completion-preview` alongside corfu in
-  `init-completion.el` (with the Emacs 31 `completion-preview-sort-function`
-  pairing).~~ **Done 2026-08-26** — `completion-preview-mode` in
-  `init-completion.el`, gated by `jotain-completion-inline-preview`, with the
-  sort pairing, the R2 `C-i` unbind, and a comment/string inhibit. See
-  `docs/design/completion.md` §6 and `docs/reviews/2026-08-completion-ux-research.md`.
-- **Finding 21** — make `devenv-env--turn-on` subprocess-free: consult only
-  `devenv-modeline--cached-trust` and replay via the async
-  `devenv-modeline--probe-trust` callback (the long-TTL trust cache shipped;
-  the async rework needs a live Emacs to validate).
-- **Finding 48, part (c)** — scanner-fidelity flake check: batch-read
-  `lisp/*.el` with Emacs's own reader, collect `(use-package NAME)` heads, and
-  diff against `scanDirectory` output (new CI machinery; parts a/b shipped in
-  `nix/use-package.nix`).
-- **Finding 52** — bench harness rework: time autoload-driven loads via a
-  file-name handler for the `load` operation (or attribute post-init loads by
-  snapshotting `features`), and measure the archive refresh synchronously
-  (`just bench` is currently a disabled stub anyway).
-- **Finding 53, full fix** — generate `config/eca/config.json`'s model list and
-  `init-ai.el`'s gptel `:models` from a single source, or add a checks.nix
-  drift check (the minimal cross-reference comments shipped).
+- **Finding 21** — make `devenv-env--turn-on` subprocess-free. The long-TTL
+  trust cache and the async modeline probe shipped (`lisp/devenv.el`
+  `devenv-modeline--cached-trust` / `devenv-modeline--probe-trust`); the
+  remaining gap is `devenv-env--turn-on`, which still calls
+  `devenv--trust-state` synchronously and `call-process`es
+  `devenv hook-should-activate` on a cache miss, so the first find-file in an
+  uncached project blocks. Rework to consult only the cache and replay via the
+  async probe callback. Needs a live Emacs to validate.
+- **Finding 52** — bench harness fidelity. The old "disabled stub" `just bench`
+  is gone; `bench-built` (`Justfile:49`) is a working harness. Confirm it times
+  autoload-driven post-init loads (via a `load` file-name handler or a
+  `features` snapshot) rather than only `require`, and measures the archive
+  refresh synchronously.
+
+## In-code deferred work
+
+- `nix/extra-packages.nix` — TEMPORARY (2026-07-21) ghostel epkg fetch
+  workaround; revert to plain `epkgs.ghostel` once the upstream fetch works.
+- `lisp/init-vc.el` — future ideas not yet wired up: mergiraf (structural merge
+  driver), magit-delta (delta-rendered magit diffs), and smerge/vc.el
+  integration for syntax-aware conflict resolution.
+- `etc/elisp-doc/elisp-doc-extract.el` — two TODOs in the vendored elisp-doc
+  engine (L517, L839); upstream-owned, track here only if we fork it.
 
 ## Investigate
 
