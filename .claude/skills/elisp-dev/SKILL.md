@@ -7,7 +7,7 @@ description: Modern Emacs Lisp development practices (Emacs 30/31) — coding an
 
 Practices distilled from the GNU Elisp Reference Manual "Tips and Conventions"
 appendix, the official style guidance, and this repo's own conventions
-(CLAUDE.md / AGENTS.md). Repo rules win where they overlap.
+(AGENTS.md). Repo rules win where they overlap.
 
 ## Hard rules for this repo
 

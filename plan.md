@@ -3,7 +3,7 @@
 Optimization of jotain Emacs for the dev machine (
 an x86_64 CPU, **x86_64-darwin**; Emacs 31 NS
 daemon). Priority order: **performance → stability → startup → feel**.
-Build-variant preference: **release > proven fork (macport) > experimental (igc)**.
+Build-variant preference: **release > experimental (igc)**.
 
 ## Open points
 
@@ -37,8 +37,8 @@ Experimental, so trial-only before any promotion.
 ### §4 — `ultra-scroll` (feel, lowest priority)
 
 `pixel-scroll-precision-mode` is fine on NS-31. Only if a variant switch
-happens (macport breaks pixel-scroll; igc), replace it with `ultra-scroll`
-(smoother on Intel). File: `lisp/init-ui.el`.
+happens (e.g. to igc), replace it with `ultra-scroll` (smoother on Intel).
+File: `lisp/init-ui.el`.
 
 ---
 
@@ -51,5 +51,5 @@ happens (macport breaks pixel-scroll; igc), replace it with `ultra-scroll`
 3. GC: `(setq garbage-collection-messages t)`, exercise completion/LSP under
    release vs igc daemons; compare pause counts.
 4. Cache parity unchanged: run the `nix-instantiate` parity check from
-   `CLAUDE.md` — the default (`unstable`) variant must still equal
+   `AGENTS.md`; the default (`unstable`) variant must still equal
    `pkgs.emacs-unstable`, and the `mainline` variant `pkgs.emacs`.

@@ -36,9 +36,9 @@ details.
 
 ## Contributing
 
-`AGENTS.md` is the contributor guide (structure, commands, style,
-testing); `CLAUDE.md` carries the full architecture notes. Both are kept
-accurate — when they disagree with the code, that's a bug.
+`AGENTS.md` is the contributor guide and the single source of truth:
+structure, commands, style, testing, and the full architecture notes. It
+is kept accurate; when it disagrees with the code, that's a bug.
 
 ## License
 

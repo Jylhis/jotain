@@ -1,7 +1,7 @@
 # Coding, naming, and documentation conventions
 
 Source: GNU Elisp Reference Manual appendix D (Tips and Conventions),
-bbatsov/emacs-lisp-style-guide, checkdoc. Repo rules (CLAUDE.md/AGENTS.md)
+bbatsov/emacs-lisp-style-guide, checkdoc. Repo rules (AGENTS.md)
 override where they conflict.
 
 ## Symbol naming

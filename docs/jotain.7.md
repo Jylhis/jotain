@@ -2,8 +2,8 @@
 title: JOTAIN
 section: 7
 header: Jotain Manual
-footer: jotain 2026.07
-date: 2026-07-21
+footer: jotain 2026.09
+date: 2026-09-29
 ---
 
 # NAME
@@ -51,7 +51,7 @@ and this man page. Chapters:
 :   init · early-init · packages
 
 *usage(7)*
-:   launching · devenv · ai-screenshot
+:   launching · devenv · notebooks · ai-screenshot
 
 *keybindings(7)*
 :   the full chord map
