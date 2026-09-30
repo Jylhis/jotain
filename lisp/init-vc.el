@@ -196,18 +196,17 @@ working-tree file no longer exists to open."
   ;; Show worktrees as a section in magit-status when more than one exists.
   (add-hook 'magit-status-sections-hook 'magit-insert-worktrees t))
 
-;; Disabled due to build not working
-;; ;;; @doc The Jujutsu porcelain — a magit-style interface for jj, sitting
-;; ;;; alongside magit (jj is normally colocated with git, so both apply).
-;; ;;; C-c j opens the status/log buffer (`majutsu-log', aliased `majutsu');
-;; ;;; C-c M-j opens the top-level transient dispatcher. Provided by Nix
-;; ;;; (nix/extra-packages.nix), so `:ensure nil'.
-;; (use-package majutsu
-;;   :ensure nil
-;;   :commands (majutsu majutsu-log majutsu-dispatch)
-;;   :bind
-;;   (("C-c j"   . majutsu-log)
-;;    ("C-c M-j" . majutsu-dispatch)))
+;;; @doc The Jujutsu porcelain — a magit-style interface for jj, sitting
+;;; alongside magit (jj is normally colocated with git, so both apply).
+;;; C-c j opens the status/log buffer (`majutsu-log', aliased `majutsu');
+;;; C-c M-j opens the top-level transient dispatcher. Provided by Nix
+;;; (nix/extra-packages.nix), so `:ensure nil'.
+(use-package majutsu
+  :ensure nil
+  :commands (majutsu majutsu-log majutsu-dispatch)
+  :bind
+  (("C-c j"   . majutsu-log)
+   ("C-c M-j" . majutsu-dispatch)))
 
 ;;; @doc Surfaces TODO/FIXME/HACK comments as a section in magit-status.
 ;;; Scan depth pinned to 1 so it stays fast on large repos.
