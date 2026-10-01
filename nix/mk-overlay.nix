@@ -115,7 +115,7 @@ let
           rm "$prog"
           makeBinaryWrapper "$orig" "$prog" \
             --suffix PATH : "${final.lib.makeBinPath runtimeDeps}" \
-            --suffix INFOPATH : "${final.jotainInfo}/share/info:" \
+            --suffix INFOPATH : "${final.jotainInfo}/share/info" \
             --set-default ASPELL_CONF "${spellConf}"
         done
       '';
@@ -187,9 +187,14 @@ in
   # symlink to the bare emacs.nix derivation, which we cannot mutate.
   # Instead we produce an outer derivation that (a) lndirs the core
   # wrapper verbatim, and (b) re-wraps the user-facing binaries to
-  # append ${jotainInfo}/share/info to $INFOPATH.  The trailing ':'
-  # tells Emacs's info-initialize to append Info-default-directory-list
-  # so the built-in Emacs manuals stay visible.
+  # append ${jotainInfo}/share/info to $INFOPATH.
+  #
+  # The value is the bare directory: makeBinaryWrapper rejects any
+  # --prefix/--suffix value that would create an empty PATH-like segment
+  # (GHSA-p7v3-pr2c-8584), so we cannot pass the trailing ':' that makes
+  # Emacs's info-initialize append Info-default-directory-list.  nixpkgs'
+  # Emacs site-start.el appends that separator itself (Emacs bug#81105),
+  # so the built-in manuals stay visible anyway.
   jotainEmacsPackages = mkJotainEmacsPackages {
     name = "jotain-emacs-full";
     package = final.jotainEmacs;
