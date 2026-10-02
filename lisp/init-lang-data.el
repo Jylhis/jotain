@@ -8,26 +8,16 @@
 ;;; Code:
 
 (declare-function mixed-pitch-mode "mixed-pitch" (&optional arg))
+(declare-function jotain-eglot-set-workspace-config "init-prog" (key settings))
 
-(defvar eglot-workspace-configuration) ; defined in eglot.el
-
-;; yaml-language-server workspace settings.  Eglot only ever reads the
-;; GLOBAL value of `eglot-workspace-configuration' (it evaluates the
-;; variable in a fresh temp buffer, so a buffer-local mode-hook binding
-;; never reaches the server), so contribute our section to the default
-;; value keyed under `:yaml'.  Other languages own their own sections, so
-;; nothing is clobbered, and a project .dir-locals.el
-;; `eglot-workspace-configuration' entry still overrides it cleanly.
-;; Teaching yaml-language-server GitLab's `!reference' custom tag (as a
-;; sequence tag) silences the `Unresolved tag: !reference' diagnostic on
-;; every `.gitlab-ci.yml' that composes jobs with `!reference', while
-;; leaving ordinary YAML alone.  Set once here (not per mode) since the
-;; value is a single global default.
-(with-eval-after-load 'eglot
-  (setq-default eglot-workspace-configuration
-                (plist-put (copy-sequence
-                            (default-value 'eglot-workspace-configuration))
-                           :yaml '(:customTags ["!reference sequence"]))))
+;; yaml-language-server workspace settings (see
+;; `jotain-eglot-set-workspace-config' in init-prog for how the section
+;; reaches the server).  Teaching yaml-language-server GitLab's
+;; `!reference' custom tag (as a sequence tag) silences the `Unresolved
+;; tag: !reference' diagnostic on every `.gitlab-ci.yml' that composes
+;; jobs with `!reference', while leaving ordinary YAML alone.
+(jotain-eglot-set-workspace-config
+ :yaml '(:customTags ["!reference sequence"]))
 
 (defun jotain-lang-data--enable-prog-mode-features ()
   "Run `prog-mode-hook' in a `text-mode'-derived config buffer.
