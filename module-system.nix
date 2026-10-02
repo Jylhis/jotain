@@ -47,19 +47,11 @@ let
     package = selectedPackage;
   };
 
-  # Fallback script for EDITOR when the daemon is not running.
-  editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
-    exec ${lib.getBin wrappedPackage}/bin/emacs -nw -- "$@"
-  '';
-
   # EDITOR — terminal-friendly emacsclient (works over SSH, in git commit, etc.)
-  editorScript = pkgs.writeShellScriptBin "jotain-editor" ''
-    exec ${lib.getBin wrappedPackage}/bin/emacsclient \
-      --tty \
-      --alternate-editor=${editorFallback} \
-      -- \
-      "$@"
-  '';
+  editorScript = import ./nix/editor-script.nix {
+    inherit pkgs;
+    package = wrappedPackage;
+  };
 
   # VISUAL — opens a GUI emacsclient frame.
   visualScript = pkgs.writeShellScriptBin "jotain-visual" ''
