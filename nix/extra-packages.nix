@@ -1,5 +1,6 @@
 # Extra Emacs Lisp packages not available on any archive (MELPA,
-# GNU ELPA, NonGNU ELPA).  Shared between default.nix and devenv.nix.
+# GNU ELPA, NonGNU ELPA).  Consumed by nix/mk-overlay.nix (overlaid onto
+# the distribution's package scope) and nix/emacs-package-set.nix.
 { pkgs }:
 
 efinal: eprev:
