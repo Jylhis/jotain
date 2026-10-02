@@ -163,8 +163,6 @@ in
     withSelinux = false;
   };
 
-  sonarlintLs = final.sonarlint-ls;
-
   # Prebuilt ECA server binary for the eca-emacs client (lisp/init-ai.el).
   # Surfaced on the overlay so module-system / Home Manager consumers can put
   # it on the wrapper PATH.

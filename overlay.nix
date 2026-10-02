@@ -8,7 +8,7 @@
 #   jotainEmacsPackages      — full distribution using jotainEmacs
 #   jotainEmacsPackagesNoGui — full distribution on the noGui build
 #   eca                      — prebuilt ECA server binary (lisp/init-ai.el)
-#   sonarlintLs              — SonarLint language server (M-x jotain-sonarlint)
+#   likec4Lsp                — LikeC4 language server (lisp/init-lang-devops.el)
 #
 # nix-community/emacs-overlay is composed underneath (pinned via
 # flake.lock's root input map, same discipline as emacs.nix), so the
