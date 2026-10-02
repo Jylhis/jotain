@@ -4,8 +4,11 @@
 # into the distribution and documented by the API-doc generator.
 #
 # Single source of truth, consumed by:
-#   • nix/mk-overlay.nix   — as `extraEmacsPackages` (force-inject).
-#   • nix/emacs-api-doc.nix — as `extraFeatureNames` (document).
+#   • nix/mk-overlay.nix        — as `extraEmacsPackages` (force-inject).
+#   • nix/emacs-package-set.nix — as `extraFeatureNames`, which is what
+#     feeds the API-doc generator's per-package feature list.
+#   • nix/checks.nix            — emacs-packages-eval's expected set, so a
+#     name added here must resolve to a derivation.
 #
 # This is a curated list, NOT `builtins.attrNames (extra-packages.nix …)`:
 #   • it EXCLUDES `ghostel` (terminal-only; not in the GUI doc/inject set),
