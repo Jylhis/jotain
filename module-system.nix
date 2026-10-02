@@ -42,37 +42,10 @@ let
     ++ lib.optional cfg.sops.enable pkgs.sops
     ++ lib.optional cfg.claudeCode.enable pkgs.claude-code;
 
-  # Re-wrap the selected package's binaries so the runtime tools ride
-  # the Emacs PATH without entering the global environment: appending
-  # keeps the host userland first (and GNU coreutils out of the way on
-  # darwin), and — unlike environment.systemPackages, which a
-  # Dock/launchd-launched GUI Emacs never sees on darwin — the wrapper
-  # PATH survives every launch context.
-  wrappedPackage =
-    pkgs.runCommand "${selectedPackage.name or "jotain-emacs"}-with-runtime-deps"
-      {
-        nativeBuildInputs = [
-          # Top-level `lndir` only exists on recent nixpkgs; on older
-          # releases (24.05+) it lives under the xorg package set.
-          (pkgs.lndir or pkgs.xorg.lndir)
-          pkgs.makeBinaryWrapper
-        ];
-        meta = (selectedPackage.meta or { }) // {
-          mainProgram = "emacs";
-        };
-        passthru = selectedPackage.passthru or { };
-      }
-      ''
-        mkdir -p $out
-        lndir -silent ${selectedPackage} $out
-        for prog in $out/bin/*; do
-          [ -L "$prog" ] || continue
-          orig=$(readlink -f "$prog")
-          rm "$prog"
-          makeBinaryWrapper "$orig" "$prog" \
-            --suffix PATH : "${lib.makeBinPath runtimeDeps}"
-        done
-      '';
+  wrappedPackage = import ./nix/wrap-runtime-deps.nix {
+    inherit pkgs runtimeDeps;
+    package = selectedPackage;
+  };
 
   # Fallback script for EDITOR when the daemon is not running.
   editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
