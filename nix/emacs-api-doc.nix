@@ -46,6 +46,8 @@
   mountPath ? "/help/api",
 }:
 let
+  texi = import ./texi-fragment.nix;
+
   inherit (pkgs) lib;
 
   # Shared resolution of the config's package set (nix/emacs-package-set.nix):
@@ -231,15 +233,8 @@ pkgs.runCommand "jotain-emacs-api-doc"
       -t texinfo \
       --shift-heading-level-by=1 \
       --wrap=none \
-    | awk '
-        /^@menu$/     { in_menu = 1; next }
-        /^@end menu$/ { in_menu = 0; next }
-        in_menu       { next }
-        /^@node /     { next }
-        /^@top /      { next }
-        { print }
-      ' \
-    | sed -E 's/@ref\{[^,}]*,,([^}]*)\}/\1/g; s/@ref\{([^}]*)\}/\1/g' \
+    | awk '${texi.stripScaffolding}' \
+    | sed -E '${texi.flattenRefs}' \
       > "$out/jotain-elisp-api.texi"
 
     touch "$out/html/.nojekyll"

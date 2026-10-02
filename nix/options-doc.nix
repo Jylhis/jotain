@@ -10,6 +10,8 @@
 let
   inherit (pkgs) lib;
 
+  texi = import ./texi-fragment.nix;
+
   gitHubUrl = "https://github.com/Jylhis/jotain";
 
   # Evaluate a module in isolation — no HM/NixOS/devenv stubs needed
@@ -223,25 +225,15 @@ pkgs.runCommand "jotain-options-doc"
         # Texinfo fragment consumed by nix/info-manual.nix.  --shift-heading-level-by=1
         # collapses the top-level "# Module Options Reference" into an @section inside
         # the parent @appendix in docs/jotain.texi, and each per-module `# ...` header
-        # becomes an @section below that.  Strip the @node/@top/@menu scaffolding that
-        # pandoc emits by default — it would collide with the node layout in
-        # docs/jotain.texi; makeinfo re-derives nodes from @section hierarchy.  Also
-        # flatten @ref{name,,text} into plain text since the stripped nodes no longer
-        # exist as cross-reference targets.
+        # becomes an @section below that.  The scaffolding strip is shared; see
+        # nix/texi-fragment.nix.
         pandoc combined.md \
           -f gfm \
           -t texinfo \
           --shift-heading-level-by=1 \
           --wrap=none \
-        | awk '
-            /^@menu$/     { in_menu = 1; next }
-            /^@end menu$/ { in_menu = 0; next }
-            in_menu       { next }
-            /^@node /     { next }
-            /^@top /      { next }
-            { print }
-          ' \
-        | sed -E 's/@ref\{[^,}]*,,([^}]*)\}/\1/g; s/@ref\{([^}]*)\}/\1/g' \
+        | awk '${texi.stripScaffolding}' \
+        | sed -E '${texi.flattenRefs}' \
           > $out/jotain-options.texi
 
         touch $out/.nojekyll
