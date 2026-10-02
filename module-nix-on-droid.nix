@@ -37,20 +37,12 @@ let
     package = selectedPackage;
   };
 
-  # Fallback for EDITOR when no daemon is running.
-  editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
-    exec ${lib.getBin wrappedPackage}/bin/emacs -nw -- "$@"
-  '';
-
   # EDITOR — terminal emacsclient (works over SSH, in git commit, etc.).
   # There is no GUI on Android, so VISUAL points at the same client.
-  editorScript = pkgs.writeShellScriptBin "jotain-editor" ''
-    exec ${lib.getBin wrappedPackage}/bin/emacsclient \
-      --tty \
-      --alternate-editor=${editorFallback} \
-      -- \
-      "$@"
-  '';
+  editorScript = import ./nix/editor-script.nix {
+    inherit pkgs;
+    package = wrappedPackage;
+  };
 in
 {
   options.services.jotain = {
