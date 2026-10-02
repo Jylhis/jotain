@@ -147,63 +147,27 @@ in
   enterTest = ''
     set -euo pipefail
 
-    echo "[1/7] core Nix tools on PATH"
-    for bin in nil nixfmt statix deadnix; do
-      real="$(readlink -f "$(command -v "$bin")")"
-      case "$real" in
-        /nix/store/*) ;;
-        *) echo "FAIL: $bin resolved to $real"; exit 1 ;;
-      esac
-    done
+    # Every group asserts the same thing: the binary is on PATH and resolves
+    # into the Nix store (not a host install that happens to shadow it).
+    check_store() {
+      echo "$1 on PATH and live in the Nix store"
+      shift
+      for bin in "$@"; do
+        real="$(readlink -f "$(command -v "$bin")")"
+        case "$real" in
+          /nix/store/*) ;;
+          *) echo "FAIL: $bin resolved to $real"; exit 1 ;;
+        esac
+      done
+    }
 
-    echo "[2/7] Meson build tools on PATH and live in the Nix store"
-    for bin in meson ninja; do
-      real="$(readlink -f "$(command -v "$bin")")"
-      case "$real" in
-        /nix/store/*) ;;
-        *) echo "FAIL: $bin resolved to $real"; exit 1 ;;
-      esac
-    done
-
-    echo "[3/7] sonarlint-ls on PATH and lives in the Nix store"
-    real_sonar="$(readlink -f "$(command -v sonarlint-ls)")"
-    case "$real_sonar" in
-      /nix/store/*) ;;
-      *) echo "FAIL: sonarlint-ls resolved to $real_sonar"; exit 1 ;;
-    esac
-
-    echo "[4/7] rassumfrassum (rass) on PATH and lives in the Nix store"
-    real_rass="$(readlink -f "$(command -v rass)")"
-    case "$real_rass" in
-      /nix/store/*) ;;
-      *) echo "FAIL: rass resolved to $real_rass"; exit 1 ;;
-    esac
-
-    echo "[5/7] docs toolchain (pandoc + makeinfo) on PATH"
-    real_pandoc="$(readlink -f "$(command -v pandoc)")"
-    case "$real_pandoc" in
-      /nix/store/*) ;;
-      *) echo "FAIL: pandoc resolved to $real_pandoc"; exit 1 ;;
-    esac
-    real_makeinfo="$(readlink -f "$(command -v makeinfo)")"
-    case "$real_makeinfo" in
-      /nix/store/*) ;;
-      *) echo "FAIL: makeinfo resolved to $real_makeinfo"; exit 1 ;;
-    esac
-
-    echo "[6/7] eca server on PATH and lives in the Nix store"
-    real_eca="$(readlink -f "$(command -v eca)")"
-    case "$real_eca" in
-      /nix/store/*) ;;
-      *) echo "FAIL: eca resolved to $real_eca"; exit 1 ;;
-    esac
-
-    echo "[7/7] tagref on PATH and lives in the Nix store"
-    real_tagref="$(readlink -f "$(command -v tagref)")"
-    case "$real_tagref" in
-      /nix/store/*) ;;
-      *) echo "FAIL: tagref resolved to $real_tagref"; exit 1 ;;
-    esac
+    check_store "core Nix tools"        nil nixfmt statix deadnix
+    check_store "Meson build tools"     meson ninja
+    check_store "SonarLint LS"          sonarlint-ls
+    check_store "rassumfrassum (rass)"  rass
+    check_store "docs toolchain"        pandoc makeinfo
+    check_store "eca server"            eca
+    check_store "tagref"                tagref
 
     # No runtime assertion that `emacs` is absent from the dev shell: a
     # host Emacs installed via home-manager sits under /nix/store/ and
