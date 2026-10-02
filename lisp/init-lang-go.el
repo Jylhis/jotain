@@ -15,39 +15,30 @@
 
 ;;; Code:
 
-(defvar eglot-workspace-configuration) ; defined in eglot.el
+(declare-function jotain-eglot-set-workspace-config "init-prog" (key settings))
 
-;; gopls workspace settings.  Eglot only ever reads the GLOBAL value of
-;; `eglot-workspace-configuration' (it evaluates the variable in a fresh
-;; temp buffer, so a buffer-local mode-hook binding never reaches the
-;; server), so contribute our section to the default value keyed under
-;; `:gopls'.  Other languages own their own sections, so nothing is
-;; clobbered, and a project .dir-locals.el `eglot-workspace-configuration'
-;; entry still overrides it cleanly.  Wrapped in `with-eval-after-load' so
-;; the variable eglot defines is present (and the section is set before the
-;; first server connects).  gopls only emits inlay hints when the hint
-;; kinds are enabled here; `eglot-inlay-hints-mode' (armed for Go in
-;; init-prog) then displays them.  `gofumpt' is left at its default (nil)
-;; so gopls agrees with the goimports/gofmt formatter apheleia runs on save.
-(with-eval-after-load 'eglot
-  (setq-default eglot-workspace-configuration
-                (plist-put (copy-sequence
-                            (default-value 'eglot-workspace-configuration))
-                           :gopls
-                           '(:usePlaceholders t
-                             :completeUnimported t
-                             :staticcheck t
-                             :hints (:parameterNames t
-                                     :assignVariableTypes t
-                                     :constantValues t
-                                     :functionTypeParameters t
-                                     :rangeVariableTypes t
-                                     :compositeLiteralTypes t
-                                     :compositeLiteralFields t)
-                             :analyses (:unusedparams t
-                                        :shadow t
-                                        :nilness t
-                                        :unusedwrite t)))))
+;; gopls workspace settings (see `jotain-eglot-set-workspace-config' in
+;; init-prog for how the section reaches the server).  gopls only emits
+;; inlay hints when the hint kinds are enabled here;
+;; `eglot-inlay-hints-mode' (armed for Go in init-prog) then displays them.
+;; `gofumpt' is left at its default (nil) so gopls agrees with the
+;; goimports/gofmt formatter apheleia runs on save.
+(jotain-eglot-set-workspace-config
+ :gopls
+ '(:usePlaceholders t
+   :completeUnimported t
+   :staticcheck t
+   :hints (:parameterNames t
+           :assignVariableTypes t
+           :constantValues t
+           :functionTypeParameters t
+           :rangeVariableTypes t
+           :compositeLiteralTypes t
+           :compositeLiteralFields t)
+   :analyses (:unusedparams t
+              :shadow t
+              :nilness t
+              :unusedwrite t)))
 
 ;;; @doc Built-in tree-sitter Go modes: `go-ts-mode` for source files,
 ;;; `go-mod-ts-mode` for go.mod, `go-work-ts-mode` (Emacs 31) for

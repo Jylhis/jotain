@@ -194,6 +194,31 @@ These servers may evaluate project JavaScript configuration files."
   :type 'boolean
   :group 'jotain)
 
+(defvar eglot-workspace-configuration) ; defined in eglot.el
+
+(defun jotain-eglot-set-workspace-config (key settings)
+  "Contribute SETTINGS under KEY to eglot's workspace configuration.
+Eglot only ever reads the GLOBAL value of
+`eglot-workspace-configuration': it evaluates the variable in a
+fresh temp buffer, so a buffer-local mode-hook binding never
+reaches the server.  Each language therefore merges its own
+section into the default value, keyed so it never leaks into
+another language's session, and `copy-sequence' keeps the shared
+default from being mutated in place.  A project
+`.dir-locals.el' `eglot-workspace-configuration' entry still
+shadows the whole thing cleanly.
+
+Deferred until eglot loads, so the variable eglot defines exists
+and every section is in place before the first server connects.
+Call this from the language's `init-lang-*' file, which owns the
+settings; the mechanism lives here with the rest of the LSP
+wiring."
+  (with-eval-after-load 'eglot
+    (setq-default eglot-workspace-configuration
+                  (plist-put (copy-sequence
+                              (default-value 'eglot-workspace-configuration))
+                             key settings))))
+
 ;;; @doc Built-in LSP client. Per-language `eglot-ensure` hooks live
 ;;; here so all LSP wiring is visible in one place; per-language
 ;;; mode regexes stay in their `init-lang-*` file. C-c r is the
@@ -420,11 +445,9 @@ shell.  A project with neither still gets `robot-mode' plus the cape capfs."
   (add-to-list 'eglot-server-programs
                '((neocaml-mode neocaml-interface-mode) . ("ocamllsp")))
 
-  ;; Per-language workspace configuration lives in each init-lang-* file,
-  ;; not here: each contributes its own section to the global
-  ;; `eglot-workspace-configuration' default (eglot only reads the global
-  ;; value, never a buffer-local one), keyed so it never leaks into other
-  ;; languages' sessions.  gopls' section is in init-lang-go.
+  ;; Per-language workspace settings live in each init-lang-* file, which
+  ;; calls `jotain-eglot-set-workspace-config' (defined above) to merge its
+  ;; section into the global default.
 
   ;; rassumfrassum (`rass`) multiplexes several real LSP servers behind a
   ;; single stdio connection so eglot effectively drives multiple servers
