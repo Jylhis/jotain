@@ -24,6 +24,8 @@
   src ? ../.,
 }:
 let
+  texi = import ./texi-fragment.nix;
+
   # Only the docs/ tree is consumed by makeinfo; restrict the store
   # path to it so we don't drag in irrelevant files (e.g. .git IPC
   # sockets, build artefacts) that Nix import refuses to copy.
@@ -205,26 +207,16 @@ pkgs.runCommand "jotain-info"
             }
           ' "$inpath" > "$tmpfile"
 
-          # Pandoc's texinfo writer emits a full @node/@top/@menu
-          # structure, which clashes with the @include-into-@chapter
-          # layout in docs/jotain.texi.  Strip those so only the
-          # @section/@subsection sectioning survives — makeinfo then
-          # assigns nodes automatically under the master's @chapter.
-          # Also flatten any surviving @ref{name,,text} (they point to
-          # nodes we just removed) into plain text.
+          # Strip pandoc's standalone-document scaffolding so only the
+          # @section/@subsection sectioning survives: makeinfo then assigns
+          # nodes automatically under the master's @chapter.  See
+          # nix/texi-fragment.nix.
           pandoc "$tmpfile" \
             -f gfm \
             -t texinfo \
             --wrap=none \
-          | awk '
-              /^@menu$/     { in_menu = 1; next }
-              /^@end menu$/ { in_menu = 0; next }
-              in_menu       { next }
-              /^@node /     { next }
-              /^@top /      { next }
-              { print }
-            ' \
-          | sed -E 's/@ref\{[^,}]*,,([^}]*)\}/\1/g; s/@ref\{([^}]*)\}/\1/g' \
+          | awk '${texi.stripScaffolding}' \
+          | sed -E '${texi.flattenRefs}' \
             > "$outname"
 
           rm -f "$tmpfile"

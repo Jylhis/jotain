@@ -20,6 +20,8 @@
 let
   inherit (pkgs) lib;
 
+  texi = import ./texi-fragment.nix;
+
   up = import ./use-package.nix { inherit lib; };
 
   # Load-order mirrors init.el and docs/architecture/modules.mdx.
@@ -329,10 +331,8 @@ pkgs.runCommand "jotain-packages-doc"
           --highlight-style=kate \
           --wrap=none
 
-        # Texinfo fragment — pandoc emits the full @node/@top/@menu
-        # scaffolding that would clash with the @chapter wrapper in
-        # docs/jotain.texi, so strip them and flatten any leftover
-        # @ref{} into plain text. --shift-heading-level-by=1 drops the
+        # Texinfo fragment — the scaffolding strip is shared; see
+        # nix/texi-fragment.nix. --shift-heading-level-by=1 drops the
         # `# Package Reference` H1 down one level so it becomes a
         # @section under the master @chapter.
         pandoc combined.md \
@@ -340,15 +340,8 @@ pkgs.runCommand "jotain-packages-doc"
           -t texinfo \
           --shift-heading-level-by=1 \
           --wrap=none \
-        | awk '
-            /^@menu$/     { in_menu = 1; next }
-            /^@end menu$/ { in_menu = 0; next }
-            in_menu       { next }
-            /^@node /     { next }
-            /^@top /      { next }
-            { print }
-          ' \
-        | sed -E 's/@ref\{[^,}]*,,([^}]*)\}/\1/g; s/@ref\{([^}]*)\}/\1/g' \
+        | awk '${texi.stripScaffolding}' \
+        | sed -E '${texi.flattenRefs}' \
           > $out/jotain-packages.texi
 
         touch $out/.nojekyll
