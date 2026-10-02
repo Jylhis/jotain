@@ -32,34 +32,10 @@ let
   # list, see nix/runtime-deps.nix).
   runtimeDeps = import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; };
 
-  # Re-wrap the selected package's binaries so the runtime tools ride
-  # the Emacs PATH (appended, so tools the user installs themselves
-  # stay first) without entering the global profile.
-  wrappedPackage =
-    pkgs.runCommand "${selectedPackage.name or "jotain-emacs"}-with-runtime-deps"
-      {
-        nativeBuildInputs = [
-          # Top-level `lndir` only exists on recent nixpkgs; on older
-          # releases (24.05+) it lives under the xorg package set.
-          (pkgs.lndir or pkgs.xorg.lndir)
-          pkgs.makeBinaryWrapper
-        ];
-        meta = (selectedPackage.meta or { }) // {
-          mainProgram = "emacs";
-        };
-        passthru = selectedPackage.passthru or { };
-      }
-      ''
-        mkdir -p $out
-        lndir -silent ${selectedPackage} $out
-        for prog in $out/bin/*; do
-          [ -L "$prog" ] || continue
-          orig=$(readlink -f "$prog")
-          rm "$prog"
-          makeBinaryWrapper "$orig" "$prog" \
-            --suffix PATH : "${lib.makeBinPath runtimeDeps}"
-        done
-      '';
+  wrappedPackage = import ./nix/wrap-runtime-deps.nix {
+    inherit pkgs runtimeDeps;
+    package = selectedPackage;
+  };
 
   # Fallback for EDITOR when no daemon is running.
   editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
