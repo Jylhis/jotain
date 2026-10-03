@@ -66,9 +66,9 @@ name used by `dockerfile-mode'."
 
 ;;; @doc Tree-sitter major mode for `Justfile` — the project-aware command
 ;;; runner Jotain itself uses (the `just` grammar). Pairs with
-;;; compile-multi for project commands. just-ts-mode also self-registers a
-;;; Justfile auto-mode entry; the `:mode' regexes here are belt-and-suspenders
-;;; and also map the `.just' extension used for included/modular recipes.
+;;; compile-multi for project commands. just-ts-mode self-registers a
+;;; Justfile auto-mode entry; the `:mode' regexes here map the `.just'
+;;; extension used for included/modular recipes.
 (use-package just-ts-mode
   :mode (("/[Jj]ustfile\\'" . just-ts-mode)
          ("\\.just\\'" . just-ts-mode)))

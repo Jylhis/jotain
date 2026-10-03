@@ -16,11 +16,6 @@
 #                      it off every binary cache by design.
 #   * Darwin terminal — noGui build.
 #
-# Base packages per variant:
-#   * mainline — pkgs.emacs from nixpkgs (default Emacs attr,
-#     Hydra-cached; kept as the cache-parity canary and escape hatch)
-#   * git/unstable/igc — pkgs.emacs-git / emacs-unstable / emacs-igc from
-#     nix-community/emacs-overlay (cached on nix-community.cachix.org)
 # The overlay is wired up in flake.nix and devenv.nix; this file also
 # re-applies it when called standalone via `nix-build emacs.nix` (the
 # overlays attr is derived from flake.lock).
@@ -39,15 +34,6 @@
 # --argstr rev does the first build fail and report the hash to pass
 # back:
 #   nix-build emacs.nix --arg variant '"git"' --argstr rev "abc123..." --argstr hash "sha256-..."
-#
-# igc on Darwin has no prebuilt upstream (plan.md §3), so it is a
-# from-source build there even at the default rev. For that case, and
-# for any custom-rev/patched build above, --arg useCcache true swaps in
-# pkgs.ccacheStdenv to make repeat local rebuilds cheaper — see its doc
-# comment below for the (required, one-time, machine-level) ccache
-# setup. It is a no-op improvement, not a cache-parity path: never turn
-# it on for a plain default-rev build that would otherwise hit the
-# binary cache.
 #
 # Source for nixpkgs is the flake.lock-pinned nixpkgs-unstable channel;
 # pass --arg pkgs '<nixpkgs>' or override `pkgs` at the command line to use
@@ -105,9 +91,7 @@
   #                 cache-parity canary, not a shipped build)
   variant ? "unstable",
 
-  # Source overrides — pin a specific commit for git/unstable/igc
-  # instead of the overlay pin:
-  #   --argstr rev "abc123..." --argstr hash "sha256-..."
+  # Source overrides — pin a custom commit instead of the overlay pin.
   rev ? null,
   hash ? null,
 
@@ -141,11 +125,10 @@
 
   # GUI toolkit
   # The matrix admits exactly one GUI per platform: pgtk on Linux, NS on
-  # Darwin. The X11 toolkits (Lucid/GTK3-x11/Motif/Athena) are gone —
-  # not arguments any more, and asserted unreachable below. GTK3 the
-  # *library* is still a build input of the pgtk build (make-emacs.nix's
-  # own withGTK3 default is `withPgtk && !noGui`, which we leave to the
-  # base); what was dropped is GTK3-as-X11-toolkit.
+  # Darwin (X11 toolkits asserted away below). GTK3 the *library* is
+  # still a build input of the pgtk build (make-emacs.nix's own withGTK3
+  # default is `withPgtk && !noGui`, which we leave to the base);
+  # GTK3-as-X11-toolkit is not in the matrix.
   noGui ? false, # terminal only (--without-x --without-ns)
   withPgtk ? (pkgs.stdenv.hostPlatform.isLinux && !noGui),
   # --with-pgtk (pure GTK / Wayland; the Linux GUI)
@@ -221,9 +204,8 @@
 }:
 
 # The build matrix: the only GUIs are pgtk on Linux and NS on Darwin.
-# A Linux build must be pgtk or terminal-only; a Darwin build NS or
-# terminal-only. This is what makes the removed X11/Lucid/Motif/Athena
-# escape hatches unreachable rather than merely undocumented.
+# This is what makes the X11/Lucid/Motif/Athena escape hatches
+# unreachable rather than merely undocumented.
 assert pkgs.stdenv.hostPlatform.isLinux -> (noGui || withPgtk);
 assert pkgs.stdenv.hostPlatform.isDarwin -> (noGui || withNS);
 assert builtins.elem variant [
@@ -264,11 +246,9 @@ let
     hash = if hash != null then hash else lib.fakeHash;
   };
 
-  # Base package per variant
-  #   * mainline — nixpkgs default emacs attr (Hydra-cached)
-  #   * git/unstable/igc — emacs-overlay's prebuilt attrs (cached on
-  #     nix-community.cachix.org; emacs-igc already carries
-  #     --with-mps=yes and the mps buildInput)
+  # Base package per variant: nixpkgs' emacs for mainline, the
+  # emacs-overlay prebuilts for git/unstable/igc (cached on
+  # nix-community.cachix.org).
   #
   # When withPgtk is requested (the Linux GUI default), select the
   # prebuilt `*-pgtk` sibling (emacs-overlay for git/unstable/igc,
@@ -409,18 +389,13 @@ let
   # parity-neutral, and no supported configuration in this matrix would set
   # them to anything else.
   #
-  # withXwidgets: null means "follow the base" and forwards nothing (see
-  # the argument's doc comment); an explicit bool is forwarded and may
-  # intentionally bust the cache.
+  # withXwidgets: null forwards nothing (cache-neutral); an explicit
+  # bool busts the cache like a rev pin — see its doc comment above.
   // lib.optionalAttrs (withXwidgets != null) {
     inherit withXwidgets;
   }
-  # See the `useCcache ?` doc comment above: default false forwards
-  # nothing here, so the default path is byte-for-byte what it was
-  # before this flag existed. The extraConfig override is what points
-  # ccache at the sandbox-visible cache dir — bare ccacheStdenv would
-  # write to $HOME/.ccache (= /homeless-shelter in the sandbox) and
-  # never hit.
+  # useCcache: default false forwards nothing — the default path is
+  # unchanged. (Sandbox setup: see the flag's doc comment above.)
   // lib.optionalAttrs useCcache {
     stdenv = pkgs.ccacheStdenv.override {
       extraConfig = ''
@@ -496,7 +471,6 @@ let
       darwinPatch "adjust-ns-init-colors.patch"
     );
 
-  # Determine if overrideAttrs is needed
   # Skip overrideAttrs unless a custom rev is pinned or Darwin patches
   # apply (they do by default on the Darwin NS GUI) — every default-rev
   # Linux/noGui variant is then a pure basePackage.override and stays a

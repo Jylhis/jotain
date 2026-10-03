@@ -24,14 +24,10 @@
 ;;; with no active region kill a word backwards instead of erroring;
 ;;; `delete-pair-push-mark' leaves a mark on the former pair contents so
 ;;; C-x C-x re-selects them. Both are Emacs 31+, guarded so the config
-;;; loads on Emacs 30. (The "diff this buffer against its file" action
-;;; under `d' during `save-some-buffers' is already built in since Emacs
-;;; 30, so it needs no config here.)
+;;; loads on Emacs 30.
 (use-package simple
   :ensure nil
   :custom
-  ;; `M-!' / `M-&' show the directory the command will run in as part of
-  ;; the prompt, so a shell command never lands in a surprising `cwd'.
   (shell-command-prompt-show-cwd t)
   :config
   (when (boundp 'kill-region-dwim)
@@ -162,9 +158,7 @@
 (use-package keyfreq
   :functions (keyfreq-mode keyfreq-autosave-mode)
   ;; Deferred to `after-init': command counting has no value during
-  ;; startup itself, so keep keyfreq off the module-load path. The hook
-  ;; loads the package and enables counting; `:config' turns on autosave
-  ;; once it is loaded.
+  ;; startup itself, so keep keyfreq off the module-load path.
   :hook (after-init . keyfreq-mode)
   :custom
   (keyfreq-file (jotain-var-file "keyfreq.el"))

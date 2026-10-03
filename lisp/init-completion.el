@@ -185,12 +185,8 @@ also toggles it per-buffer on demand."
   (completions-detailed t)
   (completions-format 'one-column)
   (completions-sort 'historical)
-  ;; Default *Completions*-buffer / minibuffer-completion knobs from the
-  ;; newcomers-presets theme.  Vertico replaces this surface in normal
-  ;; use, so these mostly govern the fallback default completion, but
-  ;; they are correct there: keep the typed input visible while
-  ;; completing, group candidates by category, and let a second TAB move
-  ;; point into the completions list.
+  ;; Newcomers-presets theme knobs; vertico replaces this surface in
+  ;; normal use, so these govern the fallback default completion.
   (minibuffer-visible-completions t)
   (completions-group t)
   (completion-auto-select 'second-tab)
@@ -208,8 +204,6 @@ also toggles it per-buffer on demand."
   :custom
   (completion-styles '(orderless partial-completion flex basic))
   (completion-category-defaults nil)
-  ;; `partial-completion' for files so `/u/s/a' matches
-  ;; `/usr/share/applications'. orderless as the fallback still.
   (completion-category-overrides
    '((file         (styles partial-completion orderless))
      (buffer       (styles orderless))
@@ -244,19 +238,10 @@ also toggles it per-buffer on demand."
   :after vertico
   :demand t
   :custom
-  ;; Per-category display rules. Each entry is (CATEGORY MODE...);
-  ;; valid modes include `buffer', `grid', `flat', `unobtrusive',
-  ;; `reverse', `vertical' (default), and `posframe' (a floating child
-  ;; frame, provided by vertico-posframe). Conflicting modes don't
-  ;; stack. The `t' entry is the catch-all: every category without a
-  ;; rule of its own floats in a posframe, so M-x, buffer switching
-  ;; and symbol help get the panel treatment while the entries above
-  ;; keep their displays.
   (vertico-multiform-categories
    '((file   grid)
      (symbol posframe (vertico-sort-function . vertico-sort-alpha))
      (t      posframe)))
-  ;; Per-command overrides — these beat the category rules above.
   (vertico-multiform-commands
    '((consult-line       buffer)
      (consult-line-multi buffer)
@@ -427,7 +412,6 @@ also toggles it per-buffer on demand."
    ("C-;"   . embark-dwim)
    ("C-h B" . embark-bindings))
   :init
-  ;; Replace the built-in `C-h <prefix>' with embark's paged version.
   (setq prefix-help-command #'embark-prefix-help-command)
   :config
   ;; Hide modelines in the transient embark collect/live buffers.
@@ -516,13 +500,11 @@ ignoring sentinel to just that process."
   :custom
   (tab-always-indent (if jotain-completion-free-tab t 'complete)))
 
-;; The one completion gesture.  `completion-at-point' rather than the stock
-;; `complete-symbol' is load-bearing: `corfu-map' contains a
-;; `<remap> <completion-at-point>' entry, and a remap only fires for the
-;; command the key actually resolves to.  Binding the command itself is
-;; therefore what makes the same key accept the selected candidate while the
-;; popup is open (the `:config' below repoints that remap at `corfu-insert'),
-;; so no second accept key is needed.
+;; Binding `completion-at-point' itself (not the stock `complete-symbol')
+;; is load-bearing: `corfu-map' carries a `<remap> <completion-at-point>'
+;; entry, and a remap only fires for the command the key resolves to, so
+;; binding the command is what makes the same key accept the selected
+;; candidate while the popup is open (repointed below at `corfu-insert').
 (when jotain-completion-key
   (keymap-global-set jotain-completion-key #'completion-at-point))
 
@@ -566,50 +548,37 @@ Setting `corfu-auto' from `corfu-mode-hook' would be too late, since
   (corfu-auto nil)
   (corfu-auto-prefix jotain-completion-auto-prefix)
   (corfu-auto-delay jotain-completion-auto-delay)
-  ;; corfu's default is `insert', which previews the selected candidate
-  ;; inline AND commits it on further input -- so typing past an open popup
-  ;; can silently accept a candidate you never chose.  `nil' shows the
-  ;; menu with no inline text and inserts nothing until an explicit
-  ;; `corfu-complete' -- the "never accept unless I ask" behaviour the freed
-  ;; RET and the explicit TAB/`C-M-i' accept gestures already aim for -- and
-  ;; it leaves the one inline surface to `completion-preview-mode's ghost text.
+  ;; corfu's default `insert' commits the selected candidate on further
+  ;; input -- typing past an open popup can silently accept a candidate
+  ;; you never chose.  nil leaves the one inline surface to
+  ;; completion-preview-mode's ghost text.
   (corfu-preview-current nil)
-  ;; Always preselect (and highlight, via the `corfu-current' face) the top
-  ;; candidate, so the accept key has something to insert and the user sees
-  ;; what it will insert.  Safe here because nothing commits on continued
-  ;; typing (`corfu-preview-current' nil) and RET is freed: only the explicit
-  ;; TAB / `C-M-i' commits, so `first' cannot cause the accidental accept it
-  ;; risks when a key accepts on its own.
+  ;; `first' preselects the top candidate so the accept key has something
+  ;; to insert; safe because with `corfu-preview-current' nil and RET
+  ;; freed, only an explicit TAB / `C-M-i' commits.
   (corfu-preselect 'first)
   :config
   ;; REMOVE = t genuinely deletes the entry rather than binding it to nil,
   ;; so the key falls through to the buffer and global maps.
   (when jotain-completion-free-return
     (keymap-unset corfu-map "RET" t))
-  ;; TAB inside the popup.  With the strict "TAB indents only" opt-in we
-  ;; delete corfu's TAB binding so it falls through to
-  ;; `indent-for-tab-command'.  Otherwise (the default) we repoint TAB from
-  ;; corfu's own `corfu-complete' (extends the common prefix, does not run a
-  ;; capf `:exit-function', so snippets would not expand) to `corfu-insert',
-  ;; the same "finish the completion" command the `<remap>' below uses -- so
-  ;; a second TAB accepts the highlighted candidate, matching `C-M-i'.  Both
-  ;; "TAB" and "<tab>" are covered so the GUI function key and the terminal
-  ;; ASCII event behave alike.  corfu binds its map through
-  ;; `overriding-terminal-local-map' while the popup is open, so this wins
-  ;; over both `indent-for-tab-command' and completion-preview's `C-i'.
+  ;; TAB inside the popup.  Strict mode deletes corfu's TAB binding so it
+  ;; falls through to `indent-for-tab-command'; otherwise TAB is repointed
+  ;; from `corfu-complete' (extends the prefix, no capf `:exit-function',
+  ;; snippets would not expand) to `corfu-insert' -- a second TAB accepts
+  ;; the candidate, matching `C-M-i'.  Both "TAB" and "<tab>" are set so
+  ;; GUI and terminal events behave alike; corfu's map wins via
+  ;; `overriding-terminal-local-map' while the popup is open.
   (if jotain-completion-free-tab
       (progn
         (keymap-unset corfu-map "TAB" t)
         (keymap-unset corfu-map "<tab>" t))
     (keymap-set corfu-map "TAB" #'corfu-insert)
     (keymap-set corfu-map "<tab>" #'corfu-insert))
-  ;; `C-M-i' reaches the popup via corfu-map's `<remap> <completion-at-point>'.
-  ;; corfu's default target, `corfu-complete', only extends the common prefix
-  ;; (status `exact'), so it neither commits the highlighted candidate nor runs
-  ;; a capf's `:exit-function' (tempel snippets would not expand).  Repoint it
-  ;; at `corfu-insert', which inserts the selected candidate with status
-  ;; `finished' -- the actual "finish the completion" gesture, and the one that
-  ;; expands snippets.  Set with the same `<remap>' string corfu ships.
+  ;; `C-M-i' reaches the popup via corfu-map's `<remap> <completion-at-point>'
+  ;; entry; repoint it at `corfu-insert' for the same finish-and-expand-
+  ;; snippets reason as TAB above.  Set with the same `<remap>' string
+  ;; corfu ships.
   (keymap-set corfu-map "<remap> <completion-at-point>" #'corfu-insert))
 
 ;;; @doc Persists corfu's pick history into savehist so frequent
@@ -708,13 +677,10 @@ Added to `completion-preview-inhibit-functions' (Emacs 31) so the ghost
 text does not appear where symbol completion is meaningless."
     (nth 8 (syntax-ppss)))
   :init
-  ;; The newcomers-presets theme enables inline preview globally.  Load
-  ;; the library up front (enabling the global mode is what turns the
-  ;; preview on, so this block is no longer deferred): Emacs 31 ships the
-  ;; globalized `global-completion-preview-mode'; on the 30.1 floor (no
-  ;; globalized variant) fall back to the per-mode hooks so the feature
-  ;; still rides `jotain-completion-auto-modes'.  Requiring first makes
-  ;; the `fboundp' probe see the symbol that only exists once loaded.
+  ;; Require first so the `fboundp' probe sees the Emacs 31 globalized
+  ;; `global-completion-preview-mode'; on the 30.1 floor (no globalized
+  ;; variant) fall back to the per-mode `jotain-completion-auto-modes'
+  ;; hooks.
   (require 'completion-preview)
   (if (fboundp 'global-completion-preview-mode)
       (global-completion-preview-mode 1)
@@ -727,14 +693,12 @@ text does not appear where symbol completion is meaningless."
   ;; (after load) rather than `:custom' so touching this deferred built-in
   ;; never forces it to load at startup.
   (setopt completion-preview-idle-delay jotain-completion-auto-delay)
-  ;; `C-i' is the TAB event, and the active-mode map ships it bound to
-  ;; `completion-preview-insert'.  With the strict "TAB indents only" opt-in
-  ;; we drop it so TAB falls through to `indent-for-tab-command' while a
-  ;; preview shows; by default we keep it (rebinding explicitly so the
-  ;; behaviour does not silently depend on the shipped default), so TAB
-  ;; accepts the ghost text when no popup is open yet.  A visible popup wins
-  ;; regardless: corfu installs `corfu-map' via `overriding-terminal-local-map'
-  ;; and its own TAB → `corfu-insert' takes precedence over this minor-mode map.
+  ;; `C-i' is the TAB event; the active-mode map ships it bound to
+  ;; `completion-preview-insert'.  Strict mode drops it so TAB falls
+  ;; through to `indent-for-tab-command'; by default we rebind it
+  ;; explicitly so the behaviour does not silently depend on the shipped
+  ;; default.  A visible popup wins regardless: corfu-map rides
+  ;; `overriding-terminal-local-map' and its TAB takes precedence.
   (if jotain-completion-free-tab
       (keymap-unset completion-preview-active-mode-map "C-i" t)
     (keymap-set completion-preview-active-mode-map "C-i"

@@ -91,10 +91,9 @@
   (push '(ns-appearance . dark) default-frame-alist))
 
 ;; Don't let Emacs resize the frame when internal elements (menu/tool
-;; bar, font, fringes) change during startup. Each implied resize is a
-;; round-trip to the window system; suppressing them removes a chunk of
-;; first-frame latency. Safe because the chrome above is already off
-;; before the first frame, so there is nothing to resize around.
+;; bar, font, fringes) change during startup: each implied resize is a
+;; round-trip to the window system. Safe because the chrome above is
+;; already off, so there is nothing to resize around.
 (setq frame-inhibit-implied-resize t)
 
 (setq inhibit-startup-screen t
@@ -110,7 +109,7 @@
 ;; smoother redisplay, especially on systems with many installed fonts.
 (setq inhibit-compacting-font-caches t)
 
-;; macOS: thinner font smoothing matches the system rendering on Retina.
+;; Thinner font smoothing matches the system rendering on Retina.
 (defvar ns-use-thin-smoothing nil)
 (when (eq system-type 'darwin)
   (setq ns-use-thin-smoothing t))

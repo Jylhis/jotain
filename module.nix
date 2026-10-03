@@ -210,7 +210,6 @@ let
   };
 in
 {
-  # Back-compat aliases.
   imports = [
     # services.jotain.openrouter.enable was the old spelling of the eca
     # OpenRouter toggle. Redirect it (with a deprecation warning).
@@ -522,29 +521,14 @@ in
       lib.hiPrio clientDesktopItem
     );
 
-    # Install the Jotain Emacs configuration into ~/.config/emacs so the
-    # daemon picks up early-init.el, init.el, the lisp/ modules, and the
-    # tempel snippet templates (lisp/init-snippets.el resolves
-    # `tempel-path' against user-emacs-directory). lisp/ and the two
-    # entry files come from compiledConfig, so the daemon loads .elc
-    # (with the .el kept alongside); the .elc entries for early-init and
-    # init are separate because repointing only "emacs/lisp" would leave
-    # the entry files interpreted.
-    #
-    # The .el entry files must come from compiledConfig too, not from
-    # ./early-init.el and ./init.el: those are *different* store paths,
-    # and a native-compiled .eln is named after a hash of its source
-    # path. Serving the sources from anywhere other than where the AOT
-    # step compiled them would give a permanent .eln miss. In practice
-    # this matters for init.el; early-init.el's AOT .eln is structurally
-    # unreachable regardless — its eln lookup happens in Fload *before*
-    # early-init.el runs, i.e. before the code that adds JOTAIN_ELN_PATH
-    # to native-comp-eln-load-path has executed, so early-init always
-    # loads its .elc (a known Emacs limitation, same reason its JIT eln
-    # in var/eln-cache never loads either). Serving it from
-    # compiledConfig is still right: one source of truth, and find-file
-    # agreement with the .elc next to it. (lisp/ was already correct —
-    # it is a single symlink to ${compiledConfig}/lisp.)
+    # Install the Jotain config into ~/.config/emacs (lisp/init-snippets.el
+    # resolves `tempel-path' against user-emacs-directory, hence templates/).
+    # Entry files and lisp/ all come from compiledConfig: a native-compiled
+    # .eln is named after a hash of its source path, so serving the sources
+    # from any other store path (e.g. ./init.el) would give a permanent .eln
+    # miss. early-init's AOT .eln is unreachable regardless — its eln lookup
+    # runs before early-init.el itself extends native-comp-eln-load-path —
+    # so it always loads .elc.
     xdg.configFile = {
       "emacs/early-init.el".source = "${compiledConfig}/early-init.el";
       "emacs/early-init.elc".source = "${compiledConfig}/early-init.elc";

@@ -44,9 +44,6 @@
 ;; down on a flaky network. Refreshes stay package.el's own job:
 ;; `package-install' downloads only when the on-disk cache is empty, and
 ;; `M-x package-refresh-contents' / `list-packages' refresh on demand.
-;;
-;; Don't add a launch-time package warm-up: on a Nix deployment nothing
-;; is ever missing, so it would only slow startup for no gain.
 
 (require 'init-core)         ; GC, encoding, var/ paths, sane defaults
 (require 'init-keys)         ; Global keymap and leader-key setup

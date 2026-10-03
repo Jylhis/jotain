@@ -263,17 +263,15 @@ availability on the right display."
 (setopt frame-resize-pixelwise t)
 (setopt window-resize-pixelwise t)
 
-;; From the newcomers-presets theme. `mode-line-compact' `long only
-;; compacts (collapses runs of spaces in) the mode line when it is longer
-;; than the window — mostly inert here since doom-modeline builds its own
-;; format, but harmless and correct for the stock mode line. Prefer the
-;; system's configured font for the default face; Jotain's explicit font
-;; probing (`jotain-ui-apply-font' above) still sets the default face on
-;; each GUI frame, so this only governs the pre-font-hook default.
+;; `mode-line-compact' `long' compacts the mode line only when it is
+;; longer than the window — mostly inert under doom-modeline (it builds
+;; its own format), but correct for the stock mode line.
 (setopt mode-line-compact 'long)
-;; `font-use-system-font' only exists on builds with system-font support
-;; (xsettings); the terminal-only distribution loads this same config, so
-;; guard it or `setopt' errors at startup there.
+;; Prefer the system font for the default face; `jotain-ui-apply-font'
+;; overrides it per GUI frame, so this governs the pre-font-hook default
+;; only. The variable only exists on builds with system-font support
+;; (xsettings), and the terminal-only distribution loads this same
+;; config, so guard it or `setopt' errors at startup there.
 (when (boundp 'font-use-system-font)
   (setopt font-use-system-font t))
 

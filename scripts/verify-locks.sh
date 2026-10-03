@@ -2,20 +2,18 @@
 # Assert flake.lock and devenv.lock agree on every shared input's rev.
 #
 # flake.nix and devenv.yaml both pin nixpkgs, treefmt-nix and
-# emacs-overlay. They must land on the same revs or the dev shell and
-# the built Emacs resolve different sources and miss the binary caches.
-# Dependabot's "nix" ecosystem bumps flake.lock alone and knows nothing
-# about devenv.yaml/devenv.lock, so the two drift apart silently without
-# a gate.
+# emacs-overlay; if they land on different revs the dev shell and the
+# built Emacs resolve different sources and miss the binary caches.
+# Dependabot's "nix" ecosystem bumps flake.lock alone, so the two drift
+# apart silently without this gate.
 #
 # Nodes are resolved through each lock's own root input map rather than
 # by attribute name, because the two files name the same input
 # differently once transitive dependencies collide.
 #
 # Two consumers, one implementation: `just verify` (fast, no nix build)
-# and the `locks-in-sync` flake check in nix/checks.nix (which is what
-# covers pushes to main/next, since nix flake check never reads
-# devenv.lock otherwise).
+# and the `locks-in-sync` flake check (the only flake check that reads
+# devenv.lock, so what covers pushes to main/next).
 #
 # Usage: verify-locks.sh [repo-root]      # default: current directory
 #        SHARED_INPUTS="a b" verify-locks.sh

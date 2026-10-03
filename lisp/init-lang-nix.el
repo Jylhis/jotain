@@ -79,7 +79,7 @@ new head onto the `nix' entry never mutates the shared default."
 ;;; nixfmt (configured in init-prog). A blank-line indent rule fills the
 ;;; gap where tree-sitter leaves an empty line at column 0.
 (use-package nix-ts-mode
-  :ensure nil ; Provided by Nix
+  :ensure nil
   :mode "\\.nix\\'"
   :hook (nix-ts-mode . jotain-nix-ts--install-blank-line-rule))
 

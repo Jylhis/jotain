@@ -46,7 +46,7 @@
 ;;; Everything degrades to a clean error when the `devenv` binary is
 ;;; not on PATH.
 (use-package devenv
-  :ensure nil ; In-repo library (lisp/devenv.el)
+  :ensure nil
   :defer t
   :commands (devenv-task-run devenv-script-run devenv-test devenv-build
              devenv-up devenv-down devenv-processes devenv-processes-logs

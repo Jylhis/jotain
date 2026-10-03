@@ -66,9 +66,9 @@
     (toml        toml-ts-mode        conf-toml-mode)
     (yaml        yaml-ts-mode        yaml-mode)
     ;; Languages with a dedicated `init-lang-*' file already route
-    ;; themselves via `:mode'; listed here belt-and-suspenders so any
-    ;; stray classic-mode path (a package autoload, a stale
-    ;; `package-quickstart' entry) still lands in the tree-sitter mode.
+    ;; themselves via `:mode'; listed here so any stray classic-mode path
+    ;; (a package autoload, a stale `package-quickstart' entry) still
+    ;; lands in the tree-sitter mode.
     (python      python-ts-mode      python-mode)
     (rust        rust-ts-mode        rust-mode)
     (css         css-ts-mode         css-mode scss-mode)
@@ -171,7 +171,7 @@ Skips modes listed in `jotain-prog-warn-non-ts-exclude'."
 ;;; transpose siblings). Heavy enough to be opt-in per buffer via
 ;;; M-x combobulate-mode or .dir-locals.el. Provided by Nix.
 (use-package combobulate
-  :ensure nil ; Provided by Nix
+  :ensure nil
   :defer t
   :commands combobulate-mode
   :custom (combobulate-key-prefix "C-c o")
@@ -279,8 +279,6 @@ elisp buffer), and already-managed buffers."
                   ((and (fboundp 'devenv-env-loading-p)
                         (devenv-env-loading-p))
                    (eglot-ensure))
-                  ;; Otherwise only start when the guessed server is actually
-                  ;; on the (project) PATH.
                   ((when-let* ((prog (jotain-prog--eglot-guess-program)))
                      (executable-find prog)) ; uses buffer-local exec-path
                    (eglot-ensure)))))))))))
@@ -385,7 +383,6 @@ shell.  A project with neither still gets `robot-mode' plus the cape capfs."
   (when (boundp 'eglot-code-action-indications)
     (setopt eglot-code-action-indications nil))
 
-  ;; Inlay hints, opt-in per major mode. Add to this list as you grow.
   (defun jotain-prog--maybe-enable-inlay-hints ()
     "Enable inlay hints in the major modes that opt in to them."
     (when (apply #'derived-mode-p
@@ -401,8 +398,6 @@ shell.  A project with neither still gets `robot-mode' plus the cape capfs."
       (eglot-inlay-hints-mode 1)))
   (add-hook 'eglot-managed-mode-hook #'jotain-prog--maybe-enable-inlay-hints)
 
-  ;; Server overrides — most languages don't need an entry, eglot has
-  ;; sensible defaults. Add only when you want a specific server name.
   (add-to-list 'eglot-server-programs
                '((go-ts-mode go-mod-ts-mode go-work-ts-mode) . ("gopls")))
   ;; Dockerfile buffers are remapped to `dockerfile-ts-mode' (see
@@ -422,9 +417,8 @@ shell.  A project with neither still gets `robot-mode' plus the cape capfs."
   ;; default HTML entry (keyed on those classic modes) never matches it, and
   ;; HTML buffers get no language server.  Key the tree-sitter modes on the
   ;; same server, using `eglot-alternatives' exactly as eglot's default does
-  ;; so either vscode's server or the older `html-languageserver' resolves.
-  ;; The binary comes from the project/host PATH, like the other servers; a
-  ;; project without it just falls back to the cape capfs.
+  ;; so either vscode's server or the older `html-languageserver' resolves;
+  ;; a project without the binary just falls back to the cape capfs.
   (add-to-list 'eglot-server-programs
                (cons '(mhtml-ts-mode html-ts-mode)
                      (eglot-alternatives
@@ -445,31 +439,22 @@ shell.  A project with neither still gets `robot-mode' plus the cape capfs."
   (add-to-list 'eglot-server-programs
                '((neocaml-mode neocaml-interface-mode) . ("ocamllsp")))
 
-  ;; Per-language workspace settings live in each init-lang-* file, which
-  ;; calls `jotain-eglot-set-workspace-config' (defined above) to merge its
-  ;; section into the global default.
-
   ;; rassumfrassum (`rass`) multiplexes several real LSP servers behind a
   ;; single stdio connection so eglot effectively drives multiple servers
   ;; per buffer.  Registered as function-valued contacts so discovery runs
   ;; at eglot connect time in the buffer's (project/devenv) environment —
   ;; not once at startup against Jotain's own shell.  Each resolver falls
-  ;; back to a plain single server when `rass' or a companion is absent, so
-  ;; a project that lacks them still gets LSP.
+  ;; back to a plain single server when `rass' or a companion is absent.
   (add-to-list 'eglot-server-programs
                (cons '(tsx-ts-mode typescript-ts-mode typescript-mode)
                      #'jotain-prog--ts-server))
   (add-to-list 'eglot-server-programs
                (cons '(python-mode python-ts-mode)
                      #'jotain-prog--python-server))
-  ;; LikeC4 architecture models (init-lang-devops).  Function-valued so it
-  ;; picks the standalone `likec4-lsp' (bundled on the wrapper PATH) or the
-  ;; main `likec4' CLI, whichever the buffer's env provides.
+  ;; LikeC4 architecture models (init-lang-devops).
   (add-to-list 'eglot-server-programs
                (cons '(likec4-mode) #'jotain-prog--likec4-server))
-  ;; Robot Framework (init-lang-devops).  Function-valued so it picks
-  ;; robotcode or the robotframework_ls entry point, whichever the buffer's
-  ;; project env provides on PATH.
+  ;; Robot Framework (init-lang-devops).
   (add-to-list 'eglot-server-programs
                (cons '(robot-mode) #'jotain-prog--robot-server)))
 
@@ -488,7 +473,7 @@ shell.  A project with neither still gets `robot-mode' plus the cape capfs."
 ;;; Provided by Nix (not on MELPA); `:if' skips the block cleanly in the
 ;;; MELPA-fallback launch where the library is absent.
 (use-package eglot-booster
-  :ensure nil ; Provided by Nix
+  :ensure nil
   :if (locate-library "eglot-booster")
   :after eglot
   :custom (eglot-booster-no-remote-boost t)
@@ -524,25 +509,19 @@ shell.  A project with neither still gets `robot-mode' plus the cape capfs."
   (dape-buffer-window-arrangement 'right)
   (dape-default-breakpoints-file (jotain-var-file "dape-breakpoints"))
   :config
-  ;; Restore the previous session's breakpoints on first use; persist
-  ;; them at exit. Both run in :config, so a session that never loads
-  ;; dape never touches the breakpoints file.
+  ;; Both run in :config, so a session that never loads dape never
+  ;; touches the breakpoints file.
   (dape-breakpoint-load)
   (add-hook 'kill-emacs-hook #'dape-breakpoint-save)
 
-  ;; Cargo-shaped Rust launch config.  dape's shipped `lldb-dap' config
-  ;; defaults to `:program "a.out"' / `:cwd "."', unusable on a cargo
-  ;; layout without hand-editing every time; this one compiles with cargo
-  ;; and prompts for the built binary under target/debug/.  `lldb-dap'
-  ;; comes from `lldb' on the project/host PATH — same convention as
-  ;; `dlv' for Go, not bundled on the wrapper.  The `:program' prompt is
-  ;; guarded on `enable-recursive-minibuffers': dape's `dape--minibuffer-hint'
-  ;; evaluates every non-ignored property with that variable bound to nil,
-  ;; so an unconditional `read-file-name' there signals "Command attempted
-  ;; to use minibuffer while in minibuffer" and the hint row shows the error
-  ;; instead of a value.  At real launch the variable is t, so the prompt
-  ;; still runs.  The lambda is comma-unquoted so it byte-compiles to a
-  ;; closure rather than staying a quoted literal list.
+  ;; Cargo-shaped Rust launch config — dape's shipped `lldb-dap' defaults
+  ;; (`:program "a.out"') are unusable on a cargo layout; this one compiles
+  ;; with cargo and prompts for the binary under target/debug/.  The
+  ;; `:program' prompt is guarded on `enable-recursive-minibuffers':
+  ;; `dape--minibuffer-hint' evaluates non-ignored properties with it bound
+  ;; to nil, so an unconditional `read-file-name' there errors instead of
+  ;; showing a hint.  The lambda is comma-unquoted so it byte-compiles to a
+  ;; closure, not a quoted literal list.
   (add-to-list 'dape-configs
                `(cargo-lldb
                  modes (rust-ts-mode rust-mode)
@@ -561,21 +540,11 @@ shell.  A project with neither still gets `robot-mode' plus the cape capfs."
 
 ;;;; SonarLint (SonarCloud connected mode)
 
-;; SonarLint provides cross-language code-quality and security diagnostics
-;; via the sonarlint-ls language server (nixpkgs).  It runs as a secondary
-;; eglot connection alongside the primary language server for the buffer.
-;;
-;; SonarCloud connected mode is configured per-project via .dir-locals.el:
-;;
-;;   ((nil . ((eglot-workspace-configuration
-;;             . (:sonarlint
-;;                (:connectedMode
-;;                 (:connections
-;;                  (:sonarcloud
-;;                   [(:organizationKey "myorg" :token "...")])
-;;                  :project
-;;                  (:connectionId "myorg" :projectKey "myproject"))
-;;                 :disableTelemetry t))))))
+;; SonarLint (sonarlint-ls, nixpkgs) adds cross-language code-quality and
+;; security diagnostics as a secondary eglot connection alongside the
+;; primary server.  SonarCloud connected mode is opt-in per project via a
+;; .dir-locals.el `eglot-workspace-configuration' entry (:sonarlint
+;; :connectedMode — :sonarcloud org key + token, connectionId/projectKey).
 
 (defun jotain-sonarlint ()
   "Start SonarLint analysis in the current project.
@@ -600,8 +569,7 @@ connection alongside any existing language server."
   :custom
   (flymake-fringe-indicator-position 'left-fringe)
   (flymake-suppress-zero-counters t)
-  ;; `short' (Flymake 1.3.6+): only the most severe diagnostic per line at
-  ;; end-of-line. Keeps busy lines legible vs. `t', which stacks them all.
+  ;; `short' needs Flymake 1.3.6+.
   (flymake-show-diagnostics-at-end-of-line 'short)
   (flymake-margin-indicators-string
    '((error   "!" compilation-error)
@@ -679,7 +647,7 @@ connection alongside any existing language server."
 ;;; Needs the `tagref' CLI on PATH (dev shell / Home Manager wrapper).
 ;;; Provided by Nix (not on MELPA).
 (use-package tagref
-  :ensure nil ; Provided by Nix
+  :ensure nil
   :commands (tagref-mode)
   :hook (prog-mode . jotain-tagref--maybe-enable)
   :init
@@ -740,8 +708,7 @@ hard-error on every prog-mode buffer)."
   (add-to-list 'apheleia-mode-alist '(zig-ts-mode . zig-fmt))
   ;; Apheleia ships gofmt/goimports/gofumpt formatters but maps Go
   ;; modes to plain gofmt; prepend a goimports mapping (gofmt plus
-  ;; import management) to shadow it.  The binary comes from the
-  ;; project/host PATH, like gopls and dlv.
+  ;; import management) to shadow it.
   (add-to-list 'apheleia-mode-alist '(go-ts-mode . goimports))
   ;; buildifier reads from stdin; `-path' lets it infer the Starlark
   ;; dialect (BUILD vs WORKSPACE vs .bzl).  Mapping the `bazel-mode'
@@ -758,23 +725,20 @@ hard-error on every prog-mode buffer)."
   (add-to-list 'apheleia-formatters '(nixfmt . ("nixfmt" "-")))
   ;; qmlformat edits files in place (`-i') rather than reading stdin, so
   ;; hand it a temp copy via apheleia's `inplace' and read the result back.
-  ;; Binary comes from the project/host PATH (bundled on the wrapper).
+  ;; Bundled on the wrapper PATH.
   (add-to-list 'apheleia-formatters '(qmlformat . ("qmlformat" "-i" inplace)))
   (add-to-list 'apheleia-mode-alist '(qml-ts-mode . qmlformat))
   ;; C/C++/CUDA format-on-save via clang-format for the tree-sitter modes
   ;; (apheleia's built-ins key clang-format on the classic cc-mode modes).
-  ;; Covers `.cu' too, since CUDA routes to c++-ts-mode.  Binary from the
-  ;; project/host PATH, like the other formatters.
+  ;; Covers `.cu' too, since CUDA routes to c++-ts-mode.
   (add-to-list 'apheleia-mode-alist '(c-ts-mode . clang-format))
   (add-to-list 'apheleia-mode-alist '(c++-ts-mode . clang-format))
   ;; OCaml via neocaml (init-lang-systems): format both modes with
   ;; ocamlformat (apheleia's built-in formatter keys on tuareg/caml modes).
   (add-to-list 'apheleia-mode-alist '(neocaml-mode . ocamlformat))
   (add-to-list 'apheleia-mode-alist '(neocaml-interface-mode . ocamlformat))
-  ;; Robot Framework (init-lang-devops): robotidy (now folded into Robocop)
-  ;; edits files in place rather than reading stdin, so hand it a temp copy
-  ;; via apheleia's `inplace' and read the result back — exactly like
-  ;; qmlformat above.  Binary comes from the project/host PATH.
+  ;; Robot Framework (init-lang-devops): robotidy (part of Robocop) edits
+  ;; in place rather than stdin — same `inplace' temp-copy trick as qmlformat.
   (add-to-list 'apheleia-formatters '(robotidy . ("robotidy" inplace)))
   (add-to-list 'apheleia-mode-alist '(robot-mode . robotidy))
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
