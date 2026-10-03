@@ -1,6 +1,5 @@
 # default.nix — Jotain non-flake entry point via flake-compat.
 #
-# Evaluates flake.nix using flake-compat (pinned in flake.lock).
 # Packages for the current system are promoted to the top level, so:
 #
 #   nix-build                              # full distribution (jotainEmacsPackages)

@@ -87,7 +87,7 @@ projects sharing a basename across different roots stay distinct."
 ;;; performance advice), and store paths are kept out of the saved
 ;;; project list.
 (use-package project-nix-store
-  :ensure nil ; Provided by Nix
+  :ensure nil
   :after project
   :init
   ;; `add-hook' without APPEND prepends, so this runs before the default

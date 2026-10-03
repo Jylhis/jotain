@@ -158,10 +158,8 @@ sourcing is unavailable or fails."
 (defconst devenv-env-never-applied-variables
   '(;; nix's `ignoreVars' (src/nix/develop.cc): dropped from every
     ;; `nix develop' shell, so devenv's own projection never has them.
-    ;; The TMP* family and NIX_BUILD_TOP are actively harmful — they
-    ;; name the build sandbox's /build, which does not exist on the
-    ;; host, and rust-analyzer's proc-macro server dies creating its
-    ;; temp dir under it.
+    ;; The TMP* family and NIX_BUILD_TOP name the build sandbox's
+    ;; /build, which does not exist on the host.
     "BASHOPTS" "HOME" "NIX_BUILD_TOP" "NIX_ENFORCE_PURITY" "NIX_LOG_FD"
     "NIX_REMOTE" "PPID" "SHELL" "SHELLOPTS" "SSL_CERT_FILE" "TEMP"
     "TEMPDIR" "TERM" "TMP" "TMPDIR" "TZ" "UID"
@@ -616,10 +614,8 @@ to preserve that version's behaviour)."
 (defun devenv--trust-state (root)
   "Return ROOT's auto-activation trust state (cached).
 See `devenv--activation-state' for the possible values."
-  ;; Trust only changes via `devenv-allow'/`devenv-revoke', which both
-  ;; invalidate this cache explicitly — cache it for the long TTL so
-  ;; the synchronous `hook-should-activate' subprocess is not re-paid
-  ;; every `devenv-cache-ttl' seconds on the find-file path.
+  ;; Long TTL so the synchronous `hook-should-activate' subprocess is
+  ;; not re-paid on the find-file path (see `devenv-env--cache-ttl').
   (let ((devenv-cache-ttl devenv-env--cache-ttl))
     (devenv--cached
      root 'trust
@@ -1843,16 +1839,10 @@ neither exists does it delegate to the previously registered contact;
 INTERACTIVE is passed through when that fallback is itself a contact
 function, as produced by `eglot-alternatives'."
   (cond
-   ;; devenv.nix / devenv.local.nix: the project's own `devenv lsp' (a
-   ;; nixd preloaded with the project's devenv options).
    ((and (devenv--devenv-nix-file-p (buffer-file-name))
          (executable-find devenv-executable))
     (list devenv-executable "lsp"))
-   ;; Any other Nix buffer: the project's Nix LSP if its env provides one,
-   ;; else the one shipped with this editor.
    ((when-let* ((prog (devenv--nix-lsp-program))) (list prog)))
-   ;; Neither: defer to whatever eglot had registered (may report that no
-   ;; server is available).
    (t
     (let ((fallback devenv--eglot-fallback-contact))
       (if (functionp fallback)

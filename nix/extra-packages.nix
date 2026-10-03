@@ -63,11 +63,11 @@ in
   # libghostty-vt native module with zig, and the module's zig-deps
   # fixed-output fetch is currently unbuildable on GitHub CI runners —
   # zig's HTTP/git fetcher fails deterministically against github.com
-  # (HttpConnectionClosing / WriteFailed, three runs on 2026-07-21).
-  # Rebuild the package Elisp-only from the same pinned MELPA source so
-  # the distribution stays buildable; `ghostel-module-auto-install
-  # 'download` (lisp/init-terminal.el) restores the module at runtime.
-  # Revert to the plain epkgs.ghostel once the upstream fetch works.
+  # (HttpConnectionClosing / WriteFailed). Rebuild the package Elisp-only
+  # from the same pinned MELPA source so the distribution stays buildable;
+  # `ghostel-module-auto-install 'download` (lisp/init-terminal.el)
+  # restores the module at runtime. Revert to the plain epkgs.ghostel
+  # once the upstream fetch works.
   ghostel = efinal.trivialBuild {
     pname = "ghostel";
     version = eprev.ghostel.version or "0";

@@ -12,11 +12,8 @@
 
 ;;;; Persistent-state directory
 ;;
-;; Jotain used to pull in `no-littering' to shepherd 200-odd variables
-;; into `var/'. The actual set of paths *this* config writes is small
-;; and stable, so we theme the relevant vars by hand from each module.
-;; `jotain-var-file' is the single helper they share (used across
-;; init-core, init-vc, init-project, init-systems, init-editing).
+;; No `no-littering': the set of paths this config writes is small,
+;; so each module themes its vars by hand via `jotain-var-file'.
 
 (defconst jotain-var-dir
   (expand-file-name "var/" user-emacs-directory)
@@ -80,7 +77,6 @@ immediately for writes."
 
 ;;; @doc Sane defaults for the bare editor — fill column, dialog/box use,
 ;;; lockfiles, recursive minibuffers, case-insensitive completion.
-;;; Settings here are the ones that don't deserve their own module.
 (use-package emacs
   :ensure nil
   :custom
@@ -127,9 +123,7 @@ immediately for writes."
   (column-number-mode 1)
   (minibuffer-depth-indicate-mode 1))
 
-;;; @doc Persist point per file across sessions. Built-in. The advice
-;;; below recenters the buffer after restore so you don't reopen on
-;;; the bottom line.
+;;; @doc Persist point per file across sessions. Built-in.
 (use-package saveplace
   :ensure nil
   :custom (save-place-file (jotain-var-file "save-place.el"))
@@ -277,7 +271,6 @@ immediately for writes."
   (when (boundp 'world-clock-sort-order)
     (setopt world-clock-sort-order "%FT%T")))
 
-;; Standalone command for viewing logs that contain raw ANSI escapes.
 (defun jotain-display-ansi-colors ()
   "Render ANSI escape sequences in the current buffer."
   (interactive)
@@ -308,10 +301,9 @@ freezes — start, reproduce, stop."
 
 ;;;; macOS — minimal modifier-key fix
 ;;
-;; Reachable Meta is non-negotiable. The Cocoa default of Option-as-Meta
-;; collides with typing curly braces and special characters on European
-;; keyboard layouts, so we put Meta on Command and leave Right-Option
-;; alone for special character entry.
+;; Option-as-Meta collides with typing curly braces and special
+;; characters on European keyboard layouts, so Meta goes on Command
+;; and Right-Option stays free for special character entry.
 (when (eq system-type 'darwin)
   (setopt mac-command-modifier      'meta
           mac-option-modifier       'super
@@ -327,20 +319,16 @@ freezes — start, reproduce, stop."
   :if (or (daemonp)
           (memq window-system '(mac ns x pgtk)))
   :functions (exec-path-from-shell-initialize)
-  ;; Import the environment on `after-init-hook' rather than eagerly:
-  ;; `exec-path-from-shell-initialize' forks the login shell, the single
-  ;; largest cost on the critical init path. Deferring it lets the first
-  ;; frame draw before the fork; PATH/MANPATH resolve at `after-init',
-  ;; before the command loop hands control to the user. The
-  ;; non-interactive-shell arg below keeps even that fork cheap.
+  ;; `exec-path-from-shell-initialize' forks the login shell — the
+  ;; single largest cost on the init path — so defer it to
+  ;; `after-init-hook': the first frame draws before the fork, and
+  ;; PATH/MANPATH resolve before the command loop gets control. The
+  ;; nil arguments below skip the shell's -i round-trip.
   ;;
-  ;; Because this now runs *after* every module has loaded, any load-time
-  ;; `executable-find' guard in a later module sees the pre-import PATH.
-  ;; That is safe here only because the tools so probed come from the Nix
-  ;; wrapper PATH, not the login shell: zoxide (init-completion.el) and,
-  ;; on Darwin, gls (init-navigation.el) are both in nix/runtime-deps.nix.
-  ;; Keep it that way — a login-shell-only tool probed at load time would
-  ;; silently fail on a GUI-launcher launch (no inherited PATH yet).
+  ;; Load-time `executable-find' guards in other modules see the
+  ;; pre-import PATH. Safe only because the tools so probed (zoxide,
+  ;; Darwin's gls) come from the Nix wrapper PATH
+  ;; (nix/runtime-deps.nix), not the login shell — keep it that way.
   :hook (after-init . exec-path-from-shell-initialize)
   :custom
   (exec-path-from-shell-arguments nil)) ; faster: skip -i

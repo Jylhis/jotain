@@ -17,7 +17,7 @@
 ;;; both configured in init-prog.  The Qt tooling (qmlls/qmlformat) rides
 ;;; the distribution wrapper PATH (nix/runtime-deps.nix).
 (use-package qml-ts-mode
-  :ensure nil ; Provided by Nix
+  :ensure nil
   :mode "\\.qml\\'")
 
 (provide 'init-lang-qml)

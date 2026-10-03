@@ -81,7 +81,7 @@ Interactively, echo the path and push it onto the kill ring."
 ;;; LSP rename can carry. Provided by Nix (manzaltu/claude-code-ide.el is
 ;;; not on MELPA).
 (use-package claude-code-ide
-  :ensure nil ; Provided by Nix
+  :ensure nil
   :defer t
   :bind ("C-c q" . claude-code-ide-menu)
   :functions (claude-code-ide-emacs-tools-setup claude-code-ide-make-tool)

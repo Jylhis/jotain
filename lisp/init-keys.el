@@ -41,9 +41,7 @@ positions, and focus are preserved during the swap."
 
 ;; DWIM C-g: the default `keyboard-quit' doesn't close a minibuffer that
 ;; isn't the selected window, which is a frequent papercut once you
-;; enable `enable-recursive-minibuffers'. This version aborts whatever
-;; the obvious target is — region, completions buffer, or minibuffer —
-;; before falling back to plain `keyboard-quit'.
+;; enable `enable-recursive-minibuffers'.
 (defun jotain-keyboard-quit-dwim ()
   "Do-What-I-Mean `keyboard-quit'.
 Minibuffer open (even when point is in another window) → abort
@@ -147,15 +145,12 @@ Region active → deactivate it.  Otherwise call regular
 
 ;;;; Repeat maps — Emacs-native "one-shot modifier" pattern
 ;;
-;; `repeat-mode' (enabled in init-core.el) lets a tagged command be
-;; repeated with single keystrokes immediately after its first
-;; invocation: type the chord once, then keep typing the trailing
-;; key.  Many built-in commands ship their own repeat-maps already
-;; (`other-window', `next-buffer', `undo', `next-error', and window
-;; resizing via `resize-window-repeat-map', …) — so `M-o o o',
-;; `C-/ /', and `C-x ^ ^ v' all Just Work.  The map below fills the
-;; remaining gap for commands that don't have one out of the box.
-;; See the "Ergonomics" chapter of the Info manual for background.
+;; `repeat-mode' (enabled in init-core.el) repeats a tagged command's
+;; trailing key after its first invocation; many built-ins
+;; (`other-window', `next-buffer', `undo', window resizing, …) already
+;; ship their own repeat-maps — the map below fills the remaining gap
+;; for commands that don't.  See the "Ergonomics" chapter of the Info
+;; manual for background.
 
 ;; Emacs 31+: transpose/rotate/flip the whole window tree without
 ;; manually deleting and re-splitting. Bound under the unused `C-x W'

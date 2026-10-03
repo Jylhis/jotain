@@ -24,27 +24,17 @@ check:
     nix flake check
 
 # Run the ERT tests under test/ via the flake check (the dev shell has
-# no emacs; the check builds one). Direct equivalent once Emacs is back
-# in the shell:
-#   emacs --batch -L lisp -L test \
-#       --eval '(dolist (f (directory-files "test" t "\\.el$")) (load f nil t))' \
-#       -l ert -f ert-run-tests-batch-and-exit
+# no emacs; the check builds one).
 [group('check')]
 test:
     nix build .#checks.{{system}}.elisp-test --no-link --print-build-logs
 
 
-# Benchmark startup against the Nix-built Emacs. The dev shell has no
-# emacs, so — like run-built — this builds one via nix, then runs the
-# bench/ harness (which resets user-emacs-directory back to the repo
-# root, so it measures the real INTERPRETED startup: the honest
-# run-built baseline). Writes a report to OUTPUT and prints it. The
-# harness self-terminates via kill-emacs on emacs-startup-hook.
-#
-# Needs a display on x86_64: like run-built it launches the pgtk GUI
-# build, which aborts with no Wayland/X display (the aarch64 branch uses
-# the -nox build). For a headless run, prefix with `xvfb-run` (in the dev
-# shell on Linux, as `just screenshot` does) — pgtk runs under X via GDK.
+# Benchmark startup against the Nix-built Emacs: builds one via nix (the
+# dev shell has no emacs), then runs the bench/ harness, which measures
+# the real INTERPRETED startup (the honest run-built baseline). Needs a
+# display on x86_64 (pgtk aborts headless; the aarch64 branch uses the
+# -nox build) — prefix `xvfb-run` for a headless run.
 [group('check')]
 bench-built output="var/bench/startup.txt":
     #!/usr/bin/env bash
@@ -95,12 +85,11 @@ build-git:
 build-igc:
     nix-build --arg variant '"igc"' --argstr system {{system}} emacs.nix
 
-# Build IGC with ccache. On Darwin, nix-community.cachix.org has no
-# prebuilt igc, so plain build-igc is already a from-source build there
-# (plan.md §3) — ccache makes repeat local rebuilds cheaper. Needs a
-# ccache sandbox exception set up first; see the useCcache doc comment
-# in emacs.nix. No-op improvement elsewhere: everywhere else, igc is a
-# cache hit and this just adds ccache overhead for nothing.
+# Build IGC with ccache. Only useful on Darwin, where nix-community has
+# no prebuilt igc (plain build-igc is already from-source there) —
+# ccache makes repeat local rebuilds cheaper. Needs the ccache sandbox
+# exception; see the useCcache comment in emacs.nix. Elsewhere igc is a
+# cache hit and this adds ccache overhead for nothing.
 [group('build')]
 build-igc-ccache:
     nix-build --arg variant '"igc"' --arg useCcache true --argstr system {{system}} emacs.nix
@@ -135,17 +124,13 @@ run-built *ARGS:
     echo "Launching Emacs from result/bin/emacs..."
     ./result/bin/emacs --init-directory="{{config_dir}}" {{ARGS}}
 
-# Launch the FRESH instance from the AOT-compiled config (.elc + store
-# .eln) instead of interpreted .el — the fastest cold start. Assembles a
-# writable init-directory under var/fast-home whose entry files and lisp/
-# symlink into the .#config-compiled store derivation: realpath resolves
-# each symlink to the store path the .eln was hashed against, so the
-# store .eln loads (same mechanism as the HM daemon). var/, elpa/ and
-# templates/ symlink back to the repo so state and installed packages
-# stay warm and writable. early-init still loads from .elc (its .eln is
-# structurally unreachable); the win is init.el + every lisp/init-*.el
-# loading as native code. NOTE: reflects the LAST build — after editing
-# config, re-run to recompile; use plain run-built while actively editing.
+# Launch from the AOT-compiled config (.elc + store .eln) — the fastest
+# cold start. var/fast-home symlinks entry files and lisp/ into the
+# .#config-compiled store derivation: realpath resolves each symlink to
+# the store path the .eln was hashed against, so the store .eln loads
+# (same mechanism as the HM daemon). var/, elpa/ and templates/ symlink
+# back to the repo so state stays warm. Reflects the LAST build —
+# re-run to recompile; use plain run-built while actively editing.
 [group('build')]
 run-built-fast *ARGS:
     #!/usr/bin/env bash
@@ -257,9 +242,8 @@ build-api-doc:
     @echo "Load log      → result-api-doc/generate.log (check the skipped list)"
 
 # Regenerate docs/configuration/package-reference.mdx from the
-# `;;; @doc` markers in lisp/init-*.el. Run after editing any
-# `;;; @doc` block; CI's `packages-doc-in-sync` check will fail
-# otherwise.
+# `;;; @doc` markers in lisp/init-*.el. Required after editing any
+# `;;; @doc` block — CI's `packages-doc-in-sync` check fails otherwise.
 [group('build')]
 docs-refresh-packages: build-packages-doc
     cp result-packages-doc/package-reference.mdx \
@@ -284,8 +268,8 @@ lang-eval-live:
     @echo "Live LSP probe → result-lang-live/live.md (+ live.json)"
 
 # Regenerate docs/reference/language-support.mdx from the language registry
-# (etc/lang-eval/jotain-lang-registry.el). Run after editing the registry;
-# CI's `lang-eval-doc-in-sync` check will fail otherwise.
+# (etc/lang-eval/jotain-lang-registry.el). Required after editing the
+# registry — CI's `lang-eval-doc-in-sync` check fails otherwise.
 [group('build')]
 docs-refresh-lang-matrix:
     #!/usr/bin/env bash
@@ -357,16 +341,14 @@ update-pins *PINS:
 [group('pins')]
 sync-devenv scope="shared":
     #!/usr/bin/env bash
-    # Deliberately does NOT run `nix flake update`, so it is safe on a
-    # Dependabot PR — those bump flake.lock alone, and
-    # .github/workflows/sync-devenv.yml runs exactly this recipe to make
-    # such a PR self-consistent.
+    # Never `nix flake update` here: it would throw away the revs
+    # Dependabot just pinned — sync-devenv.yml relies on this being
+    # safe to run on a Dependabot PR.
     #
-    # scope=shared (default) re-locks only the shared inputs. scope=all
-    # re-resolves every devenv input including the unpinned `devenv`
-    # module input itself, which is what `just update` has always done —
-    # fine with a human reading the diff, but unreviewed drift in an
-    # automated commit.
+    # scope=shared re-locks only the shared inputs; scope=all also
+    # re-resolves the unpinned `devenv` module input (what `just update`
+    # does — fine with a human reading the diff, but unreviewed drift
+    # in an automated commit).
     set -euo pipefail
     case "{{ scope }}" in
         shared | all) ;;

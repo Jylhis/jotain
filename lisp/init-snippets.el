@@ -52,14 +52,11 @@
   (("M-+" . tempel-complete)
    ("M-*" . tempel-insert)
    :map tempel-map
-   ;; TAB is deliberately absent here: snippet fields never use it (it
-   ;; indents and drives completion instead).  Upstream `tempel-map' leaves
-   ;; TAB unbound too, so field navigation stays on tempel's own
-   ;; `M-}'/`M-{' (plus `M-RET' to finish and `M-<up>'/`M-<down>'); the two
-   ;; below are added as a mnemonic alias.  Neither collides with corfu's
-   ;; `M-n'/`M-p', which matters because `tempel-map' rides on an overlay
-   ;; `keymap' property and so outranks corfu's minor-mode map while a
-   ;; snippet is live.
+   ;; Upstream `tempel-map' leaves TAB unbound (TAB indents and drives
+   ;; completion, never fields); `C-M-n'/`C-M-p' below are mnemonic aliases
+   ;; for tempel's own `M-}'/`M-{'. Neither collides with corfu's
+   ;; `M-n'/`M-p': `tempel-map' rides on an overlay `keymap' property and
+   ;; so outranks corfu's minor-mode map while a snippet is live.
    ("C-M-n" . tempel-next)
    ("C-M-p" . tempel-previous))
   :init
@@ -106,8 +103,6 @@ and re-arm the merge for a later reconnect."
                       (cons jotain-tempel--eglot-merged
                             (remq #'eglot-completion-at-point
                                   completion-at-point-functions))))
-      ;; Teardown: drop the merged capf (its eglot half now signals) and
-      ;; restore the plain tempel capf; also re-arms the merge for reconnect.
       (when jotain-tempel--eglot-merged
         (setq-local completion-at-point-functions
                     (remq jotain-tempel--eglot-merged

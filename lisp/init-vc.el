@@ -193,7 +193,6 @@ working-tree file no longer exists to open."
   ;; loads, the defcustom exists.
   (setopt magit-repository-directories
           (mapcar (lambda (root) (cons root 2)) jotain-repositories-roots))
-  ;; Show worktrees as a section in magit-status when more than one exists.
   (add-hook 'magit-status-sections-hook 'magit-insert-worktrees t))
 
 ;;; @doc The Jujutsu porcelain — a magit-style interface for jj, sitting
@@ -266,7 +265,6 @@ working-tree file no longer exists to open."
   ((after-init . global-diff-hl-mode)
    (magit-post-refresh . diff-hl-magit-post-refresh))
   :config
-  ;; Live, pre-save diff indicators.
   (diff-hl-flydiff-mode 1))
 
 ;;; @doc Dired integration for diff-hl — shows VC change indicators next

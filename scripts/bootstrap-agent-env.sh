@@ -84,8 +84,6 @@ EOF
 }
 
 if command -v nix >/dev/null 2>&1; then
-    # Already bootstrapped (or a real Nix machine) — only refresh the
-    # source prefetch (cheap no-op when the paths are already valid).
     [ -x "$PROFILE_BIN/nix" ] && persist_path
     echo "bootstrap: nix already present ($(command -v nix))"
     prefetch_flake_sources
@@ -108,7 +106,7 @@ echo "bootstrap: installing distro nix-bin via apt…"
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nix-bin
 
-# The caches this repo builds against (see CLAUDE.md "Nix build layer"):
+# The caches this repo builds against (see AGENTS.md "Nix build layer"):
 # nix-community carries the emacs-overlay variants (emacs-unstable, the
 # distribution default base); jylhis carries the repo's own artifacts.
 echo "bootstrap: writing /etc/nix/nix.conf…"

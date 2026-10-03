@@ -45,14 +45,11 @@
       systems = [
         "x86_64-linux"
         "aarch64-linux"
-        # x86_64-darwin is pinned to nixpkgs-26.05-darwin (see the
-        # nixpkgs-x86_64-darwin input); unstable dropped the platform.
+        # pinned to nixpkgs-26.05-darwin — see the nixpkgs-x86_64-darwin input
         "x86_64-darwin"
         "aarch64-darwin"
       ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
-      # x86_64-darwin uses the 26.05 pin (unstable dropped it); every other
-      # system uses nixpkgs-unstable.
       nixpkgsFor = system: if system == "x86_64-darwin" then inputs."nixpkgs-x86_64-darwin" else nixpkgs;
       pkgsFor =
         system:
