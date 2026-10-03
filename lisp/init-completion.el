@@ -246,10 +246,16 @@ also toggles it per-buffer on demand."
   :custom
   ;; Per-category display rules. Each entry is (CATEGORY MODE...);
   ;; valid modes include `buffer', `grid', `flat', `unobtrusive',
-  ;; `reverse', `vertical' (default). Conflicting modes don't stack.
+  ;; `reverse', `vertical' (default), and `posframe' (a floating child
+  ;; frame, provided by vertico-posframe). Conflicting modes don't
+  ;; stack. The `t' entry is the catch-all: every category without a
+  ;; rule of its own floats in a posframe, so M-x, buffer switching
+  ;; and symbol help get the panel treatment while the entries above
+  ;; keep their displays.
   (vertico-multiform-categories
    '((file   grid)
-     (symbol (vertico-sort-function . vertico-sort-alpha))))
+     (symbol posframe (vertico-sort-function . vertico-sort-alpha))
+     (t      posframe)))
   ;; Per-command overrides — these beat the category rules above.
   (vertico-multiform-commands
    '((consult-line       buffer)
@@ -271,6 +277,36 @@ also toggles it per-buffer on demand."
   :custom
   (vertico-buffer-hide-prompt nil)
   (vertico-buffer-display-action '(display-buffer-reuse-window)))
+
+;;; @doc vertico-posframe renders the vertico candidate list in a
+;;; floating child frame instead of the minibuffer window, giving
+;;; minibuffer completion the same surface treatment as the corfu
+;;; popup. Driven through vertico-multiform (the `t' catch-all in the
+;;; categories above) rather than a global vertico-posframe-mode, per
+;;; upstream: multiform toggles the mode per session, and the entries
+;;; above it keep their own displays (file grid, consult-line and the
+;;; grep family buffer). On a tty (ghostel, nix-on-droid) posframe
+;;; cannot work, so vertico stays in the plain minibuffer. `M-P' in
+;;; the minibuffer toggles the posframe display per session.
+(use-package vertico-posframe
+  :after vertico
+  :custom
+  ;; Over the minibuffer's home ground: the eye already looks to the
+  ;; frame bottom for completion, and prompt, input and candidates
+  ;; travel together inside the child frame.
+  (vertico-posframe-poshandler 'posframe-poshandler-frame-bottom-center)
+  ;; Inner padding so candidate text does not sit against the border.
+  (vertico-posframe-parameters '((left-fringe . 8) (right-fringe . 8)))
+  ;; Terminal fallback: keep vertico in the minibuffer when posframe
+  ;; is unworkable rather than switching to `vertico-buffer-mode',
+  ;; which would take over the whole window for every M-x on a tty.
+  (vertico-posframe-fallback-mode 'ignore)
+  :custom-face
+  ;; Inherit the corfu popup's surfaces so the two floating panels
+  ;; read as one family; posframe reads face attributes at display
+  ;; time, so the jylhis light/dark toggle restyles both together.
+  (vertico-posframe ((t :inherit corfu-default)))
+  (vertico-posframe-border ((t :inherit corfu-border))))
 
 ;;;; Annotations
 
