@@ -28,6 +28,8 @@
 #   nix-build emacs.nix --arg variant '"git"'                      # bleeding-edge master
 #   nix-build emacs.nix --arg variant '"mainline"'                 # nixpkgs default emacs attr
 #   nix-build emacs.nix --arg variant '"igc"'                      # incremental GC branch
+#   nix-build emacs.nix --arg cpuTune '"icelake-client"'           # CPU-tuned perf build
+#                                                                  #   (opt-in; off every binary cache)
 #
 # git/unstable/igc track the revision pinned by the overlay and are
 # binary-cache hits on Linux. Only when pinning a custom commit via
@@ -122,6 +124,18 @@
   # Where ccache keeps its cache (must match the extra-sandbox-paths
   # entry above). Only read when useCcache = true.
   ccacheDir ? "/var/cache/ccache",
+
+  # CPU-tuned perf build (opt-in). `null` (the default) forwards
+  # nothing, so cache parity is untouched. A string (e.g.
+  # "icelake-client") appends `-O3 -march=<cpuTune> -mtune=<cpuTune>`
+  # to NIX_CFLAGS_COMPILE via overrideAttrs, which changes the
+  # derivation hash unconditionally: like a custom `rev` pin or
+  # `useCcache`, the build is off every binary cache BY DESIGN. Only
+  # turn this on for a build that is already off the cache-parity path
+  # (the Darwin GUI, a custom rev, igc on Darwin) or when a local
+  # from-source build is accepted anyway. The flags are appended, and
+  # gcc last-flag-wins makes the -O3 override the base -O2.
+  cpuTune ? null,
 
   # GUI toolkit
   # The matrix admits exactly one GUI per platform: pgtk on Linux, NS on
@@ -471,12 +485,12 @@ let
       darwinPatch "adjust-ns-init-colors.patch"
     );
 
-  # Skip overrideAttrs unless a custom rev is pinned or Darwin patches
-  # apply (they do by default on the Darwin NS GUI) — every default-rev
-  # Linux/noGui variant is then a pure basePackage.override and stays a
-  # binary cache hit.
+  # Skip overrideAttrs unless a custom rev is pinned, Darwin patches
+  # apply (they do by default on the Darwin NS GUI), or the opt-in
+  # cpuTune flag is set. Every default-rev Linux/noGui variant is then
+  # a pure basePackage.override and stays a binary cache hit.
   hasCustomGitSrc = isGitVariant && rev != null;
-  needsOverride = hasCustomGitSrc || darwinPatches != [ ];
+  needsOverride = hasCustomGitSrc || darwinPatches != [ ] || cpuTune != null;
 
 in
 if !needsOverride then
@@ -505,5 +519,10 @@ else
             --replace-warn '(emacs-repository-get-version)' '"${rev}"' \
             --replace-warn '(emacs-repository-get-branch)' '"${gitBranch.${variant}}"'
         '';
+    }
+    // lib.optionalAttrs (cpuTune != null) {
+      # Opt-in CPU tuning: appended, so gcc's last-flag-wins overrides
+      # the base -O2 with the -O3 here.
+      NIX_CFLAGS_COMPILE = (old.NIX_CFLAGS_COMPILE or "") + " -O3 -march=${cpuTune} -mtune=${cpuTune}";
     }
   )
