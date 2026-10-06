@@ -94,6 +94,17 @@ build-igc:
 build-igc-ccache:
     nix-build --arg variant '"igc"' --arg useCcache true --argstr system {{system}} emacs.nix
 
+# Build a CPU-tuned perf Emacs: -O3 -march/-mtune for this machine's
+# icelake i5. Opt-in flag: the tune puts the build off every binary
+# cache by design, so it only pays off on a path that already builds
+# from source (the Darwin NS GUI, a custom rev pin, igc on Darwin) or
+# when a local rebuild is accepted. Composable with the other args,
+# e.g. --arg variant '"igc"' or --arg useCcache true; see the cpuTune
+# comment in emacs.nix.
+[group('build')]
+build-perf:
+    nix-build --arg cpuTune '"icelake-client"' --argstr system {{system}} emacs.nix
+
 # Build a bare aarch64-linux nox Emacs (Termux/Android) — kept for
 # cache-parity testing of emacs.nix; `run-built` uses build-nox-full.
 [group('build')]
