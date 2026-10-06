@@ -10,16 +10,16 @@ Build-variant preference: **release > experimental (igc)**.
 ### §3 — igc / MPS concurrent GC trial (experimental, biggest GC-pause win)
 
 `emacs-igc` is verified buildable on x86_64-darwin via the pinned overlay.
-Experimental, so trial-only before any promotion.
+Experimental, so trial-only before any promotion. The distribution overlay is
+already variant-parameterized (`nix/mk-overlay.nix` takes `variant`), so a
+full igc distribution needs only `import … { variant = "igc"; }`; that is a
+cache **miss** on Darwin (builds from source).
 
 - `just build-igc` → run the result as a **side daemon** on its own socket
   (`./result/bin/emacs --fg-daemon=jotain-igc --init-directory=…`) alongside
   the release daemon. A/B for ~a week on real workloads (large files, LSP,
   magit); watch for crashes and confirm the pause reduction is real on this CPU.
 - Quantify with `(setq garbage-collection-messages t)` under both daemons.
-- Only if stable: parameterize `jotainEmacsPackages` in `overlay.nix` to accept
-  an igc base so the full distribution (packages + grammars) can run on igc.
-  Note this is a cache **miss** on Darwin (builds from source).
 
 ### §4 — `ultra-scroll` (feel, lowest priority)
 
@@ -49,11 +49,6 @@ File: `lisp/init-ui.el`.
   `devenv hook-should-activate` on a cache miss, so the first find-file in an
   uncached project blocks. Rework to consult only the cache and replay via the
   async probe callback. Needs a live Emacs to validate.
-- **Finding 52** — bench harness fidelity. The old "disabled stub" `just bench`
-  is gone; `bench-built` (`Justfile:49`) is a working harness. Confirm it times
-  autoload-driven post-init loads (via a `load` file-name handler or a
-  `features` snapshot) rather than only `require`, and measures the archive
-  refresh synchronously.
 
 ## In-code deferred work
 
@@ -68,10 +63,3 @@ File: `lisp/init-ui.el`.
   profile dicts; see journal/2026-07-23.md). Build an `aspellWithDicts` from
   the option and export `ASPELL_CONF` in the module wrappers, replacing the
   profile install.
-- `etc/elisp-doc/elisp-doc-extract.el` — two TODOs in the vendored elisp-doc
-  engine (L517, L839); upstream-owned, track here only if we fork it.
-
-## Investigate
-
-All prior candidates triaged 2026-08-14; decisions captured out of band. Add
-new candidates here.
