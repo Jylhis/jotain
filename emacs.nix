@@ -101,7 +101,7 @@
   # the Darwin GUI build (patched by default, so from-source by design),
   # or the `igc` variant on Darwin (which nix-community.cachix.org does
   # not carry a prebuilt for, so `just build-igc` is a from-source build
-  # on that platform even at the default rev — see plan.md §3). Swapping
+  # on that platform even at the default rev — see TODO.md §3). Swapping
   # stdenv changes the derivation hash unconditionally, so this flag must
   # stay `false` for every default-rev, no-patch build: turning it on for
   # e.g. plain `variant = "unstable"` on Linux would trade an existing

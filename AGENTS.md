@@ -8,7 +8,8 @@ truth** for both.
 
 Jotain is a GNU Emacs 31 configuration (floor: Emacs 30.1, per `init.el`'s `Package-Requires`) with a Nix build layer. The repo ships **both** a modular Elisp configuration (`early-init.el`, `init.el`, `lisp/init-*.el`) and the Nix expressions that build Emacs itself (`emacs.nix`, `nix/mk-overlay.nix`, `overlay.nix`, `default.nix`, `flake.nix`). The default build is the emacs-overlay `unstable` variant (the Emacs 31.1 release branch), with nixpkgs' Emacs 30 kept as the `mainline` variant. The dev shell provides tooling only; Emacs itself is **not** in the shell — build and launch the editor with `just run-built`.
 
-`journal/`, `plan.md`, and `TODO.md` are the owner's working notes — they may be stale, and when they disagree with the code, the code wins. `TODO.md` cites findings by number from the review reports under `docs/reviews/` — read the referenced report for the context behind a TODO item.
+`journal/` and `TODO.md` are the owner's working notes — they may be stale, and
+when they disagree with the code, the code wins. `TODO.md` cites findings by number from the review reports under `docs/reviews/` — read the referenced report for the context behind a TODO item.
 
 ## Project Structure & Module Organization
 
