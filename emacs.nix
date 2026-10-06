@@ -9,11 +9,11 @@
 #                      X11/Lucid/GTK3-x11/Motif/Athena are not supported
 #                      and asserted away below.
 #   * Linux terminal — noGui build.
-#   * Darwin GUI     — NS/Cocoa with the nix-giant patches applied by
+#   * Darwin GUI     — NS/Cocoa with the macOS patches applied by
 #                      default (system-appearance, round-undecorated-
-#                      frame; adjust-ns-init-colors where the branch has
-#                      it). Always a from-source build — the patches put
-#                      it off every binary cache by design.
+#                      frame, fix-ns-x-colors). Always a from-source
+#                      build — the patches put it off every binary cache
+#                      by design.
 #   * Darwin terminal — noGui build.
 #
 # The overlay is wired up in flake.nix and devenv.nix; this file also
@@ -194,27 +194,31 @@
   # toolkits gone and withGTK3 left to the base (whose default is
   # `withPgtk && !noGui`), the reachable part reduces to withPgtk.
 
-  # macOS patches (from nix-giant/nix-darwin-emacs)
-  # Originally from d12frosted/homebrew-emacs-plus. Only applied on
-  # Darwin, and ON BY DEFAULT for the NS GUI build — the matrix's Darwin
-  # GUI is "modern macOS, patched", accepting that this puts every
-  # Darwin GUI build permanently off the binary caches (pair with
-  # useCcache for iteration). The noGui Darwin build takes none of them
-  # (withNS is false there), so it stays unpatched. Fetched from the
-  # commit pinned in darwinPatchesRev below; hashes are pinned per patch
-  # branch in darwinPatchHashes. Updating means bumping the rev — a
-  # patch rewritten upstream then reports its new hash at build time.
+  # macOS patches (from nix-giant/nix-darwin-emacs, which sources them
+  # from d12frosted/homebrew-emacs-plus). Only applied on Darwin, and ON
+  # BY DEFAULT for the NS GUI build — the matrix's Darwin GUI is
+  # "modern macOS, patched", accepting that this puts every Darwin GUI
+  # build permanently off the binary caches (pair with useCcache for
+  # iteration). The noGui Darwin build takes none of them (withNS is
+  # false there), so it stays unpatched. The 31/30 branch patches are
+  # fetched from the nix-giant rev pinned in darwinPatchesRev below;
+  # the unstable branch (master/32+) from the homebrew-emacs-plus rev
+  # in homebrewPatchesRev, since nix-giant dropped unstable support
+  # (2026-08-20). Hashes are pinned per patch branch in
+  # darwinPatchHashes; updating means bumping the rev — a patch
+  # rewritten upstream then reports its new hash at build time.
   withSystemAppearancePatch ? withNS,
   # Adds ns-system-appearance variable and
   # ns-system-appearance-change-functions hook for Dark/Light mode detection
   withRoundUndecoratedFramePatch ? withNS,
   # Adds `undecorated-round` frame parameter for rounded-corner
   # borderless windows using NSFullSizeContentViewWindowMask
-  withAdjustNsInitColorsPatch ? withNS,
-  # Moves ns_init_colors() after init_lread() so data-directory is set
-  # when colors load (full palette instead of the ~62 dump-time colors).
-  # Only exists in patches-unstable — silently skipped (see
-  # darwinPatches below) unless the variant maps to that branch.
+  withFixNsXColorsPatch ? withNS,
+  # Refreshes x-colors from ns-list-colors during NS window-system
+  # initialization, so the runtime palette is the full ~800-color list
+  # instead of the ~62 colors captured into the pdump headlessly.
+  # homebrew-emacs-plus's runtime-refresh successor to the dump-time
+  # adjust-ns-init-colors approach this file carried until 2026-10.
 }:
 
 # The build matrix: the only GUIs are pgtk on Linux and NS on Darwin.
@@ -423,12 +427,20 @@ let
     lib.intersectAttrs (lib.functionArgs basePackage.override) overrideArgs
   );
 
-  # Darwin patches (fetched from nix-giant/nix-darwin-emacs)
-  # Patch directory: "unstable" for master/32+; otherwise keyed on what
-  # the base package actually is, not on the variant name — "30" for
-  # Emacs 30.x (mainline while nixpkgs' default attr is 30.x), "31" for
-  # Emacs 31.x (unstable, and mainline once nixpkgs promotes 31 to
-  # pkgs.emacs).
+  # Darwin patches (macOS GUI only)
+  # Patch directory: "unstable" for master/32+ (the git/igc variants);
+  # otherwise keyed on what the base package actually is, not on the
+  # variant name — "30" for Emacs 30.x (mainline while nixpkgs' default
+  # attr is 30.x), "31" for Emacs 31.x (unstable, and mainline once
+  # nixpkgs promotes 31 to pkgs.emacs).
+  #
+  # nix-giant dropped its patches-unstable branch (2026-08-20, "Remove
+  # the support of emacs-unstable"), so the 31/30 patch sets come from
+  # the nix-giant rev pinned below while the unstable set is sourced
+  # directly from d12frosted/homebrew-emacs-plus — the canonical
+  # upstream both repos track, and the one that still maintains a
+  # master/32+ patch set (its patches/emacs-32, whose entries currently
+  # symlink to the emacs-31 dir — see darwinPatchUrl below).
   patchBranch =
     if variant == "git" || variant == "igc" then
       "unstable"
@@ -437,40 +449,62 @@ let
     else
       "31";
 
-  # fetchpatch output hashes per patch branch. The 31 and unstable
-  # branches currently carry identical patch content; 30 differs.
+  # fetchpatch output hashes per patch branch. Patch content differs
+  # across the branches (context lines shift with the source tree), so
+  # every entry carries its own hash. (The unstable table reuses the 31
+  # hashes for system-appearance/round-undecorated-frame: homebrew's
+  # emacs-32 copies are symlinks to ../emacs-31, and that content is
+  # byte-identical to nix-giant's 31 copies after fetchpatch
+  # normalization.)
   darwinPatchHashes = {
     "31" = {
       "system-appearance.patch" = "sha256-4+2U+4+2tpuaThNJfZOjy1JPnneGcsoge9r+WpgNDko=";
       "round-undecorated-frame.patch" = "sha256-KCMEvJzN1OkwFYoMLpZghvdeoO1Ckcxk3Mo19YAf850=";
+      "fix-ns-x-colors.patch" = "sha256-R1CKmkxLmXmySWUnvNLzwM/H21TJ0tBXDvKPq7bH02c=";
+    };
+    "30" = {
+      "system-appearance.patch" = "sha256-3QLq91AQ6E921/W9nfDjdOUWR8YVsqBAT/W9c1woqAw=";
+      # Stale-hash fix (2026-10): the pre-existing uYIxNTy… hash never
+      # matched this patch's fetchpatch output (the 30 table had never
+      # been built); recomputed against the pinned nixpkgs fetchpatch.
+      "round-undecorated-frame.patch" = "sha256-fesZ0H3LO6T2AiRV8ASozKxZBpvVzwLEcLDy6rctR6c=";
+      "fix-ns-x-colors.patch" = "sha256-SkNGXsexkHqughSha8q1K0IYhkpMWMH80tq8G/5CZfw=";
     };
     "unstable" = {
       "system-appearance.patch" = "sha256-4+2U+4+2tpuaThNJfZOjy1JPnneGcsoge9r+WpgNDko=";
       "round-undecorated-frame.patch" = "sha256-KCMEvJzN1OkwFYoMLpZghvdeoO1Ckcxk3Mo19YAf850=";
-      "adjust-ns-init-colors.patch" = "sha256-Pqq1FA7caSLk4R5YsKKqh5WzttQ2BWGvAvKAEaOZIJI=";
-    };
-    "30" = {
-      "system-appearance.patch" = "sha256-3QLq91AQ6E921/W9nfDjdOUWR8YVsqBAT/W9c1woqAw=";
-      "round-undecorated-frame.patch" = "sha256-uYIxNTyfbprx5mCqMNFVrBcLeo+8e21qmBE3lpcnd+4=";
+      "fix-ns-x-colors.patch" = "sha256-oe3DFgEXwp0cZJl+ufWqTonaeWSliikTRsVDNbcy4Yw=";
     };
   };
 
-  # Pinned nix-giant/nix-darwin-emacs commit the patches are fetched
-  # from. Branch URLs are mutable — an upstream rewrite/move/delete on
-  # `main` would make these fixed-output fetches fail (hash mismatch or
-  # 404) at an arbitrary future date on machines without the store
-  # paths. Bumping this rev is the deliberate update path; if the patch
-  # content changed upstream, the build reports the new hashes for the
-  # table above.
-  darwinPatchesRev = "c54ec432033e0e099ba9d4b4da8a1667971b3134"; # main as of 2026-07-21
+  # Pinned commits the patches are fetched from — one per source. Branch
+  # URLs are mutable — an upstream rewrite/move/delete on `main`/`master`
+  # would make these fixed-output fetches fail (hash mismatch or 404) at
+  # an arbitrary future date on machines without the store paths.
+  # Bumping a rev is the deliberate update path; if the patch content
+  # changed upstream, the build reports the new hashes for the table
+  # above.
+  darwinPatchesRev = "d8dd282e06e28aae5da09d3888f1f5f4db750d36"; # nix-giant main as of 2026-10-04 (31/30 branches)
+  homebrewPatchesRev = "3c3863ac20b242ac93d2becb36108b5eee1c8bf4"; # homebrew-emacs-plus master as of 2026-10-06 (unstable branch)
+
+  darwinPatchUrl =
+    name:
+    if patchBranch == "unstable" then
+      # homebrew's patches/emacs-32 entries are symlinks to
+      # ../emacs-31, and raw.githubusercontent serves a symlink's link
+      # text, not its target — so fetch the (content-identical) target
+      # from patches/emacs-31 directly.
+      "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus"
+      + "/${homebrewPatchesRev}/patches/emacs-31/${name}"
+    else
+      "https://raw.githubusercontent.com/nix-giant/nix-darwin-emacs"
+      + "/${darwinPatchesRev}/overlays/patches-${patchBranch}/${name}";
 
   darwinPatch =
     name:
     fetchpatch {
       inherit name;
-      url =
-        "https://raw.githubusercontent.com/nix-giant/nix-darwin-emacs"
-        + "/${darwinPatchesRev}/overlays/patches-${patchBranch}/${name}";
+      url = darwinPatchUrl name;
       hash = darwinPatchHashes.${patchBranch}.${name};
     };
 
@@ -479,11 +513,7 @@ let
     ++ lib.optional (isDarwin && withRoundUndecoratedFramePatch) (
       darwinPatch "round-undecorated-frame.patch"
     )
-    # Only exists in patches-unstable (master/32+); upstream has not
-    # backported it to the 31/30 branches.
-    ++ lib.optional (isDarwin && withAdjustNsInitColorsPatch && patchBranch == "unstable") (
-      darwinPatch "adjust-ns-init-colors.patch"
-    );
+    ++ lib.optional (isDarwin && withFixNsXColorsPatch) (darwinPatch "fix-ns-x-colors.patch");
 
   # Skip overrideAttrs unless a custom rev is pinned, Darwin patches
   # apply (they do by default on the Darwin NS GUI), or the opt-in
