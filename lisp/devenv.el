@@ -68,6 +68,11 @@
 ;; TMPDIR at the build sandbox's /build, which breaks every tool that
 ;; needs a temp dir, rust-analyzer's proc-macro server included.
 ;;
+;; Activation never blocks: the trust verdict behind auto-activation is
+;; read from the cache on every interactive path, and an unknown
+;; verdict is resolved by a background probe whose completion enables
+;; the loader in the project's buffers (`devenv--probe-trust').
+;;
 ;; With direnv, envrc.el plus `use devenv' in .envrc is an equally good
 ;; substrate: `devenv-env-defer-to-direnv' (default t) keeps the native
 ;; loader out of projects that have a .envrc, so the two can never
@@ -611,9 +616,25 @@ to preserve that version's behaviour)."
   "Return non-nil when trust STATE permits automatic env loading."
   (memq state '(allowed unsupported)))
 
+(defun devenv--cached-trust (root)
+  "Return ROOT's trust state from the cache, or nil when unknown.
+Never runs devenv: interactive paths (find-file, redisplay) must
+resolve an unknown state with `devenv--probe-trust' instead."
+  (let ((entry (gethash (cons root 'trust) devenv--cache))
+        (devenv-cache-ttl devenv-env--cache-ttl))
+    (when (devenv--cache-fresh-p entry)
+      (cdr entry))))
+
+(defun devenv--set-trust-state (root state)
+  "Record STATE as ROOT's cached trust state."
+  (puthash (cons root 'trust) (cons (float-time) state) devenv--cache))
+
 (defun devenv--trust-state (root)
   "Return ROOT's auto-activation trust state (cached).
-See `devenv--activation-state' for the possible values."
+See `devenv--activation-state' for the possible values.  The
+synchronous fetch on a cache miss is a fallback for callers that may
+block (see `devenv-env--shell-loader-p'); the find-file path stays
+subprocess-free via `devenv--cached-trust' plus `devenv--probe-trust'."
   ;; Long TTL so the synchronous `hook-should-activate' subprocess is
   ;; not re-paid on the find-file path (see `devenv-env--cache-ttl').
   (let ((devenv-cache-ttl devenv-env--cache-ttl))
@@ -633,6 +654,34 @@ See `devenv--activation-state' for the possible values."
                                           '("hook-should-activate"))))))
                (devenv--activation-state exit (buffer-string))))))))))
 
+(defvar devenv--trust-probing (make-hash-table :test #'equal)
+  "Roots whose trust state is resolving in the background.
+The entry doubles as a cancellation token: `devenv-allow' and
+`devenv-revoke' remove it, so a probe landing late cannot overwrite
+the verdict they recorded themselves.")
+
+(defun devenv--probe-trust (root)
+  "Resolve ROOT's trust state asynchronously, then act on the verdict.
+Records it in the trust cache, replays `devenv-env--turn-on' in the
+project's buffers when it permits loading (see
+`devenv-env--trust-landed'), and refreshes the modeline.  One probe
+per root: calls while one is in flight are no-ops, since the
+completion already replays for every project buffer."
+  (unless (gethash root devenv--trust-probing)
+    (puthash root t devenv--trust-probing)
+    (devenv--run root '("hook-should-activate")
+                 (lambda (exit output)
+                   ;; Allow/revoke cancel a probe by dropping its
+                   ;; entry; a verdict landing then must not overwrite
+                   ;; the newer state nor replay activation.
+                   (when (gethash root devenv--trust-probing)
+                     (let ((state (devenv--activation-state exit output)))
+                       (remhash root devenv--trust-probing)
+                       (devenv--set-trust-state root state)
+                       (devenv-env--trust-landed root state)
+                       (devenv-modeline--refresh-root root))))
+                 "trust-probe")))
+
 ;;;###autoload
 (defun devenv-allow ()
   "Trust the current project for devenv auto-activation.
@@ -643,11 +692,17 @@ project's buffers when `devenv-env-global-mode' is enabled."
   (let ((root (devenv--root-or-error)))
     (devenv--call root "allow")
     (devenv--cache-invalidate root)
+    ;; The verdict is known: cancel any in-flight probe (its result
+    ;; would be stale) and record `allowed' outright, so the replay
+    ;; below activates without another subprocess.
+    (remhash root devenv--trust-probing)
+    (devenv--set-trust-state root 'allowed)
     (when devenv-env-global-mode
       (dolist (buffer (devenv--project-buffers root))
         (with-current-buffer buffer
           (unless devenv-env-mode
             (devenv-env--turn-on)))))
+    (devenv-env--release-parked root)
     (devenv-modeline--refresh-root root)
     (message "devenv: allowed %s" (abbreviate-file-name root))))
 
@@ -660,9 +715,16 @@ buffer `devenv-env-mode' was managing."
   (let ((root (devenv--root-or-error)))
     (devenv--call root "revoke")
     (devenv--cache-invalidate root)
+    ;; Cancel any in-flight probe and record the verdict ourselves.
+    (remhash root devenv--trust-probing)
+    (devenv--set-trust-state root 'blocked)
     (dolist (buffer (devenv-env--buffers root))
       (with-current-buffer buffer
         (devenv-env-mode -1)))
+    ;; Eglot calls parked while a probe was still deciding must not
+    ;; strand: release them to connect with the global environment,
+    ;; which is what an untrusted project always uses.
+    (devenv-env--release-parked root)
     (devenv-modeline--refresh-root root)
     (message "devenv: revoked %s" (abbreviate-file-name root))))
 
@@ -1571,7 +1633,9 @@ is loaded by sourcing the printed dev-env script so its shellHook runs
   "Apply the project's devenv environment buffer-locally.
 Fetches the environment asynchronously (cached per project, see
 `devenv-env-loader') and sets `process-environment' and `exec-path'
-locally in this buffer, in the style of envrc.  The result mirrors a
+locally in this buffer, in the style of envrc.  Activation is gated
+on the project's cached trust state; an unknown verdict is resolved
+in the background (see `devenv-env--turn-on').  The result mirrors a
 terminal `devenv shell': PATH is layered over the login one and the
 derivation-only variables the JSON form carries are dropped.  Where
 direnv is in charge, envrc + `use devenv' does the same job; see
@@ -1599,7 +1663,11 @@ available, and the project must be trusted for auto-activation
 \(`devenv allow'; see `devenv-allow').  When `devenv-env-defer-to-direnv'
 is non-nil the buffer must also not be under direnv (no .envrc above, no
 active `envrc-mode'), so direnv keeps ownership where it is configured.
-Never activates in the minibuffer or remote buffers."
+Never activates in the minibuffer or remote buffers.
+
+Subprocess-free: the trust verdict comes from the cache only, and an
+unknown state is resolved by `devenv--probe-trust', whose completion
+replays this function in the project's buffers once it lands."
   (let ((root (and (not (minibufferp))
                    (not (file-remote-p default-directory))
                    (executable-find devenv-executable)
@@ -1607,29 +1675,68 @@ Never activates in the minibuffer or remote buffers."
     (when (and root
                (or (not devenv-env-defer-to-direnv)
                    (and (not (locate-dominating-file default-directory ".envrc"))
-                        (not (bound-and-true-p envrc-mode))))
-               (devenv--activation-permits-p (devenv--trust-state root)))
-      (devenv-env-mode 1))))
+                        (not (bound-and-true-p envrc-mode)))))
+      (let ((trust (devenv--cached-trust root)))
+        (if trust
+            (when (devenv--activation-permits-p trust)
+              (devenv-env-mode 1))
+          ;; Unknown: resolve in the background; the completion replays
+          ;; this function in the project's buffers.
+          (devenv--probe-trust root))))))
+
+(defun devenv-env--release-parked (root)
+  "Release parked eglot calls for ROOT's buffers not loading an env.
+Buffers still waiting for their environment keep their parked
+`eglot-ensure': it replays when the fetch lands (see
+`devenv-env--handle-pairs')."
+  (devenv-env--release-eglot
+   (seq-remove
+    (lambda (buffer)
+      (with-current-buffer buffer
+        (and (bound-and-true-p devenv-env-mode)
+             (when-let* ((pending-root (devenv-project-root)))
+               (gethash pending-root devenv-env--pending)))))
+    (devenv--project-buffers root))
+   t))
+
+(defun devenv-env--trust-landed (root state)
+  "Act on ROOT's resolved trust STATE.
+When loading is permitted, replay `devenv-env--turn-on' in the
+project's buffers (the cache now holds the verdict, so activation is
+immediate).  Eglot calls parked while the verdict was pending are
+released for every buffer not left waiting for an environment."
+  (when (and devenv-env-global-mode
+             (devenv--activation-permits-p state))
+    (dolist (buffer (devenv--project-buffers root))
+      (with-current-buffer buffer
+        (unless devenv-env-mode
+          (devenv-env--turn-on)))))
+  (devenv-env--release-parked root))
 
 (defun devenv-env-loading-p (&optional buffer)
-  "Non-nil when BUFFER's devenv environment fetch is still in flight.
-BUFFER defaults to the current buffer.  Used by callers (e.g. eglot
-auto-start) to hold off decisions that depend on the buffer-local
-`exec-path' until the async `devenv print-dev-env' has landed."
+  "Non-nil when BUFFER's devenv environment is still in flight.
+That covers the trust probe deciding whether the buffer gets an
+environment at all and, once permitted, the async `devenv
+print-dev-env' fetch.  BUFFER defaults to the current buffer.  Used
+by callers (e.g. eglot auto-start) to hold off decisions that depend
+on the buffer-local `exec-path' until the environment has landed."
   (with-current-buffer (or buffer (current-buffer))
-    (and (bound-and-true-p devenv-env-mode)
-         (when-let* ((root (devenv-project-root)))
-           (and (gethash root devenv-env--pending) t)))))
+    (when-let* ((root (devenv-project-root)))
+      (and (or (and devenv-env-global-mode
+                    (gethash root devenv--trust-probing))
+               (and (bound-and-true-p devenv-env-mode)
+                    (gethash root devenv-env--pending)))
+           t))))
 
 (defun devenv-env--around-eglot-ensure (orig-fun &rest args)
-  "Defer ORIG-FUN (`eglot-ensure', ARGS) while the env is loading.
-Eglot snapshots the environment at connect time; connecting
-before the async fetch lands would give the server the global
-environment.  Deferred buffers replay once the env is applied."
-  (let ((root (and devenv-env-mode (devenv-project-root))))
-    (if (and root (gethash root devenv-env--pending))
-        (cl-pushnew (current-buffer) devenv-env--eglot-replay)
-      (apply orig-fun args))))
+  "Defer ORIG_FUN (`eglot-ensure', ARGS) while the env is loading.
+Eglot snapshots the environment at connect time; connecting before
+the trust verdict or the async fetch lands would give the server the
+global environment.  Deferred buffers replay once the environment is
+applied, or once a verdict rules one out."
+  (if (devenv-env-loading-p)
+      (cl-pushnew (current-buffer) devenv-env--eglot-replay)
+    (apply orig-fun args)))
 
 ;;;###autoload
 (define-globalized-minor-mode devenv-env-global-mode devenv-env-mode
@@ -1701,29 +1808,6 @@ mouse-1: devenv menu"
                  'local-map devenv-modeline--map))
     (_ "")))
 
-(defun devenv-modeline--cached-trust (root)
-  "Return ROOT's trust state from the cache, or nil when unknown.
-Never runs devenv: modeline code must stay subprocess-free on
-the synchronous path."
-  (cdr (gethash (cons root 'trust) devenv--cache)))
-
-(defvar devenv-modeline--probing (make-hash-table :test #'equal)
-  "Roots whose trust state is being resolved in the background.")
-
-(defun devenv-modeline--probe-trust (root)
-  "Resolve ROOT's trust state asynchronously, then refresh buffers."
-  (unless (gethash root devenv-modeline--probing)
-    (puthash root t devenv-modeline--probing)
-    (devenv--run root '("hook-should-activate")
-                 (lambda (exit output)
-                   (remhash root devenv-modeline--probing)
-                   (puthash (cons root 'trust)
-                            (cons (float-time)
-                                  (devenv--activation-state exit output))
-                            devenv--cache)
-                   (devenv-modeline--refresh-root root))
-                 "trust-probe")))
-
 (defun devenv-modeline--update (&optional buffer no-probe)
   "Recompute the devenv modeline state for BUFFER.
 Unless NO-PROBE, kick an asynchronous trust probe when the state
@@ -1734,12 +1818,12 @@ is unknown so blocked projects eventually show devenv[!]."
             (devenv-modeline--compute-state
              root
              (and root (getenv "DEVENV_PROFILE"))
-             (and root (devenv-modeline--cached-trust root))))
+             (and root (devenv--cached-trust root))))
       (when (and root (not no-probe)
                  (eq devenv-modeline--state 'inactive)
-                 (null (devenv-modeline--cached-trust root))
+                 (null (devenv--cached-trust root))
                  (executable-find devenv-executable))
-        (devenv-modeline--probe-trust root))
+        (devenv--probe-trust root))
       devenv-modeline--state)))
 
 (defun devenv-modeline--refresh-root (root)

@@ -388,6 +388,8 @@ The variable `devenv-test--eglot-calls' counts replayed calls."
   `(let ((devenv-env--pending (make-hash-table :test #'equal))
          (devenv--cache (make-hash-table :test #'equal))
          (devenv-env--eglot-replay nil)
+         (devenv--trust-probing (make-hash-table :test #'equal))
+         (devenv-env-global-mode nil)
          (devenv-test--eglot-calls 0))
      (cl-letf (((symbol-function 'eglot-ensure)
                 (lambda () (cl-incf devenv-test--eglot-calls))))
@@ -442,6 +444,176 @@ silently disables eglot auto-start for the whole project."
             (should (equal devenv-env--eglot-replay (list other))))
         (kill-buffer mine)
         (kill-buffer other)))))
+
+;;;; Native loader activation flow
+
+(defmacro devenv-test--with-project (bindings &rest body)
+  "Run BODY inside a temp devenv project with one buffer in it.
+BINDINGS is a (ROOT-VAR BUFFER-VAR) list: ROOT-VAR is bound to the
+project root exactly as `devenv-project-root' returns it, BUFFER-VAR
+to a live buffer whose `default-directory' is the root.
+`executable-find' is stubbed to succeed and
+`devenv-env-defer-to-direnv' bound to nil so the direnv gate is
+skipped; trust state, probes, and fetches stay under BODY's control."
+  (declare (indent 1) (debug ((symbolp symbolp) body)))
+  (let ((root-var (car bindings))
+        (buffer-var (cadr bindings)))
+    `(let* ((,root-var (make-temp-file "devenv-test-root" t))
+            (,buffer-var (generate-new-buffer " *devenv-test*")))
+       (unwind-protect
+           (with-current-buffer ,buffer-var
+             (setq default-directory (file-name-as-directory ,root-var))
+             (with-temp-file (expand-file-name "devenv.nix" ,root-var)
+               (insert "{ }\n"))
+             (setq ,root-var (devenv-project-root))
+             (cl-letf (((symbol-function 'executable-find)
+                        (lambda (_name) t)))
+               (let ((devenv-env-defer-to-direnv nil))
+                 ,@body)))
+         (kill-buffer ,buffer-var)
+         (delete-directory ,root-var t)))))
+
+(ert-deftest devenv-test-turn-on-unknown-trust-probes ()
+  "Unknown trust leaves the mode off and kicks a background probe.
+The first find-file in an uncached project must never block on the
+`hook-should-activate' subprocess."
+  (devenv-test--with-env-state
+    (devenv-test--with-project (_root _buffer)
+      (let (probed)
+        (cl-letf (((symbol-function 'devenv--probe-trust)
+                   (lambda (_root) (setq probed t))))
+          (devenv-env--turn-on)
+          (should-not devenv-env-mode)
+          (should probed))))))
+
+(ert-deftest devenv-test-turn-on-cached-trust-enables ()
+  "A cached permissive verdict enables the mode with no subprocess."
+  (devenv-test--with-env-state
+    (devenv-test--with-project (root buffer)
+      (let (fetched)
+        (devenv--set-trust-state root 'allowed)
+        (cl-letf (((symbol-function 'devenv-env--fetch)
+                   (lambda (_root) (setq fetched t)))
+                  ((symbol-function 'devenv--probe-trust)
+                   (lambda (_root)
+                     (error "probe must not run"))))
+          (devenv-env--turn-on)
+          (should (bound-and-true-p devenv-env-mode))
+          (should (memq buffer (gethash root devenv-env--pending)))
+          (should fetched))))))
+
+(ert-deftest devenv-test-turn-on-blocked-trust-stays-off ()
+  "A cached blocking verdict keeps the mode off without probing."
+  (devenv-test--with-env-state
+    (devenv-test--with-project (root _buffer)
+      (devenv--set-trust-state root 'blocked)
+      (cl-letf (((symbol-function 'devenv--probe-trust)
+                 (lambda (_root)
+                   (error "probe must not run"))))
+        (devenv-env--turn-on)
+        (should-not devenv-env-mode)))))
+
+(ert-deftest devenv-test-probe-allowed-activates-and-fetches ()
+  "An `allowed' verdict replays turn-on, starts the fetch, and keeps
+parked eglot waiting for the environment to replay against."
+  (devenv-test--with-env-state
+    (devenv-test--with-project (root buffer)
+      (let (fetched callback)
+        (cl-letf (((symbol-function 'devenv-env--fetch)
+                   (lambda (_root) (setq fetched t)))
+                  ((symbol-function 'devenv--run)
+                   (lambda (_root _args finish &optional _name)
+                     (setq callback finish))))
+          (let ((devenv-env-global-mode t))
+            (devenv-env--turn-on)     ; unknown: probe now in flight
+            (should callback)
+            (should (gethash root devenv--trust-probing))
+            ;; Eglot auto-start parks while the verdict is pending.
+            (devenv-env--around-eglot-ensure #'eglot-ensure)
+            (should (memq buffer devenv-env--eglot-replay))
+            (funcall callback 0 (concat root "/\n")))
+          (should (eq (devenv--cached-trust root) 'allowed))
+          (should-not (gethash root devenv--trust-probing))
+          (should (bound-and-true-p devenv-env-mode))
+          (should (memq buffer (gethash root devenv-env--pending)))
+          (should fetched)
+          ;; Parked eglot stays parked until the environment lands.
+          (should (equal devenv-test--eglot-calls 0))
+          (devenv-env--handle-pairs root '("DEVENV_TEST_OK=1"))
+          (should (equal devenv-test--eglot-calls 1))
+          (should (equal (getenv "DEVENV_TEST_OK") "1"))
+          (should-not (memq buffer devenv-env--eglot-replay)))))))
+
+(ert-deftest devenv-test-probe-blocked-releases-parked-eglot ()
+  "A `blocked' verdict leaves the mode off; parked eglot connects with
+the global environment, which is what untrusted projects always did."
+  (devenv-test--with-env-state
+    (devenv-test--with-project (root buffer)
+      (let (callback)
+        (cl-letf (((symbol-function 'devenv-env--fetch)
+                   (lambda (&rest _)
+                     (error "fetch must not run")))
+                  ((symbol-function 'devenv--run)
+                   (lambda (_root _args finish &optional _name)
+                     (setq callback finish))))
+          (let ((devenv-env-global-mode t))
+            (devenv-env--turn-on)     ; unknown: probe now in flight
+            (devenv-env--around-eglot-ensure #'eglot-ensure)
+            (should (memq buffer devenv-env--eglot-replay))
+            (should (equal devenv-test--eglot-calls 0))
+            (funcall callback 2 ""))  ; blocked
+          (should (eq (devenv--cached-trust root) 'blocked))
+          (should-not (gethash root devenv--trust-probing))
+          (should-not (bound-and-true-p devenv-env-mode))
+          (should-not (memq buffer devenv-env--eglot-replay))
+          ;; Released with the global environment.
+          (should (equal devenv-test--eglot-calls 1)))))))
+
+(ert-deftest devenv-test-loading-p-covers-trust-probing ()
+  "The loading predicate holds while the verdict is pending, but only
+when the native loader is enabled; with probing done, a pending fetch
+counts only in buffers the mode is on in."
+  (devenv-test--with-env-state
+    (let ((buffer (generate-new-buffer " *devenv-test*")))
+      (unwind-protect
+          (cl-letf (((symbol-function 'devenv-project-root)
+                     (lambda (&optional _dir) "/proj/")))
+            (puthash "/proj/" t devenv--trust-probing)
+            (with-current-buffer buffer
+              ;; Loader off: a probing verdict is none of eglot's business.
+              (should-not (devenv-env-loading-p))
+              (let ((devenv-env-global-mode t))
+                (should (devenv-env-loading-p))
+                (should (devenv-env-loading-p buffer))
+                (remhash "/proj/" devenv--trust-probing)
+                ;; Nothing pending and the mode off: not loading.
+                (should-not (devenv-env-loading-p))
+                ;; Pending governs only with the mode on.
+                (puthash "/proj/" (list buffer) devenv-env--pending)
+                (should-not (devenv-env-loading-p)))))
+        (kill-buffer buffer)))))
+
+(ert-deftest devenv-test-allow-activates-without-probe ()
+  "`devenv-allow' records the verdict itself, so activation is
+immediate and an in-flight probe is cancelled."
+  (devenv-test--with-env-state
+    (devenv-test--with-project (root buffer)
+      (let (fetched probed)
+        (cl-letf (((symbol-function 'devenv--call)
+                   (lambda (&rest _) t))
+                  ((symbol-function 'devenv-env--fetch)
+                   (lambda (_root) (setq fetched t)))
+                  ((symbol-function 'devenv--probe-trust)
+                   (lambda (_root) (setq probed t))))
+          (puthash root t devenv--trust-probing) ; probe in flight
+          (let ((devenv-env-global-mode t))
+            (devenv-allow))
+          (should (eq (devenv--cached-trust root) 'allowed))
+          (should-not (gethash root devenv--trust-probing))
+          (should (bound-and-true-p devenv-env-mode))
+          (should (memq buffer (gethash root devenv-env--pending)))
+          (should fetched)
+          (should-not probed))))))
 
 ;;;; Process list parsing
 
@@ -574,6 +746,38 @@ subcommand on devenv 1.x) is `unsupported'."
   (should (devenv--activation-permits-p 'unsupported))
   (should-not (devenv--activation-permits-p 'blocked))
   (should-not (devenv--activation-permits-p 'no-project)))
+
+(ert-deftest devenv-test-cached-trust-freshness ()
+  "The cache-only trust read honours the long TTL and never fetches."
+  (let ((devenv--cache (make-hash-table :test #'equal))
+        (now (float-time)))
+    (puthash (cons "/proj/" 'trust) (cons now 'allowed) devenv--cache)
+    (should (eq (devenv--cached-trust "/proj/") 'allowed))
+    ;; Older than `devenv-env--cache-ttl': unknown again.
+    (puthash (cons "/proj/" 'trust)
+             (cons (- now devenv-env--cache-ttl 1) 'allowed)
+             devenv--cache)
+    (should-not (devenv--cached-trust "/proj/"))
+    ;; Absent roots are unknown too.
+    (should-not (devenv--cached-trust "/other/"))))
+
+(ert-deftest devenv-test-probe-cancelled-discards-verdict ()
+  "A probe cancelled by allow/revoke never writes its verdict.
+The probing-table entry is the cancellation token: without it the
+completion must leave the recorded state untouched."
+  (devenv-test--with-env-state
+    (let (callback)
+      (cl-letf (((symbol-function 'devenv--run)
+                 (lambda (_root _args finish &optional _name)
+                   (setq callback finish))))
+        (devenv--probe-trust "/proj/")
+        (should (gethash "/proj/" devenv--trust-probing))
+        ;; What `devenv-allow'/`devenv-revoke' do to an in-flight probe.
+        (remhash "/proj/" devenv--trust-probing)
+        (devenv--set-trust-state "/proj/" 'allowed)
+        (funcall callback 2 "")            ; a late `blocked' verdict
+        (should (eq (devenv--cached-trust "/proj/") 'allowed))
+        (should-not (gethash "/proj/" devenv--trust-probing))))))
 
 ;;;; Modeline status
 
