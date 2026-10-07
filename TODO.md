@@ -39,17 +39,6 @@ File: `lisp/init-ui.el`.
    `AGENTS.md`; the default (`unstable`) variant must still equal
    `pkgs.emacs-unstable`, and the `mainline` variant `pkgs.emacs`.
 
-## Deferred review findings (docs/reviews/2026-07-emacs-nix-deep-review.md)
-
-- **Finding 21** — make `devenv-env--turn-on` subprocess-free. The long-TTL
-  trust cache and the async modeline probe shipped (`lisp/devenv.el`
-  `devenv-modeline--cached-trust` / `devenv-modeline--probe-trust`); the
-  remaining gap is `devenv-env--turn-on`, which still calls
-  `devenv--trust-state` synchronously and `call-process`es
-  `devenv hook-should-activate` on a cache miss, so the first find-file in an
-  uncached project blocks. Rework to consult only the cache and replay via the
-  async probe callback. Needs a live Emacs to validate.
-
 ## In-code deferred work
 
 - `nix/extra-packages.nix` — TEMPORARY (2026-07-21) ghostel epkg fetch
