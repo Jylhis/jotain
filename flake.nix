@@ -16,9 +16,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # Supplies the git-based variants used by emacs.nix: emacs-git
-    # (master), emacs-unstable (Emacs 31 release branch — the default
-    # base for jotainEmacs, see nix/mk-overlay.nix), emacs-igc
-    # (feature/igc3). The "mainline" variant uses nixpkgs' default
+    # (master), emacs-unstable (newest Emacs release tag, currently
+    # 31.1; the default base for jotainEmacs, see nix/mk-overlay.nix),
+    # emacs-igc (feature/igc3). The "mainline" variant uses nixpkgs' default
     # emacs attribute and does not need the overlay.
     emacs-overlay = {
       url = "github:nix-community/emacs-overlay";

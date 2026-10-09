@@ -1,7 +1,8 @@
 {
   # Emacs source variant for jotainEmacs / jotainEmacsNoGui (see
   # emacs.nix). Defaults to "unstable": emacs-overlay's emacs-unstable,
-  # the Emacs 31.1 release branch, cached on nix-community.cachix.org.
+  # the newest Emacs release or pretest tag (currently 31.1), cached on
+  # nix-community.cachix.org.
   variant ? "unstable",
 }:
 final: _prev:

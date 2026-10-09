@@ -84,7 +84,8 @@
       },
 
   # Source variant
-  #   "unstable"  — the Emacs 31.1 release branch; the default here and
+  #   "unstable"  — the newest Emacs release or pretest tag (currently
+  #                 31.1); the default here and
   #                 for the distribution (mk-overlay.nix passes
   #                 variant = "unstable")
   #   "git"       — bleeding-edge master from git.savannah.gnu.org
