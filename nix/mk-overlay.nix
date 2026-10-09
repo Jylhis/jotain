@@ -10,37 +10,29 @@ let
   usePackage = import ./use-package.nix { inherit (final) lib; };
   extraPackages = import ./extra-packages.nix { pkgs = final; };
 
-  # Emacs packages the config gets from Nix (nix/extra-packages.nix or the
-  # base scope) rather than the lisp/ use-package scan — the single source
-  # of truth shared with nix/emacs-api-doc.nix. See that file's header.
+  # Packages injected outside the lisp/ use-package scan (see that file).
   nixProvidedPackages = import ./nix-provided-packages.nix;
 
-  # Runtime binaries the Elisp config shells out to (nix/runtime-deps.nix).
-  # Bundled onto every distribution wrapper's PATH below with `--suffix', so
-  # a bare `just run-built' is self-contained (carries the shipped nixd LSP
-  # fallback and friends) — not only the module/daemon installs, which wrap
-  # this same list. `--suffix' keeps ambient / project tools ahead of the
-  # bundled copies, so a devenv-provided server still wins.
+  # Runtime binaries the config shells out to, on every distribution
+  # wrapper's PATH so a bare `just run-built' is self-contained.
+  # `--suffix' keeps ambient/project tools first, so a devenv-provided
+  # server still wins.
   runtimeDeps = import ./runtime-deps.nix {
     pkgs = final;
     pkgsWithOverlay = final;
   };
 
-  # Spell dictionaries bundled into the distribution so `jinx' works out of
-  # the box (lisp/init-writing.el) without an externally-populated profile.
-  # jinx links enchant, whose aspell backend delegates to libaspell, but the
-  # base distribution ships no dictionary data — so a bare `./result/bin/emacs'
-  # (e.g. `just run-built') reports `No dictionaries available for "en_US"'.
+  # Bundled dictionaries so jinx (lisp/init-writing.el) works without a
+  # populated profile; otherwise a bare `./result/bin/emacs' reports
+  # `No dictionaries available'.
   #
-  # `aspellWithDicts' builds one directory holding libaspell's own data files
-  # *and* the requested dictionaries under a single `lib/aspell'. We point
-  # both aspell `dict-dir' and `data-dir' at it via ASPELL_CONF on the wrapper
-  # below. NIX_PROFILES alone is NOT enough: nixpkgs' libaspell patch only
-  # feeds NIX_PROFILES into dictionary *enumeration*, so `enchant_broker_-
-  # list_dicts' sees the language but `enchant_broker_request_dict' (what jinx
-  # calls) still fails to build a speller because the master word list resolves
-  # under the default data-dir. en_GB is the jinx default (init-writing.el);
-  # fi/de/fr are reachable per buffer via C-M-$.
+  # `aspellWithDicts' puts libaspell's data files and the dictionaries in
+  # one `lib/aspell', and ASPELL_CONF points both dict-dir and data-dir at
+  # it. NIX_PROFILES alone is not enough: nixpkgs' libaspell patch only
+  # uses it for dictionary enumeration, so `enchant_broker_request_dict'
+  # (what jinx calls) still fails, as the master word list resolves under
+  # the default data-dir. en_GB is jinx's default; fi/de/fr are a C-M-$
+  # switch away.
   spellEnv = final.aspellWithDicts (
     d: with d; [
       en
@@ -62,27 +54,21 @@ let
         inherit package;
         inherit (final) emacsPackagesFor;
         override = extraPackages;
-        # Fail the build (listing every miss) if a use-package-declared
-        # package is absent from the emacs package set, rather than
-        # silently dropping it and shipping a broken editor. This is what
-        # makes the older nixpkgs snapshot a safe source to build against.
+        # Fail the build, listing every miss, if a declared package is
+        # absent from the package set (e.g. under an older consumer
+        # nixpkgs) instead of silently shipping a broken editor.
         strict = true;
-        # The Nix-provided packages (shared list; see nix-provided-packages.nix).
-        # Each is a flat `epkgs.<name>` lookup, unguarded on purpose: e.g.
-        # `nix-ts-mode` is declared `:ensure nil` in init-lang-nix.el, so the
-        # lisp/ scan skips it — a missing attr here should be a loud failure,
-        # not a silently broken `.nix' autoload. Every nixpkgs in
-        # [24.05, unstable] ships these, so the 24.05+ override path is fine.
+        # Unguarded `epkgs.<name>' lookups on purpose: a missing attr must
+        # fail loudly (see nix-provided-packages.nix). Every nixpkgs in
+        # [24.05, unstable] ships these, so the 24.05+ override path holds.
         extraEmacsPackages =
           epkgs:
           map (n: epkgs.${n}) nixProvidedPackages
           ++ [
-            # Full grammar set. Every grammar is its own upstream
-            # derivation and this is a linkFarm over their store paths, so
-            # the set costs closure size (~200 MB over a curated subset,
-            # measured 2026-08-01), never build time. Shipping the full set
-            # (rather than a curated subset) keeps the `jotain-emacs-full`
-            # hash cache-stable.
+            # Full grammar set: a linkFarm over cached upstream
+            # derivations, so it costs closure size (~200 MB over a
+            # curated subset, measured 2026-08-01), never build time, and
+            # keeps the `jotain-emacs-full' hash cache-stable.
             epkgs.treesit-grammars.with-all-grammars
           ];
       };
@@ -122,22 +108,18 @@ let
       '';
 in
 {
-  # Linux GUI default is pgtk (pure GTK): unlike the X11/Lucid build it
-  # honors each backend's advertised scale — hyprland/KDE/GNOME Wayland
-  # fractional scale, and Xft.dpi/GDK_SCALE when GDK runs on X11 — so a
-  # fixed point size tracks the system like other native GTK apps. pgtk
-  # selects emacs-overlay's prebuilt `*-pgtk` sibling in emacs.nix, so
-  # this stays a binary-cache hit. Darwin keeps its NS default (retina
-  # already scales); the noGui build below never gets a GUI toolkit.
-  # FLAG-TRIM POLICY: features this config never uses (mailutils'
-  # movemail — rmail-only; gpm console mouse; SELinux attrs) are dropped
-  # ONLY on builds that are already off binary-cache parity — the two
-  # noGui builds (pure overrides, cached solely on jylhis cachix) and
-  # the Darwin GUI (patched by default, never cached anywhere). The
-  # Linux pgtk GUI keeps upstream defaults untouched: it is
-  # byte-identical to nix-community's emacs-unstable-pgtk, and that
-  # cache hit — Emacs plus every dependent ELPA package — is worth more
-  # than any closure trim.
+  # Linux GUI is pgtk: it honors each backend's scale (Wayland fractional
+  # scale, Xft.dpi/GDK_SCALE on X11), so a fixed point size tracks the
+  # system. emacs.nix selects the prebuilt `*-pgtk` sibling, so this stays
+  # a binary-cache hit.
+  #
+  # FLAG-TRIM POLICY: unused features (mailutils' movemail, gpm, SELinux)
+  # are dropped ONLY on builds already off binary-cache parity: the two
+  # noGui builds (cached only on jylhis cachix) and the Darwin GUI
+  # (patched, never cached). The Linux pgtk GUI keeps upstream defaults:
+  # it is byte-identical to nix-community's emacs-unstable-pgtk, and that
+  # cache hit (Emacs plus every dependent ELPA package) is worth more than
+  # any closure trim.
   jotainEmacs = import ../emacs.nix (
     {
       pkgs = final;
@@ -145,16 +127,13 @@ in
       withPgtk = final.stdenv.hostPlatform.isLinux;
     }
     // final.lib.optionalAttrs final.stdenv.hostPlatform.isDarwin {
-      # Off-parity anyway (default-on NS patches): trim what's unused.
-      # gpm/selinux are Linux-only and already off on Darwin.
+      # Off-parity anyway (NS patches). gpm/selinux are already off here.
       withMailutils = false;
     }
   );
 
-  # Terminal-only (`-nw`) build, used by the nix-on-droid module: Android
-  # under proot is headless, so a GUI Emacs would only bloat the closure
-  # with unusable X/Wayland libraries. Off-parity by construction (noGui
-  # is an override of the non-pgtk base), so the trim policy applies.
+  # Terminal-only build (nix-on-droid, headless). Off-parity by
+  # construction, so the trim policy applies.
   jotainEmacsNoGui = import ../emacs.nix {
     pkgs = final;
     inherit variant;
@@ -164,14 +143,10 @@ in
     withSelinux = false;
   };
 
-  # Prebuilt ECA server binary for the eca-emacs client (lisp/init-ai.el).
-  # Surfaced on the overlay so module-system / Home Manager consumers can put
-  # it on the wrapper PATH.
+  # Prebuilt ECA server for eca-emacs (lisp/init-ai.el).
   eca = import ./eca-server.nix { pkgs = final; };
 
   # LikeC4 language server for `likec4-mode' (lisp/init-lang-devops.el).
-  # Surfaced on the overlay for the same reason as `eca'; bundled onto every
-  # distribution wrapper's PATH via nix/runtime-deps.nix.
   likec4Lsp = import ./likec4-lsp.nix { pkgs = final; };
 
   jotainInfo = import ./info-manual.nix {
@@ -179,21 +154,16 @@ in
     src = ../.;
   };
 
-  # Wrap the Emacs-with-packages output so jotain.info becomes
-  # discoverable from `C-h i d' without touching user Elisp config.
+  # The full distribution: mkJotainEmacsPackages lndirs the inner
+  # emacsWithPackages result (`core', whose share/info we cannot mutate)
+  # and re-wraps its binaries with the runtime PATH, ASPELL_CONF and
+  # ${jotainInfo}/share/info on INFOPATH, so `C-h i d' finds jotain.info.
   #
-  # emacsWithPackages builds a wrapper whose share/info is a hard
-  # symlink to the bare emacs.nix derivation, which we cannot mutate.
-  # Instead we produce an outer derivation that (a) lndirs the core
-  # wrapper verbatim, and (b) re-wraps the user-facing binaries to
-  # append ${jotainInfo}/share/info to $INFOPATH.
-  #
-  # The value is the bare directory: makeBinaryWrapper rejects any
-  # --prefix/--suffix value that would create an empty PATH-like segment
-  # (GHSA-p7v3-pr2c-8584), so we cannot pass the trailing ':' that makes
-  # Emacs's info-initialize append Info-default-directory-list.  nixpkgs'
-  # Emacs site-start.el appends that separator itself (Emacs bug#81105),
-  # so the built-in manuals stay visible anyway.
+  # INFOPATH gets the bare directory: makeBinaryWrapper rejects a value
+  # that would create an empty PATH-like segment (GHSA-p7v3-pr2c-8584),
+  # so the trailing ':' that makes info-initialize append
+  # Info-default-directory-list must come from nixpkgs' site-start.el
+  # (Emacs bug#81105), which adds it, keeping the built-in manuals visible.
   jotainEmacsPackages = mkJotainEmacsPackages {
     name = "jotain-emacs-full";
     package = final.jotainEmacs;

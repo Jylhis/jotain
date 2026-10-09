@@ -2,41 +2,36 @@
 
 ;;; Commentary:
 
-;; Built-in `vc' bits live next to `magit' because in practice you tweak
-;; them as a unit ("when I open a git file, what happens?"). diff-hl
-;; ties the two together with fringe indicators.
+;; Built-in `vc' lives next to `magit' because they are tweaked as a
+;; unit.  diff-hl ties the two together with fringe indicators.
 
 ;;; Code:
 
-;; Defined in init-project.el, which init.el loads after this file;
-;; magit only reads it from its (deferred) :config block below.
+;; Defined in init-project.el, which loads after this file; only magit's
+;; deferred :config reads it.
 (defvar jotain-repositories-roots)
 
-;;; @doc Built-in version control. Pinned to Git + Jujutsu — every
-;;; other backend is a slow startup tax (probes every visited file's
-;;; parents) you almost never benefit from. JJ is supplied by `vc-jj'
-;;; below; without it in this list the backend never gets consulted
-;;; and project.el won't discover `.jj' roots.
+;;; @doc Built-in version control, limited to Git and Jujutsu: every
+;;; other backend probes each visited file's parent directories for
+;;; nothing. JJ comes from `vc-jj' below; without it in this list
+;;; project.el would not discover `.jj' roots.
 (use-package vc
   :ensure nil
   :custom
   (vc-follow-symlinks t)
   (vc-handled-backends '(Git JJ))
   :config
-  ;; Emacs 31+: rewriting already-pushed history is a deliberate, normal
-  ;; move in JJ / force-pushed feature-branch workflows, so don't fight
-  ;; it. And refreshing a `vc-dir' buffer should fold away the
-  ;; up-to-date entries on its own. Guarded for Emacs 30.
+  ;; Emacs 31+ options, guarded for Emacs 30.  Rewriting pushed history is
+  ;; normal in jj and force-push workflows; a `vc-dir' revert hides
+  ;; up-to-date entries.
   (when (boundp 'vc-allow-rewriting-published-history)
     (setopt vc-allow-rewriting-published-history t))
   (when (boundp 'vc-dir-auto-hide-up-to-date)
     (setopt vc-dir-auto-hide-up-to-date 'revert))
-  ;; A few modern `vc' conveniences, guarded so the config still loads on
-  ;; the Emacs 30.1 floor: run `C-x v' commands from non-VC buffers by
-  ;; deducing the backend from `default-directory'; save modified buffers
-  ;; before a `vc-dir' revert; view old revisions without dropping temp
-  ;; files on disk; and adopt the incoming/outgoing keymap prefixes
-  ;; (`C-x v I' log-incoming, `C-x v O' log-outgoing, etc.).
+  ;; Run `C-x v' from non-VC buffers (backend from `default-directory');
+  ;; save buffers before a `vc-dir' revert; view old revisions without
+  ;; temp files on disk; and use the `C-x v I'/`C-x v O' incoming/outgoing
+  ;; prefixes.
   (when (boundp 'vc-deduce-backend-nonvc-modes)
     (setopt vc-deduce-backend-nonvc-modes t))
   (when (boundp 'vc-dir-save-some-buffers-on-revert)
@@ -45,36 +40,26 @@
     (setopt vc-find-revision-no-save t))
   (when (boundp 'vc-use-incoming-outgoing-prefixes)
     (setopt vc-use-incoming-outgoing-prefixes t))
-  ;; `vc-auto-revert-mode' (Emacs 31) reverts VC-controlled buffers when
-  ;; their file changes on disk. Largely subsumed by the global
-  ;; `auto-revert-mode' enabled in init-core.el, but adopted from the
-  ;; newcomers-presets theme for completeness; guarded for Emacs 30.
+  ;; Largely covered by `global-auto-revert-mode' (init-core.el); adopted
+  ;; from the newcomers-presets theme.
   (when (fboundp 'vc-auto-revert-mode)
     (vc-auto-revert-mode 1)))
 
-;;; @doc Quick jump to a file git status reports as changed. Runs
-;;; `git status --porcelain=v1 -z -uall' (-z keeps spaces and
-;;; non-ASCII paths intact; -uall forces untracked listing
-;;; regardless of status.showUntrackedFiles) and offers
-;;; M/A/R/C/U/T/?? entries through `completing-read'. Adapted
-;;; from Rahul M. Juliato's emacs-solo/switch-git-status-buffer.
+;;; @doc C-x G jumps to a file git status reports as changed (modified,
+;;; added, renamed, copied, unmerged, type-changed or untracked).
+;;; Adapted from Rahul M. Juliato's emacs-solo/switch-git-status-buffer.
 (use-package vc-git
   :ensure nil
-  ;; C-x G (not C-x C-g — a sequence ending in C-g would swallow the
-  ;; "pressed C-x, changed my mind, C-g aborts" gesture) sits mnemonically
-  ;; next to C-x g magit-status / C-x M-g magit-dispatch below.
+  ;; Not C-x C-g: a sequence ending in C-g would break C-g as abort.
   :bind ("C-x G" . jotain-switch-git-status-buffer)
   :preface
   (declare-function vc-git-root "vc-git" (file))
   (defun jotain-switch-git-status-buffer ()
     "Switch to a file git status reports as changed in this repo.
-Candidates are parsed from `git status --porcelain=v1 -z -uall' so
-paths containing spaces or non-ASCII characters arrive verbatim
-and untracked files appear regardless of the user's
-`status.showUntrackedFiles' setting. Modified, added, renamed,
-copied, unmerged, type-changed, and untracked files are offered
-through `completing-read'; pure deletions are omitted since the
-working-tree file no longer exists to open."
+Parses `git status --porcelain=v1 -z -uall': -z keeps spaces and
+non-ASCII paths verbatim, and -uall lists untracked files whatever
+`status.showUntrackedFiles' says.  Deletions are omitted, since there
+is no file to open."
     (interactive)
     (require 'vc-git)
     (let ((repo-root (vc-git-root default-directory)))
@@ -120,31 +105,24 @@ working-tree file no longer exists to open."
                 (find-file (expand-file-name file-path
                                              expanded-root))))))))))
 
-;;; @doc Jujutsu (jj) backend for built-in `vc' and `project'. Adds the
-;;; JJ entry pinned in `vc-handled-backends' above, so `C-x v …', the
-;;; modeline VC state, and `project.el' all light up on jj repos
-;;; (typically colocated with git). The jj side wants
+;;; @doc Jujutsu (jj) backend for built-in `vc' and `project', so
+;;; `C-x v …', the modeline VC state and project.el work in jj repos.
+;;; vc, diff-hl and smerge expect git-format diffs and conflicts, so set
+;;; this via `jj config edit --user':
 ;;;   [ui]
 ;;;   diff-formatter = ":git"
 ;;;   conflict-marker-style = "git"
-;;; set via `jj config edit --user' so vc/diff-hl/smerge read jj diffs
-;;; and conflicts in the format they expect.
 ;;;
-;;; `jotain-switch-jj-status-buffer' (C-x J — not C-x C-j, which stays
-;;; on its Emacs 28+ default `dired-jump') is the jj twin of the
-;;; git status jump above: it parses `jj diff --summary -r @' and offers
-;;; the changed files (deletions omitted — the file is gone) through
-;;; `completing-read'. The richer interactive view is `majutsu' (C-c j).
+;;; C-x J is the jj twin of the C-x G status jump. The richer
+;;; interactive view is `majutsu' (C-c j).
 (use-package vc-jj
   :after vc
   :bind ("C-x J" . jotain-switch-jj-status-buffer)
   :preface
   (defun jotain-switch-jj-status-buffer ()
     "Switch to a file `jj' reports as changed in the working copy.
-Candidates come from `jj diff --summary -r @', whose lines are
-\"<LETTER> <path>\" (M/A/D/…). Modified and added files are offered
-through `completing-read'; pure deletions are omitted since the
-working-tree file no longer exists to open."
+Parses `jj diff --summary -r @' (lines are \"<LETTER> <path>\").
+Deletions are omitted, since there is no file to open."
     (interactive)
     (let ((repo-root (locate-dominating-file default-directory ".jj")))
       (if (not repo-root)
@@ -172,9 +150,9 @@ working-tree file no longer exists to open."
               (when file-path
                 (find-file (expand-file-name file-path expanded-root))))))))))
 
-;;; @doc The Git porcelain. Bound C-x g for status, C-x M-g for global
-;;; dispatch, C-c g for the file-specific menu. Refined hunks +
-;;; whitespace-ignoring diffs are turned on globally.
+;;; @doc The Git porcelain. C-x g for status, C-x M-g for dispatch,
+;;; C-c g for the file menu. Diffs refine hunks (ignoring whitespace)
+;;; and status buffers list worktrees.
 (use-package magit
   :bind
   (("C-x g"   . magit-status)
@@ -187,19 +165,15 @@ working-tree file no longer exists to open."
   (magit-diff-context-lines 5)
   (magit-save-repository-buffers 'dontask)
   :config
-  ;; Repository roots come from `jotain-repositories-roots'
-  ;; (init-project.el). Set here rather than in :custom because
-  ;; init-project.el loads after this file; by the time magit itself
-  ;; loads, the defcustom exists.
+  ;; Not :custom: `jotain-repositories-roots' is defined later.
   (setopt magit-repository-directories
           (mapcar (lambda (root) (cons root 2)) jotain-repositories-roots))
   (add-hook 'magit-status-sections-hook 'magit-insert-worktrees t))
 
-;;; @doc The Jujutsu porcelain — a magit-style interface for jj, sitting
-;;; alongside magit (jj is normally colocated with git, so both apply).
-;;; C-c j opens the status/log buffer (`majutsu-log', aliased `majutsu');
-;;; C-c M-j opens the top-level transient dispatcher. Provided by Nix
-;;; (nix/extra-packages.nix), so `:ensure nil'.
+;;; @doc The Jujutsu porcelain, a magit-style interface for jj that sits
+;;; alongside magit in colocated repos. C-c j opens the log
+;;; (`majutsu-log'); C-c M-j the transient dispatcher. Provided by Nix
+;;; (nix/extra-packages.nix).
 (use-package majutsu
   :ensure nil
   :commands (majutsu majutsu-log majutsu-dispatch)
@@ -207,8 +181,8 @@ working-tree file no longer exists to open."
   (("C-c j"   . majutsu-log)
    ("C-c M-j" . majutsu-dispatch)))
 
-;;; @doc Surfaces TODO/FIXME/HACK comments as a section in magit-status.
-;;; Scan depth pinned to 1 so it stays fast on large repos.
+;;; @doc Lists TODO/FIXME/HACK comments as a magit-status section.
+;;; Scan depth 1 keeps it fast on large repos.
 (use-package magit-todos
   :after magit
   :commands (magit-todos-mode global-magit-todos-mode)
@@ -216,9 +190,9 @@ working-tree file no longer exists to open."
   (magit-todos-depth 1))
 
 ;;; @doc PRs, issues, and reviews from GitHub/GitLab/Forgejo inside
-;;; magit. Uses the Emacs-30 built-in sqlite so no external
-;;; emacsql binary is needed. Auth via ~/.authinfo.gpg
-;;; (machine api.github.com login USER^forge password ghp_…).
+;;; magit. Uses Emacs's built-in sqlite, so no external emacsql binary is
+;;; needed. Tokens come from auth-source (e.g. machine api.github.com
+;;; login USER^forge password ghp_…).
 (use-package forge
   :after magit
   :custom
@@ -227,18 +201,11 @@ working-tree file no longer exists to open."
   (forge-database-connector 'emacsql-sqlite-builtin))
 
 ;;; @doc Built-in transient menu system that magit/forge are built on.
-;;; Themed under var/ so its three state files don't drop at the
-;;; repo root.
+;;; Its three state files live under var/.
 (use-package transient
   :ensure nil
-  ;; Deferred: loading transient eagerly just to set three path
-  ;; variables pulled a non-trivial library onto the startup path before
-  ;; magit/forge ever needed it. The paths are applied via
-  ;; `with-eval-after-load' when transient actually loads — at
-  ;; `after-init' (init-devenv.el's `after-init' modes autoload devenv.el,
-  ;; which `require's transient), or on first magit/forge use, whichever
-  ;; comes first — always before any state file is read. Either way it is
-  ;; off the pre-first-frame module-load path, which is the win.
+  ;; Deferred to keep transient off the startup path; the paths are set
+  ;; when it loads, before any state file is read.
   :defer t
   :init
   (with-eval-after-load 'transient
@@ -246,9 +213,8 @@ working-tree file no longer exists to open."
             transient-values-file  (jotain-var-file "transient/values.el")
             transient-levels-file  (jotain-var-file "transient/levels.el"))))
 
-;;; @doc Fringe indicators for added/changed/removed lines in the buffer
-;;; you're editing. `diff-hl-flydiff-mode` updates pre-save so the
-;;; indicators reflect uncommitted edits, not just the last save.
+;;; @doc Fringe indicators for added/changed/removed lines.
+;;; `diff-hl-flydiff-mode` updates them before saving, too.
 (use-package diff-hl
   :functions (diff-hl-flydiff-mode)
   :custom
@@ -256,41 +222,29 @@ working-tree file no longer exists to open."
   (fringes-outside-margins t)
   (diff-hl-side 'left)
   :hook
-  ;; No `:after magit'/`:demand' — adding a function to
-  ;; magit-post-refresh-hook is safe before magit loads (hooks are
-  ;; just variables), and gating on magit would postpone the
-  ;; after-init registration past after-init itself.  diff-hl 1.11
-  ;; obsoleted `diff-hl-magit-pre-refresh' (aliased to `ignore');
-  ;; only the post-refresh half is needed on Magit 2.4+.
+  ;; No `:after magit': hooking before magit loads is fine, and gating on
+  ;; it would miss after-init.  `diff-hl-magit-pre-refresh' is obsolete
+  ;; (diff-hl 1.11); only the post-refresh hook is needed.
   ((after-init . global-diff-hl-mode)
    (magit-post-refresh . diff-hl-magit-post-refresh))
   :config
   (diff-hl-flydiff-mode 1))
 
-;;; @doc Dired integration for diff-hl — shows VC change indicators next
-;;; to files in dired listings.  Kept in its own block rather than the
-;;; `diff-hl' :hook above because `diff-hl-dired-mode' lives in
-;;; `diff-hl-dired.el', not the package's main file: hooking it from the
-;;; `diff-hl' block makes use-package autoload it from "diff-hl", which
-;;; does not define it, so with stale package autoloads (e.g. a
-;;; `var/package-quickstart.el' caching old /nix/store paths) the hook
-;;; errors and empties every dired buffer.  Naming the correct feature
-;;; here pins the autoload to the right file.
+;;; @doc VC change indicators next to files in dired. Its own block
+;;; because `diff-hl-dired-mode' lives in diff-hl-dired.el: hooked from
+;;; the `diff-hl' block, use-package would autoload it from "diff-hl",
+;;; and with stale package autoloads that errors and empties every dired
+;;; buffer.
 (use-package diff-hl-dired
   :ensure nil
   :hook (dired-mode . diff-hl-dired-mode))
 
-;;; @doc Adds `N/M` counters to the doom-modeline showing
-;;; uncommitted line-level changes and commits made today (since
-;;; local midnight, merges excluded). Works on both git and jj
-;;; repos: a `.jj' directory selects the jj backend (`jj diff
-;;; --git' for churn, an `author_date(after:"00:00")' revset for
-;;; today's changes), otherwise git is used. The counter switches
-;;; to a warning/urgent face above configurable thresholds — a
-;;; nudge that the WIP is getting too large to squash into one
-;;; coherent commit. Probes run async via `make-process` so the
-;;; modeline render never blocks. (Names keep the `git-stats'
-;;; prefix for back-compatibility of the user options below.)
+;;; @doc An `N/M` mode-line counter (via `mode-line-misc-info`): N is
+;;; uncommitted added+deleted lines, M is commits made today (since local
+;;; midnight, merges excluded). Works in git and jj repos (a `.jj`
+;;; directory selects jj). N changes face at configurable thresholds, a
+;;; nudge that the WIP is getting too large for one commit. Probes run
+;;; async, so rendering never blocks.
 (defgroup jotain-vc nil
   "Version-control modeline knobs for the Jotain configuration."
   :group 'jotain-ui)
@@ -331,7 +285,7 @@ working-tree file no longer exists to open."
 Each value is a plist (:changes N :commits M :ts TIMESTAMP :busy BOOL).")
 
 (defvar jotain-git-stats--timer nil
-  "Idle timer that walks the cache and invalidates stale entries.")
+  "Idle timer that periodically invalidates every cache entry.")
 
 (defcustom jotain-git-stats-max-dotgit-bytes 4096
   "Maximum number of bytes read from a regular `.git' file.
@@ -373,11 +327,8 @@ when ROOT is not under git control or parsing fails."
 
 (defun jotain-git-stats--git-busy-p (root)
   "Return non-nil if ROOT has a long-running git op in progress.
-Probes the sentinel files git drops while rebase / merge / bisect /
-cherry-pick are mid-flight. The modeline skips its refresh in that
-window — running our read-only `diff --numstat' against a foreground
-`git rebase' is what lets our `make-process' calls race the user's
-own `.git/index.lock' churn on the same checkout."
+Probes the files git leaves while a rebase, merge, bisect or
+cherry-pick is in flight, so the refresh can stay out of its way."
   (when-let* ((git-dir (jotain-git-stats--git-dir root)))
     (or (file-exists-p (expand-file-name "rebase-merge" git-dir))
         (file-exists-p (expand-file-name "rebase-apply" git-dir))
@@ -386,11 +337,9 @@ own `.git/index.lock' churn on the same checkout."
         (file-exists-p (expand-file-name "CHERRY_PICK_HEAD" git-dir)))))
 
 (defun jotain-git-stats--parse-numstat (output)
-  "Sum the added + deleted columns from `git diff --numstat' OUTPUT.
-Format is TAB-separated \"ADDED<TAB>DELETED<TAB>FILE\" per line; binary
-files report a literal \"-\" in the count columns and are skipped.
-This is locale-independent — unlike `--shortstat', whose English
-prose breaks under `LANG=de_DE.UTF-8' etc."
+  "Sum the added + deleted columns of `--numstat' OUTPUT.
+Lines are \"ADDED<TAB>DELETED<TAB>FILE\"; binary files show \"-\" and
+are skipped.  Unlike `--shortstat' prose, this is locale-independent."
   (let ((sum 0))
     (dolist (line (split-string output "\n" t))
       (let ((cols (split-string line "\t")))
@@ -410,10 +359,8 @@ prose breaks under `LANG=de_DE.UTF-8' etc."
 
 (defun jotain-git-stats--count-diff-churn (output)
   "Count added + deleted lines in a unified-diff OUTPUT.
-Used for the jj backend, where `jj diff --git' emits a git-format
-diff.  Counts lines beginning with a single `+' or `-' while skipping
-the `+++'/`---' file headers (which begin with a doubled marker), so
-the result matches git's `--numstat' added+deleted semantics."
+Used for jj's `jj diff --git'.  Skips lines starting with a doubled
+marker (the `+++'/`---' headers), matching git's `--numstat'."
   (let ((sum 0))
     (dolist (line (split-string output "\n" t))
       (when (and (> (length line) 0)
@@ -427,19 +374,14 @@ the result matches git's `--numstat' added+deleted semantics."
   "Run COMMAND (a full argv list) with `default-directory' set to ROOT.
 EXTRA-ENV is a list of \"VAR=VALUE\" strings prepended to
 `process-environment'.  PARSE-FN is applied to stdout; CALLBACK
-receives the parsed value.  Errors and non-zero exits are mapped to 0.
-If `make-process' itself fails (e.g. the binary is missing on PATH),
-the buffer is killed and CALLBACK is still invoked with 0 so the cache
-never deadlocks.
+receives the parsed value.  Errors and non-zero exits map to 0, and so
+does a failing `make-process' (e.g. binary not on PATH), so the cache
+never stays busy.
 
-The git callers prepend `GIT_OPTIONAL_LOCKS=0' so the read paths
-(`diff-index', `log') decline to take `.git/index.lock' for an
-opportunistic refresh — that lock is what races the user's own `git
-rebase' / `git commit' on the same checkout when N modeline refreshes
-fire in parallel across sibling Emacs / Claude sessions.  The jj
-callers pass `--ignore-working-copy' in COMMAND for the same reason:
-it stops jj snapshotting (and locking) the working copy from a
-background timer."
+Git callers pass `GIT_OPTIONAL_LOCKS=0' so a background refresh never
+takes `.git/index.lock' and races the user's own git commands; jj
+callers pass `--ignore-working-copy' so jj does not snapshot (and lock)
+the working copy."
   (let* ((buffer (generate-new-buffer " *jotain-git-stats*"))
          (default-directory root)
          (process-environment (append extra-env process-environment)))
@@ -498,10 +440,8 @@ BACKEND selects the command set (`git' or `jj')."
              (set-commits (lambda (n) (plist-put entry :commits n) (funcall after))))
         (pcase backend
           ('jj
-           ;; `--ignore-working-copy' keeps the background probe from
-           ;; snapshotting/locking the working copy.  Changes = added +
-           ;; deleted lines in @ vs its parent; commits-today = non-empty
-           ;; changes authored since local midnight (root excluded).
+           ;; Changes: added + deleted lines in @.  Commits today:
+           ;; non-empty changes authored since local midnight.
            (jotain-git-stats--run
             root '("jj" "--no-pager" "--ignore-working-copy"
                    "diff" "--git" "-r" "@")
@@ -527,12 +467,9 @@ BACKEND selects the command set (`git' or `jj')."
 
 (defun jotain-git-stats--maybe-refresh (root backend)
   "Refresh ROOT's cache if it's stale and no refresh is already in flight.
-BACKEND is `git' or `jj'.  For git, also skips entirely while a
-long-running op (rebase / merge / bisect / cherry-pick) is in progress
-under ROOT — our read-only probes there are the same calls the user's
-foreground rebase is racing, so just hold the cached counts until the
-operation clears.  jj has no such index-lock contention (its ops are
-atomic via the operation log and our probes use `--ignore-working-copy')."
+BACKEND is `git' or `jj'.  For git, also wait while a rebase, merge,
+bisect or cherry-pick is in progress, keeping the cached counts.  jj
+needs no such wait: its probes pass `--ignore-working-copy'."
   (let ((entry (jotain-git-stats--entry root)))
     (unless (or (plist-get entry :busy)
                 (jotain-git-stats--fresh-p entry)
@@ -562,9 +499,8 @@ atomic via the operation log and our probes use `--ignore-working-copy')."
 
 (defun jotain-git-stats--invalidate-current-buffer (&rest _)
   "Drop the cached freshness for this buffer's repo so the next render refreshes.
-Falls back to `default-directory' when `buffer-file-name' is nil so
-that magit status buffers (which have no file) still trigger an
-invalidation after `magit-post-refresh-hook'."
+Uses `default-directory' in file-less buffers, so magit status buffers
+also invalidate after `magit-post-refresh-hook'."
   (when-let* ((file-or-dir (or buffer-file-name default-directory))
               (rb (jotain-git-stats--root-and-backend file-or-dir)))
     (let ((entry (jotain-git-stats--entry (car rb))))
@@ -576,12 +512,8 @@ invalidation after `magit-post-refresh-hook'."
            jotain-git-stats--cache)
   (force-mode-line-update t))
 
-;; Attach the counters through `mode-line-misc-info' instead of
-;; re-declaring doom-modeline's `main' modeline with a hand-copied
-;; segment list (which would silently drift as upstream adds/renames
-;; segments).  doom-modeline renders misc-info in its default `main',
-;; and the stock mode line shows it too, so the counter survives
-;; upstream changes and works without doom-modeline loaded.
+;; `mode-line-misc-info' is shown by doom-modeline's `main' and the stock
+;; mode line alike, so there is no hand-copied segment list to drift.
 (add-to-list 'mode-line-misc-info
              '(:eval (when-let* ((file buffer-file-name)
                                  (rb (and (mode-line-window-selected-p)
@@ -597,13 +529,11 @@ invalidation after `magit-post-refresh-hook'."
         (run-with-idle-timer jotain-git-stats-update-interval t
                              #'jotain-git-stats--tick)))
 
-;; smerge-mode needs no block here: it activates itself on conflict
-;; detection and already binds C-c ^ u/l/n/p (keep-upper/keep-lower/
-;; next/prev) via `smerge-command-prefix'.
+;; smerge-mode needs no block: it turns on for files with conflict
+;; markers and binds C-c ^ (`smerge-command-prefix').
 
-;;; @doc Built-in interactive diff. Configured with `plain` window setup
-;;; so the control panel doesn't pop a separate frame, plus
-;;; whitespace-ignoring diffs for less merge noise.
+;;; @doc Built-in interactive diff. The `plain` window setup keeps the
+;;; control panel out of a separate frame; diffs ignore whitespace.
 (use-package ediff
   :ensure nil
   :defer t

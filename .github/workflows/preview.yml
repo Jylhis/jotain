@@ -1,22 +1,14 @@
 # PR site previews as downloadable artifacts.
 #
-# Production Pages is served from the GitHub Actions source (deploy.yml),
-# which hosts exactly one deployment, so PR previews can't live under it at
-# a stable URL. Instead, on every pull request this builds the full site
-# (`nix build .#site`, including /help/api/ and /packages/) and uploads its
-# public/ tree as a workflow artifact. A reviewer downloads it from the run
-# and serves it locally — e.g.:
+# Pages hosts a single deployment (deploy.yml), so each PR's full `.#site`
+# is uploaded as a `site.tgz` workflow artifact instead. To view it, unzip
+# the artifact, extract site.tgz under /jotain/ (the baseHref) and serve:
 #
-#   unzip site-preview.zip -d preview
-#   d=$(mktemp -d); ln -s "$PWD/preview" "$d/jotain"
-#   python3 -m http.server -d "$d" 8080   # → http://localhost:8080/jotain/
+#   mkdir -p /tmp/site/jotain && tar xzf site.tgz -C /tmp/site/jotain
+#   python3 -m http.server -d /tmp/site 8080   # → http://localhost:8080/jotain/
 #
-# (The site is built with baseHref=/jotain, so it must be mounted under
-# /jotain/ — the same as `just serve-site`.)
-#
-# No gh-pages branch, no PAT, no Pages settings change. Every `uses:` here
-# must be github-owned or match cachix/* — the repo restricts Actions to
-# those.
+# Every `uses:` must be github-owned or match cachix/*: the repo restricts
+# Actions to those.
 name: PR preview
 
 on:
@@ -35,10 +27,9 @@ permissions:
 jobs:
   preview-artifact:
     name: Build preview artifact
-    # 90 (not 60): a PR that changes the elisp-doc engine or lisp/ forces a
-    # cold rebuild of the /help/api/ per-package fragments. Same-repo PRs
-    # pass the cachix writer token (fork runs get none, staying pull-only),
-    # so that first build populates the jylhis cache for later runs.
+    # A PR touching the elisp-doc engine or lisp/ rebuilds the /help/api/
+    # fragments cold. Same-repo PRs get the cachix writer token (forks
+    # stay pull-only), so that build fills the cache for later runs.
     timeout-minutes: 90
     runs-on: ubuntu-latest
     steps:
@@ -55,12 +46,9 @@ jobs:
       - name: Build site
         run: nix build .#site -o result-site
 
-      # Pack into a single tarball before uploading. The generated
-      # /help/api/ tree contains files whose names carry characters
-      # actions/upload-artifact@v4 rejects in paths (":" — e.g.
-      # org-babel-execute:python.html — and "*"/"?"/"<"/">"), so a
-      # directory upload fails. Archiving first sidesteps per-file path
-      # validation (the same trick upload-pages-artifact uses internally).
+      # upload-artifact rejects some /help/api/ filenames (":", e.g.
+      # org-babel-execute:python.html, and "*"/"?"/"<"/">"), so upload a
+      # tarball, as upload-pages-artifact does internally.
       - name: Pack site tarball
         run: |
           mkdir -p out
@@ -74,9 +62,8 @@ jobs:
           path: out/site.tgz
           retention-days: 14
 
-      # Point reviewers at the artifact. Skipped for forks, whose
-      # pull_request runs get a read-only token that can't comment (the
-      # artifact still uploads and is downloadable from the run).
+      # Skipped for forks: their read-only token cannot comment (the
+      # artifact still uploads).
       - name: Comment artifact link
         if: github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v9

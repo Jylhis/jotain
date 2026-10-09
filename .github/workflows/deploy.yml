@@ -1,27 +1,17 @@
 # Full validation + deploy for protected branches.
 #
-# On push to main:  check (full nix flake check) → test (devenv test),
-#                   then build-pages → deploy-pages builds the full site
-#                   (`nix build .#site`) and publishes it to GitHub Pages
-#                   via the Actions source (upload-pages-artifact +
-#                   deploy-pages), served at page.jylhis.com/jotain/. The
-#                   jylhis cachix cache is repopulated with any newly
-#                   built artifacts.
+# main: check (full nix flake check) and test (devenv test); after check,
+#       build-pages -> deploy-pages publishes the full `.#site` to GitHub
+#       Pages (Actions source) at page.jylhis.com/jotain/.
+# next: check + test only.
 #
-# On push to next:  check + test only (no deploys).
+# Both push new artifacts to the jylhis cachix cache, so later PR runs
+# hit it. Pages hosts one deployment; PR previews are artifacts instead
+# (preview.yml).
 #
-# GitHub Pages source: this repo serves Pages from the **GitHub Actions**
-# source (deploy-pages, below), not a branch. PR previews therefore cannot
-# share this Pages site as subdirectories; instead preview.yml uploads each
-# PR's built site as a downloadable workflow artifact (see that file).
-#
-# Every `uses:` here must be github-owned or match cachix/*: the repo
-# restricts Actions to those, and a disallowed action fails the entire
-# run at startup with no logs.  Reach for a `run:` step instead.
-#
-# This workflow is the only place where heavy artifacts (full grammar
-# distribution, jotainInfo, options-doc) are re-validated and pushed
-# back to cachix, so downstream PRs running ci.yml hit the cache.
+# Every `uses:` must be github-owned or match cachix/*: the repo restricts
+# Actions to those, and a disallowed action fails the whole run at
+# startup with no logs. Use a `run:` step instead.
 name: Deploy
 
 on:
@@ -29,8 +19,8 @@ on:
     branches: [main, next]
   workflow_dispatch:
 
-# Do NOT cancel protected-branch runs — post-merge cache pushes must
-# finish.  Pages deploys are additionally serialized below.
+# Never cancel: post-merge cache pushes must finish. Pages builds are
+# also serialized below.
 concurrency:
   group: deploy-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -43,11 +33,8 @@ permissions:
 jobs:
   check:
     name: Check
-    # 90 (not 30): the full `nix flake check` now includes the
-    # emacs-api-doc check, whose first uncached build (a batch Emacs over
-    # ~100 packages) is slow. This job pushes results to the jylhis cache,
-    # so once it builds emacs-api-doc, deploy-site's `.#site` reuses it as
-    # a cache hit and later runs with unchanged inputs are fast.
+    # Covers a cold emacs-api-doc build (one batch Emacs per package).
+    # The pushed result makes build-pages' `.#site` a cache hit.
     timeout-minutes: 90
     runs-on: ubuntu-latest
     steps:
@@ -59,8 +46,7 @@ jobs:
         with:
           name: jylhis
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          # The default jotainEmacs base (emacs-unstable, Emacs 31
-          # pretest) is cached on nix-community.cachix.org.
+          # Hosts the default jotainEmacs base (emacs-unstable).
           extraPullNames: nix-community
 
       - name: nix flake check
@@ -90,22 +76,16 @@ jobs:
         run: devenv test
 
   build-pages:
-    # Build the full site (`nix build .#site`, including the /help/api/
-    # reference and the /packages/ search page) and upload its public/ tree
-    # as the GitHub Pages artifact. GitHub serves it as this repo's project
-    # site at page.jylhis.com/jotain/ (the site is built with baseHref=/jotain
-    # to match).
+    # Full `.#site` (including /help/api/ and /packages/), built with
+    # baseHref=/jotain to match the project-site URL.
     name: Build site
     if: github.ref == 'refs/heads/main'
     needs: check
-    # 60 (not 15): builds the full `.#site` including the /help/api/
-    # reference. `needs: check` runs after the Check job has built and
-    # pushed emacs-api-doc to the jylhis cache, so this normally pulls it
-    # as a cache hit; the extra headroom covers a cold cache.
+    # Normally pulls emacs-api-doc from the cache Check just filled;
+    # the headroom covers a cold cache.
     timeout-minutes: 60
     runs-on: ubuntu-latest
-    # Serialize Pages builds so concurrent main pushes queue instead of
-    # racing the upload-pages-artifact step.
+    # Concurrent main pushes queue instead of racing the upload.
     concurrency:
       group: pages
       cancel-in-progress: false
@@ -118,15 +98,13 @@ jobs:
         with:
           name: jylhis
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          # The site renders man pages and the Emacs/Elisp manuals from
-          # jotainEmacs (emacs-unstable base, cached on nix-community).
+          # Man pages and manuals come from jotainEmacs.
           extraPullNames: nix-community
 
       - name: Build site
         run: nix build .#site -o result-site
 
-      # Copy out of the read-only Nix store into a writable tree
-      # (dereferencing symlinks) so upload-pages-artifact can tar it.
+      # Dereferenced, writable copy for upload-pages-artifact to tar.
       - name: Assemble Pages artifact
         run: |
           mkdir -p site

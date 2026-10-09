@@ -1,15 +1,13 @@
 ;;; debug-init.el --- Full-debug launch harness for Jotain  -*- lexical-binding: t; -*-
 
-;; Loaded via `emacs --load' by the `just run-built-debug-log' recipe, AFTER
-;; the normal init has run.  It turns on Emacs's debugging facilities and
-;; mirrors *Messages*, *Warnings*, *Backtrace*, the native-comp/compile logs,
-;; and a backtrace for every error into a per-session directory (var/debug/,
-;; gitignored via var/).  The recipe passes that directory in
-;; JOTAIN_DEBUG_DIR.
+;; Loaded by `just run-built-debug-log' after the normal init.  Turns on
+;; Emacs's debugging facilities and mirrors *Messages*, *Warnings*,
+;; *Backtrace*, the compile logs, and a backtrace per error into the
+;; session directory the recipe passes in JOTAIN_DEBUG_DIR (under
+;; var/debug/).
 ;;
-;; This file is intentionally OUTSIDE lisp/ and test/: it is not part of the
-;; loaded configuration, so the use-package scanner (nix/use-package.nix) and
-;; the elisp-compile/elisp-lint checks never see it.
+;; Kept outside lisp/ and test/ so the use-package scanner and the
+;; elisp-compile/elisp-lint checks never see it.
 
 (require 'backtrace)
 
@@ -67,7 +65,7 @@ debugger is dismissed with `q'."
               (backtrace-get-frames #'jotain-debug--log-backtrace))
              "\n"))))
 
-;; --- Turn the debugging facilities on -----------------------------------
+;;; Turn the debugging facilities on
 
 (setq debug-on-error t                 ; interactive backtrace on any error
       message-log-max t                ; keep every message in *Messages*

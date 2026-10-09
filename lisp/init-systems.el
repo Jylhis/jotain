@@ -2,23 +2,18 @@
 
 ;;; Commentary:
 
-;; Tools you reach for when working *on* systems rather than *in*
-;; them: SOPS-encrypted file editing, log file viewing, and the
-;; 1Password auth-source backend that gptel/forge/etc. consume
-;; transparently.
+;; Sysadmin tools: the 1Password auth-source backend, SOPS-encrypted
+;; file editing, and log file viewing.
 
 ;;; Code:
 
-;; Forward declaration: `auth-sources' is a defcustom in the built-in
-;; auth-source library, referenced below inside `with-eval-after-load'.
 (defvar auth-sources)
 
 ;;;; auth-source-1password
 
-;;; @doc Pulls credentials from the 1Password CLI (`op`). Once enabled,
-;;; every package that uses auth-source — magit/forge, gptel,
-;;; smtpmail, circe — resolves credentials by host against the
-;;; 1Password vault transparently.
+;;; @doc Pulls credentials from the 1Password CLI (`op`), so every
+;;; auth-source consumer (forge, gptel, smtpmail) can resolve them from
+;;; the vault by host.
 (use-package auth-source-1password
   :defer t
   :functions (auth-source-1password-enable)
@@ -27,11 +22,10 @@
   (auth-source-1password-op-executable "op")
   (auth-source-1password-cache-ttl 3600)
   :init
-  ;; Credentials are only looked up when a consumer (gptel, forge, …)
-  ;; loads auth-source, so register everything lazily at that point.
+  ;; Register lazily, when a consumer first loads auth-source.
   (with-eval-after-load 'auth-source
-    ;; Prepend any module-declared authinfo files (colon-separated paths in
-    ;; JOTAIN_AUTH_SOURCES) so they take priority over ~/.authinfo(.gpg).
+    ;; Module-declared authinfo files (colon-separated JOTAIN_AUTH_SOURCES)
+    ;; take priority over ~/.authinfo(.gpg).
     (when-let* ((paths (getenv "JOTAIN_AUTH_SOURCES")))
       (setopt auth-sources (append (split-string paths ":" t) auth-sources)))
     (require 'auth-source-1password)
@@ -41,23 +35,21 @@
 
 ;;;; sops — transparent encryption for YAML/JSON/env files
 
-;; sops-mode has no built-in keymap, so we declare one ourselves
-;; before registering it on `minor-mode-map-alist'.
+;; sops-mode ships no keymap; define one and register it below.
 (defvar sops-mode-map (make-sparse-keymap)
   "Keymap for `sops-mode'.")
 
-;;; @doc Transparent SOPS encrypt/decrypt for YAML/JSON/env files. C-c
-;;; C-c saves an encrypted edit; C-c C-d toggles into the editing
-;;; view; C-c C-k cancels.
+;;; @doc Transparent SOPS encrypt/decrypt for YAML/JSON/env files.
+;;; C-c C-d opens the decrypted edit view, C-c C-c saves it encrypted,
+;;; C-c C-k cancels.
 (use-package sops
   :commands (global-sops-mode)
   :functions (sops-save-file sops-cancel sops-edit-file)
   :init
-  ;; The global mode hooks find-file; after-init runs before command-line
-  ;; file arguments are visited, so nothing is missed.  Gated on the binary:
-  ;; the `sops' CLI is opt-in (module `services.jotain.sops.enable'), and a
-  ;; source-checkout launch without it made `global-sops-mode' log
-  ;; "executable not found: sops" on every candidate file.
+  ;; after-init runs before command-line files are visited, so none are
+  ;; missed.  The `sops' CLI is opt-in (`services.jotain.sops.enable');
+  ;; without it the mode logs "executable not found: sops" on every
+  ;; candidate file.
   (when (executable-find "sops")
     (add-hook 'after-init-hook #'global-sops-mode))
   :config
@@ -71,9 +63,8 @@
 
 ;;;; logview — major mode for log files
 
-;;; @doc Major mode for log files — level filtering, timestamp parsing,
-;;; thread highlighting. Configured for SLF4J (Java/Kotlin) and a
-;;; custom ROS2 submode.
+;;; @doc Major mode for log files: level filtering, timestamp parsing,
+;;; thread highlighting. Adds a ROS2 submode on top of the built-in ones.
 (use-package logview
   :defer t
   :custom

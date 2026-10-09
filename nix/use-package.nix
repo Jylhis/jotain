@@ -11,11 +11,10 @@
 #     extracts the `;;; @doc` block immediately above each form so
 #     `nix/packages-doc.nix` can render the package reference.
 #
-# We intentionally do NOT vendor `fromElisp` like emacs-overlay does. The
-# config in lisp/init-*.el never nests `(use-package ...)` forms inside
-# `:config` blocks, never uses `:disabled` conditionally, and never uses
-# `leaf`, so a regex scan is sufficient and keeps the dependency surface
-# small.
+# No vendored `fromElisp` (unlike emacs-overlay): the config never nests
+# `(use-package ...)` forms inside `:config` blocks, never uses `:disabled`
+# conditionally, and never uses `leaf`, so a regex scan suffices. The
+# scanner-fidelity check (nix/checks.nix) holds it to the Emacs reader.
 #
 # `;;; @doc` convention (multi-line, no need to repeat the marker):
 #
@@ -25,13 +24,12 @@
 #     ;;; A blank `;;;` line is a paragraph break.
 #     (use-package foo …)
 #
-# The legacy form where every line is `;;; @doc <text>` still works.
+# Repeating `;;; @doc` on every line also works.
 #
 # Dual-source scope contract
 # --------------------------
-# This module (and every consumer: nix/mk-overlay.nix, nix/emacs-api-doc.nix)
-# resolves packages ONLY through the portable Emacs-package-scope surface
-# that plain nixpkgs and nix-community/emacs-overlay expose identically:
+# This module and its consumers resolve packages ONLY through the
+# package-scope surface plain nixpkgs and emacs-overlay expose identically:
 #
 #   • `pkgs.emacsPackagesFor <emacs>`   — build the scope (`epkgs`).
 #   • `epkgs.overrideScope (self: super: …)` — layer extra packages
@@ -41,14 +39,11 @@
 #     `epkgs.melpaPackages`/`elpaPackages`/`manualPackages` sub-attrsets).
 #   • `epkgs.trivialBuild` and `epkgs.treesit-grammars.with-all-grammars`.
 #
-# emacs-overlay's `emacsPackagesFor` is `(super.emacsPackagesFor emacs)
-# .overrideScope (…)` — it reuses nixpkgs' scope machinery and only swaps
-# in fresher generated melpa/elpa/nongnu data, so this surface is byte-for-
-# byte the same on both sources; only the resolved package VERSIONS differ.
-# Keep edits within this surface: the overlay-only top-level helpers
-# (`pkgs.emacsWithPackagesFromUsePackage`, the `emacs-git`/`emacs-unstable`/
-# `emacs-igc` base attrs) are deliberately not depended on here — that is
-# why this pure-Nix reimplementation exists.
+# emacs-overlay's `emacsPackagesFor` reuses nixpkgs' scope machinery with
+# fresher melpa/elpa/nongnu data, so only package VERSIONS differ. The
+# overlay-only helpers (`pkgs.emacsWithPackagesFromUsePackage`, the
+# `emacs-git`/`emacs-unstable`/`emacs-igc` attrs) are deliberately not
+# used: that is why this reimplementation exists.
 #
 # Public API:
 #
@@ -109,11 +104,9 @@ let
     else
       "";
 
-  # Character classes used as word-boundary guards. POSIX ERE wants `-`
-  # at the start or end of a bracket expression, so we keep it last. We
-  # spell alphanumerics out literally instead of using `[:alnum:]`
-  # because some POSIX regex backends choke on `[[:alnum:]_-]`
-  # (ambiguous with the `[ ]` opener).
+  # Word-boundary guards. `-` stays last in the bracket expression, and
+  # alphanumerics are spelled out because some regex backends choke on
+  # `[[:alnum:]_-]`.
   wordChar = "[A-Za-z0-9+_-]";
   endSym = "[^A-Za-z0-9_-]";
 
@@ -370,25 +363,18 @@ let
       extraMap ? { },
       warnMissing ? true,
       # When true, throw (listing every unresolved name) instead of
-      # silently dropping a package that is declared in the config but
-      # absent from the emacs package set. The distribution build sets
-      # this (nix/mk-overlay.nix) so a missing package fails the build
-      # loudly rather than shipping a broken editor — this is what makes
-      # the older nixpkgs snapshot a safe source to build against. The
-      # docs generator leaves it false (best-effort). Matches the intent
-      # of emacs-overlay's `mkPackageError`.
+      # silently dropping a declared package the package set lacks. The
+      # distribution build sets it (nix/mk-overlay.nix); best-effort
+      # callers leave it false. Like emacs-overlay's `mkPackageError`.
       strict ? false,
-      # Names allowed to be absent even under `strict` (e.g. a package
-      # intentionally fetched from an archive at runtime). Each such name
-      # is dropped rather than thrown.
+      # Names dropped rather than thrown under `strict` (e.g. a package
+      # fetched from an archive at runtime).
       allowMissing ? [ ],
     }:
     let
       names = scanDirectory dir;
-      # A name is a genuine miss when it maps to a non-null attribute name
-      # (so it is not the `emacs` pseudo-package exclusion) that the scope
-      # does not provide. `:ensure nil` / `:disabled` never reach here —
-      # they are already dropped in parsePackagesFromContent.
+      # A miss: a non-null mapped name the scope lacks. `:ensure nil` and
+      # `:disabled` forms are already dropped by parsePackagesFromContent.
       isMissing =
         name:
         let
@@ -416,7 +402,7 @@ let
       # also accepted if a config is split across several directories.
       config,
 
-      # Base Emacs derivation. Defaults to whatever `pkgs.emacs` is.
+      # Base Emacs derivation (required).
       package,
 
       # emacsPackagesFor factory, i.e. `pkgs.emacsPackagesFor`.
@@ -437,10 +423,7 @@ let
       # If true, missing packages trace-warn; if false they fail silently.
       warnMissing ? true,
 
-      # If true, a package declared in the config but absent from the
-      # emacs package set throws (listing every miss) instead of being
-      # dropped. The distribution build passes this; see the `strict`
-      # doc on `packagesForDirectory`.
+      # See `strict` on `packagesForDirectory`.
       strict ? false,
 
       # Names allowed to be absent even under `strict`.

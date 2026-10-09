@@ -6,34 +6,33 @@ description: Run tasks, manage processes, and introspect devenv.sh environments 
 # devenv integration
 
 Jotain ships a native integration with [devenv](https://devenv.sh), the
-Nix-based developer environment tool. The library lives in
-`lisp/devenv.el` (standalone and reusable — no Jotain dependencies) and
-is wired in by `init-devenv.el`. Everything is driven through the
-`devenv` CLI and degrades to a clean error when the binary is not on
-`PATH`. devenv 2.1+ is recommended; every invocation sets `AI_AGENT=1`
-so devenv's TUI stays out of the machine-readable output.
+Nix-based developer environment tool. The library is `lisp/devenv.el`
+(standalone, no Jotain dependencies), wired in by `init-devenv.el`. It
+drives the `devenv` CLI and fails with a clean error when the binary is
+not on `PATH`. devenv 2.1+ is recommended; every invocation sets
+`AI_AGENT=1` so devenv's TUI stays out of the machine-readable output.
 
 ## Entry point: `C-c v`
 
-`C-c v` (or `M-x devenv`) opens a transient covering the whole surface:
+`C-c v` (or `M-x devenv`) opens a transient:
 
 | Key | Command | What it does |
 | --- | --- | --- |
-| `t` | `devenv-task-run` | Pick a task (annotated from `devenv tasks list --json`) and run it; prefix arg selects the dependency mode (`before`/`single`/`after`/`all`) |
-| `s` | `devenv-script-run` | Pick a script defined in `devenv.nix` (annotated with its description) and run it |
+| `t` | `devenv-task-run` | Pick a task (annotated from `devenv tasks list --json`) and run it; a prefix arg picks the dependency mode (`before`/`single`/`after`/`all`) |
+| `s` | `devenv-script-run` | Pick a script from `devenv.nix` (annotated with its description) and run it |
 | `T` | `devenv-test` | `devenv test` (enterTest, with processes started/stopped around it) |
 | `b` | `devenv-build` | `devenv build`, optionally for specific attributes |
-| `u` / `d` | `devenv-up` / `devenv-down` | Start/stop the project's processes; `up` streams into a live buffer (or detaches, see `devenv-up-detached`); prefix arg picks a subset |
+| `u` / `d` | `devenv-up` / `devenv-down` | Start/stop the project's processes; `up` streams into a live buffer (or detaches, see `devenv-up-detached`); a prefix arg picks a subset |
 | `p` | `devenv-processes` | Process dashboard (below) |
 | `l` | `devenv-processes-logs` | Tail one process's logs |
-| `i` / `/` / `:` | `devenv-info` / `devenv-search` / `devenv-eval` | Introspection: environment summary, package/option search, evaluate any config attribute to pretty-printed JSON |
+| `i` / `/` / `:` | `devenv-info` / `devenv-search` / `devenv-eval` | Environment summary, package/option search, evaluate any config attribute to pretty-printed JSON |
 | `r` | `devenv-reload` | Refresh the environment (below) |
 | `e` | `devenv-env-global-mode` | Toggle the native environment loader (below) |
-| `m` | `devenv-modeline-mode` | Toggle the mode-line status segment (below) |
+| `m` | `devenv-modeline-mode` | Toggle the mode-line segment (below) |
 | `a` / `x` | `devenv-allow` / `devenv-revoke` | Trust / untrust the project for auto-activation (below) |
 | `M` | `devenv-mcp-setup` | Register the project's MCP server with mcp.el |
 | `U` / `G` | `devenv-update` / `devenv-gc` | Update `devenv.lock` inputs / garbage-collect old generations |
-| `$` | `devenv-show-log` | Every CLI invocation is recorded in `*devenv log*` |
+| `$` | `devenv-show-log` | Show `*devenv log*`, which records every CLI invocation |
 
 The `-c` (`--clean`) and `-r` (`--refresh-eval-cache`) infixes apply to
 `devenv-test` and `devenv-build`.
@@ -46,107 +45,95 @@ compilation buffers with Nix trace matching, so `M-g M-n` jumps to the
 
 `devenv-processes` opens a tabulated view of the devenv process
 manager. Keys: `s` start, `k` stop, `r` restart, `l`/`RET` logs, `u`
-up, `d` down, `g` refresh. Data comes from `devenv processes list`
-(JSON when available, plain table on older devenv), fetched
-asynchronously so the UI never blocks.
+up, `d` down, `g` refresh. Data comes asynchronously from
+`devenv processes list` (JSON when available, the plain table on older
+devenv).
 
 ## Environment loading and reload
 
-Environment loading is done by the library's **native loader**
-(`devenv-env-global-mode`, enabled by `init-devenv`; direnv/envrc is
-disabled in `init-prog`). Every buffer inside a trusted devenv project
-carries the project environment buffer-locally, so eglot servers,
-apheleia formatters, `M-x compile`, and the ghostel terminal all see
-devenv-provided tools with no extra configuration.
+The library's **native loader** (`devenv-env-global-mode`, enabled by
+`init-devenv`) loads the environment; direnv/envrc is not used. Every
+buffer in a trusted devenv project gets the project environment
+buffer-locally, so eglot servers, apheleia formatters, `M-x compile`,
+and the ghostel terminal all see devenv-provided tools.
 
-The goal is parity with a terminal `devenv shell`, which takes more
-than reading `devenv print-dev-env`:
+The goal is parity with a terminal `devenv shell`:
 
 - **`devenv-env-loader` = `shell` (default)** sources the printed
-  dev-env script in bash, shellHook included, and diffs the resulting
-  environment against Emacs's own. Hook-only values therefore reach
-  Emacs too: `LOCALE_ARCHIVE`, `MANPATH`, `CARGO_INSTALL_ROOT`,
-  `$CARGO_HOME/bin` on `PATH`, and anything `enterShell` exports.
-  Because sourcing runs project code it is limited to projects trusted
-  with `devenv allow` (see below).
-- **`devenv-env-loader` = `json`** parses `devenv print-dev-env --json`
-  instead. No project code runs, but the shellHook's effects are
-  missing. This is also the automatic fallback when sourcing is
-  unavailable or fails.
+  dev-env script in bash, shellHook included, and diffs the result
+  against Emacs's own environment. Hook-only values reach Emacs too:
+  `LOCALE_ARCHIVE`, `MANPATH`, `$CARGO_HOME/bin` on `PATH`, and
+  anything `enterShell` exports. Sourcing runs project code, so it is
+  limited to projects trusted with `devenv allow` (see below).
+- **`devenv-env-loader` = `json`** parses `devenv print-dev-env --json`.
+  No project code runs, but the shellHook's effects are missing. It is
+  also the fallback when sourcing is unavailable or fails.
 - **`PATH` and `XDG_DATA_DIRS` are layered**, not replaced
   (`devenv-env-layered-variables`), matching the `nix_saved_PATH`
-  restore in devenv's own script. Without this, everything outside the
-  project profile disappears from `exec-path` — the `devenv` CLI
-  included, which then breaks `C-c v` inside the very projects it
-  manages.
+  restore in devenv's own script. Otherwise everything outside the
+  project profile, the `devenv` CLI included, would vanish from
+  `exec-path` and break `C-c v` in the projects it manages.
 - **Derivation-only variables are dropped**
   (`devenv-env-never-applied-variables`): nix's own `ignoreVars` plus
   the stdenv build variables devenv's shellHook unsets. The JSON form
-  is the raw *build* environment, so applying it verbatim sets
-  `TMPDIR`/`NIX_BUILD_TOP` to the build sandbox's `/build`, which does
-  not exist on the host. That breaks every tool needing a temp
+  is the raw *build* environment; applied verbatim, it points
+  `TMPDIR`/`NIX_BUILD_TOP` at the sandbox's `/build`, which doesn't
+  exist on the host. That breaks every tool that needs a temp
   directory: rust-analyzer's proc-macro server dies with `proc-macro
   server did not respond with data`, and cargo build scripts fail.
 
 While a fetch is in flight, `eglot-ensure` is deferred and replayed
 once the environment lands, so language servers never start with the
 wrong `PATH`. If the fetch fails, the deferred buffers are released
-without connecting (starting a server with the login environment would
-be the wrong toolchain) and the message says how many are without an
-LSP; `M-x eglot` or `C-c v r` retries.
+without connecting (the login environment would be the wrong
+toolchain) and a message says how many buffers have no LSP; `M-x eglot`
+or `C-c v r` retries.
 
 After changing `devenv.nix`, run `devenv-reload` (`C-c v r`). It
-invalidates the library's caches, re-fetches the environment, and —
-because eglot snapshots the environment when a server starts — offers
-to `eglot-reconnect` every server serving the project so language
-servers pick up new `PATH` entries. Where direnv is in charge instead,
-`envrc` + `use devenv` is an equally good substrate: set
-`devenv-env-defer-to-direnv` back to `t` and the native loader stays
-out of any project with a `.envrc`, delegating reload to
-`envrc-reload-all`.
+invalidates the library's caches, re-fetches the environment, and,
+since eglot snapshots the environment when a server starts, offers to
+`eglot-reconnect` every server in the project. To let direnv own the
+environment instead (`envrc` + `use devenv`), set
+`devenv-env-defer-to-direnv` to `t`: the native loader then skips any
+project with a `.envrc` and delegates reload to `envrc-reload-all`.
 
 ## Auto-activation trust (`devenv allow` / `revoke`)
 
 devenv 2.1+ gates shell auto-activation behind a per-project trust
-database (`~/.local/share/devenv/allowed`), managed with `devenv
-allow` and `devenv revoke`. The integration honours the same
-contract: the native loader (`devenv-env-global-mode`) consults the
-internal `devenv hook-should-activate` check and **never evaluates an
-untrusted devenv.nix automatically** — exactly like the zsh/fish/nu
-shell hooks. The same gate decides whether the environment may be
-obtained by sourcing (which runs the project's shellHook); an untrusted
-or unverifiable project falls back to the JSON loader. `devenv-allow` (`C-c v a`) trusts the project and
-immediately activates the loader in its buffers; `devenv-revoke`
-(`C-c v x`) untrusts it and drops the native environment. On devenv
-versions without the trust model (< 2.1) the loader behaves as
-before. Note that the direnv/envrc path has its own consent gate
-(`envrc-allow` → `direnv allow`), independent of devenv's database.
+database (`~/.local/share/devenv/allowed`), managed with `devenv allow`
+and `devenv revoke`. The native loader honours it: it checks
+`devenv hook-should-activate` and **never evaluates an untrusted
+devenv.nix automatically**, like devenv's zsh/fish/nu shell hooks. The
+same check decides whether the environment may be obtained by sourcing
+(which runs the shellHook); an untrusted or unverifiable project falls
+back to the JSON loader. `devenv-allow` (`C-c v a`) trusts the project
+and activates the loader in its buffers; `devenv-revoke` (`C-c v x`)
+untrusts it and drops the native environment. On devenv < 2.1, which
+has no trust model, loading is permitted. The direnv/envrc path has
+its own consent gate (`envrc-allow` → `direnv allow`), independent of
+devenv's database.
 
 ## Mode-line status
 
-`devenv-modeline-mode` (global, enabled by `init-devenv` at startup)
-adds a status segment to the mode line for buffers inside a devenv
-project:
+`devenv-modeline-mode` (global, enabled by `init-devenv`) adds a
+segment to the mode line for buffers inside a devenv project:
 
-- **`devenv[on]`** — the buffer's environment carries the devenv
-  shell (loaded by envrc/direnv or the native loader; detected via
-  `DEVENV_PROFILE`).
-- **`devenv[off]`** — devenv project, environment not loaded.
-- **`devenv[!]`** — auto-activation trust denied; run `devenv-allow`.
+- **`devenv[on]`**: the buffer's environment carries the devenv shell
+  (detected via `DEVENV_PROFILE`).
+- **`devenv[off]`**: devenv project, environment not loaded.
+- **`devenv[!]`**: auto-activation trust denied; run `devenv-allow`.
 
-Outside devenv projects the segment is empty. `mouse-1` on the
-segment opens the `devenv` transient. The redisplay path is
-subprocess-free: trust is probed once per project in the background
-from `find-file-hook` and cached.
+Outside devenv projects the segment is empty. `mouse-1` on it opens the
+`devenv` transient. Redisplay never runs a subprocess: trust is probed
+once per project in the background from `find-file-hook` and cached.
 
 ## LSP for devenv.nix
 
 devenv 2.0+ ships `devenv lsp`, a bundled nixd preconfigured with the
 project's devenv module options (completion, hover docs for
 `devenv.nix` options). `init-devenv` routes `devenv.nix` and
-`devenv.local.nix` buffers to it while `nil` keeps serving every other
-Nix file — the routing entry delegates non-devenv buffers to whatever
-contact was registered before it.
+`devenv.local.nix` buffers to it; every other Nix buffer goes to the
+contact registered before it (`nil` by default).
 
 ## MCP server for the AI stack
 
@@ -154,23 +141,22 @@ devenv 2.0+ ships `devenv mcp`, a stdio MCP server exposing nixpkgs
 package search, devenv option search, and process control
 (list/status/logs/start/stop/restart). `devenv-mcp-setup` (`C-c v M`)
 registers it with [mcp.el](https://github.com/lizqwerscott/mcp.el)
-under a per-project name (`devenv-<project>`); start it from
-`M-x mcp-hub` and run `M-x gptel-mcp-connect` to hand its tools to
-gptel. `devenv-mcp-remove` unregisters it.
+as `devenv-<project>`; start it from `M-x mcp-hub` and run
+`M-x gptel-mcp-connect` to hand its tools to gptel.
+`devenv-mcp-remove` unregisters it.
 
 ## Customization
 
-The `devenv` customization group covers the executable name
-(`devenv-executable`), the quiet-mode environment
-(`devenv-extra-env`), global CLI flags (`devenv-global-arguments`),
-cache TTL and command timeout, detached `up`
-(`devenv-up-detached`), and the dashboard's log line count
-(`devenv-processes-log-lines`).
+The `devenv` customization group covers the executable
+(`devenv-executable`), the quiet-mode environment (`devenv-extra-env`),
+global CLI flags (`devenv-global-arguments`), cache TTL and command
+timeout, detached `up` (`devenv-up-detached`), and the dashboard's log
+line count (`devenv-processes-log-lines`).
 
-The native loader adds: how the environment is obtained
+For the native loader: how the environment is obtained
 (`devenv-env-loader`), whether direnv keeps ownership
 (`devenv-env-defer-to-direnv`), extra variables to drop
-(`devenv-env-ignored-variables`, filtered on top of the built-in
+(`devenv-env-ignored-variables`, on top of the built-in
 `devenv-env-never-applied-variables`), which variables extend rather
 than replace the global value (`devenv-env-layered-variables`), and the
 shell bookkeeping ignored when diffing a sourced environment

@@ -1,43 +1,28 @@
 # nix/emacs-api-doc.nix — Generated Emacs Lisp API reference.
 #
-# Forks the elisp-doc engine (etc/elisp-doc/, vendored from gudzpoz's
-# https://codeberg.org/gudzpoz/elisp-doc) and drives it, scoped to the
-# packages *this* configuration bundles, to produce docstring-level
-# reference pages for every function, command, variable, user option and
-# face those packages define.
+# Drives the forked elisp-doc engine (etc/elisp-doc/, vendored from
+# https://codeberg.org/gudzpoz/elisp-doc) over the packages this config
+# bundles, producing a page per function, command, variable, user option
+# and face.
 #
-# Per-package caching
-# -------------------
-# Generation is split into one small derivation per package plus a cheap
-# aggregation derivation, so a single package bump only rebuilds that
-# package's fragment (everything else substitutes from the cache):
+# Per-package caching: a package bump rebuilds only that package's
+# fragment.
+#   • jotain-api-doc-<name>  runs a minimal doc Emacs (bare Emacs + that
+#     package and its deps + engine tooling) in "package" mode, emitting
+#     its per-symbol pages, html/pkg/<name>.html, md/<name>.md and an
+#     enriched `listing.eld`. It deliberately avoids the combined package
+#     closure, whose store path changes on any bump.
+#   • jotain-emacs-api-doc  unions the fragments and runs a tooling-only
+#     Emacs in "aggregate" mode for the global indexes (symbols.json,
+#     fun/var/face indexes, shortdoc.html) and index.html. Its closure is
+#     stable across package bumps, so this step is cheap.
 #
-#   • jotain-api-doc-<name>  runs a *minimal* doc Emacs — bare Emacs +
-#     just that one package (and its declared deps) + the engine tooling —
-#     in the driver's "package" mode.  It emits that package's per-symbol
-#     pages (html/{fun,var,face}/…), its package index (html/pkg/<name>.html),
-#     its markdown (md/<name>.md) and an enriched `listing.eld` (the summary
-#     column + stylized name captured while the symbols are live).  It
-#     deliberately does NOT depend on the combined package closure, whose
-#     store path changes on any package bump.
-#
-#   • jotain-emacs-api-doc  unions the per-package trees and runs the driver
-#     once more in "aggregate" mode (engine + tooling only, no packages) to
-#     build the cross-package global indexes (symbols.json, the fun/var/face
-#     type indexes, shortdoc.html) and the top index.html from the merged
-#     listings.  This closure is stable across package bumps, so this step
-#     is cheap: it only re-cp's the fragments and re-runs a tooling-only Emacs.
-#
-# Outputs (unchanged contract):
-#   • $out/html/           the browsable site: index.html, per-package
-#                          pages under pkg/, per-symbol pages under
-#                          fun/ var/ face/, global fun|var|face indexes,
-#                          shortdoc.html, symbols.json, style.css, emacs.css.
-#                          Mounted at ${mountPath} by nix/site.nix.
-#   • $out/jotain-elisp-api.texi   Texinfo fragment (@included by
-#                          docs/jotain.texi as an appendix). passthru.
-#   • passthru.perPackage  the individual per-package doc derivations, keyed
-#                          by feature name (independently buildable/cacheable).
+# Outputs:
+#   • $out/html/           the browsable tree, mounted at ${mountPath} by
+#                          nix/site.nix.
+#   • $out/jotain-elisp-api.texi   Texinfo fragment (not yet @included by
+#                          docs/jotain.texi).
+#   • passthru.perPackage  the per-package derivations, keyed by feature.
 {
   pkgs,
   src ? ../.,
@@ -50,12 +35,8 @@ let
 
   inherit (pkgs) lib;
 
-  # Shared resolution of the config's package set (nix/emacs-package-set.nix):
-  # the lisp/ use-package scan (:ensure aliases resolved) plus the
-  # Nix-provided extras — the same set legacyPackages.emacs-packages
-  # exposes. The resolution logic lives there, not here. `lispDir` keeps
-  # this file's `src` parameter used (the flake passes src = self, the
-  # same store tree ../lisp resolves to).
+  # The same package set legacyPackages.emacs-packages exposes. `lispDir`
+  # derives from `src` (the flake passes src = self, the same store tree).
   packageSet = import ./emacs-package-set.nix {
     inherit pkgs;
     lispDir = src + "/lisp";
@@ -75,14 +56,9 @@ let
       rainbow-delimiters
     ];
 
-  # Narrow the store input to just the engine files, so an unrelated repo
-  # edit (or a flake.lock bump) never invalidates the per-package fragments —
-  # each fragment then depends only on {its minimal doc Emacs, engineSrc}.
-  # Path literals (relative to this file) are used rather than `src + "/…"`:
-  # `lib.fileset` requires a real path root, and the flake passes the
-  # string-like `src = self`, which it rejects. The literals resolve inside
-  # whatever store copy this file is evaluated from, and toSource emits a
-  # tree keyed only on the six files' contents.
+  # Just the engine files, so unrelated edits never invalidate the
+  # fragments. Path literals, not `src + "/…"`: lib.fileset rejects the
+  # string-like flake `src`.
   engineSrc = lib.fileset.toSource {
     root = ../etc/elisp-doc;
     fileset = lib.fileset.unions [
@@ -96,9 +72,8 @@ let
   };
   elispDir = "${engineSrc}";
 
-  # A minimal doc Emacs + a runCommand per package. Plain `runCommand` (not
-  # runCommandLocal) so the jylhis cachix cache can substitute these — each
-  # still pulls an Emacs closure (see the reasoning in nix/checks.nix).
+  # Plain `runCommand`, not runCommandLocal, so cachix can substitute
+  # these (see nix/checks.nix).
   docFor =
     { feature, pkg }:
     let
@@ -107,8 +82,7 @@ let
     in
     pkgs.runCommand "jotain-api-doc-${feature}"
       {
-        # git on PATH: magit/forge/magit-todos shell out to git while loading,
-        # so `require` errors headless without it (a real Emacs always has it).
+        # magit/forge/magit-todos shell out to git while loading.
         nativeBuildInputs = [ pkgs.git ];
         meta.description = "API doc fragment for the Emacs package ${feature}";
       }
@@ -135,8 +109,7 @@ let
         rm -rf "$out/html/cache"
       '';
 
-  # Individual per-package doc derivations, keyed by feature name. Attr
-  # order follows the sorted feature list, giving a deterministic union.
+  # Sorted by feature, giving a deterministic union.
   perPackage = lib.listToAttrs (
     map (p: {
       name = p.feature;
@@ -145,8 +118,7 @@ let
   );
   perPackageList = lib.attrValues perPackage;
 
-  # The aggregate Emacs needs only the engine tooling — no packages — so its
-  # closure never changes when a package bumps.
+  # Tooling only, so its closure never changes when a package bumps.
   aggEmacs = scope.withPackages (_: toolingPkgs scope);
 in
 pkgs.runCommand "jotain-emacs-api-doc"
@@ -167,32 +139,23 @@ pkgs.runCommand "jotain-emacs-api-doc"
     export HOME="$(mktemp -d)"
     mkdir -p "$out/html"
 
-    # 1. Union the per-package trees. Deterministic sorted order + `cp -n`
-    #    (first-writer-wins) makes colliding symbol pages reproducible.
-    #    Collect the listing paths for the aggregate pass.
-    # `--no-preserve=mode`: the fragments live in the read-only store, so a
-    # plain `cp -r` would recreate their directories read-only and the next
-    # fragment could not add files to them.
+    # 1. Union the fragments. Sorted order + `cp -n` (first writer wins)
+    #    keeps colliding symbol pages reproducible. `--no-preserve=mode`:
+    #    otherwise the store's read-only dirs block the next fragment.
     : > listings.txt
     for d in ${lib.concatStringsSep " " perPackageList}; do
       if [ -d "$d/html" ]; then cp -rn --no-preserve=mode "$d/html/." "$out/html/" || true; fi
       if [ -e "$d/listing.eld" ]; then printf '%s\n' "$d/listing.eld" >> listings.txt; fi
     done
 
-    # The driver writes per-package markdown under html/md; lift it out so it
-    # feeds the texi fragment but is never served.
+    # Move html/md out: it feeds the texi fragment, never the site.
     if [ -d "$out/html/md" ]; then mv "$out/html/md" "$out/md"; fi
     chmod -R u+w "$out/html"
     if [ -d "$out/md" ]; then chmod -R u+w "$out/md"; fi
 
-    # 2. Aggregate mode: global fun/var/face indexes, symbols.json,
-    #    shortdoc.html and the top index.html, from the merged listings.
-    #    No package is loaded here — only the engine and its tooling.
-    #
-    #    Note: shortdoc.html reflects the built-in `shortdoc--groups' only;
-    #    a package-contributed `define-short-documentation-group' would be
-    #    missed here (rare — shortdoc is a core facility), the price of
-    #    keeping this page independent of package bumps.
+    # 2. Aggregate mode over the merged listings. shortdoc.html covers
+    #    only the built-in `shortdoc--groups' (package-defined groups are
+    #    missed), the price of independence from package bumps.
     ELISP_DOC_OUTPUT_DIR="$out/html" \
     JOTAIN_DOC_MODE=aggregate \
     JOTAIN_DOC_LISTINGS="$(cat listings.txt)" \
@@ -206,7 +169,7 @@ pkgs.runCommand "jotain-emacs-api-doc"
     fi
     rm -rf "$out/html/cache"
 
-    # 3. Ship the stylesheets and point the absolute links at the mount path.
+    # 3. Stylesheets, with absolute links rewritten to the mount path.
     cp ${elispDir}/style.css "$out/html/style.css"
     cp ${elispDir}/emacs.css "$out/html/emacs.css"
     find "$out/html" -name '*.html' -type f -print0 \
@@ -214,9 +177,8 @@ pkgs.runCommand "jotain-emacs-api-doc"
           -e 's|href="/style.css"|href="${mountPath}/style.css"|g' \
           -e 's|href="/emacs.css"|href="${mountPath}/emacs.css"|g'
 
-    # 4. Texinfo fragment for the Info manual. Concatenate the per-package
-    #    markdown under one H1, convert, and strip the @node/@menu/@top
-    #    scaffolding + flatten @ref{} exactly as nix/packages-doc.nix does.
+    # 4. Texinfo fragment: per-package markdown under one H1, converted
+    #    and cleaned with nix/texi-fragment.nix.
     {
       echo "# Emacs Package API Reference"
       echo

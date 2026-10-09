@@ -1,16 +1,13 @@
 # nix/texi-fragment.nix — post-processing for a pandoc-generated Texinfo
 # fragment that docs/jotain.texi `@include's.
 #
-# Pandoc's texinfo writer emits a standalone document: a full
-# @node/@top/@menu structure plus @ref cross-references between those
-# nodes. A fragment pulled into the master manual must carry none of it —
-# the nodes would collide with the node layout in docs/jotain.texi, and
-# the @refs would point at targets that no longer exist. makeinfo
+# Pandoc's texinfo writer emits a standalone document (@node/@top/@menu
+# plus @refs between those nodes). In the master manual the nodes would
+# collide with docs/jotain.texi's and the @refs would dangle; makeinfo
 # re-derives nodes from the surviving @section hierarchy.
 #
-# Shared so a pandoc change needs one fix, not four. Consumed by
-# nix/info-manual.nix, nix/options-doc.nix, nix/packages-doc.nix and
-# nix/emacs-api-doc.nix — every fragment that reaches the Info manual.
+# Used by nix/info-manual.nix, nix/options-doc.nix, nix/packages-doc.nix
+# and nix/emacs-api-doc.nix.
 {
   # awk program: drop the @menu block and every @node / @top line.
   stripScaffolding = ''

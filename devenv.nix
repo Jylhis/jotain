@@ -1,10 +1,9 @@
 { pkgs, ... }:
 
 let
-  # rassumfrassum (`rass`) — LSP multiplexer by João Távora that lets eglot
-  # drive multiple real language servers per buffer. Pure-Python, zero
-  # runtime deps; not in nixpkgs so we build it from PyPI here. Consumed by
-  # lisp/init-prog.el's eglot-server-programs (TS/TSX and Python).
+  # rassumfrassum (`rass`): LSP multiplexer letting eglot drive several
+  # servers per buffer (init-prog.el, TS/TSX and Python). Not in nixpkgs,
+  # so built from PyPI.
   rassumfrassum = pkgs.python3Packages.buildPythonApplication rec {
     pname = "rassumfrassum";
     version = "0.3.3";
@@ -22,10 +21,8 @@ let
     };
   };
 
-  # ECA (Editor Code Assistant) server binary. The eca-emacs client
-  # (lisp/init-ai.el) auto-detects `eca' on PATH instead of downloading it.
-  # Built inline (not via the overlay) because the dev shell's `pkgs' has no
-  # overlay applied — same approach as rassumfrassum above.
+  # ECA server for eca-emacs (lisp/init-ai.el). Imported directly: the dev
+  # shell's `pkgs' has no overlay applied.
   eca = import ./nix/eca-server.nix { inherit pkgs; };
 in
 {
@@ -33,52 +30,37 @@ in
   packages =
     with pkgs;
     [
-      # Meson build tooling.  meson-mode and apheleia use the Meson CLI for
-      # formatting, and compile-multi commands assume Ninja-backed builddirs.
+      # apheleia formats Meson files with the Meson CLI; compile-multi
+      # commands assume Ninja-backed builddirs.
       meson
       ninja
 
-      # Bazel/Starlark formatter.  bazel-mode (C-c C-f) and apheleia
-      # format-on-save shell out to buildifier for BUILD/WORKSPACE/.bzl
-      # buffers.
+      # Bazel/Starlark formatter for bazel-mode (C-c C-f) and apheleia.
       buildifier
 
-      # SonarLint language server for in-editor code quality analysis.
-      # Start in Emacs with M-x jotain-sonarlint.
+      # Started with M-x jotain-sonarlint.
       sonarlint-ls
 
-      # rassumfrassum (`rass`) LSP multiplexer.  init-prog.el routes TS/TSX
-      # and Python eglot connections through it when this binary is on PATH.
       rassumfrassum
-
-      # ECA server (`eca`) for the eca-emacs client.  On PATH so eca-emacs
-      # uses it directly instead of downloading a server at runtime.
+      # On PATH so eca-emacs does not download a server at runtime.
       eca
-
-      # tagref (`tagref`) cross-reference checker.  Backs the tagref.el Emacs
-      # integration (M-x tagref-check, xref navigation) wired in init-prog.el.
+      # tagref CLI for tagref.el (init-prog.el).
       tagref
-
-      # Dockerfile language server (`docker-langserver`) — Eglot auto-attaches
-      # it in dockerfile-mode via the entry registered in init-prog.el.
+      # `docker-langserver`, registered for eglot in init-prog.el.
       dockerfile-language-server
 
-      # Documentation build chain (`just info`, `just docs`).  Declared
-      # here so both the recipe and interactive invocations have them on
-      # PATH; the Nix derivations still pull their own copies.
+      # Docs toolchain for interactive use; the Nix derivations bring
+      # their own copies.
       pandoc
       texinfo
 
-      # Fonts used by the Emacs configuration (init-ui.el looks them up by name).
-      # These are only active while you're inside the devenv shell; on your real
-      # system they come from home-manager or equivalent.
-      # BlexMono is IBM Plex Mono with Nerd Font glyphs — the Jylhis
-      # design system's mono role and the first default-face candidate.
+      # Fonts init-ui.el probes by name, active only inside the shell.
+      # BlexMono (IBM Plex Mono + Nerd Font glyphs) is the first
+      # default-face candidate.
       nerd-fonts.blex-mono
       nerd-fonts.jetbrains-mono
       nerd-fonts.iosevka
-      # Only the families init-ui.el probes are pulled from the Google
-      # Fonts collection (variable-pitch face); the full set is ~1 GB.
+      # Only the families init-ui.el probes; the full set is ~1 GB.
       (google-fonts.override {
         fonts = [
           "Hanken Grotesk"
@@ -86,9 +68,7 @@ in
         ];
       })
     ]
-    # Virtual X server for `just screenshot` — headless capture of the
-    # Nix-built Emacs so an AI agent in a CI/cloud container can see the
-    # rendered frame. Linux-only: Xvfb is X11.
+    # Virtual X server for `just screenshot` (Linux-only).
     ++ lib.optionals stdenv.hostPlatform.isLinux [ xvfb-run ];
 
   # https://devenv.sh/languages/
@@ -97,11 +77,8 @@ in
   };
 
   # https://devenv.sh/binary-caching/
-  # Pull from the personal jylhis cache and nix-community (the latter
-  # hosts the emacs-overlay binaries used for Emacs 31). devenv
-  # automatically adds `devenv` and `nixpkgs` caches, so only the
-  # project-specific ones are declared here. Pushing is opt-in and
-  # configured in CI (or via devenv.local.nix).
+  # nix-community hosts the emacs-overlay builds; devenv adds its own and
+  # the nixpkgs caches itself. Pushing happens in CI (or devenv.local.nix).
   cachix = {
     enable = true;
     pull = [
@@ -111,8 +88,6 @@ in
   };
 
   # https://devenv.sh/integrations/claude-code/
-  # Wires up Claude Code (CLI) so that running `claude` from inside
-  # the devenv shell picks up the project's tooling automatically.
   claude.code.enable = true;
 
   # https://devenv.sh/integrations/treefmt/
@@ -122,18 +97,13 @@ in
   };
 
   # https://devenv.sh/tests/
-  # The dev shell has no Emacs, so Emacs-provenance is checked build-side:
-  # `checks.<system>.emacs-binaries` in nix/checks.nix builds jotainEmacs
-  # and verifies its binaries exist and run cleanly without leaking host
-  # config.
-  #
-  # The remaining shell tooling still gets a sanity check so CI's
-  # `devenv test` job doesn't pass green for the wrong reason.
+  # The shell has no Emacs; its binaries are checked build-side by
+  # `checks.<system>.emacs-binaries`. This only checks the shell tooling.
   enterTest = ''
     set -euo pipefail
 
-    # Every group asserts the same thing: the binary is on PATH and resolves
-    # into the Nix store (not a host install that happens to shadow it).
+    # Each binary must be on PATH and resolve into the Nix store (not a
+    # shadowing host install).
     check_store() {
       echo "$1 on PATH and live in the Nix store"
       shift
@@ -154,10 +124,8 @@ in
     check_store "eca server"            eca
     check_store "tagref"                tagref
 
-    # No runtime assertion that `emacs` is absent from the dev shell: a
-    # host Emacs installed via home-manager sits under /nix/store/ and
-    # would false-trip it. The build-side guarantee (jotainEmacs produces
-    # working binaries) lives in `checks.<system>.emacs-binaries`.
+    # No assertion that `emacs` is absent: a home-manager Emacs also
+    # lives under /nix/store/ and would false-trip it.
 
     echo "Dev-shell tooling checks passed."
   '';

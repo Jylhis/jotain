@@ -2,35 +2,27 @@
 
 ;;; Commentary:
 
-;; The single source of truth for the per-language IDE-feature evaluation.
-;; Each entry declares, for one language Jotain supports, what the config is
-;; *meant* to wire up: which major mode a sample file should land in, whether a
-;; tree-sitter grammar backs it, which LSP server(s) eglot should reach for, the
-;; apheleia formatter, the DAP adapter (if any), whether curated tempel snippets
-;; and inlay hints apply, and whether it is part of the live-probe subset.
+;; Single source of truth for the per-language IDE-feature evaluation.
+;; Each entry declares what the config is *meant* to wire up for one
+;; language: major mode, tree-sitter grammar, LSP servers, apheleia
+;; formatter, DAP adapter, snippets, inlay hints, and live-probe
+;; membership.
 ;;
-;; Two probes read this table:
+;; Readers:
 ;;
-;;   • The Tier-1 static probe (`jotain-lang-eval.el') loads the full Jotain
-;;     config and checks the *live* config against each entry — actual major
-;;     mode, wired eglot server, formatter mapping, dape adapter, snippet
-;;     section, inlay-hint membership — then renders the capability matrix.
+;;   • `jotain-lang-eval.el' (Tier-1) loads the config and compares the
+;;     live wiring with each entry, then renders the capability matrix.
+;;   • `jotain-lang-live.el' (Tier-2) starts a real eglot session for each
+;;     `:live' entry whose server is on PATH.
+;;   • `jotain-lang-doc.el' renders docs/reference/language-support.mdx.
+;;   • test/lang-eval-test.el checks the table's consistency and
+;;     cross-checks it against the source text of init-prog.el and the
+;;     init-lang-*.el files, so drift fails the ERT suite.
 ;;
-;;   • The Tier-2 live probe (`jotain-lang-live.el') starts a real eglot session
-;;     against a fixture project for every `:live' entry whose server is on PATH
-;;     and asserts the LSP features actually respond.
-;;
-;; The ERT gate (`test/lang-eval-test.el') validates this table's internal
-;; consistency and cross-checks it against the *source text* of `init-prog.el'
-;; and the `init-lang-*.el' files, so a registry entry that drifts from the
-;; config is itself a test failure — the same anti-staleness discipline as
-;; `packages-doc-in-sync' and `jotain-prog--warn-non-ts-mode'.
-;;
-;; This file is intentionally OUTSIDE lisp/ and test/ (like etc/debug-init.el
-;; and etc/elisp-doc/): it is not part of the loaded configuration, so the
-;; use-package scanner (nix/use-package.nix) and the elisp-compile/elisp-lint
-;; checks never see it.  It is pure data + tiny accessors, with no external
-;; dependencies, so the ERT gate can `require' it without booting any module.
+;; Kept outside lisp/ and test/ (like etc/debug-init.el): it is not part of
+;; the loaded configuration, so the use-package scanner and the
+;; elisp-compile/elisp-lint checks never see it.  Pure data plus small
+;; accessors, so the ERT suite can `require' it without booting the config.
 
 ;;; Code:
 

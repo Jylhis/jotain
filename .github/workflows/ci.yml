@@ -1,21 +1,14 @@
-# CI for the Jotain Emacs configuration — pull requests only.
+# PR CI: the lightweight subset of nix/checks.nix, plus elisp-compile so
+# Emacs 31 obsoletions fail before merge. The rest (package builds,
+# elisp-test, emacs-api-doc, …) runs in deploy.yml's `nix flake check`.
 #
-# Runs the lightweight subset of nix/checks.nix on every PR, plus
-# elisp-compile: the default Emacs is the unstable variant (Emacs 31
-# pretest), so the warnings-as-errors byte-compile gate must catch 31
-# obsoletions before merge, not on main. The heavy package builds
-# (packages-default, packages-info) stay deferred to deploy.yml on main
-# so PR latency stays low even on cache miss.
-#
-# The jylhis cachix cache is pull-only here: PR runs (including from
-# forks) get no CACHIX_AUTH_TOKEN, so the writer token is never exposed
-# to untrusted code.  Cache *pushes* happen in deploy.yml on protected
-# branches.
+# cachix is pull-only: no CACHIX_AUTH_TOKEN is exposed to untrusted PR
+# code. Pushes happen in deploy.yml.
 name: CI
 
-# workflow_dispatch exists because pushes from the Claude Code GitHub
-# App don't create pull_request synchronize runs — CI on such PRs is
-# kicked manually (gh workflow run ci.yml --ref <branch>).
+# workflow_dispatch: pushes from the Claude Code GitHub App create no
+# synchronize runs, so kick those manually (gh workflow run ci.yml --ref
+# <branch>).
 on:
   pull_request:
   workflow_dispatch:
@@ -40,21 +33,15 @@ jobs:
       - uses: cachix/cachix-action@v17
         with:
           name: jylhis
-          # The default jotainEmacs base (emacs-unstable, Emacs 31
-          # pretest) is cached on nix-community.cachix.org.
+          # Hosts the default jotainEmacs base (emacs-unstable).
           extraPullNames: nix-community
 
-      # Dependabot bumps flake.lock but not devenv.yaml/devenv.lock, so
-      # the shared-input pins drift apart silently without this gate.
-      # sync-devenv.yml repairs that automatically on Dependabot
-      # branches; this step stays as the fast-fail guard for every other
-      # PR, and the locks-in-sync flake check covers main/next.
-      # `just verify` is bash+jq over the two lock files — no nix build.
+      # Fast bash+jq gate on flake.lock vs devenv.lock drift; the
+      # locks-in-sync flake check covers main/next.
       - name: Check — lock files in sync (just verify)
         run: nix run nixpkgs#just -- verify
 
-      # Each check is a separate step so a failure surfaces by name in
-      # the GitHub Actions UI without needing log access.
+      # One step per check, so a failure surfaces by name in the UI.
       - name: Debug — confirm flake checks resolve
         run: |
           nix --version
@@ -98,9 +85,8 @@ jobs:
       - name: Check — elisp-compile
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.elisp-compile
 
-      # Reuses the jotainEmacsPackages.core closure elisp-compile just built,
-      # so this adds only a batch startup: it evaluates every use-package
-      # :config block (which elisp-compile's byte-compile never does).
+      # Reuses elisp-compile's closure; evaluates every use-package :config
+      # block, which byte-compiling never does.
       - name: Check — config-startup
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.config-startup
 
@@ -116,17 +102,12 @@ jobs:
       - uses: cachix/cachix-action@v17
         with:
           name: jylhis
-          # The site renders man pages and the Emacs/Elisp manuals from
-          # jotainEmacs (emacs-unstable base, cached on nix-community).
+          # Man pages and manuals come from jotainEmacs.
           extraPullNames: nix-community
 
-      # Validate the site assembly (docs pages, manual HTML, man pages,
-      # Emacs/Elisp manuals, options/package references) so a docs or
-      # website change can't break the GitHub Pages deploy that runs
-      # post-merge in deploy.yml. Builds `.#site-preview`, which omits the
-      # heavy generated /help/api/ reference (emacs-api-doc); that rides
-      # the deploy path only (deploy.yml builds the full `.#site`), keeping
-      # this PR job within its time budget.
+      # Catches docs/website breakage before the post-merge Pages deploy.
+      # `.#site-preview` omits the heavy /help/api/ reference, which only
+      # deploy.yml builds.
       - name: Build site
         run: nix build --no-link --print-build-logs .#site-preview
 

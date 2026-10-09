@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# Bump the hand-pinned upstream sources in nix/ (the pins flake.lock does
-# not manage) to their latest release. See "Hand-pinned upstreams" in
-# AGENTS.md for the list of pins, how each is bumped, and the two that
-# stay manual by design.
+# Bump the hand-pinned upstream sources in nix/ (not managed by
+# flake.lock) to the latest release, tag or branch HEAD. See "Hand-pinned
+# upstreams" in AGENTS.md, including the two pins that stay manual.
 #
 # Usage:
 #   scripts/update-pins.sh                 # update everything

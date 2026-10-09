@@ -1,25 +1,18 @@
 # LikeC4 language server (`likec4-lsp`), the standalone `@likec4/lsp` npm
 # package (https://likec4.dev/tooling/editors/#emacs).
 #
-# Backs `likec4-mode`'s eglot LSP (lisp/init-lang-devops.el +
-# init-prog.el's `jotain-prog--likec4-server`). Bundled onto every
-# distribution wrapper's PATH via nix/runtime-deps.nix, so `just
-# run-built` and the module/daemon installs get diagnostics/completion for
-# `.c4'/`.likec4' files with no user npm install.
+# Backs `likec4-mode`'s eglot server (lisp/init-lang-devops.el,
+# init-prog.el's `jotain-prog--likec4-server`); on every distribution
+# wrapper's PATH via nix/runtime-deps.nix.
 #
-# Not in nixpkgs, so packaged from the npm registry with buildNpmPackage.
-# The published tarball ships no lockfile, so `nix/likec4-lsp/{package.json,
-# package-lock.json}` vendors a wrapper pinning `@likec4/lsp@1.59.4`; the
-# lock was generated with
-#   nix shell nixpkgs#nodejs_22 --command \
-#     npm install --package-lock-only --ignore-scripts
-# and the hash below with `nix run nixpkgs#prefetch-npm-deps -- \
-# nix/likec4-lsp/package-lock.json`. Re-run both on a version bump.
+# Not in nixpkgs, and the npm tarball ships no lockfile, so
+# nix/likec4-lsp/ vendors a wrapper package.json + package-lock.json
+# pinning `@likec4/lsp@1.59.4`. `just update-pins likec4-lsp` regenerates
+# the lock (`npm install --package-lock-only --ignore-scripts`) and the
+# hash (`prefetch-npm-deps`).
 #
-# Despite the docs' "zero dependencies" claim the package pulls esbuild
-# (via bundle-require). We skip esbuild's platform-binary postinstall
-# (--ignore-scripts) and point both the build and the runtime wrapper at
-# nixpkgs' esbuild through ESBUILD_BINARY_PATH.
+# The package pulls esbuild (via bundle-require). Its platform-binary
+# postinstall is skipped and nixpkgs' esbuild used via ESBUILD_BINARY_PATH.
 { pkgs }:
 let
   inherit (pkgs) lib;
@@ -37,16 +30,12 @@ pkgs.buildNpmPackage {
 
   # Prebuilt JS from the registry — nothing to compile.
   dontNpmBuild = true;
-  # esbuild's postinstall downloads a platform binary; skip it and use
-  # nixpkgs' esbuild at build and run time instead.
   npmFlags = [ "--ignore-scripts" ];
   ESBUILD_BINARY_PATH = "${pkgs.esbuild}/bin/esbuild";
 
   nativeBuildInputs = [ pkgs.makeWrapper ];
 
-  # The vendored wrapper package declares no `bin`; the real entry point is
-  # the `likec4-lsp` bin from the @likec4/lsp dependency. Install the
-  # resolved node_modules and wrap that entry with node + esbuild.
+  # The vendored wrapper has no `bin`; wrap @likec4/lsp's entry point.
   installPhase = ''
     runHook preInstall
     mkdir -p $out/lib $out/bin

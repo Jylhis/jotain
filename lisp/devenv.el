@@ -50,8 +50,8 @@
 ;;                             buffer-locally, envrc-style.
 ;;   `devenv-eglot-setup'      Route devenv.nix buffers to the bundled
 ;;                             `devenv lsp' server (a nixd preloaded
-;;                             with the project's devenv options) while
-;;                             other Nix buffers keep their server.
+;;                             with the project's devenv options) and
+;;                             other Nix buffers to nixd or nil.
 ;;   `devenv-mcp-setup'        Register the project's `devenv mcp'
 ;;                             stdio server with mcp.el so gptel and
 ;;                             friends can call its tools.
@@ -80,9 +80,8 @@
 ;; buffers through inheritenv when that package is installed (envrc
 ;; depends on it).
 ;;
-;; All subprocess invocations set AI_AGENT=1 (see `devenv-extra-env'),
-;; which puts devenv 2.1+ into quiet mode: the TUI is suppressed and
-;; stdout stays machine-readable.
+;; Every devenv subprocess gets `devenv-extra-env' (AI_AGENT=1: quiet
+;; mode, machine-readable stdout).
 
 ;;; Code:
 
@@ -635,8 +634,7 @@ See `devenv--activation-state' for the possible values.  The
 synchronous fetch on a cache miss is a fallback for callers that may
 block (see `devenv-env--shell-loader-p'); the find-file path stays
 subprocess-free via `devenv--cached-trust' plus `devenv--probe-trust'."
-  ;; Long TTL so the synchronous `hook-should-activate' subprocess is
-  ;; not re-paid on the find-file path (see `devenv-env--cache-ttl').
+  ;; Trust changes only via allow/revoke (see `devenv-env--cache-ttl').
   (let ((devenv-cache-ttl devenv-env--cache-ttl))
     (devenv--cached
      root 'trust
@@ -873,9 +871,9 @@ configuration")))
 ;;;###autoload
 (defun devenv-script-run (script)
   "Run SCRIPT (defined in devenv.nix) in a compilation buffer.
-When the buffer's environment already carries DEVENV_PROFILE
-\(direnv/envrc has loaded the shell), the script is on PATH and
-runs directly; otherwise it goes through `devenv shell'."
+When the buffer's environment already carries DEVENV_PROFILE (the
+native loader or direnv has applied the shell), the script is on PATH
+and runs directly; otherwise it goes through `devenv shell'."
   (interactive
    (let* ((root (devenv--root-or-error))
           (scripts (or (devenv--scripts root)
@@ -1729,7 +1727,7 @@ on the buffer-local `exec-path' until the environment has landed."
            t))))
 
 (defun devenv-env--around-eglot-ensure (orig-fun &rest args)
-  "Defer ORIG_FUN (`eglot-ensure', ARGS) while the env is loading.
+  "Defer ORIG-FUN (`eglot-ensure', ARGS) while the env is loading.
 Eglot snapshots the environment at connect time; connecting before
 the trust verdict or the async fetch lands would give the server the
 global environment.  Deferred buffers replay once the environment is

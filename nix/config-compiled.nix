@@ -1,59 +1,39 @@
 # nix/config-compiled.nix — Byte-compile (and optionally AOT
 # native-compile) the Jotain Elisp config.
 #
-# One derivation, two consumers:
-#   • nix/checks.nix `elisp-compile' — the warnings-as-errors gate.
-#   • module.nix     `compiledConfig' — what the HM daemon loads.
+# One derivation, used by nix/checks.nix `elisp-compile' (the
+# warnings-as-errors gate) and module.nix `compiledConfig' (what the HM
+# daemon loads). deploy.yml pushes it to cachix, so `home-manager switch'
+# substitutes CI's artifact.
 #
-# Sharing one derivation keeps the byte-compile CI gates and the artifact
-# the daemon installs identical: deploy.yml pushes this build to cachix, so
-# `home-manager switch' substitutes it instead of running Emacs locally.
-#
-# Two deliberate narrowings:
-#
-#   • The source is a `lib.fileset' of just the config's .el files
-#     rather than the whole flake tree, so a README/website/journal edit
-#     no longer invalidates the byte-compile.
-#   • Callers pass `emacs = <distribution>.core' — the *inner*
-#     emacsWithPackages result, not the outer jotain-emacs-full wrapper.
-#     The wrapper adds a runtime PATH, INFOPATH (→ jotainInfo →
-#     packages-doc → options-doc) and ASPELL_CONF; none is read by a
-#     batch byte-compile, and depending on it meant every `;;; @doc'
-#     block and every docs/*.mdx page invalidated this derivation.
+# Two narrowings keep it from rebuilding on unrelated edits:
+#   • the source is a `lib.fileset' of just the config's .el files;
+#   • callers pass `emacs = <distribution>.core', the inner
+#     emacsWithPackages result. The outer wrapper adds PATH, INFOPATH
+#     (→ jotainInfo → every `;;; @doc' block and docs/*.mdx page) and
+#     ASPELL_CONF, none of which a batch byte-compile reads.
 {
   pkgs,
   lib ? pkgs.lib,
-  # An emacsWithPackages-style distribution.  Pass `.core' where it
-  # exists (see the header note).
+  # An emacsWithPackages-style distribution; pass `.core' where it exists.
   emacs,
   src ? ../.,
-  # AOT native-compile into $out/share/emacs/native-lisp so the daemon
-  # loads store .eln for init.el and lisp/ instead of JIT-compiling
-  # into var/eln-cache after every deploy.  The
-  # store-.eln-through-symlinks mechanism is verified sound at the
-  # source level: `comp-el-to-eln-rel-filename` (src/comp.c) calls
-  # realpath() on the source before hashing it into the .eln name —
-  # "Resolve possible symlinks in FILENAME, so that path_hash below
-  # always compares equal. (Bug#44701)" — so module.nix's
-  # xdg.configFile symlinks resolve to the exact store path this
-  # derivation compiled against.  Two scope limits: early-init.el's
-  # .eln is structurally unreachable (its eln lookup runs before
-  # early-init.el itself extends native-comp-eln-load-path), and the
-  # verification was read on the Emacs 30.2 source tree while this
-  # repo ships 31 — the mechanism predates both.  Off by default only
-  # for the cost: an extra native-comp pass whenever the config
-  # rebuilds, and ~50-150 MB of .eln in the closure.
+  # AOT native-compile into $out/share/emacs/native-lisp, so the daemon
+  # loads store .eln for init.el and lisp/ instead of JIT-compiling after
+  # every deploy. `comp-el-to-eln-rel-filename' (src/comp.c) realpath()s
+  # the source before hashing it into the .eln name (Bug#44701), so
+  # module.nix's xdg.configFile symlinks resolve to the store path
+  # compiled here. early-init.el's .eln is unreachable: its lookup runs
+  # before early-init.el extends native-comp-eln-load-path. Off by default
+  # for the cost: an extra native-comp pass and ~50-150 MB of .eln.
   nativeCompile ? false,
 }:
 let
   inherit (lib) fileset;
 
-  # Exactly what the compile command below reads.  `lib.fileset' needs a
-  # real path, not the string-like flake source — the same constraint
-  # flake.nix documents on `packages.site'.  Inside a flake, ../. is the
-  # store copy of the tree, so .git and .gitignore'd files (stray *.elc,
-  # result symlinks) are already excluded; the .el filter keeps a
-  # non-flake `import' honest too.
+  # Exactly what the compile command reads. `src' must be a real path
+  # (lib.fileset rejects the flake source string); the .el filter also
+  # keeps a non-flake import free of stray files.
   configSrc = fileset.toSource {
     root = src;
     fileset = fileset.unions [
@@ -75,8 +55,8 @@ pkgs.runCommand "jotain-config-compiled"
     chmod -R u+w $out
     cd $out
 
-    # The .el sources are kept beside the .elc so `find-function' and
-    # native compilation can still read them.
+    # The .el sources stay beside the .elc for `find-function' and
+    # native compilation.
     #
     # The pcre2el require is load-bearing: magit-todos propagates
     # pcre2el, whose defadvice byte-compiles its advice body and fails
@@ -89,13 +69,11 @@ pkgs.runCommand "jotain-config-compiled"
 
     ${lib.optionalString nativeCompile ''
       # Modelled on nixpkgs build-support/emacs/generic.nix' postInstall:
-      # `comp-el-to-eln-filename' writes to (car native-comp-eln-load-path)
-      # and `add-to-list' prepends, so the .eln land under
-      # $out/share/emacs/native-lisp/<comp-native-version-dir>/.
+      # .eln files go to (car native-comp-eln-load-path), which
+      # `add-to-list' makes $out/share/emacs/native-lisp/.
       #
-      # native-comp-speed is pinned to 2 to match early-init.el, because
-      # the speed setting is NOT part of the .eln hash — an eln compiled
-      # at a different speed would silently shadow this one.
+      # native-comp-speed matches early-init.el's 2: speed is not part of
+      # the .eln hash, so an .eln at another speed would silently shadow it.
       mkdir -p $out/share/emacs/native-lisp
       emacs --batch \
         -L lisp \

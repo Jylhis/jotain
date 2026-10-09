@@ -2,19 +2,15 @@
 
 ;;; Commentary:
 
-;; Only *global* keybindings live here — the kind you want to see in a
-;; single place so the whole keymap is reviewable at a glance.
-;; Per-package bindings stay in the relevant `use-package' block via
-;; `:bind' or `:bind-keymap'; that way a package's keys live next to
-;; the package's config, and removing the package removes the keys
-;; with it.
+;; Only global keybindings live here.  Per-package bindings stay in
+;; their `use-package' block (`:bind', `:bind-keymap'), so removing a
+;; package removes its keys.
 
 ;;; Code:
 
 (defun jotain-toggle-window-split ()
   "Toggle between horizontal and vertical window split.
-Only works when there are exactly two windows — buffers, point
-positions, and focus are preserved during the swap."
+Works with exactly two windows; their buffers and focus are kept."
   (interactive)
   (if (= (count-windows) 2)
       (let* ((this-win-buffer (window-buffer))
@@ -39,9 +35,8 @@ positions, and focus are preserved during the swap."
           (when this-win-2nd (other-window 1))))
     (user-error "Can only toggle split with exactly 2 windows")))
 
-;; DWIM C-g: the default `keyboard-quit' doesn't close a minibuffer that
-;; isn't the selected window, which is a frequent papercut once you
-;; enable `enable-recursive-minibuffers'.
+;; The default `keyboard-quit' doesn't close a minibuffer that isn't the
+;; selected window, a frequent papercut with recursive minibuffers.
 (defun jotain-keyboard-quit-dwim ()
   "Do-What-I-Mean `keyboard-quit'.
 Minibuffer open (even when point is in another window) → abort
@@ -57,10 +52,10 @@ Region active → deactivate it.  Otherwise call regular
    ((region-active-p)                            (keyboard-quit))
    (t                                            (keyboard-quit))))
 
-;;; @doc Top-level rebindings — disable accidental suspend (C-z and
-;;; C-x C-z), put other-window on M-o for one-key window switching,
-;;; bind C-x j to the two-window rotate helper above, and rebind
-;;; C-g to the DWIM quit so it closes minibuffers from elsewhere.
+;;; @doc Top-level rebindings: no accidental suspend (C-z, C-x C-z),
+;;; other-window on M-o, C-x j toggles a two-window split between
+;;; horizontal and vertical, and C-g quits DWIM-style, closing a
+;;; minibuffer even from another window.
 (use-package emacs
   :ensure nil
   :bind
@@ -70,12 +65,9 @@ Region active → deactivate it.  Otherwise call regular
    ("M-o" . other-window)
    ("C-x j" . jotain-toggle-window-split)))
 
-;;; @doc Trim unwanted stock menu-bar entries and disable the commands
+;;; @doc Remove unwanted stock menu-bar entries and disable the commands
 ;;; behind them: Read Mail, Read Net News, all Games (including the Emacs
-;;; Psychotherapist), and Help > Getting New Versions. The bar itself is
-;;; hidden (early-init.el sets `menu-bar-lines' to 0), but these entries
-;;; stay in the `menu-bar' keymap and remain reachable via F10 /
-;;; `tmm-menubar' until removed here.
+;;; Psychotherapist), and Help > Getting New Versions.
 (dolist (key '("<menu-bar> <tools> <rmail>"          ; Read Mail
                "<menu-bar> <tools> <gnus>"           ; Read Net News
                "<menu-bar> <tools> <games>"          ; Games (incl. doctor)
@@ -88,25 +80,16 @@ Region active → deactivate it.  Otherwise call regular
                mpuz pong snake solitaire tetris zone))
   (put cmd 'disabled t))
 
-;;; @doc Built-in directional window switching — `Shift-<arrow>` moves
-;;; focus between split windows. Ships with Emacs; no reason not
-;;; to turn it on globally.
+;;; @doc Built-in directional window switching: `Shift-<arrow>` moves
+;;; focus between windows.
 (use-package windmove
   :ensure nil
   :config (windmove-default-keybindings))
 
-;;; @doc Prefix labels for `which-key'. Adopts the "memorable,
-;;; discoverable, categorised" spirit of leader-key frameworks like
-;;; `general.el' without the dependency: each prefix below acquires a
-;;; short noun-phrase label that `which-key' surfaces in place of
-;;; `+prefix' when the user pauses after the prefix key. The actual
-;;; bindings themselves stay colocated with their `use-package' blocks
-;;; (per the convention documented at the top of this file); only the
-;;; cross-cutting prefix metadata lives here.
-;;;
-;;; `which-key' is enabled in init-ui.el — we register through
-;;; `with-eval-after-load' so this module can stay independent of load
-;;; order while still taking effect the moment which-key starts.
+;;; @doc Short `which-key' labels for the global `C-c' and `C-x' keys.
+;;; The bindings themselves stay in their `use-package' blocks; only the
+;;; labels live here. Registered after which-key loads (init-ui.el), so
+;;; load order doesn't matter.
 (with-eval-after-load 'which-key
   (which-key-add-key-based-replacements
     ;; C-c <letter> — global user namespace.
@@ -145,20 +128,15 @@ Region active → deactivate it.  Otherwise call regular
 
 ;;;; Repeat maps — Emacs-native "one-shot modifier" pattern
 ;;
-;; `repeat-mode' (enabled in init-core.el) repeats a tagged command's
-;; trailing key after its first invocation; many built-ins
-;; (`other-window', `next-buffer', `undo', window resizing, …) already
-;; ship their own repeat-maps — the map below fills the remaining gap
-;; for commands that don't.  See the "Ergonomics" chapter of the Info
-;; manual for background.
+;; `repeat-mode' is enabled in init-core.el, and many built-ins
+;; (`other-window', `next-buffer', `undo', window resizing) ship their
+;; own repeat maps.  See the "Ergonomics" chapter of the Info manual.
 
-;; Emacs 31+: transpose/rotate/flip the whole window tree without
-;; manually deleting and re-splitting. Bound under the unused `C-x W'
-;; prefix (capital, so it doesn't clobber the `C-x w' hi-lock map) with
-;; a repeat map, so `C-x W r r r' keeps rotating. Guarded because these
-;; commands don't exist before Emacs 31; the command symbols are quoted
-;; (not `#''), so byte-compiling on Emacs 30 sees data, not an unknown
-;; function reference.
+;; Emacs 31+: transpose/rotate/flip the whole window tree.  Emacs binds
+;; these under `C-x w' with arrow keys; this adds single-letter keys
+;; under `C-x W' with a repeat map, so `C-x W r r r' keeps rotating.
+;; The command symbols are quoted, not `#'', so byte-compiling on
+;; Emacs 30 sees data rather than unknown functions.
 (when (fboundp 'window-layout-transpose)
   (defvar-keymap jotain-window-layout-repeat-map
     :doc "Repeat map for `window-layout-*' frame transforms."

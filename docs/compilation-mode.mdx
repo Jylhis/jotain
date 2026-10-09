@@ -6,8 +6,8 @@ description: How compilation mode is configured and how to use it for building, 
 <Note>AI generated</Note>
 
 Compilation mode runs a shell command, captures the output, and parses error messages so you can jump
-directly to the source location. It works for compilers, linters, test runners, and anything else
-that outputs file/line references.
+to the source location. It works for compilers, linters, test runners, and anything else that prints
+file/line references.
 
 
 ## Configuration
@@ -23,12 +23,10 @@ The compile package is configured in `lisp/init-prog.el`:
   (compilation-always-kill t))
 ```
 
-- `compilation-scroll-output` is set to `'first-error` — the compilation buffer scrolls to follow
-  output and stops scrolling when the first error appears.
-- `compilation-ask-about-save` is disabled — Emacs saves modified buffers before compiling without
-  prompting.
-- `compilation-always-kill` is enabled — starting a new compilation kills any running one without
-  asking.
+- `compilation-scroll-output` is `'first-error`: the buffer follows output and stops at the first
+  error.
+- `compilation-ask-about-save` is off: modified buffers are saved before compiling without a prompt.
+- `compilation-always-kill` is on: a new compilation kills a running one without asking.
 
 
 ## Running a compilation
@@ -36,32 +34,10 @@ The compile package is configured in `lisp/init-prog.el`:
 `M-x compile` prompts for a shell command and runs it. `M-x recompile` (or `g` in the compilation
 buffer) re-runs the last command.
 
-For per-language compile commands, `compile-multi` is configured in `lisp/init-project.el` with
-presets for Go, Python, Haskell, Nix, and Rust:
-
-```elisp
-(compile-multi-config
- '((go-ts-mode   . (("go test"         . "go test ./...")
-                    ("go test current" . "go test .")
-                    ("go test -race"   . "go test -race ./...")
-                    ("go build"        . "go build ./...")
-                    ("go run"          . "go run .")
-                    ("go vet"          . "go vet ./...")
-                    ("golangci-lint"   . "golangci-lint run")))
-   (go-mod-ts-mode . (("go mod tidy"     . "go mod tidy")
-                      ("go mod download" . "go mod download")))
-   (python-mode  . (("pytest"         . "pytest")
-                    ("pytest file"    . "pytest %file-name%")))
-   (haskell-mode . (("stack test"     . "stack test")
-                    ("cabal test"     . "cabal test")))
-   (nix-ts-mode  . (("nix flake check" . "nix flake check")
-                    ("nix fmt"        . "nix fmt")))
-   (rust-ts-mode . (("cargo test"     . "cargo test")
-                    ("cargo clippy"   . "cargo clippy --all-targets")
-                    ("cargo build"    . "cargo build")))))
-```
-
-Run `M-x compile-multi` to pick from these. The `consult-compile-multi` integration provides a
+For per-language commands, `compile-multi` in `lisp/init-project.el` has presets for Go (test,
+build, run, vet, golangci-lint, `go mod`), Python (pytest), Haskell (stack/cabal), OCaml (dune),
+Meson, Nix (`nix flake check`, `nix fmt`, devenv), Rust (cargo), Zig, TypeScript/JavaScript (npm),
+and C/C++ (CMake, CTest). Run `M-x compile-multi` to pick one; `consult-compile-multi` provides the
 narrowing UI.
 
 
@@ -79,40 +55,38 @@ narrowing UI.
 
 ### From any buffer
 
-The standard `M-g n` (`next-error`) and `M-g p` (`previous-error`) work from any buffer — Emacs
-tracks the last buffer that produced errors and jumps you there. This works across `compile`, `grep`,
-`occur`, and any other mode that produces error-like output. `M-g M-n` and `M-g M-p` do the same
-thing but are easier to type since you can hold Meta throughout.
+`M-g n` (`next-error`) and `M-g p` (`previous-error`) work from any buffer: Emacs tracks the last
+buffer that produced errors and jumps there. This covers `compile`, `grep`, `occur`, and any other
+mode with error-like output. `M-g M-n` and `M-g M-p` do the same while you keep holding Meta.
 
-This config also binds `M-g e` to `consult-compile-error` (in `lisp/init-completion.el`), which
-provides a searchable, narrowable list of all compilation errors via consult.
+`M-g e` runs `consult-compile-error` (`lisp/init-completion.el`), a searchable list of all
+compilation errors.
 
 ### Flymake integration
 
 For in-buffer diagnostics, `M-n` and `M-p` are bound to `flymake-goto-next-error` and
-`flymake-goto-prev-error` in `flymake-mode-map` (in `lisp/init-prog.el`). These navigate flymake
-diagnostics inline without needing a compilation buffer.
+`flymake-goto-prev-error` in `flymake-mode-map` (`lisp/init-prog.el`), so no compilation buffer is
+needed.
 
 
 ## Editing grep results
 
-The `wgrep` package (configured in `lisp/init-prog.el`) enables editing grep result buffers in place.
-The workflow is:
+`wgrep` (configured in `lisp/init-prog.el`) makes grep result buffers editable:
 
-1. `consult-ripgrep` — search across the project
-2. `C-c C-o` (`embark-export`) — export results to a grep buffer
-3. `C-x C-q` — enter `wgrep` edit mode
+1. `consult-ripgrep`: search across the project
+2. `C-c C-o` (`embark-export`): export results to a grep buffer
+3. `C-x C-q`: enter `wgrep` edit mode
 4. Edit the results as you would any buffer
-5. `C-c C-c` — apply changes to all matched files
+5. `C-c C-c`: apply changes to all matched files
 
-Starting with Emacs 31, a built-in `grep-edit-mode` will also be available.
+Emacs 31 also has a built-in `grep-edit-mode`.
 
 
 ## How error parsing works
 
-Compilation mode uses `compilation-error-regexp-alist` and `compilation-error-regexp-alist-alist` to
-parse error output. Emacs ships with dozens of entries for GCC, Java, Ruby, Python, Perl, and many
-more — no configuration needed for common tools.
+Compilation mode parses output with `compilation-error-regexp-alist` and
+`compilation-error-regexp-alist-alist`. Emacs ships entries for GCC, Java, Ruby, Python, Perl, and
+many more, so common tools need no configuration.
 
 Each entry has the shape:
 
@@ -120,12 +94,12 @@ Each entry has the shape:
 (SYMBOL REGEXP FILE LINE COLUMN TYPE HYPERLINK HIGHLIGHT...)
 ```
 
-Where `TYPE` controls severity: 2 = error, 1 = warning, 0 = info. The `TYPE` field can also be a
-cons cell for conditional severity based on match groups.
+`TYPE` controls severity: 2 = error, 1 = warning, 0 = info. It can also be a cons cell for
+severity that depends on match groups.
 
 ### Adding a custom error regexp
 
-If you use a tool whose output format is not recognized, you can teach compilation mode about it:
+For a tool whose output format isn't recognized:
 
 ```elisp
 (with-eval-after-load 'compile
@@ -139,11 +113,11 @@ If you use a tool whose output format is not recognized, you can teach compilati
 
 ## Useful variables
 
-Beyond what this config sets, a few more compilation variables are worth knowing:
+A few more compilation variables worth knowing:
 
 ```elisp
 ;; Skip warnings and info when navigating with next-error.
-;; 2 = only errors, 1 = errors + warnings, 0 = everything (default).
+;; 2 = only errors, 1 = errors + warnings, 0 = everything.
 (setopt compilation-skip-threshold 2)
 
 ;; Some languages (e.g. OCaml) use 0-indexed columns.
@@ -159,14 +133,12 @@ Beyond what this config sets, a few more compilation variables are worth knowing
 
 ## The compilation mode family
 
-Compilation mode is not just for compilers — it is the infrastructure for any structured output with
-source locations:
+Compilation mode is the infrastructure for any structured output with source locations:
 
-- **grep-mode** — `M-x grep`, `M-x rgrep`, `M-x lgrep` all produce compilation-derived buffers with
+- **grep-mode**: `M-x grep`, `M-x rgrep`, and `M-x lgrep` produce compilation-derived buffers with
   the same navigation.
-- **occur-mode** — `M-x occur` participates in the same `next-error` infrastructure.
-- **flymake** — uses compilation-style error navigation under the hood.
+- **occur-mode**: `M-x occur` participates in the same `next-error` infrastructure.
+- **flymake**: uses compilation-style error navigation under the hood.
 
-Any tool that outputs file/line references can plug into this system. Whether you are navigating
-compiler errors, grep results, test failures, or linter output, the workflow is the same: `M-g n` to
-jump to the next problem.
+Whether you are looking at compiler errors, grep results, test failures, or linter output, the
+workflow is the same: `M-g n` jumps to the next problem.

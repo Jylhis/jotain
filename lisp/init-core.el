@@ -2,11 +2,9 @@
 
 ;;; Commentary:
 
-;; Settings that don't belong to any one feature: garbage collection,
-;; encoding, file-handling defaults, custom-file location, and the
-;; `var/' directory used to hold persistent state (recentf, savehist,
-;; save-place, bookmarks, …). No third-party UI here, no completion,
-;; no programming-mode tweaks — those have their own files.
+;; Settings that belong to no single feature: GC, encoding, file
+;; handling, and the `var/' directory for persistent state (recentf,
+;; savehist, save-place, bookmarks, ...).
 
 ;;; Code:
 
@@ -28,15 +26,12 @@ immediately for writes."
 
 (ignore-errors (make-directory jotain-var-dir t))
 
-;; Restore a sane GC threshold after the early-init.el bump — on
-;; `emacs-startup-hook' (late depth), so the whole of init still runs
-;; under the bumped threshold instead of paying GC pauses from the first
-;; module load onwards. 16 MiB is the common compromise: high enough
-;; that typing/scrolling never trips a GC, low enough that an idle GC
-;; actually completes quickly. Combined with the idle-timer below, total
-;; pause time stays well under perceptible. Caveat: if init errors out,
-;; the threshold stays at `most-positive-fixnum' until the minibuffer
-;; hooks below touch it.
+;; Restore the GC threshold after the early-init.el bump on
+;; `emacs-startup-hook' (late depth), so all of init runs under the bump.
+;; 16 MiB: high enough that typing/scrolling rarely trips a GC, low
+;; enough that an idle GC finishes quickly. If startup aborts before the
+;; hook runs, the threshold stays at `most-positive-fixnum' until the
+;; first minibuffer exit (see the hooks below).
 (defconst jotain-core-gc-cons-threshold (* 16 1024 1024)
   "Steady-state `gc-cons-threshold' after startup.")
 
@@ -46,20 +41,18 @@ immediately for writes."
         gc-cons-percentage 0.1))
 (add-hook 'emacs-startup-hook #'jotain-core--gc-restore-after-startup 90)
 
-;; Collect on idle only once a quarter of the threshold has been consed,
-;; so an idle period after little allocation costs nothing.  Measured
-;; against the live threshold, this also skips the collection while the
-;; minibuffer hooks below hold it at `most-positive-fixnum'.
+;; Collect on idle only once a quarter of the threshold has been consed.
+;; Measured against the live threshold, this also skips the collection
+;; while the minibuffer hooks below hold it at `most-positive-fixnum'.
 (defun jotain-core--gc-idle-collect ()
   "Run a GC when Emacs has been idle, if enough has been allocated."
   (garbage-collect-maybe 4))
 (run-with-idle-timer 5 t #'jotain-core--gc-idle-collect)
 
-;; Pause GC entirely while the minibuffer is open. Completion frameworks
-;; allocate aggressively and a GC mid-keystroke is the single biggest
-;; source of perceptible input lag. Named functions so the hooks are
-;; removable; the depth guard keeps the pause in force while an outer
-;; minibuffer is still active (`enable-recursive-minibuffers' is t).
+;; Pause GC while the minibuffer is open: completion allocates heavily
+;; and a GC mid-keystroke is felt as input lag. The depth guard keeps the
+;; pause while an outer minibuffer is still active (recursive minibuffers
+;; are enabled).
 (defun jotain-core--gc-defer ()
   "Pause GC for the duration of a minibuffer session."
   (setq gc-cons-threshold most-positive-fixnum))
@@ -70,8 +63,7 @@ immediately for writes."
 (add-hook 'minibuffer-setup-hook #'jotain-core--gc-defer)
 (add-hook 'minibuffer-exit-hook #'jotain-core--gc-restore)
 
-;; UTF-8 everywhere. Modern systems are UTF-8; the locale dance only
-;; matters if you ssh into something ancient.
+;; UTF-8 everywhere.
 (set-language-environment "UTF-8")
 (prefer-coding-system 'utf-8)
 
@@ -84,8 +76,7 @@ immediately for writes."
   (use-short-answers t)
   (read-answer-short t)
   (list-matching-lines-jump-to-current-line nil)
-  ;; Visiting a read-only file drops you into `view-mode' (SPC/DEL to
-  ;; page, q to quit) instead of a normal read-only buffer.
+  ;; Read-only files open in `view-mode' (SPC/DEL to page, q to quit).
   (view-read-only t)
   (use-dialog-box nil)
   (create-lockfiles nil)
@@ -97,9 +88,8 @@ immediately for writes."
   (ring-bell-function #'ignore)
   (scroll-preserve-screen-position 1)
   (mouse-yank-at-point t)
-  ;; Drag a region to move/copy it, including across a split (and, with
-  ;; the -cross-program knob, to and from other applications); drag the
-  ;; buffer name in the mode line to move that buffer to another window.
+  ;; Drag a region to move/copy it (also to and from other programs);
+  ;; drag the mode-line buffer name to move the buffer to another window.
   (mouse-drag-and-drop-region t)
   (mouse-drag-and-drop-region-cross-program t)
   (mouse-drag-mode-line-buffer t)
@@ -112,8 +102,7 @@ immediately for writes."
   (minibuffer-prompt-properties
    '(read-only t cursor-intangible t face minibuffer-prompt))
   (read-extended-command-predicate #'command-completion-default-include-p)
-  ;; Case-insensitive completion everywhere — orderless still respects
-  ;; case if you type uppercase, but case-blind by default.
+  ;; Case-insensitive completion everywhere.
   (completion-ignore-case t)
   (read-buffer-completion-ignore-case t)
   (read-file-name-completion-ignore-case t)
@@ -130,10 +119,9 @@ immediately for writes."
   :config
   (save-place-mode 1)
 
-  ;; Recenter the buffer after `save-place-mode' restores the cursor —
-  ;; otherwise reopening a file can leave point on the bottom line.
-  ;; Deferred via a zero-delay timer because the window doesn't exist
-  ;; yet when `save-place-find-file-hook' fires.
+  ;; Recenter after `save-place-mode' restores point, or a reopened file
+  ;; can leave point on the bottom line. Deferred with a zero-delay timer
+  ;; because the window doesn't exist yet when the hook fires.
   (defun jotain-core--recenter-buffer-window (buffer)
     "Recenter the window currently displaying BUFFER, if any."
     (when-let* ((win (get-buffer-window buffer)))
@@ -163,7 +151,6 @@ immediately for writes."
   (confirm-kill-processes nil)
   :hook (after-save . executable-make-buffer-file-executable-if-script-p)
   :config
-  ;; When opening foo/bar/new.txt and foo/bar/ doesn't exist, create it.
   (defun jotain-core--auto-create-missing-dirs ()
     "Create the parent directory of the visited file if it does not exist."
     (let ((target-dir (when buffer-file-name
@@ -175,17 +162,13 @@ immediately for writes."
 
 ;;;; custom-file writes never prompt
 
-;; `custom-file' (set in init.el) is write-only: the declarative config
-;; in git is the single source of truth, and custom.el is regenerated
-;; from scratch on every `custom-save-all' (e.g. when `package.el'
-;; persists `package-selected-packages' after installing a package).
-;; When more than one session writes it — a daemon and its `emacsclient'
-;; frames, or two Emacsen sharing `var/' — the file changes on disk
-;; underneath the writer, and `custom-save-variables' then blocks on the
-;; "changed on disk; really edit the buffer?" supersession prompt (and
-;; aborts the write with a `file-supersession' error if declined).
-;; Because the file is disposable, clobbering it is the correct outcome,
-;; so neutralize the prompt for the duration of the save.
+;; `custom-file' is write-only (init.el) and rewritten on every
+;; `custom-save-all', e.g. when package.el persists
+;; `package-selected-packages'. When two Emacs sessions share `var/', the
+;; file changes on disk under the writer and the save blocks on the
+;; "changed on disk; really edit the buffer?" prompt (a declined prompt
+;; aborts the write). The file is disposable, so clobbering it is right:
+;; suppress the prompt during the save.
 (defun jotain-core--custom-save-without-supersession (orig &rest args)
   "Run ORIG (`custom-save-all') with ARGS, never prompting on disk changes."
   (let ((saved (symbol-function 'ask-user-about-supersession-threat)))
@@ -199,24 +182,21 @@ immediately for writes."
 
 ;;;; package.el conveniences (newcomers-presets theme)
 
-;; `package-autosuggest-mode' (Emacs 31) offers to install a package when
-;; you open a file type Emacs has no mode for; `package-menu-use-current-
-;; if-no-marks' nil makes the package-menu action keys act only on marked
-;; entries, never silently on the line at point. Both guarded for the
-;; Emacs 30.1 floor. `package' is already loaded (required in init.el).
+;; Emacs 31, guarded for 30: `package-autosuggest-mode' offers to install
+;; a mode for unknown file types; `package-menu-use-current-if-no-marks'
+;; nil makes package-menu actions apply only to marked entries, never to
+;; the line at point. `package' is already loaded (init.el).
 (when (boundp 'package-menu-use-current-if-no-marks)
   (setopt package-menu-use-current-if-no-marks nil))
 (when (fboundp 'package-autosuggest-mode)
   (package-autosuggest-mode 1))
 
 ;;; @doc Repeat-mode lets you press the trailing key alone after a prefix
-;;; command (e.g. C-x o o o instead of C-x o C-x o). Built-in,
-;;; enabled globally. `repeat-exit-timeout' clears the transient map
-;;; after two idle seconds so the user doesn't have to think about
-;;; exiting it — the ergonomic "one-shot modifier" pattern. The
-;;; built-in maps cover window resizing too (`resize-window-repeat-map'),
-;;; so `C-x ^ ^ v' just works; init-keys.el only adds a map for the
-;;; Emacs 31 `window-layout-*' commands.
+;;; command (e.g. C-x o o o instead of C-x o C-x o). Built-in, enabled
+;;; globally. `repeat-exit-timeout' drops the repeat map after two idle
+;;; seconds. Built-in maps already cover window resizing
+;;; (`C-x ^ ^ v'); init-keys.el only adds a map for the Emacs 31
+;;; `window-layout-*' commands.
 (use-package repeat
   :ensure nil
   :custom
@@ -235,8 +215,7 @@ immediately for writes."
   :ensure nil
   :bind ([remap list-buffers] . ibuffer)
   :config
-  ;; Emacs 31+: show the Size column in human units (KB/MB) instead of
-  ;; raw byte counts. Guarded so the config loads on Emacs 30.
+  ;; Emacs 31+: human-readable Size column (KB/MB).
   (when (boundp 'ibuffer-human-readable-size)
     (setopt ibuffer-human-readable-size t)))
 
@@ -244,12 +223,9 @@ immediately for writes."
 ;;; the editor on a DNS lookup — reject means "treat as not a host".
 (use-package ffap
   :ensure nil
-  ;; Purely on-demand (find-file-at-point and friends), yet its ~2k-line
-  ;; body pulled in the largest built-in load on the eager startup path
-  ;; (~67ms in an isolated Emacs 31 measurement). Defer it: the built-in
-  ;; autoloads still trigger the load when a ffap command runs, and the
-  ;; `:custom' value below is recorded now and applied by the deferred
-  ;; `defcustom' when ffap finally loads.
+  ;; On-demand only, yet an eager load cost ~67ms at startup (isolated
+  ;; Emacs 31 measurement). Its autoloads load it when a ffap command
+  ;; runs, and the `:custom' value applies then.
   :defer t
   :custom
   (ffap-machine-p-known 'reject))
@@ -266,8 +242,7 @@ immediately for writes."
      ("Asia/Bangkok"    "Bangkok")
      ("Asia/Shanghai"   "Shanghai")))
   :config
-  ;; Emacs 31+: sort the world-clock table by an ISO timestamp so the
-  ;; zones list in chronological order. Guarded for Emacs 30.
+  ;; Emacs 31+: list zones in chronological order.
   (when (boundp 'world-clock-sort-order)
     (setopt world-clock-sort-order "%FT%T")))
 
@@ -286,9 +261,7 @@ immediately for writes."
 
 (defun jotain-profile-toggle ()
   "Toggle CPU+memory profiling; show the report on the second call.
-First call starts the profiler; second call stops it and pops the
-`*CPU/Memory Profiler Report*' buffer.  Useful for diagnosing
-freezes — start, reproduce, stop."
+Useful for diagnosing freezes: start, reproduce, stop."
   (interactive)
   (if jotain-profiler--running
       (progn (profiler-stop)
@@ -301,9 +274,9 @@ freezes — start, reproduce, stop."
 
 ;;;; macOS — minimal modifier-key fix
 ;;
-;; Option-as-Meta collides with typing curly braces and special
-;; characters on European keyboard layouts, so Meta goes on Command
-;; and Right-Option stays free for special character entry.
+;; Option-as-Meta breaks typing braces and special characters on
+;; European layouts, so Meta goes on Command and Right-Option stays free
+;; for character entry.
 (when (eq system-type 'darwin)
   (setopt mac-command-modifier      'meta
           mac-option-modifier       'super
@@ -311,39 +284,35 @@ freezes — start, reproduce, stop."
   (setopt trash-directory "~/.Trash"))
 
 ;;; @doc Inherits PATH, MANPATH, and other shell-managed vars from the
-;;; user's login shell so GUI / launchd / systemd-spawned Emacs
-;;; matches what the terminal sees. module.nix prepends Nix-store
-;;; binaries (rg, fd, git, jj, zoxide, coreutils) to the wrapper's
-;;; PATH — this picks up ~/.nix-profile and user toolchains.
+;;; user's login shell so a GUI, launchd, or systemd-spawned Emacs sees
+;;; what the terminal sees. The Nix wrapper already puts the tools the
+;;; config needs (rg, fd, git, jj, zoxide, coreutils) on PATH; this
+;;; adds ~/.nix-profile and user toolchains.
 (use-package exec-path-from-shell
   :if (or (daemonp)
           (memq window-system '(mac ns x pgtk)))
   :functions (exec-path-from-shell-initialize)
-  ;; `exec-path-from-shell-initialize' forks the login shell — the
-  ;; single largest cost on the init path — so defer it to
-  ;; `after-init-hook': the first frame draws before the fork, and
-  ;; PATH/MANPATH resolve before the command loop gets control. The
-  ;; nil arguments below skip the shell's -i round-trip.
+  ;; Forking the login shell is the largest cost on the init path, so it
+  ;; runs on `after-init-hook': the first frame draws first, and PATH is
+  ;; set before the command loop starts.
   ;;
   ;; Load-time `executable-find' guards in other modules see the
-  ;; pre-import PATH. Safe only because the tools so probed (zoxide,
-  ;; Darwin's gls) come from the Nix wrapper PATH
-  ;; (nix/runtime-deps.nix), not the login shell — keep it that way.
+  ;; pre-import PATH. That is safe only because the tools they probe
+  ;; (zoxide, Darwin's gls) come from the Nix wrapper PATH
+  ;; (nix/runtime-deps.nix), not the login shell. Keep it that way.
   :hook (after-init . exec-path-from-shell-initialize)
   :custom
-  (exec-path-from-shell-arguments nil)) ; faster: skip -i
+  (exec-path-from-shell-arguments nil)) ; skip the -i round-trip
 
-;;; @doc Auto-revert buffers when the underlying file changes on disk —
-;;; essential for branch switches and external edits. Also covers
-;;; non-file buffers (dired, magit) so they refresh too.
+;;; @doc Auto-revert buffers when their file changes on disk (branch
+;;; switches, external edits), and non-file buffers such as dired.
 (use-package autorevert
   :ensure nil
   :custom (global-auto-revert-non-file-buffers t)
   :config (global-auto-revert-mode 1))
 
-;;; @doc Built-in recently-visited files list. Used by consult-recent-file
-;;; and the bookmarks UI; state file lives under var/ to keep the
-;;; repo root clean.
+;;; @doc Built-in recently-visited files list, used by
+;;; `consult-recent-file'. State lives under var/.
 (use-package recentf
   :ensure nil
   :custom
@@ -359,25 +328,21 @@ freezes — start, reproduce, stop."
   :ensure nil
   :custom
   (savehist-file (jotain-var-file "savehist.el"))
-  ;; Carry the kill ring and search rings across sessions too. savehist
-  ;; tests each variable's value as a whole and drops the lot if any part
-  ;; is unprintable — these three only ever hold strings, so they always
-  ;; round-trip. `register-alist' is deliberately excluded: a single
-  ;; marker (C-x r SPC) or window-configuration register (C-x r w) would
-  ;; silently discard every saved register.
+  ;; Also persist the kill and search rings. savehist drops a variable
+  ;; whole if any part is unprintable; these hold only strings.
+  ;; `register-alist' is excluded: one marker (C-x r SPC) or window
+  ;; configuration (C-x r w) register would discard every register.
   (savehist-additional-variables
    '(kill-ring search-ring regexp-search-ring))
   :config
   (savehist-mode 1))
 
-;;; @doc Built-in bookmark store. State file is themed under var/ so it
-;;; joins the rest of Jotain's persistent state. `save-flag 1` writes
-;;; on every change so an Emacs crash never loses bookmarks; the fringe
-;;; glyph is suppressed because it adds visual noise without info.
+;;; @doc Built-in bookmark store, kept under var/. `save-flag 1` writes
+;;; on every change so a crash never loses bookmarks; no fringe mark.
 (use-package bookmark
   :ensure nil
-  ;; On-demand: nothing on the startup path uses bookmarks. Autoloaded via
-  ;; `bookmark-jump'/`consult-bookmark'; the customs apply on that load.
+  ;; Nothing at startup uses bookmarks; the customs apply when
+  ;; `bookmark-jump'/`consult-bookmark' load it.
   :defer t
   :custom
   (bookmark-default-file (jotain-var-file "bookmarks.el"))
@@ -399,26 +364,21 @@ freezes — start, reproduce, stop."
 ;;; Built-in since Emacs 30.
 (minibuffer-regexp-mode 1)
 
-;;; @doc Built-in HTML renderer used by eww, gnus, elfeed. Suppress page
-;;; colours and proportional fonts so rendered HTML inherits the
-;;; theme and the user's monospace face — better contrast,
-;;; predictable layout.
+;;; @doc Built-in HTML renderer used by eww, Gnus, and elfeed. Page
+;;; colours and proportional fonts are off, so rendered HTML follows the
+;;; theme and the default face.
 (use-package shr
   :ensure nil
-  ;; The HTML renderer, only reached on demand (eww, rendered mail, etc.),
-  ;; but the heaviest built-in on the eager startup path (~74ms, ~41 deps
-  ;; in an isolated Emacs 31 measurement). Defer it; callers that need it
-  ;; require it themselves, and the customs below apply on that load.
+  ;; On-demand only, yet an eager load cost ~74ms at startup (isolated
+  ;; Emacs 31 measurement). Callers require it; the customs apply then.
   :defer t
   :custom
   (shr-use-colors nil)
   (shr-use-fonts nil))
 
-;;; @doc Built-in GnuTLS. Harden TLS connections: verify server
-;;; certificates and raise an error instead of silently continuing
-;;; when verification fails (`gnutls-verify-error`), and require a
-;;; strong Diffie-Hellman prime so weak key exchanges are rejected
-;;; (`gnutls-min-prime-bits`).
+;;; @doc Built-in GnuTLS, hardened: a failed certificate check aborts
+;;; the connection instead of continuing (`gnutls-verify-error`), and
+;;; weak Diffie-Hellman primes are rejected (`gnutls-min-prime-bits`).
 (use-package gnutls
   :ensure nil
   :custom
@@ -426,9 +386,8 @@ freezes — start, reproduce, stop."
   (gnutls-min-prime-bits 3072))
 
 ;;; @doc Built-in Network Security Manager. `network-security-level`
-;;; 'high applies the strictest connection checks (certificate
-;;; changes, weak ciphers, downgrades); the settings file is themed
-;;; under var/ to keep the repo root clean.
+;;; 'high applies the strictest checks (certificate changes, weak
+;;; ciphers, downgrades). Settings file under var/.
 (use-package nsm
   :ensure nil
   :custom

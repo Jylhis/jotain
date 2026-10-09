@@ -2,60 +2,50 @@
 
 ;;; Commentary:
 
-;; The shared substrate every language module builds on. Eglot lives here
-;; (not in its own file) because it's the glue between `prog-mode',
-;; `flymake', `eldoc', and `xref' — splitting it out would just spread
-;; one feature across five files.
-;;
-;; Per-language `eglot-ensure' hooks live here so all LSP wiring is
-;; visible in one place. Language modules own mode registration and
-;; language-specific indentation/settings.
+;; The shared substrate every language module builds on.  Eglot lives
+;; here because it is the glue between `prog-mode', `flymake', `eldoc' and
+;; `xref'.  All LSP wiring (auto-start, server programs) and formatter
+;; wiring stays in this file; language modules own mode registration and
+;; language-specific settings.
 
 ;;; Code:
 
 ;;;; prog-mode
 
-;;; @doc Built-in `prog-mode` parent. Just turns on the fill-column
-;;; indicator — hl-line and show-paren live in init-ui so they
-;;; apply outside programming buffers too.
+;;; @doc Built-in `prog-mode` parent. Turns on the fill-column
+;;; indicator; hl-line and show-paren live in init-ui, as they apply
+;;; beyond code.
 (use-package prog-mode
   :ensure nil
   :hook
   (prog-mode . display-fill-column-indicator-mode)
   :config
-  ;; Emacs 31+: don't draw the indicator in a warning face past the
-  ;; column. Guarded so the config still loads on Emacs 30.
+  ;; Emacs 31+: no warning face past the column.
   (when (boundp 'display-fill-column-indicator-warning)
     (setopt display-fill-column-indicator-warning nil)))
 
 ;;;; Tree-sitter
 
-;;; @doc Built-in tree-sitter substrate. Bumped to font-lock level 4 to
-;;; enable every available syntactic decoration.
+;;; @doc Built-in tree-sitter. Font-lock level 4 enables every
+;;; available syntactic decoration.
 (use-package treesit
   :ensure nil
   :custom
   (treesit-font-lock-level 4))
 
-;;; @doc Defer fontification of newly exposed text by a few hundredths of
-;;; a second so heavy treesit level-4 font-lock never blocks keystrokes or
-;;; scrolling. Pairs with `redisplay-skip-fontification-on-input' (set in
-;;; init-core) — matters more on this slower Intel CPU.
+;;; @doc Defer fontification of newly exposed text by 50 ms so heavy
+;;; level-4 treesit font-lock never blocks keystrokes or scrolling.
+;;; Pairs with `redisplay-skip-fontification-on-input' (init-core).
 (use-package jit-lock
   :ensure nil
   :custom
   (jit-lock-defer-time 0.05))
 
-;;; @doc Route classic major modes to their tree-sitter variants.  We do
-;;; this ourselves rather than via `treesit-auto': Nix provides every
-;;; grammar (nothing to install), and the routing is a short
-;;; `major-mode-remap-alist' loop, the same mechanism `init-lang-go.el'
-;;; already uses.  Remapping the *chosen* mode means we own no file
-;;; regexes: each classic mode's own `auto-mode-alist' /
-;;; `interpreter-mode-alist' entry stays the source of truth and we
-;;; simply redirect it to the `-ts-mode'.  Guarded by `treesit-ready-p'
-;;; so a curated/lite build lacking a grammar falls back to the classic
-;;; mode automatically.
+;;; @doc Route classic major modes to their tree-sitter variants through
+;;; `major-mode-remap-alist' (no `treesit-auto': Nix ships every grammar).
+;;; Remapping the chosen mode means the classic modes' `auto-mode-alist'
+;;; entries stay the source of truth. A language whose grammar is not
+;;; loadable keeps its classic mode.
 (declare-function treesit-ready-p "treesit" (language &optional quiet))
 
 (defvar jotain-prog-ts-remaps
@@ -65,19 +55,16 @@
     (json        json-ts-mode        js-json-mode json-mode)
     (toml        toml-ts-mode        conf-toml-mode)
     (yaml        yaml-ts-mode        yaml-mode)
-    ;; Languages with a dedicated `init-lang-*' file already route
-    ;; themselves via `:mode'; listed here so any stray classic-mode path
-    ;; (a package autoload, a stale `package-quickstart' entry) still
-    ;; lands in the tree-sitter mode.
+    ;; Modes routed by their own `init-lang-*' file are listed too, so a
+    ;; stray classic-mode path (a package autoload, a stale quickstart
+    ;; entry) still lands in the tree-sitter mode.
     (python      python-ts-mode      python-mode)
     (rust        rust-ts-mode        rust-mode)
     (css         css-ts-mode         css-mode scss-mode)
     (javascript  js-ts-mode          js-mode javascript-mode js2-mode)
     (typescript  typescript-ts-mode  typescript-mode)
-    ;; C/C++ (init-lang-systems).  `.cu'/`.cuh' (CUDA) map to `c++-mode'
-    ;; there, so the `cpp' entry sends them to `c++-ts-mode' too — CUDA has
-    ;; no tree-sitter major mode of its own (Emacs bug#72388), and the cpp
-    ;; grammar covers ordinary CUDA code (only `<<<…>>>' launches error).
+    ;; C/C++ (init-lang-systems, which also maps `.cu'/`.cuh' straight
+    ;; to its own `cuda-ts-mode').
     (c           c-ts-mode           c-mode)
     (cpp         c++-ts-mode         c++-mode))
   "Tree-sitter routing table: entries (LANG TS-MODE CLASSIC-MODE...).
@@ -100,11 +87,10 @@ leaves the classic mode in place."
 
 (jotain-prog--apply-ts-remaps)
 
-;; Async native-comp workers run without site files, so they never pick up
-;; the `treesit-extra-load-path' that Nixpkgs' site-start.el set for the
-;; interactive Emacs.  Propagate it into each worker so compiling a
-;; `*-ts-mode' config file doesn't log a spurious tree-sitter
-;; "grammar ... unavailable" warning.  A no-op when the path is nil.
+;; Async native-comp workers skip site files, so they miss the
+;; `treesit-extra-load-path' Nixpkgs' site-start.el sets.  Pass it on, or
+;; compiling a `*-ts-mode' file logs a spurious "grammar unavailable"
+;; warning.
 (defvar treesit-extra-load-path)
 (defvar native-comp-async-env-modifier-form)
 (setq native-comp-async-env-modifier-form
@@ -112,40 +98,27 @@ leaves the classic mode in place."
 
 ;;;; Non-tree-sitter mode diagnostic
 
-;;; @doc Log to *Messages* whenever a buffer lands in a classic major
-;;; mode even though a tree-sitter variant with a loadable grammar
-;;; exists: a gap detector for a language not yet in
-;;; `jotain-prog-ts-remaps' (routed languages already sit in their
-;;; `-ts-mode' and never reach here).  Self-contained: it derives the
-;;; candidate `foo-ts-mode' and grammar name from the current mode name,
-;;; so it needs no external recipe database.  Set
-;;; `jotain-prog-warn-non-ts-mode' to nil to silence entirely, or add
-;;; deliberate classic-mode choices to
+;;; @doc Log to *Messages* when a buffer opens in a classic major mode
+;;; although a tree-sitter variant with a loadable grammar exists: a gap
+;;; detector for languages missing from `jotain-prog-ts-remaps'. Silence
+;;; it with `jotain-prog-warn-non-ts-mode', or per mode with
 ;;; `jotain-prog-warn-non-ts-exclude'.
 (defcustom jotain-prog-warn-non-ts-mode t
   "When non-nil, log if a classic major mode is used despite a ready ts-mode.
-The notice goes to *Messages* on `after-change-major-mode-hook' only
-when the corresponding tree-sitter grammar is actually loadable.
 Modes in `jotain-prog-warn-non-ts-exclude' are never reported."
   :type 'boolean
   :group 'jotain)
 
 (defcustom jotain-prog-warn-non-ts-exclude nil
-  "Classic major modes the non-ts diagnostic deliberately skips.
-Empty by default: C/C++ now route to `c-ts-mode'/`c++-ts-mode' (see
-`jotain-prog-ts-remaps' and `init-lang-systems.el'), so no language is a
-deliberate classic-mode choice any more.  Add a mode here if you ever want
-to silence the detector for a specific one."
+  "Classic major modes the non-ts diagnostic deliberately skips."
   :type '(repeat symbol)
   :group 'jotain)
 
 (defun jotain-prog--warn-non-ts-mode ()
   "Log when `major-mode' is classic but a ready tree-sitter mode exists.
-Derives the candidate `foo-ts-mode' and grammar name by stripping the
-`-mode' suffix; a no-op unless that mode is defined and its grammar
-loads.  Best-effort: it can't spot irregular names (`sh-mode' maps to
-`bash-ts-mode'), but those are remapped in `jotain-prog-ts-remaps' anyway.
-Skips modes listed in `jotain-prog-warn-non-ts-exclude'."
+Derives `foo-ts-mode' and the grammar name from `foo-mode', so irregular
+names (`sh-mode' to `bash-ts-mode') are missed; those are remapped in
+`jotain-prog-ts-remaps' anyway."
   (when (and jotain-prog-warn-non-ts-mode
              (not (memq major-mode jotain-prog-warn-non-ts-exclude)))
     (let ((name (symbol-name major-mode)))
@@ -160,16 +133,15 @@ Skips modes listed in `jotain-prog-warn-non-ts-exclude'."
 
 (add-hook 'after-change-major-mode-hook #'jotain-prog--warn-non-ts-mode)
 
-;;; @doc Code folding driven by treesit syntax nodes — folds along
-;;; functions/classes/blocks instead of indentation guesses. Fringe
-;;; indicators show fold state.
+;;; @doc Code folding along treesit syntax nodes (functions, classes,
+;;; blocks). Fringe indicators show fold state.
 (use-package treesit-fold
   :hook (after-init . global-treesit-fold-indicators-mode)
   :custom (treesit-fold-indicators-priority -1))
 
 ;;; @doc Structural editing via treesit (move/clone/raise nodes,
-;;; transpose siblings). Heavy enough to be opt-in per buffer via
-;;; M-x combobulate-mode or .dir-locals.el. Provided by Nix.
+;;; transpose siblings). Opt-in per buffer via M-x combobulate-mode or
+;;; .dir-locals.el. Provided by Nix.
 (use-package combobulate
   :ensure nil
   :defer t
@@ -181,13 +153,12 @@ Skips modes listed in `jotain-prog-warn-non-ts-exclude'."
 
 ;;;; Eglot
 
-;; Modern LSP servers routinely send multi-megabyte responses.  Bumping
-;; the read buffer cuts the number of read(2) calls dramatically.
+;; LSP servers send multi-megabyte responses; a bigger read buffer means
+;; far fewer read(2) calls.
 (setopt read-process-output-max (* 4 1024 1024))
 
-;;; @doc Security gate for JavaScript-config-evaluating language servers.
-;;; ESLint and Tailwind LSPs can execute project-controlled JS config, so
-;;; keep them opt-in.
+;;; @doc Security gate: the ESLint and Tailwind language servers can
+;;; execute project-controlled JS config, so they are opt-in.
 (defcustom jotain-prog-enable-risky-js-lsp nil
   "When non-nil, include ESLint and Tailwind LSP servers in TS/TSX `rass` sessions.
 These servers may evaluate project JavaScript configuration files."
@@ -198,41 +169,30 @@ These servers may evaluate project JavaScript configuration files."
 
 (defun jotain-eglot-set-workspace-config (key settings)
   "Contribute SETTINGS under KEY to eglot's workspace configuration.
-Eglot only ever reads the GLOBAL value of
-`eglot-workspace-configuration': it evaluates the variable in a
-fresh temp buffer, so a buffer-local mode-hook binding never
-reaches the server.  Each language therefore merges its own
-section into the default value, keyed so it never leaks into
-another language's session, and `copy-sequence' keeps the shared
-default from being mutated in place.  A project
-`.dir-locals.el' `eglot-workspace-configuration' entry still
-shadows the whole thing cleanly.
+Eglot reads the global value of `eglot-workspace-configuration' (it
+evaluates it in a temp buffer), so a buffer-local binding never reaches
+the server.  Each language merges its own section into the default
+value instead; `copy-sequence' avoids mutating the shared default.  A
+project `.dir-locals.el' entry still shadows the whole value.
 
-Deferred until eglot loads, so the variable eglot defines exists
-and every section is in place before the first server connects.
-Call this from the language's `init-lang-*' file, which owns the
-settings; the mechanism lives here with the rest of the LSP
-wiring."
+Deferred until eglot loads.  Call it from the `init-lang-*' file that
+owns the settings."
   (with-eval-after-load 'eglot
     (setq-default eglot-workspace-configuration
                   (plist-put (copy-sequence
                               (default-value 'eglot-workspace-configuration))
                              key settings))))
 
-;;; @doc Built-in LSP client. Per-language `eglot-ensure` hooks live
-;;; here so all LSP wiring is visible in one place; per-language
-;;; mode regexes stay in their `init-lang-*` file. C-c r is the
-;;; refactor prefix (rename/format/code-actions).
-;;;
-;;; Beyond the curated hook list, `jotain-prog--maybe-eglot-ensure'
-;;; auto-starts eglot for ANY project file whose language server is on the
-;;; buffer's (envrc-applied) PATH — so enabling `languages.X.enable' in a
-;;; project's devenv lights up its LSP in Emacs with no per-language config.
+;;; @doc Built-in LSP client. All LSP wiring lives here; mode regexes
+;;; stay in the `init-lang-*` files. C-c r is the refactor prefix
+;;; (rename/format/code-actions). Eglot auto-starts for any project file
+;;; whose language server is on the buffer's devenv-applied PATH, so
+;;; enabling `languages.X.enable` in a project's devenv lights up its LSP
+;;; with no per-language config.
 (use-package eglot
   :ensure nil
   :preface
-  ;; Declared so the byte-compiler stays quiet in these helpers even when
-  ;; eglot itself is not loaded at compile time.
+  ;; eglot is not loaded at compile time.
   (declare-function eglot-ensure "eglot")
   (declare-function eglot--guess-contact "eglot")
   (declare-function eglot-alternatives "eglot")
@@ -240,10 +200,10 @@ wiring."
 
   (defun jotain-prog--eglot-guess-program ()
     "Executable eglot would use for this buffer, or nil.
-Resolved via `eglot--guess-contact', which evaluates function-valued
-`eglot-server-programs' entries, so it reflects the project's env.  Returns
-nil for exotic contacts (TCP, class forms) we can't cheaply inspect.  Assumes
-eglot is loaded."
+Uses `eglot--guess-contact', which evaluates function-valued
+`eglot-server-programs' entries in the project's env.  Returns nil for
+contacts that are not a program (TCP, class forms).  Assumes eglot is
+loaded."
     (ignore-errors
       (let ((contact (nth 3 (eglot--guess-contact))))
         (cond ((stringp contact) contact)
@@ -252,11 +212,11 @@ eglot is loaded."
   (declare-function devenv-env-loading-p "devenv")
   (defun jotain-prog--maybe-eglot-ensure ()
     "Auto-start eglot when the project's env provides a server for this buffer.
-Deferred to an idle timer so `devenv-env-mode' has already turned on and
-begun applying the buffer-local `exec-path'/PATH (it runs on
-`after-change-major-mode-hook', after `prog-mode-hook').  Skips remote files,
-non-file and Lisp buffers (no server, and we must not pull eglot into every
-elisp buffer), and already-managed buffers."
+Runs from `prog-mode-hook' but defers to an idle timer: `devenv-env-mode'
+turns on later, from `after-change-major-mode-hook', and connecting
+earlier would use the global environment instead of the project's.
+Skips remote, non-file and already-managed buffers, and Lisp buffers
+(no server, and eglot must not load for every Elisp buffer)."
     (when (and buffer-file-name
                (not (file-remote-p default-directory))
                (not (derived-mode-p 'emacs-lisp-mode 'lisp-data-mode))
@@ -271,11 +231,9 @@ elisp buffer), and already-managed buffers."
                (unless (bound-and-true-p eglot--managed-mode)
                  (require 'eglot)
                  (cond
-                  ;; devenv env still loading: the buffer-local `exec-path'
-                  ;; isn't populated yet, so `executable-find' would wrongly
-                  ;; skip servers that live only in the devenv.  Call
-                  ;; `eglot-ensure' and let devenv's deferral advice hold and
-                  ;; replay it once the environment lands.
+                  ;; Env still loading, so `executable-find' cannot see
+                  ;; devenv-only servers yet.  devenv's advice holds this
+                  ;; `eglot-ensure' and replays it once the env lands.
                   ((and (fboundp 'devenv-env-loading-p)
                         (devenv-env-loading-p))
                    (eglot-ensure))
@@ -285,9 +243,8 @@ elisp buffer), and already-managed buffers."
 
   (defun jotain-prog--risky-js-extras ()
     "Optional ESLint/Tailwind `rass' companions, gated on the risky-JS opt-in.
-These servers may evaluate project-controlled JavaScript config, so they are
-added only when `jotain-prog-enable-risky-js-lsp' is non-nil and they are on
-PATH."
+Added only when `jotain-prog-enable-risky-js-lsp' is non-nil and the
+servers are on PATH."
     (let (extras)
       (when jotain-prog-enable-risky-js-lsp
         (dolist (s '("eslint-lsp" "tailwindcss-language-server"))
@@ -297,9 +254,9 @@ PATH."
 
   (defun jotain-prog--ts-server (&optional _interactive)
     "Resolve the TS/TSX server contact against the buffer's (project) PATH.
-Prefers the `rass' multiplexer when it and typescript-language-server are on
-PATH, else a plain typescript-language-server.  Called at eglot connect time,
-so it sees the project's devenv env — not Jotain's own shell."
+When `rass' and typescript-language-server are both on PATH, `rass'
+wraps it (plus any risky-JS companions); else plain
+typescript-language-server."
     (if (and (executable-find "rass")
              (executable-find "typescript-language-server"))
         (append '("rass" "--" "typescript-language-server" "--stdio")
@@ -308,8 +265,8 @@ so it sees the project's devenv env — not Jotain's own shell."
 
   (defun jotain-prog--python-server (&optional _interactive)
     "Resolve the Python server contact against the buffer's (project) PATH.
-Prefers the bundled `rass python' preset (basedpyright + ruff), then a lone
-basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
+Prefers the `rass python' preset (basedpyright + ruff), then a lone
+basedpyright/pyright, then pylsp."
     (cond ((and (executable-find "rass")
                 (executable-find "basedpyright")
                 (executable-find "ruff"))
@@ -320,30 +277,22 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
 
   (defun jotain-prog--likec4-server (&optional _interactive)
     "Resolve the LikeC4 server contact against the buffer's PATH.
-Prefers the standalone `likec4-lsp' (bundled on the distribution wrapper),
-falling back to the main `likec4' CLI's `lsp' subcommand.  Resolved at eglot
-connect time, so it sees the project's devenv env — not Jotain's own shell."
+Prefers the standalone `likec4-lsp' (on the distribution wrapper PATH),
+falling back to the `likec4' CLI's `lsp' subcommand."
     (if (executable-find "likec4-lsp")
         '("likec4-lsp" "--stdio")
       '("likec4" "lsp" "--stdio")))
 
   (defun jotain-prog--robot-server (&optional _interactive)
     "Resolve the Robot Framework server contact against the buffer's PATH.
-Prefers `robotcode' (its `language-server' subcommand), falling back to the
-`robotframework_ls' entry point.  Both speak stdio by default.  Resolved at
-eglot connect time, so it sees the project's devenv env — not Jotain's own
-shell.  A project with neither still gets `robot-mode' plus the cape capfs."
+Prefers `robotcode language-server', falling back to `robotframework_ls'.
+Both speak stdio by default."
     (if (executable-find "robotcode")
         '("robotcode" "language-server")
       '("robotframework_ls")))
   :init
-  ;; Single devenv-aware auto-start for every project language.  It runs on
-  ;; `prog-mode-hook' but defers the actual `eglot-ensure' to an idle timer,
-  ;; so it fires *after* `after-change-major-mode-hook' has turned on
-  ;; `devenv-env-mode' and begun applying the project env.  A per-mode
-  ;; `:hook . eglot-ensure' would instead fire inside the major-mode hook,
-  ;; *before* `devenv-env-mode' registers the buffer, so eglot would connect
-  ;; with the global (toolchain-less) environment instead of the devenv one.
+  ;; One devenv-aware auto-start for every language, instead of per-mode
+  ;; `eglot-ensure' hooks, which would connect before the devenv env exists.
   (add-hook 'prog-mode-hook #'jotain-prog--maybe-eglot-ensure)
   :custom
   (eglot-autoshutdown t)
@@ -361,25 +310,21 @@ shell.  A project with neither still gets `robot-mode' plus the cape capfs."
         ("C-c r q" . eglot-code-action-quickfix)
         ("C-h ."   . eldoc-doc-buffer))
   :config
-  ;; Compose eldoc sources eagerly — it's the more readable variant
-  ;; than Eglot's default in most modes.
+  ;; Show all eldoc sources together rather than Eglot's default strategy.
   (defun jotain-prog--eldoc-compose-eagerly ()
     "Compose eldoc sources eagerly in Eglot-managed buffers."
     (setq-local eldoc-documentation-strategy
                 #'eldoc-documentation-compose-eagerly))
   (add-hook 'eglot-managed-mode-hook #'jotain-prog--eldoc-compose-eagerly)
 
-  ;; Emacs 31+: render LSP hover/signature docs through the tree-sitter
-  ;; markdown viewer instead of the plain-text fallback. Guarded so the
-  ;; config still loads on Emacs 30 where the option doesn't exist.
-  ;; markdown-ts-mode.el ships in 31 but has no autoloads — require it:
+  ;; Emacs 31+: render hover/signature docs with the tree-sitter markdown
+  ;; viewer.  markdown-ts-mode.el has no autoloads, so require it.
   (when (and (boundp 'eglot-documentation-renderer)
              (require 'markdown-ts-mode nil t)
              (fboundp 'markdown-ts-view-mode))
     (setopt eglot-documentation-renderer 'markdown-ts-view-mode))
 
-  ;; Emacs 31+: suppress the new inline "a code action is available here"
-  ;; indicators — some servers make them noisy. Guarded for Emacs 30.
+  ;; Emacs 31+: hide the inline "code action available" indicators.
   (when (boundp 'eglot-code-action-indications)
     (setopt eglot-code-action-indications nil))
 
@@ -400,51 +345,40 @@ shell.  A project with neither still gets `robot-mode' plus the cape capfs."
 
   (add-to-list 'eglot-server-programs
                '((go-ts-mode go-mod-ts-mode go-work-ts-mode) . ("gopls")))
-  ;; Dockerfile buffers are remapped to `dockerfile-ts-mode' (see
-  ;; `jotain-prog-ts-remaps'); key the server on it, keeping the classic
-  ;; `dockerfile-mode' too so a build without the grammar still matches.
+  ;; Classic modes stay in the keys below so a build without the grammar
+  ;; still finds a server.
   (add-to-list 'eglot-server-programs
                '((dockerfile-ts-mode dockerfile-mode) . ("docker-langserver" "--stdio")))
-  ;; QML (init-lang-qml).  `-E' makes qmlls honor QML_IMPORT_PATH from the
-  ;; project env; it also auto-reads a `.qmlls.ini' from the source root.
-  ;; qmlls rides the distribution wrapper PATH (nix/runtime-deps.nix), so a
-  ;; project/devenv-provided qmlls still wins via the `--suffix' ordering.
+  ;; QML (init-lang-qml).  `-E' makes qmlls honour QML_IMPORT_PATH from
+  ;; the project env.  qmlls is appended to the wrapper PATH
+  ;; (nix/runtime-deps.nix), so a project-provided qmlls wins.
   (add-to-list 'eglot-server-programs
                '((qml-ts-mode) . ("qmlls" "-E")))
 
-  ;; HTML (init-lang-web).  `.html' opens in `mhtml-ts-mode' (Emacs 31),
-  ;; which does NOT derive from `html-mode'/`mhtml-mode' — so eglot's own
-  ;; default HTML entry (keyed on those classic modes) never matches it, and
-  ;; HTML buffers get no language server.  Key the tree-sitter modes on the
-  ;; same server, using `eglot-alternatives' exactly as eglot's default does
-  ;; so either vscode's server or the older `html-languageserver' resolves;
-  ;; a project without the binary just falls back to the cape capfs.
+  ;; HTML (init-lang-web).  `mhtml-ts-mode' does not derive from the
+  ;; classic modes eglot's default HTML entry is keyed on, so mirror that
+  ;; entry for the tree-sitter modes.
   (add-to-list 'eglot-server-programs
                (cons '(mhtml-ts-mode html-ts-mode)
                      (eglot-alternatives
                       '(("vscode-html-language-server" "--stdio")
                         ("html-languageserver" "--stdio")))))
 
-  ;; C/C++/CUDA (init-lang-systems).  clangd serves all three — it treats a
-  ;; `.cu' buffer as CUDA by extension.  Keyed on the tree-sitter modes with
-  ;; the classic modes kept so a grammarless build still resolves a server.
-  ;; (`.cuh' and a full index need a project `compile_commands.json' with
-  ;; clang commands and, on Nix, `--cuda-path'; that is project config.)
+  ;; C/C++/CUDA (init-lang-systems).  clangd treats `.cu' as CUDA by
+  ;; extension; `.cuh' and a full index need a project
+  ;; `compile_commands.json' (and, on Nix, `--cuda-path').
   (add-to-list 'eglot-server-programs
                '((cuda-ts-mode c-ts-mode c++-ts-mode c-mode c++-mode) . ("clangd")))
 
-  ;; OCaml via neocaml (init-lang-systems).  ocamllsp serves both the
-  ;; implementation and interface modes.  (neocaml also self-registers this,
-  ;; but LSP wiring is centralised here; the duplicate add-to-list is a no-op.)
+  ;; OCaml via neocaml (init-lang-systems).  neocaml also registers this
+  ;; itself; kept here so all LSP wiring is in one place.
   (add-to-list 'eglot-server-programs
                '((neocaml-mode neocaml-interface-mode) . ("ocamllsp")))
 
-  ;; rassumfrassum (`rass`) multiplexes several real LSP servers behind a
-  ;; single stdio connection so eglot effectively drives multiple servers
-  ;; per buffer.  Registered as function-valued contacts so discovery runs
-  ;; at eglot connect time in the buffer's (project/devenv) environment —
-  ;; not once at startup against Jotain's own shell.  Each resolver falls
-  ;; back to a plain single server when `rass' or a companion is absent.
+  ;; Function-valued contacts resolve at connect time against the buffer's
+  ;; project env, not once at startup.  `rass' (rassumfrassum) multiplexes
+  ;; several servers behind one stdio connection; each resolver falls back
+  ;; to a single server when it or a companion is absent.
   (add-to-list 'eglot-server-programs
                (cons '(tsx-ts-mode typescript-ts-mode typescript-mode)
                      #'jotain-prog--ts-server))
@@ -459,19 +393,13 @@ shell.  A project with neither still gets `robot-mode' plus the cape capfs."
                (cons '(robot-mode) #'jotain-prog--robot-server)))
 
 ;;; @doc Wrap local stdio language servers in emacs-lsp-booster, which
-;;; converts server JSON into Elisp bytecode Emacs reads directly and
-;;; buffers I/O so a busy server can't block the UI. Function-valued
-;;; contacts (the `rass` resolvers above) are boosted at their result, so
-;;; multiplexed sessions are boosted too. The binary rides the distribution
-;;; wrapper PATH (nix/runtime-deps.nix), not a devenv: the mode resolves it
-;;; once at enable time, before any buffer-local exec-path exists. Only
-;;; local stdio servers are boosted — a server over TRAMP needs the binary
-;;; on the remote host (`eglot-booster-no-remote-boost' below leaves remote
-;;; contacts unboosted, since it defaults to nil and would otherwise prepend
-;;; the booster command and break remote `M-x eglot'), and network-port
-;;; servers are never boosted.
-;;; Provided by Nix (not on MELPA); `:if' skips the block cleanly in the
-;;; MELPA-fallback launch where the library is absent.
+;;; converts server JSON into Elisp bytecode and buffers I/O so a busy
+;;; server cannot block the UI. Function-valued contacts (the `rass`
+;;; resolvers) are boosted too. The binary rides the distribution wrapper
+;;; PATH (nix/runtime-deps.nix) because the mode resolves it once at
+;;; enable time. Remote (TRAMP) contacts are left unboosted, since the
+;;; booster would have to exist on the remote host. Provided by Nix (not
+;;; on MELPA); `:if' skips the block when the library is absent.
 (use-package eglot-booster
   :ensure nil
   :if (locate-library "eglot-booster")
@@ -479,49 +407,41 @@ shell.  A project with neither still gets `robot-mode' plus the cape capfs."
   :custom (eglot-booster-no-remote-boost t)
   :config (eglot-booster-mode))
 
-;;; @doc Consult-driven workspace symbol search — C-M-. opens an
-;;; orderless-filtered list of symbols across the LSP workspace.
+;;; @doc Workspace symbol search through consult: C-M-. lists symbols
+;;; across the LSP workspace.
 (use-package consult-eglot
-  ;; Gated on eglot alone (not consult, which is deferred): the binding
-  ;; only needs `eglot-mode-map', and `consult-eglot-symbols' is
-  ;; autoloaded, so the first C-M-. pulls in consult-eglot (and consult).
+  ;; Only needs `eglot-mode-map'; `consult-eglot-symbols' is autoloaded.
   :after eglot
   :bind (:map eglot-mode-map
               ("C-M-." . consult-eglot-symbols)))
 
-;;; @doc Embark integration for consult-eglot — gives every workspace
-;;; symbol an action menu (jump to def, find refs, rename, …).
+;;; @doc Embark actions on consult-eglot workspace symbols.
 (use-package consult-eglot-embark
   :after (consult-eglot embark)
   :demand t)
 
 ;;;; Debugging — dape (Debug Adapter Protocol)
 
-;;; @doc Debug Adapter Protocol client — the debugging counterpart to
+;;; @doc Debug Adapter Protocol client, the debugging counterpart to
 ;;; eglot. Ships adapter configs for dlv (Go), debugpy (Python),
-;;; codelldb (Rust/C/C++), and more; the adapter binary (e.g. `dlv`)
-;;; comes from the project/host PATH, same convention as the LSP
-;;; servers. `C-x C-a` is the prefix (the gud convention); stepping
-;;; commands carry repeat-maps, so `C-x C-a n n n` keeps stepping.
+;;; codelldb (Rust/C/C++) and more; adapter binaries come from the
+;;; project/host PATH. `C-x C-a` is the prefix (the gud convention);
+;;; stepping commands repeat, so `C-x C-a n n n` keeps stepping.
 (use-package dape
   :bind-keymap ("C-x C-a" . dape-global-map)
   :custom
   (dape-buffer-window-arrangement 'right)
   (dape-default-breakpoints-file (jotain-var-file "dape-breakpoints"))
   :config
-  ;; Both run in :config, so a session that never loads dape never
-  ;; touches the breakpoints file.
+  ;; In :config, so a session that never loads dape never touches the file.
   (dape-breakpoint-load)
   (add-hook 'kill-emacs-hook #'dape-breakpoint-save)
 
-  ;; Cargo-shaped Rust launch config — dape's shipped `lldb-dap' defaults
-  ;; (`:program "a.out"') are unusable on a cargo layout; this one compiles
-  ;; with cargo and prompts for the binary under target/debug/.  The
-  ;; `:program' prompt is guarded on `enable-recursive-minibuffers':
-  ;; `dape--minibuffer-hint' evaluates non-ignored properties with it bound
-  ;; to nil, so an unconditional `read-file-name' there errors instead of
-  ;; showing a hint.  The lambda is comma-unquoted so it byte-compiles to a
-  ;; closure, not a quoted literal list.
+  ;; Cargo launch config: dape's `lldb-dap' default (`:program "a.out"')
+  ;; does not fit a cargo layout.  The `:program' prompt checks
+  ;; `enable-recursive-minibuffers' because `dape--minibuffer-hint'
+  ;; evaluates properties with it nil, where `read-file-name' would error.
+  ;; The lambda is comma-unquoted so it compiles to a closure.
   (add-to-list 'dape-configs
                `(cargo-lldb
                  modes (rust-ts-mode rust-mode)
@@ -540,16 +460,14 @@ shell.  A project with neither still gets `robot-mode' plus the cape capfs."
 
 ;;;; SonarLint (SonarCloud connected mode)
 
-;; SonarLint (sonarlint-ls, nixpkgs) adds cross-language code-quality and
-;; security diagnostics as a secondary eglot connection alongside the
-;; primary server.  SonarCloud connected mode is opt-in per project via a
-;; .dir-locals.el `eglot-workspace-configuration' entry (:sonarlint
-;; :connectedMode — :sonarcloud org key + token, connectionId/projectKey).
+;; SonarCloud connected mode is opt-in per project via a .dir-locals.el
+;; `eglot-workspace-configuration' entry (:sonarlint :connectedMode with
+;; the :sonarcloud org key and token, connectionId/projectKey).
 
 (defun jotain-sonarlint ()
   "Start SonarLint analysis in the current project.
-Launches the SonarLint language server as a secondary eglot
-connection alongside any existing language server."
+Launches sonarlint-ls as a secondary eglot connection alongside any
+existing language server, adding code-quality and security diagnostics."
   (interactive)
   (require 'eglot)
   (let ((eglot-server-programs
@@ -559,10 +477,10 @@ connection alongside any existing language server."
 
 ;;;; Flymake / eldoc
 
-;;; @doc Built-in inline diagnostic display. Indicator chars (! ? ·) and
-;;; end-of-line message rendering keep diagnostics legible without
-;;; opening a side window: `short' shows only the most severe diagnostic
-;;; per line, so a busy line stays readable. M-n / M-p navigate.
+;;; @doc Built-in diagnostics, on in every programming buffer. Indicator
+;;; chars (! ? ·) and end-of-line messages keep them visible
+;;; without a side window; `short' shows only the most severe diagnostic
+;;; per line. M-n / M-p navigate.
 (use-package flymake
   :ensure nil
   :hook (prog-mode . flymake-mode)
@@ -589,9 +507,8 @@ connection alongside any existing language server."
       (remove-hook 'flymake-diagnostic-functions #'elisp-flymake-byte-compile t)))
   (add-hook 'flymake-mode-hook #'jotain-prog--disable-flymake-byte-compile))
 
-;;; @doc Built-in echo-area documentation. Single-line display plus
-;;; small idle delay so it feels responsive without flashing while
-;;; you type.
+;;; @doc Built-in echo-area documentation: single-line display and a
+;;; short idle delay.
 (use-package eldoc
   :ensure nil
   :custom
@@ -599,41 +516,35 @@ connection alongside any existing language server."
   (eldoc-print-after-edit t)
   (eldoc-idle-delay 0.2)
   (eldoc-echo-area-display-truncation-message nil)
-  ;; Prefer the dedicated doc buffer over a truncated echo-area line when
-  ;; one is already visible — pairs well with `eldoc-help-at-pt' below.
+  ;; Use the doc buffer instead of the echo area when it is visible.
   (eldoc-echo-area-prefer-doc-buffer t)
   :config
-  ;; Emacs 31+: also surface `help-at-pt' text (e.g. flymake diagnostics,
-  ;; button help) through eldoc, no explicit command needed. Guarded so
-  ;; the config still loads on Emacs 30 where the option doesn't exist.
+  ;; Emacs 31+: also show `help-at-pt' text (flymake diagnostics, button
+  ;; help) through eldoc.
   (when (boundp 'eldoc-help-at-pt)
     (setopt eldoc-help-at-pt t)))
 
 ;;;; xref
 
-;;; @doc Built-in cross-reference engine. Pinned to ripgrep (in the
-;;; devenv shell) for orders-of-magnitude faster project-wide
-;;; lookups than default grep.
+;;; @doc Built-in cross-reference engine. Searches with ripgrep (on the
+;;; wrapper PATH) instead of grep.
 (use-package xref
   :ensure nil
   :custom
   (xref-search-program 'ripgrep)
   :config
-  ;; Emacs 31+: mouse-1 follows an identifier to its definition and the
-  ;; mouse-over shows a "jump to definition" hint. Guarded for Emacs 30.
+  ;; Emacs 31+: mouse-1 on an identifier jumps to its definition.
   (when (fboundp 'global-xref-mouse-mode)
     (global-xref-mouse-mode 1))
-  ;; `etags-regen-mode' (Emacs 30) regenerates a project TAGS table on
-  ;; demand, giving `xref' a definition source in buffers without an LSP
-  ;; server. Adopted from the newcomers-presets theme; guarded for safety.
+  ;; Regenerates a project TAGS table on demand, a definition source for
+  ;; buffers without an LSP server.
   (when (fboundp 'etags-regen-mode)
     (etags-regen-mode 1)))
 
 ;;;; imenu
 
-;;; @doc Built-in symbol index (the source behind `consult-imenu', M-g i).
-;;; `imenu-auto-rescan' reparses the buffer on each invocation so the
-;;; index never goes stale after you add or rename a definition.
+;;; @doc Built-in symbol index (behind `consult-imenu', M-g i), rescanned
+;;; automatically so it never goes stale.
 (use-package imenu
   :ensure nil
   :custom
@@ -653,21 +564,19 @@ connection alongside any existing language server."
   :init
   (defun jotain-tagref--maybe-enable ()
     "Enable `tagref-mode' only inside a project, when tagref is installed.
-`tagref-mode' signals a `user-error' when there is no project (e.g. the
-daemon's *scratch* buffer in `lisp-interaction-mode'), which aborts
-daemon startup before `server-start' with exit 255.  Decline silently
-outside a project, and when the library is absent (Nix-only — in the
-MELPA-fallback mode the `:commands' autoload stub would otherwise
-hard-error on every prog-mode buffer)."
+Outside a project `tagref-mode' signals a `user-error', which in the
+daemon's *scratch* buffer aborts startup before `server-start'.  The
+library is Nix-only; without it the `:commands' stub would error in
+every prog-mode buffer."
     (when (and (project-current)
                (require 'tagref nil t))
       (tagref-mode 1))))
 
 ;;;; Compile
 
-;;; @doc Built-in compile / recompile. Auto-scroll until the first error
-;;; and skip the "save?" prompt — the annoying defaults that make
-;;; people reach for projectile or compilation-multi alternatives.
+;;; @doc Built-in compile / recompile. Scrolls output until the first
+;;; error, skips the save prompt, and kills a running compilation
+;;; without asking.
 (use-package compile
   :ensure nil
   :custom
@@ -685,16 +594,12 @@ hard-error on every prog-mode buffer)."
 
 ;;;; Per-project environment + format-on-save + grep refactor
 
-;; Per-project environment is loaded natively by devenv (init-devenv.el:
-;; `devenv-env-global-mode' with `devenv-env-defer-to-direnv' nil), not by
-;; direnv/envrc.  `devenv print-dev-env' is evaluated per project and applied
-;; buffer-locally, so eglot and other tools resolve from the devenv toolchain.
-;; envrc is intentionally not enabled here.
+;; The per-project environment comes from devenv (init-devenv.el), applied
+;; buffer-locally; envrc is deliberately not enabled.
 
 ;;; @doc Async format-on-save through external formatters (ruff, nixfmt,
-;;; rustfmt, prettier, …). Replaces hand-rolled per-language hooks
-;;; with one place to look. Per-buffer override safe-local-variable
-;;; lets `.dir-locals.el` opt out.
+;;; rustfmt, prettier, …), all mapped in one place. `apheleia-mode` is a
+;;; safe local variable, so `.dir-locals.el` can opt a project out.
 (use-package apheleia
   :hook (after-init . apheleia-global-mode)
   :config
@@ -706,59 +611,44 @@ hard-error on every prog-mode buffer)."
   (add-to-list 'apheleia-formatters
                '(zig-fmt . ("zig" "fmt" "--stdin")))
   (add-to-list 'apheleia-mode-alist '(zig-ts-mode . zig-fmt))
-  ;; Apheleia ships gofmt/goimports/gofumpt formatters but maps Go
-  ;; modes to plain gofmt; prepend a goimports mapping (gofmt plus
-  ;; import management) to shadow it.
+  ;; goimports instead of apheleia's default gofmt for Go.
   (add-to-list 'apheleia-mode-alist '(go-ts-mode . goimports))
-  ;; buildifier reads from stdin; `-path' lets it infer the Starlark
-  ;; dialect (BUILD vs WORKSPACE vs .bzl).  Mapping the `bazel-mode'
-  ;; parent covers every derived Starlark-family mode (build/workspace/
-  ;; module/repo/starlark) while leaving the conf-derived bazelrc /
-  ;; bazeliskrc / bazelignore modes untouched.
+  ;; `-path' lets buildifier infer the Starlark dialect.  The `bazel-mode'
+  ;; parent covers every Starlark-family mode but not the conf-derived
+  ;; bazelrc/bazelignore modes.
   (add-to-list 'apheleia-formatters
                '(buildifier . ("buildifier" "-path" (or filepath "BUILD"))))
   (add-to-list 'apheleia-mode-alist '(bazel-mode . buildifier))
-  ;; Newer nixfmt deprecates bare invocation ("Use 'nixfmt -' for anonymous
-  ;; stdin"); prepend an explicit-"-" entry to shadow apheleia's built-in
-  ;; nixfmt formatter so format-on-save stays quiet and keeps working when
-  ;; the deprecation becomes a hard error.
+  ;; Newer nixfmt deprecates bare stdin invocation; pass "-" explicitly.
   (add-to-list 'apheleia-formatters '(nixfmt . ("nixfmt" "-")))
-  ;; qmlformat edits files in place (`-i') rather than reading stdin, so
-  ;; hand it a temp copy via apheleia's `inplace' and read the result back.
-  ;; Bundled on the wrapper PATH.
+  ;; qmlformat edits in place (`-i'), so give it apheleia's `inplace'
+  ;; temp copy.
   (add-to-list 'apheleia-formatters '(qmlformat . ("qmlformat" "-i" inplace)))
   (add-to-list 'apheleia-mode-alist '(qml-ts-mode . qmlformat))
-  ;; C/C++/CUDA format-on-save via clang-format for the tree-sitter modes
-  ;; (apheleia's built-ins key clang-format on the classic cc-mode modes).
-  ;; Covers `.cu' too, since CUDA routes to c++-ts-mode.
+  ;; apheleia keys clang-format on the classic cc-mode modes only.
+  ;; `cuda-ts-mode' counts as `c++-ts-mode' (init-lang-systems).
   (add-to-list 'apheleia-mode-alist '(c-ts-mode . clang-format))
   (add-to-list 'apheleia-mode-alist '(c++-ts-mode . clang-format))
-  ;; OCaml via neocaml (init-lang-systems): format both modes with
-  ;; ocamlformat (apheleia's built-in formatter keys on tuareg/caml modes).
+  ;; apheleia keys ocamlformat on tuareg/caml modes only.
   (add-to-list 'apheleia-mode-alist '(neocaml-mode . ocamlformat))
   (add-to-list 'apheleia-mode-alist '(neocaml-interface-mode . ocamlformat))
-  ;; Robot Framework (init-lang-devops): robotidy (part of Robocop) edits
-  ;; in place rather than stdin — same `inplace' temp-copy trick as qmlformat.
+  ;; robotidy also edits in place.
   (add-to-list 'apheleia-formatters '(robotidy . ("robotidy" inplace)))
   (add-to-list 'apheleia-mode-alist '(robot-mode . robotidy))
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
-;;; @doc Edit grep / ripgrep result buffers in place; saving propagates
-;;; edits to every matched file. Powers the project-wide refactor
-;;; flow: consult-ripgrep → C-c C-o (embark-export) → C-x C-q
-;;; (wgrep) → edit → C-c C-c.
+;;; @doc Edit grep result buffers in place and write the changes back to
+;;; every matched file: consult-ripgrep, C-c C-o (embark-export),
+;;; C-x C-q, edit, C-c C-c.
 (use-package wgrep
   :defer t
   :custom
   (wgrep-auto-save-buffer t)
   (wgrep-change-readonly-file t))
 
-;;; @doc Detect indentation width from file contents — saves us from
-;;; having to special-case every project's tab/space convention.
+;;; @doc Detect indentation width and tabs/spaces from file contents.
 (use-package dtrt-indent
-  ;; 0 silences the per-file "Note: standard-indent/indent-tabs-mode
-  ;; adjusted" narration (gated on `dtrt-indent-verbosity' >= 1);
-  ;; detection is unaffected.
+  ;; 0 silences the per-file "adjusted" message; detection is unaffected.
   :custom (dtrt-indent-verbosity 0)
   :hook (prog-mode . dtrt-indent-mode))
 

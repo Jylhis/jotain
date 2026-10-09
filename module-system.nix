@@ -1,13 +1,8 @@
 # module-system.nix — NixOS / nix-darwin module for Jotain Emacs.
 #
-# Applies the project overlay to nixpkgs and adds the Jotain Emacs
-# package to the system environment.  Shared between NixOS and
-# nix-darwin — both module systems support nixpkgs.overlays and
-# environment.systemPackages.
-#
-# For per-user daemon management (systemd service, launchd agent,
-# emacsclient wrapper, desktop entry), use the Home Manager module
-# (module.nix) instead.
+# Applies the overlay and adds Jotain Emacs to environment.systemPackages;
+# one file serves both NixOS and nix-darwin. For a per-user daemon, use
+# the Home Manager module (module.nix).
 #
 # Usage in NixOS:
 #
@@ -30,9 +25,7 @@ let
   pkgsWithOverlay = pkgs.extend jotainOverlay;
   selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.jotainEmacsPackages;
 
-  # Runtime binaries the Elisp config invokes unconditionally (shared
-  # list, see nix/runtime-deps.nix), plus the opt-in language servers /
-  # tools mirrored from the Home Manager module (module.nix).
+  # Shared runtime binaries plus the opt-in tools (mirrors module.nix).
   runtimeDeps =
     import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; }
     ++ lib.optional cfg.devenv.enable pkgs.devenv
@@ -47,13 +40,13 @@ let
     package = selectedPackage;
   };
 
-  # EDITOR — terminal-friendly emacsclient (works over SSH, in git commit, etc.)
+  # EDITOR: terminal emacsclient.
   editorScript = import ./nix/editor-script.nix {
     inherit pkgs;
     package = wrappedPackage;
   };
 
-  # VISUAL — opens a GUI emacsclient frame.
+  # VISUAL: GUI emacsclient frame.
   visualScript = pkgs.writeShellScriptBin "jotain-visual" ''
     exec ${lib.getBin wrappedPackage}/bin/emacsclient \
       --create-frame \
@@ -71,8 +64,8 @@ in
       default = null;
       defaultText = lib.literalExpression "null";
       description = ''
-        Custom Jotain Emacs package to use. Leave this unset to use the
-        cache-friendly default build from `emacs.nix`.
+        Custom Jotain Emacs package to use. Leave unset for the full
+        distribution (`jotainEmacsPackages`).
       '';
     };
 
@@ -156,14 +149,12 @@ in
       visualScript
       pkgsWithOverlay.eca
     ]
-    # Dictionaries for jinx spell-checking (lisp/init-writing.el). Must be
-    # in the profile — not on PATH — because libaspell finds
-    # $profile/lib/aspell via its NIX_PROFILES patch at runtime.
+    # jinx dictionaries: libaspell finds $profile/lib/aspell via its
+    # NIX_PROFILES patch, so they belong in the profile, not on PATH.
     ++ cfg.spell.dictionaries;
-    # Colour-emoji fallback for the `emoji' / `symbol' fontsets wired
-    # in lisp/init-ui.el.  Skipped on Darwin: macOS provides Apple
-    # Color Emoji system-wide, and nix-darwin's `fonts.packages' has a
-    # different shape from NixOS's.
+    # Colour-emoji fallback for lisp/init-ui.el's fontsets. Skipped on
+    # Darwin: macOS ships Apple Color Emoji, and nix-darwin's
+    # `fonts.packages' differs from NixOS's.
     fonts.packages = lib.mkIf pkgs.stdenv.hostPlatform.isLinux [
       pkgs.noto-fonts-color-emoji
     ];

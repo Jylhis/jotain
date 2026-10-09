@@ -2,27 +2,21 @@
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 version: 2
 updates:
-  # The nix ecosystem bumps flake.lock and nothing else — it knows
-  # nothing about devenv.yaml/devenv.lock, which pin the same three
-  # shared inputs. .github/workflows/sync-devenv.yml re-syncs them on
-  # these branches so the PR passes the `just verify` gate on its own.
+  # Bumps flake.lock only; .github/workflows/sync-devenv.yml re-syncs
+  # devenv.yaml/devenv.lock on these branches so `just verify` passes.
   - package-ecosystem: "nix"
     directory: "/"
     schedule:
       interval: "monthly"
-    # Collapse all flake input bumps into a single monthly PR so the
-    # CI matrix runs once per cycle instead of once per input.
+    # One PR per cycle instead of one per input.
     groups:
       nix-inputs:
         patterns: ["*"]
-    # emacs-overlay and nixpkgs move constantly; let a rev settle for a
-    # few days before proposing it.
+    # Let fast-moving revs (nixpkgs, emacs-overlay) settle first.
     cooldown:
       default-days: 3
     open-pull-requests-limit: 3
-    # AGENTS.md documents `build(deps)` as the conventional-commit scope
-    # for dependency bumps; Dependabot's default "Bump X from A to B"
-    # does not match it.
+    # The repo's commit scope for dependency bumps (AGENTS.md).
     commit-message:
       prefix: "build(deps)"
 

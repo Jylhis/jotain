@@ -3,21 +3,22 @@
 ;;; Commentary:
 
 ;; Batch-safe tests for the capf layer that `lisp/init-completion.el' and
-;; `lisp/init-snippets.el' build on.  No network, no subprocesses, no writes
-;; outside a temp buffer -- safe inside the Nix sandbox.
+;; `lisp/init-snippets.el' build on.  No network, subprocesses or writes
+;; outside a temp buffer, so safe in the Nix sandbox.
 ;;
-;; The first section pins down two behaviours of the core capf protocol that
-;; the design in `docs/design/completion.md' depends on and that could not be
-;; settled from documentation:
+;; Sections 1-3 pin down core capf behaviour that `docs/design/completion.md'
+;; depends on and the documentation does not settle:
 ;;
-;;   1. An exclusive capf (one that declares no `:exclusive' at all, which is
-;;      how eglot's capf is written) suppresses every capf after it, and
-;;      whether `cape-capf-nonexclusive' is the documented escape.
+;;   1. A capf with no `:exclusive' (like eglot's) suppresses every capf
+;;      after it, and `cape-capf-nonexclusive' undoes that.
 ;;
-;;   2. Whether the `:exclusive no' fallthrough honours `completion-styles'.
-;;      `completion--capf-wrapper' decides it with a bare `try-completion',
-;;      and its own FIXME warns that "non-prefix completion will not work (or
-;;      not right) for completion functions that are non-exclusive".
+;;   2. The `:exclusive no' fallthrough ignores `completion-styles':
+;;      `completion--capf-wrapper' decides with a bare `try-completion' (its
+;;      own FIXME says non-prefix completion will not work there).
+;;
+;;   3. How `cape-capf-super' propagates exclusivity.
+;;
+;; Section 4 checks this configuration's own wiring.
 ;;
 ;; Run with:
 ;;   emacs --batch -L lisp -L test -l ert -l test/completion-test.el \
@@ -31,9 +32,8 @@
 
 ;;;; Helpers
 
-;; Three capfs covering the shapes that matter.  Each reports bounds spanning
-;; the text already in the buffer, so the wrapper's prefix test sees a real
-;; prefix rather than the empty string.
+;; Each capf's bounds span the text already in the buffer, so the wrapper's
+;; prefix test sees a real prefix.
 
 (defun completion-test--capf-exclusive ()
   "Capf shaped like eglot's: no `:exclusive' key at all, so exclusive."
@@ -129,10 +129,9 @@ capf carrying it was already discarded by the prefix-only fallthrough."
 ;;;; 3. What the merged capf reports
 
 ;; `lisp/init-snippets.el' merges the snippet capf with eglot's via
-;; `cape-capf-super' in LSP buffers.  Whether that merged capf is exclusive
-;; decides two things: whether the cape fallbacks after it ever run, and
-;; whether the prefix-only fallthrough of section 2 can discard the snippet
-;; names it carries.
+;; `cape-capf-super'.  Whether the merge is exclusive decides whether the
+;; cape fallbacks after it run, and whether section 2's prefix-only
+;; fallthrough can discard its snippet names.
 
 (ert-deftest completion-test-super-merges-both-collections ()
   "`cape-capf-super' yields one collection holding both sources' candidates."
@@ -184,18 +183,16 @@ This is why `init-snippets.el' wraps its eglot merge."
 
 ;;;; 4. This configuration
 
-;; Loading the two modules executes their `:init'/`:custom'/`:bind' side
-;; effects in this batch process, which is how the assertions below observe
-;; real state.  `after-init-hook' never runs in batch, so `global-corfu-mode'
-;; stays off and no popup can appear.
+;; Loading the two modules runs their `:init'/`:custom'/`:bind' side
+;; effects here, so the assertions observe real state.  `after-init-hook'
+;; never runs in batch, so `global-corfu-mode' stays off.
 
 (require 'corfu)
 (require 'tempel)
 (require 'init-completion)
 (require 'init-snippets)
-;; Loaded after `init-completion' so the `with-eval-after-load' body its
-;; `completion-preview' block registers (the R2 keymap edits) fires on this
-;; require, letting the assertions below observe the real map state.
+;; Already loaded by `init-completion's `:init', which has therefore run
+;; its keymap edits; required here to make the dependency explicit.
 (require 'completion-preview)
 
 (ert-deftest completion-test-defcustom-defaults ()
@@ -215,15 +212,12 @@ This is why `init-snippets.el' wraps its eglot merge."
 
 (ert-deftest completion-test-corfu-preview-current-off ()
   "The popup inserts nothing until asked: `corfu-preview-current' is nil.
-corfu's own default is `insert', which commits the selected candidate on
-further input -- exactly the accidental-accept this config avoids."
+corfu's default `insert' commits the selected candidate on further input."
   (should (eq corfu-preview-current nil)))
 
 (ert-deftest completion-test-tab-indents-and-completes ()
   "TAB indents and completes: `tab-always-indent' is `complete'.
-With the default `jotain-completion-free-tab' nil, `indent-for-tab-command'
-indents the line and then runs `completion-at-point' once it is already
-indented.  Setting the knob restores the stock `t' (indent only)."
+That is the default, with `jotain-completion-free-tab' nil."
   (should (eq jotain-completion-free-tab nil))
   (should (eq tab-always-indent 'complete)))
 
@@ -241,11 +235,8 @@ indented.  Setting the knob restores the stock `t' (indent only)."
 
 (ert-deftest completion-test-corfu-map-frees-return-and-accepts-on-tab ()
   "RET is removed from `corfu-map'; TAB accepts the selected candidate.
-RET stays freed (newline only) via `jotain-completion-free-return'.  With
-`jotain-completion-free-tab' nil, TAB and `<tab>' are repointed to
-`corfu-insert' so a second TAB commits the highlighted candidate (and runs
-its `:exit-function', expanding snippets), the same command the
-`<remap> <completion-at-point>' below uses.  Navigation still works."
+TAB and `<tab>' run `corfu-insert', which also runs the candidate's
+`:exit-function' (expanding snippets).  Navigation still works."
   (should-not (lookup-key corfu-map (kbd "RET")))
   (should (eq (lookup-key corfu-map (kbd "TAB")) #'corfu-insert))
   (should (eq (lookup-key corfu-map [tab]) #'corfu-insert))
@@ -254,11 +245,7 @@ its `:exit-function', expanding snippets), the same command the
 
 (ert-deftest completion-test-inline-preview-tab-accepts-ghost-text ()
   "TAB accepts the inline preview; RET is never bound, so Enter stays a newline.
-`completion-preview-active-mode-map' ships `C-i' -> `completion-preview-insert',
-and `C-i' IS the TAB event.  With `jotain-completion-free-tab' nil that
-binding is kept (set explicitly), so when only the ghost text shows TAB
-accepts it; the whole-candidate accept is also on `M-RET'.  RET is never
-bound by the mode, so Enter stays a newline regardless."
+`C-i' is the TAB event; `M-RET' also accepts."
   (should (eq (lookup-key completion-preview-active-mode-map (kbd "C-i"))
               #'completion-preview-insert))
   (should-not (lookup-key completion-preview-active-mode-map (kbd "RET")))
@@ -267,42 +254,34 @@ bound by the mode, so Enter stays a newline regardless."
               #'completion-preview-insert)))
 
 (ert-deftest completion-test-inline-preview-is-global ()
-  "Inline preview is enabled globally (adopted from the newcomers-presets theme).
-On Emacs 31 `global-completion-preview-mode' is turned on, so the ghost text
-rides `completion-preview-mode' in every buffer rather than a per-mode hook
-list.  On the Emacs 30.1 floor, which lacks the globalized variant, the config
-falls back to the `jotain-completion-auto-modes' hooks; that path is asserted
-only when the global mode is unavailable."
+  "Inline preview is enabled globally where Emacs supports it.
+Emacs 31 has `global-completion-preview-mode'; on Emacs 30 the config
+falls back to the `jotain-completion-auto-modes' hooks."
   (if (fboundp 'global-completion-preview-mode)
       (should (bound-and-true-p global-completion-preview-mode))
     (should (memq #'completion-preview-mode prog-mode-hook))))
 
 (ert-deftest completion-test-one-key-opens-and-accepts ()
   "`C-M-i' resolves to `completion-at-point', which `corfu-map' remaps.
-Binding the command rather than leaving the stock `complete-symbol' is
-what makes the same key accept inside the popup -- a remap only fires
-for the command the key actually resolves to.  The remap is repointed
-from corfu's default `corfu-complete' (extends the common prefix, does
-not run a capf `:exit-function') to `corfu-insert' (inserts the selected
-candidate with status `finished', so it commits and expands snippets).
-This is why no separate accept key is needed."
+A remap only fires for the command a key resolves to, so binding the
+command is what lets the same key accept inside the popup.  The remap
+points at `corfu-insert' rather than corfu's `corfu-complete', which only
+extends the common prefix and skips the `:exit-function'."
   (should (eq (keymap-global-lookup jotain-completion-key)
               #'completion-at-point))
   (should (eq (lookup-key corfu-map [remap completion-at-point])
               #'corfu-insert)))
 
 (ert-deftest completion-test-corfu-preselects-first ()
-  "The top candidate is always selected, so `C-M-i' has something to insert.
-`corfu-insert' quits without inserting when nothing is selected; `first'
-guarantees a selection (and the `corfu-current' highlight that shows it).
-Safe because RET/TAB are freed -- only the explicit `C-M-i' commits."
+  "The top candidate is always selected, so the accept key has something.
+`corfu-insert' quits without inserting when nothing is selected."
   (should (eq corfu-preselect 'first)))
 
 (ert-deftest completion-test-tempel-fields-are-off-tab ()
   "Snippet fields move on tempel's own keys and on `C-M-n'/`C-M-p', never TAB.
-No field key may collide with corfu's `M-n'/`M-p': `tempel-map' rides on
-an overlay `keymap' property, which outranks corfu's minor-mode map, so
-a shared key would be stolen from the popup mid-snippet."
+No field key may collide with corfu's `M-n'/`M-p': `tempel-map' is an
+overlay `keymap' property, which outranks corfu's map, so it would steal
+the key from the popup mid-snippet."
   (should-not (lookup-key tempel-map (kbd "TAB")))
   (should-not (lookup-key tempel-map [tab]))
   (should-not (lookup-key tempel-map (kbd "<backtab>")))

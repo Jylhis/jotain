@@ -5,14 +5,14 @@ description: Main Emacs configuration entry point
 
 # init.el
 
-`init.el` is deliberately tiny. Its only jobs are:
+`init.el` is deliberately tiny. It:
 
-1. Register MELPA and NonGNU ELPA as fallback archives for anything Nix does not ship.
-2. Put `lisp/` on the load-path.
-3. Point `custom-file` at `var/custom.el` so `M-x customize` has somewhere to scribble.
-4. `require` each module in the right order. Archive refresh is *not* on the startup path — there is no background warm-up at all; archives are fetched only on demand.
+1. Registers MELPA and NonGNU ELPA as fallback archives for anything Nix does not ship.
+2. Puts `lisp/` on the load-path.
+3. Points `custom-file` at `var/custom.el`.
+4. `require`s each module in order.
 
-Everything else — GC, encoding, theme, modeline, keybindings, package configuration — lives in `early-init.el` or one of the `lisp/init-*.el` modules.
+Everything else (GC, encoding, theme, keybindings, package configuration) lives in `early-init.el` or a `lisp/init-*.el` module.
 
 ## Package archives
 
@@ -22,14 +22,12 @@ Everything else — GC, encoding, theme, modeline, keybindings, package configur
 (add-to-list 'package-archives '("nongnu" . "https://elpa.nongnu.org/nongnu/") t)
 ```
 
-Nix provides most packages via `load-path`, so `use-package` finds them without touching the network. The archives above only come into play for packages that Nix does not ship.
+Nix provides most packages via `load-path`, so the archives only matter for packages it doesn't ship. Registering an archive does no I/O, and nothing refreshes the archive index at launch. A download happens only when needed:
 
-Registering an archive performs no I/O, and nothing in the config refreshes the archive index at launch. A download happens only when it is actually needed:
+- `package-install` (including the `:ensure t` path) reads the on-disk cache under `elpa/archives/` and downloads only when that cache is empty.
+- `M-x package-refresh-contents` and `M-x list-packages` refresh when you ask.
 
-- `package-install` — including the `:ensure t` path — calls `package--archives-initialize`, which reads the on-disk cache under `elpa/archives/` and downloads only when that cache is empty.
-- `M-x package-refresh-contents` and `M-x list-packages` refresh when you ask them to.
-
-So a fresh Nix deployment, where every `:ensure`d package is already on `load-path`, starts up without contacting MELPA at all.
+A fresh Nix deployment, where every `:ensure`d package is already on `load-path`, starts without contacting MELPA. Keeping downloads off the startup path also means a flaky network can't take a daemon down at launch.
 
 ## Load path
 
@@ -43,11 +41,11 @@ So a fresh Nix deployment, where every `:ensure`d package is already on `load-pa
 (setq custom-file (locate-user-emacs-file "var/custom.el"))
 ```
 
-`custom.el` is write-only: Jotain never loads it back. The declarative config in git remains the single source of truth; the file exists only so `M-x customize` has somewhere to scribble without touching `init.el`.
+`custom.el` is write-only: Jotain never loads it back, so the declarative config in git stays the single source of truth. It only gives `M-x customize` somewhere to write without touching `init.el`.
 
 ## Module loading
 
-`init.el` then `require`s each module in order. See [Modules](/architecture/modules) for what each file owns and the full load order.
+`init.el` then `require`s each module in order. See [Modules](/architecture/modules) for what each file owns.
 
 ```elisp
 (require 'init-core)         ; GC, encoding, var/ paths, sane defaults
@@ -59,6 +57,7 @@ So a fresh Nix deployment, where every `:ensure`d package is already on `load-pa
 (require 'init-editing)      ; Electric pairs, delsel, whitespace, region tools
 (require 'init-completion)   ; Vertico, marginalia, orderless, consult, corfu
 (require 'init-navigation)   ; Dired + dirvish, project, windmove, winner
+(require 'init-casual)       ; Transient menus for dired/calc/isearch/ibuffer/Info
 (require 'init-vc)           ; vc + magit + diff-hl + forge
 (require 'init-prog)         ; prog-mode, treesit, eglot, flymake, eldoc, compile
 (require 'init-snippets)     ; tempel snippets + eglot-tempel LSP expansion
@@ -70,6 +69,7 @@ So a fresh Nix deployment, where every `:ensure`d package is already on `load-pa
 (require 'init-systems)      ; sops, logview, auth-source-1password
 (require 'init-writing)      ; jinx, markdown-mode, denote, pdf-tools
 (require 'init-org)          ; org, org-modern, capture templates
+(require 'init-http)         ; verb HTTP/REST client (org-based)
 
 (require 'init-lang-nix)
 (require 'init-lang-rust)
@@ -79,4 +79,5 @@ So a fresh Nix deployment, where every `:ensure`d package is already on `load-pa
 (require 'init-lang-devops)    ; Dockerfile, terraform, just, ansible
 (require 'init-lang-data)      ; yaml, csv, sql, jinja2, gnuplot
 (require 'init-lang-systems)   ; C/C++, CMake, Meson, Haskell, Zig
+(require 'init-lang-qml)        ; QML (Quickshell / Qt Quick)
 ```

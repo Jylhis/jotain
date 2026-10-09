@@ -2,46 +2,41 @@
 
 ;;; Commentary:
 
-;; Built-in help tweaks plus `helpful' \u2014 the modern replacement for the
-;; default `describe-*' commands. Helpful's buffers show source, callers,
-;; usage examples, and active keybindings inline.
+;; Built-in help tweaks plus `helpful', a richer replacement for the
+;; default `describe-*' commands.
 
 ;;; Code:
 
-;;; @doc Built-in help window. Auto-focus so you can scroll or dismiss
-;;; with q/n/p without reaching for the mouse.
+;;; @doc Built-in help window, selected on display so q dismisses it
+;;; at once; navigation inside *Help* (source, Info) reuses its window.
 (use-package help
   :ensure nil
   :custom
   (help-window-select t)
   (help-window-keep-selected t)
   :config
-  ;; Emacs 31+: auto-refresh the keystroke log (C-h l) so the last keys
-  ;; update live — handy when teaching or screen-sharing. Guarded so the
-  ;; config loads on Emacs 30.
+  ;; Emacs 31+: the keystroke log (C-h l) updates live.
   (when (boundp 'view-lossage-auto-refresh)
     (setopt view-lossage-auto-refresh t)))
 
-;;; @doc Built-in echo-area tooltips on buttons and links when point
-;;; lingers — discoverability for the parts of Emacs that aren't
-;;; plain text.
+;;; @doc Built-in echo-area help for buttons and links when point
+;;; lingers on them.
 (use-package help-at-pt
   :ensure nil
   :custom
   (help-at-pt-display-when-idle t))
 
-;;; @doc Built-in apropos. Bumped to "search everything" so it surfaces
-;;; faces, classes, and customs alongside functions and variables.
+;;; @doc Built-in apropos with `apropos-do-all`, so searches also cover
+;;; non-interactive functions, all variables, and all symbols.
 (use-package apropos
   :ensure nil
-  ;; On-demand (M-x apropos*); autoloaded, so keep it off the startup path.
+  ;; Autoloaded on demand; keep it off the startup path.
   :defer t
   :custom
   (apropos-do-all t))
 
 ;;; @doc Replaces the default describe-* commands with richer buffers
-;;; that include source, callers, examples, and active keybindings
-;;; — the single biggest discoverability upgrade in Emacs.
+;;; that include source, callers, and active keybindings.
 (use-package helpful
   :bind
   (("C-h f"   . helpful-callable)

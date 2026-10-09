@@ -10,32 +10,19 @@
 (declare-function mixed-pitch-mode "mixed-pitch" (&optional arg))
 (declare-function jotain-eglot-set-workspace-config "init-prog" (key settings))
 
-;; yaml-language-server workspace settings (see
-;; `jotain-eglot-set-workspace-config' in init-prog for how the section
-;; reaches the server).  Teaching yaml-language-server GitLab's
-;; `!reference' custom tag (as a sequence tag) silences the `Unresolved
-;; tag: !reference' diagnostic on every `.gitlab-ci.yml' that composes
-;; jobs with `!reference', while leaving ordinary YAML alone.
+;; yaml-language-server settings.  Declaring GitLab's `!reference' as a
+;; sequence tag silences "Unresolved tag: !reference" in `.gitlab-ci.yml'.
 (jotain-eglot-set-workspace-config
  :yaml '(:customTags ["!reference sequence"]))
 
 (defun jotain-lang-data--enable-prog-mode-features ()
   "Run `prog-mode-hook' in a `text-mode'-derived config buffer.
-Both `yaml-mode' (MELPA) and the built-in `yaml-ts-mode' derive
-from `text-mode', so none of the prog-mode niceties — line
-numbers, flymake, editorconfig, dtrt-indent, hl-todo,
-breadcrumb, indent-bars, fill-column indicator — ever fire in
-YAML buffers.  Re-running the hook reaches them without having
-to enumerate every minor mode separately, and without changing
-the mode's upstream parent.  The `derived-mode-p' guard makes
-this a no-op if the buffer's mode ever (re)parents onto
-`prog-mode', preventing the hook from firing twice.
-
-`text-mode-hook' also runs first and enables prose niceties
-that are wrong for code-shaped YAML: mixed-pitch (proportional)
-fonts, visual-line wrapping, and on-the-fly spell check.  Disable
-those after the parent hook ran so the buffer ends up looking
-like code, not prose."
+Both `yaml-mode' and `yaml-ts-mode' derive from `text-mode', so
+prog-mode features (line numbers, flymake, editorconfig, hl-todo,
+indent-bars, ...) never fire in YAML.  The `derived-mode-p' guard
+avoids running the hook twice if the mode ever reparents onto
+`prog-mode'.  Then turn off the prose features `text-mode-hook'
+enabled: mixed-pitch, visual-line wrapping, and jinx."
   (unless (derived-mode-p 'prog-mode)
     (run-hooks 'prog-mode-hook))
   (mixed-pitch-mode -1)
@@ -45,33 +32,30 @@ like code, not prose."
   (when (bound-and-true-p jinx-mode)
     (jinx-mode -1)))
 
-;;; @doc YAML major mode (MELPA). Loaded on demand for the dozens of
-;;; YAML-shaped files in any modern repo (CI, k8s, helm). YAML derives
-;;; from `text-mode' upstream, so we re-fire `prog-mode-hook' to get
-;;; the full editor surface (line numbers, flymake, indent guides, …).
+;;; @doc YAML major mode (MELPA), loaded on demand. YAML derives from
+;;; `text-mode' upstream, so we re-run `prog-mode-hook' to get line
+;;; numbers, flymake, indent guides and the rest of the code setup.
 (use-package yaml-mode
   :defer t
   :hook (yaml-mode . jotain-lang-data--enable-prog-mode-features))
 
-;;; @doc Built-in tree-sitter YAML mode (Emacs 29+). Same prog-mode
-;;; hook tweak as `yaml-mode'; kept in its own use-package block so
-;;; users running the built-in mode aren't forced to install the
-;;; MELPA `yaml-mode' package by `use-package-always-ensure'.
+;;; @doc Built-in tree-sitter YAML mode. Same prog-mode hook tweak as
+;;; `yaml-mode'; a separate block so the built-in mode works without
+;;; `use-package-always-ensure' pulling in MELPA `yaml-mode'.
 (use-package yaml-ts-mode
   :ensure nil
   :defer t
   :hook (yaml-ts-mode . jotain-lang-data--enable-prog-mode-features))
 
-;;; @doc CSV major mode with column alignment. csv-align-mode renders
-;;; separators visually so wide files become readable without
-;;; reflowing the actual bytes.
+;;; @doc CSV major mode. csv-align-mode aligns columns visually without
+;;; changing the file.
 (use-package csv-mode
   :mode "\\.csv\\'"
   :hook (csv-mode . csv-align-mode)
   :custom (csv-separators '("," ";" "|" "\t")))
 
-;;; @doc Smart indentation for SQL files — keeps SELECT lists, JOINs,
-;;; and CTEs aligned without manual whitespace fiddling.
+;;; @doc Syntax-aware indentation for SQL: SELECT lists, JOINs, and
+;;; CTEs.
 (use-package sql-indent
   :defer t)
 
@@ -81,8 +65,7 @@ like code, not prose."
   :mode (("\\.j2\\'"      . jinja2-mode)
          ("\\.jinja2?\\'" . jinja2-mode)))
 
-;;; @doc Major mode for gnuplot script files (`.plt`). Useful when an
-;;; analysis pipeline emits its own plotting scripts.
+;;; @doc Major mode for gnuplot script files (`.plt`).
 (use-package gnuplot
   :mode ("\\.plt\\'" . gnuplot-mode))
 

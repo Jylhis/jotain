@@ -2,20 +2,15 @@
 
 ;;; Commentary:
 
-;; Renders `jotain-lang-registry' into the checked-in language-support reference
-;; (docs/reference/language-support.mdx).  This is the *declared* matrix: it
-;; reflects what the registry says each language is wired for, and needs neither
-;; the config nor any language toolchain, so it is cheap and fully
-;; deterministic — which is what lets it be committed and gated by an in-sync
-;; check (nix/lang-eval.nix `lang-eval-doc-in-sync'), the same discipline as
-;; `packages-doc-in-sync'.
+;; Renders `jotain-lang-registry' into docs/reference/language-support.mdx.
+;; This is the *declared* matrix: it needs neither the config nor any
+;; toolchain, so it is deterministic and can be committed and gated by the
+;; `lang-eval-doc-in-sync' check.  The live matrices (`jotain-lang-eval.el',
+;; `jotain-lang-live.el') depend on the built distribution and are not
+;; committed.
 ;;
-;; The richer *live* matrices — actual mode routing and on-PATH markers
-;; (Tier-1, `jotain-lang-eval.el') and real LSP round-trips (Tier-2,
-;; `jotain-lang-live.el') — are build artifacts, not committed, because they
-;; depend on the built distribution and on servers being present.
-;;
-;; Batch entry point (used by nix/lang-eval.nix and `just docs-refresh-lang-matrix'):
+;; Batch entry point (nix/lang-eval.nix, behind
+;; `just docs-refresh-lang-matrix'):
 ;;   emacs -Q --batch -L <this dir> -l jotain-lang-doc.el
 ;; with JOTAIN_LANG_DOC_OUT set to the .mdx path to write.
 ;;

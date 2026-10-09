@@ -1,9 +1,7 @@
 /*
  * theme-init.js — set the Print/Negative mode before first paint.
- * Loaded synchronously in <head> by every page (hand-written and
- * generated alike) so there is no flash of the wrong theme.
- * Jylhis 3.0.0 selects mode with data-mode="dark" on <html>;
- * data-theme is retired.
+ * Loaded synchronously in <head> by every page so there is no flash
+ * of the wrong theme. Dark mode is data-mode="dark" on <html>.
  */
 try {
   var t = localStorage.getItem('jotain-theme');

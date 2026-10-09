@@ -1,9 +1,8 @@
 # Prebuilt Editor Code Assistant (ECA) server binary.
 #
-# The eca-emacs client (lisp/init-ai.el) talks to this server over JSONRPC.
-# eca-emacs would otherwise download the server on first `M-x eca'; pinning it
-# here keeps the dev shell reproducible and offline-capable. eca-emacs
-# auto-detects `eca' on $PATH, so no `eca-custom-command' is needed.
+# For the eca-emacs client (lisp/init-ai.el), which otherwise downloads
+# the server on first `M-x eca'. It finds `eca' on $PATH, so no
+# `eca-custom-command' is needed.
 { pkgs }:
 let
   inherit (pkgs) lib stdenv;
@@ -12,9 +11,9 @@ let
 
   baseUrl = "https://github.com/editor-code-assistant/eca/releases/download/${version}";
 
-  # Host platform -> { asset, sha256 }. Hashes are the hex sha256 from each
-  # release asset's `.sha256' sidecar. x86_64-linux uses the static build so no
-  # autoPatchelf is needed; aarch64-linux is dynamic and gets patched below.
+  # Hashes are each asset's `.sha256' sidecar (scripts/update-pins.sh).
+  # x86_64-linux uses the static build; aarch64-linux is dynamic and
+  # gets autoPatchelf below.
   sources = {
     x86_64-linux = {
       asset = "eca-native-static-linux-amd64.zip";

@@ -1,21 +1,15 @@
 # nix/packages-doc.nix — Generate the per-package reference.
 #
-# Walks lisp/init-*.el via nix/use-package.nix, extracts the `;;; @doc`
-# block immediately above each `(use-package …)` form, and emits the
-# same content in three shapes:
+# Walks lisp/ via nix/use-package.nix, extracts the `;;; @doc`
+# block immediately above each `(use-package …)` form, and emits:
 #
-#   • $out/index.html         — standalone HTML page (for GitHub Pages,
-#                                paired with options-doc/index.html).
-#   • $out/jotain-packages.texi — Texinfo fragment, @included by
-#                                 docs/jotain.texi as a chapter so the
-#                                 reference also lives inside jotain.info.
-#   • $out/package-reference.mdx — Mintlify-shaped `.mdx` for the docs
-#                                  site. Checked in via
-#                                  docs/configuration/package-reference.mdx;
-#                                  CI verifies the in-tree copy matches.
-#
-# Authoring source of truth: the comments in lisp/init-*.el. Refresh the
-# checked-in `.mdx` with `just docs-refresh-packages`.
+#   • $out/index.html             standalone HTML page.
+#   • $out/jotain-packages.texi   Texinfo fragment, the "Package
+#                                 Reference" chapter of jotain.info.
+#   • $out/package-reference.mdx  Mintlify `.mdx`, checked in as
+#                                 docs/configuration/package-reference.mdx
+#                                 (refresh: `just docs-refresh-packages`;
+#                                 gated by packages-doc-in-sync).
 { pkgs, src }:
 let
   inherit (pkgs) lib;
@@ -24,9 +18,8 @@ let
 
   up = import ./use-package.nix { inherit lib; };
 
-  # Load-order mirrors init.el and docs/architecture/modules.mdx.
-  # Files not listed here are appended at the end of the body so a
-  # newly added module never silently drops off the reference.
+  # Mirrors init.el's load order. Unlisted files are appended as "Other",
+  # so a new module never drops off the reference.
   moduleOrder = [
     {
       file = "init-core.el";
@@ -158,8 +151,6 @@ let
   scanned = up.scanDirectoryWithDoc (src + "/lisp");
   byFile = lib.listToAttrs (map (s: lib.nameValuePair s.file s.entries) scanned);
 
-  # Files we know about (in load order) plus any leftover that the
-  # moduleOrder list didn't account for, in alphabetical order.
   knownFiles = map (m: m.file) moduleOrder;
   scannedFiles = lib.attrNames byFile;
   leftover = lib.filter (f: !lib.elem f knownFiles) scannedFiles;
@@ -194,9 +185,8 @@ let
       ''
       + lib.concatMapStringsSep "\n" renderEntry entries;
 
-  # Drop empty render results before joining so a module with zero
-  # use-package blocks (e.g. init-docs.el) doesn't insert a phantom
-  # extra blank line between its neighbours.
+  # Drop empty results so a module without use-package blocks adds no
+  # stray blank line.
   body = lib.concatStringsSep "\n" (lib.filter (s: s != "") (map renderModule orderedModules));
 
   intro = ''
@@ -244,8 +234,7 @@ pkgs.runCommand "jotain-packages-doc"
 
         cp ${combinedMd} combined.md
 
-        # Mintlify .mdx — frontmatter + body, with no extra blank line
-        # the awk roundtripper would have to fix later.
+        # Mintlify .mdx: frontmatter + body.
         cat ${mdxFront} combined.md > $out/package-reference.mdx
 
         cat > $out/style.css <<'CSS'
@@ -331,10 +320,8 @@ pkgs.runCommand "jotain-packages-doc"
           --highlight-style=kate \
           --wrap=none
 
-        # Texinfo fragment — the scaffolding strip is shared; see
-        # nix/texi-fragment.nix. --shift-heading-level-by=1 drops the
-        # `# Package Reference` H1 down one level so it becomes a
-        # @section under the master @chapter.
+        # Texinfo fragment (see nix/texi-fragment.nix). The heading shift
+        # makes `# Package Reference` an @section under the master @chapter.
         pandoc combined.md \
           -f gfm \
           -t texinfo \

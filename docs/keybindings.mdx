@@ -6,16 +6,14 @@ description: The Jotain keybinding namespace, organised by prefix
 Jotain follows Emacs conventions: only **global** rebindings live in
 [`lisp/init-keys.el`](https://github.com/Jylhis/jotain/blob/main/lisp/init-keys.el);
 per-package bindings stay colocated with the package's `use-package` block.
-[`which-key`](https://github.com/justbur/emacs-which-key) is enabled by
-default, so after any prefix key a paged menu of available continuations
-appears in the echo area. The prefix labels listed below are registered via
+The built-in `which-key` is enabled, so after any prefix key a menu of
+continuations appears in the echo area. The labels below are registered via
 `which-key-add-key-based-replacements` in `init-keys.el`, so they show up in
-those menus instead of the bare command names.
+those menus instead of bare command names.
 
 ## `C-c` — user namespace
 
-Reserved by Emacs convention for user bindings. Jotain claims the
-following:
+Reserved by Emacs convention for user bindings. Jotain uses:
 
 | Key | Label | Command |
 | --- | --- | --- |
@@ -31,7 +29,7 @@ following:
 | `C-c M-j` | jujutsu-dispatch | `majutsu-dispatch` |
 | `C-c k` | consult-kmacro | `consult-kmacro` |
 | `C-c l` | org-store-link | `org-store-link` |
-| `C-c m` | — | `consult-man` |
+| `C-c m` | consult-man | `consult-man` |
 | `C-c n` | **org-roam** prefix | `n f` find, `n i` insert, `n c` capture |
 | `C-c o` | **combobulate** prefix | structural editing dispatch |
 | `C-c q` | claude-code-ide | `claude-code-ide-menu` |
@@ -44,7 +42,7 @@ following:
 
 ## `C-x` — control namespace
 
-Built-in Emacs prefix extended with a handful of Jotain additions:
+The built-in prefix, with a few Jotain additions:
 
 | Key | Label | Command |
 | --- | --- | --- |
@@ -64,8 +62,7 @@ Built-in Emacs prefix extended with a handful of Jotain additions:
 
 ## Other global bindings
 
-Single-keystroke globals that don't fit a `C-c` / `C-x` namespace —
-window switching, spell-check, region growth, and multi-cursor.
+Globals outside the `C-c` / `C-x` namespaces:
 
 | Key | Command |
 | --- | --- |
@@ -76,6 +73,9 @@ window switching, spell-check, region growth, and multi-cursor.
 | `C->` | `mc/mark-next-like-this` |
 | `C-<` | `mc/mark-previous-like-this` |
 | `C-S-c C-S-c` | `mc/mark-all-like-this` |
+| `C-h f` / `C-h v` / `C-h k` | `helpful-callable` / `helpful-variable` / `helpful-key` |
+| `C-h F` / `C-h C` | `helpful-function` / `helpful-command` |
+| `C-h o` | `helpful-symbol` (via `[remap describe-symbol]`) |
 | `C-h .` | `helpful-at-point` (via `[remap display-local-help]`) |
 | `C-.` | `embark-act` |
 | `C-;` | `embark-dwim` |
@@ -90,24 +90,26 @@ window switching, spell-check, region growth, and multi-cursor.
 
 ## Mode-local overrides
 
-A few major modes rebind `C-c` leaves locally:
+Some modes add local bindings:
 
-- `dired-mode`: `C-c C-e` → `wdired-change-to-wdired-mode` (toggle writable dired)
+- `dired-mode`: `C-c C-e` → `wdired-change-to-wdired-mode` (writable dired)
 - `sops-mode`: `C-c C-c` save, `C-c C-k` cancel, `C-c C-d` edit
-- `embark` exports: `C-c C-o` → `embark-export`
-- `org-mode`: `C-c b` is an Org Babel notebook prefix — `b` run buffer,
+- Minibuffer: `C-c C-o` → `embark-export`
+- `dired`, `calc`, `Info`, `ibuffer`: `C-o` opens the `casual` menu
+  for the mode (`<f2>` during isearch)
+- `org-mode`: `C-c b` is an Org Babel notebook prefix (`b` run buffer,
   `e` run subtree, `r` restart session and run buffer, `s` switch to
-  session, `k` clear results, `t` tangle. Single blocks stay on
+  session, `k` clear results, `t` tangle). Single blocks stay on
   `C-c C-c`, and Org's own `C-c C-v` babel map is untouched. See
   [Notebooks with Org Babel](/usage/notebooks).
+- `org-mode`: `C-c C-r` is the `verb` HTTP client map.
 
 ## Embark action menu
 
-`C-.` (`embark-act`) opens a keyboard-driven "right-click" menu of the
-actions that apply to the thing at point — a minibuffer candidate, a
-file name, a buffer, a URL, an Elisp symbol, the active region. `C-;`
-(`embark-dwim`) skips the menu and runs the default action. The keys
-below are pressed *after* `C-.`, inside the action menu:
+`C-.` (`embark-act`) opens a keyboard-driven "right-click" menu of
+actions for the thing at point: a minibuffer candidate, file name,
+buffer, URL, Elisp symbol, or the active region. `C-;` (`embark-dwim`)
+runs the default action directly. These keys are pressed *after* `C-.`:
 
 | Key | Action |
 | --- | --- |
@@ -121,37 +123,31 @@ below are pressed *after* `C-.`, inside the action menu:
 Two habits worth forming:
 
 - **Search → edit.** `consult-ripgrep` → `C-. E` exports to a grep
-  buffer, then `C-x C-q` (`wgrep`) makes it editable so you can rewrite
-  every match in place and save across all files at once.
+  buffer; `C-x C-q` (`wgrep`) then makes it editable, so you can rewrite
+  every match and save across all files at once.
 - **Keep the session alive.** Acting on a candidate exits the
-  minibuffer by default; call it with a prefix (`C-u C-.`) to stay in
-  the minibuffer for successive actions — handy for deleting or
-  renaming several files in a row.
+  minibuffer; with a prefix (`C-u C-.`) it stays open for further
+  actions, e.g. deleting or renaming several files in a row.
 
-Because Embark resolves candidate paths through `project.el`, the full
-file-action arsenal (`w` copy path, `r` rename, `d` delete, `j` jump to
-dired) works directly on the project-relative candidates of
-`project-find-file` without a dired detour. `embark-become`'s file map
-already offers `p` for `project-find-file`, so `C-. B p` re-runs a
-plain `C-x C-f` input through the project finder.
+Embark resolves candidate paths through `project.el`, so the file
+actions (`w` copy path, `r` rename, `d` delete, `j` jump to dired) work
+directly on `project-find-file` candidates. `embark-become`'s file map
+offers `p` for `project-find-file`, so `C-. B p` re-runs a plain
+`C-x C-f` input through the project finder.
 
 ## Window navigation
 
-Shift + arrow keys move focus between split windows, courtesy of the
-built-in `windmove-default-keybindings`. `M-o` cycles through windows
-linearly; `C-x j` rotates a two-window layout between horizontal and
-vertical splits.
+Shift + arrow keys move between windows (`windmove-default-keybindings`).
+`M-o` cycles through windows; `C-x j` toggles a two-window layout between
+horizontal and vertical splits.
 
 ## Why no leader-key framework?
 
-The article ["general.el to conquer Emacs keybindings"](https://bicycleforyourmind.com/generaldotel-to-conquer-emacs-keybindings)
-makes a persuasive case for adopting [`general.el`](https://github.com/noctuid/general.el)
-as a unified keybinding layer. Jotain considered and rejected the
-migration: `general.el`'s primary differentiator is `:states` for
-evil-mode integration, which Jotain does not use, and Emacs 30's
-`keymap-set` plus built-in `which-key` plus use-package `:bind` already
-cover the article's discoverability and leader-key ergonomics without
-an extra dependency. The *spirit* of the article — memorable,
-categorised, self-documenting prefixes — is realised here through the
-`which-key-add-key-based-replacements` table in `init-keys.el`. See
-[Inspiration & Resources](/inspiration) for the full rationale.
+["general.el to conquer Emacs keybindings"](https://bicycleforyourmind.com/generaldotel-to-conquer-emacs-keybindings)
+argues for [`general.el`](https://github.com/noctuid/general.el) as a
+unified keybinding layer. Jotain doesn't adopt it: its main
+differentiator is `:states` for evil-mode, which Jotain doesn't use, and
+the built-in `keymap-set`, `which-key`, and use-package `:bind` already
+cover discoverability and leader-key ergonomics. The article's idea of
+memorable, self-documenting prefixes lives in the
+`which-key-add-key-based-replacements` table in `init-keys.el`.

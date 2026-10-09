@@ -2,27 +2,21 @@
 
 ;;; Commentary:
 
-;; Go modes (built-in tree-sitter variants), buffer-local gopls
-;; workspace configuration, struct-tag editing, and a point-aware test
-;; runner.  The eglot hook that starts gopls lives in `init-prog';
-;; format-on-save flows through apheleia -> goimports and debugging
-;; through dape -> dlv, both configured in `init-prog'.
+;; Go tree-sitter modes, gopls workspace settings, struct-tag editing,
+;; and a test runner.  gopls (eglot), goimports (apheleia), and dlv
+;; (dape) are wired in `init-prog'.
 ;;
-;; Per the convention for language tooling, no Go binaries ship with
-;; this config.  Expected on the project/host PATH: go, gopls (LSP),
-;; goimports (formatting), dlv (debugging), and optionally
-;; gomodifytags (struct tags) and golangci-lint (compile-multi entry).
+;; No Go binaries ship with this config.  Expected on the project PATH:
+;; go, gopls, goimports, dlv, and optionally gomodifytags and
+;; golangci-lint (a compile-multi entry in `init-project').
 
 ;;; Code:
 
 (declare-function jotain-eglot-set-workspace-config "init-prog" (key settings))
 
-;; gopls workspace settings (see `jotain-eglot-set-workspace-config' in
-;; init-prog for how the section reaches the server).  gopls only emits
-;; inlay hints when the hint kinds are enabled here;
-;; `eglot-inlay-hints-mode' (armed for Go in init-prog) then displays them.
-;; `gofumpt' is left at its default (nil) so gopls agrees with the
-;; goimports/gofmt formatter apheleia runs on save.
+;; gopls only emits inlay hints for the kinds enabled here; init-prog
+;; turns on `eglot-inlay-hints-mode' to show them.  `gofumpt' stays nil
+;; so gopls agrees with the goimports formatter apheleia runs on save.
 (jotain-eglot-set-workspace-config
  :gopls
  '(:usePlaceholders t
@@ -40,74 +34,55 @@
               :nilness t
               :unusedwrite t)))
 
-;;; @doc Built-in tree-sitter Go modes: `go-ts-mode` for source files,
+;;; @doc Built-in tree-sitter Go modes: `go-ts-mode` for source,
 ;;; `go-mod-ts-mode` for go.mod, `go-work-ts-mode` (Emacs 31) for
-;;; go.work. Eglot wires gopls in init-prog, with gopls workspace
-;;; configuration contributed to the global `eglot-workspace-configuration`
-;;; above; format-on-save runs goimports through apheleia; dape drives
-;;; dlv for debugging. All Go tooling (go, gopls, goimports, dlv) comes
-;;; from the project/host PATH, not from this config.
+;;; go.work. gopls (eglot), goimports (apheleia, on save), and dlv (dape)
+;;; are wired in init-prog; all Go tooling comes from the project PATH.
 (use-package go-ts-mode
   :ensure nil
   :mode (("\\.go\\'"     . go-ts-mode)
          ("/go\\.mod\\'"  . go-mod-ts-mode))
   :custom
-  ;; gofmt indents with tabs; a step of 8 (the default) matches the
-  ;; default `tab-width' so one indent level renders as exactly one tab.
-  ;; Renamed to `go-ts-indent-offset' in Emacs 31 (obsolete alias keeps
-  ;; this working); rename atomically when the floor moves to 31.
+  ;; 8 matches the default `tab-width', so one level is one gofmt tab.
+  ;; Emacs 31 renames this `go-ts-indent-offset' (obsolete alias kept);
+  ;; switch when the floor moves to 31.
   (go-ts-mode-indent-offset 8))
 
-;; go.work: Emacs 31 adds `go-work-ts-mode'; on Emacs 30 fall back to
-;; `go-mod-ts-mode', whose gomod grammar handles the near-identical
-;; syntax.  This prepends to `auto-mode-alist' so it wins over any
-;; go-work-ts-mode entry Emacs registers on its own.
+;; go.work: `go-work-ts-mode' on Emacs 31, else `go-mod-ts-mode' (the
+;; gomod grammar handles the near-identical syntax).
 (add-to-list 'auto-mode-alist
              (cons "/go\\.work\\'"
                    (if (fboundp 'go-work-ts-mode)
                        'go-work-ts-mode
                      'go-mod-ts-mode)))
 
-;; go-tag/gotest (below) drag in the *classic* `go-mode' package as a
-;; transitive dependency; nothing in this config selects it deliberately
-;; — every Go buffer uses the built-in tree-sitter modes.  go-mode's
-;; autoloads install two pieces of *global* state that break unrelated
-;; buffers, so strip them:
+;; go-tag/gotest pull in classic `go-mode' as a dependency, and its
+;; autoloads add global state that breaks unrelated buffers:
 ;;
-;;   - A `magic-mode-alist' entry `(go--is-go-asm . go-asm-mode)'.
-;;     `magic-mode-alist' is consulted for EVERY file `set-auto-mode'
-;;     visits, and `go--is-go-asm' is autoloaded from `go-mode', so
-;;     opening any file at all (e.g. a .nix file) force-loads classic
-;;     go-mode.  When go-mode is not on `load-path' this raises "File
-;;     mode specification error: Cannot open load file ... go-mode" and
-;;     aborts mode setup, so the buffer never reaches its real mode.
-;;   - `auto-mode-alist' entries routing .go / go.mod / go.work to the
-;;     classic modes (this module's own `:mode' and the go.work entry
-;;     above already route them to the tree-sitter modes).
+;;   - `magic-mode-alist' entry `(go--is-go-asm . go-asm-mode)'.  It runs
+;;     for EVERY visited file and autoloads go-mode; when go-mode is not
+;;     on `load-path' that signals "Cannot open load file ... go-mode"
+;;     and the buffer never reaches its real mode.
+;;   - `auto-mode-alist' entries routing Go files to the classic modes.
 ;;
-;; Stripping the `magic-mode-alist' entry is what actually prevents the
-;; load error: the `major-mode-remap-alist' remap below does NOT (it
-;; only rewrites the *chosen* mode; the magic predicate fires earlier
-;; and loads go-mode directly).  The removals are no-ops when go-mode's
-;; autoloads were never loaded, so this stays safe everywhere.
+;; Only stripping the magic entry prevents the load error; the remap
+;; below acts after the predicate has already fired.  Both removals are
+;; no-ops when go-mode's autoloads were never loaded.
 (setq magic-mode-alist (assq-delete-all 'go--is-go-asm magic-mode-alist))
 (dolist (classic '(go-mode go-dot-mod-mode go-dot-work-mode))
   (setq auto-mode-alist (rassq-delete-all classic auto-mode-alist)))
 
-;; Belt-and-suspenders: if some other path still selects a classic Go
-;; major mode (a stale `package-quickstart' autoload, an old
-;; `auto-mode-alist' entry), remap it to the tree-sitter equivalent so
-;; `go-mode' is never required and every Go buffer lands in `go-ts-mode'.
+;; If anything else still selects a classic Go mode (e.g. a stale
+;; `package-quickstart' autoload), remap it to the tree-sitter mode.
 (when (fboundp 'go-ts-mode)
   (dolist (remap '((go-mode         . go-ts-mode)
                    (go-dot-mod-mode . go-mod-ts-mode)
                    (go-mod-mode     . go-mod-ts-mode)))
     (add-to-list 'major-mode-remap-alist remap)))
 
-;;; @doc Struct-tag editing (`json:"..."', `db:"..."', …). gopls has no
-;;; equivalent; the underlying `gomodifytags' binary comes from the
-;;; project environment. Bound under the buffer-local `C-c C-t' Go
-;;; tooling prefix so it never shadows the global `C-c t' theme toggle.
+;;; @doc Struct-tag editing (`json:"..."`, `db:"..."`, ...) via the
+;;; project's `gomodifytags`. Bound under the mode-local `C-c C-t` Go
+;;; prefix, clear of the global `C-c t` theme toggle.
 (use-package go-tag
   :after go-ts-mode
   :bind (:map go-ts-mode-map
@@ -116,9 +91,7 @@
 
 ;;; @doc Run the Go test or benchmark at point, the current file's
 ;;; tests, or the whole project, with compilation-mode error jumping.
-;;; Complements the project-wide compile-multi "go test" commands with
-;;; single-test / single-file runs. Shares the mode-local `C-c C-t' Go
-;;; tooling prefix with go-tag.
+;;; Shares the `C-c C-t` prefix with go-tag.
 (use-package gotest
   :after go-ts-mode
   :bind (:map go-ts-mode-map

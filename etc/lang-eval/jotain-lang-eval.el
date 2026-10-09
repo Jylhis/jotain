@@ -2,12 +2,10 @@
 
 ;;; Commentary:
 
-;; Loads the full Jotain configuration and, for every entry in
-;; `jotain-lang-registry', inspects the *live* config to determine which IDE
-;; features are wired up for that language.  It answers "what does the config
-;; provide" — deterministically, with no language toolchains required.  Whether
-;; a wired feature actually responds end-to-end (i.e. the server is on PATH and
-;; talks) is the job of the Tier-2 live probe (`jotain-lang-live.el').
+;; With the full config loaded, inspects the live config for every entry in
+;; `jotain-lang-registry' to see which IDE features are wired up.  Needs no
+;; language toolchains.  Whether a server actually responds is the Tier-2
+;; probe's job (`jotain-lang-live.el').
 ;;
 ;; Per language it records:
 ;;   • the major mode a sample file resolves to (via `set-auto-mode') and
@@ -16,18 +14,20 @@
 ;;     (reusing `jotain-prog--eglot-guess-program') and whether any declared
 ;;     server binary is on PATH in the build environment;
 ;;   • the apheleia formatter mapping and its binary's availability;
-;;   • the declared DAP adapter and its binary's availability;
-;;   • whether curated tempel snippets and inlay hints apply.
+;;   • the declared DAP adapter and whether a `dape-configs' entry targets
+;;     the mode;
+;;   • whether templates/jotain.eld has a section for the mode, and the
+;;     registry's inlay-hint flag.
 ;;
-;; Every per-language inspection is wrapped in `condition-case', so one broken
-;; language records an error cell instead of sinking the whole run.
+;; Each inspection runs under `condition-case', so a broken language
+;; records an error cell instead of aborting the run.
 ;;
-;; Batch entry point (used by nix/lang-eval.nix):
+;; Batch entry point (nix/lang-eval.nix `lang-eval-matrix'):
 ;;   emacs --batch --init-directory=<writable config copy> \
 ;;     -L <this dir> -l jotain-lang-eval.el
-;; with JOTAIN_LANG_EVAL_OUT pointing at the output directory.  Set
-;; JOTAIN_LANG_EVAL_STRICT=1 to exit non-zero on a routing/override regression,
-;; which is how the derivation gates the build.
+;; with JOTAIN_LANG_EVAL_OUT pointing at the output directory.  The
+;; derivation also sets JOTAIN_LANG_EVAL_STRICT=1, which exits non-zero on
+;; a routing or override regression.
 ;;
 ;; Outside lisp/ and test/ on purpose (see jotain-lang-registry.el).
 
@@ -37,8 +37,8 @@
 (require 'seq)
 (require 'subr-x)
 
-;; Force the config's lazily-loaded prog packages so their `:config' forms run
-;; and populate `eglot-server-programs', `apheleia-mode-alist', `dape-configs'.
+;; Load the lazy prog packages so their `:config' forms populate
+;; `eglot-server-programs', `apheleia-mode-alist', and `dape-configs'.
 (require 'eglot)
 (require 'apheleia nil t)
 (require 'dape nil t)
@@ -47,9 +47,9 @@
 ;;;; Helpers
 
 (defun jotain-lang-eval--snippet-modes ()
-  "Return the set of major-mode symbols that have a tempel section.
-Reads templates/jotain.eld (bare symbols are section headers, lists are
-templates) rather than depending on tempel's internal state."
+  "Return the major-mode symbols that have a tempel section.
+Reads templates/jotain.eld directly: bare symbols are section headers,
+lists are templates."
   (let* ((root (locate-dominating-file
                 (or load-file-name buffer-file-name default-directory) "init.el"))
          (eld (and root (expand-file-name "templates/jotain.eld" root)))
@@ -92,17 +92,14 @@ templates) rather than depending on tempel's internal state."
 
 (defun jotain-lang-eval--one (entry snippet-modes)
   "Evaluate one registry ENTRY, returning a result plist.
-SNIPPET-MODES is the set of modes with a tempel section (computed once by
-the caller, since it re-reads templates/jotain.eld)."
+SNIPPET-MODES is the set of modes with a tempel section."
   (condition-case err
       (with-temp-buffer
         (let ((buffer-file-name
                (expand-file-name (plist-get entry :sample) temporary-file-directory)))
-          ;; Mode routing (auto-mode-alist + major-mode-remap-alist) and the
-          ;; globals we read (eglot-server-programs, apheleia-mode-alist,
-          ;; dape-configs) do not depend on mode hooks, so suppress them:
-          ;; running every prog-mode hook in batch for 30 throwaway buffers is
-          ;; just noise and a source of spurious per-language errors.
+          ;; Routing and the globals read here do not depend on mode hooks;
+          ;; running them for every throwaway buffer only adds noise and
+          ;; spurious errors.
           (delay-mode-hooks (set-auto-mode))
           (let* ((expected (plist-get entry :mode))
                  (classic (jotain-lang-get entry :classic))
@@ -142,8 +139,7 @@ the caller, since it re-reads templates/jotain.eld)."
                  :error (error-message-string err)))))
 
 (defun jotain-lang-eval-run ()
-  "Evaluate every registry entry, returning a list of result plists.
-Computes the tempel snippet-mode set once and shares it across entries."
+  "Evaluate every registry entry, returning a list of result plists."
   (let ((snippet-modes (jotain-lang-eval--snippet-modes)))
     (mapcar (lambda (e) (jotain-lang-eval--one e snippet-modes))
             jotain-lang-registry)))
@@ -287,8 +283,8 @@ With JOTAIN_LANG_EVAL_STRICT set, exit non-zero on any regression."
     (message "jotain-lang-eval: wrote matrix for %d languages to %s"
              (length results) out)))
 
-;; Auto-run only when invoked as a batch job with an output directory set, so
-;; the file can be `require'd for unit testing without side effects.
+;; Auto-run only in batch with an output directory set, so `require' has
+;; no side effects.
 (when (and noninteractive (getenv "JOTAIN_LANG_EVAL_OUT"))
   (jotain-lang-eval-batch))
 

@@ -18,17 +18,16 @@ jotain — a custom GNU Emacs configuration built from scratch
 
 # DESCRIPTION
 
-*Jotain* is Finnish for "something" — a GNU Emacs 31 configuration
-(floor: Emacs 30.1) with no framework underneath. Instead of layering
-on Doom or Spacemacs, it is built from scratch: Nix builds the editor
-from source, plain Elisp configures it.
+*Jotain* is Finnish for "something": a GNU Emacs 31 configuration
+(floor: Emacs 30.1) built from scratch, with no framework such as Doom
+or Spacemacs underneath. Nix builds the editor; plain Elisp configures
+it.
 
-The repository ships both a modular Elisp configuration
-(*early-init.el*, *init.el*, *lisp/init-\*.el*) and the Nix expressions
-that build Emacs itself (*emacs.nix*, *overlay.nix*, *default.nix*,
-*flake.nix*). The dev shell provides tooling only — Emacs is not in
-it; **just run-built** builds the editor via Nix and launches it with
-this configuration.
+The repository ships a modular Elisp configuration (*early-init.el*,
+*init.el*, *lisp/init-\*.el*) and the Nix expressions that build Emacs
+(*emacs.nix*, *overlay.nix*, *default.nix*, *flake.nix*). The dev shell
+provides tooling only, not Emacs; **just run-built** builds the editor
+via Nix and launches it with this configuration.
 
 # MANUAL SECTIONS
 

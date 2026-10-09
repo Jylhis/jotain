@@ -11,16 +11,10 @@
 #   eca                      — prebuilt ECA server binary (lisp/init-ai.el)
 #   likec4Lsp                — LikeC4 language server (lisp/init-lang-devops.el)
 #
-# nix-community/emacs-overlay is composed underneath (pinned via
-# flake.lock's root input map, same discipline as emacs.nix), so the
-# emacs-git/unstable/igc bases and their epkgs snapshot resolve even
-# when this file is imported standalone — e.g. the module.nix fallback
-# without the flake, or:
-#
-#   import <nixpkgs> { overlays = [ (import ./overlay.nix) ]; }
-#
-# This keeps standalone consumers on the exact snapshot the flake build
-# (and CI cache) uses, at the cost of one fixed-output fetchTarball.
+# nix-community/emacs-overlay (pinned via flake.lock) is composed
+# underneath, so standalone imports (the module fallback without the
+# flake, or `import <nixpkgs> { overlays = [ (import ./overlay.nix) ]; }`)
+# resolve the same Emacs bases and epkgs snapshot as the flake build.
 let
   emacsOverlay = import (
     let

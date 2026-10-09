@@ -2,12 +2,11 @@
 
 ;;; Commentary:
 
-;; Wrapper init that loads the real init.el and installs an
-;; `emacs-startup-hook' that writes a timing report to the file named by
-;; the JOTAIN_BENCH_OUTPUT environment variable, then exits.
+;; Wrapper init: loads the real init.el, then on `emacs-startup-hook'
+;; writes a startup report to $JOTAIN_BENCH_OUTPUT (or runs the file-open
+;; benchmark when $JOTAIN_BENCH_OPEN_OUTPUT is set) and exits.
 ;;
-;; Relies on `jotain-bench--real-dir' and `jotain-bench--results' set up
-;; by the sibling bench/early-init.el.
+;; Uses the state set up by bench/early-init.el.
 
 ;;; Code:
 
@@ -23,14 +22,12 @@
               (jotain-bench-open--run)
               (kill-emacs 0))
 
-             ;; Startup benchmark mode (original)
+             ;; Startup benchmark mode
              ((getenv "JOTAIN_BENCH_OUTPUT")
               (let* ((init-time (float-time (time-subtract after-init-time before-init-time)))
                      (total-time (float-time (time-subtract (current-time) before-init-time)))
-                     ;; The authoritative startup number: `emacs-init-time'
-                     ;; spans the whole `startup.el' run (incl.
-                     ;; `package-activate-all'), which the before/after-init
-                     ;; delta above does not.
+                     ;; The authoritative number: unlike the delta above it
+                     ;; spans all of startup.el, `package-activate-all' too.
                      (einit (emacs-init-time "%.3f"))
                      (gc-pct (if (> init-time 0) (* 100.0 (/ gc-elapsed init-time)) 0.0))
                      (pkg-count (if (bound-and-true-p package-activated-list)
@@ -45,8 +42,7 @@
                                                     (not (string-prefix-p "NETWORK:" (car x)))
                                                     (> (cdr x) 0.010)))
                                              sorted))
-                     ;; Autoload-driven loads the require-only harness never
-                     ;; saw (Finding 52), collected by the `load' advice.
+                     ;; Non-`require' loads, from the `load' advice.
                      (loads-slow (seq-filter (lambda (x) (> (cdr x) 0.010))
                                              (sort (copy-sequence jotain-bench--loads)
                                                    (lambda (a b) (> (cdr a) (cdr b))))))
@@ -110,8 +106,8 @@
                                     (if (bound-and-true-p package-quickstart) "yes" "no"))
                             (format "  native-comp available       %s\n"
                                     (if (and (fboundp 'native-comp-available-p) (native-comp-available-p)) "yes" "no")))
-                    ;; Full sorted feature list so a run-to-run diff can
-                    ;; answer "what did this change pull in?" (Finding 52).
+                    ;; Sorted so a run-to-run diff shows what a change
+                    ;; pulled in.
                     (insert (format "\nFEATURES (%d, sorted)\n" (length features-sorted))
                             (format "──────────────────────────────────────────────────────\n"))
                     (dolist (f features-sorted)

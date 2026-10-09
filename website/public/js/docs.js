@@ -1,7 +1,6 @@
 /*
- * docs.js — minimal chrome behavior for generated pages:
- * just the theme toggle. Buffer switching lives on the landing SPA.
- * Jylhis 3.0.0 selects mode with data-mode="dark" on <html>.
+ * docs.js: theme toggle for generated pages. Buffer switching
+ * lives on the landing SPA (app.js).
  */
 (function () {
   'use strict';

@@ -5,11 +5,11 @@ description: Pre-package, pre-GUI initialisation
 
 # early-init.el
 
-`early-init.el` is loaded before `package.el` runs, before the first frame is drawn, and before `init.el` is evaluated. Anything that *must* happen that early lives here; everything else lives in `init.el` or one of the `lisp/init-*.el` modules.
+`early-init.el` is loaded before `package.el` runs, before the first frame is drawn, and before `init.el`. Only what *must* happen that early lives here; everything else is in `init.el` or a `lisp/init-*.el` module.
 
 ## Garbage collection
 
-The GC threshold is bumped to "effectively never" during startup; `init-core` restores a 16 MiB runtime value.
+GC is effectively off during startup; `init-core` restores a 16 MiB runtime value.
 
 ```elisp
 (setq gc-cons-threshold most-positive-fixnum
@@ -18,7 +18,7 @@ The GC threshold is bumped to "effectively never" during startup; `init-core` re
 
 ## Bidirectional text
 
-Jotain targets LTR-only usage, so disable the bidirectional reordering and parenthesis algorithms — they otherwise run on every redisplay and are measurable on large files.
+Jotain targets LTR-only text, so bidi reordering and the bidi parenthesis algorithm are disabled; they otherwise run on every redisplay and cost time in large files.
 
 ```elisp
 (setq-default bidi-display-reordering nil
@@ -28,7 +28,7 @@ Jotain targets LTR-only usage, so disable the bidirectional reordering and paren
 
 ## Load preference
 
-Prefer newer source files to stale `.elc` in batch mode only. Interactive sessions keep `.elc` preference for speed.
+Prefer newer source files over stale `.elc` only in batch mode. Interactive sessions skip the mtime check.
 
 ```elisp
 (setq load-prefer-newer noninteractive)
@@ -36,7 +36,7 @@ Prefer newer source files to stale `.elc` in batch mode only. Interactive sessio
 
 ## package.el and use-package
 
-`package.el` stays on and `package-quickstart` is enabled — Nix (and, in dev, devenv) already provides most packages via `load-path`, so startup is fast without any trickery. `use-package` is built in on Emacs 29+, so the only thing we configure before `init.el` loads is imenu support and `use-package-always-ensure`.
+`package.el` stays on with `package-quickstart` enabled; Nix already puts most packages on `load-path`. Before `init.el` loads, only imenu support and `use-package-always-ensure` are configured.
 
 ```elisp
 (setq package-quickstart-file
@@ -46,13 +46,17 @@ Prefer newer source files to stale `.elc` in batch mode only. Interactive sessio
       use-package-always-ensure t)
 ```
 
-`package-quickstart-file` **must** be pinned here, not in `init.el`: `startup.el` runs its automatic `package-activate-all` between `early-init.el` and `init.el`, and looks up the quickstart file at whatever path `package-quickstart-file` holds at that moment. Leaving it at its default puts the file outside `var/`, and Emacs never finds it on later startups — quickstart ends up paying its refresh + byte-compile cost on every `package-install` without providing any actual speedup.
+`package-quickstart-file` **must** be pinned here, not in `init.el`: `startup.el` runs `package-activate-all` between `early-init.el` and `init.el`, using whatever path the variable holds at that moment. The default path is outside `var/`, so without the pin quickstart is never loaded but still pays its refresh cost on every `package-install`.
 
-With `use-package-always-ensure` set to `t`, every `use-package` block defaults to "install if missing". Built-ins must opt out with `:ensure nil`.
+The quickstart file caches absolute `/nix/store` load-path entries, so `early-init.el` deletes it whenever a hash of `EMACSLOADPATH` (stored in `var/package-quickstart.gen`) changes. Otherwise a redeploy could activate stale package versions.
+
+With `use-package-always-ensure` set to `t`, every `use-package` block installs its package if missing. Built-ins must opt out with `:ensure nil`.
+
+Setting `JOTAIN_PROFILE_STARTUP` turns on `use-package-compute-statistics`, so `M-x use-package-report` shows per-block timings.
 
 ### Silencing a quickstart false-positive
 
-`package-quickstart-refresh` (called after every `package-install` via `package--quickstart-maybe-refresh`) internally re-calls `package-initialize`, which trips the "Unnecessary call to `package-initialize` in init file" warning even though the call is legitimate. Emacs's own code can't distinguish that internal self-call from a user one, so we suppress the warning type directly:
+`package-quickstart-refresh` (run after every `package-install`) re-calls `package-initialize`, which trips the "Unnecessary call to `package-initialize` in init file" warning. That internal call can't be told apart from a user one, so the warning type is suppressed:
 
 ```elisp
 (with-eval-after-load 'warnings
@@ -61,15 +65,16 @@ With `use-package-always-ensure` set to `t`, every `use-package` block defaults 
 
 ## Frame chrome
 
-GUI chrome is disabled in `default-frame-alist` *before* the first frame is drawn — this is much faster than toggling the modes off afterwards.
+The tool bar and scroll bars are disabled in `default-frame-alist` *before* the first frame is drawn, which is cheaper than toggling the modes off afterwards. The menu bar stays on. `frame-inhibit-implied-resize` stops startup font and fringe changes from resizing the frame, since each resize is a round-trip to the window system.
 
 ```elisp
-(push '(menu-bar-lines . 0) default-frame-alist)
 (push '(tool-bar-lines . 0) default-frame-alist)
 (push '(vertical-scroll-bars) default-frame-alist)
 (when (featurep 'ns)
   (push '(ns-transparent-titlebar . t) default-frame-alist)
   (push '(ns-appearance . dark) default-frame-alist))
+
+(setq frame-inhibit-implied-resize t)
 
 (setq inhibit-startup-screen t
       inhibit-startup-message t
@@ -79,7 +84,7 @@ GUI chrome is disabled in `default-frame-alist` *before* the first frame is draw
 
 ## Byte-compiler noise
 
-Silence obsolete-symbol warnings from third-party packages we do not control. Real warnings still surface.
+Silence obsolete-symbol warnings from third-party packages. Other warnings still surface.
 
 ```elisp
 (setq byte-compile-warnings '(not obsolete))
@@ -87,7 +92,7 @@ Silence obsolete-symbol warnings from third-party packages we do not control. Re
 
 ## Font caches
 
-Trade a bit of RAM for smoother redisplay.
+Trade a little RAM for smoother redisplay.
 
 ```elisp
 (setq inhibit-compacting-font-caches t)
@@ -97,30 +102,29 @@ Trade a bit of RAM for smoother redisplay.
 
 ## Native compilation
 
-On Emacs 30+ with native compilation available, keep the eln-cache out of the config directory and pin native-comp speed. Async compilation warnings stay at their default: since Emacs 30, `native-comp-async-warnings-errors-kind` already limits them to errors and important warnings, so they are worth seeing.
+When native compilation is available: move the eln-cache to `var/eln-cache/` and run at most half the logical cores (1 to 3) as async jobs so a background recompile can't starve redisplay. On Emacs 31+, background compilation also pauses on battery power. Async warnings keep their default: since Emacs 30, `native-comp-async-warnings-errors-kind` limits them to errors and important warnings.
 
 ```elisp
 (when (and (fboundp 'native-comp-available-p)
            (native-comp-available-p))
-  (setq native-comp-speed 2)
+  (setq native-comp-speed 2
+        native-comp-async-jobs-number (max 1 (min 3 (/ (num-processors) 2)))
+        native-comp-async-on-battery-power nil)
   (when (fboundp 'startup-redirect-eln-cache)
     (startup-redirect-eln-cache
      (convert-standard-filename
       (expand-file-name "var/eln-cache/" user-emacs-directory)))))
 ```
 
+If `JOTAIN_ELN_PATH` names a directory (set by the Home Manager wrapper when `services.jotain.nativeCompile.enable` is on, and by `just run-built-fast`), it is *appended* to `native-comp-eln-load-path`, so the config's ahead-of-time compiled `.eln` files load from the store. It must not be prepended: Emacs writes JIT output to the first writable entry, which has to stay the `var/` cache.
+
 ## Tree-sitter grammars
 
-Nix sets `TREE_SITTER_DIR` to point at the grammar bundle produced by `default.nix`; `early-init.el` picks it up and wires it into `treesit-extra-load-path`.
-
-```elisp
-(when-let* ((ts-dir (getenv "TREE_SITTER_DIR")))
-  (setq treesit-extra-load-path (list ts-dir)))
-```
+No setup is needed here: nixpkgs' `site-start.el` sets `treesit-extra-load-path` to the bundled grammars, and `init-prog.el` forwards it to native-comp workers.
 
 ## Terminal aliases
 
-Ghostty advertises `TERM=xterm-ghostty`, but Emacs does not ship `term/xterm-ghostty.el`. Aliasing to `xterm-256color` makes `term/xterm.el` load instead, restoring `modifyOtherKeys` and 24-bit colour. This must be set in `early-init.el` because `tty-run-terminal-initialization` fires before `init.el`.
+Ghostty advertises `TERM=xterm-ghostty`, but Emacs ships no `term/xterm-ghostty.el`. Aliasing it to `xterm-256color` loads `term/xterm.el` instead, restoring `modifyOtherKeys` and 24-bit colour. It must be set in `early-init.el` because `tty-run-terminal-initialization` runs before `init.el`. Ghostel buffers use the same `TERM`, so this also covers a nested `emacs -nw`.
 
 ```elisp
 (add-to-list 'term-file-aliases '("xterm-ghostty" . "xterm-256color"))

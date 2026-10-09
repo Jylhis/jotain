@@ -66,8 +66,7 @@ in
 pkgs.runCommand "jotain-options-doc"
   {
     nativeBuildInputs = [ pkgs.pandoc ];
-    # Fragment consumed by nix/info-manual.nix so the same option
-    # reference appears as an appendix in the bundled Info manual.
+    # Appendix of the Info manual (nix/info-manual.nix).
     passthru.texinfoFragment = "jotain-options.texi";
   }
   # shellcheck disable=SC2016,SC2086
@@ -222,11 +221,9 @@ pkgs.runCommand "jotain-options-doc"
           --highlight-style=kate \
           --wrap=none
 
-        # Texinfo fragment consumed by nix/info-manual.nix.  --shift-heading-level-by=1
-        # collapses the top-level "# Module Options Reference" into an @section inside
-        # the parent @appendix in docs/jotain.texi, and each per-module `# ...` header
-        # becomes an @section below that.  The scaffolding strip is shared; see
-        # nix/texi-fragment.nix.
+        # Texinfo fragment for nix/info-manual.nix. Shifting headings by one
+        # turns each `# …` into an @section under docs/jotain.texi's
+        # @appendix. See nix/texi-fragment.nix.
         pandoc combined.md \
           -f gfm \
           -t texinfo \

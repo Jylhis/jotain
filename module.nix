@@ -12,8 +12,7 @@
 #     environmentFile = "/run/secrets/jotain-env";  # OPENROUTER_API_KEY=… etc.
 #   };
 #
-# Modelled after the home-manager services.emacs module, but uses the
-# Jotain-built Emacs and `jotain` naming throughout.
+# Modelled after home-manager's services.emacs.
 args@{
   config,
   lib,
@@ -61,29 +60,19 @@ let
     }
   );
 
-  # Path the Jotain config is installed to via xdg.configFile below.
-  # Pinning --init-directory to this location prevents Emacs from
-  # falling back to a stray ~/.emacs.d/ on the user's machine.
+  # Where xdg.configFile installs the config. --init-directory is pinned
+  # here so a stray ~/.emacs.d/ is never picked up.
   initDirectory = "${config.xdg.configHome}/emacs";
 
-  # Byte-compiled copy of the Jotain config, so the daemon executes the
-  # same .elc artifact the elisp-compile flake check verifies instead of
-  # interpreting raw .el on every start. Loading .elc is also what lets
-  # deferred native compilation produce .eln files into the writable
-  # var/eln-cache — JIT native comp never triggers for plain .el loads.
+  # Byte-compiled config, so the daemon loads .elc instead of
+  # interpreting .el (and deferred native compilation, which never fires
+  # for plain .el loads, can fill var/eln-cache).
   #
-  # This *is* nix/checks.nix' `elisp-compile': both call the same
-  # nix/config-compiled.nix, so on the default configuration they are the
-  # same store path and `home-manager switch' substitutes CI's artifact
-  # from cachix instead of running Emacs locally. They diverge under a
-  # custom `services.jotain.package' or a different nixpkgs pin —
-  # inherent, and only costs the old behaviour of building it here.
-  #
-  # `.core' is the inner emacsWithPackages result: the outer wrapper adds
-  # a runtime PATH, INFOPATH and ASPELL_CONF, none of which a batch
-  # byte-compile reads, and depending on it would drag jotainInfo (and so
-  # every `;;; @doc' block and docs/*.mdx page) into this derivation. The
-  # `or' covers a user-supplied `services.jotain.package'.
+  # Same derivation as nix/checks.nix' `elisp-compile', so on the default
+  # configuration `home-manager switch' substitutes CI's cachix artifact.
+  # A custom `services.jotain.package' or nixpkgs pin builds it locally.
+  # `.core' is the inner emacsWithPackages result (see
+  # nix/config-compiled.nix); the `or' covers a custom package.
   compiledConfig = import ./nix/config-compiled.nix {
     inherit pkgs;
     emacs = selectedPackage.core or selectedPackage;
@@ -93,12 +82,9 @@ let
   # Generator for ~/.config/eca/config.json (see nix/eca-config.nix).
   ecaConfig = import ./nix/eca-config.nix { inherit lib pkgs; };
 
-  # Runtime dependencies the Elisp config invokes unconditionally,
-  # factored into nix/runtime-deps.nix so module-system.nix and
-  # module-nix-on-droid.nix satisfy the same contract. Prepending these
-  # to PATH in the wrapper keeps them available regardless of launch
-  # context — notably launchd on macOS, which doesn't inherit the
-  # user's login-shell PATH.
+  # Shared runtime binaries (nix/runtime-deps.nix) plus the opt-in tools,
+  # prepended to PATH in emacsWrapper: launchd does not inherit the
+  # login-shell PATH.
   runtimeDeps =
     import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; }
     ++ lib.optional cfg.devenv.enable pkgs.devenv
@@ -108,23 +94,18 @@ let
     ++ lib.optional cfg.sops.enable pkgs.sops
     ++ lib.optional cfg.claudeCode.enable pkgs.claude-code;
 
-  # Colour-emoji fallback for the `emoji' / `symbol' fontsets wired in
-  # lisp/init-ui.el.  macOS ships Apple Color Emoji system-wide, so the
-  # Nix font would just bloat the closure there.
+  # Colour-emoji fallback for the `emoji' / `symbol' fontsets
+  # (lisp/init-ui.el). macOS ships Apple Color Emoji.
   emojiFontPackages = lib.optional isLinux pkgs.noto-fonts-color-emoji;
 
-  # Nerd Font glyphs for the icon stack (nerd-icons, doom-modeline,
-  # corfu/marginalia margins, dirvish, ibuffer). BlexMono (IBM Plex Mono
-  # patched) is the first entry in `jotain-font-preferences'
-  # (lisp/init-ui.el), so the icons match the default editor face out of
-  # the box; keep the two in step when either changes.
+  # Nerd Font glyphs for the icon stack. BlexMono is the first entry in
+  # `jotain-font-preferences' (lisp/init-ui.el); keep the two in step.
   iconFontPackages = [ pkgs.nerd-fonts.blex-mono ];
 
   runtimePath = lib.makeBinPath runtimeDeps;
 
-  # Wrapper around `emacs` that always passes --init-directory, so the
-  # daemon and any interactive `emacs` invocation pick up Jotain
-  # regardless of Emacs's user-emacs-directory discovery order.
+  # `emacs` with --init-directory always set, for the daemon and any
+  # interactive invocation.
   emacsWrapper = pkgs.writeShellScriptBin "emacs" ''
     export PATH=${runtimePath}''${PATH:+:$PATH}
     ${lib.optionalString cfg.nativeCompile.enable ''
@@ -133,8 +114,8 @@ let
     exec ${emacsBinPath}/emacs --init-directory=${lib.escapeShellArg initDirectory} "$@"
   '';
 
-  # Fallback script for EDITOR when the daemon is not running.
-  # Goes through emacsWrapper so --init-directory is preserved.
+  # EDITOR fallback without a daemon; via emacsWrapper to keep
+  # --init-directory.
   editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
     exec ${emacsWrapper}/bin/emacs -nw -- "$@"
   '';
@@ -157,14 +138,12 @@ let
       "$@"
   '';
 
-  # launchd agent label — Home Manager prefixes user agents with
-  # "org.nix-community.home."; the agent below is named `jotain`.
+  # Home Manager prefixes user agent labels with "org.nix-community.home.".
   launchdLabel = "org.nix-community.home.jotain";
   launchdPlist = "${config.home.homeDirectory}/Library/LaunchAgents/${launchdLabel}.plist";
 
-  # Cross-platform daemon control. `jotctl <start|stop|status|restart|logs>`
-  # drives launchd on macOS and the systemd user service on Linux — the same
-  # daemon defined by launchd.agents.jotain / systemd.user.services.jotain.
+  # `jotctl <start|stop|status|restart|logs>`: drives the launchd agent on
+  # macOS or the systemd user service on Linux.
   jotctlScript = pkgs.writeShellScriptBin "jotctl" (
     if isDarwin then
       ''
@@ -199,10 +178,8 @@ let
   systemdWantedBy =
     if cfg.startWithUserSession == "graphical" then "graphical-session.target" else "default.target";
 
-  # Short aliases inspired by https://rahuljuliato.com/posts/launching-emacs-terminal :
-  # `emd` brings up a foreground daemon, `em` connects a terminal client, `emg`
-  # connects a graphical client. All three reuse the wrappers already built
-  # above so --init-directory and runtime PATH stay consistent.
+  # Aliases after https://rahuljuliato.com/posts/launching-emacs-terminal :
+  # `emd` foreground daemon, `em` terminal client, `emg` GUI client.
   shellAliasMap = {
     "${cfg.shellAliases.prefix}emd" = "${emacsWrapper}/bin/emacs --fg-daemon";
     "${cfg.shellAliases.prefix}em" = "${lib.getBin editorScript}/bin/jotain-editor";
@@ -211,15 +188,13 @@ let
 in
 {
   imports = [
-    # services.jotain.openrouter.enable was the old spelling of the eca
-    # OpenRouter toggle. Redirect it (with a deprecation warning).
+    # Old spelling of eca.openrouter.enable (warns on use).
     (lib.mkRenamedOptionModule
       [ "services" "jotain" "openrouter" "enable" ]
       [ "services" "jotain" "eca" "openrouter" "enable" ]
     )
-    # The secrets env file is daemon-wide (it reaches every env-var-reading
-    # integration, not just eca), so it now lives at the top level. Keep
-    # eca.environmentFile working as an alias.
+    # The secrets file is daemon-wide, not eca-specific; keep the old
+    # path as an alias.
     (lib.mkAliasOptionModule
       [ "services" "jotain" "eca" "environmentFile" ]
       [ "services" "jotain" "environmentFile" ]
@@ -234,9 +209,9 @@ in
       default = null;
       defaultText = lib.literalExpression "null";
       description = ''
-        Custom Jotain Emacs package to use. Leave this unset to use
-        the default distribution from `emacs.nix` (pgtk/Wayland GUI on
-        Linux, patched NS GUI on Darwin).
+        Custom Jotain Emacs package to use. Leave unset for the full
+        distribution (`jotainEmacsPackages`: pgtk/Wayland GUI on Linux,
+        patched NS GUI on Darwin).
       '';
     };
 
@@ -246,21 +221,18 @@ in
       example = true;
       description = ''
         AOT native-compile the Jotain config into the store, so the
-        daemon loads `.eln` for `init.el` and the `lisp/` modules from
-        `services.jotain`'s own derivation instead of JIT-compiling
-        into `var/eln-cache` after every deploy (every deploy that
-        touches `lisp/` moves the store path, which invalidates the
-        JIT cache). `early-init.el` is structurally excluded: its
-        `.eln` lookup happens before the load path is extended, so it
-        always runs from `.elc` — with or without this option.
+        daemon loads `.eln` for `init.el` and `lisp/` instead of
+        JIT-compiling into `var/eln-cache` after every deploy that
+        touches `lisp/` (which moves the store path and invalidates
+        that cache). `early-init.el` always runs from `.elc`: its
+        `.eln` lookup happens before it extends
+        `native-comp-eln-load-path`.
 
-        The store-`.eln`-through-symlinks mechanism is sound: Emacs
-        `realpath()`s the source before hashing it into the `.eln`
-        name (src/comp.c, Bug#44701), so the HM symlinks resolve to
-        the exact path the AOT step compiled against. Off by default
-        only because enabling it adds a native-compilation pass to
-        every activation that rebuilds the config, and roughly
-        50–150 MB of `.eln` to the closure.
+        Emacs `realpath()`s the source before hashing it into the
+        `.eln` name (src/comp.c, Bug#44701), so the Home Manager
+        symlinks resolve to the path the AOT step compiled. Off by
+        default for the cost: a native-compilation pass whenever the
+        config rebuilds, and roughly 50-150 MB of `.eln`.
       '';
     };
 
@@ -322,18 +294,16 @@ in
       example = "/run/secrets/jotain-env";
       description = ''
         Path to a {manpage}`systemd.exec(5)`-style environment file
-        (`VAR=value` lines) loaded into the Jotain daemon's environment.
-        Every subprocess Emacs spawns inherits it, so this is the single
-        place to supply credentials for all external-system integrations
-        that read the environment — among them gptel's
+        (`VAR=value` lines) loaded into the Jotain daemon's environment
+        and inherited by every subprocess Emacs spawns. Use it for
+        credentials read from the environment, such as gptel's
         {env}`OPENROUTER_API_KEY` / {env}`ANTHROPIC_API_KEY` /
-        {env}`GEMINI_API_KEY` (lisp/init-ai.el), the {command}`eca` server's
-        provider keys, and any token a tool reads from the environment.
-        Point it at a runtime secret path (sops-nix, agenix, …); the file is
-        read at daemon start and never copied into the Nix store. On Linux
-        it becomes the service's {var}`EnvironmentFile`; on macOS the launchd
-        agent sources it before exec. Secrets that instead live in a
-        password manager can be resolved through auth-source — see
+        {env}`GEMINI_API_KEY` (lisp/init-ai.el) and the {command}`eca`
+        server's provider keys. Point it at a runtime secret path
+        (sops-nix, agenix, …); it is read at daemon start and never
+        copied into the Nix store. On Linux it becomes the service's
+        {var}`EnvironmentFile`; on macOS the launchd agent sources it
+        before exec. For auth-source alternatives see
         {option}`services.jotain.onePassword.enable` and
         {option}`services.jotain.authSources`.
       '';
@@ -344,17 +314,15 @@ in
       default = [ ];
       example = [ "/run/secrets/authinfo" ];
       description = ''
-        Extra authinfo/netrc file paths to hand to Emacs's
-        {var}`auth-sources`, searched ahead of {file}`~/.authinfo(.gpg)` and
-        the 1Password backend. Point these at runtime secret files a secret
-        manager produces (sops-nix, agenix, …) — the entries are file
-        *paths*, not the secrets themselves, and are passed to the daemon
-        through the {env}`JOTAIN_AUTH_SOURCES` environment variable that
-        lisp/init-systems.el reads. Every package that consults auth-source
-        (gptel, {command}`forge`, smtpmail, circe) then resolves credentials
-        from them; the {command}`eca` server, which reads only its
-        environment, additionally has its provider keys exported from
-        auth-source before each session (see {file}`lisp/init-ai.el`).
+        Extra authinfo/netrc file paths prepended to Emacs's
+        {var}`auth-sources`, ahead of {file}`~/.authinfo(.gpg)`. Point them
+        at runtime secret files (sops-nix, agenix, …); only the *paths*
+        reach the daemon, via the {env}`JOTAIN_AUTH_SOURCES` variable read
+        by lisp/init-systems.el. auth-source consumers (gptel,
+        {command}`forge`, smtpmail, circe) then resolve credentials from
+        them; the {command}`eca` server, which reads only its environment,
+        gets its provider keys exported from auth-source before each
+        session (see {file}`lisp/init-ai.el`).
       '';
     };
 
@@ -394,10 +362,10 @@ in
       enable = lib.mkEnableOption ''
         the {command}`devenv` CLI on the wrapper PATH, for the native
         environment loader (`devenv-env-global-mode`, lisp/devenv.el)
-        under launchd/systemd daemons whose login shell does not export
-        it. Opt-in because exec-path-from-shell normally finds the
-        user's own devenv, and `pkgs.devenv` bundles its own nix and
-        can version-skew against per-project devenv installs
+        under daemons whose login shell does not export it. Opt-in
+        because exec-path-from-shell normally finds the user's own
+        devenv, and `pkgs.devenv` bundles its own nix, which can
+        version-skew against per-project devenv installs
       '';
     };
 
@@ -433,11 +401,11 @@ in
 
       openrouter.enable = lib.mkEnableOption ''
         the default OpenRouter provider in the generated {command}`eca`
-        config. The provider and its model catalogue come from
+        config. The provider and model catalogue come from
         {file}`config/eca/config.json` (kept in sync with gptel's models in
         lisp/init-ai.el); the API key is read at runtime from
         {env}`OPENROUTER_API_KEY` via eca's `''${env:…}` interpolation, so
-        no secret is written to the Nix store. Supply the key through
+        no secret reaches the Nix store. Supply it through
         {option}`services.jotain.environmentFile`. gptel defaults to
         OpenRouter regardless of this option
       '';
@@ -457,11 +425,11 @@ in
         description = ''
           Freeform {command}`eca` configuration, rendered to
           {file}`~/.config/eca/config.json` and deep-merged over the default
-          OpenRouter provider (later values win). Any eca key is expressible
+          OpenRouter provider (these values win). Any eca key is expressible
           (`providers`, `models`, `rules`, `mcpServers`, `behavior`, …). Use
-          eca's `''${env:VAR}` syntax for secrets so nothing sensitive lands
-          in the Nix store; provide the referenced variables through
-          {option}`services.jotain.environmentFile`.
+          eca's `''${env:VAR}` syntax for secrets, supplied through
+          {option}`services.jotain.environmentFile`, so none reach the Nix
+          store.
         '';
       };
     };
@@ -523,14 +491,10 @@ in
       lib.hiPrio clientDesktopItem
     );
 
-    # Install the Jotain config into ~/.config/emacs (lisp/init-snippets.el
-    # resolves `tempel-path' against user-emacs-directory, hence templates/).
-    # Entry files and lisp/ all come from compiledConfig: a native-compiled
-    # .eln is named after a hash of its source path, so serving the sources
-    # from any other store path (e.g. ./init.el) would give a permanent .eln
-    # miss. early-init's AOT .eln is unreachable regardless — its eln lookup
-    # runs before early-init.el itself extends native-comp-eln-load-path —
-    # so it always loads .elc.
+    # Entry files and lisp/ come from compiledConfig: an .eln is named
+    # after a hash of its source path, so sources from any other store path
+    # (e.g. ./init.el) would always miss. templates/ is for `tempel-path'
+    # (lisp/init-snippets.el).
     xdg.configFile = {
       "emacs/early-init.el".source = "${compiledConfig}/early-init.el";
       "emacs/early-init.elc".source = "${compiledConfig}/early-init.elc";
@@ -540,10 +504,8 @@ in
       "emacs/templates".source = ./templates;
     }
     // lib.optionalAttrs cfg.eca.enable {
-      # Config for the eca server (lisp/init-ai.el), generated from the
-      # eca.* options. Any ${env:…} references (e.g. the OpenRouter key) are
-      # resolved at runtime from the daemon environment — see
-      # eca.environmentFile — so no secret is written to the store.
+      # ${env:…} references resolve at runtime from the daemon environment
+      # (environmentFile), so no secret is written to the store.
       "eca/config.json".source = ecaConfig.mkConfigFile {
         includeOpenRouter = cfg.eca.openrouter.enable;
         inherit (cfg.eca) settings;
@@ -582,14 +544,9 @@ in
           ExecStartPost = "${pkgs.coreutils}/bin/chmod --changes -w ${socketDir}";
           ExecStopPost = "${pkgs.coreutils}/bin/chmod --changes +w ${socketDir}";
         }
-        # Secrets for every env-var-reading integration (gptel keys, the
-        # eca server, tokens) — read at start from a runtime secret path,
-        # never copied into the store.
         // lib.optionalAttrs (cfg.environmentFile != null) {
           EnvironmentFile = cfg.environmentFile;
         }
-        # Non-secret authinfo file paths for Emacs auth-source
-        # (services.jotain.authSources); read by lisp/init-systems.el.
         // lib.optionalAttrs (cfg.authSources != [ ]) {
           Environment = [ "JOTAIN_AUTH_SOURCES=${lib.concatStringsSep ":" cfg.authSources}" ];
         };
@@ -627,10 +584,8 @@ in
     launchd.agents.jotain = lib.mkIf isDarwin {
       enable = true;
       config = {
-        # launchd has no EnvironmentFile; when a secret env file is set,
-        # source it in a shell before exec so Emacs and its children (the
-        # eca server, gptel's curl, …) see the API keys. The file is read at
-        # launch from a runtime path and never copied into the store.
+        # launchd has no EnvironmentFile: source the file in a shell
+        # before exec so Emacs and its children see the keys.
         ProgramArguments =
           if cfg.environmentFile != null then
             [
@@ -650,8 +605,6 @@ in
           SuccessfulExit = false;
         };
       }
-      # Non-secret authinfo file paths for Emacs auth-source
-      # (services.jotain.authSources); read by lisp/init-systems.el.
       // lib.optionalAttrs (cfg.authSources != [ ]) {
         EnvironmentVariables.JOTAIN_AUTH_SOURCES = lib.concatStringsSep ":" cfg.authSources;
       };

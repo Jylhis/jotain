@@ -2,53 +2,55 @@
 
 ## Emacs performance optimization — open points (was plan.md)
 
-Optimization of jotain Emacs for the dev machine (
-an x86_64 CPU, **x86_64-darwin**; Emacs 31 NS
-daemon). Priority order: **performance → stability → startup → feel**.
-Build-variant preference: **release > experimental (igc)**.
+Target: the dev machine (x86_64-darwin, Emacs 31 NS daemon). Priority:
+**performance → stability → startup → feel**. Build-variant preference:
+**release > experimental (igc)**.
 
 ### §3 — igc / MPS concurrent GC trial (experimental, biggest GC-pause win)
 
 `emacs-igc` is verified buildable on x86_64-darwin via the pinned overlay.
-Experimental, so trial-only before any promotion. The distribution overlay is
-already variant-parameterized (`nix/mk-overlay.nix` takes `variant`), so a
-full igc distribution needs only `import … { variant = "igc"; }`; that is a
-cache **miss** on Darwin (builds from source).
+Trial only before any promotion. The distribution overlay already takes
+`variant` (`nix/mk-overlay.nix`), so a full igc distribution is
+`import … { variant = "igc"; }`, a cache **miss** on Darwin (builds from
+source).
 
-- `just build-igc` → run the result as a **side daemon** on its own socket
-  (`./result/bin/emacs --fg-daemon=jotain-igc --init-directory=…`) alongside
-  the release daemon. A/B for ~a week on real workloads (large files, LSP,
-  magit); watch for crashes and confirm the pause reduction is real on this CPU.
+- `just build-igc`, then run the result as a **side daemon** on its own
+  socket (`./result/bin/emacs --fg-daemon=jotain-igc --init-directory=…`)
+  next to the release daemon. A/B it for about a week on real workloads
+  (large files, LSP, magit); watch for crashes and confirm the pause
+  reduction is real on this CPU.
 - Quantify with `(setq garbage-collection-messages t)` under both daemons.
 
 ### §4 — `ultra-scroll` (feel, lowest priority)
 
-`pixel-scroll-precision-mode` is fine on NS-31. Only if a variant switch
-happens (e.g. to igc), replace it with `ultra-scroll` (smoother on Intel).
-File: `lisp/init-ui.el`.
+The config uses the built-in `pixel-scroll-mode` (`lisp/init-ui.el`). Only if
+a variant switch happens (e.g. to igc), replace it with `ultra-scroll`
+(smoother on Intel).
 
 ### Verification (for the open work)
 
 1. Baseline: `just bench-built var/bench/before.txt`; profile a freeze with
    `M-x jotain-profile-toggle`.
-2. After build changes: re-run `just bench-built`, diff load times; confirm the
-   eln-cache holds `init-*.eln`.
+2. After build changes: re-run `just bench-built`, diff load times, and
+   confirm the eln-cache holds `init-*.eln`.
 3. GC: `(setq garbage-collection-messages t)`, exercise completion/LSP under
-   release vs igc daemons; compare pause counts.
+   the release and igc daemons, compare pause counts.
 4. Cache parity unchanged: run the `nix-instantiate` parity check from
-   `AGENTS.md`; the default (`unstable`) variant must still equal
-   `pkgs.emacs-unstable`, and the `mainline` variant `pkgs.emacs`.
+   `AGENTS.md`. On Linux the default (`unstable`) variant must still equal
+   `pkgs.emacs-unstable-pgtk`, and `mainline` `pkgs.emacs-pgtk`.
 
 ## In-code deferred work
 
-- `nix/extra-packages.nix` — TEMPORARY (2026-07-21) ghostel epkg fetch
+- `nix/extra-packages.nix`: TEMPORARY (2026-07-21) ghostel epkg fetch
   workaround; revert to plain `epkgs.ghostel` once the upstream fetch works.
-- `lisp/init-vc.el` — future ideas not yet wired up: mergiraf (structural merge
+- `lisp/init-vc.el`: ideas not yet wired up: mergiraf (structural merge
   driver), magit-delta (delta-rendered magit diffs), and smerge/vc.el
   integration for syntax-aware conflict resolution.
-- `module.nix` / `module-system.nix` / `module-nix-on-droid.nix` — the
-  `services.jotain.spell.dictionaries` option and the hardcoded `aspellDicts.en`
-  are no-ops for actual spell-checking (jinx reads `jinx-languages`, not the
-  profile dicts; see journal/2026-07-23.md). Build an `aspellWithDicts` from
-  the option and export `ASPELL_CONF` in the module wrappers, replacing the
-  profile install.
+- `module.nix` / `module-system.nix` / `module-nix-on-droid.nix`: the
+  `services.jotain.spell.dictionaries` option and the hardcoded
+  `aspellDicts.en` do nothing for spell-checking. libaspell's `NIX_PROFILES`
+  patch only feeds dictionary enumeration, and the distribution wrapper's
+  default `ASPELL_CONF` points at its own bundled en/fi/de/fr set
+  (`nix/mk-overlay.nix`; see journal/2026-07-23.md). Build an
+  `aspellWithDicts` from the option and export `ASPELL_CONF` in the module
+  wrappers, replacing the profile install.

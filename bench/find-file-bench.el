@@ -2,24 +2,25 @@
 
 ;;; Commentary:
 
-;; Measures the cost of opening files after the full Jotain config is loaded.
-;; Instruments `find-file', hook variables, and known-expensive global minor
-;; mode functions to produce a per-file and per-hook timing breakdown.
+;; Measures the cost of opening files with the full config loaded.  Times
+;; hook functions and known-expensive mode functions for a per-file and
+;; per-hook breakdown.
 ;;
-;; Invoked by bench/init.el when JOTAIN_BENCH_OPEN_OUTPUT is set.
+;; Loaded by bench/init.el when JOTAIN_BENCH_OPEN_OUTPUT is set.  No
+;; Justfile recipe sets it; export it by hand.
 
 ;;; Code:
 
 (require 'cl-lib)
 (require 'seq)
 
-;; Defined in bench/early-init.el; declare to silence byte-compiler.
+;; Defined in bench/early-init.el.
 (defvar jotain-bench--real-dir)
 
 ;;;; State
 
 (defvar jotain-bench-open--per-file nil
-  "List of (FILE-NAME MODE TOTAL-SECS MINOR-MODES HOOK-TIMINGS).")
+  "List of (FILE-NAME DESC MODE SECS MINOR-COUNT HOOK-TIMINGS).")
 
 (defvar jotain-bench-open--hook-accum nil
   "Alist of (FUNC-NAME . (CALLS TOTAL-SECS)).")
@@ -57,7 +58,6 @@
   (when (boundp hook-var)
     (let ((fns (symbol-value hook-var)))
       (when (and fns (not (functionp fns)))
-        ;; It's a list of functions
         (dolist (fn fns)
           (when (and (symbolp fn) (fboundp fn)
                      (not (memq fn jotain-bench-open--advised)))
@@ -177,8 +177,7 @@
 ;;;; Main benchmark runner
 
 (defun jotain-bench-open--run ()
-  "Open test files, collect timings, write report, then exit."
-  ;; Instrument hook variables
+  "Open the test files, collect timings, and write the report."
   (dolist (hook '(find-file-hook
                   after-change-major-mode-hook
                   prog-mode-hook
@@ -189,11 +188,9 @@
                   emacs-lisp-mode-hook))
     (jotain-bench-open--instrument-hook-var hook))
 
-  ;; Instrument known-expensive functions
   (dolist (fn jotain-bench-open--target-functions)
     (jotain-bench-open--instrument-function fn))
 
-  ;; Open each test file and measure.
   (let ((files (jotain-bench-open--test-files)))
     (dolist (entry files)
       (let* ((file (car entry))
@@ -216,13 +213,9 @@
                   jotain-bench-open--per-file)))
         (kill-buffer buf))))
 
-  ;; Reverse to get insertion order
   (setq jotain-bench-open--per-file (nreverse jotain-bench-open--per-file))
 
-  ;; Write report
   (jotain-bench-open--write-report)
-
-  ;; Cleanup
   (jotain-bench-open--cleanup))
 
 ;;;; Report writer
@@ -234,7 +227,6 @@
          (total-time (apply #'+ (mapcar (lambda (r) (nth 3 r)) results)))
          (file-count (length results))
          (avg-time (if (> file-count 0) (/ total-time file-count) 0))
-         ;; Sort hook accum by total time descending
          (sorted-hooks (sort (copy-sequence jotain-bench-open--hook-accum)
                              (lambda (a b) (> (nth 2 a) (nth 2 b))))))
     (when outfile

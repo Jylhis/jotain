@@ -3,8 +3,7 @@
 ;;; Commentary:
 
 ;; Buffer-level editing behaviour: pair insertion, region selection,
-;; whitespace handling, undo. Things you'd expect any modern editor to
-;; do without thinking about it.
+;; whitespace handling, undo, auto-save.
 
 ;;; Code:
 
@@ -13,18 +12,17 @@
   :ensure nil
   :config (electric-pair-mode 1))
 
-;;; @doc When a region is active, typing replaces it instead of leaving
-;;; the selection alone. Built-in, on by default in most modern
-;;; editors — Emacs needs this opt-in.
+;;; @doc Typing replaces the active region, as in most editors.
+;;; Built-in.
 (use-package delsel
   :ensure nil
   :config (delete-selection-mode 1))
 
-;;; @doc Two small built-in editing knobs. `kill-region-dwim' makes C-w
-;;; with no active region kill a word backwards instead of erroring;
-;;; `delete-pair-push-mark' leaves a mark on the former pair contents so
-;;; C-x C-x re-selects them. Both are Emacs 31+, guarded so the config
-;;; loads on Emacs 30.
+;;; @doc Small built-in editing knobs. The shell-command prompt shows
+;;; the working directory. On Emacs 31+, `kill-region-dwim' makes C-w
+;;; with no active region kill the previous word instead of erroring,
+;;; and `delete-pair-push-mark' leaves a mark on the former pair
+;;; contents so C-x C-x re-selects them.
 (use-package simple
   :ensure nil
   :custom
@@ -35,16 +33,15 @@
   (when (boundp 'delete-pair-push-mark)
     (setopt delete-pair-push-mark t)))
 
-;; Indent with spaces by default. `.editorconfig' and dtrt-indent (both
-;; in init-prog.el) still override per file/project, and modes that
-;; require tabs (makefile-mode, go-ts-mode) set it themselves — this only
-;; changes the fallback when nothing else has an opinion.
+;; Spaces by default.  editorconfig and dtrt-indent (init-prog.el) still
+;; override per project/file, and tab-requiring modes (makefile-mode,
+;; go-ts-mode) set it themselves.
 (setopt indent-tabs-mode nil)
 
 ;;; @doc Strip trailing whitespace and stray tabs on save without
 ;;; reformatting the rest of the buffer. Built-in. Skipped during
-;;; super-save's automatic saves so its except-current-line
-;;; handling keeps whitespace at point intact.
+;;; super-save's automatic saves, which keep whitespace on the current
+;;; line.
 (use-package whitespace
   :ensure nil
   :preface
@@ -56,28 +53,19 @@
   :custom
   (whitespace-style '(face trailing tabs tab-mark)))
 
-;;; @doc Treats CamelCase / snake_case word parts as separate words for
-;;; M-f / M-b / M-d. Built-in. Programming-mode only — prose still
-;;; gets whole-word motion.
+;;; @doc Treats CamelCase word parts as separate words for M-f / M-b /
+;;; M-d. Built-in; programming modes only.
 (use-package subword
   :ensure nil
   :hook ((prog-mode . subword-mode)))
 
 ;;; @doc Defaults for the built-in comment commands (M-;, C-x C-;, M-j).
-;;; `comment-multi-line' makes M-j continue inside an open block
-;;; comment instead of closing/reopening; `extra-line' style puts
-;;; opening and closing delimiters on their own lines for
-;;; `comment-region'; `comment-empty-lines' makes `comment-region'
-;;; treat blank lines the same as content lines;
-;;; `comment-auto-fill-only-comments' keeps automatic line wrapping
-;;; (when `auto-fill-mode' is on) confined to comments. C-c ; is an
-;;; ergonomic alias for `comment-line' — C-; is taken by embark-dwim.
-;;; Deliberate tradeoff: org-mode shadows C-c ; with `org-toggle-comment',
-;;; which is the org equivalent anyway.
-;;; Per-mode overrides go in the language module via a named hook:
-;;;   (defun my-foo-mode-setup ()
-;;;     (setq-local comment-multi-line nil))
-;;;   (add-hook 'foo-mode-hook #'my-foo-mode-setup)
+;;; M-j continues an open block comment instead of closing and
+;;; reopening it; `comment-region' puts the delimiters on their own lines
+;;; and comments blank lines too; auto-fill wraps only comments. C-c ; is
+;;; an alias for `comment-line' (C-; is embark-dwim); in Org it is
+;;; `org-toggle-comment'. Override per mode with a named hook in the
+;;; language module that sets these with `setq-local'.
 (use-package newcomment
   :ensure nil
   :bind ("C-c ;" . comment-line)
@@ -87,32 +75,25 @@
   (comment-empty-lines t)
   (comment-auto-fill-only-comments t))
 
-;;; @doc Bindings for the two transpose commands Emacs ships without
-;;; defaults, so the prose-level family (sentence, paragraph) is
-;;; reachable alongside the built-in C-t (chars), M-t (words),
-;;; C-x C-t (lines), and C-M-t (sexps, tree-sitter aware in Emacs
-;;; 30+). Caveat: transpose-lines works on real newlines, so it
-;;; gives surprising results under visual-line-mode where wrapped
-;;; "lines" are visual only.
+;;; @doc Bindings for the two transpose commands Emacs ships unbound:
+;;; sentences (C-x M-t) and paragraphs (C-x C-M-t), next to the stock
+;;; C-t, M-t, C-x C-t and C-M-t.
 (use-package emacs
   :ensure nil
   :bind
   (("C-x M-t"   . transpose-sentences)
    ("C-x C-M-t" . transpose-paragraphs)))
 
-;;; @doc Emacs 30 ships `replace-regexp-as-diff' and
-;;; `multi-file-replace-regexp-as-diff' — run a regex replacement, but
-;;; see the result as a unified diff first and either apply it as a
-;;; patch or abort. Worth reaching for on any non-trivial refactor.
-;;; The dired-marked variant is bound in `init-navigation.el'.
+;;; @doc Regex replacement previewed as a unified diff (Emacs 30), which
+;;; you then apply as a patch or discard: `M-s R` in the buffer, `M-s M-R`
+;;; across files. The dired variant is bound in `init-navigation.el`.
 (use-package replace
   :ensure nil
   :bind (("M-s R"   . replace-regexp-as-diff)
          ("M-s M-R" . multi-file-replace-regexp-as-diff)))
 
-;;; @doc Treesit-aware semantic region expansion. Smaller, faster
-;;; successor to expand-region; produces better expansions with
-;;; much less code now that treesit is everywhere.
+;;; @doc Semantic, tree-sitter-aware region expansion on C-=, a
+;;; smaller successor to expand-region.
 (use-package expreg
   :bind ("C-=" . expreg-expand))
 
@@ -124,17 +105,15 @@
    ("C-<"         . mc/mark-previous-like-this)
    ("C-S-c C-S-c" . mc/mark-all-like-this)))
 
-;;; @doc Visual undo tree on C-x u. Stateless — no .undo-tree side files
-;;; cluttering the filesystem like undo-tree.el used to leave
-;;; behind.
+;;; @doc Visual undo tree on C-x u, built on the native undo list (no
+;;; side files).
 (use-package vundo
   :bind ("C-x u" . vundo)
   :custom (vundo-glyph-alist vundo-unicode-symbols))
 
-;;; @doc Auto-saves buffers when idle and on focus loss, writing the
-;;; actual file rather than #foo# auto-save side files. Also strips
-;;; trailing whitespace except on the current line so you don't
-;;; fight your own cursor.
+;;; @doc Saves file buffers automatically (when idle, on buffer switch
+;;; and on focus loss), writing the real file. Local files only. Strips
+;;; trailing whitespace except on the current line.
 (use-package super-save
   :hook (after-init . super-save-mode)
   :custom
@@ -143,22 +122,17 @@
   (super-save-silent t)
   (super-save-delete-trailing-whitespace 'except-current-line))
 
-;;; @doc Make `M-x re-builder' use string syntax — the same form you'd
-;;; paste into `re-search-forward' — instead of the default `read'
-;;; syntax that requires escaping every backslash twice.
+;;; @doc `M-x re-builder' uses `string' syntax (the form of a regexp typed
+;;; interactively) instead of `read' syntax with doubled backslashes.
 (use-package re-builder
   :ensure nil
-  ;; On-demand (M-x re-builder); autoloaded, so keep it off the startup path.
   :defer t
   :custom (reb-re-syntax 'string))
 
 ;;; @doc Counts command invocations to disk; `M-x keyfreq-show` ranks
 ;;; the busiest commands so you can spot rebinding opportunities.
-;;; Tiny, no daemon, no network.
 (use-package keyfreq
   :functions (keyfreq-mode keyfreq-autosave-mode)
-  ;; Deferred to `after-init': command counting has no value during
-  ;; startup itself, so keep keyfreq off the module-load path.
   :hook (after-init . keyfreq-mode)
   :custom
   (keyfreq-file (jotain-var-file "keyfreq.el"))

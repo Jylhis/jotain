@@ -2,18 +2,13 @@
 
 ;;; Commentary:
 
-;; Batch-safe ERT tests for `jotain-lang-registry' (etc/lang-eval/), the
-;; declarative per-language feature standard that the Tier-1/Tier-2 probes read.
+;; Drift guard for `jotain-lang-registry' (etc/lang-eval/).  The tests do
+;; not boot the config: they read init-prog.el, init-lang-*.el and
+;; templates/jotain.eld as text and check the registry agrees with them.
+;; Actual mode routing and eglot resolution are checked by the Tier-1
+;; probe (`nix build .#lang-eval-matrix').
 ;;
-;; These tests deliberately do NOT boot the config.  Like test-ui.el and
-;; test-org-babel.el, they read configuration files as *text/data* and assert
-;; the registry stays consistent with them, so a registry entry that drifts from
-;; the live wiring in init-prog.el / init-lang-*.el fails here — the same
-;; anti-staleness role `packages-doc-in-sync' plays for the package reference.
-;; The live-config side (actual mode routing, eglot resolution) is exercised by
-;; the Tier-1 probe when its Nix derivation is built.
-;;
-;; No network, no subprocess, no writes -- safe inside the Nix sandbox.
+;; No network, subprocess, or writes, so safe in the Nix sandbox.
 ;;
 ;; Run with:
 ;;   emacs --batch -L lisp -L test -l ert -l test/lang-eval-test.el \
@@ -25,8 +20,7 @@
 (require 'seq)
 (require 'subr-x)
 
-;; The registry lives outside lisp/ (etc/lang-eval/), so put it on load-path
-;; before requiring it, anchored on init.el like the other tests locate files.
+;; The registry lives outside lisp/, so add etc/lang-eval/ to load-path.
 (defconst lang-eval-test--root
   (locate-dominating-file
    (or load-file-name buffer-file-name default-directory) "init.el")
