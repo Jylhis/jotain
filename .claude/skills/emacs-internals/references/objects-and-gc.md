@@ -86,9 +86,10 @@ collector (see end) changes most of it.
   section — which is exactly what this repo does: `early-init.el` sets it to
   `most-positive-fixnum` (and `gc-cons-percentage` 0.6) during startup;
   `lisp/init-core.el` restores 16 MiB / 0.1 on `emacs-startup-hook`, pauses
-  GC for the duration of minibuffer sessions, and runs an idle GC. Calling
-  `garbage-collect` explicitly just before a latency-critical section
-  guarantees no GC inside it (if it conses less than the threshold).
+  GC for the duration of minibuffer sessions, and runs an idle
+  `garbage-collect-maybe`. Calling `garbage-collect` explicitly just before
+  a latency-critical section guarantees no GC inside it (if it conses less
+  than the threshold).
 - `garbage-collect-maybe FACTOR` (28+) collects only when more than
   1/FACTOR of the threshold has been consed since the last GC: the cheaper
   choice for idle-timer GCs than an unconditional `garbage-collect`.
