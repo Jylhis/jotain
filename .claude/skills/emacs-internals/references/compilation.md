@@ -98,8 +98,8 @@ libgccjit IR → GCC optimizer → .eln shared object`
   `silent` (log only), nil (drop). 30 added
   `native-comp-async-warnings-errors-kind` (default `important`: errors and
   important warnings only), and NEWS.30 recommends leaving reporting on
-  now that the noise is filtered. This repo sets it to nil in
-  `early-init.el`.
+  now that the noise is filtered. This repo leaves it at the
+  default.
 - `native-comp-async-jobs-number` (0 = half the CPUs; this repo caps it at
   3). Log buffers: `*Async-native-compile-log*`, `*Native-compile-Log*`.
   `native-comp-async-query-on-exit` (default nil) asks before killing
