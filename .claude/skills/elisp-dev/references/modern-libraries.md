@@ -1,7 +1,7 @@
 # Modern Emacs Lisp libraries and idioms
 
 Source: GNU Elisp Reference Manual, `seq.el`/`map.el`/`cl-lib`/`rx`/`pcase`
-nodes, NEWS.30/NEWS.31. Prefer these over hand-rolled list surgery; they are
+nodes, NEWS.30 and the 31.1 NEWS. Prefer these over hand-rolled list surgery; they are
 built in on Emacs 30/31.
 
 ## pcase
@@ -48,8 +48,11 @@ extensible via `cl-defgeneric`. Rule of thumb: `dolist` for side effects,
   `cl-incf`/`cl-decf`/`push`/`pop`/`cl-callf`/`cl-rotatef` on places;
   `gv-define-setter` for new ones. `(setf (alist-get k a) v)` (with
   `:remove` for deletion) is the idiomatic alist updater.
-- Emacs 31 promotes `incf`/`decf`/`plusp`/`minusp`/`oddp`/`evenp` to core
-  (un-prefixed).
+- Emacs 31 promotes `incf`/`decf`/`plusp`/`minusp`/`oddp`/`evenp`/
+  `member-if` to core (un-prefixed). The `cl-` names become deprecated
+  aliases (`cl-member-if` and `cl-gensym` are already obsolete; use
+  `gensym`). With a 30.1 floor the unprefixed forms break on 30, so keep
+  `cl-incf` etc. or gate on 31.
 
 ## rx (structured regexps)
 
@@ -58,8 +61,10 @@ extensible via `cl-defgeneric`. Rule of thumb: `dolist` for side effects,
 set) `not` `syntax` `bol`/`eol`/`bos`/`eos` `word-boundary` `literal`
 `regexp` `eval`; `rx-define`/`rx-let` for reusable components; also usable as
 a pcase pattern with group bindings. Use it for any nontrivial regexp;
-`relint` checks hand-written ones. (Emacs 31 obsoletes the `any` *atom* for
-"."; use `anychar`.)
+`relint` checks hand-written ones. (Emacs 31 obsoletes the bare `any` *atom*,
+an alias of `not-newline`: write `nonl` for ".", or `anychar` to match
+newline too. The `(any …)` set form is fine. 31 also makes the `eval` form
+use the current Lisp dialect.)
 
 ## Binding, threading, and control-flow macros
 
@@ -83,10 +88,12 @@ a pcase pattern with group bindings. Use it for any nontrivial regexp;
   `string-search` `string-replace` (prefer over
   `replace-regexp-in-string` for literal replacement) `string-chop-newline`.
 - **`defvar-keymap`** + `keymap-set`/`keymap-global-set`/`keymap-lookup`
-  (Emacs 29) replace `define-key`/`kbd`. `defvar-keymap` takes `:repeat`;
-  Emacs 31 adds `:prefix`/`:continue`.
+  (Emacs 29) replace `define-key`/`kbd`. `defvar-keymap` takes `:repeat`
+  and `:prefix SYMBOL` (29); Emacs 31 adds the `:prefix t` shorthand and
+  `:continue` (commands that keep a repeat map active).
 - Emacs 30 extended `sort` with `:key`/`:lessp`/`:reverse`/`:in-place`, and
-  added `value<`, `merge-ordered-lists`, `take`/`ntake`, `drop`.
+  added `value<`, `merge-ordered-lists`, `drop`; `take`/`ntake` are 29.
+- `let-alist` (31) indexes into lists: `.items.0`.
 
 ## Performance idioms (measure first)
 

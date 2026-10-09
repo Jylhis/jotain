@@ -7,8 +7,10 @@ manual, this repo's workflow (`just test`, every `test/*.el`).
 
 - **`M-x toggle-debug-on-error`** / `(setq debug-on-error t)` — enter the
   backtrace debugger on any error. `just run-built-debug` starts Emacs
-  with `--debug-init` and `debug-on-error` for startup problems
-  (`just debug` is a disabled stub — no Emacs in the dev shell).
+  with `--debug-init` and `debug-on-error` for startup problems;
+  `just run-built-debug-log` also mirrors messages, warnings, and
+  backtraces into `var/debug/<timestamp>/` (`M-x jotain-debug-dump-now`).
+  There is no Emacs in the dev shell, so these build one via Nix first.
 - `debug-on-entry` / `cancel-debug-on-entry` — break on entry to a function.
   `debug-on-variable-change` (add-variable-watcher) — break when a variable
   changes. `debug-on-signal` — catch even handled signals.
@@ -28,9 +30,10 @@ manual, this repo's workflow (`just test`, every `test/*.el`).
   fontification hotspots (look for `redisplay_internal`, `jit-lock`,
   font-lock functions).
 - `benchmark-run` / `benchmark-progn` for microbenchmarks;
-  `M-x emacs-init-time` for startup cost. (This repo's `just bench` —
-  `require` wrapped with timing advice via `bench/early-init.el` — is
-  currently a disabled stub; the wrapper files remain in `bench/`.)
+  `M-x emacs-init-time` for startup cost. This repo's `just bench-built`
+  builds the distribution and runs it against `bench/`, whose
+  `early-init.el` wraps `require` with timing advice (needs a display;
+  prefix `xvfb-run` headless).
 - `M-x memory-report` for a heap overview; `garbage-collect` and
   `gc-elapsed`/`gcs-done` for GC pressure (see the internals skill's
   `objects-and-gc.md`).
@@ -45,14 +48,20 @@ manual, this repo's workflow (`just test`, every `test/*.el`).
   `(should-error FORM :type 'error-symbol)`. `should` records and *explains*
   its argument form on failure, so prefer `(should (equal actual expected))`
   over an opaque boolean — the explainer diffs the two.
-- `skip-unless` for conditional skips; `:tags` for grouping;
+- `skip-unless` / `skip-when` (30) for conditional skips; `:tags` for grouping;
   `:expected-result :failed` for known failures; `ert-info` adds context.
 - **Environment hygiene**: each test must restore prior global state. Use
   `with-temp-buffer` for buffer work, `save-window-excursion` for windows,
   `let` for options (they're dynamic/special, so `let` restores them),
   `cl-letf` to stub functions
   (`(cl-letf (((symbol-function 'y-or-n-p) (lambda (&rest _) t))) …)`),
-  `unwind-protect` for temp files/processes.
+  `unwind-protect` for processes.
+  - Temp files/dirs: `ert-with-temp-file` / `ert-with-temp-directory`
+    (`(require 'ert-x)`) create and always delete them; prefer these to a
+    hand-rolled `unwind-protect`. `ert-with-test-buffer`,
+    `ert-with-buffer-selected` and `ert-with-buffer-renamed` live in `ert`
+    as of 31 (`ert-x` on 30); `ert-play-keys` (31, `ert-x`) drives
+    keyboard input; `ert-font-lock` (30) asserts faces.
   - Note: `cl-letf` on a **primitive** (subr) may not take effect under
     native compilation unless a trampoline exists — see the internals
     skill's `compilation.md`. Stub Lisp-level functions where possible.
