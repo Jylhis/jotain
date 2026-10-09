@@ -2,7 +2,8 @@
 #
 # Adds:
 #   jotainEmacs              — bare Emacs binary (unstable variant, the
-#                              Emacs 31.1 release branch; see nix/mk-overlay.nix)
+#                              newest Emacs release tag, currently 31.1;
+#                              see nix/mk-overlay.nix)
 #   jotainEmacsNoGui         — terminal-only (noGui) twin of jotainEmacs
 #   jotainInfo               — Jotain manual (share/info/jotain.info + dir)
 #   jotainEmacsPackages      — full distribution using jotainEmacs
