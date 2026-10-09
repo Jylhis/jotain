@@ -1,6 +1,6 @@
 # The redisplay engine
 
-Sources: GNU Elisp Reference Manual (Emacs 30.2) Display chapter and the
+Sources: GNU Elisp Reference Manual (Emacs 31.1) Display chapter and the
 design commentary at the top of `src/xdisp.c`.
 
 ## Architecture
@@ -39,9 +39,10 @@ design commentary at the top of `src/xdisp.c`.
   expensive.
 - Bidi reordering (`bidi.c`) happens inside `set_iterator_to_next`; R2L
   rows get glyphs prepended and are drawn left-to-right by back-ends.
-  Disabling bidi in pure-ASCII buffers (as this repo's `early-init.el`
-  does via `bidi-paragraph-direction 'left-to-right` and
-  `bidi-inhibit-bpa`) skips reordering and the bracket-pairing algorithm.
+  This repo's `early-init.el` sets `bidi-display-reordering` nil (which
+  skips reordering), `bidi-paragraph-direction` `left-to-right` (skips
+  paragraph-direction detection), and `bidi-inhibit-bpa` t (skips the
+  bracket-pairing algorithm).
 
 ## Optimization ladder (tried in order per window)
 
@@ -76,21 +77,29 @@ design commentary at the top of `src/xdisp.c`.
 - Contract: given POS, fontify from POS (recommended chunk ~400–600 chars),
   set `fontified` non-nil over what you covered. Text never displayed is
   never fontified — fontification is lazy and display-driven.
-- Under long-line optimizations (Emacs 29+), fontification functions run
-  narrowed around POS (`long-line-optimizations-in-fontification-functions`).
+- Under long-line optimizations (Emacs 29+; lines longer than
+  `long-line-threshold`, 50000), fontification functions run inside a
+  `with-restriction` labeled
+  `long-line-optimizations-in-fontification-functions` (a label, not a
+  variable), narrowed to `long-line-optimizations-region-size` (500000) around
+  POS. Escape with `without-restriction :label`.
 
 ## Forcing and observing redisplay
 
-- `(redisplay)` attempts immediate redisplay; `(redisplay t)` prevents
-  preemption by pending input; return t only means "attempted".
-  `(sit-for 0)` ≡ `(redisplay)`.
+- `(redisplay)` redisplays now. In 31 the FORCE arg is ignored (the
+  manual node still describes it); the value is t if redisplay ran, nil
+  only while executing a keyboard macro. `(sit-for 0)` is *not*
+  equivalent: with input pending it returns nil without redisplaying.
 - `force-window-update OBJECT` marks window(s) for the *next* redisplay.
   `redraw-frame` / `redraw-display` clear and redraw.
-- Hooks: `pre-redisplay-function` / `pre-redisplay-functions` (per-window,
-  buffer current). `post-command-hook` runs *before* the command loop's
-  redisplay, not after.
-- Redisplay is preempted by pending input — a busy loop that never reads
-  input starves display updates; use `(redisplay t)` or `sit-for` inside.
+- Hooks: `pre-redisplay-function` (receives the window set: nil = selected
+  window, t = all) / `pre-redisplay-functions` (per window, buffer current;
+  default `(redisplay--update-region-highlight)`). `post-command-hook` runs
+  *before* the command loop's redisplay, not after.
+- Redisplay itself is no longer preempted mid-way (since 24.5;
+  `redisplay-dont-pause` was removed in 31), but the command loop and
+  `sit-for` *skip* it while input is pending. A busy loop never returns to
+  the command loop, so it starves display: call `(redisplay)` inside.
 - Mode lines: `force-mode-line-update`, and `:eval` forms in
   `mode-line-format` run during redisplay — keep them cheap and
   side-effect-free; they can run asynchronously relative to command
@@ -100,9 +109,14 @@ design commentary at the top of `src/xdisp.c`.
 
 - `message` logs to `*Messages*` (respecting `message-log-max`) and
   displays in the echo area; `inhibit-message` suppresses display but
-  keeps logging. Always `(message "%s" str)` for literal strings.
-  `set-message-functions` pipeline (`set-minibuffer-message`,
-  `inhibit-message`, `set-multi-message`) routes messages.
+  keeps logging; in 31 it also suppresses *clearing* the echo area (e.g.
+  `(message nil)`). Always `(message "%s" str)` for literal strings.
+  `set-message-functions` (default `(set-minibuffer-message)`) routes
+  messages; the *function* `inhibit-message` in that list filters by
+  `inhibit-message-regexps`, and `set-multi-message` accumulates.
+- 31: `minibuffer-message` no longer blocks (it uses a timer), and
+  `make-progress-reporter` CONTEXT `async` skips updates while the echo
+  area is busy.
 
 ## Overlays vs text properties for display (cost model)
 
@@ -117,8 +131,11 @@ design commentary at the top of `src/xdisp.c`.
 
 ## Debugging redisplay
 
-- `M-x trace-redisplay` (in builds with `--enable-checking=glyphs`),
-  `dump-glyph-matrix`. Practically: bisect with `redisplay-skip-fontification-on-input`, `jit-lock-defer-time`,
+- `trace-redisplay` and `dump-glyph-matrix` exist only in `GLYPH_DEBUG`
+  builds (`--enable-checking=glyphs`), so not in this repo's Nix builds.
+  Practically: bisect with `redisplay-skip-fontification-on-input`
+  (default nil; t skips fontification when input is pending at command
+  start, pairs with `fast-but-imprecise-scrolling`), `jit-lock-defer-time`,
   and check `(elp-instrument-package "font-lock")` or the `profiler` for
   fontification hotspots; suspect mode-line `:eval`s and per-window hooks
   first for "constant CPU while idle".

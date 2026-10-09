@@ -1,7 +1,7 @@
 # The command loop, keymaps, and quitting
 
-Sources: GNU Elisp Reference Manual (Emacs 30.2), Command Loop and Keymaps
-chapters; `src/keyboard.c`.
+Sources: GNU Elisp Reference Manual (Emacs 31.1), Command Loop and Keymaps
+chapters, Key Binding Conventions (D.2); `src/keyboard.c`.
 
 ## One iteration of the command loop
 
@@ -13,9 +13,13 @@ chapters; `src/keyboard.c`.
    evaluated to produce arguments (`interactive` string codes or a Lisp
    form), then the command body runs.
 3. Around execution: `pre-command-hook` (before), `post-command-hook`
-   (after — runs *before* redisplay). Errors in these hooks no longer
-   remove the offending function (they used to); they're reported and
-   execution continues, but treat both hooks as ultra-hot paths.
+   (after, and also after commands aborted by quit or error; runs
+   *before* redisplay). Quitting is inhibited in both. An error is
+   silenced and the **offending function is removed from the hook**, so a
+   buggy hook function silently stops running. Under long lines both run
+   inside a `with-restriction` labeled
+   `long-line-optimizations-in-command-hooks`. Treat both as ultra-hot
+   paths.
 4. After the command: point adjustment (moving point out of invisible text
    / composed sequences, unless `disable-point-adjustment`), then redisplay
    if no input is pending.
@@ -32,17 +36,26 @@ chapters; `src/keyboard.c`.
   `M--` = `-`.
 - Special events (`special-event-map`: focus, delete-frame, sigusr…) are
   dispatched inside `read-event` itself, invisibly to the sequence reader —
-  the event appears only in `last-input-event`.
+  the event appears only in `last-input-event`. 31 adds
+  `insert-special-event` (queue one; only types bound in
+  `special-event-map` are accepted) and a `sleep-event` type.
 
 ### Writing commands
 
 - `(interactive SPEC &rest MODES)` — string codes (`"p"`, `"P"`, `"r"`,
-  `"sPrompt"`, `"e"`…) or any Lisp form returning the arg list. The MODES
-  tail (Emacs 28+) declares which modes the command applies to and powers
-  `M-X` and command completion predicates.
-- A command is any `commandp` object: interactive-declared function,
-  keyboard macro, or `(declare (interactive-only …))`-free callable.
-  Commands intended only for Lisp use should declare `interactive-only`.
+  `"sPrompt"`, `"e"`…) or any Lisp form returning the arg list. 31 adds
+  `"R"`: like `"r"` but nil nil when the region is inactive
+  (`use-region-beginning`/`-end`). The MODES tail (Emacs 28+, or
+  `(declare (modes …))`) declares which modes the command applies to.
+  `M-X` (`execute-extended-command-for-buffer`) always filters by it;
+  plain `M-x` only when `read-extended-command-predicate` is set (default
+  nil).
+- A command is any `commandp` object: a function with an `interactive`
+  form (in the body or via the `interactive-form` property), a
+  string/vector keyboard macro, or an autoload with INTERACTIVE non-nil.
+- `(declare (interactive-only ALT))` marks a command meant *only* for
+  interactive use; the byte compiler warns when Lisp calls it. ALT is t, a
+  string (warning text), or the replacement function symbol.
 
 ## Keymaps
 
@@ -59,7 +72,8 @@ chapters; `src/keyboard.c`.
 
 1. `overriding-terminal-local-map` (used by transient maps —
    `set-transient-map`)
-2. `overriding-local-map`
+2. `overriding-local-map`: when non-nil it **replaces** items 3–7, not
+   just precedes them; the global map is still searched.
 3. `keymap` **text/overlay property at point** (at the position clicked for
    mouse events)
 4. `emulation-mode-map-alists` (e.g. evil, viper)
@@ -70,8 +84,11 @@ chapters; `src/keyboard.c`.
    minor-mode maps, unlike the `keymap` property which sits above)
 8. `global-map`
 
-`current-active-maps` and `(key-binding KEY)` resolve exactly this order —
-use them when debugging "why does this key do X here".
+`(key-binding KEY)` resolves exactly this order; `current-active-maps`
+does too, but ignores the overriding maps unless OLP is non-nil (optional
+POSITION for mouse/position lookup). Use them when debugging "why does
+this key do X here". 31: `defvar-keymap :prefix t` names the prefix
+command after the map.
 
 ### Remapping and translation
 
@@ -89,9 +106,14 @@ use them when debugging "why does this key do X here".
 
 ### Key-binding conventions (for config code)
 
-- `C-c LETTER` is reserved for users; `C-c C-LETTER` and `C-c DIGIT`/
-  `C-c {}<>:;` for major modes; `F5`–`F9` for users. Don't bind `C-h`,
-  `C-g`, or `ESC ESC ESC`.
+- `C-c LETTER` (either case) and `F5`–`F9` are reserved for users; this
+  repo is a personal config, so it *is* the user and may bind them.
+  `C-c` + control char or digit, and `C-c {`/`}`/`<`/`>`/`:`/`;`, are for
+  major modes; other `C-c` punctuation for minor modes.
+- Don't bind `C-h` after a prefix (it lists the prefix's bindings), or
+  sequences ending in `C-g` or in `ESC` (except `ESC ESC`). Temporary
+  modal states *should* bind `ESC ESC ESC` (or `ESC ESC`) as their way
+  out.
 
 ## Reading input programmatically
 
@@ -105,7 +127,8 @@ use them when debugging "why does this key do X here".
 ## Quitting
 
 - `C-g` sets `quit-flag`; the flag is checked only at safe points
-  (`maybe_quit` in C, between byte-codes in Lisp), then signals `quit` to
+  (`maybe_quit` in C; at backward jumps and calls in bytecode; loop
+  latches in native code below speed 3), then signals `quit` to
   the innermost command loop. While *waiting for input*, `C-g` is instead
   an ordinary event bound to `keyboard-quit`.
 - `inhibit-quit` non-nil defers quits; when the binding unwinds with
@@ -115,6 +138,8 @@ use them when debugging "why does this key do X here".
   with `inhibit-quit` bound).
 - `minibuffer-quit` signals quit without aborting keyboard-macro
   definition/execution.
+- 31, batch: `C-c` (SIGINT) signals `quit` instead of killing Emacs when
+  `kill-emacs-on-sigint` is nil (default t).
 
 ## Recursive editing
 

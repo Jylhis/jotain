@@ -8,7 +8,8 @@ override where they conflict.
 
 - **Every global symbol** (function, variable, face, constant) starts with
   the library prefix: `foo-thing`, never bare `thing`. In this repo the
-  prefix is the module concern (`init-...`) for module-internal helpers.
+  prefix is `jotain-<concern>-` (`jotain-core--gc-restore`,
+  `jotain-prog-ts-remaps`); `lisp/devenv.el` uses its own `devenv-`.
 - **Private symbols use a double hyphen**: `foo--internal` — not public API,
   may change without notice. Reach for it liberally for helpers.
 - Predicates: single word ends in `p` (`stringp`), multi-word ends in `-p`
@@ -18,7 +19,8 @@ override where they conflict.
 - A single function value → `-function`; a list of functions (abnormal
   hook) → `-functions`; a normal hook → `-hook`; one predicate function →
   `-predicate`.
-- Face names must **not** end in `-face` (checkdoc-enforced).
+- Face names must **not** end in `-face` (a manual convention that
+  package-lint flags; checkdoc doesn't check it).
 - Prefer `file`/`file-name`/`directory` over `path` in names — GNU reserves
   "path" for search paths (`load-path`, `exec-path`).
 - Prefix unused lexical args with `_` to silence the byte-compiler:
@@ -40,11 +42,15 @@ then copyright/license, then `;; Header: value` lines (`Author:`,
 `Maintainer:`, `Version:`, `Package-Requires:` as
 `((emacs "30.1") (compat "30.1"))`, `Keywords:` from `finder-known-keywords`
 only, `URL:`), then `;;; Commentary:`, `;;; Code:`, the code, `(provide
-'foo)`, and the mandatory footer `;;; foo.el ends here`.
+'foo)`, and the footer `;;; foo.el ends here` (31: checkdoc and package.el
+no longer require it when `Package-Requires` says emacs ≥ 30.1, but keep
+it for older consumers).
 
-This repo's `lisp/init-*.el` modules follow the abbreviated house form: the
-`-*- lexical-binding: t; -*-` cookie on line 1 and `(provide 'init-<concern>)`
-at the end — that is the required shape, don't add full FSF headers to them.
+This repo's `lisp/init-*.el` modules follow the abbreviated house form, which
+every module shares: line 1 `;;; init-<concern>.el --- Summary -*-
+lexical-binding: t; -*-`, then `;;; Commentary:`, `;;; Code:`, the code,
+`(provide 'init-<concern>)`, and `;;; init-<concern>.el ends here`. No
+copyright/license or `Author:`/`Version:` headers; don't add them.
 
 ## Autoload cookies (`;;;###autoload`)
 
@@ -84,9 +90,10 @@ at the end — that is the required shape, don't add full FSF headers to them.
 - Key references: `\\[command]` not a hardcoded `C-x`; `\\<map>` /
   `\\{map}` for a mode's own bindings.
 - Never indent continuation lines to align with source; verify with
-  `M-x checkdoc`. Emacs 30 warns on control chars and (separately) overwide
-  docstrings — both are byte-compile warnings, which the `elisp-compile`
-  flake check (run via `just check`) fails on.
+  `M-x checkdoc`. The byte compiler warns on docstring lines wider than
+  `byte-compile-docstring-max-column` (80; since 28, `docstrings-wide`) and,
+  since 30, on control characters (`docstrings-control-chars`). Both fail
+  the `elisp-compile` flake check (run via `just check`).
 
 ## Etiquette that catches config bugs
 

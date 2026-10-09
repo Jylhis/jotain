@@ -15,9 +15,10 @@ for the lowest-impact tool that works.
   - No duplicate adds (`equal` comparison — this is why anonymous lambdas on
     hooks are a problem: an edited lambda leaves the old one behind and
     can't be removed. Use **named functions**).
-  - New functions run **first** by default. If order matters use DEPTH
-    (−100..100, higher = later; legacy `t`/`append` ≈ 90). Never use ±100 —
-    leave room for others.
+  - New functions run **first** by default (depth 0). If order matters use
+    DEPTH (−100..100, higher = later; any non-nil symbol such as legacy
+    `t`/`append` means 90). At equal depth, DEPTH > 0 goes after existing
+    functions, DEPTH ≤ 0 before. Never use ±100; leave room for others.
   - LOCAL non-nil makes it buffer-local and appends `t` (meaning "also run
     the global value").
 - Modify hooks only with `add-hook`/`remove-hook`, never `setq` or `setopt`
@@ -41,12 +42,13 @@ for the lowest-impact tool that works.
 | `:after` | `old` then `fn` | old's |
 | `:override` | replace `old` | fn's |
 | `:around` | `fn` gets `old` as its first arg | fn's |
-| `:before-while` | `(and (fn) (old))` | gated |
-| `:before-until` | `(or (fn) (old))` | short-circuit |
+| `:before-while` | `(and (fn) (old))` | old's, or nil if fn returns nil |
+| `:before-until` | `(or (fn) (old))` | fn's if non-nil, else old's |
 | `:after-while` | `(and (old) (fn))` | fn's |
 | `:after-until` | `(or (old) (fn))` | fn's if old nil |
 | `:filter-args` | `fn` transforms the arg list, then `old` | old's |
 | `:filter-return` | `old` then `fn` transforms its result | fn's |
+| `:interactive-only` (31) | `fn` replaces only the interactive spec | old's |
 
 ### When NOT to advise
 
@@ -56,8 +58,9 @@ for the lowest-impact tool that works.
   hook. Released libraries must not advise other packages' or Emacs's
   functions — request an upstream hook instead.
 - **Never advise primitives**: the advice machinery uses some of them
-  (infinite recursion), and native-code C-to-C calls bypass advice unless a
-  trampoline exists (see the internals `compilation.md`).
+  (infinite recursion); calls from C never see the advice; and
+  natively-compiled Lisp sees it only through a trampoline (see the
+  internals `compilation.md`).
 - `defadvice` is obsolete since Emacs 30 — use `advice-add`/`define-advice`.
 
 ## Mode conventions
@@ -67,9 +70,10 @@ for the lowest-impact tool that works.
   `run-mode-hooks`, and takes `:syntax-table`, `:abbrev-table`,
   `:interactive nil`, `:after-hook`. Parent should be `prog-mode`,
   `text-mode`, `special-mode`, or `fundamental-mode`. Emacs 30:
-  `derived-mode-p` takes a list; `major-mode-remap-alist` /
-  `major-mode-remap-defaults` remap modes (how this repo routes to
-  tree-sitter modes instead of `treesit-auto`).
+  `derived-mode-p` takes a list (the `&rest` form is deprecated);
+  `major-mode-remap-alist` (29) / `major-mode-remap-defaults` (30) remap
+  modes (how this repo routes to tree-sitter modes instead of
+  `treesit-auto`).
 - **`define-minor-mode`** generates the toggle command, the mode variable,
   and the `minor-mode-alist` lighter (lighter starts with a space).
 - Major modes must not set user preferences (don't force Auto Fill); they
@@ -78,8 +82,11 @@ for the lowest-impact tool that works.
   `imenu-generic-expression`, buffer-local `eldoc-documentation-functions`).
 - Use `make-local-variable` in the mode body; **never**
   `make-variable-buffer-local` on another package's variable (it's global).
-- Keybinding reservations: `C-c LETTER` and `F5`–`F9` are the **user's** —
-  never bind them from a mode. `C-c C-<letter>` / `C-c DIGIT` are the mode's.
+- Keybinding reservations: `C-c LETTER` (either case) and `F5`–`F9` are the
+  **user's**, never bound from a mode; this personal config *is* the user,
+  so binding them here is fine. `C-c` + control char or digit and
+  `C-c {`/`}`/`<`/`>`/`:`/`;` are the major mode's; other `C-c`
+  punctuation is for minor modes.
 
 ## Loading
 
@@ -92,8 +99,9 @@ for the lowest-impact tool that works.
   file than expected (shadowed installs).
 - **`with-eval-after-load LIBRARY BODY`** runs BODY after LIBRARY loads (or
   immediately if already loaded). LIBRARY is a bare filename string or a
-  feature symbol. Caveats: BODY runs in a null lexical context (don't
-  capture); an error aborts the rest of BODY; heavy work delays every
+  feature symbol. It wraps BODY in a closure (`(eval-after-load 'foo
+  (lambda () …))`), so lexical captures work. Caveats: an error aborts the
+  rest of BODY; heavy work delays every
   reload. The manual restricts it to personal init files — which is exactly
   this repo — but `use-package`'s `:config`/`:after` are the cleaner
   expression of the same idea and should be preferred here.

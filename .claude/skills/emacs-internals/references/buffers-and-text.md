@@ -1,6 +1,6 @@
 # Buffer internals: gap buffer, markers, overlays, text properties
 
-Source: GNU Elisp Reference Manual (Emacs 30.2), E.9.1 Buffer Internals plus
+Source: GNU Elisp Reference Manual (Emacs 31.1), E.9.1 Buffer Internals plus
 the Buffer Gap / Text Properties / Overlays chapters.
 
 ## Two C structures (`src/buffer.h`)
@@ -49,6 +49,8 @@ the Buffer Gap / Text Properties / Overlays chapters.
 - Text properties are *part of the text*: copied with it (`buffer-substring`
   vs `buffer-substring-no-properties`), and property changes count as buffer
   modifications (but not as character changes — see `chars_modiff`).
+- 31: `text-property-default-nonsticky` is buffer-local when set; use
+  `setq-default` for the global value.
 
 ## Overlays
 
@@ -61,6 +63,11 @@ the Buffer Gap / Text Properties / Overlays chapters.
 - Overlays are buffer-local, not part of the text (never copied with it),
   and support `priority`, `window`, and before/after-string properties that
   only redisplay interprets.
+- Since 29 `overlay-recenter` is a no-op and `overlay-lists` returns one
+  unified list. 31.1 restores the pre-28 `overlays-in`/`overlays-at`
+  semantics: they return overlays outside the current narrowing, the
+  empty-overlay special case applies only at the real end of buffer, and
+  `remove-overlays` again works outside the narrowing.
 - Rule of thumb: text properties for *content-attached* data (fontification,
   syntax), overlays for *annotation/UI* (highlights, inline hints) — and
   prefer text properties in very hot paths.
@@ -73,18 +80,26 @@ the Buffer Gap / Text Properties / Overlays chapters.
   `enable-multibyte-characters`…). All other buffer-local bindings live in
   the `local_var_alist`.
 - `inhibit_buffer_hooks`: buffers created for internal/temp use (e.g.
-  `with-temp-buffer`, generate-new-buffer with INHIBIT-BUFFER-HOOKS) skip
-  `kill-buffer-hook`/`buffer-list-update-hook` — that's why temp buffers are
-  cheap and why global buffer hooks don't see them.
+  `with-temp-buffer`, `generate-new-buffer` with INHIBIT-BUFFER-HOOKS) skip
+  `kill-buffer-hook`, `kill-buffer-query-functions`, and
+  `buffer-list-update-hook`. `with-temp-buffer` expands to
+  `(generate-new-buffer " *temp*" t)`; the leading space also disables
+  undo. That's why temp buffers are cheap and why global buffer hooks
+  don't see them.
+- 31: `with-work-buffer` is `with-temp-buffer` that reuses up to
+  `work-buffer-limit` (10) pooled buffers; prefer it in hot loops.
 - The `next` chain links **all** buffers including killed ones (GC uses it);
   a "killed" buffer object survives until unreferenced.
 
 ## Practical performance notes
 
 - Long lines historically defeated redisplay/scanning caches; Emacs 29+
-  mitigates with `long-line-threshold` and forced narrowing
-  (`long-line-optimizations-p`).
-- `cache_long_line_scans` / `cache-long-scans` enables newline caching for
-  buffers where scanning is hot.
+  mitigates them (`long-line-optimizations-p`). `long-line-threshold`
+  defaults to 50000. Narrowing to `long-line-optimizations-region-size`
+  (500000) applies only to `fontification-functions` and
+  `pre`/`post-command-hook` (escape with `without-restriction`);
+  `large-hscroll-threshold` (10000) covers truncated lines.
+- `cache-long-scans` (newline cache) already defaults to t; set it to nil
+  only for debugging.
 - Counting positions: prefer `line-number-at-pos` sparingly in hot loops —
   it scans; cache or use `count-lines` over bounded regions.

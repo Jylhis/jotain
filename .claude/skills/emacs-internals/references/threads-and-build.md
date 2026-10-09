@@ -1,7 +1,7 @@
 # Threads and the build/dump pipeline
 
-Sources: GNU Elisp Reference Manual (Emacs 30.2) Threads chapter and
-Building Emacs / Pure Storage nodes; emacs-devel on the igc/MPS branch.
+Sources: GNU Elisp Reference Manual (Emacs 31.1) Threads chapter and
+Building Emacs node, 31.1 `etc/NEWS`; emacs-devel on the igc/MPS branch.
 
 ## Threads (cooperative concurrency)
 
@@ -24,8 +24,14 @@ Building Emacs / Pure Storage nodes; emacs-devel on the igc/MPS branch.
 
 ### API
 
-- `make-thread FUNCTION &optional NAME` — starts with no let bindings;
-  current buffer inherited from the creator. `current-thread`,
+- `make-thread FUNCTION &optional NAME BUFFER-DISPOSITION` — starts with no
+  let bindings; current buffer inherited from the creator. 31 adds
+  BUFFER-DISPOSITION: nil (default) lets another thread kill the thread's
+  current buffer (the thread gets a new current buffer and is signalled
+  `thread-buffer-killed`), `silently` does the same without the signal, t
+  makes the buffer unkillable. Query/change with
+  `thread-buffer-disposition` / `thread-set-buffer-disposition`; the main
+  thread's disposition is fixed. `current-thread`,
   `all-threads`, `main-thread`, `threadp`, `thread-live-p`, `thread-name`,
   `thread-join` (returns the function's value), `thread-yield`.
 - `thread-signal THREAD ERROR-SYMBOL DATA` — deliver a signal into another
@@ -48,23 +54,27 @@ Building Emacs / Pure Storage nodes; emacs-devel on the igc/MPS branch.
 - The build compiles the C core into a bootstrap executable **`temacs`**,
   which loads the preloaded Lisp libraries and then *dumps* its state so a
   normal startup doesn't re-load them.
-- **Portable dumper (pdumper)** is the only supported method in Emacs 30:
-  it writes a `.pdmp` file that the same executable maps at startup.
-  `dump-emacs-portable` performs it; `pdumper-stats` reports whether the
-  session was restored from a dump and the load time. The old **unexec**
-  dumper is deprecated and compiled out by default (`dump-emacs`
-  unavailable).
+- **Portable dumper (pdumper)** writes a `.pdmp` file that the same
+  executable maps at startup. `dump-emacs-portable` performs it;
+  `pdumper-stats` reports whether the session was restored from a dump, the
+  dump file, and the load time. The old **unexec** dumper was deprecated in
+  27 (opt-in via `--with-dumping=unexec` through 30) and **removed in
+  31.1**: `dump-emacs` no longer exists and `--temacs=` accepts only
+  `pdump`/`pbootstrap`.
 - A `.pdmp` is **not portable** — only the exact executable that produced
   it can load it. This matters for Nix: the Emacs binary and its dump are a
-  matched pair in the same store path.
+  matched pair in the same store path. The dump lives at
+  `libexec/emacs/<version>/<triplet>/emacs-<fingerprint>.pdmp`;
+  `emacs --fingerprint` prints the build hash.
 - **Delayed initialization**: preloaded code must defer install-path and
   environment computation to startup (dump time ≠ run time). Escape
   hatches: `custom-initialize-delay` as a defcustom `:initialize`, and
-  `before-init-hook` / `after-pdump-load-hook`.
-- **Pure storage** (`purecopy`, `purify-flag`, `pure-bytes-used`) was
-  read-only shared memory for preloaded data. Already near-vestigial under
-  pdump; **Emacs 31 (master) removed it entirely** — `purecopy` is a
-  compatibility no-op. Ignore `purecopy` in modern code.
+  `before-init-hook` / `after-pdump-load-hook` (29+; runs at the end of
+  startup for code that was dumped).
+- **Pure storage** was read-only shared memory for preloaded data. Already
+  near-vestigial under pdump; **Emacs 31.1 removed it**: `purecopy` is an
+  obsolete alias for `identity` and `pure-bytes-used` is always 0. Ignore
+  `purecopy` in modern code.
 
 ## The igc / MPS garbage-collector branch (status)
 
@@ -75,8 +85,9 @@ Building Emacs / Pure Storage nodes; emacs-devel on the igc/MPS branch.
 - Authors: Gerd Möllmann, Pip Cet, Helmut Eller, with Eli Zaretskii and
   Stefan Kangas. History: `scratch/igc` (2024) → `feature/igc` →
   `feature/igc3` (2026).
-- **Status: igc did NOT make Emacs 31** (feature freeze May 2026); work
-  continues on `feature/igc3`, realistic target Emacs 32. Mainline 30/31
+- **Status: igc did NOT make Emacs 31.1** (no MPS/igc entry in NEWS;
+  `(featurep 'mps)` is nil). Per emacs-devel, work continues on
+  `feature/igc3` with Emacs 32 as the realistic target. Released 30 and 31
   keep the classic GC, so the `gc-cons-threshold` tuning in
   `objects-and-gc.md` applies to the builds this repo ships by default. Under
   igc, that tuning is largely irrelevant — GC pauses become small and

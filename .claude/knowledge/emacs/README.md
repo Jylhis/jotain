@@ -29,7 +29,7 @@ self-contained `references/*.md` files. Read only the reference you need.
 
 Everything traces back to these — cite them when correcting the notes:
 
-- **GNU Emacs Lisp Reference Manual** (Emacs 30.2): the Internals appendix
+- **GNU Emacs Lisp Reference Manual** (Emacs 31.1): the Internals appendix
   (E), plus the Variables, Macros, Customization, Loading, Modes, Display,
   Command Loop, Keymaps, Byte/Native Compilation, and Threads chapters.
   Read in Emacs with `C-h i m Elisp RET`, or `C-h S` (`info-lookup-symbol`)
@@ -37,13 +37,18 @@ Everything traces back to these — cite them when correcting the notes:
 - **GNU Emacs Manual** (`C-h r`) for user-facing behavior.
 - **Source commentary**: `src/xdisp.c` (redisplay design), `src/comp.c` +
   `lisp/emacs-lisp/comp*.el` (native compilation), `src/buffer.h`.
-- **`etc/NEWS.30` / `etc/NEWS.31`** for version-specific changes.
+- **`etc/NEWS.30` / `etc/NEWS`** (in a 31.1 tree the 31 NEWS is plain
+  `etc/NEWS`) for version-specific changes. A local copy ships
+  with every Nix-built Emacs under `share/emacs/<version>/etc/`, and the
+  manual under `share/info/elisp.info.gz`: `C-h C-n`, `C-h i`, or
+  `zcat … | grep -a` when no Emacs is at hand.
 - bbatsov/emacs-lisp-style-guide and the use-package manual for style.
 
 ## How to keep it honest
 
-These notes target Emacs 30/31 and carry version flags (e.g. igc/MPS is not
-in mainline 30/31; pure space is gone in 31). When a note conflicts with the
+These notes target Emacs 31.1 (released 2026-08-24, the default build) with
+30.1 as the floor, and carry version flags (e.g. igc/MPS is not in 30 or
+31.1; pure storage and unexec are gone in 31). When a note conflicts with the
 installed Emacs, **trust the running Emacs and its manual**: verify with
 `C-h f`/`C-h v`/`C-h S`, then fix the reference file in the same change so
 the knowledge base doesn't drift.

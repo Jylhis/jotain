@@ -7,8 +7,11 @@ Source: GNU Elisp Reference Manual ch. 12 (Variable Scoping) and ch. 14
 
 - Selected by the buffer-local `lexical-binding`, set from the first-line
   `-*- lexical-binding: t; -*-` cookie. Every file in this repo has it; new
-  files must. Emacs 30 *warns* when the cookie is missing; Emacs 31 warns at
-  plain `load` time and makes `-x`/`--script` files lexical by default.
+  files must. Dynamic binding is still the default in 30 and 31. Emacs 30
+  adds a byte-compile warning for a missing cookie; Emacs 31 also warns at
+  `load` time, makes `-x`/`--script` files lexical, and lets the default
+  be flipped with `(set-default-toplevel-value 'lexical-binding t)`. A file
+  that must stay dynamic says so with `lexical-binding: nil`.
 - Under lexical binding a variable reference must be textually inside its
   binding form; closures capture bindings with **indefinite extent**. Lookup
   order: lexical environment first, then the symbol's dynamic value cell.
@@ -71,8 +74,9 @@ global read errors loudly.
 5. **Repeated expansion** — interpreted code re-expands on each call,
    compiled code once; avoid side effects in expansion, and never mutate
    (`setcar`) objects that appear as quoted constants — compiled code shares
-   them across calls. (Emacs 30 warns on constant mutation; Emacs 31 makes
-   it genuinely break.)
+   them across calls. (Emacs 30 warns on constant mutation. Emacs 31 merges
+   more `equal` constants, so mutating one can corrupt an unrelated
+   literal, and restricts `aset` on strings: see `emacs-30-31-changes.md`.)
 
 ### `declare` forms
 
@@ -81,8 +85,9 @@ global read errors loudly.
 - `(declare (debug SPEC))` — Edebug spec; use `(debug t)` when all args are
   evaluated normally. Declare it for every non-trivial macro or Edebug can't
   step into calls.
-- Emacs 30 adds function `declare` forms: `(ftype (function (int) int))` and
-  `important-return-value t`.
+- Emacs 30 adds function `declare` forms: `(ftype (function (integer
+  boolean) string))` (trusted only at `compilation-safety` 0) and
+  `(important-return-value t)`.
 - Style: write a macro only when a function won't do (macros don't compose,
   can't be passed as values); keep the real logic in a helper function and
   let the macro be thin sugar; write the intended call site first.

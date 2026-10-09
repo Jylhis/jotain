@@ -1,9 +1,9 @@
 # Object representation and garbage collection
 
-Source: GNU Elisp Reference Manual (Emacs 30.2), appendix E (Internals) and
+Source: GNU Elisp Reference Manual (Emacs 31.1), appendix E (Internals) and
 ch. 2–3. Version notes flagged inline. The GC description covers the classic
-in-tree collector — the default in Emacs 30 and 31; the MPS/igc collector
-(see end) changes most of it.
+in-tree collector, the only one in released Emacs 30 and 31.1; the MPS/igc
+collector (see end) changes most of it.
 
 ## Tagged pointers (`Lisp_Object`)
 
@@ -37,9 +37,12 @@ in-tree collector — the default in Emacs 30 and 31; the MPS/igc collector
 
 ## Emacs 30 type-system additions
 
-- Interpreted closures are first-class `closure` objects (function
-  representation reworked in 30); `cl-type-of`, type descriptors, and a
-  documented type hierarchy were added.
+- Evaluating a `lambda` now yields an `interpreted-function` object, not a
+  `(closure …)` list. `closure` is the parent type of both
+  `interpreted-function` and `byte-code-function` (`closurep`,
+  `interpreted-function-p`). Don't `car`/`cdr` into function objects.
+  `cl-type-of`, type descriptors, and a documented type hierarchy were
+  added.
 - Objects are self-typing; each primitive type has a predicate. Use
   `cl-type-of` for the most specific type name.
 
@@ -68,28 +71,37 @@ in-tree collector — the default in Emacs 30 and 31; the MPS/igc collector
 
 ### Triggering and tuning
 
-- `gc-cons-threshold` — bytes of Lisp allocation since the last GC that
-  allow the next one. Default `GC_DEFAULT_THRESHOLD`: **800,000 on 64-bit**
-  (400,000 on plain 32-bit). Buffer contents don't count. Values below
-  1/10 of the default last only until the next GC.
+- `gc-cons-threshold` — bytes of Lisp allocation since the last GC that allow
+  the next one. Default `GC_DEFAULT_THRESHOLD`: **800,000 on 64-bit** and
+  32-bit `--with-wide-int` (400,000 on plain 32-bit). Buffer contents don't
+  count. Values below 1/10 of the default last only until the next GC.
 - `gc-cons-percentage` — threshold as a fraction of the current heap.
-  Default **0.1 interactive, 1.0 in batch** (and while dumping).
+  Default **0.1 interactive and while dumping, 1.0 under
+  `--batch`/`--script`** (since 29).
 - **Both criteria must be satisfied** for GC to run; the check is periodic
   and approximate, not per-allocation.
 - The manual explicitly advises against keeping `gc-cons-threshold` large
   for prolonged periods: fewer but much longer pauses, higher memory
   pressure. The legitimate pattern is a *temporary* raise around a critical
   section — which is exactly what this repo does: `early-init.el` sets it to
-  `most-positive-fixnum` during startup and restores a sane value on
-  `emacs-startup-hook`. Calling `garbage-collect` explicitly just before a
-  latency-critical section guarantees no GC inside it (if it conses less
-  than the threshold).
-- Observability: `garbage-collect` (returns per-type `(NAME SIZE USED FREE)`
-  usage), `gcs-done`, `gc-elapsed`, `garbage-collection-messages`,
-  `post-gc-hook` (GC is inhibited while it runs — keep it cheap),
-  `memory-report` (approximate `*Memory Report*` buffer), `memory-limit`,
-  `memory-info`, `memory-use-counts`, and the cumulative counters
-  `cons-cells-consed`, `strings-consed`, `intervals-consed`, etc.
+  `most-positive-fixnum` (and `gc-cons-percentage` 0.6) during startup;
+  `lisp/init-core.el` restores 16 MiB / 0.1 on `emacs-startup-hook`, pauses
+  GC for the duration of minibuffer sessions, and runs an idle GC. Calling
+  `garbage-collect` explicitly just before a latency-critical section
+  guarantees no GC inside it (if it conses less than the threshold).
+- `garbage-collect-maybe FACTOR` (28+) collects only when more than
+  1/FACTOR of the threshold has been consed since the last GC: the cheaper
+  choice for idle-timer GCs than an unconditional `garbage-collect`.
+- Observability: `garbage-collect` (returns per-type `(NAME SIZE USED [FREE])`
+  entries; the trailing `heap` entry needs malloc's `mallinfo`),
+  `garbage-collect-heapsize` (31: the same list from the last GC, without
+  collecting; exact only right after a GC), `gcs-done`, `gc-elapsed`,
+  `garbage-collection-messages`, `post-gc-hook` (GC is inhibited while it runs
+  — keep it cheap), `memory-report` (approximate `*Memory Report*` buffer),
+  `memory-limit` (KiB of virtual memory), `memory-info` (reports the remote
+  host when `default-directory` is remote), `memory-use-counts`, and the
+  cumulative counters `cons-cells-consed`, `strings-consed`,
+  `intervals-consed`, etc.
 
 ## Stack-allocated objects
 
@@ -101,13 +113,17 @@ in-tree collector — the default in Emacs 30 and 31; the MPS/igc collector
 ## Pure storage (historical) and the igc/MPS collector
 
 - Pure storage: read-only, shared memory for preloaded-library data, filled
-  only while `temacs` loads the preloaded files (`purecopy`, `purify-flag`,
-  `pure-bytes-used`). Under pdump it was already nearly irrelevant;
-  **Emacs 31 (master) removed pure space entirely** — `purecopy` is a
-  compatibility no-op. Treat `purecopy` in modern code as noise.
-- **igc/MPS**: the `feature/igc` branch (packaged by emacs-overlay as
-  `emacs-igc`; built here via `just build-igc`) replaces mark-sweep with
-  Ravenbrook MPS — an incremental, mostly-copying, generational collector.
-  Under igc, `gc-cons-threshold` semantics and `garbage-collect` output do
-  not apply as written; GC pauses become small and incremental. The 30.2
-  manual contains no igc documentation.
+  only while `temacs` loads the preloaded files. Under pdump it was already
+  nearly irrelevant; **Emacs 31.1 removed pure storage**: `purecopy` is an
+  obsolete alias for `identity`, `pure-bytes-used` is always 0, and
+  `purify-flag` survives only as a "preload phase" flag. The manual's Pure
+  Storage node is gone. Treat `purecopy` in modern code as noise.
+- `--disable-gc-mark-trace` (configure, 30+) drops the GC mark trace buffer
+  for roughly 5% faster GC, at the cost of GC debugging aids.
+- **igc/MPS**: the `feature/igc3` branch, not merged in 31.1 (packaged by
+  emacs-overlay as `emacs-igc`; built here via `just build-igc`), replaces
+  mark-sweep with Ravenbrook MPS — an incremental, mostly-copying,
+  generational collector. Under igc, `gc-cons-threshold` semantics and
+  `garbage-collect` output do not apply as written; GC pauses become small and
+  incremental. Neither the 31.1 manual nor NEWS mentions igc/MPS (`(featurep
+  'mps)` is nil on mainline builds).
