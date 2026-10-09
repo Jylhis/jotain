@@ -30,7 +30,7 @@ self-contained:
 - GC startup tuning: `early-init.el` raises `gc-cons-threshold` to
   `most-positive-fixnum` during init; `lisp/init-core.el` restores the
   steady-state value on `emacs-startup-hook`, pauses GC in the minibuffer,
-  and runs an idle GC. See `references/objects-and-gc.md`.
+  and runs an idle `garbage-collect-maybe`. See `references/objects-and-gc.md`.
 - Native-comp eln cache is redirected to `var/eln-cache/` in `early-init.el`,
   with the store-resident AOT `.eln` dir (`JOTAIN_ELN_PATH`) appended;
   `just clean` removes the cache. See `references/compilation.md`. The `igc`

@@ -35,8 +35,8 @@ immediately for writes."
 ;; that typing/scrolling never trips a GC, low enough that an idle GC
 ;; actually completes quickly. Combined with the idle-timer below, total
 ;; pause time stays well under perceptible. Caveat: if init errors out,
-;; the threshold stays at `most-positive-fixnum' until the idle timer or
-;; the minibuffer hooks below touch it.
+;; the threshold stays at `most-positive-fixnum' until the minibuffer
+;; hooks below touch it.
 (defconst jotain-core-gc-cons-threshold (* 16 1024 1024)
   "Steady-state `gc-cons-threshold' after startup.")
 
@@ -46,13 +46,13 @@ immediately for writes."
         gc-cons-percentage 0.1))
 (add-hook 'emacs-startup-hook #'jotain-core--gc-restore-after-startup 90)
 
-;; Explicit `garbage-collect' ignores the threshold, so skip the idle
-;; collection while a minibuffer is open — otherwise idling five seconds
-;; mid-completion would run the very GC pause the hooks below prevent.
+;; Collect on idle only once a quarter of the threshold has been consed,
+;; so an idle period after little allocation costs nothing.  Measured
+;; against the live threshold, this also skips the collection while the
+;; minibuffer hooks below hold it at `most-positive-fixnum'.
 (defun jotain-core--gc-idle-collect ()
-  "Run a full GC when Emacs has been idle, unless a minibuffer is open."
-  (unless (active-minibuffer-window)
-    (garbage-collect)))
+  "Run a GC when Emacs has been idle, if enough has been allocated."
+  (garbage-collect-maybe 4))
 (run-with-idle-timer 5 t #'jotain-core--gc-idle-collect)
 
 ;; Pause GC entirely while the minibuffer is open. Completion frameworks
