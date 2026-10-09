@@ -1,13 +1,6 @@
 { pkgs, ... }:
 
 let
-  # Emacs is deliberately NOT installed into the devenv shell: the ~1 GB
-  # jotainEmacsPackages closure would dominate `direnv allow` time.
-  # The Nix-side builds (flake `packages.<system>.{default,emacs,…}`,
-  # `just build*`, `nix flake check`) are unaffected; flake checks
-  # still verify Emacs binaries via `checks.<system>.emacs-binaries`
-  # (see nix/checks.nix).
-
   # rassumfrassum (`rass`) — LSP multiplexer by João Távora that lets eglot
   # drive multiple real language servers per buffer. Pure-Python, zero
   # runtime deps; not in nixpkgs so we build it from PyPI here. Consumed by
@@ -40,14 +33,6 @@ in
   packages =
     with pkgs;
     [
-      # Nix tooling
-      nil
-      nixfmt
-
-      # Nix linting
-      statix
-      deadnix
-
       # Meson build tooling.  meson-mode and apheleia use the Meson CLI for
       # formatting, and compile-multi commands assume Ninja-backed builddirs.
       meson

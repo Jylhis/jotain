@@ -54,9 +54,7 @@ let
   };
   nixSrc = fileset.toSource {
     root = repoRoot;
-    fileset = fileset.union (fileset.fileFilter (f: lib.hasSuffix ".nix" f.name) repoRoot) (
-      repoRoot + "/statix.toml"
-    );
+    fileset = fileset.fileFilter (f: lib.hasSuffix ".nix" f.name) repoRoot;
   };
 
   # Toolchain for the Elisp checks: the *inner* emacsWithPackages result
