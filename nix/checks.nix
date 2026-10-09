@@ -1,7 +1,7 @@
 # nix/checks.nix — Flake check derivations for Jotain.
 #
-# Application and configuration checks live here (Nix linting, Elisp
-# validation).  Dev-environment assertions live in devenv.nix enterTest.
+# Application and configuration checks; dev-shell assertions live in
+# devenv.nix enterTest.
 {
   pkgs,
   src,
@@ -13,17 +13,13 @@ let
 
   # Narrowed check sources
   #
-  # `src' is the flake source (string-like) and lib.fileset needs a real
-  # path, so the narrowed sources are built from ../. — the same tree,
-  # the same idiom nix/info-manual.nix uses and the same constraint
-  # flake.nix documents on `packages.site'.  Inside a flake, ../. is the
-  # store copy of the source, so .git and .gitignore'd files (stray
-  # *.elc, result symlinks) are already excluded.
+  # lib.fileset needs a real path, not the string-like flake `src', so
+  # these are built from ../. (the same tree; inside a flake it is the
+  # store copy, without .git or ignored files).
   #
-  # `src' itself stays a parameter: options-doc.nix computes
-  # `srcPrefix = toString src + "/"' to rewrite declaration paths into
-  # GitHub URLs, and handing it a fileset source would break that strip
-  # and turn every `declarations' link into an absolute store path.
+  # `src' stays a parameter for options-doc.nix, whose `srcPrefix' strip
+  # turns declaration paths into GitHub URLs; a fileset source would
+  # break it.
   repoRoot = ../.;
   elIn = dir: fileset.fileFilter (f: lib.hasSuffix ".el" f.name) (repoRoot + dir);
 
@@ -37,12 +33,9 @@ let
     root = repoRoot;
     fileset = fileset.union configFiles (elIn "/test");
   };
-  # elisp-test additionally loads test/lang-eval-test.el, which locates files
-  # relative to the repo root: it `require's jotain-lang-registry from
-  # etc/lang-eval/ (adding it to load-path itself) and reads templates/jotain.eld.
-  # Both trees are kept outside lisp/ and test/ by design, so ship them in $src.
-  # The paren-only elisp-lint and reader-only scanner-fidelity checks never load
-  # the test, so they keep the narrower elispSrc and its cache key.
+  # elisp-test also needs etc/lang-eval/ and templates/ (read by
+  # test/lang-eval-test.el). The checks that never load tests keep the
+  # narrower elispSrc and its cache key.
   elispTestSrc = fileset.toSource {
     root = repoRoot;
     fileset = fileset.unions [
@@ -57,15 +50,10 @@ let
     fileset = fileset.fileFilter (f: lib.hasSuffix ".nix" f.name) repoRoot;
   };
 
-  # Toolchain for the Elisp checks: the *inner* emacsWithPackages result
-  # (nix/mk-overlay.nix `passthru.core'), not the outer jotain-emacs-full
-  # wrapper. The wrapper only adds a runtime PATH, INFOPATH (→ jotainInfo)
-  # and ASPELL_CONF, none of which a batch byte-compile or the ERT suite
-  # reads; depending on it would instead pull in jotainInfo → packages-doc
-  # + options-doc, invalidating these checks on unrelated docs/@doc edits.
-  # `core' is also invariant under ordinary Elisp edits:
-  # emacsWithPackagesFromUsePackage scans lisp/ only for package *names*,
-  # so its store path moves only when the package set does.
+  # The inner emacsWithPackages result (`passthru.core'), not the outer
+  # wrapper: the wrapper's INFOPATH pulls in jotainInfo, so docs/@doc
+  # edits would invalidate these checks. `core' moves only when the
+  # package set does (the lisp/ scan reads package names only).
   elispEmacs = pkgs.jotainEmacsPackages.core;
 
   hmStubModule = {
@@ -134,9 +122,7 @@ let
     startWithUserSession = "graphical";
   };
 
-  # Minimal stand-in for the nix-on-droid module system so the Jotain
-  # nix-on-droid module evaluates here on x86_64 (eval only — the actual
-  # aarch64 activation package is built on-device, not in CI).
+  # Minimal stand-in for the nix-on-droid module system (eval only).
   nixOnDroidStubModule = {
     options = {
       assertions = lib.mkOption {
@@ -181,19 +167,14 @@ in
 
   packages-doc = import ./packages-doc.nix { inherit pkgs src; };
 
-  # Generated docstring-level API reference (etc/elisp-doc). A build check
-  # only — the output is not checked into git, so there is no in-sync
-  # gate. Heavy: realizes the config package closure and runs a batch
-  # Emacs, so it lives with the deploy-only checks rather than PR CI's
-  # lightweight subset (PR CI still exercises it transitively via `site`).
+  # Build-only (the output is not checked in). Heavy, so deploy-path
+  # only: PR CI's subset skips it and its `site` job builds
+  # `.#site-preview`, which omits it.
   emacs-api-doc = import ./emacs-api-doc.nix { inherit pkgs src; };
 
-  # Checked-in Mintlify .mdx must match the generator
-  #
-  # docs/configuration/package-reference.mdx is checked in so the
-  # Mintlify site can serve it without running Nix. The generator in
-  # nix/packages-doc.nix is the source of truth, so we verify the
-  # tracked file is byte-identical to the freshly generated one.
+  # docs/configuration/package-reference.mdx is checked in so Mintlify
+  # can serve it without Nix; it must match nix/packages-doc.nix byte
+  # for byte.
   packages-doc-in-sync =
     let
       generated = import ./packages-doc.nix { inherit pkgs src; };
@@ -214,24 +195,14 @@ in
         touch $out
       '';
 
-  # Checked-in language-support reference must match the registry
-  #
-  # docs/reference/language-support.mdx is generated from the declarative
-  # per-language feature standard in etc/lang-eval/jotain-lang-registry.el.
-  # This gate makes drift fatal, mirroring packages-doc-in-sync. Cheap: it
-  # only re-renders the registry (no config, no toolchains). The live matrix
-  # and end-to-end LSP probe (lang-eval-matrix / lang-eval-live) are heavier
-  # legacyPackages, buildable on demand and never part of nix flake check.
+  # docs/reference/language-support.mdx must match a fresh render of
+  # etc/lang-eval/jotain-lang-registry.el. Cheap: registry only.
   inherit ((import ./lang-eval.nix { inherit pkgs; })) lang-eval-doc-in-sync;
 
-  # eca and gptel must offer the same OpenRouter model catalogue
-  #
-  # config/eca/config.json (providers.openrouter.models) and the gptel
-  # OpenRouter backend in lisp/init-ai.el (:models) are two hand-kept
-  # copies of one list, tied together only by cross-reference comments.
-  # This makes the drift fatal. The elisp list is read with Emacs' own
-  # reader (so a reformat can't fool a regex) and anchored on the
-  # OpenRouter form, not the Ollama :models further down the file.
+  # config/eca/config.json and gptel's OpenRouter :models
+  # (lisp/init-ai.el) are hand-kept copies of one list. The elisp side is
+  # read with Emacs' reader, anchored on the OpenRouter form (not the
+  # Ollama :models further down).
   eca-models-in-sync =
     pkgs.runCommand "check-eca-models-in-sync"
       {
@@ -268,11 +239,8 @@ in
         touch $out
       '';
 
-  # Vendored design system must match the pinned upstream rev
-  #
-  # website/public/ds is committed so website/public stays a no-build
-  # shell, which risks drifting from the Emacs themes built from the same
-  # repo. Both read nix/design-pin.nix, and this check makes drift fatal.
+  # website/public/ds is committed (website/public needs no build step)
+  # and must match nix/design-pin.nix, which the Emacs themes also use.
   ds-in-sync =
     let
       dsAssets = import ./ds-assets.nix {
@@ -296,13 +264,9 @@ in
         touch $out
       '';
 
-  # flake.lock and devenv.lock must pin the same shared revs
-  #
-  # nix flake check never reads devenv.lock, so without this check the
-  # only gate on lock drift is PR CI's `just verify` step — and nothing
-  # at all guards pushes to main/next. Dependabot's "nix" ecosystem
-  # bumps flake.lock alone, which is exactly how the two drift apart.
-  # Same script the Justfile recipe runs, so the two can't disagree.
+  # flake.lock and devenv.lock must pin the same shared revs (Dependabot
+  # bumps flake.lock alone). Without this, only PR CI's `just verify`
+  # (same script) guards drift; this also covers pushes to main/next.
   locks-in-sync =
     pkgs.runCommandLocal "check-locks-in-sync"
       {
@@ -341,10 +305,7 @@ in
         touch $out
       '';
 
-  # nix-on-droid module evaluation
-  # Eval-only: the terminal Jotain Emacs the module selects builds on
-  # aarch64 (on-device), but here we only assert the module evaluates
-  # and wires EDITOR through environment.sessionVariables.
+  # Eval-only: the module evaluates and sets EDITOR.
   nix-on-droid-module-eval =
     pkgs.runCommandLocal "check-nix-on-droid-module-eval"
       {
@@ -358,9 +319,8 @@ in
         touch $out
       '';
 
-  # Emacs is not installed in the dev shell, so its provenance is verified
-  # here on the build side: the jotainEmacs derivation ships the expected
-  # binaries and they run cleanly without touching anything outside the store.
+  # The dev shell has no Emacs, so jotainEmacs is checked here: expected
+  # binaries exist and run without touching paths outside the store.
   emacs-binaries =
     pkgs.runCommandLocal "check-emacs-binaries"
       {
@@ -423,15 +383,11 @@ in
 
   # Elisp syntax (balanced parens)
   #
-  # `runCommand', not `runCommandLocal', for the three Elisp checks:
-  # runCommandLocal sets allowSubstitutes = false, which only wins when
-  # rebuilding is cheaper than fetching, untrue once the rebuild needs a
-  # multi-hundred-MB Emacs closure. Substituting the cached marker
-  # (lint/test) or compiled-config tree (compile) from jylhis.cachix.org
-  # is cheaper, and deploy.yml pushes them on main, so a PR touching
-  # neither lisp/ nor test/ never pulls Emacs. The cheap checks below stay
-  # runCommandLocal. (Dropping preferLocalBuild lets these run on remote
-  # builders; harmless: none reads /proc, HOME, PATH or the network.)
+  # The Emacs-based checks use `runCommand', not `runCommandLocal' (which
+  # sets allowSubstitutes = false): substituting the cached result from
+  # jylhis cachix beats rebuilding against a multi-hundred-MB Emacs
+  # closure, so a PR touching neither lisp/ nor test/ never pulls Emacs.
+  # They read no /proc, HOME, PATH or network, so remote builders are fine.
   elisp-lint =
     pkgs.runCommand "check-elisp-lint"
       {
@@ -445,10 +401,8 @@ in
                                (directory-files "lisp" t "^\\(init-.*\\|devenv\\)\\.el$")
                                (directory-files "test" t "\\.el$")))
                 (failed nil))
-            ;; The source is a narrowed lib.fileset (see the top of this
-            ;; file).  A fileset that silently loses lisp/ or test/ would
-            ;; leave this check passing over nothing, so make an
-            ;; implausibly short file list fatal rather than green.
+            ;; Guard against a narrowed fileset that silently lost
+            ;; lisp/ or test/ and would pass over nothing.
             (when (< (length files) 30)
               (message "FAIL: only %d files found — narrowed source is wrong"
                        (length files))
@@ -469,13 +423,10 @@ in
 
   # Regex scanner fidelity vs the Emacs reader
   #
-  # nix/use-package.nix finds `(use-package NAME' by regex over file
-  # text, so a commented-out, quoted, or string-embedded occurrence would
-  # be miscounted as a real package (or a genuine form missed). This
-  # reads lisp/*.el with Emacs' own reader, collects the use-package
-  # heads that appear as actual code, and diffs them against the
-  # scanner's output. A divergence means the regex is over- or
-  # under-matching.
+  # nix/use-package.nix finds `(use-package NAME' by regex, so a
+  # commented-out, quoted or string-embedded occurrence could be
+  # miscounted (or a real form missed). Diff its output against the
+  # use-package heads Emacs' reader finds in lisp/.
   scanner-fidelity =
     let
       usePackage = import ./use-package.nix { inherit lib; };
@@ -535,12 +486,10 @@ in
         touch $out
       '';
 
-  # legacyPackages.emacs-packages must cover every package the config
-  # declares, and every value must be a derivation. Ground truth is
-  # recomputed here from lisp/ + nix-provided-packages.nix directly
-  # (the same philosophy as scanner-fidelity), so a broken resolver or
-  # a silently dropped name fails instead of shipping a partial set.
-  # Eval-only: forces attribute lookups, never builds packages.
+  # legacyPackages.emacs-packages must cover every declared package with
+  # a derivation. The expected set is recomputed from lisp/ +
+  # nix-provided-packages.nix, so a broken resolver or dropped name
+  # fails. Eval-only: never builds packages.
   emacs-packages-eval =
     let
       set = import ./emacs-package-set.nix { inherit pkgs; };
@@ -570,20 +519,15 @@ in
         touch $out
       '';
 
-  # Elisp byte-compilation (warnings as errors)
-  #
-  # Shared with module.nix' `compiledConfig': on the default HM config
-  # this is literally the same store path, so `home-manager switch'
-  # substitutes CI's artifact instead of re-running Emacs.  `nix flake
-  # check' only requires each check to build; a non-empty output is fine.
+  # Elisp byte-compilation (warnings as errors). Same derivation as
+  # module.nix' `compiledConfig' (see nix/config-compiled.nix); a
+  # non-empty check output is fine.
   elisp-compile = import ./config-compiled.nix {
     inherit pkgs;
     emacs = elispEmacs;
   };
 
-  # Elisp unit tests (ERT, batch)
-  # Pure-function tests only: no devenv binary, no network, no
-  # subprocesses — safe inside the Nix sandbox.
+  # ERT suite. Sandbox-safe: no devenv binary, network or subprocesses.
   elisp-test =
     pkgs.runCommand "check-elisp-test"
       {
@@ -600,29 +544,19 @@ in
 
   # Full-startup smoke test
   #
-  # elisp-compile only byte-compiles the config, and emacs-binaries runs
-  # --no-init-file, so a runtime `use-package' :config error (e.g. a stale
-  # ELPA package shadowing an Emacs built-in) has no other automated gate.
-  #
-  # This actually *evaluates* every :config block against the full package
-  # closure (`elispEmacs' == jotainEmacsPackages.core, already realised by
-  # elisp-compile, so this adds only a batch launch, not a second closure).
-  # Recipe, tuned to be deterministic and network-free in the sandbox:
-  #   • `emacs --batch' does NOT auto-load init, so load early-init.el and
-  #     init.el explicitly (no -q, so emacsWithPackages' site activation
-  #     still puts every package on load-path);
-  #   • point user-emacs-directory at a WRITABLE copy and set HOME to it,
-  #     since the store $src is read-only and early-init.el / init-core
-  #     write under var/;
-  #   • force `use-package-always-ensure nil' AFTER early-init.el (which
-  #     sets it t): every package is already on load-path via the closure,
-  #     so :config still runs, but no :ensure fires `package-install', so no
-  #     network (unreachable in the sandbox anyway).
-  # use-package demotes a failing :config to `(display-warning 'use-package
-  # … :error)', printed as "Error (use-package)", so a clean exit is not
-  # enough; fail on that marker (and on the autoload-failure signature this
-  # bug class produces). A clean tree emits neither; the pre-existing benign
-  # `Warning (emacs)' type-check lines are intentionally not matched.
+  # The only gate that evaluates every use-package :config block (e.g. a
+  # stale ELPA package shadowing a built-in), against elisp-compile's
+  # closure:
+  #   • `emacs --batch' loads no init, so load early-init.el and init.el
+  #     explicitly (no -q: site activation puts packages on load-path);
+  #   • user-emacs-directory and HOME point at a writable copy, since
+  #     the config writes under var/;
+  #   • `use-package-always-ensure nil' after early-init.el, so no
+  #     :ensure triggers `package-install' (no network in the sandbox).
+  # use-package demotes a failing :config to an "Error (use-package)"
+  # warning, so a clean exit is not enough: fail on that marker and on
+  # the autoload-failure signature. Benign `Warning (emacs)' lines are
+  # not matched.
   config-startup =
     pkgs.runCommand "check-config-startup"
       {

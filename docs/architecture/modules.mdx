@@ -5,20 +5,16 @@ description: Elisp modules that make up the Jotain configuration
 
 # Modules
 
-Jotain's Elisp configuration is split across `lisp/init-*.el`, one file per concern. Each file is self-contained: a package that only exists to enhance a built-in (e.g. `dirvish` → `dired`, `magit` → `vc`) lives in the same file as the built-in it enhances. There is no "builtins.el" / "third-party.el" split.
+Jotain's Elisp configuration is split across `lisp/init-*.el`, one file per concern. A package that only exists to enhance a built-in lives in the same file as that built-in (`dirvish` with `dired`, `magit` with `vc`). There is no "builtins.el" / "third-party.el" split.
 
 ## Conventions
 
-- Every module file is named `init-<concern>.el` under `lisp/`.
-- Every file starts with a `lexical-binding: t` cookie.
-- Every file ends with `(provide 'init-<concern>)`.
+- Every module is `lisp/init-<concern>.el`, starts with a `lexical-binding: t` cookie, and ends with `(provide 'init-<concern>)`.
 - Modules are loaded in order from `init.el`.
-- `use-package-always-ensure` is `t` (set in `early-init.el`), so every `use-package` block defaults to "install if missing". Built-ins must opt out with `:ensure nil`. Packages provided by Nix use `:ensure nil` — Nix puts them on `load-path`, so `use-package` finds them without touching the network.
-- User options (`defcustom` variables) are set via `setopt`, not `setq`, so the `:set` callback and `:type` validation run.
+- `use-package-always-ensure` is `t` (set in `early-init.el`), so every `use-package` block installs its package if missing. Built-ins and Nix-provided packages opt out with `:ensure nil`; Nix puts the latter on `load-path`, so no network access is needed.
+- User options (`defcustom` variables) are set with `setopt`, not `setq`, so their `:set` callbacks and `:type` validation run.
 
 ## Load order
-
-`init.el` loads modules in this order:
 
 ```
 init-core         GC, encoding, var/ paths, sane file-handling defaults
@@ -29,7 +25,8 @@ init-help         helpful + built-in help tweaks
 init-docs         Register the bundled jotain.info with C-h i
 init-editing      elec-pair, delsel, whitespace, region tools, keyfreq
 init-completion   vertico, marginalia, orderless, consult, corfu, cape
-init-navigation   dired, dirvish, project, windmove, winner
+init-navigation   dired, dirvish, winner
+init-casual       Transient menus for dired/calc/isearch/ibuffer/Info
 init-vc           vc, vc-jj, magit, majutsu, magit-todos, forge, diff-hl, ediff
 init-prog         prog-mode, treesit, eglot, dape, flymake, eldoc, apheleia, compile
 init-snippets     tempel snippets + eglot-tempel LSP expansion
@@ -41,6 +38,7 @@ init-terminal     ghostel terminal + tty integration (kkp, clipetty)
 init-systems      sops, logview, auth-source-1password
 init-writing      jinx, markdown-mode, denote, pdf-tools
 init-org          org, org-modern, capture templates
+init-http         verb HTTP/REST client (Org-based)
 
 init-lang-nix
 init-lang-rust
@@ -50,104 +48,116 @@ init-lang-web         TS/TSX/CSS/HTML/JSON
 init-lang-devops      Dockerfile, terraform, just, ansible, bazel
 init-lang-data        yaml, csv, sql, jinja2, gnuplot
 init-lang-systems     C/C++/CUDA, CMake, Meson, Haskell, OCaml, Zig
+init-lang-qml         QML (Quickshell / Qt Quick)
 ```
 
 ## Core modules
 
 ### `init-core`
 
-GC, encoding, and the sane-defaults baseline. Restores `gc-cons-threshold` to 16 MiB after the early-init bump; pauses GC entirely while the minibuffer is open; forces UTF-8 everywhere; enables `save-place-mode`, `recentf`, `savehist`, `repeat-mode`, `uniquify`, `ibuffer` as the default buffer list, `global-auto-revert-mode`. Defines `jotain-var-dir` and the `jotain-var-file` helper, and themes the built-in state-file variables (`recentf-save-file`, `savehist-file`, `save-place-file`, `bookmark-default-file`, `auto-save-list-file-prefix`) to live under `var/`. Other modules use the same helper to keep their own state (keyfreq, logview, forge, transient) in the same place. Also contains the macOS modifier-key fix (`Cmd`→Meta, `Option`→Super, right Option untouched for special characters). Sets `read-extended-command-predicate` to filter `M-x` candidates by major mode; untagged commands are still shown, and typing a full command name always runs it regardless of the filter.
+GC, encoding, and baseline defaults. Restores `gc-cons-threshold` to 16 MiB after the early-init bump and pauses GC while the minibuffer is open; forces UTF-8; enables `save-place-mode`, `recentf`, `savehist`, `repeat-mode`, `uniquify`, `ibuffer` as the buffer list, and `global-auto-revert-mode`. Defines `jotain-var-dir` and the `jotain-var-file` helper, which every module uses to keep state files (recentf, savehist, bookmarks, keyfreq, forge, …) under `var/`. On macOS, `Cmd` is Meta and `Option` is Super; right Option is left alone for special characters. `read-extended-command-predicate` hides `M-x` candidates tagged for other major modes; typing a full command name still runs it.
 
 ### `init-keys`
 
-Global bindings only — per-package bindings live in the relevant `use-package` block. Unbinds `C-z` / `C-x C-z` (no accidental suspend on GUI), binds `M-o` to `other-window`, enables `windmove-default-keybindings` (Shift + arrows), defines `jotain-toggle-window-split` on `C-x j` for rotating a two-window layout, and (on Emacs 31+) ships a `repeat-map` for the `window-layout-*` frame transforms under `C-x W`. Also registers `which-key-add-key-based-replacements` for the cross-cutting `C-c` / `C-x` prefixes (`C-c n` org-roam, `C-c r` eglot-refactor, `C-c o` combobulate, `C-x P` project, etc.) so the prefix menus surface short noun-phrase labels instead of bare command names. See [Keybindings](/keybindings) for the full namespace map and [Ergonomics](/ergonomics) for the repeat-maps rationale.
+Global bindings only; per-package bindings live in their `use-package` block. Unbinds `C-z` / `C-x C-z`, binds `M-o` to `other-window`, enables `windmove-default-keybindings` (Shift + arrows), binds `jotain-toggle-window-split` to `C-x j`, and (on Emacs 31+) adds a repeat-map for the `window-layout-*` commands under `C-x W`. It also registers `which-key` labels for the shared `C-c` / `C-x` prefixes (`C-c n` org-roam, `C-c r` eglot-refactor, `C-c o` combobulate, `C-x P` project, …). See [Keybindings](/keybindings) and [Ergonomics](/ergonomics).
 
 ### `init-ui`
 
-Appearance. Uses the Jylhis design system themes `jylhis-light` (light) and `jylhis-dark` (dark), user-customisable via `jotain-theme-light` / `jotain-theme-dark`, with `auto-dark-mode` flipping between them based on the system appearance. The themes come from the pin in `nix/design-pin.nix`; if that package is unavailable, or a theme it names cannot be loaded, the module degrades to the built-in `modus-operandi` / `modus-vivendi` rather than failing the rest of startup. Installs `doom-modeline`, picks the first available font from `jotain-font-preferences` (BlexMono Nerd Font → JetBrains Mono Nerd Font → Iosevka Nerd Font → DejaVu Sans Mono), enables `display-line-numbers`, `pixel-scroll-precision-mode`, `hl-line-mode`, `show-paren-mode`, built-in `which-key`, `nerd-icons` integrations for dired/ibuffer/corfu/marginalia, `hl-todo`, `breadcrumb`, `pulsar`, `rainbow-delimiters`, `indent-bars`.
+Appearance. Uses the Jylhis design system themes `jylhis-light` / `jylhis-dark` (customisable via `jotain-theme-light` / `jotain-theme-dark`), with `auto-dark-mode` following the system appearance. The themes come from the pin in `nix/design-pin.nix`; if they are unavailable or fail to load, the module falls back to `modus-operandi` / `modus-vivendi`. Installs `doom-modeline` and picks the first available font from `jotain-font-preferences` (BlexMono Nerd Font → JetBrains Mono Nerd Font → Iosevka Nerd Font → DejaVu Sans Mono). Also enables `display-line-numbers`, `pixel-scroll-mode`, `hl-line-mode`, `show-paren-mode`, the built-in `which-key`, `nerd-icons` for dirvish/ibuffer/corfu/marginalia, `hl-todo`, `breadcrumb`, `pulsar`, `rainbow-delimiters`, and `indent-bars`.
 
 ### `init-help`
 
-Built-in help tweaks (`help-window-select`) plus `helpful` for richer `describe-*` buffers. See [Finding Information in Emacs](/finding-information-in-emacs) for day-to-day usage.
+Built-in help tweaks (`help-window-select`) plus `helpful` for richer `describe-*` buffers. See [Finding Information in Emacs](/finding-information-in-emacs).
 
 ### `init-docs`
 
-Makes the bundled Jotain Info manual (`jotain.info`, generated by `nix build .#info`) discoverable from `C-h i`. For NixOS / nix-darwin / Home Manager users this is already wired up at the Nix layer: the Emacs wrapper pre-sets `INFOPATH`, so no Elisp is needed — this module is the source-checkout fallback. After `just info`, `result-info/share/info` is added to `Info-directory-list`; `C-h i d m Jotain RET` opens the manual. `JOTAIN_INFO_DIR` overrides the search.
+Makes the bundled `jotain.info` manual discoverable from `C-h i` in a source checkout. Nix-installed distributions don't need it: their wrapper already sets `INFOPATH`. The module adds the first existing directory among `JOTAIN_INFO_DIR`, `result-info/share/info` (from `just info`), and `result/share/info` to `Info-additional-directory-list`; `C-h i d m Jotain RET` then opens the manual.
 
 ### `init-editing`
 
-Baseline editing primitives: `electric-pair-mode`, `delete-selection-mode`, `whitespace-mode`, undo settings, region tools. Also `keyfreq`, which counts command frequency to disk (`M-x keyfreq-show`) — tiny, no daemon, no network, enabled at `after-init`.
+Editing primitives: `electric-pair-mode`, `delete-selection-mode`, `whitespace-mode`, undo settings, and region tools (`expreg`, `multiple-cursors`, `vundo`). Also `keyfreq`, which records command frequency to `var/` (`M-x keyfreq-show`), enabled at `after-init`.
 
 ### `init-completion`
 
-The vertico stack on the minibuffer side, corfu + cape on the in-buffer side, plus the built-in `minibuffer` tweaks they rely on. All configured in one file because touching one nearly always means touching the others. `C-s` is deliberately left as `isearch-forward`; use `M-s l` for `consult-line` when you want the consult UI.
+The vertico stack in the minibuffer and corfu + cape in buffers, plus the built-in `minibuffer` tweaks they rely on. They share one file because changing one nearly always means changing the others. `C-s` stays `isearch-forward`; `M-s l` is `consult-line`.
 
 ### `init-navigation`
 
-`dired` and `dirvish` in the same file, along with `project`, `winner-mode`, and directional navigation.
+`dired` and its extensions, `dirvish`, and `winner-mode`. Directional window movement (`windmove`) is in `init-keys`; `project` is in `init-project`.
+
+### `init-casual`
+
+`casual` Transient menus over built-in tools, each bound in its own mode map: `C-o` in dired, calc, Info, and ibuffer, `<f2>` during isearch.
 
 ### `init-vc`
 
-`vc` pinned to Git + Jujutsu (other backends are a slow startup tax), `vc-jj` for jj support through built-in `vc`/`project.el` (jj repos are typically colocated with git), `magit` with refined hunks and worktrees in `magit-status`, `majutsu` as a magit-style jj porcelain (`C-c j` status/log, `C-c M-j` dispatch), `magit-todos`, `forge` (configured with the built-in sqlite backend, `emacsql-sqlite-builtin`), `diff-hl` (including `diff-hl-flydiff-mode` for pre-save indicators), and `ediff` with sane window setup (`smerge-mode` needs no config — it self-activates on conflicts with its stock `C-c ^` bindings). The `N/M` modeline counter is backend-aware: a `.jj` directory selects jj probes (`jj diff --git`, an `author_date` revset), otherwise git. For correct jj diff/conflict rendering set `ui.diff-formatter = ":git"` and `ui.conflict-marker-style = "git"` via `jj config edit --user`.
+`vc` limited to Git + Jujutsu (other backends cost startup time), `vc-jj` for jj support in `vc` / `project.el`, `magit` with refined hunks and worktrees in `magit-status`, `majutsu` as a magit-style jj porcelain (`C-c j` log, `C-c M-j` dispatch), `magit-todos`, `forge` (built-in sqlite backend, `emacsql-sqlite-builtin`), `diff-hl` with `diff-hl-flydiff-mode`, and `ediff`. `smerge-mode` needs no config; it activates on conflicts with its stock `C-c ^` bindings. The `N/M` modeline counter is backend-aware: a `.jj` directory selects jj probes (`jj diff --git`, an `author_date` revset), otherwise git. For correct jj diff and conflict rendering, set `ui.diff-formatter = ":git"` and `ui.conflict-marker-style = "git"` via `jj config edit --user`.
 
 ### `init-prog`
 
-The shared substrate for programming modes: `prog-mode` hooks, `treesit` setup, `eglot`, `flymake`, `eldoc`, `apheleia` for format-on-save, `compile`. Per-language `eglot-ensure` hooks live here so all LSP wiring is in one place, and beyond that curated list `eglot` auto-starts for any project file whose language server is on the buffer's (envrc-applied) `PATH` — so enabling a language in a project's devenv lights up its LSP with no per-language config. Per-language mode settings live in `init-lang-*.el`. When the `rass` binary (rassumfrassum, shipped in the devenv shell) is on `PATH`, `tsx-ts-mode` / `typescript-ts-mode` / `typescript-mode` buffers are routed through it to run `typescript-language-server` alongside whichever of `eslint-lsp` and `tailwindcss-language-server` are also on `PATH`, and Python buffers run the bundled `rass python` preset (basedpyright + ruff) when both binaries are present; any missing prerequisite makes eglot fall back to its built-in single-server lookup, so projects using `pylsp` / `pyright` / unguarded tsserver keep working unchanged. Also provides `jotain-sonarlint` for on-demand SonarLint analysis via the `sonarlint-ls` language server — SonarCloud connected mode is configured per-project via `eglot-workspace-configuration` in `.dir-locals.el`. Debugging goes through `dape` (Debug Adapter Protocol, `C-x C-a` prefix); the adapter binaries (e.g. `dlv` for Go, `debugpy` for Python) come from the project/host PATH, same as the LSP servers.
+The shared substrate for programming modes: `prog-mode` hooks, `treesit`, `eglot`, `flymake`, `eldoc`, `apheleia` (format-on-save), and `compile`. All LSP wiring lives here. Beyond the curated per-language hooks, `eglot` auto-starts for any project file whose language server is on the buffer's project `PATH`, so enabling a language in a project's devenv lights up its LSP with no extra config. When `rass` (rassumfrassum, shipped in the devenv shell) is on `PATH`, TypeScript/TSX buffers run `typescript-language-server` through it; `eslint-lsp` and `tailwindcss-language-server` join only when `jotain-prog-enable-risky-js-lsp` is non-nil, because they can execute project JavaScript config. Python buffers use the `rass python` preset (basedpyright + ruff) when both binaries are present. If a prerequisite is missing, eglot falls back to a single server, so projects using `pylsp` / `pyright` keep working. `M-x jotain-sonarlint` starts on-demand SonarLint analysis via `sonarlint-ls`; SonarCloud connected mode is configured per project via `eglot-workspace-configuration` in `.dir-locals.el`. Debugging uses `dape` (`C-x C-a` prefix); adapters such as `dlv` and `debugpy` come from the project or host `PATH`, like the LSP servers.
 
 ### `init-snippets`
 
-Template/snippet expansion via `tempel`, chosen over the built-in `skeleton`/`abbrev` and the heavier `yasnippet` because it shares an author with the corfu/cape/vertico stack and plugs straight into `completion-at-point-functions` — snippet names surface in the corfu popup (added buffer-locally ahead of the cape capfs on `prog-mode`/`text-mode`), and `M-+` (`tempel-complete`) / `M-*` (`tempel-insert`) expand them, with `TAB` / `S-TAB` moving between fields. The curated templates themselves live in `templates/jotain.eld` (keyed by major mode — basic for/while/if/function constructs for Emacs Lisp, Python, Rust, Go, C/C++, and TS/TSX/JS), so adding a snippet never touches Elisp. `eglot-tempel` is configured here too, so Tempel also expands the snippets language servers return (e.g. function-argument placeholders); it is armed the moment eglot loads, before the first connection.
+Snippets via `tempel`, chosen over `skeleton`/`abbrev` and the heavier `yasnippet` because it shares an author with the corfu/cape/vertico stack and plugs into `completion-at-point-functions`: snippet names appear in the corfu popup. `M-+` (`tempel-complete`) and `M-*` (`tempel-insert`) expand them; `M-}` / `M-{` (or `C-M-n` / `C-M-p`) move between fields, and `TAB` is deliberately not a field key. Templates live in `templates/jotain.eld`, keyed by major mode, so adding one never touches Elisp. `eglot-tempel` lets Tempel expand the snippets language servers return (e.g. argument placeholders).
 
 ### `init-project`
 
-Two complementary project command systems: `projection` (`.dir-locals.el`-backed commands exposed via `C-x P`, auto-detected from Makefiles/justfiles/Cargo.toml/etc) and `compile-multi` (per-major-mode named compile commands like "go test", "pytest file", "nix flake check"). They overlap but neither fully covers the other.
+`project` plus two complementary command systems: `projection` (`C-x P`, project types and commands auto-detected from Makefiles, justfiles, `Cargo.toml`, etc.) and `compile-multi` (named per-mode compile commands like "go test", "pytest file", "nix flake check"). Neither fully covers the other.
 
 ### `init-devenv`
 
-Wiring for the in-repo [devenv.sh](https://devenv.sh) integration library `lisp/devenv.el` — the one file under `lisp/` that is *not* an `init-*` module: it is a standalone, reusable package (own `devenv-` namespace, no `jotain-` dependencies) that this module merely binds into the configuration. `C-c v` opens a transient with task and script runners (completing-read over `devenv tasks list --json` / `devenv eval scripts`), `devenv test`/`build`/`update`/`gc` through compilation-mode with Nix-trace error matching, a tabulated process dashboard over the devenv process manager (`devenv up`/`down`, per-process start/stop/restart/logs), environment introspection (`devenv eval`/`info`/`search`), and `devenv-reload` (invalidates caches, re-fetches the environment, offers `eglot-reconnect`). `devenv.nix` buffers are routed to the bundled `devenv lsp` server while `nil` keeps serving other Nix files. `devenv-mcp-setup` registers the project's `devenv mcp` stdio server with mcp.el for gptel tool use. Environment loading is the library's native loader (`devenv-env-global-mode`), since direnv/envrc is disabled (see `init-prog`): for a trusted project it sources `devenv print-dev-env` in bash so the shellHook runs, layers `PATH` over the login one, and drops the derivation-only variables the JSON form carries. It defers to envrc where `devenv-env-defer-to-direnv` is left at `t`. See [devenv integration](/usage/devenv) for the user guide.
+Binds the in-repo [devenv.sh](https://devenv.sh) library `lisp/devenv.el` into the configuration. The library is a standalone package (own `devenv-` namespace, no `jotain-` dependencies) and the one file under `lisp/` that is not an `init-*` module. `C-c v` opens a transient with task and script runners, `devenv test` / `build` / `update` / `gc` in compilation-mode with Nix-trace error matching, a process dashboard over `devenv up` / `down`, introspection (`devenv eval` / `info` / `search`), and `devenv-reload`. `devenv.nix` buffers use the bundled `devenv lsp` server; other Nix files keep `nil`. `devenv-mcp-setup` registers the project's `devenv mcp` server with mcp.el for gptel. The library's native loader (`devenv-env-global-mode`) loads each trusted project's environment: it sources `devenv print-dev-env` in bash (so the shellHook runs) and applies the result buffer-locally. direnv/envrc is not used; Jotain sets `devenv-env-defer-to-direnv` to nil. See [devenv integration](/usage/devenv).
 
 ### `init-ai`
 
-AI assistants. `claude-code-ide` on `C-c q` for agentic multi-file edits via the Claude Code CLI. `eca` on `C-c e` is the Editor Code Assistant client (chat, inline completion, rewrite, MCP) talking to a Nix-provided server. `gptel` on `C-c s` (send) / `C-c S` (menu) with four backends configured: OpenRouter (default, OpenAI-compatible aggregator, `anthropic/claude-sonnet-4.6`), direct Anthropic, Google Gemini, and a local Ollama instance (no key needed). `mcp` is loaded after `gptel` for Model Context Protocol tool use. API keys resolve from the environment (`OPENROUTER_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY`) first, then fall back to `auth-source` — `auth-source-1password` (see `init-systems`) makes that transparent. The eca server's config is generated by the Home Manager module's `services.jotain.eca` submodule (`eca.openrouter.enable` for the default OpenRouter provider from `config/eca/config.json`, `eca.settings` for a freeform merge); the legacy `services.jotain.openrouter.enable` is a renamed alias. API keys for all of these — and any other environment-reading integration — come from the single daemon-wide `services.jotain.environmentFile`, or through Emacs's `auth-source`: `services.jotain.authSources` wires runtime authinfo files (sops/agenix) into `auth-sources`, and `services.jotain.onePassword.enable` puts the `op` CLI on `PATH` for the 1Password backend. Because the eca server reads only its own environment, `jotain-ai-export-api-keys` (see `init-ai`) resolves any missing provider key from auth-source and exports it before each eca session. `services.jotain.claudeCode.enable` supplies the Claude Code CLI for `claude-code-ide`.
+AI assistants. `claude-code-ide` on `C-c q` drives the Claude Code CLI. `eca` on `C-c e` is the Editor Code Assistant client (chat, completion, rewrite, MCP) talking to a Nix-provided server. `gptel` on `C-c s` (send) / `C-c S` (menu) has four backends: OpenRouter (default, `anthropic/claude-sonnet-4.6`), Anthropic, Gemini, and a local Ollama. `mcp` loads after `gptel` for Model Context Protocol tools. API keys come from the environment (`OPENROUTER_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY`) first, then `auth-source`. The eca server reads only its own environment, so `jotain-ai-export-api-keys` exports any missing key from auth-source before each eca session.
+
+On the Home Manager side, `services.jotain.eca` generates the eca server config (`eca.openrouter.enable` adds the default provider from `config/eca/config.json`; `eca.settings` is a freeform merge; the legacy `services.jotain.openrouter.enable` is a renamed alias). Keys come from `services.jotain.environmentFile`, or via auth-source: `services.jotain.authSources` adds runtime authinfo files (sops/agenix) and `services.jotain.onePassword.enable` puts the `op` CLI on `PATH`. `services.jotain.claudeCode.enable` supplies the Claude Code CLI.
 
 ### `init-shell`
 
-`eshell`, `comint`, and `ielm` together — shells and REPLs have their own input handling, history, prompts, and rendering, so grouping them lets the rules be coordinated in one place. The true PTY terminal emulator lives in `init-terminal`.
+`eshell`, `comint`, and `ielm`, grouped because shells and REPLs share concerns (input handling, history, prompts). The PTY terminal emulator lives in `init-terminal`.
 
 ### `init-terminal`
 
-Both directions of terminal support. Inside Emacs: `ghostel`, a terminal emulator powered by libghostty-vt (the VT engine behind Ghostty) through a native dynamic module — real PTY for tmux/ncurses programs, plus automatic shell integration (OSC 7 directory tracking, OSC 133 prompt navigation) and OSC 52 clipboard. The Nix package builds the module from source and ships it in the package directory; in a source checkout the module is downloaded into the writable `elpa/` dir on first `M-x ghostel`. Emacs inside a terminal: `global-kkp-mode` (Kitty Keyboard Protocol), `clipetty` (OSC 52 clipboard through SSH + tmux), `xterm-mouse-mode`, and `tty-tip-mode` on Emacs 31+ — all no-ops in GUI frames. Ghostel's buffers advertise `TERM=xterm-ghostty`, the same dialect the outer Ghostty terminal uses; the `xterm-ghostty → xterm-256color` alias that supports both lives in `early-init.el` because terminal initialisation runs before `init.el`.
+Terminal support in both directions. Inside Emacs: `ghostel`, a terminal emulator built on libghostty-vt (Ghostty's VT engine) through a native module, with a real PTY, shell integration (OSC 7 directory tracking, OSC 133 prompt navigation), and OSC 52 clipboard. When the native module is missing, `ghostel-module-auto-install` downloads it into the package directory on first `M-x ghostel`; that directory must be writable (e.g. a MELPA install under `elpa/`). Emacs inside a terminal: `global-kkp-mode` (Kitty Keyboard Protocol), `clipetty` (OSC 52 clipboard through SSH and tmux), `xterm-mouse-mode`, and `tty-tip-mode` on Emacs 31+, all no-ops in GUI frames. Ghostel advertises `TERM=xterm-ghostty`, like Ghostty itself; the `xterm-ghostty → xterm-256color` alias lives in `early-init.el` because terminal initialisation runs before `init.el`.
 
 ### `init-systems`
 
-Sysadmin tools: SOPS-encrypted file editing, `logview` for log files, and `auth-source-1password` as an `auth-source` backend so `magit`/`forge`, `gptel`, `smtpmail`, etc. all resolve credentials against the 1Password vault transparently.
+Sysadmin tools: `sops` for encrypted files, `logview`, and `auth-source-1password` so `forge`, `gptel`, `smtpmail`, etc. resolve credentials from the 1Password vault.
 
 ### `init-writing`
 
-Prose editing: `jinx` for spell-checking, `markdown-mode`, `denote` for notes, `pdf-tools`. Org is big enough to earn its own file.
+Prose: `jinx` spell-checking, `markdown-mode`, `denote`, `pdf-tools`. Org has its own file.
 
 ### `init-org`
 
-`org-mode`, `org-modern`, capture templates, agenda, and friends. Binds `C-c a` → `org-agenda`, `C-c c` → `org-capture`, `C-c l` → `org-store-link`.
+`org-mode`, `org-modern`, capture templates, agenda, and `org-roam`. Binds `C-c a` → `org-agenda`, `C-c c` → `org-capture`, `C-c l` → `org-store-link`.
 
-Also holds the Org Babel layer that makes an `.org` file usable as a notebook: `jotain-org-babel-languages` (a curated set of languages, all backed by `ob-*` libraries Org itself ships), a trust-aware `org-confirm-babel-evaluate` predicate that skips the prompt for files under `org-directory` or inside the current project, inline-image refresh after every run, source-block editing that preserves indentation, and a `C-c b` notebook prefix (`b` run buffer, `e` run subtree, `r` restart session and run buffer, `s` switch to session, `k` clear results, `t` tangle). See [Notebooks with Org Babel](/usage/notebooks).
+It also makes an `.org` file usable as a notebook: `jotain-org-babel-languages` (a curated set backed by `ob-*` libraries Org itself ships), an `org-confirm-babel-evaluate` predicate that skips the prompt for files under `org-directory` or inside the current project, inline-image refresh after every run, source-block editing that preserves indentation, and a `C-c b` prefix in Org buffers (`b` run buffer, `e` run subtree, `r` restart session and run buffer, `s` switch to session, `k` clear results, `t` tangle). See [Notebooks with Org Babel](/usage/notebooks).
+
+### `init-http`
+
+`verb`, an Org-based HTTP client: requests are Org headings whose children inherit the parent's URL, headers, and body. Its command map is on `C-c C-r` in Org buffers.
 
 ## Language modules
 
-Each `init-lang-*.el` file pins `:mode` regexes and provides font-lock for a group of related languages. Formatter configuration is centralised through `apheleia` in `init-prog.el`; LSP server hooks live in `init-prog.el` too.
+Each `init-lang-*.el` file sets `:mode` regexes and language-specific tweaks for a group of related languages. Formatters (`apheleia`) and LSP hooks live in `init-prog.el`.
 
-- **`init-lang-nix`** — `nix-ts-mode`. Formatting via apheleia (which ships a `nixfmt` entry).
-- **`init-lang-rust`** — `rust-ts-mode` (built-in) plus Cargo command wrappers.
-- **`init-lang-python`** — `python-ts-mode` (built-in), the interpreter set to `python3`. The LSP server (pyright/basedpyright/ruff-lsp) comes from the project environment, not from this config.
-- **`init-lang-go`** — `go-ts-mode` / `go-mod-ts-mode` / `go-work-ts-mode` (built-in), with a buffer-local gopls workspace config that turns on inlay hints, staticcheck, and the `unusedparams`/`shadow`/`nilness`/`unusedwrite` analyses (eglot wired in `init-prog`). A `major-mode-remap-alist` entry routes the classic `go-mode` to `go-ts-mode`, so a stale autoload or missing grammar can never drop a `.go` file into an unavailable classic mode. Adds `go-tag` (struct-tag editing) and `gotest` (point-aware test/benchmark/coverage runs) under the buffer-local `C-c C-t` prefix. Formatting via apheleia → `goimports`; debugging via dape → `dlv`. All Go tooling (`go`, `gopls`, `goimports`, `dlv`, `gomodifytags`) comes from the project/host PATH.
-- **`init-lang-web`** — `typescript-ts-mode`, `tsx-ts-mode`, CSS, JSON, and related tree-sitter modes. Plain `.html`/`.htm` uses the built-in `mhtml-ts-mode` (tree-sitter HTML + JS + CSS); `web-mode` is kept for the templating dialects it uniquely handles (`.php`, `.erb`, `.jsp`, `.tpl`, mustache, Django).
-- **`init-lang-devops`** — Dockerfile, Terraform (`*.tf`), gitlab-ci, justfile, Ansible, Bazel/Starlark (`BUILD`, `WORKSPACE`, `MODULE.bazel`, `*.bzl`, `.bazelrc`, …). A `jotain-docker-backend` defcustom (`'podman` by default, set to `'docker` for classic Docker) switches the runtime command used by `dockerfile-mode`. Bazel buffers format on save via buildifier (centralised through apheleia in `init-prog`).
-- **`init-lang-data`** — YAML, CSV (with `csv-align-mode`), SQL (`sql-indent`), Jinja2, gnuplot.
-- **`init-lang-systems`** — C/C++ (`c-ts-mode`/`c++-ts-mode`, routed via `jotain-prog-ts-remaps`; eglot wires `clangd`, apheleia wires `clang-format`, dape uses `codelldb`), CUDA (`.cu`/`.cuh` → `cuda-ts-mode`, defined here on the `cuda` tree-sitter grammar — a C++ superset; via `derived-mode-add-parents` it counts as `c++-ts-mode`, so the full C++ tool stack applies), CMake, Meson, Haskell (`haskell-ts-mode`, derived from `haskell-mode` so eglot's HLS entry matches), OCaml (`neocaml` — `neocaml-mode`/`neocaml-interface-mode` on the `ocaml`/`ocaml-interface` grammars; `tuareg` kept for `.mll`/`.mly`; eglot wires `ocamllsp`, apheleia wires `ocamlformat`), Zig (`zig-ts-mode`, eglot wires `zls`). `cc-mode` is retained for its `auto-mode-alist` decisions and as the grammarless fallback.
+- **`init-lang-nix`**: `nix-ts-mode`, formatted with `nixfmt` via apheleia.
+- **`init-lang-rust`**: `rust-ts-mode` (built-in) plus rust-analyzer workspace settings (clippy on save, build scripts, proc macros).
+- **`init-lang-python`**: `python-ts-mode` (built-in) with `python3` as the interpreter, or IPython for the REPL when it is on `PATH`. The language server comes from the project environment (see `init-prog`).
+- **`init-lang-go`**: `go-ts-mode` / `go-mod-ts-mode` / `go-work-ts-mode` (built-in), with a gopls workspace config that enables inlay hints, staticcheck, and the `unusedparams` / `shadow` / `nilness` / `unusedwrite` analyses. A `major-mode-remap-alist` entry sends the classic `go-mode` to `go-ts-mode`. `go-tag` (struct tags) and `gotest` (test, benchmark, and coverage runs) live under the mode-local `C-c C-t` prefix. Formatting uses `goimports`, debugging `dlv`. All Go tooling (`go`, `gopls`, `goimports`, `dlv`, `gomodifytags`) comes from the project or host `PATH`.
+- **`init-lang-web`**: `typescript-ts-mode`, `tsx-ts-mode`, CSS, JSON, and related modes. Plain `.html` / `.htm` uses the built-in `mhtml-ts-mode`; `web-mode` handles templating dialects (`.php`, `.erb`, `.jsp`, `.tpl`, mustache, Django).
+- **`init-lang-devops`**: Dockerfile, Terraform, gitlab-ci, justfile, Ansible, Robot Framework, Bazel/Starlark (`BUILD`, `WORKSPACE`, `MODULE.bazel`, `*.bzl`, `.bazelrc`, …), and the Structurizr and LikeC4 architecture DSLs. `jotain-docker-backend` (`'podman` by default, `'docker` for Docker) picks the runtime command used by `dockerfile-mode`. Bazel files are formatted with buildifier.
+- **`init-lang-data`**: YAML, CSV (with `csv-align-mode`), SQL (`sql-indent`), Jinja2, gnuplot.
+- **`init-lang-systems`**: C/C++ (`c-ts-mode` / `c++-ts-mode` via `jotain-prog-ts-remaps`; `clangd`, `clang-format`, `codelldb`), CUDA (`cuda-ts-mode`, defined here on the `cuda` grammar; `derived-mode-add-parents` makes it count as `c++-ts-mode`, so the C++ tools apply), CMake, Meson, Haskell (`haskell-ts-mode`, derived from `haskell-mode` so eglot's HLS entry matches), OCaml (`neocaml-mode` / `neocaml-interface-mode`, `tuareg` for `.mll` / `.mly`, `dune`; `ocamllsp`, `ocamlformat`), and Zig (`zig-ts-mode`, `zls`). `cc-mode` stays for its `auto-mode-alist` decisions and as the fallback without a grammar.
+- **`init-lang-qml`**: `qml-ts-mode` for QML (Quickshell, Qt Quick); `qmlls` and `qmlformat` are wired in `init-prog`.
 
 ## Adding a new module
 
 1. Create `lisp/init-<concern>.el` with the usual Elisp headers and a `lexical-binding: t` cookie.
 2. End the file with `(provide 'init-<concern>)`.
-3. Add a `(require 'init-<concern>)` line in `init.el` at the appropriate point in the load order.
-4. Run `just check` — the `elisp-lint` flake check confirms the parser is happy and `elisp-compile` byte-compiles with warnings as errors.
+3. Add a `(require 'init-<concern>)` line in `init.el` at the right point in the load order.
+4. Run `just check`: `elisp-lint` checks the parens, and `elisp-compile` byte-compiles with warnings as errors.

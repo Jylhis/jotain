@@ -6,24 +6,18 @@
 
 ;;; Commentary:
 
-;; Entry point. Responsibilities kept to an absolute minimum:
+;; Entry point: register MELPA/NonGNU as fallback archives, put lisp/ on
+;; the load-path, and load the per-concern modules in order.
 ;;
-;;   1. Register MELPA as a fallback archive for anything Nix doesn't ship.
-;;   2. Put lisp/ on the load-path.
-;;   3. Load per-concern modules in the right order.
+;; Each `init-<concern>.el' owns everything for its concern, built-in and
+;; third-party alike: a package that enhances a built-in (dirvish, magit)
+;; lives with that built-in (dired, vc). There is deliberately no
+;; builtins/third-party split.
 ;;
-;; Every module is named `init-<concern>.el' and owns *everything* related
-;; to that concern — built-in and third-party alike. A package that only
-;; exists to enhance a built-in (dirvish → dired, magit → vc) lives in the
-;; same file as the built-in it enhances. There is no "builtins.el" or
-;; "third-party.el" split; that split ages badly.
-;;
-;; Package provenance: Nix (or the devenv shell in dev) provides most
-;; packages via load-path, so `use-package' finds them without touching
-;; the network. Anything Nix doesn't ship falls through to MELPA at
-;; install time. `use-package-always-ensure' is t (set in early-init.el),
-;; so every block defaults to "install if missing" — built-ins must opt
-;; out with `:ensure nil'.
+;; Nix puts most packages on load-path, so `use-package' finds them
+;; without the network; anything else installs from the archives.
+;; `use-package-always-ensure' is t (early-init.el), so built-ins must
+;; opt out with `:ensure nil'.
 
 ;;; Code:
 
@@ -33,27 +27,24 @@
 
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 
-;; custom.el is write-only — we never load it back, to keep the declarative
-;; config in git as the single source of truth. It exists only so that
-;; `M-x customize' has somewhere to scribble without touching init.el.
+;; custom.el is write-only: never loaded back, so the config in git stays
+;; the single source of truth. It only gives Customize somewhere to write.
 (setq custom-file (locate-user-emacs-file "var/custom.el"))
 
-;; Archives are registered above but never fetched on the startup path:
-;; Nix (and the devenv shell in dev) provides every `:ensure'd package,
-;; so a launch-time download only slows startup and can take a daemon
-;; down on a flaky network. Refreshes stay package.el's own job:
-;; `package-install' downloads only when the on-disk cache is empty, and
-;; `M-x package-refresh-contents' / `list-packages' refresh on demand.
+;; The archives are never fetched on the startup path: a launch-time
+;; download only slows startup and can take a daemon down on a flaky
+;; network. `package-install' downloads only when the on-disk cache is
+;; empty; `M-x package-refresh-contents' / `list-packages' refresh.
 
 (require 'init-core)         ; GC, encoding, var/ paths, sane defaults
-(require 'init-keys)         ; Global keymap and leader-key setup
+(require 'init-keys)         ; Global bindings, which-key labels, repeat maps
 (require 'init-ui)           ; Theme, modeline, fonts, frame tweaks
 (require 'init-tabs)         ; Workspace tabs via tab-bar-mode
 (require 'init-help)         ; helpful + built-in help tweaks
 (require 'init-docs)         ; Surface jotain.info under C-h i
 (require 'init-editing)      ; Electric pairs, delsel, whitespace, region tools
 (require 'init-completion)   ; Vertico, marginalia, orderless, consult, corfu
-(require 'init-navigation)   ; Dired + dirvish, project, windmove, winner
+(require 'init-navigation)   ; Dired + dirvish, winner
 (require 'init-casual)       ; Transient menus for dired/calc/isearch/ibuffer/Info
 (require 'init-vc)           ; vc + magit + diff-hl + forge
 (require 'init-prog)         ; prog-mode, treesit, eglot, flymake, eldoc, compile
@@ -68,9 +59,8 @@
 (require 'init-org)          ; org, org-modern, capture templates
 (require 'init-http)         ; verb HTTP/REST client (org-based)
 
-;; Languages. The well-supported ones (Nix, Rust, Python, Go) each have
-;; their own file; less-used modes are grouped by concern so init.el
-;; doesn't grow one line per MELPA package.
+;; Languages: Nix, Rust, Python, Go, and QML get their own files;
+;; less-used modes are grouped by concern.
 (require 'init-lang-nix)
 (require 'init-lang-rust)
 (require 'init-lang-python)
@@ -78,7 +68,7 @@
 (require 'init-lang-web)       ; TS/TSX/CSS/HTML/JSON/web-mode
 (require 'init-lang-devops)    ; Dockerfile, terraform, just, ansible
 (require 'init-lang-data)      ; yaml, csv, sql, jinja2, gnuplot
-(require 'init-lang-systems)   ; C/C++, CMake, Meson, Haskell, Zig
+(require 'init-lang-systems)   ; C/C++, CMake, Meson, Haskell, OCaml, Zig
 (require 'init-lang-qml)        ; QML (Quickshell / Qt Quick)
 
 (provide 'init)

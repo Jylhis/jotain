@@ -2,22 +2,14 @@
 
 ;;; Commentary:
 
-;; The Jylhis themes come from an out-of-tree pin (nix/design-pin.nix,
-;; built as jylhis-emacs-themes), so the theme symbols `init-ui.el'
-;; names and the theme files that pin actually ships can drift apart.
-;; When they do, `load-theme' signals — and because `init.el' requires
-;; init-ui unguarded, every module after it would silently never load.
+;; The Jylhis themes come from an out-of-tree pin (nix/design-pin.nix),
+;; so the theme symbols `init-ui.el' names can drift from the theme files
+;; the pin ships (as upstream renames have done).  On drift `load-theme'
+;; signals and init-ui falls back to Modus.  Byte compilation can't
+;; catch it: the `load-theme' calls are skipped in batch.
 ;;
-;; v3.0.0 of the design system (one theme) renamed
-;; `jylhis-survey-light'/`jylhis-survey-dark' (v2.0.0's renaming of
-;; `jylhis-sheet'/`jylhis-field') to the mode symbols
-;; `jylhis-light'/`jylhis-dark', which is exactly that failure.  Byte
-;; compilation cannot catch it: the `load-theme' calls sit behind
-;; `(unless noninteractive ...)' and are never evaluated in batch.
-;;
-;; These tests read `init-ui.el' as data rather than loading it — the
-;; module pulls in doom-modeline, auto-dark and friends, none of which
-;; are worth booting in batch just to read two defcustom defaults.
+;; The tests read `init-ui.el' as data instead of loading it, which would
+;; pull in doom-modeline, auto-dark, and friends.
 
 ;;; Code:
 

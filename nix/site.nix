@@ -14,53 +14,34 @@
 #   /help/api/        generated docstring-level API reference (emacs-api-doc.nix)
 #   /packages/        third-party package search over /help/api/ (withApiDoc)
 #
-# Output layout ($out/public/ is uploaded as the GitHub Pages artifact):
-#   $out/public/          the site
-#
-# The site is served under a base path (baseHref, default /jotain) because it
-# is a GitHub Pages project site at page.jylhis.com/jotain/. Every internal
-# absolute URL below carries that prefix; pass baseHref = "" to serve at a root.
-#
-# Usage:
-#   nix build .#site -o result-site
-#   # served at /jotain/, so mount it there for a faithful local preview:
-#   d=$(mktemp -d); ln -s "$PWD/result-site/public" "$d/jotain"
-#   python3 -m http.server -d "$d" 8080   # → http://localhost:8080/jotain/
+# The site is $out/public/ (the GitHub Pages artifact). Preview it under
+# the base path with `just serve-site`.
 {
   pkgs,
   lib ? pkgs.lib,
   src ? ../.,
-  # Whether to mount the generated per-package API reference (etc/elisp-doc)
-  # at /help/api/. This build is heavy (a batch Emacs over ~100 packages),
-  # so it is on for the deployed `.#site` but OFF for the `.#site-preview`
-  # target PR CI builds — keeping the PR `site` job within its time budget.
-  # Guarded lazily below so `withApiDoc = false` never realizes emacsApiDoc.
+  # Mount the heavy /help/api/ reference. Off for `.#site-preview` (PR CI);
+  # guarded lazily so `false` never realizes emacsApiDoc.
   withApiDoc ? true,
-  # Path prefix the site is served under. The site is a GitHub Pages project
-  # site at page.jylhis.com/jotain/, so every internal absolute URL carries
-  # this prefix. Set to "" to serve from a domain root.
+  # Prefix of every internal absolute URL: the site is the GitHub Pages
+  # project site page.jylhis.com/jotain/. Use "" to serve from a root.
   baseHref ? "/jotain",
 }:
 let
   optionsDoc = import ./options-doc.nix { inherit pkgs src; };
   packagesDoc = import ./packages-doc.nix { inherit pkgs src; };
-  # Generated docstring-level API reference for the bundled packages
-  # (etc/elisp-doc). Its html/ tree is mounted at /help/api/; the mount
-  # path is baked into the pages' absolute stylesheet links, so keep the
-  # two in sync.
+  # The mount path is baked into the pages' stylesheet links; keep it in
+  # sync with where html/ is copied below.
   emacsApiDoc = import ./emacs-api-doc.nix {
     inherit pkgs src;
     mountPath = "${baseHref}/help/api";
   };
-  # The /help/ index row for the API reference, emitted only when the
-  # reference is actually mounted (see withApiDoc).
+  # /help/ index row, emitted only under withApiDoc.
   apiHelpRow = ''<div class="man-entry"><a href="${baseHref}/help/api/">C-h S — elisp API reference</a><span class="man-dots">·····································································</span><span class="man-desc">docstrings for every bundled package</span></div>'';
-  # The /packages/ search landing page — like apiHelpRow, only when the
-  # generated reference it searches over is actually mounted.
+  # /packages/ row, likewise only under withApiDoc.
   pkgSearchRow = ''<div class="man-entry"><a href="${baseHref}/packages/">M-x list-packages — package search</a><span class="man-dots">·····································································</span><span class="man-desc">search every third-party package and symbol</span></div>'';
   infoManual = import ./info-manual.nix { inherit pkgs src; };
-  # The Emacs Jotain actually ships (emacs-unstable base, the newest Emacs
-  # release tag, currently 31.1): its man pages and manual sources feed /man and
+  # The shipped Emacs: its man pages and manual sources feed /man and
   # /info, so the site documents the exact revision users get.
   emacs = pkgs.jotainEmacs;
 
@@ -104,9 +85,8 @@ let
     fileset = lib.fileset.maybeMissing (src + "/website/public");
   };
 
-  # The GNU Emacs + Elisp manuals, rendered from the exact source
-  # revision the site's Emacs is built from.  Separate derivation so a
-  # docs/ edit doesn't re-render ~200 chapters of upstream manual.
+  # The GNU Emacs + Elisp manuals from that Emacs's source. Separate
+  # derivation, so a docs/ edit does not re-render them.
   emacsManualsHtml =
     pkgs.runCommand "emacs-manuals-html"
       {

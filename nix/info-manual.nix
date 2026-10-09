@@ -12,8 +12,8 @@
 #                                |
 #                           jotain.info + install-info dir entry
 #
-# The options appendix comes from nix/options-doc.nix which exposes a
-# Texinfo fragment alongside its HTML output.
+# The options and package references come in as Texinfo fragments from
+# nix/options-doc.nix and nix/packages-doc.nix.
 #
 # Usage:
 #   nix build .#info
@@ -26,9 +26,8 @@
 let
   texi = import ./texi-fragment.nix;
 
-  # Only the docs/ tree is consumed by makeinfo; restrict the store
-  # path to it so we don't drag in irrelevant files (e.g. .git IPC
-  # sockets, build artefacts) that Nix import refuses to copy.
+  # Only docs/ is read; narrowing also avoids files Nix refuses to copy
+  # (e.g. sockets).
   docsSrc = lib.fileset.toSource {
     root = src;
     fileset = lib.fileset.intersection (lib.fileset.maybeMissing (src + "/docs")) (
@@ -41,10 +40,8 @@ let
   optionsDoc = import ./options-doc.nix { inherit pkgs src; };
   packagesDoc = import ./packages-doc.nix { inherit pkgs src; };
 
-  # Pages that flow into @chapter sections of jotain.texi.  Order and
-  # grouping mirror docs/docs.json.  Each entry is { src, out }: the
-  # path relative to docs/ and the @include filename referenced from
-  # docs/jotain.texi.
+  # Chapters of jotain.texi: { src (relative to docs/), out (the
+  # @include name) }. Order mirrors docs/docs.json.
   chapters = [
     {
       src = "introduction.mdx";
@@ -82,10 +79,8 @@ let
       src = "configuration/packages.mdx";
       out = "configuration-packages.texi";
     }
-    # configuration/package-reference.mdx is itself generated from
-    # `;;; @doc` markers (see nix/packages-doc.nix). Skip the markdown
-    # round-trip and use the texinfo fragment that derivation already
-    # produces; it is copied into docs/ below.
+    # configuration/package-reference.mdx is skipped: packages-doc.nix's
+    # own texinfo fragment is copied in below.
     {
       src = "usage/launching.mdx";
       out = "usage-launching.texi";
@@ -156,23 +151,19 @@ pkgs.runCommand "jotain-info"
         cd build
 
         # Preprocess one Markdown/MDX file into plain GFM, then pandoc it
-        # into a Texinfo fragment.  The preprocessor handles the only three
-        # MDX-isms currently used under docs/:
+        # into a Texinfo fragment. The awk pass handles the MDX-isms used
+        # under docs/:
         #
-        #   1. YAML frontmatter (`---\n...\n---`) is stripped.
+        #   1. YAML frontmatter is stripped.
         #   2. <Note>…</Note> (single- or multi-line) becomes a blockquote.
-        #   3. The leading `# Title` that every MDX page opens with is
-        #      dropped — the @chapter wrapper in docs/jotain.texi already
-        #      provides that heading, and removing it here means remaining
-        #      h2 headings map to @section (pandoc default) without needing
-        #      --shift-heading-level-by.
+        #   3. The leading `# Title` is dropped: docs/jotain.texi's @chapter
+        #      provides it, and the h2s then map to @section unshifted.
         convert() {
           local inpath="$1"
           local outname="$2"
           local tmpfile
           tmpfile="$(mktemp)"
 
-          # 1+2+3 are all regex-small enough to fit in one awk pass.
           awk '
             BEGIN { in_fm = 0; fm_done = 0; stripped_title = 0 }
             # Strip a YAML frontmatter block at the very top of the file.
@@ -207,10 +198,7 @@ pkgs.runCommand "jotain-info"
             }
           ' "$inpath" > "$tmpfile"
 
-          # Strip pandoc's standalone-document scaffolding so only the
-          # @section/@subsection sectioning survives: makeinfo then assigns
-          # nodes automatically under the master's @chapter.  See
-          # nix/texi-fragment.nix.
+          # See nix/texi-fragment.nix.
           pandoc "$tmpfile" \
             -f gfm \
             -t texinfo \
@@ -226,29 +214,23 @@ pkgs.runCommand "jotain-info"
     ${convertLines}
         cd ..
 
-        # Bring the options-doc and packages-doc texinfo fragments into
-        # the include search path.
+        # Put the generated fragments on the include path.
         cp "$optionsFragment"  docs/jotain-options.texi
         cp "$packagesFragment" docs/jotain-packages.texi
 
-        # Emit the final .info.  Jotain is a short manual — one node per
-        # chapter is enough, no need for --split-size gymnastics.
+        # A short manual: one unsplit .info file.
         mkdir -p "$out/share/info"
         makeinfo --no-split \
           -o "$out/share/info/jotain.info" \
           docs/jotain.texi
 
-        # Populate a `dir` file so Emacs's Info-insert-dir merger picks us
-        # up.  install-info is idempotent and won't clobber other packages'
-        # entries when Emacs scans a superset of info directories.
+        # A `dir` file so Emacs's Info directory merge lists the manual.
         install-info \
           --dir-file="$out/share/info/dir" \
           "$out/share/info/jotain.info"
 
-        # HTML rendering of the same manual, one page per chapter, for the
-        # website (nix/site.nix mounts this at /manual/).  The css-ref is
-        # relative so the site can ship its own manual.css next to the
-        # pages; standalone consumers just get unstyled-but-readable HTML.
+        # HTML, one page per chapter, for the site's /manual/. The relative
+        # css-ref lets nix/site.nix ship manual.css beside the pages.
         # makeinfo only creates the last path component itself.
         mkdir -p "$out/share/doc/jotain"
         makeinfo --html \

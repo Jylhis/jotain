@@ -6,21 +6,18 @@
 #   nix/checks.nix          → ds-in-sync (vendored copy == pinned upstream)
 #   Justfile                → just ds-sync
 #
-# Both halves of the design system must move together: the Emacs themes and
-# the website CSS are generated from the same token sources, so pinning them
-# separately would let website/public/ds drift from the Emacs themes.
+# The Emacs themes and the website CSS are generated from the same token
+# sources, so one pin keeps them in step.
 #
-# The design system ships one `jylhis` theme with first-class light/dark
-# modes, selected by `data-mode` alone (`data-theme` is retired). Generated
-# outputs are named `jylhis-<light|dark>` (×2), and upstream does not commit
-# them, so nix/extra-packages.nix and nix/ds-assets.nix run the generator
-# in-derivation, mirroring upstream's own nix/generated.nix. jotain loads the
-# jylhis-light/jylhis-dark pair; see lisp/init-ui.el.
+# Upstream does not commit the generated `jylhis-<light|dark>` outputs, so
+# nix/extra-packages.nix and nix/ds-assets.nix run the generator
+# in-derivation, mirroring upstream's nix/generated.nix. jotain loads the
+# jylhis-light/jylhis-dark pair (lisp/init-ui.el).
 #
-# Upstream has not cut a v3.0.0 tag, so the rev is the pin.
+# There is no v3.0.0 tag yet, so the rev is the pin.
 #
-# Bumping: change rev + version here, then run `just ds-sync` to re-vendor the
-# website assets.  The sha256 is the NAR hash of the unpacked tarball —
+# Bump with `just update-pins design`, or by hand: change rev + version,
+# then run `just ds-sync`. sha256 is the NAR hash of the unpacked tarball:
 # `nix-prefetch-url --unpack https://github.com/Jylhis/design/archive/<rev>.tar.gz`.
 {
   owner = "Jylhis";

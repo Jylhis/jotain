@@ -3,9 +3,8 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    # nixpkgs-unstable (26.11) dropped x86_64-darwin; 26.05 is its last
-    # supported release. Pinned for that one platform only — every other
-    # system uses the unstable channel above. See `nixpkgsFor`.
+    # nixpkgs-unstable (26.11) dropped x86_64-darwin; 26.05 is the last
+    # release supporting it. Used for that platform only (see `nixpkgsFor`).
     nixpkgs-x86_64-darwin.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -15,18 +14,16 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Supplies the git-based variants used by emacs.nix: emacs-git
-    # (master), emacs-unstable (newest Emacs release tag, currently
-    # 31.1; the default base for jotainEmacs, see nix/mk-overlay.nix),
-    # emacs-igc (feature/igc3). The "mainline" variant uses nixpkgs' default
-    # emacs attribute and does not need the overlay.
+    # The git-based emacs.nix variants: emacs-git (master), emacs-unstable
+    # (newest release or pretest tag, currently 31.1; the jotainEmacs
+    # default) and emacs-igc (feature/igc3). "mainline" is nixpkgs' own
+    # emacs and needs no overlay.
     emacs-overlay = {
       url = "github:nix-community/emacs-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Android (Termux/proot) Nix environment. Only consumed by
-    # `nixOnDroidModules` / the example `nixOnDroidConfigurations`; other
-    # outputs do not depend on it.
+    # Android (proot) Nix environment, used only by the example
+    # `nixOnDroidConfigurations`.
     nix-on-droid = {
       url = "github:nix-community/nix-on-droid/master";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -45,7 +42,7 @@
       systems = [
         "x86_64-linux"
         "aarch64-linux"
-        # pinned to nixpkgs-26.05-darwin — see the nixpkgs-x86_64-darwin input
+        # on nixpkgs-26.05-darwin (see the nixpkgs-x86_64-darwin input)
         "x86_64-darwin"
         "aarch64-darwin"
       ];
@@ -66,15 +63,11 @@
           projectRootFile = "flake.nix";
           programs = import ./nix/treefmt.nix;
         };
-      # Overlay handed to the HM / NixOS / nix-darwin / nix-on-droid module
-      # outputs. emacs-overlay is composed underneath the jotain overlay so
-      # module installs resolve the emacs-git/unstable/igc bases and their
-      # epkgs from the same snapshot `packages.default` (and CI) build —
-      # otherwise module-built distributions would silently diverge from
-      # the flake-built, cachix-cached one. Consumer trade-off: consumers
-      # following jotain's nixpkgs pin get jylhis-cachix hits; consumers
-      # overriding nixpkgs with their own (24.05+) lose Hydra-cached epkgs
-      # and build the overlay's MELPA snapshot locally instead.
+      # Overlay for the module outputs. emacs-overlay sits underneath so
+      # module installs resolve the same Emacs bases and epkgs snapshot as
+      # `packages.default` (and CI's cachix artifacts). Consumers that
+      # override nixpkgs (24.05+) lose those cache hits and build the
+      # overlay's MELPA snapshot locally.
       moduleOverlay = nixpkgs.lib.composeExtensions emacs-overlay.overlays.default self.overlays.default;
     in
     {
@@ -102,22 +95,16 @@
 
       lib = import ./nix/use-package.nix { inherit (nixpkgs) lib; };
 
-      # THE BUILD MATRIX: exactly two Emacs builds per platform —
-      # `emacs` (bare: pgtk/Wayland GUI on Linux, patched NS GUI on
-      # Darwin) inside `default` (the full distribution), and
-      # `emacs-nox` (terminal-only distribution) — on {x86_64, aarch64}
-      # × {Linux, Darwin}. emacs.nix asserts the unsupported GUI
-      # combinations away.
+      # Two Emacs builds per platform: `emacs` (pgtk GUI on Linux, patched
+      # NS GUI on Darwin; wrapped by `default`, the full distribution) and
+      # the terminal-only `emacs-nox`. emacs.nix asserts other GUIs away.
       packages = forAllSystems (system: {
         default = (pkgsFor system).jotainEmacsPackages;
         emacs = (pkgsFor system).jotainEmacs;
-        # Full terminal-only distribution (noGui Emacs + packages +
-        # grammars) — same attribute the nix-on-droid module ships.
-        # `just run-built` launches this on aarch64-linux.
+        # Terminal-only distribution: what the nix-on-droid module ships
+        # and what `just run-built` launches on aarch64-linux.
         emacs-nox = (pkgsFor system).jotainEmacsPackagesNoGui;
-        # LikeC4 language server (@likec4/lsp), bundled onto every
-        # distribution wrapper via nix/runtime-deps.nix. Exposed here so it
-        # can be built and checked directly with `nix build .#likec4-lsp`.
+        # Already bundled into every distribution; exposed for direct builds.
         likec4-lsp = (pkgsFor system).likec4Lsp;
         info = (pkgsFor system).jotainInfo;
         docs = import ./nix/options-doc.nix {
@@ -128,57 +115,34 @@
           pkgs = pkgsFor system;
           src = self;
         };
-        # Generated docstring-level API reference for every bundled
-        # package (nix/emacs-api-doc.nix, forking etc/elisp-doc). Heavy:
-        # realizes the config package closure and runs a batch Emacs.
-        # Mounted into the site under /help/api/ by nix/site.nix.
+        # Docstring-level API reference for every bundled package, mounted
+        # at /help/api/ by nix/site.nix. Heavy: one batch Emacs per package.
         emacs-api-doc = import ./nix/emacs-api-doc.nix {
           pkgs = pkgsFor system;
           src = self;
         };
-        # No `src = self` here: site.nix (via info-manual.nix) selects
-        # files with lib.fileset, which requires a real path — the
-        # string-like flake source is rejected. The default src (../.
-        # relative to nix/) is the same tree as a path, matching how
-        # mk-overlay.nix wires jotainInfo.
+        # No `src = self`: lib.fileset (used by site.nix and
+        # info-manual.nix) rejects the string-like flake source. The
+        # default src (../.) is the same tree as a path.
         site = import ./nix/site.nix {
           pkgs = pkgsFor system;
         };
-        # Light site for PR CI: same assembly minus the heavy
-        # /help/api/ generated API reference (emacs-api-doc), which is
-        # built only on the deploy path. Keeps PR CI's `site` job within
-        # its time budget while still validating docs/manuals/man/options.
+        # PR CI's site build: the full site minus the heavy /help/api/
+        # reference, which only the deploy path builds.
         site-preview = import ./nix/site.nix {
           pkgs = pkgsFor system;
           withApiDoc = false;
         };
-        # Design-system CSS + fonts at the pinned jylhis/design rev, as
-        # website/public/ds is expected to contain them. `just ds-sync`
-        # copies from here; the ds-in-sync check diffs against it.
+        # Expected contents of website/public/ds (`just ds-sync`, ds-in-sync).
         ds-assets = import ./nix/ds-assets.nix {
           pkgs = pkgsFor system;
           inherit ((pkgsFor system)) bun;
         };
       });
 
-      # AOT-compiled config (byte + native .eln in the store), for `just
-      # run-built-fast`. Built against jotainEmacsPackages.core — the same
-      # inner emacsWithPackages wrapper the daemon (module.nix) and the
-      # byte-compile check compile against, so the store .eln matches the
-      # full distribution `just build` launches. `.core` (not the outer
-      # wrapper) keeps jotainInfo and every @doc/docs page out of the
-      # derivation's inputs; no `src = self` for the same lib.fileset
-      # reason documented on `site` above.
-      #
-      # Kept in `legacyPackages`, NOT `packages`: with nativeCompile=true
-      # it is a heavy AOT native-comp pass (~50-150 MB of .eln) that only
-      # the local `just run-built-fast` consumes — nothing in CI or the
-      # deployed artifacts does (module.nix builds its own compiledConfig;
-      # nix/checks.nix' elisp-compile uses nativeCompile=false). `nix flake
-      # check' builds every `packages` output but skips `legacyPackages',
-      # so this stays off the main/next deploy gate while `nix build
-      # .#config-compiled' still resolves it (packages → legacyPackages
-      # fallback).
+      # legacyPackages holds outputs `nix flake check` must not build
+      # (it builds every `packages` output but skips these); `nix build
+      # .#<name>` still resolves them.
       legacyPackages = forAllSystems (
         system:
         let
@@ -190,25 +154,24 @@
           };
         in
         {
-          # Every Emacs package the config bundles (nix/emacs-package-set.nix),
-          # individually buildable: nix build .#emacs-packages.magit. Kept in
-          # legacyPackages, NOT packages, so `nix flake check` never builds
-          # them; the eval-only emacs-packages-eval check (nix/checks.nix)
-          # gates that every declared name resolves to a derivation.
+          # Every bundled Emacs package, e.g. `nix build
+          # .#emacs-packages.magit`. The eval-only emacs-packages-eval check
+          # gates that every declared name resolves.
           emacs-packages = emacsPackageSet.byName;
 
+          # AOT-compiled config (.elc + store .eln) for `just run-built-fast`
+          # only; ~50-150 MB of .eln. Built against `.core`, like the
+          # daemon's compiledConfig and the elisp-compile check (see
+          # nix/config-compiled.nix).
           config-compiled = import ./nix/config-compiled.nix {
             pkgs = pkgsFor system;
             emacs = (pkgsFor system).jotainEmacsPackages.core;
             nativeCompile = true;
           };
 
-          # Per-language IDE-feature evaluation (nix/lang-eval.nix). Kept in
-          # legacyPackages, NOT packages: lang-eval-matrix loads the full config
-          # in batch and lang-eval-live bundles heavy language servers, so
-          # `nix flake check` (which builds every packages output) must not run
-          # them. The cheap, deterministic gate is checks.lang-eval-doc-in-sync;
-          # these are buildable on demand:
+          # Per-language IDE-feature evaluation (nix/lang-eval.nix). The
+          # matrix loads the full config and the live probe bundles language
+          # servers; the cheap gate is checks.lang-eval-doc-in-sync.
           #   nix build .#lang-eval-doc      (registry -> language-support.mdx)
           #   nix build .#lang-eval-matrix   (live config-introspection matrix)
           #   nix build .#lang-eval-live     (end-to-end LSP probe subset)
@@ -227,12 +190,9 @@
         }
       );
 
-      # Example nix-on-droid configuration wiring up the Jotain module.
-      # nix-on-droid runs on aarch64-linux (Android under proot), so this
-      # builds/activates only on-device or via aarch64 emulation —
-      # `nix flake check` does not realise it (unknown output type), and
-      # CI is x86_64-only. Copy this shape into your own nix-on-droid
-      # flake and run `nix-on-droid switch --flake .#default`.
+      # Example nix-on-droid config (aarch64-linux). `nix flake check`
+      # does not build it (unknown output type). Copy this shape into your
+      # own flake and run `nix-on-droid switch --flake .#default`.
       nixOnDroidConfigurations.default = inputs.nix-on-droid.lib.nixOnDroidConfiguration {
         pkgs = import nixpkgs {
           system = "aarch64-linux";
@@ -242,8 +202,7 @@
           self.nixOnDroidModules.default
           {
             services.jotain.enable = true;
-            # nix-on-droid's system.stateVersion has no default; set it so
-            # this example evaluates as a complete, switchable config.
+            # No default upstream; required for a switchable config.
             system.stateVersion = "24.05";
           }
         ];

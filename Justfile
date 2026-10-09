@@ -1,14 +1,11 @@
 # Jotain Emacs configuration — task runner.
 #
-# All recipes assume the devenv shell is active. Enter it with
-# `devenv shell`, or prefix any command with `devenv shell --`,
-# e.g. `devenv shell -- just check`. direnv users can create their
-# own (untracked) .envrc with `eval "$(devenv direnvrc)"` + `use devenv`.
+# Recipes assume the devenv shell: `devenv shell`, or prefix with
+# `devenv shell --` (e.g. `devenv shell -- just check`).
 
 config_dir := justfile_directory()
 
-# Emacs build flavours target the current system by default. Override
-# with `just system=x86_64-linux build-nox` etc.
+# Override with e.g. `just system=x86_64-linux build-nox`.
 system := arch() + "-" + if os() == "macos" { "darwin" } else { "linux" }
 
 # List available recipes.
@@ -18,23 +15,20 @@ default:
 
 # ── Check / compile ─────────────────────────────────────────────────
 
-# Run all checks: eval, flake, devenv, linting.
+# Run every flake check (heavier than PR CI; excludes devenv test).
 [group('check')]
 check:
     nix flake check
 
-# Run the ERT tests under test/ via the flake check (the dev shell has
-# no emacs; the check builds one).
+# Run the ERT tests under test/ via the elisp-test flake check.
 [group('check')]
 test:
     nix build .#checks.{{system}}.elisp-test --no-link --print-build-logs
 
 
-# Benchmark startup against the Nix-built Emacs: builds one via nix (the
-# dev shell has no emacs), then runs the bench/ harness, which measures
-# the real INTERPRETED startup (the honest run-built baseline). Needs a
-# display on x86_64 (pgtk aborts headless; the aarch64 branch uses the
-# -nox build) — prefix `xvfb-run` for a headless run.
+# Measures interpreted startup (the run-built baseline). Needs a display
+# except on aarch64-linux (pgtk aborts headless): prefix `xvfb-run`.
+# Benchmark startup of the Nix-built Emacs with the bench/ harness.
 [group('check')]
 bench-built output="var/bench/startup.txt":
     #!/usr/bin/env bash
@@ -63,9 +57,8 @@ bench-built output="var/bench/startup.txt":
 build:
     nix-build
 
-# Build a bare Emacs (no tree-sitter grammars): the matrix GUI for the
-# platform — pgtk/Wayland on Linux, patched NS on Darwin (the latter is
-# a from-source build by design; see emacs.nix).
+# Darwin's patched NS build is from source by design (see emacs.nix).
+# Build a bare Emacs (no grammars): pgtk on Linux, patched NS on Darwin.
 [group('build')]
 build-bare:
     nix-build --argstr system {{system}} emacs.nix
@@ -85,39 +78,31 @@ build-git:
 build-igc:
     nix-build --arg variant '"igc"' --argstr system {{system}} emacs.nix
 
-# Build IGC with ccache. Only useful on Darwin, where nix-community has
-# no prebuilt igc (plain build-igc is already from-source there) —
-# ccache makes repeat local rebuilds cheaper. Needs the ccache sandbox
-# exception; see the useCcache comment in emacs.nix. Elsewhere igc is a
-# cache hit and this adds ccache overhead for nothing.
+# Only useful on Darwin, where nix-community has no prebuilt igc;
+# elsewhere igc is a cache hit. Needs the sandbox setup described at
+# useCcache in emacs.nix.
+# Build IGC with ccache, for cheaper repeat local rebuilds.
 [group('build')]
 build-igc-ccache:
     nix-build --arg variant '"igc"' --arg useCcache true --argstr system {{system}} emacs.nix
 
-# Build a CPU-tuned perf Emacs: -O3 -march/-mtune for this machine's
-# icelake i5. Opt-in flag: the tune puts the build off every binary
-# cache by design, so it only pays off on a path that already builds
-# from source (the Darwin NS GUI, a custom rev pin, igc on Darwin) or
-# when a local rebuild is accepted. Composable with the other args,
-# e.g. --arg variant '"igc"' or --arg useCcache true; see the cpuTune
-# comment in emacs.nix.
+# Off every binary cache by design; see cpuTune in emacs.nix.
+# Build a CPU-tuned Emacs (-O3 -march/-mtune=icelake-client).
 [group('build')]
 build-perf:
     nix-build --arg cpuTune '"icelake-client"' --argstr system {{system}} emacs.nix
 
-# Build a bare aarch64-linux nox Emacs (Termux/Android) — kept for
-# cache-parity testing of emacs.nix; `run-built` uses build-nox-full.
+# Build a bare aarch64-linux terminal Emacs (cache-parity testing).
 [group('build')]
 build-android:
     nix-build --arg noGui true --argstr system aarch64-linux emacs.nix
 
-# Build the full terminal-only distribution (noGui Emacs + packages +
-# grammars) for the current system.
+# Build the full terminal-only distribution for the current system.
 [group('build')]
 build-nox-full:
     nix build .#emacs-nox -o result
 
-# Auto-detect platform, build, then launch Emacs with this configuration.
+# Build for this platform, then launch Emacs with this configuration.
 [group('build')]
 run-built *ARGS:
     #!/usr/bin/env bash
@@ -135,13 +120,11 @@ run-built *ARGS:
     echo "Launching Emacs from result/bin/emacs..."
     ./result/bin/emacs --init-directory="{{config_dir}}" {{ARGS}}
 
-# Launch from the AOT-compiled config (.elc + store .eln) — the fastest
-# cold start. var/fast-home symlinks entry files and lisp/ into the
-# .#config-compiled store derivation: realpath resolves each symlink to
-# the store path the .eln was hashed against, so the store .eln loads
-# (same mechanism as the HM daemon). var/, elpa/ and templates/ symlink
-# back to the repo so state stays warm. Reflects the LAST build —
-# re-run to recompile; use plain run-built while actively editing.
+# var/fast-home symlinks the entry files and lisp/ into .#config-compiled,
+# so realpath hits the store .eln (as in the HM daemon); var/, elpa/ and
+# templates/ point back at the repo. Reflects the last build: use plain
+# run-built while editing.
+# Launch the AOT-compiled config (.elc + store .eln), the fastest start.
 [group('build')]
 run-built-fast *ARGS:
     #!/usr/bin/env bash
@@ -153,31 +136,25 @@ run-built-fast *ARGS:
     echo "Compiled config: $store"
     home="{{config_dir}}/var/fast-home"
     mkdir -p "$home" "{{config_dir}}/var"
-    # Compiled entry files + lisp/ from the store (symlinks; realpath →
-    # store path → store .eln hits).
     for f in early-init.el early-init.elc init.el init.elc lisp; do
         ln -sfn "$store/$f" "$home/$f"
     done
-    # Writable, shared state — reuse the repo's warm caches and packages.
+    # Writable state shared with the repo.
     ln -sfn "{{config_dir}}/var" "$home/var"
     ln -sfn "{{config_dir}}/templates" "$home/templates"
     [ -e "{{config_dir}}/elpa" ] && ln -sfn "{{config_dir}}/elpa" "$home/elpa" || true
-    # Store AOT .eln for init.el + lisp/ (appended to the eln load path
-    # by early-init.el).
+    # Appended to the eln load path by early-init.el.
     export JOTAIN_ELN_PATH="$store/share/emacs/native-lisp"
     exec ./result/bin/emacs --init-directory="$home" {{ARGS}}
 
-# Same, with init debugging enabled.
+# Like run-built, with --debug-init and debug-on-error.
 [group('build')]
 run-built-debug *ARGS:
     just run-built --debug-init --eval '(setq debug-on-error t)' {{ARGS}}
 
-# Like run-built-debug, but with every debugging facility on (--debug-init,
-# debug-on-error, unbounded *Messages*, verbose warnings + native-comp,
-# full eglot/jsonrpc traffic) and every message, warning and error backtrace
-# mirrored into var/debug/<timestamp>/ (gitignored via var/). stderr is teed
-# there live too; stdout stays on the tty so a GUI or -nw Emacs both work.
-# Inspect the files afterwards, or M-x jotain-debug-dump-now to flush mid-run.
+# Every debugging facility on (etc/debug-init.el); messages, warnings,
+# backtraces and stderr go to var/debug/<timestamp>/. stdout stays on the
+# tty, so GUI and -nw both work. M-x jotain-debug-dump-now flushes mid-run.
 [group('build')]
 [doc('Launch with full debugging on; logs to var/debug/<timestamp>/')]
 run-built-debug-log *ARGS:
@@ -188,17 +165,13 @@ run-built-debug-log *ARGS:
     mkdir -p "$dir"
     export JOTAIN_DEBUG_DIR="$dir"
     echo "Debug session → $dir"
-    # Redirect only fd 2 through tee: stderr (build logs + Emacs native-comp /
-    # GTK / --debug-init output) is saved and still shown, without touching
-    # stdout, so the interactive Emacs tty is left intact.
+    # Tee only stderr, leaving the interactive tty on stdout intact.
     exec 2> >(tee "$dir/stderr.log" >&2)
     just run-built --debug-init --load "{{config_dir}}/etc/debug-init.el" {{ARGS}}
 
-# Headless screenshot: build Emacs, launch under Xvfb with this config,
-# capture the frame via jotain-screenshot, write OUT (PNG). Linux only;
-# needs xvfb-run from the devenv shell. First run is slow: nix build
-# (cache pull) + MELPA package bootstrap — raise the timeout if a cold
-# cache needs it.
+# Needs xvfb-run (devenv shell). First run is slow (cache pull + MELPA
+# bootstrap); raise the timeout if a cold cache needs it.
+# Headless screenshot under Xvfb via jotain-screenshot, saved to `out` (PNG).
 [group('build')]
 [linux]
 screenshot out="var/screenshots/headless.png":
@@ -222,14 +195,14 @@ screenshot out="var/screenshots/headless.png":
     echo "Screenshot → $out"
 
 
-# Build option reference documentation (HTML for GitHub Pages).
+# Build the Nix module options reference (HTML).
 [group('build')]
 docs:
     nix build .#docs -o result-docs
     @echo "Docs built → result-docs/index.html"
 
-# Build the bundled Info manual (jotain.info) from docs/*.mdx + options.
-# Loaded automatically by init-docs.el when result-info/ exists.
+# init-docs.el picks up result-info/ automatically.
+# Build the Info manual (jotain.info) from docs/ and the generated references.
 [group('build')]
 info:
     nix build .#info -o result-info
@@ -242,45 +215,38 @@ build-packages-doc:
     nix build .#packages-doc -o result-packages-doc
     @echo "Packages doc → result-packages-doc/index.html"
 
-# Build the generated docstring-level API reference for every bundled
-# package (etc/elisp-doc). Heavy: realizes the config package closure and
-# runs a batch Emacs over it. Output feeds the site's /help/api/ and the
-# Info manual's Emacs API Reference appendix.
+# Build the docstring-level API reference for /help/api/ (heavy).
 [group('build')]
 build-api-doc:
     nix build .#emacs-api-doc -o result-api-doc
     @echo "API reference → result-api-doc/html/index.html"
     @echo "Load log      → result-api-doc/generate.log (check the skipped list)"
 
-# Regenerate docs/configuration/package-reference.mdx from the
-# `;;; @doc` markers in lisp/init-*.el. Required after editing any
-# `;;; @doc` block — CI's `packages-doc-in-sync` check fails otherwise.
+# Required after editing any `;;; @doc` block (packages-doc-in-sync).
+# Regenerate docs/configuration/package-reference.mdx from `;;; @doc` markers.
 [group('build')]
 docs-refresh-packages: build-packages-doc
     cp result-packages-doc/package-reference.mdx \
        docs/configuration/package-reference.mdx
     @echo "Refreshed docs/configuration/package-reference.mdx"
 
-# Build the Tier-1 live language capability matrix: load the full config and
-# introspect what each language is wired for (actual mode routing, tree-sitter
-# readiness, resolved eglot server, formatter, on-PATH markers). Fails on a
-# routing/override regression (JOTAIN_LANG_EVAL_STRICT).
+# Loads the full config and introspects each language's mode routing,
+# grammar, eglot server, formatter and tools; fails on a routing regression.
+# Build the live per-language capability matrix.
 [group('build')]
 lang-matrix:
     nix build .#lang-eval-matrix -o result-lang-matrix
     @echo "Language matrix → result-lang-matrix/matrix.md (+ matrix.json, index.html)"
 
-# Run the Tier-2 end-to-end live LSP probe over the curated language subset.
-# Heavy: the derivation bundles the language servers. Answers "does the LSP
-# actually respond", not just "is it wired".
+# Heavy: bundles the language servers. Checks that each LSP responds.
+# Run the end-to-end LSP probe over the curated language subset.
 [group('build')]
 lang-eval-live:
     nix build .#lang-eval-live -o result-lang-live
     @echo "Live LSP probe → result-lang-live/live.md (+ live.json)"
 
-# Regenerate docs/reference/language-support.mdx from the language registry
-# (etc/lang-eval/jotain-lang-registry.el). Required after editing the
-# registry — CI's `lang-eval-doc-in-sync` check fails otherwise.
+# Required after editing etc/lang-eval/jotain-lang-registry.el.
+# Regenerate docs/reference/language-support.mdx from the language registry.
 [group('build')]
 docs-refresh-lang-matrix:
     #!/usr/bin/env bash
@@ -294,18 +260,15 @@ docs-refresh-lang-matrix:
 [group('build')]
 docs-all: docs info
 
-# Build the full page.jylhis.com/jotain site: landing SPA + docs pages +
-# manual (HTML/Info) + man pages + GNU Emacs/Elisp manuals + options
-# and package references. Published to GitHub Pages by deploy.yml on push
-# to main (see .github/workflows/deploy.yml). The site is built under the
-# /jotain base path (nix/site.nix baseHref).
+# Landing page, docs, manuals, man pages and the generated references,
+# under the /jotain base path; deploy.yml publishes it from main.
+# Build the full page.jylhis.com/jotain site.
 [group('build')]
 site:
     nix build .#site -o result-site
     @echo "Site → result-site/public/index.html"
 
-# Build and locally serve the full site. The site is served under /jotain/
-# (baseHref), so mount it there for a faithful preview of production.
+# Build the site and serve it locally under /jotain/, as in production.
 [group('build')]
 serve-site: site
     #!/usr/bin/env bash
@@ -327,7 +290,7 @@ fmt:
 
 # ── Lock synchronization ────────────────────────────────────────────
 
-# Inputs shared between flake.nix and devenv.yaml — both locks must agree on these revs.
+# Inputs both lock files must pin to the same revs.
 shared_inputs := "nixpkgs treefmt-nix emacs-overlay"
 
 # Update flake inputs, then sync devenv.yaml/devenv.lock to the new revs.
@@ -339,11 +302,10 @@ update:
     just sync-devenv all
     echo "Done."
 
-# Bump the hand-pinned upstreams that flake.lock does NOT manage (the
-# extra Emacs packages, the ECA server, the vendored npm LSPs, the design
-# pin). Uses Mic92/nix-update where it fits and bespoke steps otherwise.
-# Pass pin names to scope it (e.g. `just update-pins combobulate eca`);
-# `just update-pins --list` shows the known names.
+# Covers the extra Emacs packages, ECA server, vendored npm LSPs and the
+# design pin. Scope with pin names (`just update-pins combobulate eca`);
+# `--list` shows them.
+# Bump the hand-pinned upstreams that flake.lock does not manage.
 [group('pins')]
 update-pins *PINS:
     bash scripts/update-pins.sh {{ PINS }}
@@ -352,14 +314,12 @@ update-pins *PINS:
 [group('pins')]
 sync-devenv scope="shared":
     #!/usr/bin/env bash
-    # Never `nix flake update` here: it would throw away the revs
-    # Dependabot just pinned — sync-devenv.yml relies on this being
-    # safe to run on a Dependabot PR.
+    # Never `nix flake update` here: sync-devenv.yml runs this on
+    # Dependabot PRs and must keep the revs Dependabot pinned.
     #
-    # scope=shared re-locks only the shared inputs; scope=all also
-    # re-resolves the unpinned `devenv` module input (what `just update`
-    # does — fine with a human reading the diff, but unreviewed drift
-    # in an automated commit).
+    # scope=all also re-resolves the unpinned `devenv` input (what
+    # `just update` uses); the default keeps automated commits to the
+    # shared inputs.
     set -euo pipefail
     case "{{ scope }}" in
         shared | all) ;;
@@ -400,18 +360,15 @@ verify:
     set -euo pipefail
     SHARED_INPUTS="{{ shared_inputs }}" bash scripts/verify-locks.sh .
 
-# Re-vendor website/public/ds from the jylhis/design rev pinned in
-# nix/design-pin.nix — the same pin the Emacs themes are built from.
-# Run after bumping that pin; the `ds-in-sync` flake check fails until
-# the committed copy matches.
+# Run after bumping nix/design-pin.nix (ds-in-sync fails until then).
+# Re-vendor website/public/ds from the pinned jylhis/design rev.
 [group('pins')]
 ds-sync:
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{config_dir}}"
     out=$(nix build --no-link --print-out-paths .#ds-assets)
-    # Wipe first so fonts retired by an upstream type change are removed,
-    # not left behind.
+    # Wipe first so files dropped upstream do not linger.
     rm -rf website/public/ds
     mkdir -p website/public/ds
     cp -r "$out/." website/public/ds/
@@ -421,7 +378,7 @@ ds-sync:
 
 # ── Cleanup ─────────────────────────────────────────────────────────
 
-# Remove .elc files, autosaves, and the eln-cache.
+# Remove .elc files, autosaves, the eln-cache and the result symlink.
 [group('clean')]
 clean:
     #!/usr/bin/env bash
@@ -435,7 +392,7 @@ clean:
     rm -f  "{{config_dir}}/result"        2>/dev/null || true
     echo "Cleaned compiled artifacts."
 
-# Nuke installed packages and persistent state — forces a full re-fetch.
+# Run clean, then remove elpa/, var/ and .dev-home/ (forces a full re-fetch).
 [group('clean')]
 clean-all: clean
     #!/usr/bin/env bash

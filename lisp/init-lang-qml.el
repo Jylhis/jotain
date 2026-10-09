@@ -2,20 +2,17 @@
 
 ;;; Commentary:
 
-;; QML is the Qt Modeling Language, used here for the owner's Quickshell
-;; desktop shell.  Like Nix, it earns its own file: it fits none of the
-;; grouped language files (web is TS/CSS/HTML, systems is C/C++/Zig).  The
-;; eglot hook (qmlls) and the apheleia formatter (qmlformat) are wired in
-;; `init-prog' so all language servers and formatters stay in one place.
+;; QML (Qt Modeling Language), used for the owner's Quickshell desktop
+;; shell.  It fits none of the grouped language files.  qmlls (eglot) and
+;; qmlformat (apheleia) are wired in `init-prog'.
 
 ;;; Code:
 
-;;; @doc Tree-sitter QML major mode (xhcoding/qml-ts-mode), for editing
-;;; Quickshell / Qt Quick `.qml' files.  Provided by Nix; its `qmljs'
-;;; grammar ships via treesit-grammars.with-all-grammars.  LSP through
-;;; eglot → qmlls and format-on-save through apheleia → qmlformat are
-;;; both configured in init-prog.  The Qt tooling (qmlls/qmlformat) rides
-;;; the distribution wrapper PATH (nix/runtime-deps.nix).
+;;; @doc Tree-sitter QML major mode (xhcoding/qml-ts-mode) for Quickshell
+;;; / Qt Quick `.qml' files. Provided by Nix, with the `qmljs' grammar
+;;; from treesit-grammars.with-all-grammars. qmlls (eglot) and qmlformat
+;;; (apheleia) are wired in init-prog and ride the distribution wrapper
+;;; PATH (nix/runtime-deps.nix).
 (use-package qml-ts-mode
   :ensure nil
   :mode "\\.qml\\'")

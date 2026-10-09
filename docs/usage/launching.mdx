@@ -6,48 +6,44 @@ description: Pick the right launch pattern for the task — one-shot, daemon + c
 # Launching Emacs
 
 <Note>
-**Current state:** the devenv shell provides tooling only; there is no
-`emacs` binary in it (see the top-of-file note in `devenv.nix`). The
-direct-launch recipes (`just run`, `just debug`, `just tty`,
-`just daemon`, `just client`, `just client-tty`, `just quick`) were
-removed along with it. The supported launch path is **`just run-built`**:
-build Emacs via Nix, then launch it with this configuration. Other docs
-pages that mention launching point back at this note.
+The devenv shell provides tooling only; there is no `emacs` binary in it.
+The supported launch path is **`just run-built`**: build Emacs via Nix,
+then launch it with this configuration.
 </Note>
 
-Jotain supports three launch patterns. Pick the one that matches the
-task — they're complementary, not alternatives.
+Jotain supports three launch patterns. They're complementary: pick the
+one that fits the task.
 
 ## One-shot
 
-A fresh `emacs` process every time. Loads the full Jotain config; pays
-package-init cost on every launch.
+A fresh `emacs` process every time. Loads the full Jotain config and
+pays package-init cost on every launch.
 
 ```bash
 just run-built            # build for this platform, then launch result/bin/emacs
 just run-built-debug      # same, with --debug-init and debug-on-error
+just run-built-debug-log  # full debugging, logs mirrored into var/debug/<timestamp>/
+just run-built-fast       # rebuild, then launch the AOT-compiled config (fastest start)
 ```
 
 `just run-built` auto-detects the platform, builds the full
-distribution (`just build`; on aarch64-linux the full terminal-only
+distribution (`just build`; on aarch64-linux the terminal-only
 distribution via `just build-nox-full`), and launches
 `./result/bin/emacs --init-directory=<repo>`, so it never touches
-`~/.emacs.d`. The first invocation pays a `nix build` (usually a
-binary-cache pull); reruns launch straight from `./result`.
+`~/.emacs.d`. The first run pays a `nix build` (usually a binary-cache
+pull).
 
-Best for sanity checks and trying out config changes. Avoid for
-day-to-day editing — the startup cost adds up.
+Best for sanity checks and trying out config changes; the startup cost
+adds up for day-to-day editing.
 
 ## Daemon + client
 
-Start Emacs once as a server; reuse it via lightweight clients. The
+Start Emacs once as a server and reuse it via lightweight clients. The
 first frame is slow; every frame after is instant.
 
 ### In the repo (development)
 
-The `just daemon` / `just client` / `just client-tty` recipes were
-removed (no Emacs in the dev shell; see the note above). The manual
-equivalent uses the Nix-built binary:
+Use the Nix-built binary:
 
 ```bash
 just build          # or let a previous `just run-built` leave ./result behind
@@ -57,10 +53,8 @@ just build          # or let a previous `just run-built` leave ./result behind
 ```
 
 The daemon blocks; run it in another terminal (or under `tmux`) and
-connect with `emacsclient` from elsewhere. Launching with
-`--init-directory=<repo>` keeps it isolated from `~/.emacs.d`.
-
-Stop the daemon with `C-c` in its terminal, or from any client:
+connect with `emacsclient` from elsewhere. Stop it with `C-c` in its
+terminal, or from any client:
 
 ```bash
 ./result/bin/emacsclient -e '(kill-emacs)'
@@ -71,16 +65,17 @@ Stop the daemon with `C-c` in its terminal, or from any client:
 The `services.jotain` module ships:
 
 - A systemd user service (Linux) or launchd agent (macOS) that runs
-  `emacs --fg-daemon`. Enabled via `services.jotain.startWithUserSession`.
-- `jotain-editor` — `emacsclient --tty` with a `-nw` fallback. Set as
-  `$EDITOR` when `services.jotain.defaultEditor = true`.
-- `jotain-visual` — `emacsclient --create-frame`. Set as `$VISUAL`.
-- `jotctl {start|stop|status|restart|logs}` — manage the daemon itself
-  (wraps `launchctl` on macOS, the `jotain` systemd user service on
-  Linux). Always on `PATH` when the module is enabled.
-- A `.desktop` entry (`jotain-client.desktop`) for launching a GUI
-  client from your application menu, enabled by
-  `services.jotain.client.enable`.
+  `emacs --fg-daemon`. `services.jotain.startWithUserSession` controls
+  whether it starts with the session.
+- `jotain-editor`: `emacsclient --tty`, falling back to `emacs -nw`
+  when no daemon is running. Set as `$EDITOR` when
+  `services.jotain.defaultEditor = true`.
+- `jotain-visual`: `emacsclient --create-frame`. Set as `$VISUAL` by
+  the same option.
+- `jotctl {start|stop|status|restart|logs}` to manage the daemon (see
+  below).
+- A `.desktop` entry (`jotain-client.desktop`) for a GUI client,
+  enabled by `services.jotain.client.enable`.
 
 See *Module Options* in the appendix for the full option reference.
 
@@ -103,16 +98,15 @@ services.jotain = {
 | `em`  | `jotain-editor` (`emacsclient --tty`)   |
 | `emg` | `jotain-visual` (`emacsclient -c`)      |
 
-The aliases are written to `programs.bash.shellAliases`,
-`programs.zsh.shellAliases`, and `programs.fish.shellAliases` — pick
-up whichever shell home-manager already manages.
+They are added to the bash, zsh, and fish `shellAliases` that
+home-manager manages.
 
 ### Managing the daemon (`jotctl`)
 
-`emd` starts a *foreground* daemon; to manage the supervised daemon
-(the launchd agent on macOS, the `jotain` systemd user service on
-Linux) use `jotctl`, which is always on `PATH` when the module is
-enabled — independent of `shellAliases.enable`:
+`emd` starts a *foreground* daemon. The supervised daemon (the launchd
+agent on macOS, the `jotain` systemd user service on Linux) is managed
+with `jotctl`, which is always on `PATH` when the module is enabled,
+whatever `shellAliases.enable` says:
 
 | Command          | macOS (launchd)                  | Linux (systemd --user)            |
 | ---------------- | -------------------------------- | --------------------------------- |
@@ -127,10 +121,9 @@ the daemon's stdout; `jotctl logs` prints the launchd state instead.
 
 ## Quick edit (`-Q -nw`)
 
-When you need a stripped-down Emacs — editing `/etc/hosts` over SSH,
-fixing a typo in a 200 MB log file, demonstrating something with no
-muscle-memory key bindings — bypass Jotain entirely (the `just quick`
-recipe was removed; use any `emacs` on the host, or the Nix-built one):
+For a stripped-down Emacs (editing `/etc/hosts` over SSH, a typo in a
+200 MB log file, a demo without custom bindings), bypass Jotain with any
+`emacs` on the host or the Nix-built one:
 
 ```bash
 ./result/bin/emacs -Q -nw --eval "(load-theme 'wombat t)"
@@ -138,10 +131,8 @@ recipe was removed; use any `emacs` on the host, or the Nix-built one):
 
 This is the pattern [Rahul Juliato describes in basic-emacs-alias][article-2].
 `-Q` skips `early-init.el`, `init.el`, site-lisp, and `~/.emacs.d/`;
-`-nw` keeps it in the current terminal; the wombat theme line is the
-one concession to readability on dark terminals.
-
-To get the same effect anywhere, add an alias to your shell:
+`-nw` stays in the current terminal; wombat keeps it readable on dark
+terminals. As a shell alias:
 
 ```bash
 alias eq='emacs -Q -nw --eval "(load-theme '\''wombat t)"'

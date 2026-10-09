@@ -2,11 +2,9 @@
 
 ;;; Commentary:
 
-;; A deliberately trivial ERT test whose only job is to prove that the
-;; elisp-test flake check discovers every file under test/ instead of
-;; loading a hard-coded list.  If this test stops appearing in the
-;; batch run output, test discovery has regressed and newly added test
-;; files are silently never executed.
+;; A trivial test proving the elisp-test check globs test/*.el rather
+;; than loading a fixed list.  If it vanishes from the batch output, new
+;; test files are silently not run.
 
 ;;; Code:
 

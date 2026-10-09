@@ -3,29 +3,24 @@
 # Reads etc/lang-eval/jotain-lang-registry.el (the declarative per-language
 # feature standard) and produces three artifacts plus one gate:
 #
-#   • lang-eval-doc      the *declared* matrix rendered to a Mintlify `.mdx`
-#                        (docs/reference/language-support.mdx). Cheap and
-#                        deterministic: it needs neither the config nor any
-#                        toolchain, so it is checked in and gated.
-#   • lang-eval-matrix   the Tier-1 *live* matrix — the full Jotain config is
-#                        loaded and introspected per language (actual mode
-#                        routing, tree-sitter readiness, the eglot server eglot
-#                        resolves, formatter mapping, on-PATH markers). Fails
-#                        the build if a language's mode routing or an explicit
-#                        eglot override regresses (JOTAIN_LANG_EVAL_STRICT).
-#   • lang-eval-live     the Tier-2 end-to-end probe — a real eglot session is
-#                        started against a fixture project for a curated subset
-#                        whose servers this derivation bundles, and the
-#                        negotiated LSP capabilities are recorded.
-#   • lang-eval-doc-in-sync  a flake check: the checked-in `.mdx` must match a
-#                        fresh render of the registry (like packages-doc-in-sync).
+#   • lang-eval-doc      the *declared* matrix as a Mintlify `.mdx`
+#                        (docs/reference/language-support.mdx). Needs no
+#                        config or toolchain, so it is checked in and gated.
+#   • lang-eval-matrix   Tier-1 *live* matrix: the full config is loaded and
+#                        introspected per language (mode routing, tree-sitter
+#                        readiness, resolved eglot server, formatter, on-PATH
+#                        markers). Fails on a routing or explicit eglot
+#                        override regression (JOTAIN_LANG_EVAL_STRICT).
+#   • lang-eval-live     Tier-2 probe: a real eglot session per fixture
+#                        project for a curated subset whose servers it
+#                        bundles, recording the negotiated capabilities.
+#   • lang-eval-doc-in-sync  flake check: the checked-in `.mdx` must match a
+#                        fresh render of the registry.
 #
-# lang-eval-matrix and lang-eval-live load the full config in batch and (for
-# live) bundle heavy toolchains, so they are exposed as `legacyPackages`
-# (buildable with `nix build .#lang-eval-matrix` / `.#lang-eval-live`) and are
-# NOT part of `nix flake check`. The gates that run in CI are the cheap
-# lang-eval-doc-in-sync check here and the ERT drift guard (test/lang-eval-test.el,
-# via the elisp-test check).
+# matrix and live are heavy, so they are `legacyPackages` (not part of
+# `nix flake check`). The gates in `nix flake check` are
+# lang-eval-doc-in-sync and the ERT drift guard (test/lang-eval-test.el,
+# via elisp-test).
 {
   pkgs,
 }:
@@ -36,8 +31,7 @@ let
 
   elIn = dir: fs.fileFilter (f: lib.hasSuffix ".el" f.name) (root + dir);
 
-  # The evaluation engine: registry + renderers + probes. Narrowed so an
-  # unrelated repo edit never invalidates these derivations.
+  # Registry + renderers + probes, narrowed against unrelated edits.
   engineSrc = fs.toSource {
     root = root + "/etc/lang-eval";
     fileset = fs.unions [
@@ -54,8 +48,8 @@ let
     fileset = root + "/etc/lang-eval/fixtures";
   };
 
-  # The interpreted config tree for `--init-directory` (copied writable at
-  # build time, the same shape `just run-built` launches).
+  # The interpreted config for `--init-directory`, as `just run-built`
+  # launches it.
   configSrc = fs.toSource {
     inherit root;
     fileset = fs.unions [
@@ -69,9 +63,8 @@ let
   emacsFull = pkgs.jotainEmacsPackages; # wrapper: full closure + tree-sitter grammars
   emacsBare = pkgs.jotainEmacs; # enough to render the registry doc
 
-  # Curated language servers/toolchains for the live probe. nixd/qmlls/likec4
-  # already ride the distribution wrapper (nix/runtime-deps.nix), so nix is
-  # covered without listing a server here; the rest are added explicitly.
+  # Servers for the live probe. nixd/qmlls/likec4 already ride the
+  # distribution wrapper (nix/runtime-deps.nix).
   liveServers = with pkgs; [
     basedpyright
     ruff

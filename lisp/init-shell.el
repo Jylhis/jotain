@@ -2,19 +2,14 @@
 
 ;;; Commentary:
 
-;; Shells are inherently a separate concern from prog-mode editing — they
-;; have their own input handling, history, prompts, and rendering. Group
-;; them together so the rules ("how should the prompt look", "how does
-;; history search work") can be coordinated.
-;;
-;; The ghostel terminal emulator (a true PTY, unlike these Lisp-driven
-;; shells and REPLs) lives in init-terminal.el.
+;; Lisp-driven shells and REPLs, grouped so prompt and history settings
+;; stay consistent.  The ghostel terminal emulator (a real PTY) lives in
+;; init-terminal.el.
 
 ;;; Code:
 
-;;; @doc Built-in Lisp-driven shell — works the same on every platform
-;;; and is the right tool for Emacs-flavoured pipelines (commands
-;;; as Elisp functions, no subprocess for builtins).
+;;; @doc Built-in Lisp-driven shell: the same on every platform, with
+;;; Elisp functions as commands and no subprocess for builtins.
 (use-package eshell
   :ensure nil
   :commands (eshell)
@@ -25,8 +20,8 @@
   (eshell-error-if-no-glob t)
   (eshell-destroy-buffer-when-process-dies t))
 
-;;; @doc Built-in REPL substrate (used by python, ielm, sql, etc.).
-;;; The settings here apply to every comint-derived buffer.
+;;; @doc Built-in REPL substrate (python, ielm, sql, ...). These
+;;; settings apply to every comint-derived buffer.
 (use-package comint
   :ensure nil
   :custom
@@ -34,9 +29,8 @@
   (comint-input-ignoredups t)
   (comint-scroll-to-bottom-on-input t))
 
-;;; @doc Built-in Emacs Lisp REPL. Emacs 31+ can persist input history
-;;; across sessions like comint/shell already do; point it at a file
-;;; under `var/'. Guarded so the config loads on Emacs 30.
+;;; @doc Built-in Emacs Lisp REPL. On Emacs 31+ its input history
+;;; persists to a file under `var/'.
 (use-package ielm
   :ensure nil
   :commands ielm

@@ -1,13 +1,11 @@
 # nix/editor-script.nix — the terminal `emacsclient' wrapper used as EDITOR.
 # Shared by module-system.nix and module-nix-on-droid.nix.
 #
-# `--alternate-editor' points at a `-nw' Emacs from the same wrapped
-# package, so EDITOR still works when no daemon is running — over SSH, in a
-# `git commit', in a sudoedit.
+# `--alternate-editor' falls back to a `-nw' Emacs from the same package
+# when no daemon is running.
 #
-# module.nix (Home Manager) deliberately builds its own pair instead: its
-# fallback has to go through `emacsWrapper', which pins --init-directory at
-# the deployed config, and it also ships a GUI `jotain-visual'.
+# module.nix builds its own: its fallback must go through `emacsWrapper',
+# which pins --init-directory at the deployed config.
 { pkgs, package }:
 let
   inherit (pkgs) lib;

@@ -2,24 +2,19 @@
 
 ;;; Commentary:
 
-;; Two things in `init-org.el' can rot silently.
+;; Two things in `init-org.el' can rot silently:
 ;;
-;; The first is `jotain-org-babel-languages'.  Enabling a language is a
-;; promise that `ob-LANG' exists in the Org that actually ships — a
-;; typo, or a language that moved out to org-contrib, produces nothing
-;; at byte-compile time and a broken `C-c C-c' months later.  These
-;; tests `require' every one of them.
+;; - `jotain-org-babel-languages': a typo, or a language moved out to
+;;   org-contrib, passes byte-compilation and breaks `C-c C-c' later.
+;;   The tests `require' every `ob-LANG'.
 ;;
-;; The second is `jotain-org-babel-confirm-evaluate'.  It relaxes
-;; `org-confirm-babel-evaluate' from "always ask" to "ask unless the
-;; file is ours", which is a security boundary: a regression that makes
-;; it return nil unconditionally would silently evaluate source blocks
-;; from any `.org' file the user opens.  That deserves a test.
+;; - `jotain-org-babel-confirm-evaluate' is a security boundary: if it
+;;   returned nil unconditionally, source blocks from any `.org' file
+;;   would run without confirmation.
 ;;
-;; Like `test-ui.el', these read `init-org.el' rather than loading it —
-;; the module's `:custom' forms reference `jotain-notes-directory' from
-;; `init-writing', so requiring it standalone would fail.  Only the two
-;; `defun' forms under test are evaluated.
+;; Like `test-ui.el', these read `init-org.el' as data instead of loading
+;; it (its `:custom' forms need `jotain-notes-directory' from
+;; `init-writing'), and evaluate only the forms under test.
 
 ;;; Code:
 
@@ -74,8 +69,7 @@ data, so no `use-package' form is expanded and no package is loaded."
 
 (ert-deftest test-org-babel-languages-have-backends ()
   "Every enabled language is backed by an `ob-LANG' library Org ships.
-This is the test that catches a language which was renamed, or moved
-out of Org core into org-contrib, during an Org version bump."
+Catches a language renamed or moved to org-contrib by an Org bump."
   (dolist (lang (test-org-babel--languages))
     (let ((feature (intern (format "ob-%s" lang))))
       (should (require feature nil t)))))
@@ -109,8 +103,8 @@ out of Org core into org-contrib, during an Org version bump."
 
 (ert-deftest test-org-babel-does-not-trust-foreign-files ()
   "An Org file from outside the notes tree and outside any project asks.
-This is the security-relevant direction: a downloaded `.org' must not
-be able to run code on `C-c C-c' without confirmation."
+The security-relevant direction: a downloaded `.org' must not run code
+on `C-c C-c' without confirmation."
   (test-org-babel--define 'jotain-org-babel-trusted-p)
   (let* ((elsewhere (file-name-as-directory (make-temp-file "jotain-foreign" t)))
          (org-directory (expand-file-name "notes" temporary-file-directory))
@@ -131,8 +125,7 @@ be able to run code on `C-c C-c' without confirmation."
 
 (ert-deftest test-org-babel-confirm-inverts-trust ()
   "`org-confirm-babel-evaluate' prompts exactly when the file is untrusted.
-The predicate takes the block's language and body and ignores both —
-guard the arity too, since Org calls it with two arguments."
+Also guards the arity: Org calls the predicate with two arguments."
   (test-org-babel--define 'jotain-org-babel-confirm-evaluate)
   (cl-letf (((symbol-function 'jotain-org-babel-trusted-p) (lambda () t)))
     (should-not (jotain-org-babel-confirm-evaluate "python" "print(1)")))

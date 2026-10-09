@@ -1,14 +1,10 @@
 # module-nix-on-droid.nix — nix-on-droid module for Jotain Emacs.
 #
-# Installs a terminal-only Jotain Emacs into a nix-on-droid environment
-# (Nix on Android, running under proot via Termux). Android has no
-# systemd/launchd, no X/Wayland server, and no `fonts.packages`, and uses
-# `environment.packages` instead of `environment.systemPackages`, so this
-# module is a deliberately trimmed cousin of module-system.nix: it just
-# adds a `-nw` Emacs plus an emacsclient EDITOR wrapper to the profile.
-#
-# For per-user daemon management on desktop Linux/macOS use the Home
-# Manager module (module.nix); for NixOS / nix-darwin use module-system.nix.
+# Installs a terminal-only Jotain Emacs plus an emacsclient EDITOR wrapper
+# into nix-on-droid (Nix on Android under proot). A trimmed cousin of
+# module-system.nix: no systemd/launchd, display server or
+# `fonts.packages`, and `environment.packages` instead of
+# `environment.systemPackages`.
 #
 # Usage in a nix-on-droid flake:
 #
@@ -24,12 +20,9 @@ let
   cfg = config.services.jotain;
   jotainOverlay = args.jotainOverlay or (import ./overlay.nix);
   pkgsWithOverlay = pkgs.extend jotainOverlay;
-  # Terminal-only build: Android under proot is headless.
   selectedPackage =
     if cfg.package != null then cfg.package else pkgsWithOverlay.jotainEmacsPackagesNoGui;
 
-  # Runtime binaries the Elisp config invokes unconditionally (shared
-  # list, see nix/runtime-deps.nix).
   runtimeDeps = import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; };
 
   wrappedPackage = import ./nix/wrap-runtime-deps.nix {
@@ -37,8 +30,7 @@ let
     package = selectedPackage;
   };
 
-  # EDITOR — terminal emacsclient (works over SSH, in git commit, etc.).
-  # There is no GUI on Android, so VISUAL points at the same client.
+  # Terminal emacsclient for EDITOR, and VISUAL too (no GUI on Android).
   editorScript = import ./nix/editor-script.nix {
     inherit pkgs;
     package = wrappedPackage;
@@ -53,8 +45,8 @@ in
       default = null;
       defaultText = lib.literalExpression "null";
       description = ''
-        Custom Jotain Emacs package to use. Leave this unset to use the
-        cache-friendly terminal-only default build from `emacs.nix`.
+        Custom Jotain Emacs package to use. Leave unset for the
+        terminal-only distribution (`jotainEmacsPackagesNoGui`).
       '';
     };
 
@@ -75,9 +67,8 @@ in
       wrappedPackage
       editorScript
       pkgsWithOverlay.eca
-      # Base dictionary for jinx spell-checking (lisp/init-writing.el).
-      # Must be in the profile — not on PATH — because libaspell finds
-      # $profile/lib/aspell via its NIX_PROFILES patch at runtime.
+      # jinx dictionary: libaspell finds $profile/lib/aspell via its
+      # NIX_PROFILES patch, so it belongs in the profile, not on PATH.
       pkgs.aspellDicts.en
     ];
 

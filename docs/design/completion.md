@@ -3,10 +3,9 @@
 **Date:** 2026-07-26
 **Status:** Implemented 2026-07-27 in `lisp/init-completion.el` and
 `lisp/init-snippets.el`, with coverage in `test/completion-test.el`. Both items
-this document recorded as blocking were settled by measurement rather than
-deferred — see §2.3 and §2.4. Where the implementation departs from the
-specification as
-first written, the section says so instead of being quietly edited to match.
+recorded as blocking were settled by measurement (§2.3, §2.4). Where the
+implementation departs from the specification as first written, the section
+says so instead of being quietly edited to match.
 **Evidence base:** [`docs/reviews/2026-07-completion-research.md`](../reviews/2026-07-completion-research.md).
 Section references below of the form *(research §2.1)* point into that report.
 Claims marked **[unverified]** here are ones the research explicitly could not
@@ -64,7 +63,7 @@ Two failure modes this design must respect, both verified:
 there is manual-only via the key in §2.3. No `text-mode-hook` entry is needed —
 absence *is* the configuration.
 
-**Honest scoping:** upstream's own per-mode knob is `global-corfu-modes`, which
+**Scoping:** upstream's own per-mode knob is `global-corfu-modes`, which
 toggles `corfu-mode` itself, not auto-vs-manual. The `setq-local`-in-a-hook
 technique is *a* mechanism the corfu README licenses ("setting `corfu-auto` to t
 locally … before enabling"), not one upstream presents as *the* prog/prose recipe
@@ -72,15 +71,14 @@ locally … before enabling"), not one upstream presents as *the* prog/prose rec
 
 **Tuning.** `corfu-auto-delay` and `corfu-auto-prefix` keep their current values
 (`0.1` / `2`) pending measurement. The research found **no evidence** for any
-particular tuning — every number in circulation for this stack is folklore until
-measured (research §6.6). Do not present the current values as tuned.
+particular tuning (research §6.6), so don't present these values as tuned.
+*(Moved to `0.2` / `3` in §6.2.)*
 
 ### 2.2 TAB (R2)
 
 **`tab-always-indent` = `t`.**
 
-This is not a customization that fights core — it is the **stock Emacs default** on
-both 30 and 31, and `indent-for-tab-command`'s only `completion-at-point` call is
+This is the **stock Emacs default** on both 30 and 31, and `indent-for-tab-command`'s only `completion-at-point` call is
 guarded by `(eq tab-always-indent 'complete)`, making that branch provably
 unreachable (research §2.1). The current config sets `'complete`
 (`lisp/init-completion.el`:276); this design reverts to the default.
@@ -109,11 +107,10 @@ snippet field navigation as the one deliberate exception. That exception is gone
 fields now move on `M-}`/`M-{` (tempel's own keys) or `C-M-n`/`C-M-p`, and `TAB`
 appears nowhere.
 
-The exception turned out to rest on a false premise. **Upstream `tempel-map`
-never bound `TAB` at all** — it ships `M-}`/`M-{`, `M-RET` (`tempel-done`),
-`M-<up>`/`M-<down>` and a set of command remaps. The `TAB`/`S-TAB` pair was this
-configuration's own addition in `init-snippets.el`'s `:bind` block. Removing it
-is a deletion, not a substitution, and tempel's own keys take over for free.
+The exception rested on a false premise: **upstream `tempel-map` never bound
+`TAB`**. It ships `M-}`/`M-{`, `M-RET` (`tempel-done`), `M-<up>`/`M-<down>` and
+some command remaps; the `TAB`/`S-TAB` pair was this configuration's own
+addition in `init-snippets.el`. Removing it let tempel's own keys take over.
 
 `C-M-n`/`C-M-p` are added alongside as a mnemonic alias. No field key may
 collide with corfu's `M-n`/`M-p`: `tempel-map` is installed as an overlay
@@ -130,7 +127,7 @@ TAB, `c-tab-always-indent`, and the minibuffer.
 | Key | Role |
 | --- | --- |
 | `C-M-i` | **The chain key.** Opens completion; inside the popup, inserts the selected candidate. |
-| `TAB` | Indent. Only. (Plus tempel field navigation during a live snippet.) |
+| `TAB` | Indent. Only. *(The snippet-field exception was dropped, §2.2; TAB completes since §7.)* |
 | `RET` | Newline. Only. Never accepts a candidate. |
 | `M-n` / `M-p` | Navigate candidates. |
 | `C-g` | Dismiss. |
@@ -393,7 +390,8 @@ is more discoverable.
 
 ## 4. Delta from the current configuration
 
-What implementing this would change. Nothing here is done yet.
+What implementing this would change, as written before implementation (see
+Status for what landed).
 
 | File | Change |
 | --- | --- |
@@ -404,12 +402,10 @@ What implementing this would change. Nothing here is done yet.
 | `lisp/init-snippets.el`:51 | Consider `tempel-expand` (exact-match, no UI) for the buffer-local prog-mode capf instead of `tempel-complete`, per §2.4. |
 | `docs/` | Document the chain key and the opt-out table; regenerate the package reference if any `@doc` block changes. |
 
-**Both preconditions are discharged.** They were recorded as needing a live
-Emacs, and they did — but a *batch* one, not an interactive one, which is
-cheaper than this document assumed. The `elisp-test` check already runs
-`emacs --batch` against the full package set, so capf dispatch and keymap state
-are both directly assertable. The lesson worth keeping: "needs a running Emacs"
-is not the same as "needs a human at a GUI".
+**Both preconditions are discharged.** They needed a live Emacs, but a *batch*
+one: the `elisp-test` check runs `emacs --batch` against the full package set,
+so capf dispatch and keymap state are directly assertable. "Needs a running
+Emacs" is not the same as "needs a human at a GUI".
 
 What still genuinely needs eyes on a screen is narrower than the original list:
 whether the auto-popup delay is comfortable — which has no evidence base at all

@@ -2,21 +2,17 @@
 
 ;;; Commentary:
 
-;; Nix is the package manager and dev-shell tool this whole config is
-;; built around, so it earns its own language file even though we don't
-;; write much of it day to day. The eglot hook is registered in
-;; `init-prog' so all language servers are visible from one place.
+;; Nix support: `nix-ts-mode' plus a blank-line indent fix.  The eglot
+;; and nixfmt wiring live in `init-prog'.
 
 ;;; Code:
 
-;; Blank-line indentation for `nix-ts-mode'.
-;;
-;; On a blank line treesit finds no node starting at BOL, so
-;; `treesit-simple-indent' matches on PARENT alone.  Most containers are
-;; handled by the mode's own `parent-is' rules; three parents fall
-;; through to column 0: `binding_set' (its prev-sibling anchor returns
-;; nil when NODE is nil), and `source_code'/`ERROR' (a not-yet-balanced
-;; buffer).  Indent those relative to the previous non-blank line.
+;; Blank-line indentation.  On a blank line treesit finds no node at BOL,
+;; so `treesit-simple-indent' matches on PARENT alone.  Three parents fall
+;; through the mode's own rules to column 0: `binding_set' (its
+;; prev-sibling anchor returns nil when NODE is nil) and
+;; `source_code'/`ERROR' (an unbalanced buffer).  Indent those relative to
+;; the previous non-blank line.
 
 (defvar nix-ts-mode-indent-offset)        ; defined in nix-ts-mode.el
 (defvar treesit-simple-indent-rules)      ; defined in treesit.el
@@ -72,12 +68,9 @@ new head onto the `nix' entry never mutates the shared default."
                       (assq-delete-all 'nix
                                        (copy-sequence treesit-simple-indent-rules))))))
 
-;;; @doc Tree-sitter Nix major mode. Nix is the package manager and
-;;; dev-shell tool the whole config is built around, so it gets a
-;;; dedicated module even though we don't write much of it daily.
-;;; Provided by Nix; format-on-save flows through apheleia →
-;;; nixfmt (configured in init-prog). A blank-line indent rule fills the
-;;; gap where tree-sitter leaves an empty line at column 0.
+;;; @doc Tree-sitter Nix major mode, provided by Nix. Format-on-save runs
+;;; nixfmt through apheleia (init-prog). An extra indent rule stops blank
+;;; lines from falling back to column 0.
 (use-package nix-ts-mode
   :ensure nil
   :mode "\\.nix\\'"

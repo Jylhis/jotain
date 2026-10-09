@@ -5,26 +5,26 @@ description: How Jotain builds Emacs from source using Nix
 
 # Nix Build System
 
-Jotain uses Nix for reproducible Emacs builds with fine-grained control over compile options. The source of nixpkgs is the revision pinned in `flake.lock` by default; both `default.nix` and `emacs.nix` read it directly via `fetchTarball`, so non-flake `nix-build` consumers get the same pin. Pass `--arg pkgs '<nixpkgs>'` or override `pkgs` to use a different one.
+Jotain builds Emacs with Nix, exposing the build options as arguments. nixpkgs comes from the revision pinned in `flake.lock`: `default.nix` and `emacs.nix` read it directly via `fetchTarball`, so non-flake `nix-build` consumers get the same pin. Pass `--arg pkgs '<nixpkgs>'` to use a different one.
 
 ## Two-Layer Architecture
 
 ### emacs.nix
 
-The core build expression. It selects a base package per variant — emacs-overlay's `emacs-git`/`emacs-unstable`/`emacs-igc` for the git-based variants (`unstable` is the default), nixpkgs' default `emacs` attribute for `mainline` (the cache-parity canary) — and calls `.override { ... }` with the supported build flags exposed as file-level arguments. **The build matrix is four shipped builds** on {x86_64, aarch64} × {Linux, Darwin}: pgtk/Wayland GUI or terminal-only on Linux, patched NS GUI or terminal-only on Darwin; `emacs.nix` asserts every other GUI configuration away. pgtk honors each backend's advertised scale (Wayland fractional scale) so a fixed point size tracks the system. When `withPgtk = true` (the Linux GUI default) the base selection picks the prebuilt `*-pgtk` sibling (`emacs-unstable-pgtk` etc.) directly instead of overriding `withPgtk` on the non-pgtk base, because the two build identical content under different derivation names and the sibling is the one the cache holds. The [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay) that supplies the git-based variants is a flake input composed into every overlay consumer in `flake.nix`; `emacs.nix` and `overlay.nix` re-apply it from `flake.lock` when imported standalone.
+The core build expression. It picks a base package per variant (emacs-overlay's `emacs-unstable` / `emacs-git` / `emacs-igc`, or nixpkgs' `emacs` for `mainline`) and calls `.override { ... }` with its arguments. The build matrix is four shipped builds on {x86_64, aarch64} × {Linux, Darwin}: pgtk/Wayland GUI or terminal-only on Linux, patched NS GUI or terminal-only on Darwin. `emacs.nix` asserts every other GUI configuration away. pgtk honors each backend's scale (Wayland fractional scale), so a fixed point size tracks the system. With `withPgtk = true` (the Linux GUI default) it selects the prebuilt `*-pgtk` sibling (`emacs-unstable-pgtk` etc.) instead of overriding `withPgtk` on the plain base: both build the same content, but only the sibling's store path is in the cache. [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay) is a flake input composed into every overlay consumer in `flake.nix`; `emacs.nix` and `overlay.nix` re-apply it from `flake.lock` when imported standalone.
 
 Supported:
 
-- **Source variants**: `unstable` (`emacs-unstable`, the newest Emacs release or pretest tag, currently 31.1; the default), `git` (emacs-overlay's `emacs-git`, current master), `igc` (`emacs-igc`, the feature/igc3 Memory Pool System incremental GC branch), `mainline` (nixpkgs' default `emacs` attribute; parity canary, not a flake output).
-- **GUIs**: pgtk (pure GTK / Wayland; the only Linux GUI), NS (Cocoa/NeXTstep; the only macOS GUI, patched by default), or no GUI at all (`noGui = true`).
-- **Compilation**: native compilation (libgccjit AOT, default when the build platform can execute the host), compressed install, C sources for `find-function-C-source`, `srcRepo` (run autoreconf on git-based sources), opt-in `useCcache`.
+- **Source variants**: `unstable` (the newest Emacs release or pretest tag, currently 31.1; the default), `git` (master), `igc` (the `feature/igc3` Memory Pool System GC branch), `mainline` (nixpkgs' `emacs`; the parity canary, not a flake output).
+- **GUIs**: pgtk (the only Linux GUI), NS (the only macOS GUI, patched by default), or none (`noGui = true`).
+- **Compilation**: native compilation (libgccjit AOT, on when the build platform can execute the host), compressed install, C sources for `find-function-C-source`, `srcRepo` (autoreconf on git sources), opt-in `useCcache`.
 - **Image formats**: WebP (default), optionally ImageMagick.
-- **Libraries**: tree-sitter, SQLite3, dbus, selinux, gpm, ALSA, ACL, mailutils, systemd, GLib networking. The overlay trims mailutils/gpm/selinux from the builds that are already off binary-cache parity (both terminal-only builds and the Darwin GUI); the Linux pgtk build keeps upstream defaults so it stays byte-identical to the cached `emacs-unstable-pgtk`.
-- **Darwin patches**: `system-appearance`, `round-undecorated-frame`, and `fix-ns-x-colors` applied via `overrideAttrs` — **on by default for the NS GUI**, which makes every Darwin GUI build a from-source build. The 31/30 branch patch sets are fetched from `nix-giant/nix-darwin-emacs`; the master/32+ set (the `git`/`igc` variants) from `d12frosted/homebrew-emacs-plus`, since nix-giant dropped its unstable patch branch in 2026-08.
+- **Libraries**: tree-sitter, SQLite3, dbus, selinux, gpm, ALSA, ACL, mailutils, systemd, GLib networking. The overlay drops mailutils/gpm/selinux from the builds already off cache parity (both terminal-only builds and the Darwin GUI); the Linux pgtk build keeps upstream defaults so it stays identical to the cached `emacs-unstable-pgtk`.
+- **Darwin patches**: `system-appearance`, `round-undecorated-frame`, and `fix-ns-x-colors`, applied via `overrideAttrs` and **on by default for the NS GUI**, so every Darwin GUI build is a from-source build. The Emacs 31/30 patch sets come from `nix-giant/nix-darwin-emacs`; the master set (the `git` / `igc` variants) from `d12frosted/homebrew-emacs-plus`, because nix-giant dropped its unstable patch branch.
 
 ### Cache-parity invariant
 
-`emacs.nix` is written so that every argument default matches the corresponding default in upstream nixpkgs' `make-emacs.nix` (and the explicit args emacs-overlay passes to its prebuilt attrs). As long as that holds,
+Every argument default in `emacs.nix` matches the corresponding default in nixpkgs' `make-emacs.nix` (and the explicit args emacs-overlay passes to its prebuilt attrs). As long as that holds,
 
 ```nix
 import ./emacs.nix {}                          # unstable (bare-file default)
@@ -32,7 +32,7 @@ import ./emacs.nix { variant = "mainline"; }   # nixpkgs' emacs, the parity cana
 import ./emacs.nix { noGui = true; }           # any standard override
 ```
 
-produces the *exact* store path of the matching base attr. On Linux `withPgtk` is on by default, so each GUI build maps to the prebuilt `*-pgtk` sibling (`emacs-unstable-pgtk`, `emacs-git-pgtk`, `emacs-igc-pgtk`, or nixpkgs' `emacs-pgtk` for `mainline`); the terminal-only `noGui` builds map to their own matching attrs. So the `nix-community.cachix.org` (git/unstable/igc, including the shipped `unstable` default), Hydra (mainline), and project `jylhis` binary caches hit and nothing recompiles from source. Only custom `rev` pins and the Darwin patch flags diverge; those paths run through `overrideAttrs` and intentionally bust the cache.
+produces the *exact* store path of the matching base attr. On Linux each GUI build maps to the prebuilt `*-pgtk` sibling (`emacs-unstable-pgtk`, `emacs-git-pgtk`, `emacs-igc-pgtk`, or nixpkgs' `emacs-pgtk` for `mainline`); `noGui` builds map to their own attrs. The `nix-community.cachix.org` (git/unstable/igc), Hydra (mainline), and `jylhis` caches therefore hit and nothing compiles from source. Custom `rev` pins, `useCcache`, `cpuTune`, and the Darwin patches go through `overrideAttrs` or a different stdenv and intentionally miss the cache.
 
 Verify after any change to defaults:
 
@@ -62,60 +62,60 @@ nix-instantiate --eval --strict -E '
   }'
 ```
 
-The override arg set is filtered through `lib.intersectAttrs (lib.functionArgs basePackage.override)`, so only the flags the base `make-emacs.nix` actually defines are forwarded. This keeps the build evaluating when a downstream flake overrides `nixpkgs` with an older release (24.05+): arguments that newer `make-emacs.nix` versions added are dropped rather than throwing "called with unexpected argument". On the pinned unstable every argument is accepted, so the intersection is a no-op and cache parity is unaffected.
+The override arg set is filtered through `lib.intersectAttrs (lib.functionArgs basePackage.override)`, so only flags the base `make-emacs.nix` defines are forwarded. A downstream flake that overrides `nixpkgs` with an older release (24.05+) therefore still evaluates: flags added in newer `make-emacs.nix` versions are dropped instead of failing with "called with unexpected argument". On the pinned unstable every argument is accepted, so the filter is a no-op and parity is unaffected.
 
 ### default.nix
 
-The non-flake entry point — a thin flake-compat wrapper, not a distribution layer. It reads the pinned `flake-compat` rev from `flake.lock`, evaluates `flake.nix`, and promotes the current system's packages to the top level: plain `nix-build` builds the full distribution (`jotainEmacsPackages`), `nix-build -A emacs` the bare Emacs. Variant builds still target `emacs.nix` directly (e.g. `nix-build emacs.nix --arg withPgtk true`).
+A thin flake-compat wrapper. It reads the pinned `flake-compat` rev from `flake.lock`, evaluates `flake.nix`, and promotes the current system's packages to the top level: `nix-build` builds the full distribution (`jotainEmacsPackages`), `nix-build -A emacs` the bare Emacs. Variant builds target `emacs.nix` directly (e.g. `nix-build emacs.nix --arg variant '"git"'`).
 
 ### Tree-sitter grammars
 
-Grammar bundling lives in `nix/mk-overlay.nix`, not in `default.nix`: the distribution's `withPackages` set includes `epkgs.treesit-grammars.with-all-grammars` (~275 grammars — a linkFarm over per-grammar derivations, so the full set costs closure size, never build time). Discovery is nixpkgs' own `site-start.el`, which sets `treesit-extra-load-path` to the bundled grammar directory — `early-init.el` deliberately does **no** `TREE_SITTER_DIR` handling (see its comment), and `init-prog.el` propagates `treesit-extra-load-path` to async native-comp workers, which run without site files.
+Grammars are bundled in `nix/mk-overlay.nix`: the distribution's `withPackages` set includes `epkgs.treesit-grammars.with-all-grammars` (~275 grammars, a linkFarm over per-grammar derivations, so they cost closure size but not build time). nixpkgs' `site-start.el` points `treesit-extra-load-path` at the bundled directory, so `early-init.el` needs no `TREE_SITTER_DIR` handling. `init-prog.el` passes `treesit-extra-load-path` on to async native-comp workers, which run without site files.
 
 ### emacs-packages
 
-`legacyPackages.<system>.emacs-packages` (nix/emacs-package-set.nix) exposes every Emacs package the configuration bundles — the `lisp/` use-package scan with `:ensure` aliases resolved, the Nix-provided extras (nix/nix-provided-packages.nix), and the full tree-sitter grammar set — each individually buildable:
+`legacyPackages.<system>.emacs-packages` (`nix/emacs-package-set.nix`) exposes every Emacs package the configuration bundles, each individually buildable: the `lisp/` use-package scan with `:ensure` aliases resolved, the Nix-provided extras (`nix/nix-provided-packages.nix`), and the tree-sitter grammar set.
 
 ```bash
 nix build .#emacs-packages.magit
 nix build .#emacs-packages.treesit-grammars
 ```
 
-Keys are the use-package head names, so `dired-async` holds the `async` derivation its `:ensure async` resolves to, and `ghostel` is the Elisp-only rebuild from nix/extra-packages.nix. The set lives in `legacyPackages` so `nix flake check` never builds it; the eval-only `emacs-packages-eval` check verifies every declared name resolves to a derivation. The packages mirror `packages.default` (the GUI-base scope), not `emacs-nox`.
+Keys are use-package head names, so `dired-async` holds the `async` derivation its `:ensure async` resolves to. The set lives in `legacyPackages` so `nix flake check` never builds it; the eval-only `emacs-packages-eval` check verifies every name resolves to a derivation. It mirrors `packages.default` (the GUI build), not `emacs-nox`.
 
 ## Key Build Options
 
 | Option | Default | Description |
 |---|---|---|
-| `variant` | `"unstable"` | Emacs source variant — `unstable` / `git` / `igc` / `mainline` |
-| `noGui` | `false` | Terminal only — `--without-x --without-ns` |
-| `withPgtk` | `isLinux && !noGui` | Pure GTK (Wayland) — `--with-pgtk`; the Linux GUI. Selects the prebuilt `*-pgtk` sibling for cache parity |
-| `withNS` | `isDarwin && !noGui` | Cocoa/NeXTstep — the macOS GUI |
+| `variant` | `"unstable"` | Emacs source variant: `unstable` / `git` / `igc` / `mainline` |
+| `noGui` | `false` | Terminal only (`--without-x --without-ns`) |
+| `withPgtk` | `isLinux && !noGui` | Pure GTK (Wayland), the Linux GUI. Selects the prebuilt `*-pgtk` sibling for cache parity |
+| `withNS` | `isDarwin && !noGui` | Cocoa/NeXTstep, the macOS GUI |
 | `withNativeCompilation` | auto | libgccjit AOT compilation |
 | `withTreeSitter` | `true` | Built-in tree-sitter support |
 | `withSystemd` | Linux | `--with-systemd` (journal support) |
-| `withSystemAppearancePatch` | `withNS` | (Darwin) add `ns-system-appearance` hooks — **on by default for the GUI** |
-| `withRoundUndecoratedFramePatch` | `withNS` | (Darwin) rounded borderless frames — **on by default for the GUI** |
-| `withFixNsXColorsPatch` | `withNS` | (Darwin) refresh `x-colors` from `ns-list-colors` at runtime, so the full palette is available instead of the ~62 headless-dump colors — **on by default for the GUI** |
-| `rev` / `hash` | `null` | Pin a specific commit for `git` / `unstable` / `igc` variants |
-| `useCcache` | `false` | Build with `pkgs.ccacheStdenv` (`CCACHE_DIR` wired via `extraConfig`; `ccacheDir` argument, default `/var/cache/ccache`). Only useful for builds already off the cache-parity path (custom `rev`, the Darwin GUI, or `igc` on Darwin); needs a machine-level `extra-sandbox-paths` exception first |
-| `cpuTune` | `null` | CPU-tuned perf build: appends `-O3 -march=<tune> -mtune=<tune>` to `NIX_CFLAGS_COMPILE` (`just build-perf` passes `icelake-client`). Off every binary cache by design; only for builds already off the cache-parity path or when a from-source build is accepted |
+| `withSystemAppearancePatch` | `withNS` | (Darwin) `ns-system-appearance` hooks |
+| `withRoundUndecoratedFramePatch` | `withNS` | (Darwin) rounded borderless frames |
+| `withFixNsXColorsPatch` | `withNS` | (Darwin) refresh `x-colors` from `ns-list-colors` at runtime, so the full palette is available instead of the ~62 colors in the headless dump |
+| `rev` / `hash` | `null` | Pin a specific commit for the `git` / `unstable` / `igc` variants |
+| `useCcache` | `false` | Build with `pkgs.ccacheStdenv` (cache dir from `ccacheDir`, default `/var/cache/ccache`). Only for builds already off cache parity (custom `rev`, the Darwin GUI, `igc` on Darwin); needs an `extra-sandbox-paths` entry first |
+| `cpuTune` | `null` | Appends `-O3 -march=<tune> -mtune=<tune>` to `NIX_CFLAGS_COMPILE` (`just build-perf` passes `icelake-client`). Off every binary cache by design |
 
-See `emacs.nix` for the complete argument list and defaults.
+See `emacs.nix` for the full argument list.
 
 ## IGC Variant
 
-The `igc` variant builds Emacs's `feature/igc3` branch, which replaces the default mark-and-sweep garbage collector with the [Memory Pool System](https://memory-pool-system.readthedocs.io). The base package is emacs-overlay's `emacs-igc`, which already carries `--with-mps=yes` and the `mps` build input, so no manual steps are needed on Linux — the overlay-pinned revision is a binary-cache hit there. On Darwin, `nix-community.cachix.org` has no prebuilt `emacs-igc`, so `just build-igc` compiles it from source even at the default revision; `just build-igc-ccache` (`useCcache = true`) makes repeat local rebuilds on that platform cheaper once ccache is set up (see the `useCcache` doc comment in `emacs.nix`).
+The `igc` variant builds Emacs's `feature/igc3` branch, which replaces the mark-and-sweep garbage collector with the [Memory Pool System](https://memory-pool-system.readthedocs.io). emacs-overlay's `emacs-igc` already carries `--with-mps=yes` and the `mps` input, and on Linux the default revision is a binary-cache hit. `nix-community.cachix.org` has no Darwin `emacs-igc`, so `just build-igc` compiles from source there; `just build-igc-ccache` makes repeat rebuilds cheaper once ccache is set up (see the `useCcache` comment in `emacs.nix`).
 
 ## Git Variants
 
-The `git`, `unstable`, and `igc` variants build the revision pinned inside emacs-overlay (updated daily upstream, advanced here by `just update`) and are binary-cache hits from `nix-community.cachix.org`. To pin a different commit, pass `--argstr rev "..."` — `emacs.nix` then fetches it from `https://git.savannah.gnu.org/git/emacs.git` via `fetchgit`; the first build reports the correct hash to pass back via `--argstr hash "sha256-..."`. In that case `postPatch` substitutes the pinned revision into `lisp/loadup.el` so `emacs-repository-get-version` returns the expected value without a `.git` directory in the build tree. On `aarch64-linux`, the overlay's bases include `--enable-check-lisp-object-type` to avoid segfaults.
+`git`, `unstable`, and `igc` build the revision pinned inside emacs-overlay (advanced here by `just update`) and are cache hits from `nix-community.cachix.org`. To pin another commit, pass `--argstr rev "..."`: `emacs.nix` fetches it from `https://git.savannah.gnu.org/git/emacs.git`, and the first build reports the hash to pass back via `--argstr hash "sha256-..."`. `postPatch` then writes the revision into `lisp/loadup.el` so `emacs-repository-get-version` works without a `.git` directory. The overlay's `--enable-check-lisp-object-type` on `aarch64-linux` (it avoids segfaults there) carries over to custom revisions.
 
 ## nix-on-droid
 
-`nixOnDroidModules.default` (from `module-nix-on-droid.nix`) installs Jotain on Android via [nix-on-droid](https://github.com/nix-community/nix-on-droid). Because Android runs headless under proot, the module is a trimmed cousin of `module-system.nix`: it `pkgs.extend`s the overlay and adds a **terminal-only** build (`jotainEmacsPackagesNoGui`, a `noGui = true` Emacs) plus an `emacsclient` `EDITOR`/`VISUAL` wrapper to `environment.packages` and `environment.sessionVariables`. There is no systemd service, launchd agent, `fonts.packages`, or GUI frame.
+`nixOnDroidModules.default` (`module-nix-on-droid.nix`) installs Jotain on Android via [nix-on-droid](https://github.com/nix-community/nix-on-droid). Android runs headless under proot, so the module is a trimmed `module-system.nix`: it `pkgs.extend`s the overlay and adds a **terminal-only** build (`jotainEmacsPackagesNoGui`) plus an `emacsclient` `EDITOR`/`VISUAL` wrapper via `environment.packages` and `environment.sessionVariables`. There is no systemd service, launchd agent, `fonts.packages`, or GUI.
 
-`flake.nix` exposes an example `nixOnDroidConfigurations.default` (aarch64-linux). It activates only on-device or under aarch64 emulation, so `nix flake check` does not realise it (CI is x86_64); the module itself is eval-checked on x86_64 via `nix-on-droid-module-eval` in `nix/checks.nix`.
+`flake.nix` also exposes an example `nixOnDroidConfigurations.default` (aarch64-linux). It only activates on a device or under aarch64 emulation, so `nix flake check` does not realise it; the module is eval-checked on x86_64 by `nix-on-droid-module-eval`.
 
 ## Overriding nixpkgs
 
@@ -125,4 +125,4 @@ A downstream flake can follow a different nixpkgs (release branches **24.05+** t
 inputs.jotain.inputs.nixpkgs.follows = "nixpkgs";
 ```
 
-The version-gated override split (see [Cache-parity invariant](#cache-parity-invariant)) keeps the modules evaluating and building on older releases. The caveat is Emacs version: 24.05's `pkgs.emacs` is Emacs 29 while Jotain's Elisp targets 30/31, so the build succeeds but runtime behaviour is only guaranteed on the pinned unstable.
+The argument filter described under [Cache-parity invariant](#cache-parity-invariant) keeps the modules evaluating and building on older releases. The caveat is the Emacs version: 24.05's `pkgs.emacs` is Emacs 29, while Jotain's Elisp targets 30/31, so the build succeeds but runtime behaviour is only guaranteed on the pinned unstable.

@@ -2,19 +2,15 @@
 
 ;;; Commentary:
 
-;; Two complementary systems for "what command should I run for this
-;; project right now?":
+;; project.el setup, plus two complementary answers to "which command do
+;; I run here?":
 ;;
-;;   - `projection' stores commands as safe-local variables in
-;;     .dir-locals.el and exposes them via `C-x P'. It auto-discovers
-;;     project types from Makefiles, justfiles, Cargo.toml, etc.
+;;   - `projection' (`C-x P') auto-detects the project type (Makefile,
+;;     justfile, Cargo.toml, ...); commands can be overridden as
+;;     safe-local variables in .dir-locals.el.
 ;;
-;;   - `compile-multi' is a per-major-mode picker for named compile
-;;     commands ("go test", "pytest file", "nix flake check"). Each
-;;     mode has its own list configured in this file.
-;;
-;; They overlap but neither covers the other completely. Use whichever
-;; reaches your hand first.
+;;   - `compile-multi' is a per-major-mode picker of named compile
+;;     commands, configured below.
 
 ;;; Code:
 
@@ -23,10 +19,9 @@
 (defcustom jotain-repositories-roots
   (list "~/Developer" "~/Projects")
   "Roots whose immediate subdirectories are treated as repositories.
-Feeds `jotain-find-projects-and-switch' (C-x p P) here and
-`magit-repository-directories' (init-vc.el). Roots that do not
-exist on this machine are silently skipped, so the defaults are
-harmless wherever the config is deployed."
+Feeds `jotain-find-projects-and-switch' (C-x p P) and
+`magit-repository-directories' (init-vc.el).  Missing roots are
+skipped."
   :type '(repeat directory)
   :group 'project)
 
@@ -34,8 +29,7 @@ harmless wherever the config is deployed."
 
 (defun jotain-find-projects-and-switch ()
   "Scan `jotain-repositories-roots', pick a project, remember and open it.
-Completion labels include the full abbreviated parent root, so two
-projects sharing a basename across different roots stay distinct."
+Labels include the parent root, so same-named projects stay distinct."
   (interactive)
   (let* ((dirs (cl-loop for root in jotain-repositories-roots
                         when (file-directory-p root)
@@ -56,61 +50,51 @@ projects sharing a basename across different roots stay distinct."
           (project-remember-project proj))
         (project-switch-project dir)))))
 
-;;; @doc Built-in project tracker. Extra root markers below mean a
-;;; project is recognised when any of these is present, not just
-;;; on a VCS root. Project list lives under var/. `C-x p P' scans
-;;; `jotain-repositories-roots' to add+open projects not yet in
-;;; the known list.
+;;; @doc Built-in project tracker. The extra root markers make a
+;;; directory with, e.g., `flake.nix` or `go.mod` a project root, even
+;;; without VCS or inside a larger repository. The project list lives
+;;; under var/. `C-x p P` scans `jotain-repositories-roots` to add and
+;;; open projects not yet known.
 (use-package project
   :ensure nil
   :bind (:map project-prefix-map ("P" . jotain-find-projects-and-switch))
   :custom
   (project-list-file (jotain-var-file "projects.el"))
   (project-buffers-viewer 'project-list-buffers-ibuffer)
-  ;; go.mod so a Go module under a larger git root is recognised as its
-  ;; own project — otherwise gopls, `project-find-file' and
-  ;; `consult-ripgrep' scope to the git root rather than the module.  Only
-  ;; go.mod, not go.work: `project-try-vc' joins every marker into one
-  ;; regexp for `locate-dominating-file', so the deepest match wins and a
-  ;; module's go.mod always shadows an ancestor go.work.  A go.work
-  ;; multi-module workspace therefore scopes per-module here; if the
-  ;; workspace root is wanted instead, drop go.mod and add "go.work".
+  ;; go.mod scopes gopls, `project-find-file' and `consult-ripgrep' to the
+  ;; module, not the git root.  The deepest marker wins, so a module's
+  ;; go.mod shadows an ancestor go.work; to scope to a go.work workspace
+  ;; instead, replace "go.mod" with "go.work".
   (project-vc-extra-root-markers
    '(".project" "package.json" "Cargo.toml" "pyproject.toml" "flake.nix"
      "devenv.nix" "go.mod")))
 
-;;; @doc `project.el' backend for the Nix (and Guix) store: each
-;;; `/nix/store' path that is a directory becomes a project root, so
-;;; `project-find-file' jumps between files under the same store path
-;;; while reading a dependency's source. `project-nix-store-try' is
-;;; registered ahead of the built-in `project-try-vc' (upstream's
-;;; performance advice), and store paths are kept out of the saved
+;;; @doc project.el backend for the Nix (and Guix) store: each store
+;;; directory is a project root, so `project-find-file` works while
+;;; reading a dependency's source. Store paths stay out of the saved
 ;;; project list.
 (use-package project-nix-store
   :ensure nil
   :after project
   :init
-  ;; `add-hook' without APPEND prepends, so this runs before the default
-  ;; `project-try-vc' member of `project-find-functions' — the ordering
-  ;; upstream recommends for good performance.
+  ;; Prepended, so it runs before `project-try-vc' as upstream recommends
+  ;; for performance.
   (add-hook 'project-find-functions #'project-nix-store-try)
   :config
-  ;; Keep store paths out of the remembered project list. The option is
-  ;; newer than this config's Emacs 30.1 floor, so guard the reference.
+  ;; `project-list-exclude' is newer than Emacs 30.1.
   (when (boundp 'project-list-exclude)
     (add-to-list 'project-list-exclude #'project-nix-store-p)))
 
 ;;;; projection — per-project commands keyed off .dir-locals.el
 
-;;; @doc `.dir-locals.el`-driven per-project commands (configure, build,
-;;; test, run, package, install) auto-detected from
-;;; Makefile/justfile/Cargo.toml/etc and exposed under C-x P.
+;;; @doc Per-project commands (configure, build, test, run, package,
+;;; install) under C-x P, auto-detected from Makefile/justfile/Cargo.toml
+;;; and friends and overridable from `.dir-locals.el`.
 (use-package projection
   :hook (after-init . global-projection-hook-mode)
   :bind-keymap ("C-x P" . projection-map)
   :config
-  ;; Mark all the projection-commands-* variables as safe local
-  ;; variables so .dir-locals.el can set them without prompting.
+  ;; Let .dir-locals.el set the command strings without prompting.
   (dolist (sym '(projection-commands-configure-project
                  projection-commands-build-project
                  projection-commands-test-project
@@ -119,15 +103,14 @@ projects sharing a basename across different roots stay distinct."
                  projection-commands-install-project))
     (put sym 'safe-local-variable #'stringp)))
 
-;;; @doc Bridges projection with compile-multi: project-prefix RET picks
-;;; from every named compile command available in this project.
+;;; @doc Bridges projection with compile-multi: `C-x p RET` picks from
+;;; every named compile command available in this project.
 (use-package projection-multi
   :after projection
   :bind (:map project-prefix-map
               ("RET" . projection-multi-compile)))
 
-;;; @doc Embark menu for projection-multi entries — pin a command,
-;;; preview output, etc.
+;;; @doc Embark actions on projection-multi entries.
 (use-package projection-multi-embark
   :after (embark projection-multi)
   :functions (projection-multi-embark-setup-command-map)
@@ -137,8 +120,8 @@ projects sharing a basename across different roots stay distinct."
 ;;;; compile-multi — named compile commands per major mode
 
 ;;; @doc Per-major-mode picker for named compile commands ("go test",
-;;; "pytest file", "nix flake check", …). Complement to projection,
-;;; kept side by side because neither system fully covers the other.
+;;; "pytest file", "nix flake check", …). Complements projection; neither
+;;; fully covers the other.
 (use-package compile-multi
   :defer t
   :commands (compile-multi)
@@ -153,12 +136,9 @@ projects sharing a basename across different roots stay distinct."
                       ("golangci-lint"   . "golangci-lint run")))
      (go-mod-ts-mode . (("go mod tidy"     . "go mod tidy")
                         ("go mod download" . "go mod download")))
-     ;; `python-base-mode' is the shared parent of both `python-mode' and
-     ;; `python-ts-mode', so this fires regardless of which one a .py buffer
-     ;; lands in (the repo routes to python-ts-mode, but a missing grammar
-     ;; falls back to python-mode).  "pytest file" is a function action so
-     ;; the current file is substituted at run time — compile-multi does not
-     ;; template `%…%' placeholders.
+     ;; `python-base-mode' covers both `python-mode' and `python-ts-mode'.
+     ;; "pytest file" is a function because compile-multi has no file
+     ;; placeholder.
      (python-base-mode . (("pytest"      . "pytest")
                           ("pytest file" . ,(lambda ()
                                               (concat "pytest "
@@ -170,9 +150,7 @@ projects sharing a basename across different roots stay distinct."
                       ("dune test"      . "dune test")
                       ("dune runtest"   . "dune runtest")
                       ("dune fmt"       . "dune build @fmt")))
-     ;; neocaml-mode/neocaml-interface-mode (the tree-sitter OCaml modes)
-     ;; derive from neocaml-base-mode, not tuareg-mode, so key the same dune
-     ;; commands on it too.
+     ;; The neocaml modes do not derive from tuareg-mode.
      (neocaml-base-mode . (("dune build"   . "dune build")
                            ("dune test"    . "dune test")
                            ("dune runtest" . "dune runtest")
@@ -191,37 +169,31 @@ projects sharing a basename across different roots stay distinct."
      (zig-ts-mode  . (("zig build"      . "zig build")
                       ("zig test"       . "zig build test")
                       ("zig run"        . "zig build run")))
-     ;; TypeScript / JavaScript — a list trigger is `eval'd by compile-multi,
-     ;; so this one entry covers all three ts-modes.  Neutral `npm' scripts;
-     ;; concrete commands are overridden per project via projection /
-     ;; .dir-locals.el.
+     ;; A list trigger is `eval'd, so one entry covers all three modes.
+     ;; Override per project via projection / .dir-locals.el.
      ((apply #'derived-mode-p '(typescript-ts-mode tsx-ts-mode js-ts-mode))
       . (("npm test"  . "npm test")
          ("npm build" . "npm run build")
          ("npm lint"  . "npm run lint")))
-     ;; C / C++ — CMake / CTest, mirroring the Meson entries above.
+     ;; C / C++: CMake and CTest.
      ((apply #'derived-mode-p '(c-mode c++-mode c-ts-mode c++-ts-mode))
       . (("cmake configure" . "cmake -B build")
          ("cmake build"     . "cmake --build build")
          ("ctest"           . "ctest --test-dir build --output-on-failure"))))))
 
-;;; @doc Renders compile-multi pickers through consult — gives you
-;;; orderless filtering and preview on every "what command should I
-;;; run?" prompt.
+;;; @doc Renders compile-multi pickers through consult.
 (use-package consult-compile-multi
   :after compile-multi
   :functions (consult-compile-multi-mode)
   :demand t
   :config (consult-compile-multi-mode))
 
-;;; @doc Decorates compile-multi entries with nerd-font glyphs for the
-;;; command type — purely visual, but a useful at-a-glance hint.
+;;; @doc Nerd-font icons for compile-multi entries by command type.
 (use-package compile-multi-nerd-icons
   :after (compile-multi nerd-icons-completion)
   :demand t)
 
-;;; @doc Embark actions on compile-multi entries (run, copy, edit
-;;; command line). Mirrors the projection embark integration.
+;;; @doc Embark actions on compile-multi entries.
 (use-package compile-multi-embark
   :after (embark compile-multi)
   :functions (compile-multi-embark-mode)

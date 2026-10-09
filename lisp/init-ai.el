@@ -7,10 +7,9 @@
 ;;   claude-code-ide  C-c q         Agentic editing — autonomous multi-file
 ;;                                  changes via the Claude Code CLI.
 ;;
-;;   jotain-screenshot              Capture the frame to var/screenshots/,
-;;                                  also served to Claude as the
-;;                                  `emacs_screenshot' MCP tool so the AI
-;;                                  can see how Emacs looks.
+;;   jotain-screenshot              Capture the frame to var/screenshots/;
+;;                                  also the `emacs_screenshot' MCP tool,
+;;                                  so Claude can see Emacs.
 ;;
 ;;   eca              C-c e         Editor Code Assistant — chat, inline
 ;;                                  completion, rewrite, and MCP through an
@@ -26,23 +25,19 @@
 ;;                                  registers the project's `devenv mcp'
 ;;                                  server here.
 ;;
-;; Auth: API keys come from the environment first (OPENROUTER_API_KEY /
-;; ANTHROPIC_API_KEY / GEMINI_API_KEY) and fall back to auth-source —
-;; auth-source-1password (configured in init-systems.el) makes that
-;; transparent, as does any authinfo file wired through the module's
-;; `services.jotain.authSources'.  The eca server reads the same provider
-;; keys only from its process environment, so `jotain-ai-export-api-keys'
-;; (run before a session starts) resolves any missing key from auth-source
-;; and `setenv's it, letting eca work from an authinfo file or 1Password too.
-;; Its OpenRouter provider is defined in config/eca/config.json (opt-in via
-;; services.jotain.eca.openrouter.enable in the Home Manager module).
+;; Auth: API keys (OPENROUTER_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY)
+;; come from the environment, falling back to auth-source (1Password via
+;; init-systems.el, or authinfo files from `services.jotain.authSources').
+;; The eca server reads keys only from its environment, so
+;; `jotain-ai-export-api-keys' exports missing ones from auth-source before
+;; a session starts.  Its OpenRouter provider is config/eca/config.json
+;; (opt-in via services.jotain.eca.openrouter.enable in Home Manager).
 
 ;;; Code:
 
 ;;;; Frame screenshots for AI tooling
 ;;
-;; `x-export-frames' is a cairo-only primitive (Linux X11/pgtk builds;
-;; absent on noGui/tty and macOS NS builds).
+;; `x-export-frames' needs a cairo build (Linux X11/pgtk), not noGui or NS.
 
 (declare-function x-export-frames "xfns.c" (&optional frames type))
 (declare-function jotain-var-file "init-core" (name))
@@ -75,24 +70,20 @@ Interactively, echo the path and push it onto the kill ring."
       (message "Screenshot: %s" file))
     file))
 
-;;; @doc Agentic multi-file editing through the Claude Code CLI. Bound to
-;;; C-c q (user-reserved space, so no major mode shadows it) so the menu
-;;; is one key away whenever a refactor needs more context than a single
-;;; LSP rename can carry. Provided by Nix (manzaltu/claude-code-ide.el is
-;;; not on MELPA).
+;;; @doc Agentic multi-file editing through the Claude Code CLI; C-c q
+;;; opens its menu. Attached sessions also get an `emacs_screenshot` MCP
+;;; tool. Provided by Nix (manzaltu/claude-code-ide.el is not on MELPA).
 (use-package claude-code-ide
   :ensure nil
   :defer t
   :bind ("C-c q" . claude-code-ide-menu)
   :functions (claude-code-ide-emacs-tools-setup claude-code-ide-make-tool)
   :custom
-  ;; Serve custom MCP tools (emacs_screenshot below) to attached sessions.
+  ;; Serve custom MCP tools (emacs_screenshot) to attached sessions.
   (claude-code-ide-enable-mcp-server t)
   :config
   (claude-code-ide-emacs-tools-setup)
-  ;; Let Claude see the frame: capture an image, return the path, Read it.
-  ;; fboundp-guarded so an upstream API rename degrades to a no-op instead
-  ;; of breaking startup.
+  ;; Guarded so an upstream API rename degrades to a no-op.
   (when (fboundp 'claude-code-ide-make-tool)
     (claude-code-ide-make-tool
      :name "emacs_screenshot"
@@ -106,18 +97,15 @@ Interactively, echo the path and push it onto the kill ring."
   '(("OPENROUTER_API_KEY" "openrouter.ai" "apikey")
     ("ANTHROPIC_API_KEY" "api.anthropic.com" "apikey")
     ("GEMINI_API_KEY" "generativelanguage.googleapis.com" "apikey"))
-  "Provider API-key env vars and their auth-source (VAR HOST USER) lookup.
-`jotain-ai-export-api-keys' consults this to feed keys to subprocesses —
-notably the eca server — that read credentials only from the environment.")
+  "Provider API-key env vars and their auth-source lookup, as (VAR HOST USER).
+Read by `jotain-ai-export-api-keys'.")
 
 (defun jotain-ai-export-api-keys ()
   "Export any missing provider API key from auth-source into the environment.
-For each entry of `jotain-ai-provider-auth-keys' whose env var is unset,
-resolve the secret via auth-source (by host/user) and `setenv' it, so a
-subprocess that reads credentials only from its environment — the eca
-server especially — inherits it.  Variables already set (e.g. from the
-module's `services.jotain.environmentFile') are left untouched, and a
-missing secret is skipped silently."
+For each unset variable in `jotain-ai-provider-auth-keys', look the
+secret up by host and user and `setenv' it, so subprocesses such as the
+eca server inherit it.  Set variables are left alone; missing secrets
+are skipped."
   (require 'auth-source)
   (dolist (entry jotain-ai-provider-auth-keys)
     (pcase-let ((`(,var ,host ,user) entry))
@@ -126,28 +114,22 @@ missing secret is skipped silently."
                              :host host :user user)))
           (setenv var secret))))))
 
-;;; @doc Editor Code Assistant — AI pair-programming client (chat, inline
-;;; completion, rewrite, MCP) talking to an external `eca' server over
-;;; JSONRPC. The server binary is provided by Nix and found on $PATH, so
-;;; nothing is downloaded; provider keys come from the environment, same as
-;;; gptel. C-c e starts a session and opens the chat.
+;;; @doc Editor Code Assistant: AI pair-programming client (chat, inline
+;;; completion, rewrite, MCP) talking to an external `eca` server over
+;;; JSONRPC. The server binary is on the wrapper PATH, so nothing is
+;;; downloaded. Missing provider keys are exported from auth-source before
+;;; a session starts. C-c e starts a session and opens the chat.
 (use-package eca
   :defer t
   :bind ("C-c e" . eca)
   :init
-  ;; The server reads provider keys only from its environment, so fill any
-  ;; missing key from auth-source (authinfo file or 1Password) before a
-  ;; session starts.
   (advice-add 'eca :before #'jotain-ai-export-api-keys))
 
-;;; @doc Conversational LLM front-end with multiple backends. OpenRouter
-;;; — an OpenAI-compatible aggregator fronting Claude, GPT, Gemini,
-;;; DeepSeek, Qwen, GLM and more behind one key — is the default; direct
-;;; Anthropic, Gemini and local Ollama backends stay selectable from the
-;;; C-c S menu. Bound to C-c s / C-c S for quick send and full menu —
-;;; user-reserved space, so org-mode and friends can't shadow them. Keys
-;;; come from the environment first, then auth-source via
-;;; auth-source-1password.
+;;; @doc Conversational LLM front-end. The default backend is OpenRouter,
+;;; an OpenAI-compatible aggregator (Claude, GPT, Gemini, DeepSeek, Qwen,
+;;; GLM, ...) behind one key; direct Anthropic, Gemini and local Ollama
+;;; backends are selectable from the C-c S menu. C-c s sends. Keys come
+;;; from the environment, then auth-source.
 (use-package gptel
   :defer t
   :functions (gptel-make-openai gptel-make-anthropic gptel-make-gemini
@@ -156,7 +138,6 @@ missing secret is skipped silently."
   (("C-c s" . gptel-send)
    ("C-c S" . gptel-menu))
   :config
-  ;; OpenRouter — OpenAI-compatible aggregator, primary backend.
   (setopt gptel-backend
           (gptel-make-openai "OpenRouter"
             :host "openrouter.ai"
@@ -167,8 +148,8 @@ missing secret is skipped silently."
                        (auth-source-pick-first-password
                         :host "openrouter.ai"
                         :user "apikey")))
-            ;; Keep this model list in sync with config/eca/config.json
-            ;; (providers.openrouter.models) — the eca server's copy.
+            ;; Keep in sync with config/eca/config.json
+            ;; (providers.openrouter.models); checked by eca-models-in-sync.
             :models '(anthropic/claude-opus-4.8
                       anthropic/claude-sonnet-4.6
                       openai/gpt-5.5
@@ -178,7 +159,6 @@ missing secret is skipped silently."
                       z-ai/glm-4.7))
           gptel-model 'anthropic/claude-sonnet-4.6)
 
-  ;; Anthropic (Claude) — direct backend, no aggregator.
   (gptel-make-anthropic "Claude"
     :stream t
     :key (lambda ()
@@ -187,7 +167,6 @@ missing secret is skipped silently."
                 :host "api.anthropic.com"
                 :user "apikey"))))
 
-  ;; Google Gemini — direct backend.
   (gptel-make-gemini "Gemini"
     :stream t
     :key (lambda ()
@@ -196,16 +175,15 @@ missing secret is skipped silently."
                 :host "generativelanguage.googleapis.com"
                 :user "apikey"))))
 
-  ;; Ollama — local models, no key needed.
+  ;; Local models, no key needed.
   (gptel-make-ollama "Ollama"
     :stream t
     :host "localhost:11434"
     :models '(llama3.1:latest)))
 
-;;; @doc Model Context Protocol bridge — lets gptel call MCP tools so the
-;;; LLM can read files, query databases, and act through registered
-;;; servers. Loaded on demand via its autoloads (`devenv-mcp-setup',
-;;; M-x mcp-connect-server) — nothing here forces a load.
+;;; @doc Model Context Protocol client: lets gptel call tools on
+;;; registered MCP servers. Loaded on demand (M-x mcp-connect-server,
+;;; `devenv-mcp-setup`).
 (use-package mcp
   :defer t)
 

@@ -5,7 +5,7 @@
 #   nix-build                              # full distribution (jotainEmacsPackages)
 #   nix-build -A emacs                     # bare Emacs only
 #   nix-build emacs.nix                    # bare Emacs (cache-parity build)
-#   nix-build emacs.nix --arg withPgtk true  # variant builds
+#   nix-build emacs.nix --arg noGui true   # variant build (terminal-only)
 let
   lock = builtins.fromJSON (builtins.readFile ./flake.lock);
   flake-compat = fetchTarball {

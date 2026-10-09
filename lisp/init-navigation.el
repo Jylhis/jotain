@@ -2,33 +2,30 @@
 
 ;;; Commentary:
 
-;; Dired (built-in) and dirvish (third-party enhancement) live together
-;; here, as do `project' and `winner'. The rule from the top of init.el:
-;; if package A only exists to enhance built-in B, they share a file.
+;; Dired and its enhancements (dirvish and friends) live together here,
+;; per the init.el rule that a package enhancing a built-in shares its
+;; file.  Also window layout: `winner' and a reversible `C-x 1'.
 
 ;;; Code:
 
-;;; @doc Built-in directory editor — Jotain's primary file manager.
-;;; The custom block below tames cross-platform ls quirks (BSD on
-;;; macOS lacks `--group-directories-first` and `--dired`). `M-s R`
-;;; previews a regex replacement across the contents of all marked
-;;; files as a unified diff (Emacs 30's
-;;; `dired-do-replace-regexp-as-diff'). `!'/`&' hand the file under
-;;; point to the OS default application (`open'/`xdg-open'/`start')
-;;; via `dired-guess-shell-alist-user'; files can also be dragged out
-;;; to desktop apps with the mouse.
+;;; @doc Built-in directory editor, Jotain's primary file manager. On
+;;; macOS it uses GNU `gls` when available, since BSD ls lacks
+;;; `--group-directories-first` and `--dired`. `M-s R` previews a regex
+;;; replacement across the marked files as a unified diff. `!`/`&`
+;;; suggest the OS default application (`open`/`xdg-open`/`start`) for
+;;; common document and media files; files can also be dragged out to
+;;; desktop apps with the mouse.
 (use-package dired
   :ensure nil
   :custom
-  ;; macOS ships BSD `ls', which rejects `--dired' and `--group-directories-first'.
-  ;; Prefer GNU `gls' from coreutils when available; otherwise fall back to BSD
-  ;; ls and disable the `--dired' handshake so Emacs doesn't error on startup.
+  ;; macOS BSD `ls' rejects `--dired' and `--group-directories-first'.
+  ;; Prefer GNU `gls'; otherwise use BSD ls without `--dired'.
   (insert-directory-program (or (and (eq system-type 'darwin)
                                      (executable-find "gls"))
                                 "ls"))
   (dired-use-ls-dired (or (not (eq system-type 'darwin))
                           (and (executable-find "gls") t)))
-  ;; `v' sorts numbers naturally (foo2 before foo10) instead of lexically.
+  ;; `v': natural number sort (foo2 before foo10).
   (dired-listing-switches (if (and (eq system-type 'darwin)
                                    (not (executable-find "gls")))
                               "-alhv"
@@ -39,28 +36,25 @@
   (dired-recursive-deletes 'top)
   (dired-deletion-confirmer #'y-or-n-p)
   (dired-auto-revert-buffer #'dired-buffer-stale-p)
-  ;; Auto-refresh a destination buffer after copy/rename, but never a
-  ;; remote one — a TRAMP round-trip per file op would stall the UI.
+  ;; Revert the destination after copy/rename, but not over TRAMP, where
+  ;; a round-trip per file op would stall the UI.
   (dired-do-revert-buffer (lambda (dir) (not (file-remote-p dir))))
   (dired-clean-confirm-killing-deleted-buffers nil)
   (dired-create-destination-dirs 'ask)
   (dired-free-space nil)
   (dired-vc-rename-file t)
-  ;; Stop point at the first/last file line instead of drifting onto
-  ;; the header or trailing blank lines.
+  ;; Keep point on file lines, off the header and trailing blank lines.
   (dired-movement-style 'bounded-files)
-  ;; Drag files out of dired into external desktop applications.
   (dired-mouse-drag-files t)
   :hook (dired-mode . dired-hide-details-mode)
   :bind (:map dired-mode-map
               ("M-s R" . dired-do-replace-regexp-as-diff))
   :config
-  ;; Emacs 31+: also hide the absolute directory path in the header line
-  ;; under `dired-hide-details-mode'. Guarded for Emacs 30.
+  ;; Emacs 31+: `dired-hide-details-mode' also hides the absolute path.
   (when (boundp 'dired-hide-details-hide-absolute-location)
     (setopt dired-hide-details-hide-absolute-location t))
-  ;; `!'/`&' guess the OS default handler for common document, image,
-  ;; and media types, so RET opens them in the desktop application.
+  ;; `!'/`&' suggest the OS default handler for documents, images and
+  ;; media.
   (when-let* ((opener (cond
                        ((eq system-type 'darwin) "open")
                        ((memq system-type '(gnu gnu/linux gnu/kfreebsd
@@ -77,9 +71,9 @@
                ,opener)
               ("\\.\\(?:mp3\\|flac\\)\\'" ,opener)))))
 
-;;; @doc Built-in dired extras — `dired-omit-mode` hides dotfiles and
-;;; cache directories so dired listings show only the things you
-;;; actually want to see.
+;;; @doc Built-in dired extras. `dired-omit-mode` hides lock and
+;;; auto-save files, `.git`, `.DS_Store`, Syncthing folders, `__pycache__`
+;;; and flycheck/flymake temp files.
 (use-package dired-x
   :ensure nil
   :after dired
@@ -97,28 +91,25 @@
            "\\|^flycheck_.*"
            "\\|^flymake_.*")))
 
-;;; @doc Async file ops for dired — wraps `dired-do-copy`, `dired-do-rename`,
-;;; `dired-do-symlink`, `dired-do-hardlink` so they fork into a subprocess
-;;; instead of blocking the main Emacs. Multi-GB copies no longer freeze
-;;; the UI; the mode-line shows progress and a message fires on completion.
+;;; @doc Async file ops for dired: copy, rename, symlink and hardlink run
+;;; in a subprocess, so large copies do not freeze the UI.
 (use-package dired-async
   :ensure async
   :after dired
   :config (dired-async-mode 1))
 
-;;; @doc rsync from dired — bound to `C-c C-r` in `dired-mode-map`. Best
-;;; for very large transfers or TRAMP sources/destinations: hands marked
-;;; files to `rsync` in an async shell buffer with live progress. Uses
-;;; `--progress` (not `--info=progress2`) so stock macOS rsync 2.6.9 still
-;;; works; noisier output, but portable.
+;;; @doc rsync from dired (`C-c C-r`), for very large transfers or TRAMP
+;;; endpoints: hands the marked files to `rsync` asynchronously with live
+;;; progress. `--progress`, not `--info=progress2`, so stock macOS rsync
+;;; 2.6.9 still works.
 (use-package dired-rsync
   :after dired
   :bind (:map dired-mode-map ("C-c C-r" . dired-rsync))
   :custom
   (dired-rsync-options "-az --progress --human-readable"))
 
-;;; @doc Pure-Lisp ls emulation. Fallback for macOS without GNU coreutils
-;;; — gives us folders-first sorting that BSD ls cannot produce.
+;;; @doc Pure-Lisp ls emulation, used on macOS without GNU coreutils to
+;;; get the folders-first sorting BSD ls cannot produce.
 (use-package ls-lisp
   :ensure nil
   :if (and (eq system-type 'darwin) (not (executable-find "gls")))
@@ -129,9 +120,9 @@
   (ls-lisp-UCA-like-collation t)
   (ls-lisp-verbosity '(links uid gid)))
 
-;;; @doc Built-in writable dired — C-c C-e turns the dired buffer into
-;;; a regular text buffer where you can rename/chmod files with the
-;;; usual editing commands. Save to commit changes.
+;;; @doc Built-in writable dired: C-c C-e makes the listing editable,
+;;; so files can be renamed and chmodded with normal editing. Save
+;;; (C-c C-c) to apply.
 (use-package wdired
   :ensure nil
   :after dired
@@ -140,20 +131,17 @@
   (wdired-create-parent-directories t)
   :bind (:map dired-mode-map ("C-c C-e" . wdired-change-to-wdired-mode)))
 
-;;; @doc Pretty colours for dired (font-locks files by type, age,
-;;; executability). Pure cosmetic, big readability win.
+;;; @doc Extra dired colours by file type, permissions and more.
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
 
-;;; @doc Live filter dired buffers by typing a fragment after `/`.
-;;; Faster than re-running ls with a glob.
+;;; @doc Live-filter a dired buffer by typing a fragment after `/`.
 (use-package dired-narrow
   :after dired
   :bind (:map dired-mode-map ("/" . dired-narrow)))
 
-;;; @doc Browse the system trash bin from inside Emacs. With
-;;; `delete-by-moving-to-trash` set in init-core, every dired
-;;; deletion is recoverable through `M-x trashed`.
+;;; @doc Browse the system trash. With `delete-by-moving-to-trash` set
+;;; in init-core, dired deletions are recoverable through `M-x trashed`.
 (use-package trashed
   :commands trashed
   :custom
@@ -162,23 +150,17 @@
   (trashed-sort-key '("Date deleted" . t)))
 
 ;;; @doc Shortens `/nix/store/abc123-foo-1.0` to `…foo-1.0` in dired and
-;;; shell buffers — purely cosmetic, but transformative on a system
-;;; that's mostly Nix store paths.
+;;; shell buffers.
 (use-package pretty-sha-path
   :hook ((dired-mode shell-mode) . pretty-sha-path-mode))
 
-;;; @doc Modern dired front-end with previews, side panels, and miller
-;;; columns. Overrides plain dired so every `C-x d` benefits.
-;;; `TAB' on a directory expands its contents inline as a subtree
-;;; (`dirvish-subtree-toggle'); `<backtab>' opens the subtree management
-;;; transient (`dirvish-subtree-menu'). This uses dirvish's own subtree
-;;; engine — the standalone `dired-subtree' package is deliberately not
-;;; loaded, because dirvish's `subtree-state' attribute and revert
-;;; pipeline are built around `dirvish-subtree' and the two engines
-;;; corrupt each other's overlays when combined.
-;;; `dirvish-side' (C-c D) already provides the docked side-tree that
-;;; Emacs 31's new `speedbar-window' offers, so speedbar is intentionally
-;;; not wired up here.
+;;; @doc Modern dired front-end with previews, side panels and miller
+;;; columns, replacing plain dired everywhere. C-c d opens it, C-c D a
+;;; docked side tree. `TAB` expands a directory inline and `<backtab>`
+;;; opens the subtree menu. The standalone `dired-subtree` package is
+;;; deliberately not loaded: it and dirvish's own subtree engine corrupt
+;;; each other's overlays. The side tree covers what speedbar would, so
+;;; speedbar is not wired up.
 (use-package dirvish
   :demand t
   :after dired
@@ -197,19 +179,15 @@
   :config
   (dirvish-override-dired-mode 1))
 
-;; Resize all sibling windows proportionally when splitting, instead
-;; of always halving the current window.
+;; Splitting resizes all sibling windows proportionally.
 (setopt window-combination-resize t)
 
-;;; @doc Built-in window-layout undo/redo — pairs with the toggle helper
-;;; below so `C-x 1` becomes a reversible "expand this window"
-;;; command.
+;;; @doc Built-in window-layout undo/redo. Makes `C-x 1` reversible
+;;; (see below).
 (use-package winner
   :ensure nil
   :config (winner-mode 1))
 
-;; Reversible `C-x 1': first press collapses to a single window,
-;; second press restores the previous layout via `winner-mode'.
 (declare-function winner-undo "winner")
 (defun jotain-nav-toggle-delete-other-windows ()
   "Delete other windows, or restore the previous layout.

@@ -2,25 +2,18 @@
 
 ;;; Commentary:
 
-;; The Nix build (`jotainEmacsPackages') pre-wraps emacs with
-;; INFOPATH pointing at the bundled jotain.info, so `C-h i d'
-;; already lists Jotain under the "Emacs" category for NixOS /
-;; nix-darwin / Home Manager users.  This module is the fallback for
-;; source-checkout workflows (`just run' against a host emacs that
-;; is not the Jotain wrapper): if `just info' has produced
-;; `result-info/share/info/jotain.info' in the repo, register its
-;; directory in `Info-additional-directory-list' so the manual still
-;; opens.
+;; The Nix distribution (`jotainEmacsPackages') wraps emacs with
+;; INFOPATH pointing at jotain.info, so `C-h i d' already lists Jotain.
+;; This module is the fallback for a host Emacs that isn't the Jotain
+;; wrapper: if a built manual is found (JOTAIN_INFO_DIR, or the
+;; checkout's result-info/ from `just info'), add its directory to
+;; `Info-additional-directory-list'.
 
 ;;; Code:
 
-;; `Info-directory-list' is nil until `info-initialize' builds it from
-;; INFOPATH and `Info-default-directory-list', and that initialization
-;; is skipped entirely once the list is non-nil -- so seeding it here
-;; would suppress every other manual.  `Info-additional-directory-list'
-;; is the variable designed for additions: Info appends it after the
-;; initialized list.  Declared for warning-clean byte-compilation
-;; without an eager `(require 'info)'.
+;; Not `Info-directory-list': `info-initialize' skips building it from
+;; INFOPATH once it is non-nil, so seeding it would hide every other
+;; manual.  Info appends `Info-additional-directory-list' afterwards.
 (defvar Info-additional-directory-list)
 
 (defvar jotain-info--candidate-paths

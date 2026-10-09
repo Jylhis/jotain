@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 # Bootstrap Nix in a bare container (AI agent sessions, throwaway VMs).
 #
-# Fresh Claude Code cloud containers have no nix, just, devenv, or
-# emacs — every Justfile recipe and flake check is unrunnable until
-# Nix exists. This script gets a working toolchain from a stock
-# Ubuntu/Debian image:
+# From a stock Ubuntu/Debian image (run as root):
 #
 #   1. apt install nix-bin (distro Nix, old but enough to bootstrap)
 #   2. /etc/nix/nix.conf: flakes + the caches this repo builds against
@@ -13,44 +10,37 @@
 #      caches, so flake-CLI builds work even when GitHub tarball
 #      downloads are blocked (see prefetch_flake_sources below)
 #
-# Idempotent: when nix is already on PATH it only re-runs the cheap
-# source prefetch, so it is safe as a SessionStart hook (hooks re-run
-# on every session resume). Wired up in .claude/settings.json; run it
-# manually anywhere else.
+# Idempotent: with nix already on PATH it only re-runs the cheap
+# prefetch, so it is safe as the remote-session SessionStart hook in
+# .claude/settings.json (hooks re-run on every resume).
 set -euo pipefail
 
 PROFILE_BIN="$HOME/.nix-profile/bin"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 persist_path() {
-    # Claude Code exports $CLAUDE_ENV_FILE for hooks; KEY=value lines
-    # written there persist into subsequent shell commands.
+    # KEY=value lines in Claude Code's $CLAUDE_ENV_FILE persist into
+    # later shell commands.
     if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
         echo "PATH=$PROFILE_BIN:$PATH" >>"$CLAUDE_ENV_FILE"
     fi
 }
 
 prefetch_flake_sources() {
-    # Agent-session egress proxies commonly 403 the github.com tarball
-    # downloads every eval-time fetch here resolves to, while the Nix
-    # binary caches stay reachable. The locked source *trees* themselves
-    # are substitutable by narHash: nixpkgs from cache.nixos.org,
-    # emacs-overlay and flake-compat from nix-community.cachix.org. With
-    # those store paths pre-seeded, the flake CLI resolves locked inputs
-    # from the store and never touches GitHub — `nix build .#default -o
-    # result` and the per-check `nix build .#checks.<system>.<name>`
-    # builds all work offline.
+    # Agent egress proxies often 403 github.com tarball downloads while
+    # the binary caches stay reachable. The locked source trees are
+    # substitutable by narHash (nixpkgs from cache.nixos.org,
+    # emacs-overlay and flake-compat from nix-community.cachix.org), so
+    # once pre-seeded the flake CLI (`nix build .#default -o result`,
+    # `nix build .#checks.<system>.<name>`) never touches GitHub.
     #
-    # Only the flake CLI, though: `nix-build` via default.nix goes
-    # through flake-compat's builtins.fetchTree, which re-downloads by
-    # URL even when the narHash store path exists — so `just build` /
-    # `just screenshot` / `just run-built` still need the flake-CLI
-    # equivalents in such sessions (`nix build .#default -o result`,
-    # then the recipe's remaining steps against ./result).
+    # `nix-build` via default.nix does not benefit: flake-compat's
+    # builtins.fetchTree re-downloads by URL anyway, so `just build`,
+    # `just screenshot` and `just run-built` need the flake-CLI build and
+    # then the recipe's remaining steps against ./result.
     #
-    # Best-effort by design: a MISS (input absent from every cache) only
-    # matters if the build actually forces that input, and a network
-    # failure here should never fail the SessionStart hook.
+    # Best-effort: a miss matters only if a build forces that input, and
+    # a network failure must never fail the SessionStart hook.
     local lock="$REPO_ROOT/flake.lock"
     [ -f "$lock" ] || return 0
     command -v python3 >/dev/null 2>&1 || {
@@ -106,9 +96,8 @@ echo "bootstrap: installing distro nix-bin via apt…"
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nix-bin
 
-# The caches this repo builds against (see AGENTS.md "Nix build layer"):
-# nix-community carries the emacs-overlay variants (emacs-unstable, the
-# distribution default base); jylhis carries the repo's own artifacts.
+# nix-community carries the emacs-overlay builds (emacs-unstable, the
+# default base); jylhis carries the repo's own artifacts.
 echo "bootstrap: writing /etc/nix/nix.conf…"
 mkdir -p /etc/nix
 cat >/etc/nix/nix.conf <<'EOF'
@@ -118,10 +107,8 @@ trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDS
 max-jobs = auto
 EOF
 
-# Distro nix (2.18-era) is only the seed: use it to install current
-# nix plus the task runner from nixpkgs. devenv is intentionally not
-# installed here — pull it in with `nix profile install nixpkgs#devenv`
-# when a task actually needs `devenv test` or `devenv update`.
+# Distro nix only seeds current nix + just. devenv is left out: install
+# it with `nix profile install nixpkgs#devenv` when a task needs it.
 echo "bootstrap: installing current nix + just from nixpkgs…"
 nix profile install nixpkgs#nix nixpkgs#just
 

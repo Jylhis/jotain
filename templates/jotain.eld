@@ -1,13 +1,13 @@
 ;; Tempel templates -*- mode: lisp-data; outline-regexp: "[a-z]"; -*-
 ;;
-;; Curated, minimal snippets for basic language constructs.  A bare
-;; major-mode symbol is a section header; the (name template...) forms
-;; under it apply to that mode and its derived modes.  Field markers:
-;;   p    tab stop / field           n    newline
+;; Minimal snippets for basic language constructs.  A bare major-mode
+;; symbol starts a section; the (name template...) forms under it apply to
+;; that mode and its derived modes.  Elements:
+;;   p    field                      n    newline
 ;;   n>   newline + reindent         >    reindent this line
 ;;   r>   region or field, reindented
-;; Trigger a snippet by typing its name and completing (M-+), or insert
-;; one interactively with M-*.
+;;   q    final point
+;; Complete a name with M-+, or insert interactively with M-*.
 
 prog-mode
 

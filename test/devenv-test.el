@@ -2,9 +2,9 @@
 
 ;;; Commentary:
 
-;; Batch-safe unit tests for the pure functions in lisp/devenv.el.
-;; No devenv binary, no network, no subprocesses: everything here
-;; exercises parsing, routing, and cache logic on canned data.
+;; Batch-safe unit tests for lisp/devenv.el.  No devenv binary, network,
+;; or subprocesses: process entry points are stubbed and everything runs
+;; on canned data.
 ;;
 ;; Run with:
 ;;   emacs --batch -L lisp -L test -l ert -l test/devenv-test.el \
@@ -514,8 +514,8 @@ The first find-file in an uncached project must never block on the
         (should-not devenv-env-mode)))))
 
 (ert-deftest devenv-test-probe-allowed-activates-and-fetches ()
-  "An `allowed' verdict replays turn-on, starts the fetch, and keeps
-parked eglot waiting for the environment to replay against."
+  "An `allowed' verdict replays turn-on and starts the fetch.
+Parked eglot keeps waiting for the environment to replay against."
   (devenv-test--with-env-state
     (devenv-test--with-project (root buffer)
       (let (fetched callback)
@@ -545,8 +545,8 @@ parked eglot waiting for the environment to replay against."
           (should-not (memq buffer devenv-env--eglot-replay)))))))
 
 (ert-deftest devenv-test-probe-blocked-releases-parked-eglot ()
-  "A `blocked' verdict leaves the mode off; parked eglot connects with
-the global environment, which is what untrusted projects always did."
+  "A `blocked' verdict leaves the mode off and releases parked eglot.
+It connects with the global environment, as untrusted projects do."
   (devenv-test--with-env-state
     (devenv-test--with-project (root buffer)
       (let (callback)
@@ -570,9 +570,9 @@ the global environment, which is what untrusted projects always did."
           (should (equal devenv-test--eglot-calls 1)))))))
 
 (ert-deftest devenv-test-loading-p-covers-trust-probing ()
-  "The loading predicate holds while the verdict is pending, but only
-when the native loader is enabled; with probing done, a pending fetch
-counts only in buffers the mode is on in."
+  "The loading predicate covers a pending verdict and a pending fetch.
+The verdict counts only when the native loader is enabled; with probing
+done, a pending fetch counts only in buffers the mode is on in."
   (devenv-test--with-env-state
     (let ((buffer (generate-new-buffer " *devenv-test*")))
       (unwind-protect
@@ -594,8 +594,8 @@ counts only in buffers the mode is on in."
         (kill-buffer buffer)))))
 
 (ert-deftest devenv-test-allow-activates-without-probe ()
-  "`devenv-allow' records the verdict itself, so activation is
-immediate and an in-flight probe is cancelled."
+  "`devenv-allow' activates at once and cancels an in-flight probe.
+It records the verdict itself instead of waiting for the probe."
   (devenv-test--with-env-state
     (devenv-test--with-project (root buffer)
       (let (fetched probed)
@@ -661,9 +661,7 @@ immediate and an in-flight probe is cancelled."
           ;; Other Nix files in the same project do not match.
           (should-not (devenv--devenv-nix-file-p
                        (expand-file-name "flake.nix" root)))
-          ;; A devenv.nix basename outside any devenv project does not
-          ;; match either (no dominating devenv.nix above temp roots
-          ;; is assumed; the file itself dominates its own directory).
+          ;; A nil file name (a non-file buffer) never matches.
           (should-not (devenv--devenv-nix-file-p nil)))
       (delete-directory root t))))
 

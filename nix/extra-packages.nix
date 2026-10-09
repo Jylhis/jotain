@@ -1,32 +1,25 @@
-# Extra Emacs Lisp packages not available on any archive (MELPA,
-# GNU ELPA, NonGNU ELPA).  Consumed by nix/mk-overlay.nix (overlaid onto
-# the distribution's package scope) and nix/emacs-package-set.nix.
+# Emacs packages Nix builds itself (absent from every archive), plus
+# overrides of archive packages: built-in shims, ghostel, and version
+# pins. Overlaid onto the package scope by nix/mk-overlay.nix and
+# nix/emacs-package-set.nix.
 { pkgs }:
 
 efinal: eprev:
 let
   # Emacs 31 ships newer xref/project/eglot/flymake in-tree, but
-  # emacs-overlay's generated package set still publishes them as
-  # standalone GNU ELPA derivations. Transitive `Package-Requires' from
-  # installed packages (consult-eglot, eglot-tempel, projection, breadcrumb,
-  # and ELPA flymake) drag those ELPA copies into the distribution's
-  # site-lisp, whose dirs are prepended to `load-path' at startup and
-  # SHADOW the in-tree versions. The stale ELPA xref-1.7.0 lacks
-  # `global-xref-mouse-mode', so init-prog.el's guarded
-  # `(global-xref-mouse-mode 1)' hit a failing autoload and errored at
-  # startup (the others are latent shadows of the same kind).
+  # transitive `Package-Requires' (consult-eglot, eglot-tempel,
+  # projection, breadcrumb, ELPA flymake) pull emacs-overlay's standalone
+  # GNU ELPA copies into site-lisp, which is prepended to `load-path' and
+  # SHADOWS the in-tree versions. (The stale ELPA xref lacks
+  # `global-xref-mouse-mode', which broke init-prog.el at startup.)
   #
-  # Replace each with an empty package so the in-tree copy wins.
-  # `trivialBuild' needs at least one .el, so we ship a single inert shim
-  # NOT named after the feature: the result is a valid derivation (so the
-  # transitive `packageRequires' still resolve) whose site-lisp dir carries
-  # no `xref.el'/`project.el'/`eglot.el'/`flymake.el' to shadow the
-  # built-in. A `(provide 'xref)' stub must NOT be used: it would
-  # re-shadow. Consumers still byte-compile against the base Emacs's
-  # in-tree copies (on load-path at build time), which are supersets.
-  # A source *directory* (not a bare .el, since trivialBuild's unpackPhase
-  # cp's a directory and mis-handles a store path whose name ends in
-  # `.el') holding one inert shim file.
+  # Replace each with an empty package: a valid derivation, so the
+  # `packageRequires' still resolve, holding one inert shim NOT named
+  # after the feature (`trivialBuild' needs one .el). A `(provide 'xref)'
+  # stub would re-shadow. Consumers still byte-compile against the
+  # in-tree copies, which are supersets. The shim lives in a source
+  # directory: trivialBuild's unpackPhase mis-handles a store path ending
+  # in `.el'.
   shimSrc =
     name:
     pkgs.runCommand "${name}-builtin-shim-src" { } ''
@@ -52,8 +45,7 @@ let
     };
 in
 {
-  # Stop stale GNU ELPA core packages from shadowing Emacs 31's in-tree
-  # versions (see `emptyElpaPackage' above).
+  # See `emptyElpaPackage' above.
   xref = emptyElpaPackage "xref";
   project = emptyElpaPackage "project";
   eglot = emptyElpaPackage "eglot";
@@ -61,13 +53,13 @@ in
 
   # TEMPORARY (2026-07-21): emacs-overlay's ghostel epkg builds the
   # libghostty-vt native module with zig, and the module's zig-deps
-  # fixed-output fetch is currently unbuildable on GitHub CI runners —
-  # zig's HTTP/git fetcher fails deterministically against github.com
-  # (HttpConnectionClosing / WriteFailed). Rebuild the package Elisp-only
-  # from the same pinned MELPA source so the distribution stays buildable;
-  # `ghostel-module-auto-install 'download` (lisp/init-terminal.el)
-  # restores the module at runtime. Revert to the plain epkgs.ghostel
-  # once the upstream fetch works.
+  # fixed-output fetch is currently unbuildable on GitHub CI runners
+  # (zig's fetcher fails against github.com: HttpConnectionClosing /
+  # WriteFailed). Rebuild the package Elisp-only from the same pinned
+  # MELPA source so the distribution stays buildable. Until reverted the
+  # distribution has no module: auto-install downloads into the package
+  # directory, which is the read-only store path. Revert to the plain
+  # epkgs.ghostel once the upstream fetch works.
   ghostel = efinal.trivialBuild {
     pname = "ghostel";
     version = eprev.ghostel.version or "0";
@@ -83,14 +75,9 @@ in
     '';
   };
 
-  # Pinned in nix/design-pin.nix, shared with the website's vendored CSS so
-  # the editor and page.jylhis.com/jotain can never sit on different versions of the
-  # design system.  v3.0.0 collapses upstream to a single theme — generated
-  # outputs rename from jylhis-{survey,mono}-{light,dark} to jylhis-{light,dark}
-  # and are no longer committed (jylhis-themes.el stays a committed source),
-  # so the generator runs here in-derivation (bun + sources in), mirroring
-  # upstream's own nix/emacs.nix.  trivialBuild globs every *.el, so the
-  # rename needed no change beyond the src wiring.
+  # Pinned in nix/design-pin.nix, shared with the website's vendored CSS.
+  # The generated jylhis-{light,dark} themes are not committed upstream, so
+  # the generator runs here; jylhis-themes.el is a committed source.
   jylhis-emacs-themes =
     let
       pin = import ./design-pin.nix;
@@ -143,11 +130,8 @@ in
     ];
   };
 
-  # Boosts eglot by wrapping local stdio language servers in the
-  # emacs-lsp-booster binary (nix/runtime-deps.nix), which converts server
-  # JSON into Elisp bytecode Emacs reads directly and buffers I/O.  Wired in
-  # lisp/init-prog.el.  Not on MELPA/ELPA; requires only Emacs built-ins
-  # (eglot, jsonrpc, seq), so no packageRequires.
+  # Wraps eglot's stdio servers in emacs-lsp-booster
+  # (nix/runtime-deps.nix); wired in lisp/init-prog.el. Built-ins only.
   eglot-booster = efinal.trivialBuild {
     pname = "eglot-booster";
     version = "0.1.0";
@@ -170,13 +154,9 @@ in
     };
   };
 
-  # `project.el' backend for the Nix (and Guix) store, wired in
-  # lisp/init-project.el: each /nix/store path that is a directory becomes a
-  # project root, so `project-find-file' works while visiting store files.
-  # emacs-overlay's epkgs carries `project-nix-store' but lags on version
-  # (0.10.0 as of the pinned snapshot), so this override pins ahead to the
-  # current tagged release. Package-Requires is ((emacs "29.1")) — only
-  # built-ins — so no packageRequires.
+  # `project.el' backend for the Nix (and Guix) store
+  # (lisp/init-project.el). Overrides emacs-overlay's lagging epkg with
+  # the current tagged release. Built-ins only.
   project-nix-store = efinal.trivialBuild {
     pname = "project-nix-store";
     version = "0.13.0";
@@ -188,11 +168,8 @@ in
     };
   };
 
-  # Tree-sitter QML major mode (lisp/init-lang-qml.el), for editing
-  # Quickshell / Qt Quick `.qml' files.  Not on MELPA.  Uses the `qmljs'
-  # grammar, which the distribution already ships via
-  # treesit-grammars.with-all-grammars.  Depends only on Emacs built-ins
-  # (treesit, c-ts-common, js), so no packageRequires.
+  # Tree-sitter QML mode (lisp/init-lang-qml.el), using the bundled
+  # `qmljs' grammar. Not on MELPA; built-ins only.
   qml-ts-mode = efinal.trivialBuild {
     pname = "qml-ts-mode";
     version = "0.1";
@@ -204,12 +181,11 @@ in
     };
   };
 
-  # Magit-style porcelain for Jujutsu (jj), wired in lisp/init-vc.el.  Not on
-  # MELPA; nixpkgs carries it (at an older revision), so this override just
-  # pins ahead of that.  `packageRequires' mirrors upstream's
-  # `Package-Requires': trivialBuild byte-compiles every .el in the source,
-  # so the gerrit files' `consult'/`plz' requires must resolve even though
-  # Jotain never calls them.
+  # Magit-style porcelain for Jujutsu (lisp/init-vc.el), pinned ahead of
+  # nixpkgs' older revision. `packageRequires' mirrors upstream's:
+  # trivialBuild byte-compiles every .el, so the gerrit files'
+  # `consult'/`plz' requires must resolve even though Jotain never calls
+  # them.
   majutsu = efinal.trivialBuild {
     pname = "majutsu";
     # Past the v0.6.0 tag; the Version header still reads 0.6.0 in-dev.
@@ -229,9 +205,7 @@ in
     ];
   };
 
-  # Emacs integration for the tagref CLI ([tag:x]/[ref:x] cross-references):
-  # completion, xref navigation, and M-x tagref-check.  Not on MELPA; depends
-  # only on Emacs built-ins, so no packageRequires.
+  # Emacs integration for the tagref CLI. Not on MELPA; built-ins only.
   tagref = efinal.trivialBuild {
     pname = "tagref";
     version = "0.1.0";

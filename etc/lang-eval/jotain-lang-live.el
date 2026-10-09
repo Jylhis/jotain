@@ -2,28 +2,25 @@
 
 ;;; Commentary:
 
-;; The end-to-end counterpart to the Tier-1 static probe.  For every registry
-;; entry flagged `:live', and whose language server binary is on PATH, it opens
-;; a real fixture project, starts an eglot session, and checks that the LSP
-;; features actually respond: it reads the negotiated server capabilities
-;; (completion, hover, definition, references, rename, formatting, symbols) and
-;; issues one real completion request as proof the pipe talks end-to-end.
+;; Tier-2 end-to-end probe.  For every `:live' registry entry whose server
+;; is on PATH, opens a fixture project, starts eglot, records the
+;; negotiated capabilities (completion, hover, definition, references,
+;; rename, formatting, symbols), and sends one real completion request.
 ;;
-;; This is deliberately separate from Tier-1: it needs the language toolchains
-;; on PATH, so its Nix derivation (nix/lang-eval.nix `lang-eval-live') builds a
-;; heavier closure and runs only on the deploy path / on demand, exactly like
-;; nix/emacs-api-doc.nix.  A language whose server is absent is recorded as
-;; `skip', never `fail'.
+;; It needs the language servers, so its derivation (nix/lang-eval.nix
+;; `lang-eval-live') bundles them and is built on demand only, never by
+;; `nix flake check'.  A language whose server is absent is a `skip', not
+;; a failure.
 ;;
-;; Fixtures live under etc/lang-eval/fixtures/<id>/.  They are copied to a
-;; writable temp dir and `git init'ed at runtime so `project-current' resolves,
-;; then the file named by the entry's :sample is visited.
+;; Fixtures under etc/lang-eval/fixtures/<id>/ are copied to a temp dir
+;; and `git init'ed so `project-current' resolves; then the entry's
+;; :sample file is visited.
 ;;
-;; Batch entry point (used by nix/lang-eval.nix):
+;; Batch entry point (nix/lang-eval.nix):
 ;;   emacs --batch --init-directory=<writable config copy> \
 ;;     -L <this dir> -l jotain-lang-live.el
-;; with JOTAIN_LANG_EVAL_OUT set (output dir) and
-;; JOTAIN_LANG_FIXTURES pointing at the fixtures directory.
+;; with JOTAIN_LANG_LIVE set, JOTAIN_LANG_EVAL_OUT naming the output dir,
+;; and JOTAIN_LANG_FIXTURES the fixtures directory.
 ;;
 ;; Outside lisp/ and test/ on purpose (see jotain-lang-registry.el).
 

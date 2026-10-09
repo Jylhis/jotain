@@ -2,17 +2,15 @@
 
 ;;; Commentary:
 
-;; Modes for the web frontend stack: TypeScript/TSX, HTML/CSS, JSON,
-;; and `web-mode' for templating languages (ERB, Mustache, Django, ASP).
-;; Built-in tree-sitter modes are pinned with :ensure nil; web-mode and
-;; vue-mode etc. were dropped during review.
-;;
-;; Eglot hooks for TypeScript/TSX live centrally in `init-prog.el'.
+;; Web frontend modes: TypeScript/TSX, JavaScript, HTML, CSS/SCSS, and
+;; `web-mode' for HTML templating languages.  JSON routes to
+;; `json-ts-mode' through `jotain-prog-ts-remaps', and all eglot wiring
+;; lives in `init-prog.el'.
 
 ;;; Code:
 
-;;; @doc Built-in tree-sitter TypeScript / TSX / JSX modes. Eglot wires
-;;; typescript-language-server in init-prog.
+;;; @doc Built-in tree-sitter TypeScript / TSX / JSX modes.
+;;; typescript-language-server is wired in init-prog.
 (use-package typescript-ts-mode
   :ensure nil
   :mode (("\\.ts\\'"  . typescript-ts-mode)
@@ -32,17 +30,16 @@
   :mode (("\\.css\\'"  . css-ts-mode)
          ("\\.scss\\'" . css-ts-mode)))
 
-;;; @doc Built-in tree-sitter HTML mode for plain `.html`/`.htm` (parses
-;;; HTML + embedded JS + CSS). Templating dialects still go to web-mode
-;;; below, which mhtml-ts-mode does not handle.
+;;; @doc Built-in tree-sitter HTML mode (Emacs 31) for plain
+;;; `.html`/`.htm`, including embedded JS and CSS. Templating dialects go
+;;; to web-mode below.
 (use-package mhtml-ts-mode
   :ensure nil
   :mode "\\.html?\\'")
 
-;;; @doc One mode for every templating language that mixes HTML with
-;;; something else: ERB, Mustache, Django, ASP, JSP, PHP. Plain `.html`
-;;; goes to mhtml-ts-mode above. The M-o rebind below stops web-mode-map
-;;; from shadowing our global other-window binding.
+;;; @doc One mode for HTML templating languages: ERB, Mustache, Django,
+;;; ASP, JSP, PHP. `M-o` is rebound so web-mode-map does not shadow the
+;;; global `other-window`.
 (use-package web-mode
   :mode (("\\.phtml\\'"   . web-mode)
          ("\\.tpl\\.php\\'" . web-mode)
@@ -52,7 +49,6 @@
          ("\\.mustache\\'" . web-mode)
          ("\\.djhtml\\'"  . web-mode))
   :bind (:map web-mode-map
-              ;; Don't shadow our global M-o → other-window.
               ("M-o" . other-window))
   :custom
   (web-mode-markup-indent-offset 2)

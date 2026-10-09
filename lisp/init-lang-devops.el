@@ -2,16 +2,12 @@
 
 ;;; Commentary:
 
-;; Major modes for files you edit when wiring up CI, containers, and
-;; infrastructure: Dockerfile, terraform, gitlab-ci,
-;; justfile, ansible. None of these are huge — they mostly exist to
-;; pin a `:mode' regex and provide font-lock.
+;; Modes for CI, containers, and infrastructure: Dockerfile, Terraform,
+;; GitLab CI, Justfile, Ansible, Bazel, and Robot Framework.
 ;;
-;; Also here: two small hand-rolled major modes for the architecture-as-
-;; code C4-model DSLs — Structurizr (`.dsl') and LikeC4 (`.c4'/`.likec4').
-;; Neither is a package, so they need no MELPA entry and are invisible to
-;; the use-package scanner in nix/use-package.nix. LikeC4 additionally
-;; gets an eglot LSP (the `likec4-lsp' server) wired in init-prog.el.
+;; Also two hand-rolled modes for the C4-model DSLs, Structurizr (`.dsl')
+;; and LikeC4 (`.c4'/`.likec4').  They are not packages, so the
+;; use-package scanner (nix/use-package.nix) never sees them.
 
 ;;; Code:
 
@@ -19,25 +15,20 @@
   "Docker/Podman and infrastructure-as-code settings."
   :group 'convenience)
 
-;; Forward declaration so `jotain--apply-docker-backend' byte-compiles
-;; cleanly under `byte-compile-error-on-warn'.  The defcustom below
-;; supplies the real binding; this only silences the compiler.
+;; Defined by the defcustom below, whose :set calls this function.
 (defvar jotain-docker-backend)
 
 (defun jotain--apply-docker-backend ()
-  "Apply `jotain-docker-backend' to dockerfile-mode.
-Sets the runtime command used by `dockerfile-mode'.  The variable is
-only touched once its owning package has loaded, so this is safe to
-call before or after."
+  "Set `dockerfile-mode-command' from `jotain-docker-backend'.
+A no-op until dockerfile-mode has loaded, so safe to call any time."
   (let ((cmd (if (eq jotain-docker-backend 'podman) "podman" "docker")))
     (when (boundp 'dockerfile-mode-command)
       (setopt dockerfile-mode-command cmd))))
 
 (defcustom jotain-docker-backend 'podman
   "Container runtime that Docker-aware packages should drive.
-`podman' (default) is rootless and daemonless; `docker' uses the
-classic dockerd pair.  Changing this re-applies the runtime command
-name used by `dockerfile-mode'."
+`podman' (default) or `docker'.  Setting it updates
+`dockerfile-mode-command'."
   :type '(choice (const :tag "Podman" podman)
                  (const :tag "Docker" docker))
   :group 'jotain-devops
@@ -45,64 +36,57 @@ name used by `dockerfile-mode'."
          (set-default-toplevel-value sym val)
          (jotain--apply-docker-backend)))
 
-;;; @doc Dockerfile major mode — syntax highlighting plus build
-;;; commands (`M-x dockerfile-build-buffer`). The runtime command
-;;; name comes from `jotain-docker-backend`.
+;;; @doc Dockerfile major mode with build commands (`M-x
+;;; dockerfile-build-buffer`). The runtime command comes from
+;;; `jotain-docker-backend`.
 (use-package dockerfile-mode
   :defer t
   :config (jotain--apply-docker-backend))
 
-;;; @doc HCL-aware Terraform mode for `.tf` files. Loaded by the mode
-;;; regex; LSP comes from terraform-ls (configured in init-prog).
+;;; @doc Terraform mode for `.tf` files. eglot's built-in entry starts
+;;; terraform-ls when it is on PATH.
 (use-package terraform-mode
   :defer t
   :mode "\\.tf\\'")
 
-;;; @doc YAML mode tuned for `.gitlab-ci.yml` keywords — includes,
-;;; rules, jobs. Saves a lot of typo'd job names on CI debugging
-;;; days.
+;;; @doc `yaml-mode` derivative for `.gitlab-ci.yml` with GitLab CI
+;;; keyword highlighting and completion.
 (use-package gitlab-ci-mode
   :defer t)
 
-;;; @doc Tree-sitter major mode for `Justfile` — the project-aware command
-;;; runner Jotain itself uses (the `just` grammar). Pairs with
-;;; compile-multi for project commands. just-ts-mode self-registers a
-;;; Justfile auto-mode entry; the `:mode' regexes here map the `.just'
-;;; extension used for included/modular recipes.
+;;; @doc Tree-sitter major mode for `Justfile` (the `just` grammar). The
+;;; package registers Justfile itself; the `:mode` regexes add the
+;;; `.just` extension used for modular recipes.
 (use-package just-ts-mode
   :mode (("/[Jj]ustfile\\'" . just-ts-mode)
          ("\\.just\\'" . just-ts-mode)))
 
-;;; @doc Ansible minor mode layered on top of yaml-mode for playbook
-;;; files. Adds module-name completion and Jinja2 highlighting.
+;;; @doc Ansible minor mode for playbooks: keyword and Jinja2
+;;; highlighting plus `ansible-vault` helpers. Not enabled
+;;; automatically; use `M-x ansible-mode`.
 (use-package ansible
   :defer t)
 
-;;; @doc Bazel/Starlark support — major modes for `BUILD`, `WORKSPACE`,
-;;; `MODULE.bazel`, `REPO.bazel`, `*.bzl`, `.bazelrc`, `.bazelignore`
-;;; and `.bazeliskrc` (auto-mode-alist comes from the package's own
-;;; autoloads). `C-c C-f` runs buildifier; format-on-save for the
-;;; Starlark-family buffers is wired through apheleia in init-prog.
+;;; @doc Bazel/Starlark major modes for `BUILD`, `WORKSPACE`,
+;;; `MODULE.bazel`, `REPO.bazel`, `*.bzl`, `.bazelrc`, `.bazelignore` and
+;;; `.bazeliskrc` (registered by the package). `C-c C-f` runs
+;;; buildifier; format-on-save goes through apheleia (init-prog).
 (use-package bazel
   :defer t)
 
-;;; @doc Major mode for Robot Framework test suites and resource files
-;;; (`.robot`/`.resource`) — the keyword-driven acceptance-test / RPA
-;;; syntax, with font-lock and table-aware indentation. LSP and
-;;; format-on-save are wired in init-prog (server/formatter resolved from
-;;; the project PATH, like the other languages).
+;;; @doc Major mode for Robot Framework suites and resource files
+;;; (`.robot`/`.resource`). LSP (robotcode or robotframework_ls) and
+;;; format-on-save (robotidy) are wired in init-prog, from the project
+;;; PATH.
 (use-package robot-mode
   :mode (("\\.robot\\'" . robot-mode)
          ("\\.resource\\'" . robot-mode)))
 
 ;;; Structurizr DSL ---------------------------------------------------
 ;;
-;; `.dsl' files otherwise fall to the built-in `dsssl-mode', which is
-;; derived from `scheme-mode' and indents with `lisp-indent-line'.  That
-;; treats Structurizr's `{'/`}' blocks as Lisp forms, so electric
-;; indentation mangles every line.  This mode indents purely by brace
-;; nesting, knows the `//', `#', and `/* */' comment forms, and dedents
-;; electrically when a closing brace is typed.
+;; `.dsl' otherwise opens in the built-in `dsssl-mode', whose Lisp
+;; indentation mangles Structurizr's `{'/`}' blocks.  This mode indents by
+;; brace depth and knows the `//', `#', and `/* */' comment forms.
 
 (defcustom jotain-structurizr-indent-offset 4
   "Columns of indentation per `{'/`}' nesting level in Structurizr DSL."
@@ -111,8 +95,8 @@ name used by `dockerfile-mode'."
 
 (defvar jotain-structurizr-mode-syntax-table
   (let ((table (make-syntax-table)))
-    ;; Braces delimit blocks — make them paren pairs so sexp motion,
-    ;; `show-paren-mode', and depth-based indentation all work.
+    ;; Braces as paren pairs, for sexp motion, `show-paren-mode', and
+    ;; depth-based indentation.
     (modify-syntax-entry ?{ "(}" table)
     (modify-syntax-entry ?} "){" table)
     (modify-syntax-entry ?\" "\"" table)
@@ -170,13 +154,9 @@ name used by `dockerfile-mode'."
 
 ;;; LikeC4 -----------------------------------------------------------
 ;;
-;; LikeC4 (https://likec4.dev) is the other architecture-as-code C4-model
-;; DSL, sibling to Structurizr above.  Files are `.c4'/`.likec4' and have
-;; no built-in major mode.  Like Structurizr this is a hand-rolled mode
-;; (not a package), so it needs no MELPA entry and is invisible to the
-;; use-package scanner.  It indents purely by `{'/`}' nesting and knows the
-;; C-style `//' and `/* */' comment forms.  LSP (via the bundled
-;; `likec4-lsp' server) is wired in init-prog.el, keyed on `likec4-mode'.
+;; LikeC4 (https://likec4.dev): same brace-depth approach as Structurizr,
+;; with only the `//' and `/* */' comment forms.  The eglot server
+;; (`likec4-lsp', bundled on the distribution PATH) is wired in init-prog.
 
 (defcustom jotain-likec4-indent-offset 2
   "Columns of indentation per `{'/`}' nesting level in LikeC4 DSL."
@@ -185,17 +165,12 @@ name used by `dockerfile-mode'."
 
 (defvar jotain-likec4-mode-syntax-table
   (let ((table (make-syntax-table)))
-    ;; Braces delimit blocks — make them paren pairs so sexp motion,
-    ;; `show-paren-mode', and depth-based indentation all work.
     (modify-syntax-entry ?{ "(}" table)
     (modify-syntax-entry ?} "){" table)
     (modify-syntax-entry ?\" "\"" table)
-    ;; `//' and `/* */' are the only comment forms (no `#' unlike
-    ;; Structurizr).
     (modify-syntax-entry ?/  ". 124b" table)
     (modify-syntax-entry ?*  ". 23"   table)
     (modify-syntax-entry ?\n "> b"    table)
-    ;; Identifiers and relationship arrows keep `-' and `_' together.
     (modify-syntax-entry ?_ "_" table)
     (modify-syntax-entry ?- "_" table)
     table)
@@ -219,8 +194,6 @@ name used by `dockerfile-mode'."
   (let ((depth (save-excursion
                  (back-to-indentation)
                  (let ((open (car (syntax-ppss))))
-                   ;; A line that leads with `}' closes the block above,
-                   ;; so it belongs one level out.
                    (if (looking-at-p "}") (1- open) open)))))
     (indent-line-to (* jotain-likec4-indent-offset (max depth 0)))))
 
@@ -232,7 +205,6 @@ name used by `dockerfile-mode'."
               comment-start-skip "\\(?://+\\|/\\*+\\)[ \t]*"
               indent-line-function #'jotain-likec4-indent-line
               font-lock-defaults '(jotain-likec4-font-lock-keywords nil t))
-  ;; Dedent the line when the block-closing brace is typed.
   (setq-local electric-indent-chars (cons ?} electric-indent-chars)))
 
 (add-to-list 'auto-mode-alist '("\\.c4\\'" . likec4-mode))

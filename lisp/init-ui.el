@@ -2,10 +2,8 @@
 
 ;;; Commentary:
 
-;; Everything that affects what the editor *looks* like: theme, modeline,
-;; fonts, line numbers, smooth scrolling, frame parameters. Both built-in
-;; (`display-line-numbers', `pixel-scroll', `which-key', `paren') and
-;; third-party (`doom-modeline', `pulsar', `nerd-icons') live here together.
+;; What the editor looks like: theme, modeline, fonts, icons, line
+;; numbers, scrolling, and frame parameters, built-in and third-party.
 
 ;;; Code:
 
@@ -17,24 +15,18 @@
 
 (defcustom jotain-theme-light 'jylhis-light
   "Theme to use when the system is in light mode.
-Renamed in v3.0.0 of the Jylhis design system (one theme): the
-v2 `jylhis-survey-light' became `jylhis-light' — the single
-jylhis theme's light (Print) mode.  A machine-local config still
-setting an older symbol will fail to load a theme."
+The default is the Jylhis theme's light (Print) mode."
   :type 'symbol
   :group 'jotain-ui)
 
 (defcustom jotain-theme-dark 'jylhis-dark
   "Theme to use when the system is in dark mode.
-Renamed in v3.0.0 of the Jylhis design system (one theme): the
-v2 `jylhis-survey-dark' became `jylhis-dark' — the single
-jylhis theme's dark (Negative) mode.  A machine-local config still
-setting an older symbol will fail to load a theme."
+The default is the Jylhis theme's dark (Negative) mode."
   :type 'symbol
   :group 'jotain-ui)
 
-;; Trust all themes by default — we only load our own Jylhis themes
-;; and never load themes from disk paths we don't control.
+;; Trust all themes: the config loads only the Jylhis themes or the
+;; built-in Modus fallback, never theme files from untrusted paths.
 (setopt custom-safe-themes t)
 
 (defun jotain-ui--disable-other-themes (_theme &optional _no-confirm no-enable)
@@ -53,19 +45,17 @@ REASON is reported so the downgrade is visible in *Messages*."
           jotain-theme-dark 'modus-vivendi)
   (message "jotain: %s; falling back to Modus themes" reason))
 
-;; Requiring jylhis-themes (its jylhis-themes.el entry point) is what puts
-;; the Jylhis themes on custom-theme-load-path.
+;; Requiring jylhis-themes puts the Jylhis themes on
+;; `custom-theme-load-path'.
 (if (not (require 'jylhis-themes nil t))
     (jotain-ui--fall-back-to-modus "jylhis-themes is unavailable")
   ;; Pre-load both themes so auto-dark can flip between them without
-  ;; re-evaluating the .el files on every appearance change.  Guarded
-  ;; against batch mode where custom-theme-load-path may be incomplete.
+  ;; re-evaluating the files.  Skipped in batch, where
+  ;; `custom-theme-load-path' may be incomplete.
   ;;
-  ;; `load-theme' signals if the theme file is missing, and init.el
-  ;; requires this module unguarded — so an upstream rename (v2.0.0's
-  ;; sheet/field became survey/mono light/dark; v3.0.0 collapsed to
-  ;; jylhis-light/jylhis-dark) would otherwise take out every module
-  ;; loaded after init-ui.  Degrade to Modus instead.
+  ;; `load-theme' signals if a theme is missing (e.g. after an upstream
+  ;; rename), and init.el requires this module unguarded, so the error
+  ;; would take out every later module.  Degrade to Modus instead.
   (unless noninteractive
     (condition-case err
         (progn
@@ -74,9 +64,8 @@ REASON is reported so the downgrade is visible in *Messages*."
       (error (jotain-ui--fall-back-to-modus (error-message-string err))))))
 
 ;;; @doc Flips between `jotain-theme-light` and `jotain-theme-dark`
-;;; following the system appearance — works on macOS, GNOME, and
-;;; anything that exposes a dark/light setting. C-c t toggles
-;;; manually.
+;;; following the system appearance (macOS, GNOME, or anything exposing
+;;; a dark/light setting). C-c t toggles manually.
 (use-package auto-dark
   :demand t
   :bind ("C-c t" . auto-dark-toggle-appearance)
@@ -88,13 +77,11 @@ REASON is reported so the downgrade is visible in *Messages*."
 
 (defun jotain-ui--ensure-tty-theme (&optional frame)
   "Enable a theme on terminal FRAME when `auto-dark' left none active.
-In a bare terminal `auto-dark' has no system appearance source (no
-macOS/GNOME/D-Bus), so its detection fails and no theme is enabled,
-leaving default faces -- the \"themes broken in the terminal\" symptom.
-Pick the configured dark/light theme by the frame's background mode.
-Runs on `server-after-make-frame-hook' so daemon tty clients are covered
-too.  `load-theme' is frame-global, so a mixed GUI+tty daemon keeps one
-theme across frames; a single-surface session is always correct."
+In a bare terminal `auto-dark' has no appearance source (no
+macOS/GNOME/D-Bus), so no theme gets enabled.  Pick the dark or light
+theme by the frame's background mode.  Runs on
+`server-after-make-frame-hook' to cover daemon tty clients.  Themes are
+frame-global, so a mixed GUI+tty daemon shares one theme."
   (let ((frame (or frame (selected-frame))))
     (when (and (not (display-graphic-p frame))
                (null custom-enabled-themes))
@@ -114,18 +101,15 @@ theme across frames; a single-surface session is always correct."
 
 (defun jotain-ui--apply-modeline-icons (&optional frame)
   "Enable doom-modeline glyphs only on a graphical FRAME.
-Terminal frames have no Nerd Font, so the icons render as tofu; gate
-`doom-modeline-icon' on `display-graphic-p'.  Runs on
-`server-after-make-frame-hook' so a daemon's GUI client frames still get
-glyphs even though no graphical frame exists at daemon start (mirrors
-`jotain-ui-apply-font')."
+Terminal frames have no Nerd Font, so the icons render as tofu.  Runs
+on `server-after-make-frame-hook' so a daemon's GUI frames get glyphs
+even though no graphical frame exists at daemon start."
   (when (boundp 'doom-modeline-icon)
     (setopt doom-modeline-icon (and (display-graphic-p frame) t))
     (force-mode-line-update t)))
 
 ;;; @doc A dense, IDE-style modeline with LSP/eglot status, project
-;;; buffer info, and Nerd Font glyphs. Loaded after init so the
-;;; primary frame doesn't redraw before fonts are ready.
+;;; buffer info, and Nerd Font glyphs. Enabled after init.
 (use-package doom-modeline
   :hook (after-init . doom-modeline-mode)
   :custom
@@ -137,21 +121,17 @@ glyphs even though no graphical frame exists at daemon start (mirrors
   :config
   (jotain-ui--apply-modeline-icons)
   (add-hook 'server-after-make-frame-hook #'jotain-ui--apply-modeline-icons)
-  ;; Upstream doom-modeline's git-worktree indicator calls
-  ;; `doom-modeline-vcs-icon' with the codicon "nf-cod-worktree" against the
-  ;; hardcoded `devicon' set (wrong set — the glyph is absent from every
-  ;; nerd-icons release), and `doom-modeline-icon' does not guard the
-  ;; missing-glyph lookup, so the VCS segment errors on every redisplay
-  ;; inside a worktree (where `.git' is a file).  Jotain already surfaces
-  ;; worktrees via `jotain-git-stats' (init-vc) and magit's worktree
-  ;; section, so neutralize the broken probe rather than the whole segment.
+  ;; Upstream bug: the git-worktree indicator looks up the codicon
+  ;; "nf-cod-worktree" in the `devicon' set, where no nerd-icons release
+  ;; has it, and the lookup is unguarded, so the VCS segment errors on
+  ;; every redisplay inside a worktree.  Disable just that probe; worktrees
+  ;; show in `jotain-git-stats' (init-vc) and magit's worktree section.
   (when (fboundp 'doom-modeline--in-git-worktree-p)
     (advice-add 'doom-modeline--in-git-worktree-p :override #'ignore)))
 
-;; doom-modeline's minor-modes segment is off by default, so lighters
-;; are hidden there without any diminish-style setup.  For the vanilla
-;; modeline (doom-modeline unavailable or disabled), Emacs 31's built-in
-;; `mode-line-collapse-minor-modes' collapses them behind one indicator.
+;; doom-modeline hides minor-mode lighters by default.  For the stock
+;; mode line, Emacs 31's `mode-line-collapse-minor-modes' collapses them
+;; behind one indicator.
 (when (boundp 'mode-line-collapse-minor-modes)
   (setopt mode-line-collapse-minor-modes t))
 
@@ -174,10 +154,9 @@ machine-local config)."
 HEIGHT is in 1/10 pt units (140 = 14 pt).  The first installed family
 wins.  All heights are multiplied by `jotain-font-scale' at runtime.
 
-BlexMono is IBM Plex Mono with Nerd Font glyphs patched in — the mono
-role of the Jylhis design system, so the editor matches jylhis.com.
-Entries containing \"Nerd Font\" also supply `nerd-icons-font-family';
-keep at least one such family ahead of the plain fallbacks."
+BlexMono is IBM Plex Mono with Nerd Font glyphs, the mono role of the
+Jylhis design system.  Entries containing \"Nerd Font\" also supply
+`nerd-icons-font-family'; keep one ahead of the plain fallbacks."
   :type '(alist :key-type string :value-type integer)
   :group 'jotain-ui)
 
@@ -191,8 +170,7 @@ keep at least one such family ahead of the plain fallbacks."
 Heights are larger than the monospace default: proportional fonts render
 visually smaller at the same point size.
 
-Hanken Grotesk is the body role of the Jylhis design system; Literata,
-the v1 body face, is kept behind it as a fallback."
+Hanken Grotesk is the body role of the Jylhis design system."
   :type '(alist :key-type string :value-type integer)
   :group 'jotain-ui)
 
@@ -220,9 +198,9 @@ attributes are applied globally so all frames see the update."
       '("Apple Color Emoji" "Noto Color Emoji" "Symbola")
     '("Noto Color Emoji" "Segoe UI Emoji" "Symbola"))
   "Ordered list of family names to try for the `emoji' and `symbol' charsets.
-The first installed family wins.  macOS ships Apple Color Emoji
-system-wide; Linux/Home-Manager pulls in Noto Color Emoji through
-`services.jotain' so the default is available without extra setup."
+The first installed family wins.  macOS ships Apple Color Emoji; on
+Linux the Jotain Home Manager and NixOS modules install Noto Color
+Emoji."
   :type '(repeat string)
   :group 'jotain-ui)
 
@@ -242,9 +220,9 @@ availability on the right display."
 (jotain-ui-apply-emoji-font)
 (add-hook 'server-after-make-frame-hook #'jotain-ui-apply-emoji-font)
 
-;;; @doc Built-in emoji picker (Emacs 29+): `C-x 8 e e' inserts by name,
-;;; `C-x 8 e s' searches, `C-x 8 e l' opens the full list, `C-x 8 e d'
-;;; describes the emoji at point.  `which-key' surfaces the prefix.
+;;; @doc Built-in emoji picker: `C-x 8 e e' inserts by name, `C-x 8 e s'
+;;; searches, `C-x 8 e l' lists all, `C-x 8 e d' describes the emoji at
+;;; point.
 (use-package emoji
   :ensure nil
   :defer t)
@@ -255,23 +233,17 @@ availability on the right display."
 (setopt cursor-in-non-selected-windows nil)
 (setopt highlight-nonselected-windows nil)
 
-;; Resize the frame and its windows to exact pixels rather than rounding
-;; to whole character cells — the frame then sits flush against a tiling
-;; window manager's gaps (pgtk/Wayland is the Linux GUI default) and
-;; horizontal splits divide evenly. (`frame-inhibit-implied-resize' is
-;; set in early-init.el.)
+;; Resize frames and windows by pixel, not whole character cells, so a
+;; frame sits flush in a tiling window manager and splits divide evenly.
 (setopt frame-resize-pixelwise t)
 (setopt window-resize-pixelwise t)
 
-;; `mode-line-compact' `long' compacts the mode line only when it is
-;; longer than the window — mostly inert under doom-modeline (it builds
-;; its own format), but correct for the stock mode line.
+;; Compact the stock mode line only when it overflows the window
+;; (mostly inert under doom-modeline).
 (setopt mode-line-compact 'long)
-;; Prefer the system font for the default face; `jotain-ui-apply-font'
-;; overrides it per GUI frame, so this governs the pre-font-hook default
-;; only. The variable only exists on builds with system-font support
-;; (xsettings), and the terminal-only distribution loads this same
-;; config, so guard it or `setopt' errors at startup there.
+;; System font as the default face until `jotain-ui-apply-font' runs.
+;; The variable only exists on builds with system-font support, so guard
+;; it for the terminal-only distribution.
 (when (boundp 'font-use-system-font)
   (setopt font-use-system-font t))
 
@@ -285,28 +257,22 @@ availability on the right display."
   (when jotain-line-numbers-in-prog
     (display-line-numbers-mode 1)))
 
-;;; @doc Built-in line numbers — only on programming and config buffers,
-;;; never on prose or org files where they're noise. Honour the
-;;; `jotain-line-numbers-in-prog' toggle so users can flip it off
-;;; without editing this file.
+;;; @doc Built-in line numbers in programming and config buffers only,
+;;; not prose or Org. Toggle with `jotain-line-numbers-in-prog'.
 (use-package display-line-numbers
   :ensure nil
   :hook ((prog-mode conf-mode) . jotain-ui--maybe-line-numbers))
 
-;;; @doc Built-in smooth scrolling, plus the scrolling behaviour tuning
-;;; from James Cherti's "Enhancing Emacs Scrolling" (jamescherti.com).
-;;; `pixel-scroll-mode' (the newcomers-presets theme's choice) smooths
-;;; mouse-wheel scrolling; the theme deliberately prefers it over
-;;; `pixel-scroll-precision-mode', which it leaves off citing bug#69972.
-;;; `fast-but-imprecise-scrolling' lets large jumps skip exact
-;;; intermediate fontification — a worthwhile redisplay win on this
-;;; integrated-GPU Intel machine. `scroll-conservatively' 20 scrolls just
-;;; enough to keep point visible instead of eagerly recentering (0, the
-;;; default, is too eager); `auto-window-vscroll' nil avoids random
+;;; @doc Built-in smooth scrolling, tuned after James Cherti's
+;;; "Enhancing Emacs Scrolling" (jamescherti.com). `pixel-scroll-mode'
+;;; smooths mouse-wheel scrolling; like the newcomers-presets theme, it is
+;;; preferred over `pixel-scroll-precision-mode' (bug#69972).
+;;; `fast-but-imprecise-scrolling' skips exact fontification on large
+;;; jumps. `scroll-conservatively' 20 scrolls just enough to keep point
+;;; visible instead of recentering; `auto-window-vscroll' nil avoids
 ;;; half-screen jumps on long lines; `scroll-error-top-bottom' moves point
-;;; to the buffer edge before signalling; and the `hscroll-*' pair steps
-;;; horizontal scrolling one column at a time.
-;;; (`scroll-preserve-screen-position' is set in init-core.el.)
+;;; to the buffer edge before signalling; the `hscroll-*' pair scrolls
+;;; horizontally one column at a time.
 (use-package pixel-scroll
   :ensure nil
   :custom
@@ -318,14 +284,14 @@ availability on the right display."
   (hscroll-step 1)
   :config (pixel-scroll-mode 1))
 
-;;; @doc Built-in current-line highlight — on for code and prose, off
-;;; in shells/dired where it would fight the cursor.
+;;; @doc Built-in current-line highlight in code, config, and prose
+;;; buffers only.
 (use-package hl-line
   :ensure nil
   :hook ((prog-mode conf-mode text-mode) . hl-line-mode))
 
-;;; @doc Built-in matching-paren highlight. Tuned to flash quickly and
-;;; highlight even when point is just outside the pair.
+;;; @doc Built-in matching-paren highlight, quick to appear, also when
+;;; point is just inside a paren or in a line's leading/trailing space.
 (use-package paren
   :ensure nil
   :hook (after-init . show-paren-mode)
@@ -335,16 +301,14 @@ availability on the right display."
   (show-paren-when-point-inside-paren t)
   (show-paren-when-point-in-periphery t))
 
-;;; @doc Built-in keybinding cheatsheet. After a prefix key, displays a
-;;; paged list of completions in the echo area. Discoverability
-;;; multiplier — a Jotain staple.
+;;; @doc Built-in keybinding cheatsheet: after a prefix key, a popup
+;;; lists the keys that can follow it.
 (use-package which-key
   :ensure nil
   :config (which-key-mode 1))
 
-;;; @doc Built-in calendar. Configured for ISO week numbering and a
-;;; Monday week start so it agrees with how the rest of Europe
-;;; thinks about dates.
+;;; @doc Built-in calendar with ISO week numbers and a Monday week
+;;; start.
 (use-package calendar
   :ensure nil
   :defer t
@@ -362,9 +326,8 @@ availability on the right display."
 
 ;;;; Icons (Nerd Font glyphs in dired, ibuffer, corfu, marginalia)
 
-;;; @doc Provides the Nerd-Font glyph alphabet that the rest of the
-;;; nerd-icons-* family draws on. Picks the font family from
-;;; `jotain-font-preferences` so the icons match the editor face.
+;;; @doc Nerd Font glyphs for the nerd-icons-* family. The font family
+;;; comes from `jotain-font-preferences` so icons match the editor face.
 (use-package nerd-icons
   ;; Deferred: doom-modeline pulls it in at after-init, and the :after
   ;; chains below (corfu/completion/ibuffer glue) follow it there.
@@ -372,9 +335,8 @@ availability on the right display."
   :preface
   (defun jotain-ui--apply-nerd-icons-font (&optional frame)
     "Set `nerd-icons-font-family' from `jotain-font-preferences' for FRAME.
-Runs on `server-after-make-frame-hook' so daemon-created GUI frames
-get the matched Nerd Font too — at daemon load time no graphical
-frame exists yet, so a load-time-only probe would never fire."
+Runs on `server-after-make-frame-hook' because no graphical frame
+exists when a daemon loads the config."
     (when (display-graphic-p frame)
       (when-let* ((nerd-font
                    (cl-loop for (family . _height) in jotain-font-preferences
@@ -386,8 +348,7 @@ frame exists yet, so a load-time-only probe would never fire."
   (jotain-ui--apply-nerd-icons-font)
   (add-hook 'server-after-make-frame-hook #'jotain-ui--apply-nerd-icons-font))
 
-;;; @doc Decorates corfu candidates with a kind-specific glyph in the
-;;; margin, so completions are scannable at a glance.
+;;; @doc Kind-specific glyphs in the corfu candidate margin.
 (use-package nerd-icons-corfu
   :after (nerd-icons corfu)
   :functions (nerd-icons-corfu-formatter)
@@ -403,30 +364,26 @@ frame exists yet, so a load-time-only probe would never fire."
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
 
-;;; @doc Adds Nerd-Font glyphs to ibuffer rows so buffer types are
-;;; visually distinguished at a glance.
+;;; @doc Nerd Font glyphs in ibuffer rows, by buffer type.
 (use-package nerd-icons-ibuffer
   :after nerd-icons
   :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
 
 ;;;; Polish packages
 
-;;; @doc Highlights TODO / FIXME / HACK / NOTE / XXX keywords in code
-;;; with a face that survives theme changes.
+;;; @doc Highlights TODO / FIXME / HACK / NOTE / XXX keywords in code.
 (use-package hl-todo
   :hook (prog-mode . hl-todo-mode)
   :custom
   (hl-todo-highlight-punctuation ":"))
 
-;;; @doc Headerline showing project / file / nested function position —
-;;; the missing "where am I in this file?" indicator built on
-;;; imenu.
+;;; @doc Header line showing project, file, and the enclosing
+;;; definitions at point.
 (use-package breadcrumb
   :hook (prog-mode . breadcrumb-local-mode))
 
-;;; @doc Pulses a coloured highlight when point jumps a long distance
-;;; (other-window, xref, consult-line). Tells the eye where the
-;;; cursor went without staring.
+;;; @doc Pulses the current line after a jump (other-window, xref,
+;;; consult-line) so the eye finds the cursor.
 (use-package pulsar
   :hook (after-init . pulsar-global-mode)
   :custom
@@ -437,8 +394,7 @@ frame exists yet, so a load-time-only probe would never fire."
      xref-find-definitions xref-find-references xref-go-back
      consult-line consult-goto-line imenu)))
 
-;;; @doc Colourises matching parens by depth in Lisp buffers — almost
-;;; essential for navigating deeply nested forms.
+;;; @doc Colours parens by nesting depth in Lisp buffers.
 (use-package rainbow-delimiters
   :hook ((lisp-mode emacs-lisp-mode) . rainbow-delimiters-mode))
 
@@ -454,8 +410,7 @@ frame exists yet, so a load-time-only probe would never fire."
   (when jotain-indent-bars-enabled
     (indent-bars-mode 1)))
 
-;;; @doc Vertical indent guides for code, treesit-aware so the bars
-;;; follow real syntactic indentation. Toggle via
+;;; @doc Vertical indent guides for code, tree-sitter aware. Toggle with
 ;;; `jotain-indent-bars-enabled'.
 (use-package indent-bars
   :custom (indent-bars-treesit-support t)
