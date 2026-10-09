@@ -499,10 +499,12 @@ in
       VISUAL = "${lib.getBin visualScript}/bin/jotain-visual";
     };
 
-    programs.bash.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
-    programs.zsh.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
-    programs.fish.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
+    programs = {
 
+      bash.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
+      zsh.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
+      fish.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
+    };
     fonts.fontconfig.enable = lib.mkIf isLinux true;
 
     home.packages = [
