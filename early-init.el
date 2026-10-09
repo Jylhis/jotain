@@ -114,9 +114,10 @@
 (when (eq system-type 'darwin)
   (setq ns-use-thin-smoothing t))
 
-;; Native compilation (Emacs 30+): keep eln-cache out of the config dir,
-;; and silence the firehose of async warnings during init.
-(defvar native-comp-async-report-warnings-errors nil)
+;; Native compilation (Emacs 30+): keep eln-cache out of the config dir.
+;; Async warnings stay at their default: since 30,
+;; `native-comp-async-warnings-errors-kind' already limits them to errors
+;; and important warnings, and NEWS.30 advises against silencing them.
 (defvar native-comp-speed nil)
 (defvar native-comp-async-jobs-number 0)
 ;; Emacs 31+ defcustom living in the not-yet-preloaded comp-run.el, so
@@ -131,8 +132,7 @@
   ;; eln-cache warm-up speed); the floor keeps small hosts (2-core VMs,
   ;; nix-on-droid) at a single job. `num-processors' shipped in 28.1,
   ;; below the Emacs 30 floor, so no guard is needed.
-  (setq native-comp-async-report-warnings-errors nil
-        native-comp-speed 2
+  (setq native-comp-speed 2
         native-comp-async-jobs-number (max 1 (min 3 (/ (num-processors) 2)))
         ;; Emacs 31+: pause background native compilation while on
         ;; battery so a recompile doesn't spin the fans on an unplugged
