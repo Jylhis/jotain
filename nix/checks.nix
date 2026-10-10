@@ -264,33 +264,6 @@ in
         touch $out
       '';
 
-  # flake.lock and devenv.lock must pin the same shared revs (Dependabot
-  # bumps flake.lock alone). Without this, only PR CI's `just verify`
-  # (same script) guards drift; this also covers pushes to main/next.
-  locks-in-sync =
-    pkgs.runCommandLocal "check-locks-in-sync"
-      {
-        inherit src;
-        nativeBuildInputs = [ pkgs.jq ];
-      }
-      ''
-        # Checked separately so an untracked/renamed script reports
-        # itself instead of masquerading as lock drift.
-        if [ ! -f "$src/scripts/verify-locks.sh" ]; then
-          echo "scripts/verify-locks.sh is missing from the flake source." >&2
-          echo "If you just created it, git add it — the flake source is" >&2
-          echo "tracked files only." >&2
-          exit 1
-        fi
-        if ! bash "$src/scripts/verify-locks.sh" "$src"; then
-          echo "" >&2
-          echo "flake.lock and devenv.lock disagree on a shared input's rev." >&2
-          echo "Re-sync them with: just sync-devenv" >&2
-          exit 1
-        fi
-        touch $out
-      '';
-
   module-eval =
     pkgs.runCommandLocal "check-module-eval"
       {

@@ -23,7 +23,10 @@ let
       url = (builtins.elemAt pin.kd 1).ur;
       sha = pin.ha.vl;
     in
-    builtins.fetchTarball { inherit url; sha256 = sha; }
+    builtins.fetchTarball {
+      inherit url;
+      sha256 = sha;
+    }
   );
   jotainOverlay = import ./nix/mk-overlay.nix { };
 in

@@ -12,5 +12,7 @@
 
   # No package.nix: the Emacs distribution builds through nix/inputs.nix
   # (the computed jotain attrset) and the flakeless shim default.nix.
-  deploy = { type = "none"; };
+  deploy = {
+    type = "none";
+  };
 }
