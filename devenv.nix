@@ -49,6 +49,11 @@ in
       # `docker-langserver`, registered for eglot in init-prog.el.
       dockerfile-language-server
 
+      # The enterTest store checks assert nil/nixfmt on PATH; this tree's
+      # devenv treefmt-nix no longer surfaces formatter binaries there.
+      nil
+      nixfmt-rfc-style
+
       # Docs toolchain for interactive use; the Nix derivations bring
       # their own copies.
       pandoc
