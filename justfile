@@ -12,11 +12,11 @@ test:
     system=$(nix eval --impure --raw --expr builtins.currentSystem)
     cd "{{ repo }}"
     refs=()
-    while read -r n; do refs+=(".#checks.${system}.${n}"); done < <(
-        nix eval --json ".#checks.${system}" --apply builtins.attrNames \
+    while read -r n; do refs+=("checks.${system}.${n}"); done < <(
+        nix eval --json -f . "checks.${system}" --apply builtins.attrNames \
         | jq -r '.[] | select(startswith("jotain-"))')
     [ "${#refs[@]}" -gt 0 ] || { echo "FAIL: no jotain-* checks registered yet"; exit 1; }
-    nix build --no-link "${refs[@]}"
+    nix build --no-link -f . "${refs[@]}"
 
 # Build the full distribution for this system (flakeless shim entry).
 [group('build')]
