@@ -146,7 +146,7 @@ doesn't has any shortdoc information."
       (if (equal heading (elisp-doc-entry-section-heading section))
           (setq found section)))))
 
-
+
 
 (defvar elisp-doc--verbose t)
 (defun elisp-doc--log (msg &rest args)
@@ -223,7 +223,7 @@ buffer, make the buffer no longer read-only, and then returns a
     (if (string-prefix-p " *elisp-doc" (buffer-name buffer))
         (kill-buffer buffer))))
 
-
+
 
 (defvar elisp-doc-output-dir
   (file-name-concat
@@ -339,7 +339,7 @@ Content of the documentation pages is part of <a href=\"https://www.gnu.org/soft
         (write-region (point-min) (point-max) output))))
   entry)
 
-
+
 
 (defvar elisp-doc--output-sections
   '(nil
@@ -363,7 +363,7 @@ Content of the documentation pages is part of <a href=\"https://www.gnu.org/soft
              nil))
          (elisp-doc-entry-sections entry))))
 
-
+
 
 (defun elisp-doc--apply-highlights (section highlighted)
   "Copy argument highlight from HIGHLIGHTED to SECTION."
@@ -410,7 +410,7 @@ Content of the documentation pages is part of <a href=\"https://www.gnu.org/soft
           (delete-region start end)
           (insert text))))))
 
-
+
 
 (defun elisp-doc--insert-release (entry)
   "Insert \"Probaly introduced in ...\" string in ENTRY."
@@ -420,7 +420,7 @@ Content of the documentation pages is part of <a href=\"https://www.gnu.org/soft
     (goto-char (1- (elisp-doc-entry-section-end doc)))
     (insert "\nProbably introduced at or before Emacs version " release ".")))
 
-
+
 
 (defconst elisp-doc--html-entity-regexp
   (rx-to-string
@@ -443,7 +443,7 @@ Content of the documentation pages is part of <a href=\"https://www.gnu.org/soft
       (replace-match subst t t)
       (set-text-properties start (+ start (length subst)) props))))
 
-
+
 
 (defvar elisp-doc--wrap-sections
   '("Source Code" "Signature" "Demos" "Shortdoc" "Value"))
@@ -503,7 +503,7 @@ Content of the documentation pages is part of <a href=\"https://www.gnu.org/soft
             (insert "<code>")
             (goto-char (+ point (length "<code></code>")))))))))
 
-
+
 
 (defvar elisp-doc--pure-ui-button-categories
   (mapcar (lambda (s) (concat (symbol-name s) "-button"))
@@ -576,7 +576,7 @@ Content of the documentation pages is part of <a href=\"https://www.gnu.org/soft
         (when (= ?\n (char-after (1- end)))
           (set-text-properties (1- end) end nil))))))
 
-
+
 
 (defvar elisp-doc--linkers
   '((helpful-navigate-button . elisp-doc--link-source-file)
@@ -919,7 +919,7 @@ TODO: The caller may use PRED to check if the fragment if valid."
     (insert "}\n")
     (buffer-string)))
 
-
+
 
 (defun elisp-doc--prune-whitespace (_entry)
   "Call `whitespace-cleanup'."
@@ -963,7 +963,7 @@ TODO: The caller may use PRED to check if the fragment if valid."
       (goto-char start)
       (insert "<details><summary>Large value</summary>"))))
 
-
+
 
 (defvar elisp-doc-face-sample-text
   "The quick brown fox jumps over the lazy dog.")
@@ -1002,7 +1002,7 @@ Helpful does not provide `describe-face' equivalence."
         (goto-char (+ (match-end 0) (length "<tr><td></td><td></td></tr>"))))
       (insert "</tbody></table></div>"))))
 
-
+
 
 ;; (pop-to-buffer
 ;;  (elisp-doc-entry-buffer
@@ -1020,7 +1020,7 @@ Helpful does not provide `describe-face' equivalence."
 ;;  (elisp-doc-entry-buffer
 ;;   (elisp-doc-export (elisp-doc-extract-helpful #'describe-face 'woman-italic))))
 
-
+
 
 (provide 'elisp-doc-extract)
 
