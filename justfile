@@ -18,6 +18,23 @@ test:
     [ "${#refs[@]}" -gt 0 ] || { echo "FAIL: no jotain-* checks registered yet"; exit 1; }
     nix build --no-link -f . "${refs[@]}"
 
+# Re-vendor website/public/ds from the pinned jylhis/design rev
+# (the fix for a failing jotain-ds-in-sync gate).
+[group('pins')]
+ds-sync:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ repo }}"
+    out=$(nix-build --no-out-link -E '
+      let jotain = (import ./nix/inputs.nix { }).jotain;
+      in jotain.packages.${builtins.currentSystem}.ds-assets')
+    # Wipe first so files dropped upstream do not linger.
+    rm -rf lib/jotain/website/public/ds
+    mkdir -p lib/jotain/website/public/ds
+    cp -r "$out/." lib/jotain/website/public/ds/
+    chmod -R u+w lib/jotain/website/public/ds
+    echo "Re-vendored website/public/ds from $(nix eval --raw --file lib/jotain/nix/design-pin.nix rev)"
+
 # Build the full distribution for this system (flakeless shim entry).
 [group('build')]
 build:
