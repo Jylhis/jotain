@@ -10,6 +10,10 @@
 
 ;;; Code:
 
+(defgroup jotain-prog nil
+  "Programming-mode, tree-sitter and LSP settings."
+  :group 'convenience)
+
 ;;;; prog-mode
 
 ;;; @doc Built-in `prog-mode` parent. Turns on the fill-column
@@ -107,12 +111,12 @@ leaves the classic mode in place."
   "When non-nil, log if a classic major mode is used despite a ready ts-mode.
 Modes in `jotain-prog-warn-non-ts-exclude' are never reported."
   :type 'boolean
-  :group 'jotain)
+  :group 'jotain-prog)
 
 (defcustom jotain-prog-warn-non-ts-exclude nil
   "Classic major modes the non-ts diagnostic deliberately skips."
   :type '(repeat symbol)
-  :group 'jotain)
+  :group 'jotain-prog)
 
 (defun jotain-prog--warn-non-ts-mode ()
   "Log when `major-mode' is classic but a ready tree-sitter mode exists.
@@ -163,7 +167,7 @@ names (`sh-mode' to `bash-ts-mode') are missed; those are remapped in
   "When non-nil, include ESLint and Tailwind LSP servers in TS/TSX `rass` sessions.
 These servers may evaluate project JavaScript configuration files."
   :type 'boolean
-  :group 'jotain)
+  :group 'jotain-prog)
 
 (defvar eglot-workspace-configuration) ; defined in eglot.el
 
