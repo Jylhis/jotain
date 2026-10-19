@@ -19,6 +19,8 @@
 ;;; (`devenv eval`/`info`/`search`). `devenv-env-global-mode` applies
 ;;; each project's `devenv print-dev-env` environment buffer-locally;
 ;;; `devenv-reload` refreshes it and offers to reconnect eglot.
+;;; `devenv-shell` does the same per buffer without recording trust,
+;;; the manual counterpart of a terminal `devenv shell`.
 ;;; devenv.nix buffers get the bundled `devenv lsp` server; other Nix
 ;;; buffers get nixd or nil, the project's own first. `devenv-mcp-setup`
 ;;; registers the project's `devenv mcp` server with mcp.el for gptel.
@@ -32,7 +34,7 @@
   :commands (devenv-task-run devenv-script-run devenv-test devenv-build
              devenv-up devenv-down devenv-processes devenv-processes-logs
              devenv-info devenv-search devenv-eval devenv-reload
-             devenv-allow devenv-revoke devenv-eglot-setup
+             devenv-allow devenv-revoke devenv-shell devenv-eglot-setup
              devenv-mcp-setup devenv-env-global-mode)
   :bind ("C-c v" . devenv)
   :custom

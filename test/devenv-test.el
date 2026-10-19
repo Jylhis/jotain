@@ -386,6 +386,7 @@ back to the global `exec-path' and returns an absolute path."
 The variable `devenv-test--eglot-calls' counts replayed calls."
   (declare (indent 0) (debug t))
   `(let ((devenv-env--pending (make-hash-table :test #'equal))
+         (devenv-env--manual-roots (make-hash-table :test #'equal))
          (devenv--cache (make-hash-table :test #'equal))
          (devenv-env--eglot-replay nil)
          (devenv--trust-probing (make-hash-table :test #'equal))
@@ -614,6 +615,80 @@ It records the verdict itself instead of waiting for the probe."
           (should (memq buffer (gethash root devenv-env--pending)))
           (should fetched)
           (should-not probed))))))
+
+;;;; Manual per-buffer activation (devenv-shell)
+
+(ert-deftest devenv-test-shell-loader-p-manual-consent ()
+  "Manual consent permits sourcing without trust; loader pref still wins."
+  (devenv-test--with-env-state
+    (devenv-test--with-project (root _buffer)
+      (devenv--set-trust-state root 'blocked)
+      (let ((devenv-env-loader 'shell))
+        (should-not (devenv-env--shell-loader-p root))
+        (puthash root t devenv-env--manual-roots)
+        (should (devenv-env--shell-loader-p root))
+        ;; A global json preference stays absolute: never source.
+        (let ((devenv-env-loader 'json))
+          (should-not (devenv-env--shell-loader-p root)))))))
+
+(ert-deftest devenv-test-shell-enables-without-trust ()
+  "`devenv-shell' activates per buffer and records session consent.
+No probe runs and the trust verdict is left untouched: consent is
+not trust."
+  (devenv-test--with-env-state
+    (devenv-test--with-project (root buffer)
+      (let (fetched)
+        (cl-letf (((symbol-function 'devenv-env--fetch)
+                   (lambda (_root) (setq fetched t)))
+                  ((symbol-function 'devenv--probe-trust)
+                   (lambda (_root) (error "probe must not run"))))
+          (devenv--set-trust-state root 'blocked)
+          (devenv-shell)
+          (should (gethash root devenv-env--manual-roots))
+          (should (bound-and-true-p devenv-env-mode))
+          (should (memq buffer (gethash root devenv-env--pending)))
+          (should fetched)
+          (should (eq (devenv--cached-trust root) 'blocked)))))))
+
+(ert-deftest devenv-test-shell-toggles-off ()
+  "Calling `devenv-shell' again turns the environment off in place."
+  (devenv-test--with-env-state
+    (devenv-test--with-project (root _buffer)
+      (cl-letf (((symbol-function 'devenv-env--fetch) (lambda (&rest _) t)))
+        (devenv-shell)
+        (devenv-env--handle-pairs root '("DEVENV_TEST_OK=1"))
+        (should (equal (getenv "DEVENV_TEST_OK") "1"))
+        (devenv-shell)
+        (should-not (bound-and-true-p devenv-env-mode))
+        (should-not (getenv "DEVENV_TEST_OK"))
+        (should-not (local-variable-p 'process-environment))
+        ;; Consent outlives the buffer that asked for it.
+        (should (gethash root devenv-env--manual-roots))))))
+
+(ert-deftest devenv-test-shell-defers-to-direnv ()
+  "`devenv-shell' refuses a direnv-managed buffer when deferring."
+  (devenv-test--with-env-state
+    (devenv-test--with-project (root _buffer)
+      (with-temp-file (expand-file-name ".envrc" root) (insert "use devenv\n"))
+      (cl-letf (((symbol-function 'devenv-env--fetch) (lambda (&rest _) t)))
+        (let ((devenv-env-defer-to-direnv t))
+          (should-error (devenv-shell) :type 'user-error))
+        (let ((devenv-env-defer-to-direnv nil))
+          (devenv-shell)
+          (should (bound-and-true-p devenv-env-mode)))))))
+
+(ert-deftest devenv-test-revoke-clears-manual-consent ()
+  "`devenv-revoke' withdraws consent and disables explicit buffers."
+  (devenv-test--with-env-state
+    (devenv-test--with-project (root buffer)
+      (cl-letf (((symbol-function 'devenv--call) (lambda (&rest _) t))
+                ((symbol-function 'devenv-env--fetch) (lambda (&rest _) t)))
+        (devenv-shell)
+        (should (gethash root devenv-env--manual-roots))
+        (devenv-revoke)
+        (should-not (gethash root devenv-env--manual-roots))
+        (should-not (gethash root devenv-env--pending))
+        (should-not (bound-and-true-p devenv-env-mode))))))
 
 ;;;; Process list parsing
 
