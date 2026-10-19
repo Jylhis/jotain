@@ -39,6 +39,9 @@
   :bind ("C-c v" . devenv)
   :custom
   (devenv-env-defer-to-direnv nil)
+  ;; devenv-modeline-mode already shows devenv[on]/[off]/[!]; the
+  ;; minor-mode lighter would only duplicate it.
+  (devenv-env-lighter "")
   :hook ((after-init . devenv-modeline-mode)
          ;; Autoloaded, so devenv.el loads at after-init.
          (after-init . devenv-env-global-mode))

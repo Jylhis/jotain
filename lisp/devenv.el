@@ -739,8 +739,12 @@ buffer `devenv-env-mode' was managing."
     (dolist (buffer (devenv-env--buffers root))
       (with-current-buffer buffer
         (devenv-env-mode -1)))
-    ;; Manual consent goes with trust.
+    ;; Manual consent goes with trust, and an in-flight fetch must not
+    ;; land an environment in buffers the loop above just cleaned; the
+    ;; pending list is dropped so its completion applies to nobody.
     (remhash root devenv-env--manual-roots)
+    (remhash root devenv-env--fetching)
+    (remhash root devenv-env--pending)
     ;; Eglot calls parked while a probe was still deciding must not
     ;; strand: release them to connect with the global environment,
     ;; which is what an untrusted project always uses.
@@ -1037,7 +1041,7 @@ otherwise attached in a live `devenv-log-mode' buffer."
           (devenv-log-mode))
         (make-process
          :name "devenv-up" :buffer buffer
-         :command (devenv--command args)
+         :command (devenv--command args nil (devenv--ensure-executable))
          :noquery t :connection-type 'pipe
          :filter #'devenv--insert-filter
          :sentinel (lambda (proc event)
@@ -1344,6 +1348,13 @@ reconnect any eglot servers so they see the new environment."
 (defvar devenv-env--pending (make-hash-table :test #'equal)
   "Roots with an environment fetch in flight, mapped to buffers.")
 
+(defvar devenv-env--fetching (make-hash-table :test #'equal)
+  "Roots whose environment fetch is running.
+A second `devenv-env--fetch' for such a root is a no-op: the
+running fetch's completion applies to every buffer registered in
+`devenv-env--pending' meanwhile.  `devenv-env--handle-pairs'
+clears the entry on every path, failures included.")
+
 (defvar devenv-env--manual-roots (make-hash-table :test #'equal)
   "Roots activated per buffer with `devenv-shell' this session.
 Manual activation is consent to source the dev-env without
@@ -1488,6 +1499,7 @@ would be the wrong toolchain for a project whose server only exists
 inside devenv."
   (let ((buffers (gethash root devenv-env--pending)))
     (remhash root devenv-env--pending)
+    (remhash root devenv-env--fetching)
     (unwind-protect
         (when pairs
           (puthash (cons root 'env) (cons (float-time) pairs) devenv--cache)
@@ -1675,10 +1687,13 @@ All buffers registered under ROOT in `devenv-env--pending' get the
 result; deferred `eglot-ensure' calls are replayed.  A trusted
 project is loaded by sourcing the printed dev-env script so its
 shellHook runs (see `devenv-env-loader'); otherwise the JSON form
-is parsed."
-  (if (devenv-env--with-global-env (devenv-env--shell-loader-p root))
-      (devenv-env--fetch-shell root)
-    (devenv-env--fetch-json root)))
+is parsed.  A fetch already running for ROOT absorbs this call:
+its completion serves every registered buffer."
+  (unless (gethash root devenv-env--fetching)
+    (puthash root t devenv-env--fetching)
+    (if (devenv-env--with-global-env (devenv-env--shell-loader-p root))
+        (devenv-env--fetch-shell root)
+      (devenv-env--fetch-json root))))
 
 (defun devenv-env--buffers (root)
   "Return live buffers under ROOT that have `devenv-env-mode' on."
@@ -1715,11 +1730,11 @@ direnv is in charge, envrc + `use devenv' does the same job; see
           (let ((pairs (devenv-env--cached-pairs root)))
             (if pairs
                 (devenv-env--apply (current-buffer) pairs)
-              (let ((pending (gethash root devenv-env--pending)))
-                (push (current-buffer)
-                      (gethash root devenv-env--pending))
-                (unless pending
-                  (devenv-env--fetch root)))))))
+              (push (current-buffer)
+                    (gethash root devenv-env--pending))
+              ;; Deduplicated by `devenv-env--fetching': a fetch
+              ;; already running for the root picks this buffer up.
+              (devenv-env--fetch root)))))
     (kill-local-variable 'process-environment)
     (kill-local-variable 'exec-path)))
 

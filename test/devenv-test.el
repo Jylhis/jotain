@@ -39,6 +39,13 @@
     (should (string-match-p "devenv shell" cmd))
     (should-not (equal cmd "devenv shell my script"))))
 
+(ert-deftest devenv-test-command-with-program ()
+  "A resolved program overrides `devenv-executable'."
+  (let ((devenv-executable "devenv")
+        (devenv-global-arguments '("-q")))
+    (should (equal (devenv--command '("up") nil "/usr/bin/devenv")
+                   '("/usr/bin/devenv" "-q" "up")))))
+
 ;;;; First-line extraction (error reporting)
 
 (ert-deftest devenv-test-first-line ()
@@ -386,6 +393,7 @@ back to the global `exec-path' and returns an absolute path."
 The variable `devenv-test--eglot-calls' counts replayed calls."
   (declare (indent 0) (debug t))
   `(let ((devenv-env--pending (make-hash-table :test #'equal))
+         (devenv-env--fetching (make-hash-table :test #'equal))
          (devenv-env--manual-roots (make-hash-table :test #'equal))
          (devenv--cache (make-hash-table :test #'equal))
          (devenv-env--eglot-replay nil)
@@ -687,8 +695,37 @@ not trust."
         (should (gethash root devenv-env--manual-roots))
         (devenv-revoke)
         (should-not (gethash root devenv-env--manual-roots))
+        (should-not (gethash root devenv-env--fetching))
         (should-not (gethash root devenv-env--pending))
         (should-not (bound-and-true-p devenv-env-mode))))))
+
+;;;; Environment fetch bookkeeping
+
+(ert-deftest devenv-test-fetch-dedups-in-flight ()
+  "A fetch while one runs for the root is a no-op; completion re-arms."
+  (devenv-test--with-env-state
+    (let ((root "/proj/") (calls 0))
+      (cl-letf (((symbol-function 'devenv-env--fetch-shell)
+                 (lambda (_root) (cl-incf calls)))
+                ((symbol-function 'devenv-env--fetch-json)
+                 (lambda (&rest _) (error "json must not run")))
+                ((symbol-function 'devenv-env--shell-loader-p)
+                 (lambda (_root) t)))
+        (devenv-env--fetch root)
+        (devenv-env--fetch root)
+        (should (equal calls 1))
+        (should (gethash root devenv-env--fetching))
+        (with-temp-buffer
+          ;; A late-joining buffer is served by the running fetch.
+          (push (current-buffer) (gethash root devenv-env--pending))
+          (devenv-env--fetch root)
+          (should (equal calls 1))
+          (devenv-env--handle-pairs root '("DEVENV_TEST_OK=1"))
+          (should (equal (getenv "DEVENV_TEST_OK") "1")))
+        (should-not (gethash root devenv-env--fetching))
+        ;; The guard released, a new fetch may start.
+        (devenv-env--fetch root)
+        (should (equal calls 2))))))
 
 ;;;; Process list parsing
 
