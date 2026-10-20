@@ -51,6 +51,7 @@
 (require 'init-snippets)     ; tempel snippets + eglot-tempel LSP expansion
 (require 'init-project)      ; project + projection + compile-multi
 (require 'init-devenv)       ; devenv.sh: tasks, processes, env, LSP, MCP
+(require 'init-review)       ; repo-review queue + org-remark notes
 (require 'init-ai)           ; eca, claude-code-ide, gptel, mcp
 (require 'init-shell)        ; eshell, comint, ielm
 (require 'init-terminal)     ; ghostel terminal + tty integration (kkp, clipetty)

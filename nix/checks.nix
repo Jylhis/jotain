@@ -10,6 +10,7 @@
 let
   inherit (pkgs) lib;
   inherit (lib) fileset;
+  inherit (pkgs) git;
 
   # Narrowed check sources
   #
@@ -500,11 +501,15 @@ in
     emacs = elispEmacs;
   };
 
-  # ERT suite. Sandbox-safe: no devenv binary, network or subprocesses.
+  # ERT suite. Sandbox-safe: no devenv binary or network. git is on
+  # PATH for the tests that build throwaway VC projects (repo-review).
   elisp-test =
     pkgs.runCommand "check-elisp-test"
       {
-        nativeBuildInputs = [ elispEmacs ];
+        nativeBuildInputs = [
+          elispEmacs
+          git
+        ];
         src = elispTestSrc;
       }
       ''

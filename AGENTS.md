@@ -225,9 +225,10 @@ When a note conflicts with the installed Emacs, trust the running Emacs
 - **Module file shape**: `-*- lexical-binding: t; -*-` cookie, ends with
   `(provide 'init-<concern>)`, plus a `(require 'init-<concern>)` at the
   right point in `init.el`.
-- **`lisp/devenv.el`** is the only non-`init-*` file in `lisp/`: a
-  standalone package (`devenv-` namespace, no `jotain-` dependencies) wired
-  in by `lisp/init-devenv.el`.
+- `lisp/devenv.el` and `lisp/repo-review.el` are the only non-`init-*`
+  files in `lisp/`: standalone packages (own `devenv-` / `repo-review-`
+  namespaces, no `jotain-` dependencies) wired in by `lisp/init-devenv.el`
+  and `lisp/init-review.el`.
 - **LSP and formatters live in `init-prog.el`.** Per-language `eglot-ensure`
   hooks and `apheleia` formatters are centralised there; `init-lang-*.el`
   holds only mode regexes and language tweaks.

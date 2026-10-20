@@ -18,6 +18,18 @@ test:
     [ "${#refs[@]}" -gt 0 ] || { echo "FAIL: no jotain-* checks registered yet"; exit 1; }
     nix build --no-link -f . "${refs[@]}"
 
+# Regenerate docs/configuration/package-reference.mdx from the ;;; @doc
+# blocks in lisp/ (the fix for a failing packages-doc-in-sync gate).
+[group('docs')]
+docs-refresh-packages:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ repo }}"
+    out=$(nix build --no-link --print-out-paths --impure --expr '
+      (import ./nix/inputs.nix { }).jotain.packages.${builtins.currentSystem}.packages-doc')
+    cp "$out/package-reference.mdx" lib/jotain/docs/configuration/package-reference.mdx
+    echo "Refreshed lib/jotain/docs/configuration/package-reference.mdx"
+
 # Re-vendor website/public/ds from the pinned jylhis/design rev
 # (the fix for a failing jotain-ds-in-sync gate).
 [group('pins')]
