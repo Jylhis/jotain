@@ -1,4 +1,4 @@
-# nix/checks.nix — Flake check derivations for Jotain.
+# nix/checks.nix — Flake check derivations for the configuration.
 #
 # Application and configuration checks; dev-shell assertions live in
 # devenv.nix enterTest.
@@ -52,10 +52,10 @@ let
   };
 
   # The inner emacsWithPackages result (`passthru.core'), not the outer
-  # wrapper: the wrapper's INFOPATH pulls in jotainInfo, so docs/@doc
+  # wrapper: the wrapper's INFOPATH pulls in emacsConfigInfo, so docs/@doc
   # edits would invalidate these checks. `core' moves only when the
   # package set does (the lisp/ scan reads package names only).
-  elispEmacs = pkgs.jotainEmacsPackages.core;
+  elispEmacs = pkgs.emacsConfigPackages.core;
 
   hmStubModule = {
     options = {
@@ -73,7 +73,7 @@ let
       };
       xdg.configHome = lib.mkOption {
         type = lib.types.str;
-        default = "/tmp/jotain-home/.config";
+        default = "/tmp/emacs-config-home/.config";
       };
       xdg.configFile = lib.mkOption {
         type = lib.types.attrsOf lib.types.anything;
@@ -103,16 +103,16 @@ let
   };
 
   evalHomeModule =
-    jotainConfig:
+    emacsConfigConfig:
     lib.evalModules {
       modules = [
         hmStubModule
         ../module.nix
         {
-          services.jotain = {
+          services.emacsConfig = {
             enable = true;
           }
-          // jotainConfig;
+          // emacsConfigConfig;
         }
       ];
       specialArgs = { inherit pkgs; };
@@ -142,16 +142,16 @@ let
   };
 
   evalNixOnDroidModule =
-    jotainConfig:
+    emacsConfigConfig:
     lib.evalModules {
       modules = [
         nixOnDroidStubModule
         ../module-nix-on-droid.nix
         {
-          services.jotain = {
+          services.emacsConfig = {
             enable = true;
           }
-          // jotainConfig;
+          // emacsConfigConfig;
         }
       ];
       specialArgs = { inherit pkgs; };
@@ -160,9 +160,9 @@ let
   nixOnDroidModule = evalNixOnDroidModule { };
 in
 {
-  packages-default = pkgs.jotainEmacsPackages;
-  packages-emacs = pkgs.jotainEmacs;
-  packages-info = pkgs.jotainInfo;
+  packages-default = pkgs.emacsConfigPackages;
+  packages-emacs = pkgs.emacsConfig;
+  packages-info = pkgs.emacsConfigInfo;
 
   options-doc = import ./options-doc.nix { inherit pkgs src; };
 
@@ -197,7 +197,7 @@ in
       '';
 
   # docs/reference/language-support.mdx must match a fresh render of
-  # etc/lang-eval/jotain-lang-registry.el. Cheap: registry only.
+  # etc/lang-eval/my-lang-registry.el. Cheap: registry only.
   inherit ((import ./lang-eval.nix { inherit pkgs; })) lang-eval-doc-in-sync;
 
   # config/eca/config.json and gptel's OpenRouter :models
@@ -271,9 +271,11 @@ in
         defaultEditorConfigured = if defaultModule.config.home.sessionVariables ? EDITOR then "1" else "0";
         graphicalTarget =
           if pkgs.stdenv.hostPlatform.isLinux then
-            builtins.toJSON graphicalModule.config.systemd.user.services.jotain.Install.WantedBy
+            builtins.toJSON graphicalModule.config.systemd.user.services.emacs-config.Install.WantedBy
           else
-            toString (builtins.length graphicalModule.config.launchd.agents.jotain.config.ProgramArguments);
+            toString (
+              builtins.length graphicalModule.config.launchd.agents.emacs-config.config.ProgramArguments
+            );
       }
       ''
         touch $out
@@ -293,12 +295,12 @@ in
         touch $out
       '';
 
-  # The dev shell has no Emacs, so jotainEmacs is checked here: expected
+  # The dev shell has no Emacs, so emacsConfig is checked here: expected
   # binaries exist and run without touching paths outside the store.
   emacs-binaries =
     pkgs.runCommandLocal "check-emacs-binaries"
       {
-        emacs = pkgs.jotainEmacs;
+        emacs = pkgs.emacsConfig;
       }
       ''
         set -euo pipefail
@@ -365,7 +367,7 @@ in
   elisp-lint =
     pkgs.runCommand "check-elisp-lint"
       {
-        nativeBuildInputs = [ pkgs.jotainEmacs ];
+        nativeBuildInputs = [ pkgs.emacsConfig ];
         src = elispSrc;
       }
       ''
@@ -553,7 +555,7 @@ in
           -l "$workdir/early-init.el" \
           --eval '(setq use-package-always-ensure nil)' \
           -l "$workdir/init.el" \
-          --eval '(message "jotain: config startup complete")' \
+          --eval '(message "emacs-config: config startup complete")' \
           > "$workdir/startup.log" 2>&1
 
         cat "$workdir/startup.log"
@@ -563,7 +565,7 @@ in
           echo "(commonly a stale ELPA package shadowing an Emacs built-in)" >&2
           exit 1
         fi
-        if ! grep -qF "jotain: config startup complete" "$workdir/startup.log"; then
+        if ! grep -qF "emacs-config: config startup complete" "$workdir/startup.log"; then
           echo "FAIL: startup aborted before loading the whole config" >&2
           exit 1
         fi

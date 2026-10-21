@@ -15,7 +15,7 @@ win where they overlap.
 1. Every file starts with `;;; file.el --- desc -*- lexical-binding: t; -*-`
    and modules end with `(provide 'init-<concern>)` and
    `;;; init-<concern>.el ends here`. Global symbols use the
-   `jotain-<concern>-` prefix (`--` for private).
+   `my-<concern>-` prefix (`--` for private).
 2. `setopt` for `defcustom` variables, `setq` only for plain `defvar`s.
 3. `use-package` blocks: built-ins and Nix-provided packages get
    `:ensure nil` (because `use-package-always-ensure` is `t`).

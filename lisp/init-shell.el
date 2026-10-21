@@ -36,7 +36,7 @@
   :commands ielm
   :config
   (when (boundp 'ielm-history-file-name)
-    (setopt ielm-history-file-name (jotain-var-file "ielm-history.eld"))))
+    (setopt ielm-history-file-name (my-var-file "ielm-history.eld"))))
 
 (provide 'init-shell)
 ;;; init-shell.el ends here

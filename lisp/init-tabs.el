@@ -33,10 +33,10 @@
   :config
   (tab-bar-history-mode 1))
 
-(defun jotain-tabs--switch-project-in-tab (orig dir)
+(defun my-tabs--switch-project-in-tab (orig dir)
   "Around advice for ORIG: open project DIR in its own tab.
 Tabs are keyed by the abbreviated directory (the
-`jotain-tabs-project-dir' tab parameter), so projects sharing a
+`my-tabs-project-dir' tab parameter), so projects sharing a
 basename still get distinct tabs."
   (let* ((dir-key (abbreviate-file-name (directory-file-name dir)))
          (name    (file-name-nondirectory (directory-file-name dir)))
@@ -44,7 +44,7 @@ basename still get distinct tabs."
          (idx     (cl-position
                    dir-key tabs
                    :key (lambda (tab)
-                          (alist-get 'jotain-tabs-project-dir tab))
+                          (alist-get 'my-tabs-project-dir tab))
                    :test #'equal)))
     (if idx
         (progn (tab-bar-select-tab (1+ idx))
@@ -53,11 +53,11 @@ basename still get distinct tabs."
       (tab-bar-rename-tab name)
       (let ((current (assq 'current-tab (tab-bar-tabs))))
         (when current
-          (push (cons 'jotain-tabs-project-dir dir-key) (cdr current))))
+          (push (cons 'my-tabs-project-dir dir-key) (cdr current))))
       (funcall orig dir))))
 
 (advice-add 'project-switch-project :around
-            #'jotain-tabs--switch-project-in-tab)
+            #'my-tabs--switch-project-in-tab)
 
 (provide 'init-tabs)
 ;;; init-tabs.el ends here

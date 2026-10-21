@@ -1,6 +1,6 @@
-# module-nix-on-droid.nix — nix-on-droid module for Jotain Emacs.
+# module-nix-on-droid.nix — nix-on-droid module for the configured Emacs.
 #
-# Installs a terminal-only Jotain Emacs plus an emacsclient EDITOR wrapper
+# Installs a terminal-only the configured Emacs plus an emacsclient EDITOR wrapper
 # into nix-on-droid (Nix on Android under proot). A trimmed cousin of
 # module-system.nix: no systemd/launchd, display server or
 # `fonts.packages`, and `environment.packages` instead of
@@ -8,8 +8,8 @@
 #
 # Usage in a nix-on-droid flake:
 #
-#   imports = [ jotain.nixOnDroidModules.default ];
-#   services.jotain.enable = true;
+#   imports = [ emacs-config.nixOnDroidModules.default ];
+#   services.emacsConfig.enable = true;
 args@{
   config,
   lib,
@@ -17,11 +17,11 @@ args@{
   ...
 }:
 let
-  cfg = config.services.jotain;
-  jotainOverlay = args.jotainOverlay or (import ./overlay.nix);
-  pkgsWithOverlay = pkgs.extend jotainOverlay;
+  cfg = config.services.emacsConfig;
+  emacsConfigOverlay = args.emacsConfigOverlay or (import ./overlay.nix);
+  pkgsWithOverlay = pkgs.extend emacsConfigOverlay;
   selectedPackage =
-    if cfg.package != null then cfg.package else pkgsWithOverlay.jotainEmacsPackagesNoGui;
+    if cfg.package != null then cfg.package else pkgsWithOverlay.emacsConfigPackagesNoGui;
 
   runtimeDeps = import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; };
 
@@ -37,16 +37,16 @@ let
   };
 in
 {
-  options.services.jotain = {
-    enable = lib.mkEnableOption "the Jotain Emacs configuration (terminal-only, for nix-on-droid)";
+  options.services.emacsConfig = {
+    enable = lib.mkEnableOption "the Emacs configuration (terminal-only, for nix-on-droid)";
 
     package = lib.mkOption {
       type = lib.types.nullOr lib.types.package;
       default = null;
       defaultText = lib.literalExpression "null";
       description = ''
-        Custom Jotain Emacs package to use. Leave unset for the
-        terminal-only distribution (`jotainEmacsPackagesNoGui`).
+        Custom Emacs package to use. Leave unset for the
+        terminal-only distribution (`emacsConfigPackagesNoGui`).
       '';
     };
 
@@ -73,8 +73,8 @@ in
     ];
 
     environment.sessionVariables = lib.mkIf cfg.defaultEditor {
-      EDITOR = "${lib.getBin editorScript}/bin/jotain-editor";
-      VISUAL = "${lib.getBin editorScript}/bin/jotain-editor";
+      EDITOR = "${lib.getBin editorScript}/bin/emacs-config-editor";
+      VISUAL = "${lib.getBin editorScript}/bin/emacs-config-editor";
     };
   };
 }

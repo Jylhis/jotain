@@ -38,7 +38,7 @@ in
       # Bazel/Starlark formatter for bazel-mode (C-c C-f) and apheleia.
       buildifier
 
-      # Started with M-x jotain-sonarlint.
+      # Started with M-x my-sonarlint.
       sonarlint-ls
 
       rassumfrassum

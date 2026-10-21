@@ -2,9 +2,9 @@
 
 ;;; Commentary:
 
-;; Drift guard for `jotain-lang-registry' (etc/lang-eval/).  The tests do
+;; Drift guard for `my-lang-registry' (etc/lang-eval/).  The tests do
 ;; not boot the config: they read init-prog.el, init-lang-*.el and
-;; templates/jotain.eld as text and check the registry agrees with them.
+;; templates/default.eld as text and check the registry agrees with them.
 ;; Actual mode routing and eglot resolution are checked by the Tier-1
 ;; probe (`nix build .#lang-eval-matrix').
 ;;
@@ -27,7 +27,7 @@
   "Repository root, located by walking up to the directory holding init.el.")
 
 (add-to-list 'load-path (expand-file-name "etc/lang-eval" lang-eval-test--root))
-(require 'jotain-lang-registry)
+(require 'my-lang-registry)
 
 ;;;; Helpers
 
@@ -41,10 +41,10 @@
     (with-temp-buffer (insert-file-contents path) (buffer-string))))
 
 (defun lang-eval-test--snippet-modes ()
-  "Return the tempel section-header mode symbols in templates/jotain.eld."
+  "Return the tempel section-header mode symbols in templates/default.eld."
   (let ((modes '()))
     (with-temp-buffer
-      (insert-file-contents (lang-eval-test--file "templates/jotain.eld"))
+      (insert-file-contents (lang-eval-test--file "templates/default.eld"))
       (goto-char (point-min))
       (condition-case nil
           (while t
@@ -57,7 +57,7 @@
 
 (ert-deftest lang-eval-test-entries-well-formed ()
   "Every registry entry has the required keys with the right shapes."
-  (dolist (e jotain-lang-registry)
+  (dolist (e my-lang-registry)
     (should (symbolp (plist-get e :id)))
     (should (stringp (plist-get e :name)))
     (should (stringp (plist-get e :file)))
@@ -70,22 +70,22 @@
 
 (ert-deftest lang-eval-test-ids-unique ()
   "Registry :id values are unique."
-  (let ((ids (mapcar (lambda (e) (plist-get e :id)) jotain-lang-registry)))
+  (let ((ids (mapcar (lambda (e) (plist-get e :id)) my-lang-registry)))
     (should (equal ids (seq-uniq ids)))))
 
 (ert-deftest lang-eval-test-owning-files-exist ()
   "Every entry's :file is a real lisp/ module."
-  (dolist (e jotain-lang-registry)
+  (dolist (e my-lang-registry)
     (should (file-exists-p (lang-eval-test--file (concat "lisp/" (plist-get e :file)))))))
 
 ;;;; Drift: registry vs. config source text
 
 (ert-deftest lang-eval-test-override-servers-present ()
   "Each :override language's server appears in init-prog.el's server-programs.
-These are the servers Jotain sets explicitly (not eglot built-ins), so a
+These are the servers the configuration sets explicitly (not eglot built-ins), so a
 removed override must fail here."
   (let ((prog (lang-eval-test--contents "lisp/init-prog.el")))
-    (dolist (e jotain-lang-registry)
+    (dolist (e my-lang-registry)
       (when (plist-get e :override)
         (let ((servers (plist-get e :servers)))
           (should
@@ -93,11 +93,11 @@ removed override must fail here."
 
 (ert-deftest lang-eval-test-override-formatters-present ()
   "apheleia formatter overrides declared in the registry appear in init-prog.el.
-Only the formatters Jotain adds itself are checked; apheleia built-ins
+Only the formatters the configuration adds itself are checked; apheleia built-ins
 (ruff/prettier/rustfmt/clang-format) are not in our source."
   (let ((prog (lang-eval-test--contents "lisp/init-prog.el"))
         (ours '("meson" "zig" "goimports" "buildifier" "nixfmt" "qmlformat")))
-    (dolist (e jotain-lang-registry)
+    (dolist (e my-lang-registry)
       (let ((f (plist-get e :formatter)))
         (when (and f (member f ours))
           (should (string-search f prog)))))))
@@ -107,7 +107,7 @@ Only the formatters Jotain adds itself are checked; apheleia built-ins
 Catches a language module that stops registering its major mode, and the
 tree-sitter routing table in init-prog.el for remapped languages."
   (let ((prog (lang-eval-test--contents "lisp/init-prog.el")))
-    (dolist (e jotain-lang-registry)
+    (dolist (e my-lang-registry)
       (unless (plist-get e :skip-mode)
         (let* ((own (lang-eval-test--contents (concat "lisp/" (plist-get e :file))))
                (mode (symbol-name (plist-get e :mode)))
@@ -119,9 +119,9 @@ tree-sitter routing table in init-prog.el for remapped languages."
                                        (string-search classic prog))))))))))
 
 (ert-deftest lang-eval-test-snippet-flag-matches-templates ()
-  "The :snippets flag agrees exactly with templates/jotain.eld section headers."
+  "The :snippets flag agrees exactly with templates/default.eld section headers."
   (let ((sections (lang-eval-test--snippet-modes)))
-    (dolist (e jotain-lang-registry)
+    (dolist (e my-lang-registry)
       (let ((declared (and (plist-get e :snippets) t))
             (present (and (memq (plist-get e :mode) sections) t)))
         (should (eq declared present))))))
@@ -129,13 +129,13 @@ tree-sitter routing table in init-prog.el for remapped languages."
 (ert-deftest lang-eval-test-inlay-modes-listed ()
   "Each :inlay entry's mode is named in init-prog.el's inlay opt-in list."
   (let ((prog (lang-eval-test--contents "lisp/init-prog.el")))
-    (dolist (e jotain-lang-registry)
+    (dolist (e my-lang-registry)
       (when (plist-get e :inlay)
         (should (string-search (symbol-name (plist-get e :mode)) prog))))))
 
 (ert-deftest lang-eval-test-live-subset-has-servers ()
   "Every live-probe language declares at least one LSP server to probe."
-  (dolist (e jotain-lang-registry)
+  (dolist (e my-lang-registry)
     (when (plist-get e :live)
       (should (plist-get e :servers)))))
 

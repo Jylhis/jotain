@@ -1,4 +1,4 @@
-;;; jotain-lang-registry.el --- Declarative per-language feature standard -*- lexical-binding: t; -*-
+;;; my-lang-registry.el --- Declarative per-language feature standard -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 
@@ -10,11 +10,11 @@
 ;;
 ;; Readers:
 ;;
-;;   • `jotain-lang-eval.el' (Tier-1) loads the config and compares the
+;;   • `my-lang-eval.el' (Tier-1) loads the config and compares the
 ;;     live wiring with each entry, then renders the capability matrix.
-;;   • `jotain-lang-live.el' (Tier-2) starts a real eglot session for each
+;;   • `my-lang-live.el' (Tier-2) starts a real eglot session for each
 ;;     `:live' entry whose server is on PATH.
-;;   • `jotain-lang-doc.el' renders docs/reference/language-support.mdx.
+;;   • `my-lang-doc.el' renders docs/reference/language-support.mdx.
 ;;   • test/lang-eval-test.el checks the table's consistency and
 ;;     cross-checks it against the source text of init-prog.el and the
 ;;     init-lang-*.el files, so drift fails the ERT suite.
@@ -26,7 +26,7 @@
 
 ;;; Code:
 
-(defconst jotain-lang-registry
+(defconst my-lang-registry
   ;; Each entry is a plist.  Required keys:
   ;;   :id          symbol, stable identifier (and fixture directory name)
   ;;   :name        display string for the matrix
@@ -44,7 +44,7 @@
   ;;                strictly; built-in defaults are only advisory.
   ;;   :formatter   apheleia formatter binary, or nil
   ;;   :dape        DAP adapter binary label (dlv/debugpy/codelldb), or nil
-  ;;   :snippets    t when templates/jotain.eld has a section for :mode
+  ;;   :snippets    t when templates/default.eld has a section for :mode
   ;;   :inlay       t when :mode is in init-prog's inlay-hints opt-in list
   ;;   :live        t to include in the Tier-2 live LSP probe subset
   ;;   :skip-mode   t to skip strict mode-routing assertions (content- or
@@ -173,29 +173,29 @@
      :formatter "buildifier" :skip-mode t)
 
     (:id structurizr :name "Structurizr DSL" :file "init-lang-devops.el"
-     :sample "eval.dsl"            :mode jotain-structurizr-mode :grammar nil)
+     :sample "eval.dsl"            :mode my-structurizr-mode :grammar nil)
 
     (:id jinja2     :name "Jinja2"         :file "init-lang-data.el"
      :sample "eval.j2"             :mode jinja2-mode :grammar nil)
 
     (:id just       :name "Just"           :file "init-lang-devops.el"
      :sample "justfile"            :mode just-ts-mode :grammar just :skip-mode t))
-  "The per-language feature standard read by the Jotain language evaluation.
+  "The per-language feature standard read by the language evaluation.
 See the Commentary and the inline key documentation for the plist shape.")
 
 ;;;; Accessors
 
-(defun jotain-lang-get (entry key &optional default)
+(defun my-lang-get (entry key &optional default)
   "Return KEY from registry ENTRY, or DEFAULT (nil) when absent."
   (if (plist-member entry key) (plist-get entry key) default))
 
-(defun jotain-lang-entry (id)
+(defun my-lang-entry (id)
   "Return the registry entry whose :id is ID, or nil."
-  (seq-find (lambda (e) (eq (plist-get e :id) id)) jotain-lang-registry))
+  (seq-find (lambda (e) (eq (plist-get e :id) id)) my-lang-registry))
 
-(defun jotain-lang-live-entries ()
+(defun my-lang-live-entries ()
   "Return the registry entries flagged for the Tier-2 live probe."
-  (seq-filter (lambda (e) (jotain-lang-get e :live)) jotain-lang-registry))
+  (seq-filter (lambda (e) (my-lang-get e :live)) my-lang-registry))
 
-(provide 'jotain-lang-registry)
-;;; jotain-lang-registry.el ends here
+(provide 'my-lang-registry)
+;;; my-lang-registry.el ends here

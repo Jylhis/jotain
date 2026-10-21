@@ -120,9 +120,9 @@ libgccjit IR → GCC optimizer → .eln shared object`
   the last entry is the system eln dir.
 - This repo redirects the writable head to `var/eln-cache/` in
   `early-init.el` via `startup-redirect-eln-cache` (which `setcar`s the
-  list), and *appends* `JOTAIN_ELN_PATH`, the store-resident AOT `.eln`s
+  list), and *appends* `EMACS_CONFIG_ELN_PATH`, the store-resident AOT `.eln`s
   for this config built by `nix/config-compiled.nix` when
-  `services.jotain.nativeCompile.enable` is on. Append, never prepend: the
+  `services.emacsConfig.nativeCompile.enable` is on. Append, never prepend: the
   head must stay the writable cache.
 - Per-ABI subdirectory `comp-native-version-dir`, `emacs-version "-"
   comp-abi-hash` (e.g. `31.1-305e932a/`). `comp-abi-hash` is an 8-char

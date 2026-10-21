@@ -1,18 +1,18 @@
-# module-system.nix — NixOS / nix-darwin module for Jotain Emacs.
+# module-system.nix — NixOS / nix-darwin module for the configured Emacs.
 #
-# Applies the overlay and adds Jotain Emacs to environment.systemPackages;
+# Applies the overlay and adds the configured Emacs to environment.systemPackages;
 # one file serves both NixOS and nix-darwin. For a per-user daemon, use
 # the Home Manager module (module.nix).
 #
 # Usage in NixOS:
 #
-#   imports = [ jotain.nixosModules.default ];
-#   services.jotain.enable = true;
+#   imports = [ emacs-config.nixosModules.default ];
+#   services.emacsConfig.enable = true;
 #
 # Usage in nix-darwin:
 #
-#   imports = [ jotain.darwinModules.default ];
-#   services.jotain.enable = true;
+#   imports = [ emacs-config.darwinModules.default ];
+#   services.emacsConfig.enable = true;
 args@{
   config,
   lib,
@@ -20,10 +20,10 @@ args@{
   ...
 }:
 let
-  cfg = config.services.jotain;
-  jotainOverlay = args.jotainOverlay or (import ./overlay.nix);
-  pkgsWithOverlay = pkgs.extend jotainOverlay;
-  selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.jotainEmacsPackages;
+  cfg = config.services.emacsConfig;
+  emacsConfigOverlay = args.emacsConfigOverlay or (import ./overlay.nix);
+  pkgsWithOverlay = pkgs.extend emacsConfigOverlay;
+  selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.emacsConfigPackages;
 
   # Shared runtime binaries plus the opt-in tools (mirrors module.nix).
   runtimeDeps =
@@ -47,7 +47,7 @@ let
   };
 
   # VISUAL: GUI emacsclient frame.
-  visualScript = pkgs.writeShellScriptBin "jotain-visual" ''
+  visualScript = pkgs.writeShellScriptBin "emacs-config-visual" ''
     exec ${lib.getBin wrappedPackage}/bin/emacsclient \
       --create-frame \
       --alternate-editor=${lib.getBin wrappedPackage}/bin/emacs \
@@ -56,16 +56,16 @@ let
   '';
 in
 {
-  options.services.jotain = {
-    enable = lib.mkEnableOption "the Jotain Emacs configuration";
+  options.services.emacsConfig = {
+    enable = lib.mkEnableOption "the Emacs configuration";
 
     package = lib.mkOption {
       type = lib.types.nullOr lib.types.package;
       default = null;
       defaultText = lib.literalExpression "null";
       description = ''
-        Custom Jotain Emacs package to use. Leave unset for the full
-        distribution (`jotainEmacsPackages`).
+        Custom Emacs package to use. Leave unset for the full
+        distribution (`emacsConfigPackages`).
       '';
     };
 
@@ -81,7 +81,7 @@ in
     };
 
     sonarlint = {
-      enable = lib.mkEnableOption "SonarLint language server ({command}`M-x jotain-sonarlint`)";
+      enable = lib.mkEnableOption "SonarLint language server ({command}`M-x my-sonarlint`)";
     };
 
     devenv = {
@@ -142,7 +142,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    nixpkgs.overlays = [ jotainOverlay ];
+    nixpkgs.overlays = [ emacsConfigOverlay ];
     environment.systemPackages = [
       wrappedPackage
       editorScript
@@ -159,8 +159,8 @@ in
       pkgs.noto-fonts-color-emoji
     ];
     environment.variables = lib.mkIf cfg.defaultEditor {
-      EDITOR = lib.mkOverride 900 "${lib.getBin editorScript}/bin/jotain-editor";
-      VISUAL = lib.mkOverride 900 "${lib.getBin visualScript}/bin/jotain-visual";
+      EDITOR = lib.mkOverride 900 "${lib.getBin editorScript}/bin/emacs-config-editor";
+      VISUAL = lib.mkOverride 900 "${lib.getBin visualScript}/bin/emacs-config-visual";
     };
   };
 }

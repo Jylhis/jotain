@@ -7,7 +7,7 @@
 ;;   claude-code-ide  C-c q         Agentic editing — autonomous multi-file
 ;;                                  changes via the Claude Code CLI.
 ;;
-;;   jotain-screenshot              Capture the frame to var/screenshots/;
+;;   my-screenshot              Capture the frame to var/screenshots/;
 ;;                                  also the `emacs_screenshot' MCP tool,
 ;;                                  so Claude can see Emacs.
 ;;
@@ -27,11 +27,11 @@
 ;;
 ;; Auth: API keys (OPENROUTER_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY)
 ;; come from the environment, falling back to auth-source (1Password via
-;; init-systems.el, or authinfo files from `services.jotain.authSources').
+;; init-systems.el, or authinfo files from `services.emacsConfig.authSources').
 ;; The eca server reads keys only from its environment, so
-;; `jotain-ai-export-api-keys' exports missing ones from auth-source before
+;; `my-ai-export-api-keys' exports missing ones from auth-source before
 ;; a session starts.  Its OpenRouter provider is config/eca/config.json
-;; (opt-in via services.jotain.eca.openrouter.enable in Home Manager).
+;; (opt-in via services.emacsConfig.eca.openrouter.enable in Home Manager).
 
 ;;; Code:
 
@@ -40,25 +40,25 @@
 ;; `x-export-frames' needs a cairo build (Linux X11/pgtk), not noGui or NS.
 
 (declare-function x-export-frames "xfns.c" (&optional frames type))
-(declare-function jotain-var-file "init-core" (name))
+(declare-function my-var-file "init-core" (name))
 (declare-function auth-source-pick-first-password "auth-source" (&rest spec))
 
-(defun jotain-screenshot (&optional file format)
+(defun my-screenshot (&optional file format)
   "Capture the selected frame to FILE; return the absolute path.
 FORMAT is one of the symbols `png' (default), `svg' or `pdf'.
 FILE defaults to var/screenshots/<timestamp>.<format> under
-`jotain-var-dir'.  Signals `user-error' on tty frames and on
+`my-var-dir'.  Signals `user-error' on tty frames and on
 builds without `x-export-frames' (noGui, macOS NS).
 Interactively, echo the path and push it onto the kill ring."
   (interactive)
   (unless (display-graphic-p)
-    (user-error "jotain-screenshot needs a graphical frame"))
+    (user-error "my-screenshot needs a graphical frame"))
   (unless (fboundp 'x-export-frames)
     (user-error "x-export-frames unavailable — needs a cairo build (Linux X11/pgtk)"))
   (let* ((format (or format 'png))
          (file (expand-file-name
                 (or file
-                    (jotain-var-file
+                    (my-var-file
                      (format "screenshots/%s.%s"
                              (format-time-string "%Y%m%dT%H%M%S") format))))))
     (make-directory (file-name-directory file) t)
@@ -91,23 +91,23 @@ Interactively, echo the path and push it onto the kill ring."
      :args '((:name "format" :type string :enum ["png" "svg" "pdf"]
               :optional t :description "Image format; default png"))
      :function (lambda (&optional format)
-                 (jotain-screenshot nil (and format (intern format)))))))
+                 (my-screenshot nil (and format (intern format)))))))
 
-(defvar jotain-ai-provider-auth-keys
+(defvar my-ai-provider-auth-keys
   '(("OPENROUTER_API_KEY" "openrouter.ai" "apikey")
     ("ANTHROPIC_API_KEY" "api.anthropic.com" "apikey")
     ("GEMINI_API_KEY" "generativelanguage.googleapis.com" "apikey"))
   "Provider API-key env vars and their auth-source lookup, as (VAR HOST USER).
-Read by `jotain-ai-export-api-keys'.")
+Read by `my-ai-export-api-keys'.")
 
-(defun jotain-ai-export-api-keys ()
+(defun my-ai-export-api-keys ()
   "Export any missing provider API key from auth-source into the environment.
-For each unset variable in `jotain-ai-provider-auth-keys', look the
+For each unset variable in `my-ai-provider-auth-keys', look the
 secret up by host and user and `setenv' it, so subprocesses such as the
 eca server inherit it.  Set variables are left alone; missing secrets
 are skipped."
   (require 'auth-source)
-  (dolist (entry jotain-ai-provider-auth-keys)
+  (dolist (entry my-ai-provider-auth-keys)
     (pcase-let ((`(,var ,host ,user) entry))
       (unless (getenv var)
         (when-let* ((secret (auth-source-pick-first-password
@@ -123,7 +123,7 @@ are skipped."
   :defer t
   :bind ("C-c e" . eca)
   :init
-  (advice-add 'eca :before #'jotain-ai-export-api-keys))
+  (advice-add 'eca :before #'my-ai-export-api-keys))
 
 ;;; @doc Conversational LLM front-end. The default backend is OpenRouter,
 ;;; an OpenAI-compatible aggregator (Claude, GPT, Gemini, DeepSeek, Qwen,

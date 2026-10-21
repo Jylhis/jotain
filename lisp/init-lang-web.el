@@ -4,7 +4,7 @@
 
 ;; Web frontend modes: TypeScript/TSX, JavaScript, HTML, CSS/SCSS, and
 ;; `web-mode' for HTML templating languages.  JSON routes to
-;; `json-ts-mode' through `jotain-prog-ts-remaps', and all eglot wiring
+;; `json-ts-mode' through `my-prog-ts-remaps', and all eglot wiring
 ;; lives in `init-prog.el'.
 
 ;;; Code:

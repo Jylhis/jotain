@@ -8,7 +8,7 @@
 
 ;;; Code:
 
-;;; @doc Built-in directory editor, Jotain's primary file manager. On
+;;; @doc Built-in directory editor, the configuration's primary file manager. On
 ;;; macOS it uses GNU `gls` when available, since BSD ls lacks
 ;;; `--group-directories-first` and `--dired`. `M-s R` previews a regex
 ;;; replacement across the marked files as a unified diff. `!`/`&`
@@ -189,7 +189,7 @@
   :config (winner-mode 1))
 
 (declare-function winner-undo "winner")
-(defun jotain-nav-toggle-delete-other-windows ()
+(defun my-nav-toggle-delete-other-windows ()
   "Delete other windows, or restore the previous layout.
 If only one window is visible and `winner-mode' has a previous
 configuration, undo the deletion instead."
@@ -198,7 +198,7 @@ configuration, undo the deletion instead."
       (winner-undo)
     (delete-other-windows)))
 
-(keymap-global-set "C-x 1" #'jotain-nav-toggle-delete-other-windows)
+(keymap-global-set "C-x 1" #'my-nav-toggle-delete-other-windows)
 
 (provide 'init-navigation)
 ;;; init-navigation.el ends here

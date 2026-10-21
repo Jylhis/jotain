@@ -14,8 +14,8 @@ test:
     refs=()
     while read -r n; do refs+=("checks.${system}.${n}"); done < <(
         nix eval --json -f . "checks.${system}" --apply builtins.attrNames \
-        | jq -r '.[] | select(startswith("jotain-"))')
-    [ "${#refs[@]}" -gt 0 ] || { echo "FAIL: no jotain-* checks registered yet"; exit 1; }
+        | jq -r '.[] | select(startswith("emacs-"))')
+    [ "${#refs[@]}" -gt 0 ] || { echo "FAIL: no emacs-* checks registered yet"; exit 1; }
     nix build --no-link -f . "${refs[@]}"
 
 # Regenerate docs/configuration/package-reference.mdx from the ;;; @doc
@@ -26,20 +26,20 @@ docs-refresh-packages:
     set -euo pipefail
     cd "{{ repo }}"
     out=$(nix build --no-link --print-out-paths --impure --expr '
-      (import ./nix/inputs.nix { }).jotain.packages.${builtins.currentSystem}.packages-doc')
+      (import ./nix/inputs.nix { }).emacs-config.packages.${builtins.currentSystem}.packages-doc')
     cp "$out/package-reference.mdx" lib/emacs/docs/configuration/package-reference.mdx
     echo "Refreshed lib/emacs/docs/configuration/package-reference.mdx"
 
 # Re-vendor website/public/ds from the pinned jylhis/design rev
-# (the fix for a failing jotain-ds-in-sync gate).
+# (the fix for a failing emacs-ds-in-sync gate).
 [group('pins')]
 ds-sync:
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{ repo }}"
     out=$(nix-build --no-out-link -E '
-      let jotain = (import ./nix/inputs.nix { }).jotain;
-      in jotain.packages.${builtins.currentSystem}.ds-assets')
+      let emacs-config = (import ./nix/inputs.nix { }).emacs-config;
+      in emacs-config.packages.${builtins.currentSystem}.ds-assets')
     # Wipe first so files dropped upstream do not linger.
     rm -rf lib/emacs/website/public/ds
     mkdir -p lib/emacs/website/public/ds

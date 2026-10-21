@@ -12,12 +12,12 @@
 
 ;;; Code:
 
-(declare-function jotain-eglot-set-workspace-config "init-prog" (key settings))
+(declare-function my-eglot-set-workspace-config "init-prog" (key settings))
 
 ;; gopls only emits inlay hints for the kinds enabled here; init-prog
 ;; turns on `eglot-inlay-hints-mode' to show them.  `gofumpt' stays nil
 ;; so gopls agrees with the goimports formatter apheleia runs on save.
-(jotain-eglot-set-workspace-config
+(my-eglot-set-workspace-config
  :gopls
  '(:usePlaceholders t
    :completeUnimported t

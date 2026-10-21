@@ -20,7 +20,7 @@ These are the owner's stated requirements. They are inputs, not conclusions.
 | # | Requirement |
 | --- | --- |
 | R1 | Completion pops up **automatically in code**, and **only on request in prose** (text/org/markdown/commit buffers). |
-| R2 | **TAB indents. Only.** TAB never triggers completion. *(Superseded 2026-09-04 — TAB now indents **and** completes; see §7. Restore with `jotain-completion-free-tab`.)* |
+| R2 | **TAB indents. Only.** TAB never triggers completion. *(Superseded 2026-09-04 — TAB now indents **and** completes; see §7. Restore with `my-completion-free-tab`.)* |
 | R3 | A **separate, explicit key** drives the snippet + completion chain. |
 | R4 | **RET never accepts a completion.** Enter inserts a newline, always. |
 | R5 | Sources that matter: **eglot (LSP)**, **dabbrev/file**, **tempel snippets**, **history/abbrev/spelling**. AI inline suggestions are **surveyed only** — no adoption decision. |
@@ -232,7 +232,7 @@ snippet capf with eglot's. Tempel is non-exclusive but eglot is not, so the
 merged capf inherited eglot's exclusivity — meaning **`cape-dabbrev`, `cape-file`
 and `cape-keyword` never ran in any LSP buffer.** They were configured and dead.
 The implementation wraps the merged capf in `cape-capf-nonexclusive`, gated by
-`jotain-completion-eglot-nonexclusive`.
+`my-completion-eglot-nonexclusive`.
 
 **Fact 4 bounds a residual weakness**, which the merge happens to mitigate. A
 non-exclusive capf loses candidates a non-prefix pattern would have matched. For
@@ -312,39 +312,39 @@ gathered nothing on opt-out idioms across two rounds — neither the Elisp manua
 normative guidance nor any real-world config (research §6.6). Rather than invent an
 evidence claim, this section follows the pattern already established in `lisp/`:
 
-- a `defgroup jotain-<area>` (`jotain-ui`, `jotain-writing`, `jotain-vc`,
-  `jotain-devops`);
-- boolean or list `defcustom jotain-<area>-<knob>` toggles with `:type` and
-  `:group` (`jotain-prog-warn-non-ts-mode`, `jotain-prog-enable-risky-js-lsp`,
-  `jotain-prog-warn-non-ts-exclude`);
+- a `defgroup my-<area>` (`my-ui`, `my-writing`, `my-vc`,
+  `my-devops`);
+- boolean or list `defcustom my-<area>-<knob>` toggles with `:type` and
+  `:group` (`my-prog-warn-non-ts-mode`, `my-prog-enable-risky-js-lsp`,
+  `my-prog-warn-non-ts-exclude`);
 - set with `setopt`, per the repo rule.
 
 ### 3.2 Proposed knobs
 
-All under a new `(defgroup jotain-completion nil … :group 'convenience)` in
+All under a new `(defgroup my-completion nil … :group 'convenience)` in
 `lisp/init-completion.el`.
 
 | Option | Default | Disables |
 | --- | --- | --- |
-| `jotain-completion-auto-modes` | `'(prog-mode-hook)` | Auto-popup. `nil` ⇒ manual-only **everywhere**, including code. Add hooks to extend auto-popup to more modes. |
-| `jotain-completion-auto-delay` | `0.1` | — (tuning; see §2.1 on the absence of evidence) |
-| `jotain-completion-auto-prefix` | `2` | — (tuning) |
-| `jotain-completion-free-return` | `t` | `nil` ⇒ restore corfu's default `RET` = `corfu-insert`. |
-| `jotain-completion-free-tab` | `t` | `nil` ⇒ restore corfu's default `TAB` = `corfu-complete`. |
-| `jotain-completion-eglot-nonexclusive` | `t` | `nil` ⇒ leave the LSP capf exclusive, so the cape fallbacks stay suppressed in LSP buffers (see §2.4). |
-| `jotain-completion-key` | `"C-M-i"` | The chain key. `nil` ⇒ bind nothing, leaving the stock global binding intact. |
-| `jotain-completion-fallbacks` | `t` | `nil` ⇒ omit `cape-dabbrev` / `cape-file` / `cape-keyword` from the global capf list. |
-| `jotain-completion-snippets` | `t` | `nil` ⇒ do not add any tempel capf (`M-+`/`M-*` still work). |
+| `my-completion-auto-modes` | `'(prog-mode-hook)` | Auto-popup. `nil` ⇒ manual-only **everywhere**, including code. Add hooks to extend auto-popup to more modes. |
+| `my-completion-auto-delay` | `0.1` | — (tuning; see §2.1 on the absence of evidence) |
+| `my-completion-auto-prefix` | `2` | — (tuning) |
+| `my-completion-free-return` | `t` | `nil` ⇒ restore corfu's default `RET` = `corfu-insert`. |
+| `my-completion-free-tab` | `t` | `nil` ⇒ restore corfu's default `TAB` = `corfu-complete`. |
+| `my-completion-eglot-nonexclusive` | `t` | `nil` ⇒ leave the LSP capf exclusive, so the cape fallbacks stay suppressed in LSP buffers (see §2.4). |
+| `my-completion-key` | `"C-M-i"` | The chain key. `nil` ⇒ bind nothing, leaving the stock global binding intact. |
+| `my-completion-fallbacks` | `t` | `nil` ⇒ omit `cape-dabbrev` / `cape-file` / `cape-keyword` from the global capf list. |
+| `my-completion-snippets` | `t` | `nil` ⇒ do not add any tempel capf (`M-+`/`M-*` still work). |
 
 **Granularity rule:** every knob disables exactly one mechanism, and `nil` always
 means "behave as stock Emacs/corfu would". No knob silently re-enables another.
 
 **Substitution, recorded:** the ninth knob was originally
-`jotain-completion-snippet-tab`, gating the `TAB` field-navigation exception.
+`my-completion-snippet-tab`, gating the `TAB` field-navigation exception.
 That exception no longer exists (§2.2), so the knob would have gated nothing —
 and its `nil` branch would have meant "restore a binding upstream never had",
 violating the rule above. It is replaced by
-`jotain-completion-eglot-nonexclusive`, which gates a mechanism the
+`my-completion-eglot-nonexclusive`, which gates a mechanism the
 implementation genuinely adds and which the original table omitted. The count is
 still nine.
 
@@ -352,7 +352,7 @@ still nine.
 
 This matters and cannot be papered over:
 
-- `jotain-completion-auto-modes`, `-snippets`, `-fallbacks` are read at **load
+- `my-completion-auto-modes`, `-snippets`, `-fallbacks` are read at **load
   time** (they add/remove hooks). Changing them needs a **restart**, or manual
   `remove-hook`.
 - `-auto-delay`, `-auto-prefix` are read **per keystroke** — immediate.
@@ -381,7 +381,7 @@ Documented for the user, because they cost nothing to support:
   persist across sessions by design. Opt-outs belong in the user's own init or in
   a machine-local file, not in Customize.
 
-An environment-variable opt-out (precedent: `JOTAIN_INFO_DIR`) is **deliberately
+An environment-variable opt-out (precedent: `EMACS_CONFIG_INFO_DIR`) is **deliberately
 not proposed**. That precedent exists for a value that must be readable before
 Lisp can discover it; completion behavior has no such constraint, and a defcustom
 is more discoverable.
@@ -397,7 +397,7 @@ Status for what landed).
 | --- | --- |
 | `lisp/init-completion.el`:276 | `tab-always-indent` `'complete` → `t`. |
 | `lisp/init-completion.el`:281-287 | `corfu-auto` `t` → `nil` globally; add `prog-mode-hook` opt-in. |
-| `lisp/init-completion.el` | New: `defgroup jotain-completion` + the §3.2 knobs; `keymap-unset` of `RET`/`TAB` in `corfu-map`; bind the chain key. |
+| `lisp/init-completion.el` | New: `defgroup my-completion` + the §3.2 knobs; `keymap-unset` of `RET`/`TAB` in `corfu-map`; bind the chain key. |
 | `lisp/init-snippets.el`:45-48 | Correct the comment's rationale (research §1.3); decide whether to keep the `cape-capf-super` merge and, if kept, whether to add a cache buster. |
 | `lisp/init-snippets.el`:51 | Consider `tempel-expand` (exact-match, no UI) for the buffer-local prog-mode capf instead of `tempel-complete`, per §2.4. |
 | `docs/` | Document the chain key and the opt-out table; regenerate the package reference if any `@doc` block changes. |
@@ -444,7 +444,7 @@ This is also what makes room for 6.4 — with corfu contributing no inline text,
 the ghost text is the sole inline surface.
 
 **6.2 The auto-popup timing moved onto corfu's documented defaults.**
-`jotain-completion-auto-delay` `0.1 → 0.2` and `jotain-completion-auto-prefix`
+`my-completion-auto-delay` `0.1 → 0.2` and `my-completion-auto-prefix`
 `2 → 3`. §2.1 flagged the old `0.1`/`2` as unmeasured folklore; corfu's own
 defaults are `0.2`/`3`, and its docstrings caution against sitting *below* them
 (load/flicker). With no measurement either way, the documented resting point is
@@ -454,14 +454,14 @@ keystroke. Still not "tuned" — just no longer below the values upstream warns
 about.
 
 **6.3 A documentation panel (`corfu-popupinfo`).** New knob
-`jotain-completion-doc-popup` (default `t`) enables `corfu-popupinfo-mode`, the
+`my-completion-doc-popup` (default `t`) enables `corfu-popupinfo-mode`, the
 bundled IDE-style detail panel, delay `(1.0 . 0.5)`. It binds only
 `M-t`/`M-h`/`M-g`/`C-M-v` — no collision with the freed RET/TAB or `M-n`/`M-p`.
 `corfu-echo` is the documented lighter fallback.
 
 **6.4 Inline ghost text (`completion-preview-mode`) — Finding 12(b), adopted.**
-New knob `jotain-completion-inline-preview` (default `t`) enables the built-in
-inline preview in `jotain-completion-auto-modes` — the *same* mode list as the
+New knob `my-completion-inline-preview` (default `t`) enables the built-in
+inline preview in `my-completion-auto-modes` — the *same* mode list as the
 auto-popup, so prose stays quiet (R1) and the minibuffer is never touched. It
 draws the top capf candidate as ghost text after point, the modern-editor feel.
 
@@ -486,7 +486,7 @@ two things batch tests cannot settle: whether ghost + popup together reads as
 integrated or busy, and whether the prefix-only ghost (preview keeps its own
 `'(basic)` style) ever disagrees jarringly with an orderless popup row. Both are
 structurally mitigated (`corfu-preview-current nil`, matched sorts) and behind a
-one-line opt-out (`jotain-completion-inline-preview`).
+one-line opt-out (`my-completion-inline-preview`).
 
 **6.6 Considered, not taken this round:** `corfu-preselect 'prompt` (marginal
 once auto-insert is gone), a buffer-local `orderless-literal-only`/`basic` style
@@ -532,7 +532,7 @@ text. `M-RET` and `M-i` stay as §6.4 left them.
 unbound, the preview map binds no RET). The owner kept R4 explicitly. Only TAB and
 `C-M-i` accept.
 
-**7.5 One knob, one meaning, `nil` = stricter core.** `jotain-completion-free-tab`
+**7.5 One knob, one meaning, `nil` = stricter core.** `my-completion-free-tab`
 flips default `t` → `nil`. Its meaning is unchanged ("non-nil ⇒ TAB never
 completes"); only the default moved, so setting it restores the whole §2.2 /
 2026-08 "TAB indents only" behaviour — `tab-always-indent` `t`, corfu's TAB

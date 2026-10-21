@@ -1,4 +1,4 @@
-;;; jotain-lang-live.el --- Tier-2 live LSP feature probe -*- lexical-binding: t; -*-
+;;; my-lang-live.el --- Tier-2 live LSP feature probe -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 
@@ -18,15 +18,15 @@
 ;;
 ;; Batch entry point (nix/lang-eval.nix):
 ;;   emacs --batch --init-directory=<writable config copy> \
-;;     -L <this dir> -l jotain-lang-live.el
-;; with JOTAIN_LANG_LIVE set, JOTAIN_LANG_EVAL_OUT naming the output dir,
-;; and JOTAIN_LANG_FIXTURES the fixtures directory.
+;;     -L <this dir> -l my-lang-live.el
+;; with EMACS_CONFIG_LANG_LIVE set, EMACS_CONFIG_LANG_EVAL_OUT naming the output dir,
+;; and EMACS_CONFIG_LANG_FIXTURES the fixtures directory.
 ;;
-;; Outside lisp/ and test/ on purpose (see jotain-lang-registry.el).
+;; Outside lisp/ and test/ on purpose (see my-lang-registry.el).
 
 ;;; Code:
 
-(require 'jotain-lang-registry)
+(require 'my-lang-registry)
 (require 'eglot)
 (require 'project)
 (require 'flymake)
@@ -34,10 +34,10 @@
 (require 'seq)
 (require 'subr-x)
 
-(defvar jotain-lang-live-connect-timeout 45
+(defvar my-lang-live-connect-timeout 45
   "Seconds to wait for an eglot session to negotiate capabilities.")
 
-(defconst jotain-lang-live-features
+(defconst my-lang-live-features
   '((completion . :completionProvider)
     (hover      . :hoverProvider)
     (definition . :definitionProvider)
@@ -49,7 +49,7 @@
 
 ;;;; Helpers
 
-(defun jotain-lang-live--wait (pred timeout)
+(defun my-lang-live--wait (pred timeout)
   "Pump process output until PRED returns non-nil or TIMEOUT seconds elapse."
   (let ((deadline (+ (float-time) timeout)))
     (catch 'done
@@ -58,20 +58,20 @@
         (accept-process-output nil 0.1))
       nil)))
 
-(defun jotain-lang-live--fixture-root (entry fixtures)
+(defun my-lang-live--fixture-root (entry fixtures)
   "Copy ENTRY's fixture from FIXTURES to a temp dir and git-init it.
 Return the temp directory, or nil when the fixture is missing."
   (let ((src (file-name-as-directory
               (expand-file-name (symbol-name (plist-get entry :id)) fixtures))))
     (when (file-directory-p src)
-      (let ((dst (file-name-as-directory (make-temp-file "jotain-live-" t))))
+      (let ((dst (file-name-as-directory (make-temp-file "my-live-" t))))
         (copy-directory src dst t t t)
         (let ((default-directory dst))
           (ignore-errors (call-process "git" nil nil nil "init" "-q"))
           (ignore-errors (call-process "git" nil nil nil "add" "-A")))
         dst))))
 
-(defun jotain-lang-live--completion-works-p ()
+(defun my-lang-live--completion-works-p ()
   "Return non-nil when an eglot completion request yields candidates."
   (ignore-errors
     (goto-char (point-max))
@@ -83,7 +83,7 @@ Return the temp directory, or nil when the fixture is missing."
 
 ;;;; Per-language probe
 
-(defun jotain-lang-live--one (entry fixtures)
+(defun my-lang-live--one (entry fixtures)
   "Run the live probe for ENTRY using fixtures under FIXTURES."
   (let* ((name (plist-get entry :name))
          (servers (plist-get entry :servers))
@@ -92,7 +92,7 @@ Return the temp directory, or nil when the fixture is missing."
      ((not server)
       (list :name name :found nil))
      (t
-      (let ((root (jotain-lang-live--fixture-root entry fixtures)))
+      (let ((root (my-lang-live--fixture-root entry fixtures)))
         (if (not root)
             (list :name name :found server :error "fixture missing")
           (condition-case err
@@ -102,11 +102,11 @@ Return the temp directory, or nil when the fixture is missing."
                       (progn
                         (eglot-ensure)
                         (let ((connected
-                               (jotain-lang-live--wait
+                               (my-lang-live--wait
                                 (lambda ()
                                   (and (eglot-current-server)
                                        (eglot--server-capabilities (eglot-current-server))))
-                                jotain-lang-live-connect-timeout)))
+                                my-lang-live-connect-timeout)))
                           (if (not connected)
                               (list :name name :found server :connected nil)
                             (let* ((caps (eglot--server-capabilities (eglot-current-server)))
@@ -115,24 +115,24 @@ Return the temp directory, or nil when the fixture is missing."
                                             (cons (car cell)
                                                   (and (plist-member caps (cdr cell))
                                                        (plist-get caps (cdr cell)) t)))
-                                          jotain-lang-live-features)))
+                                          my-lang-live-features)))
                                 (list :name name :found server :connected t
                                       :features feat
                                       :diagnostics (and (memq 'eglot-flymake-backend
                                                               flymake-diagnostic-functions) t)
-                                      :completion-live (jotain-lang-live--completion-works-p))))))
+                                      :completion-live (my-lang-live--completion-works-p))))))
                     (ignore-errors (eglot-shutdown (eglot-current-server)))
                     (set-buffer-modified-p nil))))
             (error (list :name name :found server :error (error-message-string err))))))))))
 
-(defun jotain-lang-live-run (fixtures)
+(defun my-lang-live-run (fixtures)
   "Probe every live registry entry using fixtures under FIXTURES."
-  (mapcar (lambda (e) (jotain-lang-live--one e fixtures))
-          (jotain-lang-live-entries)))
+  (mapcar (lambda (e) (my-lang-live--one e fixtures))
+          (my-lang-live-entries)))
 
 ;;;; Rendering
 
-(defun jotain-lang-live--status (result feature)
+(defun my-lang-live--status (result feature)
   "Render RESULT's FEATURE status cell."
   (cond
    ((not (plist-get result :found)) "skip")
@@ -146,7 +146,7 @@ Return the temp directory, or nil when the fixture is missing."
       (cond ((and adv live) "✓") (adv "adv") (t "✗"))))
    (t (if (cdr (assq feature (plist-get result :features))) "✓" "✗"))))
 
-(defun jotain-lang-live--render-markdown (results)
+(defun my-lang-live--render-markdown (results)
   "Render RESULTS as a Markdown live-probe report."
   (let ((rows
          (mapconcat
@@ -159,13 +159,13 @@ Return the temp directory, or nil when the fixture is missing."
                       (plist-get r :name)
                       (or (plist-get r :found) "—")
                       conn
-                      (jotain-lang-live--status r 'completion)
-                      (jotain-lang-live--status r 'hover)
-                      (jotain-lang-live--status r 'definition)
-                      (jotain-lang-live--status r 'references)
-                      (jotain-lang-live--status r 'rename)
-                      (jotain-lang-live--status r 'format)
-                      (jotain-lang-live--status r 'diagnostics))))
+                      (my-lang-live--status r 'completion)
+                      (my-lang-live--status r 'hover)
+                      (my-lang-live--status r 'definition)
+                      (my-lang-live--status r 'references)
+                      (my-lang-live--status r 'rename)
+                      (my-lang-live--status r 'format)
+                      (my-lang-live--status r 'diagnostics))))
           results "\n")))
     (concat
      "# Live LSP probe results\n\n"
@@ -180,7 +180,7 @@ Return the temp directory, or nil when the fixture is missing."
      rows
      "\n")))
 
-(defun jotain-lang-live--json (results)
+(defun my-lang-live--json (results)
   "Render RESULTS as a pretty JSON array string."
   (require 'json)
   (let ((json-encoding-pretty-print t))
@@ -202,26 +202,26 @@ Return the temp directory, or nil when the fixture is missing."
 
 ;;;; Batch driver
 
-(defun jotain-lang-live-batch ()
-  "Run the live probe and write live.md + live.json to JOTAIN_LANG_EVAL_OUT."
-  (let* ((out (or (getenv "JOTAIN_LANG_EVAL_OUT")
-                  (error "JOTAIN_LANG_EVAL_OUT is not set")))
-         (fixtures (or (getenv "JOTAIN_LANG_FIXTURES")
+(defun my-lang-live-batch ()
+  "Run the live probe and write live.md + live.json to EMACS_CONFIG_LANG_EVAL_OUT."
+  (let* ((out (or (getenv "EMACS_CONFIG_LANG_EVAL_OUT")
+                  (error "EMACS_CONFIG_LANG_EVAL_OUT is not set")))
+         (fixtures (or (getenv "EMACS_CONFIG_LANG_FIXTURES")
                        (expand-file-name
                         "fixtures"
                         (file-name-directory
                          (or load-file-name buffer-file-name default-directory)))))
-         (results (jotain-lang-live-run fixtures)))
+         (results (my-lang-live-run fixtures)))
     (make-directory out t)
     (with-temp-file (expand-file-name "live.md" out)
-      (insert (jotain-lang-live--render-markdown results)))
+      (insert (my-lang-live--render-markdown results)))
     (with-temp-file (expand-file-name "live.json" out)
-      (insert (jotain-lang-live--json results)))
-    (message "jotain-lang-live: probed %d live languages -> %s" (length results) out)))
+      (insert (my-lang-live--json results)))
+    (message "my-lang-live: probed %d live languages -> %s" (length results) out)))
 
-(when (and noninteractive (getenv "JOTAIN_LANG_EVAL_OUT")
-           (getenv "JOTAIN_LANG_LIVE"))
-  (jotain-lang-live-batch))
+(when (and noninteractive (getenv "EMACS_CONFIG_LANG_EVAL_OUT")
+           (getenv "EMACS_CONFIG_LANG_LIVE"))
+  (my-lang-live-batch))
 
-(provide 'jotain-lang-live)
-;;; jotain-lang-live.el ends here
+(provide 'my-lang-live)
+;;; my-lang-live.el ends here

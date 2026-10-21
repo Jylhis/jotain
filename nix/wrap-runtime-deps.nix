@@ -1,4 +1,4 @@
-# nix/wrap-runtime-deps.nix: re-wrap a Jotain distribution with the
+# nix/wrap-runtime-deps.nix: re-wrap an Emacs configuration distribution with the
 # runtime binaries (nix/runtime-deps.nix) appended to PATH. Shared by
 # module-system.nix and module-nix-on-droid.nix.
 #
@@ -10,7 +10,7 @@
   package,
   runtimeDeps,
 }:
-pkgs.runCommand "${package.name or "jotain-emacs"}-with-runtime-deps"
+pkgs.runCommand "${package.name or "emacs-config"}-with-runtime-deps"
   {
     nativeBuildInputs = [
       # Top-level `lndir` only exists on recent nixpkgs; on older

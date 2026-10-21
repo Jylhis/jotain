@@ -1,15 +1,15 @@
-# module.nix — Home Manager module for the Jotain Emacs daemon.
+# module.nix — Home Manager module for the Emacs daemon.
 #
 # Import this module from your home-manager configuration and enable:
 #
-#   imports = [ /path/to/jotain/module.nix ];
+#   imports = [ /path/to/lib/emacs/module.nix ];
 #
-#   services.jotain = {
+#   services.emacsConfig = {
 #     enable = true;
 #     defaultEditor = true;
 #     client.enable = true;
 #     eca.openrouter.enable = true;   # eca OpenRouter provider (config.json)
-#     environmentFile = "/run/secrets/jotain-env";  # OPENROUTER_API_KEY=… etc.
+#     environmentFile = "/run/secrets/emacs-config-env";  # OPENROUTER_API_KEY=… etc.
 #   };
 #
 # Modelled after home-manager's services.emacs.
@@ -20,10 +20,10 @@ args@{
   ...
 }:
 let
-  cfg = config.services.jotain;
-  jotainOverlay = args.jotainOverlay or (import ./overlay.nix);
-  pkgsWithOverlay = pkgs.extend jotainOverlay;
-  selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.jotainEmacsPackages;
+  cfg = config.services.emacsConfig;
+  emacsConfigOverlay = args.emacsConfigOverlay or (import ./overlay.nix);
+  pkgsWithOverlay = pkgs.extend emacsConfigOverlay;
+  selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.emacsConfigPackages;
   inherit (pkgs.stdenv.hostPlatform) isLinux;
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
   startWithSession =
@@ -42,13 +42,13 @@ let
   socketPath = "${socketDir}/server";
 
   # Desktop entry for the Emacs client (adapted from upstream emacs.desktop).
-  clientDesktopItem = pkgs.writeTextDir "share/applications/jotain-client.desktop" (
+  clientDesktopItem = pkgs.writeTextDir "share/applications/emacs-config-client.desktop" (
     lib.generators.toINI { } {
       "Desktop Entry" = {
         Type = "Application";
         Exec = "${emacsBinPath}/emacsclient ${lib.concatStringsSep " " cfg.client.arguments} %F";
         Terminal = false;
-        Name = "Jotain Client";
+        Name = "Emacs Client (config)";
         Icon = "emacs";
         Comment = "Edit text";
         GenericName = "Text Editor";
@@ -70,7 +70,7 @@ let
   #
   # Same derivation as nix/checks.nix' `elisp-compile', so on the default
   # configuration `home-manager switch' substitutes CI's cachix artifact.
-  # A custom `services.jotain.package' or nixpkgs pin builds it locally.
+  # A custom `services.emacsConfig.package' or nixpkgs pin builds it locally.
   # `.core' is the inner emacsWithPackages result (see
   # nix/config-compiled.nix); the `or' covers a custom package.
   compiledConfig = import ./nix/config-compiled.nix {
@@ -99,7 +99,7 @@ let
   emojiFontPackages = lib.optional isLinux pkgs.noto-fonts-color-emoji;
 
   # Nerd Font glyphs for the icon stack. BlexMono is the first entry in
-  # `jotain-font-preferences' (lisp/init-ui.el); keep the two in step.
+  # `my-font-preferences' (lisp/init-ui.el); keep the two in step.
   iconFontPackages = [ pkgs.nerd-fonts.blex-mono ];
 
   runtimePath = lib.makeBinPath runtimeDeps;
@@ -109,19 +109,19 @@ let
   emacsWrapper = pkgs.writeShellScriptBin "emacs" ''
     export PATH=${runtimePath}''${PATH:+:$PATH}
     ${lib.optionalString cfg.nativeCompile.enable ''
-      export JOTAIN_ELN_PATH=${compiledConfig}/share/emacs/native-lisp
+      export EMACS_CONFIG_ELN_PATH=${compiledConfig}/share/emacs/native-lisp
     ''}
     exec ${emacsBinPath}/emacs --init-directory=${lib.escapeShellArg initDirectory} "$@"
   '';
 
   # EDITOR fallback without a daemon; via emacsWrapper to keep
   # --init-directory.
-  editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
+  editorFallback = pkgs.writeShellScript "emacs-config-editor-fallback" ''
     exec ${emacsWrapper}/bin/emacs -nw -- "$@"
   '';
 
   # EDITOR — terminal-friendly emacsclient (works over SSH, in git commit, etc.)
-  editorScript = pkgs.writeShellScriptBin "jotain-editor" ''
+  editorScript = pkgs.writeShellScriptBin "emacs-config-editor" ''
     exec ${lib.getBin selectedPackage}/bin/emacsclient \
       --tty \
       --alternate-editor=${editorFallback} \
@@ -130,7 +130,7 @@ let
   '';
 
   # VISUAL — opens a GUI emacsclient frame.
-  visualScript = pkgs.writeShellScriptBin "jotain-visual" ''
+  visualScript = pkgs.writeShellScriptBin "emacs-config-visual" ''
     exec ${lib.getBin selectedPackage}/bin/emacsclient \
       --create-frame \
       --alternate-editor=${emacsWrapper}/bin/emacs \
@@ -139,12 +139,12 @@ let
   '';
 
   # Home Manager prefixes user agent labels with "org.nix-community.home.".
-  launchdLabel = "org.nix-community.home.jotain";
+  launchdLabel = "org.nix-community.home.emacs-config";
   launchdPlist = "${config.home.homeDirectory}/Library/LaunchAgents/${launchdLabel}.plist";
 
-  # `jotctl <start|stop|status|restart|logs>`: drives the launchd agent on
+  # `emacsctl <start|stop|status|restart|logs>`: drives the launchd agent on
   # macOS or the systemd user service on Linux.
-  jotctlScript = pkgs.writeShellScriptBin "jotctl" (
+  emacsctlScript = pkgs.writeShellScriptBin "emacsctl" (
     if isDarwin then
       ''
         label=${launchdLabel}
@@ -157,20 +157,20 @@ let
           stop)    launchctl bootout "$target" ;;
           restart) launchctl kickstart -k "$target" ;;
           status)  launchctl print "$target" ;;
-          logs)    echo "macOS launchd does not capture Jotain stdout (no StandardOutPath set); showing launchd state:" >&2
+          logs)    echo "macOS launchd does not capture the daemon's stdout (no StandardOutPath set); showing launchd state:" >&2
                    launchctl print "$target" ;;
-          *) echo "usage: jotctl {start|stop|status|restart|logs}" >&2; exit 2 ;;
+          *) echo "usage: emacsctl {start|stop|status|restart|logs}" >&2; exit 2 ;;
         esac
       ''
     else
       ''
         case "''${1:-status}" in
-          start)   exec systemctl --user start jotain ;;
-          stop)    exec systemctl --user stop jotain ;;
-          restart) exec systemctl --user restart jotain ;;
-          status)  exec systemctl --user status jotain ;;
-          logs)    exec journalctl --user -u jotain -f ;;
-          *) echo "usage: jotctl {start|stop|status|restart|logs}" >&2; exit 2 ;;
+          start)   exec systemctl --user start emacs-config ;;
+          stop)    exec systemctl --user stop emacs-config ;;
+          restart) exec systemctl --user restart emacs-config ;;
+          status)  exec systemctl --user status emacs-config ;;
+          logs)    exec journalctl --user -u emacs-config -f ;;
+          *) echo "usage: emacsctl {start|stop|status|restart|logs}" >&2; exit 2 ;;
         esac
       ''
   );
@@ -182,35 +182,21 @@ let
   # `emd` foreground daemon, `em` terminal client, `emg` GUI client.
   shellAliasMap = {
     "${cfg.shellAliases.prefix}emd" = "${emacsWrapper}/bin/emacs --fg-daemon";
-    "${cfg.shellAliases.prefix}em" = "${lib.getBin editorScript}/bin/jotain-editor";
-    "${cfg.shellAliases.prefix}emg" = "${lib.getBin visualScript}/bin/jotain-visual";
+    "${cfg.shellAliases.prefix}em" = "${lib.getBin editorScript}/bin/emacs-config-editor";
+    "${cfg.shellAliases.prefix}emg" = "${lib.getBin visualScript}/bin/emacs-config-visual";
   };
 in
 {
-  imports = [
-    # Old spelling of eca.openrouter.enable (warns on use).
-    (lib.mkRenamedOptionModule
-      [ "services" "jotain" "openrouter" "enable" ]
-      [ "services" "jotain" "eca" "openrouter" "enable" ]
-    )
-    # The secrets file is daemon-wide, not eca-specific; keep the old
-    # path as an alias.
-    (lib.mkAliasOptionModule
-      [ "services" "jotain" "eca" "environmentFile" ]
-      [ "services" "jotain" "environmentFile" ]
-    )
-  ];
-
-  options.services.jotain = {
-    enable = lib.mkEnableOption "the Jotain Emacs daemon";
+  options.services.emacsConfig = {
+    enable = lib.mkEnableOption "the Emacs daemon";
 
     package = lib.mkOption {
       type = lib.types.nullOr lib.types.package;
       default = null;
       defaultText = lib.literalExpression "null";
       description = ''
-        Custom Jotain Emacs package to use. Leave unset for the full
-        distribution (`jotainEmacsPackages`: pgtk/Wayland GUI on Linux,
+        Custom Emacs package to use. Leave unset for the full
+        distribution (`emacsConfigPackages`: pgtk/Wayland GUI on Linux,
         patched NS GUI on Darwin).
       '';
     };
@@ -220,7 +206,7 @@ in
       default = false;
       example = true;
       description = ''
-        AOT native-compile the Jotain config into the store, so the
+        AOT native-compile the config into the store, so the
         daemon loads `.eln` for `init.el` and `lisp/` instead of
         JIT-compiling into `var/eln-cache` after every deploy that
         touches `lisp/` (which moves the store path and invalidates
@@ -250,7 +236,7 @@ in
     };
 
     client = {
-      enable = lib.mkEnableOption "generation of Jotain client desktop file";
+      enable = lib.mkEnableOption "generation of the Emacs client desktop file";
 
       arguments = lib.mkOption {
         type = with lib.types; listOf str;
@@ -262,16 +248,16 @@ in
     };
 
     socketActivation = {
-      enable = lib.mkEnableOption "systemd socket activation for the Jotain service";
+      enable = lib.mkEnableOption "systemd socket activation for the service";
     };
 
     startWithUserSession = lib.mkOption {
       type = with lib.types; either bool (enum [ "graphical" ]);
       default = !cfg.socketActivation.enable;
-      defaultText = lib.literalExpression "!config.services.jotain.socketActivation.enable";
+      defaultText = lib.literalExpression "!config.services.emacsConfig.socketActivation.enable";
       example = "graphical";
       description = ''
-        Whether to launch the Jotain service with the systemd user session.
+        Whether to launch the service with the systemd user session.
         If `true`, the service is started by `default.target`.
         If `"graphical"`, it is started by `graphical-session.target`.
       '';
@@ -291,10 +277,10 @@ in
     environmentFile = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
-      example = "/run/secrets/jotain-env";
+      example = "/run/secrets/emacs-config-env";
       description = ''
         Path to a {manpage}`systemd.exec(5)`-style environment file
-        (`VAR=value` lines) loaded into the Jotain daemon's environment
+        (`VAR=value` lines) loaded into the daemon's environment
         and inherited by every subprocess Emacs spawns. Use it for
         credentials read from the environment, such as gptel's
         {env}`OPENROUTER_API_KEY` / {env}`ANTHROPIC_API_KEY` /
@@ -304,8 +290,8 @@ in
         copied into the Nix store. On Linux it becomes the service's
         {var}`EnvironmentFile`; on macOS the launchd agent sources it
         before exec. For auth-source alternatives see
-        {option}`services.jotain.onePassword.enable` and
-        {option}`services.jotain.authSources`.
+        {option}`services.emacsConfig.onePassword.enable` and
+        {option}`services.emacsConfig.authSources`.
       '';
     };
 
@@ -317,7 +303,7 @@ in
         Extra authinfo/netrc file paths prepended to Emacs's
         {var}`auth-sources`, ahead of {file}`~/.authinfo(.gpg)`. Point them
         at runtime secret files (sops-nix, agenix, …); only the *paths*
-        reach the daemon, via the {env}`JOTAIN_AUTH_SOURCES` variable read
+        reach the daemon, via the {env}`EMACS_CONFIG_AUTH_SOURCES` variable read
         by lisp/init-systems.el. auth-source consumers (gptel,
         {command}`forge`, smtpmail, circe) then resolve credentials from
         them; the {command}`eca` server, which reads only its environment,
@@ -332,7 +318,7 @@ in
         for {command}`auth-source-1password` (lisp/init-systems.el) that
         resolves credentials for gptel, {command}`forge`, smtpmail, etc.
         from the vault when they are not supplied through
-        {option}`services.jotain.environmentFile`. Pulls the unfree
+        {option}`services.emacsConfig.environmentFile`. Pulls the unfree
         `_1password-cli` package, so it needs `allowUnfree`
       '';
     };
@@ -355,7 +341,7 @@ in
     };
 
     sonarlint = {
-      enable = lib.mkEnableOption "SonarLint language server ({command}`M-x jotain-sonarlint`)";
+      enable = lib.mkEnableOption "SonarLint language server ({command}`M-x my-sonarlint`)";
     };
 
     devenv = {
@@ -394,8 +380,8 @@ in
           Whether to install {file}`~/.config/eca/config.json` for the
           {command}`eca` server (the AI pair-programming backend in
           lisp/init-ai.el). Enabled automatically when
-          {option}`services.jotain.eca.openrouter.enable` is set or
-          {option}`services.jotain.eca.settings` is non-empty.
+          {option}`services.emacsConfig.eca.openrouter.enable` is set or
+          {option}`services.emacsConfig.eca.settings` is non-empty.
         '';
       };
 
@@ -406,7 +392,7 @@ in
         lisp/init-ai.el); the API key is read at runtime from
         {env}`OPENROUTER_API_KEY` via eca's `''${env:…}` interpolation, so
         no secret reaches the Nix store. Supply it through
-        {option}`services.jotain.environmentFile`. gptel defaults to
+        {option}`services.emacsConfig.environmentFile`. gptel defaults to
         OpenRouter regardless of this option
       '';
 
@@ -428,14 +414,14 @@ in
           OpenRouter provider (these values win). Any eca key is expressible
           (`providers`, `models`, `rules`, `mcpServers`, `behavior`, …). Use
           eca's `''${env:VAR}` syntax for secrets, supplied through
-          {option}`services.jotain.environmentFile`, so none reach the Nix
+          {option}`services.emacsConfig.environmentFile`, so none reach the Nix
           store.
         '';
       };
     };
 
     shellAliases = {
-      enable = lib.mkEnableOption "shell aliases for the Jotain daemon and clients";
+      enable = lib.mkEnableOption "shell aliases for the daemon and clients";
 
       prefix = lib.mkOption {
         type = lib.types.str;
@@ -458,13 +444,13 @@ in
     assertions = [
       {
         assertion = !cfg.socketActivation.enable || isLinux;
-        message = "services.jotain.socketActivation.enable is only supported on Linux/systemd.";
+        message = "services.emacsConfig.socketActivation.enable is only supported on Linux/systemd.";
       }
     ];
 
     home.sessionVariables = lib.mkIf cfg.defaultEditor {
-      EDITOR = "${lib.getBin editorScript}/bin/jotain-editor";
-      VISUAL = "${lib.getBin visualScript}/bin/jotain-visual";
+      EDITOR = "${lib.getBin editorScript}/bin/emacs-config-editor";
+      VISUAL = "${lib.getBin visualScript}/bin/emacs-config-visual";
     };
 
     programs = {
@@ -479,7 +465,7 @@ in
       selectedPackage
       editorScript
       visualScript
-      jotctlScript
+      emacsctlScript
       # hiPrio so the wrapped `emacs` shadows the unwrapped binary
       # that ships inside the selected package.
       (lib.hiPrio emacsWrapper)
@@ -512,10 +498,10 @@ in
       };
     };
 
-    systemd.user.services.jotain = lib.mkIf isLinux (
+    systemd.user.services.emacs-config = lib.mkIf isLinux (
       {
         Unit = {
-          Description = "Jotain Emacs text editor";
+          Description = "Emacs text editor";
           Documentation = "info:emacs man:emacs(1) https://gnu.org/software/emacs/";
 
           After = lib.optional (cfg.startWithUserSession == "graphical") "graphical-session.target";
@@ -548,7 +534,7 @@ in
           EnvironmentFile = cfg.environmentFile;
         }
         // lib.optionalAttrs (cfg.authSources != [ ]) {
-          Environment = [ "JOTAIN_AUTH_SOURCES=${lib.concatStringsSep ":" cfg.authSources}" ];
+          Environment = [ "EMACS_CONFIG_AUTH_SOURCES=${lib.concatStringsSep ":" cfg.authSources}" ];
         };
       }
       // lib.optionalAttrs startWithSession {
@@ -558,9 +544,9 @@ in
       }
     );
 
-    systemd.user.sockets.jotain = lib.mkIf (isLinux && cfg.socketActivation.enable) {
+    systemd.user.sockets.emacs-config = lib.mkIf (isLinux && cfg.socketActivation.enable) {
       Unit = {
-        Description = "Jotain Emacs text editor";
+        Description = "Emacs text editor";
         Documentation = "info:emacs man:emacs(1) https://gnu.org/software/emacs/";
       };
 
@@ -577,11 +563,11 @@ in
 
       Install = {
         WantedBy = [ "sockets.target" ];
-        RequiredBy = [ "jotain.service" ];
+        RequiredBy = [ "emacs-config.service" ];
       };
     };
 
-    launchd.agents.jotain = lib.mkIf isDarwin {
+    launchd.agents.emacs-config = lib.mkIf isDarwin {
       enable = true;
       config = {
         # launchd has no EnvironmentFile: source the file in a shell
@@ -606,7 +592,7 @@ in
         };
       }
       // lib.optionalAttrs (cfg.authSources != [ ]) {
-        EnvironmentVariables.JOTAIN_AUTH_SOURCES = lib.concatStringsSep ":" cfg.authSources;
+        EnvironmentVariables.EMACS_CONFIG_AUTH_SOURCES = lib.concatStringsSep ":" cfg.authSources;
       };
     };
   };

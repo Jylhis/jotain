@@ -11,7 +11,7 @@ Current suite:
   data, so the theme names can't drift from the design-system pin; the
   theme-file tests `skip-unless` the `jylhis-themes` package loads).
 - `test-org-babel.el`: Org Babel wiring, including the
-  `jotain-org-babel-confirm-evaluate` trust check.
+  `my-org-babel-confirm-evaluate` trust check.
 - `completion-test.el`: the in-buffer completion wiring.
 - `devenv-test.el`: the `devenv.el` integration library.
 - `lang-eval-test.el`: drift guard for the language-eval registry in

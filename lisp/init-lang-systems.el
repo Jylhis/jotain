@@ -4,7 +4,7 @@
 
 ;; Systems-language modes: C/C++, CUDA, CMake, Meson, Haskell, OCaml,
 ;; Dune, and Zig.  C/C++ open in `c-ts-mode'/`c++-ts-mode' via
-;; `jotain-prog-ts-remaps' (init-prog.el); cc-mode decides which
+;; `my-prog-ts-remaps' (init-prog.el); cc-mode decides which
 ;; extensions are C vs C++.  CUDA has no upstream tree-sitter mode, so
 ;; this file defines `cuda-ts-mode'.
 ;;
@@ -15,7 +15,7 @@
 
 ;;; @doc Built-in cc-mode, kept for its `auto-mode-alist' decisions and as
 ;;; the grammarless fallback. The `:mode' list decides which extensions
-;;; are C vs C++ (headers default to C++); `jotain-prog-ts-remaps'
+;;; are C vs C++ (headers default to C++); `my-prog-ts-remaps'
 ;;; (init-prog.el) then remaps `c-mode'/`c++-mode' to the tree-sitter
 ;;; modes when the grammar loads. `c-basic-offset'/`c-default-style'
 ;;; apply to the remaining cc-mode buffers (Java, AWK, and C/C++ without
@@ -40,7 +40,7 @@
          ("\\.txx\\'" . c++-mode)))
 
 ;;; @doc Built-in tree-sitter C/C++ modes, reached via
-;;; `jotain-prog-ts-remaps' (init-prog.el). Indent 4 to match cc-mode's
+;;; `my-prog-ts-remaps' (init-prog.el). Indent 4 to match cc-mode's
 ;;; `c-basic-offset'; style `k&r', the closest tree-sitter style to
 ;;; Stroustrup, which has no tree-sitter equivalent. clangd (eglot) and
 ;;; clang-format (apheleia) are wired in init-prog.el.
@@ -128,7 +128,7 @@ where the `<<<...>>>' launch syntax parses as an error node."
 (add-to-list 'auto-mode-alist '("\\.cuh\\'" . cuda-ts-mode))
 
 ;;; @doc CMake mode for CMakeLists.txt and `.cmake` files, the fallback
-;;; when `cmake-ts-mode` (via `jotain-prog-ts-remaps`) has no grammar.
+;;; when `cmake-ts-mode` (via `my-prog-ts-remaps`) has no grammar.
 (use-package cmake-mode
   :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
 

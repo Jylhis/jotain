@@ -1,5 +1,5 @@
 # nix/config-compiled.nix — Byte-compile (and optionally AOT
-# native-compile) the Jotain Elisp config.
+# native-compile) the Elisp config.
 #
 # One derivation, used by nix/checks.nix `elisp-compile' (the
 # warnings-as-errors gate) and module.nix `compiledConfig' (what the HM
@@ -10,7 +10,7 @@
 #   • the source is a `lib.fileset' of just the config's .el files;
 #   • callers pass `emacs = <distribution>.core', the inner
 #     emacsWithPackages result. The outer wrapper adds PATH, INFOPATH
-#     (→ jotainInfo → every `;;; @doc' block and docs/*.mdx page) and
+#     (→ emacsConfigInfo → every `;;; @doc' block and docs/*.mdx page) and
 #     ASPELL_CONF, none of which a batch byte-compile reads.
 {
   pkgs,
@@ -43,7 +43,7 @@ let
     ];
   };
 in
-pkgs.runCommand "jotain-config-compiled"
+pkgs.runCommand "emacs-config-config-compiled"
   {
     src = configSrc;
     nativeBuildInputs = [ emacs ];

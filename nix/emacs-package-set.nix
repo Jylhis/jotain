@@ -8,7 +8,7 @@
 #
 # Consumed by flake.nix (legacyPackages.emacs-packages), nix/checks.nix
 # (emacs-packages-eval) and nix/emacs-api-doc.nix. Keep the resolution
-# logic here only. Needs the Jotain overlay in `pkgs` (pkgs.jotainEmacs).
+# logic here only. Needs the overlay in `pkgs` (pkgs.emacsConfig).
 {
   pkgs,
   lispDir ? ../lisp,
@@ -20,7 +20,7 @@ let
   extraPackages = import ./extra-packages.nix { inherit pkgs; };
 
   # The same scope the distribution is built from (nix/mk-overlay.nix).
-  scope = (pkgs.emacsPackagesFor pkgs.jotainEmacs).overrideScope extraPackages;
+  scope = (pkgs.emacsPackagesFor pkgs.emacsConfig).overrideScope extraPackages;
 
   extraFeatureNames = import ./nix-provided-packages.nix;
 

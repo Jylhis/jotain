@@ -15,7 +15,7 @@ let
   openrouterProviders = { inherit (base) providers; };
 in
 {
-  # `services.jotain.eca.settings': a freeform JSON tree.
+  # `services.emacsConfig.eca.settings': a freeform JSON tree.
   settingsType = jsonFormat.type;
 
   # `settings' wins over the default provider, so users can extend the

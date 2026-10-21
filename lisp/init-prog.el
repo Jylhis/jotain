@@ -10,7 +10,7 @@
 
 ;;; Code:
 
-(defgroup jotain-prog nil
+(defgroup my-prog nil
   "Programming-mode, tree-sitter and LSP settings."
   :group 'convenience)
 
@@ -52,7 +52,7 @@
 ;;; loadable keeps its classic mode.
 (declare-function treesit-ready-p "treesit" (language &optional quiet))
 
-(defvar jotain-prog-ts-remaps
+(defvar my-prog-ts-remaps
   '((bash        bash-ts-mode        sh-mode)
     (cmake       cmake-ts-mode       cmake-mode)
     (dockerfile  dockerfile-ts-mode  dockerfile-mode)
@@ -76,12 +76,12 @@ For each entry whose grammar LANG is loadable, every CLASSIC-MODE is
 remapped to TS-MODE through `major-mode-remap-alist'.  Go is handled in
 `init-lang-go.el', which additionally strips classic go-mode autoloads.")
 
-(defun jotain-prog--apply-ts-remaps ()
-  "Populate `major-mode-remap-alist' from `jotain-prog-ts-remaps'.
+(defun my-prog--apply-ts-remaps ()
+  "Populate `major-mode-remap-alist' from `my-prog-ts-remaps'.
 Only remaps a language whose grammar is loadable (`treesit-ready-p') and
 whose tree-sitter mode is defined, so a build without a given grammar
 leaves the classic mode in place."
-  (dolist (entry jotain-prog-ts-remaps)
+  (dolist (entry my-prog-ts-remaps)
     (let ((lang (car entry))
           (ts-mode (cadr entry))
           (classics (cddr entry)))
@@ -89,7 +89,7 @@ leaves the classic mode in place."
         (dolist (classic classics)
           (add-to-list 'major-mode-remap-alist (cons classic ts-mode)))))))
 
-(jotain-prog--apply-ts-remaps)
+(my-prog--apply-ts-remaps)
 
 ;; Async native-comp workers skip site files, so they miss the
 ;; `treesit-extra-load-path' Nixpkgs' site-start.el sets.  Pass it on, or
@@ -104,27 +104,27 @@ leaves the classic mode in place."
 
 ;;; @doc Log to *Messages* when a buffer opens in a classic major mode
 ;;; although a tree-sitter variant with a loadable grammar exists: a gap
-;;; detector for languages missing from `jotain-prog-ts-remaps'. Silence
-;;; it with `jotain-prog-warn-non-ts-mode', or per mode with
-;;; `jotain-prog-warn-non-ts-exclude'.
-(defcustom jotain-prog-warn-non-ts-mode t
+;;; detector for languages missing from `my-prog-ts-remaps'. Silence
+;;; it with `my-prog-warn-non-ts-mode', or per mode with
+;;; `my-prog-warn-non-ts-exclude'.
+(defcustom my-prog-warn-non-ts-mode t
   "When non-nil, log if a classic major mode is used despite a ready ts-mode.
-Modes in `jotain-prog-warn-non-ts-exclude' are never reported."
+Modes in `my-prog-warn-non-ts-exclude' are never reported."
   :type 'boolean
-  :group 'jotain-prog)
+  :group 'my-prog)
 
-(defcustom jotain-prog-warn-non-ts-exclude nil
+(defcustom my-prog-warn-non-ts-exclude nil
   "Classic major modes the non-ts diagnostic deliberately skips."
   :type '(repeat symbol)
-  :group 'jotain-prog)
+  :group 'my-prog)
 
-(defun jotain-prog--warn-non-ts-mode ()
+(defun my-prog--warn-non-ts-mode ()
   "Log when `major-mode' is classic but a ready tree-sitter mode exists.
 Derives `foo-ts-mode' and the grammar name from `foo-mode', so irregular
 names (`sh-mode' to `bash-ts-mode') are missed; those are remapped in
-`jotain-prog-ts-remaps' anyway."
-  (when (and jotain-prog-warn-non-ts-mode
-             (not (memq major-mode jotain-prog-warn-non-ts-exclude)))
+`my-prog-ts-remaps' anyway."
+  (when (and my-prog-warn-non-ts-mode
+             (not (memq major-mode my-prog-warn-non-ts-exclude)))
     (let ((name (symbol-name major-mode)))
       (when (and (string-suffix-p "-mode" name)
                  (not (string-suffix-p "-ts-mode" name)))
@@ -132,10 +132,10 @@ names (`sh-mode' to `bash-ts-mode') are missed; those are remapped in
                (ts-mode (intern-soft (concat base "-ts-mode")))
                (lang (intern base)))
           (when (and ts-mode (fboundp ts-mode) (treesit-ready-p lang t))
-            (message "jotain: %s opened in %s; %s (tree-sitter, grammar `%s') is available"
+            (message "init-prog: %s opened in %s; %s (tree-sitter, grammar `%s') is available"
                      (buffer-name) major-mode ts-mode lang)))))))
 
-(add-hook 'after-change-major-mode-hook #'jotain-prog--warn-non-ts-mode)
+(add-hook 'after-change-major-mode-hook #'my-prog--warn-non-ts-mode)
 
 ;;; @doc Code folding along treesit syntax nodes (functions, classes,
 ;;; blocks). Fringe indicators show fold state.
@@ -163,15 +163,15 @@ names (`sh-mode' to `bash-ts-mode') are missed; those are remapped in
 
 ;;; @doc Security gate: the ESLint and Tailwind language servers can
 ;;; execute project-controlled JS config, so they are opt-in.
-(defcustom jotain-prog-enable-risky-js-lsp nil
+(defcustom my-prog-enable-risky-js-lsp nil
   "When non-nil, include ESLint and Tailwind LSP servers in TS/TSX `rass` sessions.
 These servers may evaluate project JavaScript configuration files."
   :type 'boolean
-  :group 'jotain-prog)
+  :group 'my-prog)
 
 (defvar eglot-workspace-configuration) ; defined in eglot.el
 
-(defun jotain-eglot-set-workspace-config (key settings)
+(defun my-eglot-set-workspace-config (key settings)
   "Contribute SETTINGS under KEY to eglot's workspace configuration.
 Eglot reads the global value of `eglot-workspace-configuration' (it
 evaluates it in a temp buffer), so a buffer-local binding never reaches
@@ -202,7 +202,7 @@ owns the settings."
   (declare-function eglot-alternatives "eglot")
   (defvar eglot--managed-mode)
 
-  (defun jotain-prog--eglot-guess-program ()
+  (defun my-prog--eglot-guess-program ()
     "Executable eglot would use for this buffer, or nil.
 Uses `eglot--guess-contact', which evaluates function-valued
 `eglot-server-programs' entries in the project's env.  Returns nil for
@@ -214,7 +214,7 @@ loaded."
               ((and (consp contact) (stringp (car contact))) (car contact))))))
 
   (declare-function devenv-env-loading-p "devenv")
-  (defun jotain-prog--maybe-eglot-ensure ()
+  (defun my-prog--maybe-eglot-ensure ()
     "Auto-start eglot when the project's env provides a server for this buffer.
 Runs from `prog-mode-hook' but defers to an idle timer: `devenv-env-mode'
 turns on later, from `after-change-major-mode-hook', and connecting
@@ -241,22 +241,22 @@ Skips remote, non-file and already-managed buffers, and Lisp buffers
                   ((and (fboundp 'devenv-env-loading-p)
                         (devenv-env-loading-p))
                    (eglot-ensure))
-                  ((when-let* ((prog (jotain-prog--eglot-guess-program)))
+                  ((when-let* ((prog (my-prog--eglot-guess-program)))
                      (executable-find prog)) ; uses buffer-local exec-path
                    (eglot-ensure)))))))))))
 
-  (defun jotain-prog--risky-js-extras ()
+  (defun my-prog--risky-js-extras ()
     "Optional ESLint/Tailwind `rass' companions, gated on the risky-JS opt-in.
-Added only when `jotain-prog-enable-risky-js-lsp' is non-nil and the
+Added only when `my-prog-enable-risky-js-lsp' is non-nil and the
 servers are on PATH."
     (let (extras)
-      (when jotain-prog-enable-risky-js-lsp
+      (when my-prog-enable-risky-js-lsp
         (dolist (s '("eslint-lsp" "tailwindcss-language-server"))
           (when (executable-find s)
             (setq extras (append extras (list "--" s "--stdio"))))))
       extras))
 
-  (defun jotain-prog--ts-server (&optional _interactive)
+  (defun my-prog--ts-server (&optional _interactive)
     "Resolve the TS/TSX server contact against the buffer's (project) PATH.
 When `rass' and typescript-language-server are both on PATH, `rass'
 wraps it (plus any risky-JS companions); else plain
@@ -264,10 +264,10 @@ typescript-language-server."
     (if (and (executable-find "rass")
              (executable-find "typescript-language-server"))
         (append '("rass" "--" "typescript-language-server" "--stdio")
-                (jotain-prog--risky-js-extras))
+                (my-prog--risky-js-extras))
       '("typescript-language-server" "--stdio")))
 
-  (defun jotain-prog--python-server (&optional _interactive)
+  (defun my-prog--python-server (&optional _interactive)
     "Resolve the Python server contact against the buffer's (project) PATH.
 Prefers the `rass python' preset (basedpyright + ruff), then a lone
 basedpyright/pyright, then pylsp."
@@ -279,7 +279,7 @@ basedpyright/pyright, then pylsp."
           ((executable-find "pyright-langserver") '("pyright-langserver" "--stdio"))
           (t '("pylsp"))))
 
-  (defun jotain-prog--likec4-server (&optional _interactive)
+  (defun my-prog--likec4-server (&optional _interactive)
     "Resolve the LikeC4 server contact against the buffer's PATH.
 Prefers the standalone `likec4-lsp' (on the distribution wrapper PATH),
 falling back to the `likec4' CLI's `lsp' subcommand."
@@ -287,7 +287,7 @@ falling back to the `likec4' CLI's `lsp' subcommand."
         '("likec4-lsp" "--stdio")
       '("likec4" "lsp" "--stdio")))
 
-  (defun jotain-prog--robot-server (&optional _interactive)
+  (defun my-prog--robot-server (&optional _interactive)
     "Resolve the Robot Framework server contact against the buffer's PATH.
 Prefers `robotcode language-server', falling back to `robotframework_ls'.
 Both speak stdio by default."
@@ -297,7 +297,7 @@ Both speak stdio by default."
   :init
   ;; One devenv-aware auto-start for every language, instead of per-mode
   ;; `eglot-ensure' hooks, which would connect before the devenv env exists.
-  (add-hook 'prog-mode-hook #'jotain-prog--maybe-eglot-ensure)
+  (add-hook 'prog-mode-hook #'my-prog--maybe-eglot-ensure)
   :custom
   (eglot-autoshutdown t)
   (eglot-extend-to-xref t)
@@ -315,11 +315,11 @@ Both speak stdio by default."
         ("C-h ."   . eldoc-doc-buffer))
   :config
   ;; Show all eldoc sources together rather than Eglot's default strategy.
-  (defun jotain-prog--eldoc-compose-eagerly ()
+  (defun my-prog--eldoc-compose-eagerly ()
     "Compose eldoc sources eagerly in Eglot-managed buffers."
     (setq-local eldoc-documentation-strategy
                 #'eldoc-documentation-compose-eagerly))
-  (add-hook 'eglot-managed-mode-hook #'jotain-prog--eldoc-compose-eagerly)
+  (add-hook 'eglot-managed-mode-hook #'my-prog--eldoc-compose-eagerly)
 
   ;; Emacs 31+: render hover/signature docs with the tree-sitter markdown
   ;; viewer.  markdown-ts-mode.el has no autoloads, so require it.
@@ -332,7 +332,7 @@ Both speak stdio by default."
   (when (boundp 'eglot-code-action-indications)
     (setopt eglot-code-action-indications nil))
 
-  (defun jotain-prog--maybe-enable-inlay-hints ()
+  (defun my-prog--maybe-enable-inlay-hints ()
     "Enable inlay hints in the major modes that opt in to them."
     (when (apply #'derived-mode-p
                  '(go-ts-mode
@@ -345,7 +345,7 @@ Both speak stdio by default."
                    nix-ts-mode
                    haskell-ts-mode))
       (eglot-inlay-hints-mode 1)))
-  (add-hook 'eglot-managed-mode-hook #'jotain-prog--maybe-enable-inlay-hints)
+  (add-hook 'eglot-managed-mode-hook #'my-prog--maybe-enable-inlay-hints)
 
   (add-to-list 'eglot-server-programs
                '((go-ts-mode go-mod-ts-mode go-work-ts-mode) . ("gopls")))
@@ -385,16 +385,16 @@ Both speak stdio by default."
   ;; to a single server when it or a companion is absent.
   (add-to-list 'eglot-server-programs
                (cons '(tsx-ts-mode typescript-ts-mode typescript-mode)
-                     #'jotain-prog--ts-server))
+                     #'my-prog--ts-server))
   (add-to-list 'eglot-server-programs
                (cons '(python-mode python-ts-mode)
-                     #'jotain-prog--python-server))
+                     #'my-prog--python-server))
   ;; LikeC4 architecture models (init-lang-devops).
   (add-to-list 'eglot-server-programs
-               (cons '(likec4-mode) #'jotain-prog--likec4-server))
+               (cons '(likec4-mode) #'my-prog--likec4-server))
   ;; Robot Framework (init-lang-devops).
   (add-to-list 'eglot-server-programs
-               (cons '(robot-mode) #'jotain-prog--robot-server)))
+               (cons '(robot-mode) #'my-prog--robot-server)))
 
 ;;; @doc Wrap local stdio language servers in emacs-lsp-booster, which
 ;;; converts server JSON into Elisp bytecode and buffers I/O so a busy
@@ -435,7 +435,7 @@ Both speak stdio by default."
   :bind-keymap ("C-x C-a" . dape-global-map)
   :custom
   (dape-buffer-window-arrangement 'right)
-  (dape-default-breakpoints-file (jotain-var-file "dape-breakpoints"))
+  (dape-default-breakpoints-file (my-var-file "dape-breakpoints"))
   :config
   ;; In :config, so a session that never loads dape never touches the file.
   (dape-breakpoint-load)
@@ -468,7 +468,7 @@ Both speak stdio by default."
 ;; `eglot-workspace-configuration' entry (:sonarlint :connectedMode with
 ;; the :sonarcloud org key and token, connectionId/projectKey).
 
-(defun jotain-sonarlint ()
+(defun my-sonarlint ()
   "Start SonarLint analysis in the current project.
 Launches sonarlint-ls as a secondary eglot connection alongside any
 existing language server, adding code-quality and security diagnostics."
@@ -504,12 +504,12 @@ existing language server, adding code-quality and security diagnostics."
         ("C-c ! l" . flymake-show-buffer-diagnostics)
         ("C-c ! p" . flymake-show-project-diagnostics))
   :config
-  (defun jotain-prog--disable-flymake-byte-compile ()
+  (defun my-prog--disable-flymake-byte-compile ()
     "Disable `elisp-flymake-byte-compile' in non-file buffers like *scratch*."
     (when (and (derived-mode-p 'emacs-lisp-mode)
                (not buffer-file-name))
       (remove-hook 'flymake-diagnostic-functions #'elisp-flymake-byte-compile t)))
-  (add-hook 'flymake-mode-hook #'jotain-prog--disable-flymake-byte-compile))
+  (add-hook 'flymake-mode-hook #'my-prog--disable-flymake-byte-compile))
 
 ;;; @doc Built-in echo-area documentation: single-line display and a
 ;;; short idle delay.
@@ -564,9 +564,9 @@ existing language server, adding code-quality and security diagnostics."
 (use-package tagref
   :ensure nil
   :commands (tagref-mode)
-  :hook (prog-mode . jotain-tagref--maybe-enable)
+  :hook (prog-mode . my-tagref--maybe-enable)
   :init
-  (defun jotain-tagref--maybe-enable ()
+  (defun my-tagref--maybe-enable ()
     "Enable `tagref-mode' only inside a project, when tagref is installed.
 Outside a project `tagref-mode' signals a `user-error', which in the
 daemon's *scratch* buffer aborts startup before `server-start'.  The

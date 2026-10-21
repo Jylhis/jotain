@@ -41,7 +41,7 @@ nil when SYMBOL has no defcustom in that file."
 
 (ert-deftest test-ui-theme-defaults-are-quoted-symbols ()
   "`init-ui.el' names a theme symbol for each system appearance."
-  (dolist (var '(jotain-theme-light jotain-theme-dark))
+  (dolist (var '(my-theme-light my-theme-dark))
     (let ((default (test-ui--defcustom-default var)))
       (should (eq (car-safe default) 'quote))
       (should (symbolp (cadr default))))))
@@ -52,7 +52,7 @@ Skipped when the Jylhis theme package is absent — `init-ui.el' falls
 back to Modus in that case, which is a supported configuration."
   (skip-unless (require 'jylhis-themes nil t))
   (let ((available (custom-available-themes)))
-    (dolist (var '(jotain-theme-light jotain-theme-dark))
+    (dolist (var '(my-theme-light my-theme-dark))
       (should (memq (cadr (test-ui--defcustom-default var)) available)))))
 
 (provide 'test-ui)

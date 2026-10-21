@@ -61,11 +61,11 @@
 (setq use-package-enable-imenu-support t
       use-package-always-ensure t)
 
-;; Opt-in startup profiling: with JOTAIN_PROFILE_STARTUP set, use-package
+;; Opt-in startup profiling: with EMACS_CONFIG_PROFILE_STARTUP set, use-package
 ;; records per-block timings for `M-x use-package-report'. Off by default
 ;; because collecting them has a per-block cost.
 (defvar use-package-compute-statistics nil)
-(when (getenv "JOTAIN_PROFILE_STARTUP")
+(when (getenv "EMACS_CONFIG_PROFILE_STARTUP")
   (setq use-package-compute-statistics t))
 
 ;; Disable UI chrome before the first frame is drawn, which is cheaper
@@ -120,16 +120,16 @@
     (startup-redirect-eln-cache
      (convert-standard-filename
       (expand-file-name "var/eln-cache/" user-emacs-directory))))
-  ;; JOTAIN_ELN_PATH: store-resident AOT .eln for this config
+  ;; EMACS_CONFIG_ELN_PATH: store-resident AOT .eln for this config
   ;; (nix/config-compiled.nix), exported by module.nix's wrapper when
-  ;; `services.jotain.nativeCompile.enable' is on and by
+  ;; `services.emacsConfig.nativeCompile.enable' is on and by
   ;; `just run-built-fast'. Unset elsewhere; JIT into var/eln-cache works
   ;; as usual.
   ;;
   ;; Append, never prepend: `startup-redirect-eln-cache' `setcar's the
   ;; head of the list, and the head must stay the writable cache, since
   ;; Emacs writes JIT output to the first writable entry.
-  (let ((store (getenv "JOTAIN_ELN_PATH")))
+  (let ((store (getenv "EMACS_CONFIG_ELN_PATH")))
     (when (and store (file-directory-p store))
       (add-to-list 'native-comp-eln-load-path
                    (file-name-as-directory store)

@@ -3,27 +3,27 @@
 ;;; Commentary:
 
 ;; Wrapper init: loads the real init.el, then on `emacs-startup-hook'
-;; writes a startup report to $JOTAIN_BENCH_OUTPUT (or runs the file-open
-;; benchmark when $JOTAIN_BENCH_OPEN_OUTPUT is set) and exits.
+;; writes a startup report to $EMACS_CONFIG_BENCH_OUTPUT (or runs the file-open
+;; benchmark when $EMACS_CONFIG_BENCH_OPEN_OUTPUT is set) and exits.
 ;;
 ;; Uses the state set up by bench/early-init.el.
 
 ;;; Code:
 
-(load (expand-file-name "init.el" jotain-bench--real-dir) nil t)
+(load (expand-file-name "init.el" my-bench--real-dir) nil t)
 
 (add-hook 'emacs-startup-hook
           (lambda ()
             (cond
              ;; File-open benchmark mode
-             ((getenv "JOTAIN_BENCH_OPEN_OUTPUT")
+             ((getenv "EMACS_CONFIG_BENCH_OPEN_OUTPUT")
               (load (expand-file-name "bench/find-file-bench.el"
-                                      jotain-bench--real-dir) nil t)
-              (jotain-bench-open--run)
+                                      my-bench--real-dir) nil t)
+              (my-bench-open--run)
               (kill-emacs 0))
 
              ;; Startup benchmark mode
-             ((getenv "JOTAIN_BENCH_OUTPUT")
+             ((getenv "EMACS_CONFIG_BENCH_OUTPUT")
               (let* ((init-time (float-time (time-subtract after-init-time before-init-time)))
                      (total-time (float-time (time-subtract (current-time) before-init-time)))
                      ;; The authoritative number: unlike the delta above it
@@ -32,8 +32,8 @@
                      (gc-pct (if (> init-time 0) (* 100.0 (/ gc-elapsed init-time)) 0.0))
                      (pkg-count (if (bound-and-true-p package-activated-list)
                                     (length package-activated-list) 0))
-                     (outfile (getenv "JOTAIN_BENCH_OUTPUT"))
-                     (sorted (sort (copy-sequence jotain-bench--results)
+                     (outfile (getenv "EMACS_CONFIG_BENCH_OUTPUT"))
+                     (sorted (sort (copy-sequence my-bench--results)
                                    (lambda (a b) (> (cdr a) (cdr b)))))
                      (init-modules (seq-filter (lambda (x) (string-prefix-p "init-" (car x))) sorted))
                      (network-ops (seq-filter (lambda (x) (string-prefix-p "NETWORK:" (car x))) sorted))
@@ -44,7 +44,7 @@
                                              sorted))
                      ;; Non-`require' loads, from the `load' advice.
                      (loads-slow (seq-filter (lambda (x) (> (cdr x) 0.010))
-                                             (sort (copy-sequence jotain-bench--loads)
+                                             (sort (copy-sequence my-bench--loads)
                                                    (lambda (a b) (> (cdr a) (cdr b))))))
                      (features-sorted (sort (mapcar #'symbol-name features) #'string<))
                      (sum-init (apply #'+ (or (mapcar #'cdr init-modules) '(0))))
@@ -54,7 +54,7 @@
                 (when outfile
                   (with-temp-file outfile
                     (insert
-                     (format "Jotain Startup Benchmark\n")
+                     (format "Startup Benchmark\n")
                      (format "══════════════════════════════════════════════════════\n\n")
                      (format "SUMMARY\n")
                      (format "──────────────────────────────────────────────────────\n")

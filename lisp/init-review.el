@@ -2,7 +2,7 @@
 
 ;;; Commentary:
 
-;; Binds the self-contained lisp/repo-review.el library into Jotain,
+;; Binds the self-contained lisp/repo-review.el library into the configuration,
 ;; with org-remark for marginal notes that never touch the sources.
 
 ;;; Code:
@@ -19,7 +19,7 @@
   :ensure nil
   :bind (:map project-prefix-map ("R" . repo-review-start))
   :custom
-  (repo-review-queue-dir (jotain-var-file "repo-review/")))
+  (repo-review-queue-dir (my-var-file "repo-review/")))
 
 ;;; @doc Marginal notes and highlights for files visited from the review
 ;;; queue. `repo-review' enables `org-remark-mode' in each visited file

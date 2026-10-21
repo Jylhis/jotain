@@ -184,7 +184,7 @@ in
   # Magit-style porcelain for Jujutsu (lisp/init-vc.el), pinned ahead of
   # nixpkgs' older revision. `packageRequires' mirrors upstream's:
   # trivialBuild byte-compiles every .el, so the gerrit files'
-  # `consult'/`plz' requires must resolve even though Jotain never calls
+  # `consult'/`plz' requires must resolve even though the configuration never calls
   # them.
   majutsu = efinal.trivialBuild {
     pname = "majutsu";

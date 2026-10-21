@@ -2,7 +2,7 @@
 
 ;;; Commentary:
 
-;; Binds the self-contained lisp/devenv.el library into Jotain.
+;; Binds the self-contained lisp/devenv.el library into the configuration.
 ;;
 ;; envrc is not enabled (init-prog.el), so the native loader owns each
 ;; trusted project's environment, `.envrc' or not (hence

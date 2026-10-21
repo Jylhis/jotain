@@ -11,37 +11,37 @@
 
 ;;; Code:
 
-(defgroup jotain-devops nil
+(defgroup my-devops nil
   "Docker/Podman and infrastructure-as-code settings."
   :group 'convenience)
 
 ;; Defined by the defcustom below, whose :set calls this function.
-(defvar jotain-docker-backend)
+(defvar my-docker-backend)
 
-(defun jotain--apply-docker-backend ()
-  "Set `dockerfile-mode-command' from `jotain-docker-backend'.
+(defun my--apply-docker-backend ()
+  "Set `dockerfile-mode-command' from `my-docker-backend'.
 A no-op until dockerfile-mode has loaded, so safe to call any time."
-  (let ((cmd (if (eq jotain-docker-backend 'podman) "podman" "docker")))
+  (let ((cmd (if (eq my-docker-backend 'podman) "podman" "docker")))
     (when (boundp 'dockerfile-mode-command)
       (setopt dockerfile-mode-command cmd))))
 
-(defcustom jotain-docker-backend 'podman
+(defcustom my-docker-backend 'podman
   "Container runtime that Docker-aware packages should drive.
 `podman' (default) or `docker'.  Setting it updates
 `dockerfile-mode-command'."
   :type '(choice (const :tag "Podman" podman)
                  (const :tag "Docker" docker))
-  :group 'jotain-devops
+  :group 'my-devops
   :set (lambda (sym val)
          (set-default-toplevel-value sym val)
-         (jotain--apply-docker-backend)))
+         (my--apply-docker-backend)))
 
 ;;; @doc Dockerfile major mode with build commands (`M-x
 ;;; dockerfile-build-buffer`). The runtime command comes from
-;;; `jotain-docker-backend`.
+;;; `my-docker-backend`.
 (use-package dockerfile-mode
   :defer t
-  :config (jotain--apply-docker-backend))
+  :config (my--apply-docker-backend))
 
 ;;; @doc Terraform mode for `.tf` files. eglot's built-in entry starts
 ;;; terraform-ls when it is on PATH.
@@ -88,12 +88,12 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
 ;; indentation mangles Structurizr's `{'/`}' blocks.  This mode indents by
 ;; brace depth and knows the `//', `#', and `/* */' comment forms.
 
-(defcustom jotain-structurizr-indent-offset 4
+(defcustom my-structurizr-indent-offset 4
   "Columns of indentation per `{'/`}' nesting level in Structurizr DSL."
   :type 'natnum
-  :group 'jotain-devops)
+  :group 'my-devops)
 
-(defvar jotain-structurizr-mode-syntax-table
+(defvar my-structurizr-mode-syntax-table
   (let ((table (make-syntax-table)))
     ;; Braces as paren pairs, for sexp motion, `show-paren-mode', and
     ;; depth-based indentation.
@@ -109,9 +109,9 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
     (modify-syntax-entry ?_ "_" table)
     (modify-syntax-entry ?- "_" table)
     table)
-  "Syntax table for `jotain-structurizr-mode'.")
+  "Syntax table for `my-structurizr-mode'.")
 
-(defvar jotain-structurizr-font-lock-keywords
+(defvar my-structurizr-font-lock-keywords
   (let ((keywords '("workspace" "model" "views" "styles" "style" "branding"
                     "terminology" "configuration" "properties" "group"
                     "enterprise" "person" "softwareSystem" "container"
@@ -126,9 +126,9 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
       ("->" . font-lock-function-name-face)
       (,(rx symbol-start (group (+ (any word "_"))) (* space) "=")
        (1 font-lock-variable-name-face))))
-  "Font-lock rules for `jotain-structurizr-mode'.")
+  "Font-lock rules for `my-structurizr-mode'.")
 
-(defun jotain-structurizr-indent-line ()
+(defun my-structurizr-indent-line ()
   "Indent the current Structurizr line by its `{'/`}' nesting depth."
   (let ((depth (save-excursion
                  (back-to-indentation)
@@ -136,21 +136,21 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
                    ;; A line that leads with `}' closes the block above,
                    ;; so it belongs one level out.
                    (if (looking-at-p "}") (1- open) open)))))
-    (indent-line-to (* jotain-structurizr-indent-offset (max depth 0)))))
+    (indent-line-to (* my-structurizr-indent-offset (max depth 0)))))
 
-(define-derived-mode jotain-structurizr-mode prog-mode "Structurizr"
+(define-derived-mode my-structurizr-mode prog-mode "Structurizr"
   "Major mode for editing Structurizr DSL architecture models."
-  :syntax-table jotain-structurizr-mode-syntax-table
+  :syntax-table my-structurizr-mode-syntax-table
   (setq-local comment-start "// "
               comment-end ""
               comment-start-skip "\\(?://+\\|#+\\|/\\*+\\)[ \t]*"
-              indent-line-function #'jotain-structurizr-indent-line
-              font-lock-defaults '(jotain-structurizr-font-lock-keywords nil t))
+              indent-line-function #'my-structurizr-indent-line
+              font-lock-defaults '(my-structurizr-font-lock-keywords nil t))
   ;; Dedent the line when the block-closing brace is typed.
   (setq-local electric-indent-chars (cons ?} electric-indent-chars)))
 
 ;; Win over the built-in `.dsl' -> `dsssl-mode' entry by prepending.
-(add-to-list 'auto-mode-alist '("\\.dsl\\'" . jotain-structurizr-mode))
+(add-to-list 'auto-mode-alist '("\\.dsl\\'" . my-structurizr-mode))
 
 ;;; LikeC4 -----------------------------------------------------------
 ;;
@@ -158,12 +158,12 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
 ;; with only the `//' and `/* */' comment forms.  The eglot server
 ;; (`likec4-lsp', bundled on the distribution PATH) is wired in init-prog.
 
-(defcustom jotain-likec4-indent-offset 2
+(defcustom my-likec4-indent-offset 2
   "Columns of indentation per `{'/`}' nesting level in LikeC4 DSL."
   :type 'natnum
-  :group 'jotain-devops)
+  :group 'my-devops)
 
-(defvar jotain-likec4-mode-syntax-table
+(defvar my-likec4-mode-syntax-table
   (let ((table (make-syntax-table)))
     (modify-syntax-entry ?{ "(}" table)
     (modify-syntax-entry ?} "){" table)
@@ -176,7 +176,7 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
     table)
   "Syntax table for `likec4-mode'.")
 
-(defvar jotain-likec4-font-lock-keywords
+(defvar my-likec4-font-lock-keywords
   (let ((keywords '("specification" "model" "views" "view" "element" "tag"
                     "relationship" "color" "technology" "style" "styles"
                     "extend" "extends" "link" "icon" "title" "description"
@@ -189,22 +189,22 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
        (1 font-lock-variable-name-face))))
   "Font-lock rules for `likec4-mode'.")
 
-(defun jotain-likec4-indent-line ()
+(defun my-likec4-indent-line ()
   "Indent the current LikeC4 line by its `{'/`}' nesting depth."
   (let ((depth (save-excursion
                  (back-to-indentation)
                  (let ((open (car (syntax-ppss))))
                    (if (looking-at-p "}") (1- open) open)))))
-    (indent-line-to (* jotain-likec4-indent-offset (max depth 0)))))
+    (indent-line-to (* my-likec4-indent-offset (max depth 0)))))
 
 (define-derived-mode likec4-mode prog-mode "LikeC4"
   "Major mode for editing LikeC4 architecture models."
-  :syntax-table jotain-likec4-mode-syntax-table
+  :syntax-table my-likec4-mode-syntax-table
   (setq-local comment-start "// "
               comment-end ""
               comment-start-skip "\\(?://+\\|/\\*+\\)[ \t]*"
-              indent-line-function #'jotain-likec4-indent-line
-              font-lock-defaults '(jotain-likec4-font-lock-keywords nil t))
+              indent-line-function #'my-likec4-indent-line
+              font-lock-defaults '(my-likec4-font-lock-keywords nil t))
   (setq-local electric-indent-chars (cons ?} electric-indent-chars)))
 
 (add-to-list 'auto-mode-alist '("\\.c4\\'" . likec4-mode))

@@ -8,8 +8,8 @@ override where they conflict.
 
 - **Every global symbol** (function, variable, face, constant) starts with
   the library prefix: `foo-thing`, never bare `thing`. In this repo the
-  prefix is `jotain-<concern>-` (`jotain-core--gc-restore`,
-  `jotain-prog-ts-remaps`); `lisp/devenv.el` uses its own `devenv-`.
+  prefix is `my-<concern>-` (`my-core--gc-restore`,
+  `my-prog-ts-remaps`); `lisp/devenv.el` uses its own `devenv-`.
 - **Private symbols use a double hyphen**: `foo--internal` — not public API,
   may change without notice. Reach for it liberally for helpers.
 - Predicates: single word ends in `p` (`stringp`), multi-word ends in `-p`

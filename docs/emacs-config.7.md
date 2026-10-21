@@ -1,14 +1,14 @@
 ---
-title: JOTAIN
+title: EMACS-CONFIG
 section: 7
-header: Jotain Manual
-footer: jotain 2026.09
+header: Emacs Configuration Manual
+footer: emacs-config 2026.09
 date: 2026-09-29
 ---
 
 # NAME
 
-jotain — a custom GNU Emacs configuration built from scratch
+emacs-config — a custom GNU Emacs configuration built from scratch
 
 # SYNOPSIS
 
@@ -18,7 +18,7 @@ jotain — a custom GNU Emacs configuration built from scratch
 
 # DESCRIPTION
 
-*Jotain* is Finnish for "something": a GNU Emacs 31 configuration
+A GNU Emacs 31 configuration
 (floor: Emacs 30.1) built from scratch, with no framework such as Doom
 or Spacemacs underneath. Nix builds the editor; plain Elisp configures
 it.
@@ -35,7 +35,7 @@ The full manual is generated from *docs/* and available as HTML, Info,
 and this man page. Chapters:
 
 *introduction(7)*
-:   what jotain is, and why
+:   what the configuration is, and why
 
 *installation(7)*
 :   nix, home-manager, devenv
@@ -64,24 +64,24 @@ and this man page. Chapters:
 :   full documentation index (HTML)
 
 */manual/*
-:   the Jotain manual, one page per chapter
+:   the manual, one page per chapter
 
-*/manual/jotain.info*
+*/manual/emacs-config.info*
 :   the same manual as an Info file — install and read with
-    **C-h i d m Jotain RET**
+    **C-h i d m Emacs config RET**
 
 */man/*
 :   this page and the Emacs man pages
 
 */info/emacs/*, */info/elisp/*
 :   the GNU Emacs manual and the Emacs Lisp reference manual, rendered
-    from the exact Emacs source revision Jotain builds
+    from the exact Emacs source revision the configuration builds
 
 */options/*
 :   Nix module options reference (Home Manager, NixOS/nix-darwin, devenv)
 
 */help/packages/*
-:   every Emacs package Jotain ships, with the reason it is included
+:   every Emacs package the configuration ships, with the reason it is included
 
 # SEE ALSO
 

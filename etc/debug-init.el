@@ -1,9 +1,9 @@
-;;; debug-init.el --- Full-debug launch harness for Jotain  -*- lexical-binding: t; -*-
+;;; debug-init.el --- Full-debug launch harness for the configuration  -*- lexical-binding: t; -*-
 
 ;; Loaded by `just run-built-debug-log' after the normal init.  Turns on
 ;; Emacs's debugging facilities and mirrors *Messages*, *Warnings*,
 ;; *Backtrace*, the compile logs, and a backtrace per error into the
-;; session directory the recipe passes in JOTAIN_DEBUG_DIR (under
+;; session directory the recipe passes in EMACS_CONFIG_DEBUG_DIR (under
 ;; var/debug/).
 ;;
 ;; Kept outside lisp/ and test/ so the use-package scanner and the
@@ -11,26 +11,26 @@
 
 (require 'backtrace)
 
-(defvar jotain-debug-directory
-  (or (getenv "JOTAIN_DEBUG_DIR")
+(defvar my-debug-directory
+  (or (getenv "EMACS_CONFIG_DEBUG_DIR")
       (expand-file-name "var/debug/session" user-emacs-directory))
   "Directory the debug harness writes its logs into.")
 
-(defun jotain-debug--file (name)
-  "Return NAME under `jotain-debug-directory', ensuring the directory exists."
-  (make-directory jotain-debug-directory t)
-  (expand-file-name name jotain-debug-directory))
+(defun my-debug--file (name)
+  "Return NAME under `my-debug-directory', ensuring the directory exists."
+  (make-directory my-debug-directory t)
+  (expand-file-name name my-debug-directory))
 
-(defvar jotain-debug--errors-file (jotain-debug--file "errors.log")
+(defvar my-debug--errors-file (my-debug--file "errors.log")
   "File that accumulates a backtrace for every error that reaches the debugger.")
 
-(defun jotain-debug--append (file text)
+(defun my-debug--append (file text)
   "Append TEXT to FILE, creating it if necessary.  Never signals."
   (ignore-errors
     (let ((coding-system-for-write 'utf-8))
       (write-region text nil file 'append 'silent))))
 
-(defun jotain-debug--dump-buffer (buffer file)
+(defun my-debug--dump-buffer (buffer file)
   "Overwrite FILE with BUFFER's contents when it exists and is non-empty."
   (ignore-errors
     (when-let* ((buf (get-buffer buffer)))
@@ -39,30 +39,30 @@
           (let ((coding-system-for-write 'utf-8))
             (write-region (point-min) (point-max) file nil 'silent)))))))
 
-(defun jotain-debug-dump-now ()
+(defun my-debug-dump-now ()
   "Flush *Messages*, *Warnings*, *Backtrace* and the compile logs to disk.
 Runs automatically on exit; call it interactively to snapshot the
 current state without quitting (handy before a suspected crash)."
   (interactive)
-  (jotain-debug--dump-buffer "*Messages*"   (jotain-debug--file "messages.log"))
-  (jotain-debug--dump-buffer "*Warnings*"   (jotain-debug--file "warnings.log"))
-  (jotain-debug--dump-buffer "*Backtrace*"  (jotain-debug--file "backtrace.log"))
-  (jotain-debug--dump-buffer "*Compile-Log*" (jotain-debug--file "compile-log.log"))
-  (jotain-debug--dump-buffer "*Async-native-compile-log*"
-                             (jotain-debug--file "native-comp.log"))
+  (my-debug--dump-buffer "*Messages*"   (my-debug--file "messages.log"))
+  (my-debug--dump-buffer "*Warnings*"   (my-debug--file "warnings.log"))
+  (my-debug--dump-buffer "*Backtrace*"  (my-debug--file "backtrace.log"))
+  (my-debug--dump-buffer "*Compile-Log*" (my-debug--file "compile-log.log"))
+  (my-debug--dump-buffer "*Async-native-compile-log*"
+                             (my-debug--file "native-comp.log"))
   (when (called-interactively-p 'interactive)
-    (message "jotain-debug: logs flushed to %s" jotain-debug-directory)))
+    (message "my-debug: logs flushed to %s" my-debug-directory)))
 
-(defun jotain-debug--log-backtrace (&rest _)
-  "Append the current backtrace to `jotain-debug--errors-file'.
+(defun my-debug--log-backtrace (&rest _)
+  "Append the current backtrace to `my-debug--errors-file'.
 Advises `debug' so every error is logged even when the interactive
 debugger is dismissed with `q'."
   (ignore-errors
-    (jotain-debug--append
-     jotain-debug--errors-file
+    (my-debug--append
+     my-debug--errors-file
      (concat "\n;; " (format-time-string "%FT%T%z") "\n"
              (backtrace-to-string
-              (backtrace-get-frames #'jotain-debug--log-backtrace))
+              (backtrace-get-frames #'my-debug--log-backtrace))
              "\n"))))
 
 ;;; Turn the debugging facilities on
@@ -74,8 +74,8 @@ debugger is dismissed with `q'."
 (when (boundp 'native-comp-async-report-warnings-errors)
   (setq native-comp-async-report-warnings-errors t))
 
-(advice-add 'debug :before #'jotain-debug--log-backtrace)
-(add-hook 'kill-emacs-hook #'jotain-debug-dump-now)
+(advice-add 'debug :before #'my-debug--log-backtrace)
+(add-hook 'kill-emacs-hook #'my-debug-dump-now)
 
 ;; Full eglot/jsonrpc traffic once eglot loads, for LSP debugging.
 (with-eval-after-load 'eglot
@@ -83,5 +83,5 @@ debugger is dismissed with `q'."
 
 (add-hook 'emacs-startup-hook
           (lambda ()
-            (message "jotain-debug: full debugging on; logs → %s (M-x jotain-debug-dump-now to flush)"
-                     jotain-debug-directory)))
+            (message "my-debug: full debugging on; logs → %s (M-x my-debug-dump-now to flush)"
+                     my-debug-directory)))

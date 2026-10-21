@@ -10,17 +10,17 @@
 (declare-function mixed-pitch-mode "mixed-pitch" (&optional arg))
 (declare-function global-jinx-mode "jinx" (&optional arg))
 
-(defgroup jotain-writing nil
-  "Jotain prose and note-taking settings."
+(defgroup my-writing nil
+  "the configuration prose and note-taking settings."
   :group 'text)
 
-(defcustom jotain-notes-directory (expand-file-name "~/Documents/notes/")
+(defcustom my-notes-directory (expand-file-name "~/Documents/notes/")
   "Directory holding plain-text notes.
 Shared root for `denote-directory' (below) and `org-directory'
 (init-org.el), so denote, org-capture and org-roam files land in
 one tree.  It need not exist yet."
   :type 'directory
-  :group 'jotain-writing)
+  :group 'my-writing)
 
 ;;; @doc Built-in text-mode tweaks for prose: visual line wrap and
 ;;; hanging indent on wrapped lines. Proportional fonts come from
@@ -45,12 +45,12 @@ one tree.  It need not exist yet."
 ;;; (see init-lang-data), commit messages, and email.
 (use-package mixed-pitch
   :preface
-  (defun jotain-writing--keep-monospace ()
+  (defun my-writing--keep-monospace ()
     "Turn off `mixed-pitch-mode' in a column-sensitive text-mode buffer."
     (mixed-pitch-mode -1))
   :hook ((text-mode        . mixed-pitch-mode)
-         (git-commit-setup . jotain-writing--keep-monospace)
-         (message-mode     . jotain-writing--keep-monospace)))
+         (git-commit-setup . my-writing--keep-monospace)
+         (message-mode     . my-writing--keep-monospace)))
 
 ;;; @doc Just-in-time spell check using enchant. `global-jinx-mode'
 ;;; replaces `flyspell-mode' and `flyspell-prog-mode': jinx keys off
@@ -59,12 +59,12 @@ one tree.  It need not exist yet."
 ;;; dictionaries. YAML buffers opt out (init-lang-data).
 (use-package jinx
   :preface
-  (defun jotain-writing--enable-jinx ()
+  (defun my-writing--enable-jinx ()
     "Enable `global-jinx-mode', demoting errors so startup continues.
 Jinx compiles a native module against enchant on first load; if that
 fails (MELPA fallback without cc/enchant), a raw error would abort the
 remaining `emacs-startup-hook' functions."
-    (with-demoted-errors "jotain: jinx unavailable: %S"
+    (with-demoted-errors "init-writing: jinx unavailable: %S"
       (global-jinx-mode 1)))
   :custom
   ;; The Nix distribution bundles en/fi/de/fr aspell dictionaries
@@ -72,7 +72,7 @@ remaining `emacs-startup-hook' functions."
   ;; "en_GB fi".  One default language stops foreign words passing as
   ;; correct English.
   (jinx-languages "en_GB")
-  :hook (emacs-startup . jotain-writing--enable-jinx)
+  :hook (emacs-startup . my-writing--enable-jinx)
   :bind (("M-$"   . jinx-correct)
          ("C-M-$" . jinx-languages)))
 
@@ -101,12 +101,12 @@ remaining `emacs-startup-hook' functions."
               ("C-c m <right>" . markdown-demote)))
 
 ;;; @doc Plain-text notes with strict file-naming rules, stored under
-;;; `jotain-notes-directory` (default `~/Documents/notes`), shared with
+;;; `my-notes-directory` (default `~/Documents/notes`), shared with
 ;;; Org (init-org.el).
 (use-package denote
   :commands (denote denote-create-note denote-open-or-create)
   :custom
-  (denote-directory jotain-notes-directory)
+  (denote-directory my-notes-directory)
   (denote-known-keywords '("emacs" "nix" "linux" "writing")))
 
 ;;; @doc In-Emacs PDF viewing: search, annotate, follow links, outline.

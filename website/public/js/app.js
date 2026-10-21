@@ -10,7 +10,7 @@
   var ORDER = ['readme', 'man', 'keys'];
   var META = {
     readme: { name: 'README.org', mode: '(Org)' },
-    man: { name: '*Man JOTAIN(7)*', mode: '(Man)' },
+    man: { name: '*Man EMACS-CONFIG(7)*', mode: '(Man)' },
     keys: { name: 'keybindings.org', mode: '(Org)' }
   };
 
@@ -19,10 +19,10 @@
     { buf: 'readme', label: 'README.org', id: 'sec-ships', title: 'What ships — emacs.nix, init-*.el, module.nix' },
     { buf: 'readme', label: 'README.org', id: 'sec-qs', title: 'Quickstart — devenv shell, just run' },
     { buf: 'readme', label: 'README.org', id: 'sec-manual', title: 'Read the manual' },
-    { buf: 'man', label: '*Man JOTAIN(7)*', id: 'man-name', title: 'NAME — jotain' },
-    { buf: 'man', label: '*Man JOTAIN(7)*', id: 'man-synopsis', title: 'SYNOPSIS — just run | debug | tty | daemon' },
-    { buf: 'man', label: '*Man JOTAIN(7)*', id: 'man-sections', title: 'MANUAL SECTIONS — introduction, installation, …' },
-    { buf: 'man', label: '*Man JOTAIN(7)*', id: 'man-seealso', title: 'SEE ALSO — emacs(1), nix(1), just(1)' },
+    { buf: 'man', label: '*Man EMACS-CONFIG(7)*', id: 'man-name', title: 'NAME — emacs-config' },
+    { buf: 'man', label: '*Man EMACS-CONFIG(7)*', id: 'man-synopsis', title: 'SYNOPSIS — just run | debug | tty | daemon' },
+    { buf: 'man', label: '*Man EMACS-CONFIG(7)*', id: 'man-sections', title: 'MANUAL SECTIONS — introduction, installation, …' },
+    { buf: 'man', label: '*Man EMACS-CONFIG(7)*', id: 'man-seealso', title: 'SEE ALSO — emacs(1), nix(1), just(1)' },
     { buf: 'keys', label: 'keybindings', id: 'keys-cc', title: 'C-c — user namespace (org, magit, consult, gptel)' },
     { buf: 'keys', label: 'keybindings', id: 'keys-cx', title: 'C-x — control namespace (dape, magit-status, vundo)' },
     { buf: 'keys', label: 'keybindings', id: 'keys-global', title: 'Other globals — M-o, embark C-. / C-;, expreg' },
@@ -56,7 +56,7 @@
   function toggleTheme() {
     var dark = !isDark();
     document.documentElement.dataset.mode = dark ? 'dark' : '';
-    try { localStorage.setItem('jotain-theme', dark ? 'dark' : 'light'); } catch (e) { /* private mode */ }
+    try { localStorage.setItem('emacs-config-theme', dark ? 'dark' : 'light'); } catch (e) { /* private mode */ }
     renderTheme();
     msg('Theme: ' + (dark ? 'jylhis-dark (Negative)' : 'jylhis-light (Print)'), 2000);
   }

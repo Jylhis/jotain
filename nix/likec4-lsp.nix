@@ -2,7 +2,7 @@
 # package (https://likec4.dev/tooling/editors/#emacs).
 #
 # Backs `likec4-mode`'s eglot server (lisp/init-lang-devops.el,
-# init-prog.el's `jotain-prog--likec4-server`); on every distribution
+# init-prog.el's `my-prog--likec4-server`); on every distribution
 # wrapper's PATH via nix/runtime-deps.nix.
 #
 # Not in nixpkgs, and the npm tarball ships no lockfile, so
@@ -24,7 +24,7 @@ pkgs.buildNpmPackage {
 
   src = ./likec4-lsp;
 
-  npmDepsHash = "sha256-l2NrBh1O3P/oKy9DpW5XER7OlZq4GZXmQyoxrTcwJGM=";
+  npmDepsHash = "sha256-/6B+u/5jFh09n4L44HAL2OF4Co8rF4mdNP4GWkoV1M8=";
 
   inherit nodejs;
 

@@ -1,9 +1,9 @@
-# Jotain
+# Emacs configuration
 
-**Jotain** (Finnish for "something") is a GNU Emacs 31 configuration
-(floor: Emacs 30.1) with a Nix build layer and no framework underneath.
-Nix builds the editor, with binary-cache parity as an invariant; modular
-Elisp (`lisp/init-*.el`, one file per concern) configures it.
+This is a GNU Emacs 31 configuration (floor: Emacs 30.1) with a Nix build
+layer and no framework underneath. Nix builds the editor, with binary-cache
+parity as an invariant; modular Elisp (`lisp/init-*.el`, one file per
+concern) configures it.
 
 Documentation: **<https://page.jylhis.com/jotain>** has the rendered docs,
 the full manual (HTML/Info/man), the Nix module options reference, and a
@@ -28,7 +28,7 @@ with no Nix, run `scripts/bootstrap-agent-env.sh` first.
 
 The flake exposes the full distribution (`packages.<system>.default`,
 Emacs + tree-sitter grammars), a bare `emacs`, a terminal-only
-`emacs-nox`, and modules for Home Manager (`services.jotain` daemon),
+`emacs-nox`, and modules for Home Manager (`services.emacsConfig` daemon),
 NixOS / nix-darwin, and nix-on-droid. See
 [Installation](https://page.jylhis.com/jotain/docs/installation).
 

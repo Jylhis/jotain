@@ -11,20 +11,20 @@
 ;;;; Persistent-state directory
 ;;
 ;; No `no-littering': the set of paths this config writes is small,
-;; so each module themes its vars by hand via `jotain-var-file'.
+;; so each module themes its vars by hand via `my-var-file'.
 
-(defconst jotain-var-dir
+(defconst my-var-dir
   (expand-file-name "var/" user-emacs-directory)
-  "Directory for Jotain's persistent state files.")
+  "Directory for the configuration's persistent state files.")
 
-(defun jotain-var-file (name)
-  "Return NAME expanded under `jotain-var-dir'.
+(defun my-var-file (name)
+  "Return NAME expanded under `my-var-dir'.
 Ensures the directory exists so callers can use the path
 immediately for writes."
-  (make-directory jotain-var-dir t)
-  (expand-file-name name jotain-var-dir))
+  (make-directory my-var-dir t)
+  (expand-file-name name my-var-dir))
 
-(ignore-errors (make-directory jotain-var-dir t))
+(ignore-errors (make-directory my-var-dir t))
 
 ;; Restore the GC threshold after the early-init.el bump on
 ;; `emacs-startup-hook' (late depth), so all of init runs under the bump.
@@ -32,36 +32,36 @@ immediately for writes."
 ;; enough that an idle GC finishes quickly. If startup aborts before the
 ;; hook runs, the threshold stays at `most-positive-fixnum' until the
 ;; first minibuffer exit (see the hooks below).
-(defconst jotain-core-gc-cons-threshold (* 16 1024 1024)
+(defconst my-core-gc-cons-threshold (* 16 1024 1024)
   "Steady-state `gc-cons-threshold' after startup.")
 
-(defun jotain-core--gc-restore-after-startup ()
+(defun my-core--gc-restore-after-startup ()
   "Drop `gc-cons-threshold' to its steady-state value once startup is done."
-  (setq gc-cons-threshold jotain-core-gc-cons-threshold
+  (setq gc-cons-threshold my-core-gc-cons-threshold
         gc-cons-percentage 0.1))
-(add-hook 'emacs-startup-hook #'jotain-core--gc-restore-after-startup 90)
+(add-hook 'emacs-startup-hook #'my-core--gc-restore-after-startup 90)
 
 ;; Collect on idle only once a quarter of the threshold has been consed.
 ;; Measured against the live threshold, this also skips the collection
 ;; while the minibuffer hooks below hold it at `most-positive-fixnum'.
-(defun jotain-core--gc-idle-collect ()
+(defun my-core--gc-idle-collect ()
   "Run a GC when Emacs has been idle, if enough has been allocated."
   (garbage-collect-maybe 4))
-(run-with-idle-timer 5 t #'jotain-core--gc-idle-collect)
+(run-with-idle-timer 5 t #'my-core--gc-idle-collect)
 
 ;; Pause GC while the minibuffer is open: completion allocates heavily
 ;; and a GC mid-keystroke is felt as input lag. The depth guard keeps the
 ;; pause while an outer minibuffer is still active (recursive minibuffers
 ;; are enabled).
-(defun jotain-core--gc-defer ()
+(defun my-core--gc-defer ()
   "Pause GC for the duration of a minibuffer session."
   (setq gc-cons-threshold most-positive-fixnum))
-(defun jotain-core--gc-restore ()
+(defun my-core--gc-restore ()
   "Restore steady-state GC once the outermost minibuffer exits."
   (when (< (minibuffer-depth) 2)
-    (setq gc-cons-threshold jotain-core-gc-cons-threshold)))
-(add-hook 'minibuffer-setup-hook #'jotain-core--gc-defer)
-(add-hook 'minibuffer-exit-hook #'jotain-core--gc-restore)
+    (setq gc-cons-threshold my-core-gc-cons-threshold)))
+(add-hook 'minibuffer-setup-hook #'my-core--gc-defer)
+(add-hook 'minibuffer-exit-hook #'my-core--gc-restore)
 
 ;; UTF-8 everywhere.
 (set-language-environment "UTF-8")
@@ -115,30 +115,30 @@ immediately for writes."
 ;;; @doc Persist point per file across sessions. Built-in.
 (use-package saveplace
   :ensure nil
-  :custom (save-place-file (jotain-var-file "save-place.el"))
+  :custom (save-place-file (my-var-file "save-place.el"))
   :config
   (save-place-mode 1)
 
   ;; Recenter after `save-place-mode' restores point, or a reopened file
   ;; can leave point on the bottom line. Deferred with a zero-delay timer
   ;; because the window doesn't exist yet when the hook fires.
-  (defun jotain-core--recenter-buffer-window (buffer)
+  (defun my-core--recenter-buffer-window (buffer)
     "Recenter the window currently displaying BUFFER, if any."
     (when-let* ((win (get-buffer-window buffer)))
       (with-selected-window win
         (ignore-errors (recenter)))))
 
-  (defun jotain-core--recenter-after-save-place (&rest _)
+  (defun my-core--recenter-after-save-place (&rest _)
     "Schedule a recenter after `save-place-mode' restores point."
     (when buffer-file-name
       (run-with-timer 0 nil
-                      #'jotain-core--recenter-buffer-window
+                      #'my-core--recenter-buffer-window
                       (current-buffer))))
 
   (advice-add 'save-place-find-file-hook :after
-              #'jotain-core--recenter-after-save-place))
+              #'my-core--recenter-after-save-place))
 
-(declare-function jotain-core--auto-create-missing-dirs nil)
+(declare-function my-core--auto-create-missing-dirs nil)
 ;;; @doc Built-in file-handling tweaks: no auto-save side files, no
 ;;; backup `~` files, no kill-process confirmation, plus a hook that
 ;;; auto-creates missing parent directories on find-file.
@@ -146,19 +146,19 @@ immediately for writes."
   :ensure nil
   :custom
   (auto-save-default nil)
-  (auto-save-list-file-prefix (jotain-var-file "auto-save-list/saves-"))
+  (auto-save-list-file-prefix (my-var-file "auto-save-list/saves-"))
   (make-backup-files nil)
   (confirm-kill-processes nil)
   :hook (after-save . executable-make-buffer-file-executable-if-script-p)
   :config
-  (defun jotain-core--auto-create-missing-dirs ()
+  (defun my-core--auto-create-missing-dirs ()
     "Create the parent directory of the visited file if it does not exist."
     (let ((target-dir (when buffer-file-name
                         (file-name-directory buffer-file-name))))
       (when (and target-dir (not (file-exists-p target-dir)))
         (make-directory target-dir t))))
   (add-to-list 'find-file-not-found-functions
-               #'jotain-core--auto-create-missing-dirs))
+               #'my-core--auto-create-missing-dirs))
 
 ;;;; custom-file writes never prompt
 
@@ -169,7 +169,7 @@ immediately for writes."
 ;; "changed on disk; really edit the buffer?" prompt (a declined prompt
 ;; aborts the write). The file is disposable, so clobbering it is right:
 ;; suppress the prompt during the save.
-(defun jotain-core--custom-save-without-supersession (orig &rest args)
+(defun my-core--custom-save-without-supersession (orig &rest args)
   "Run ORIG (`custom-save-all') with ARGS, never prompting on disk changes."
   (let ((saved (symbol-function 'ask-user-about-supersession-threat)))
     (unwind-protect
@@ -178,7 +178,7 @@ immediately for writes."
           (apply orig args))
       (fset 'ask-user-about-supersession-threat saved))))
 (advice-add 'custom-save-all :around
-            #'jotain-core--custom-save-without-supersession)
+            #'my-core--custom-save-without-supersession)
 
 ;;;; package.el conveniences (newcomers-presets theme)
 
@@ -246,7 +246,7 @@ immediately for writes."
   (when (boundp 'world-clock-sort-order)
     (setopt world-clock-sort-order "%FT%T")))
 
-(defun jotain-display-ansi-colors ()
+(defun my-display-ansi-colors ()
   "Render ANSI escape sequences in the current buffer."
   (interactive)
   (require 'ansi-color)
@@ -256,21 +256,21 @@ immediately for writes."
 (declare-function profiler-stop "profiler")
 (declare-function profiler-report "profiler")
 
-(defvar jotain-profiler--running nil
-  "Non-nil when `jotain-profile-toggle' is mid-recording.")
+(defvar my-profiler--running nil
+  "Non-nil when `my-profile-toggle' is mid-recording.")
 
-(defun jotain-profile-toggle ()
+(defun my-profile-toggle ()
   "Toggle CPU+memory profiling; show the report on the second call.
 Useful for diagnosing freezes: start, reproduce, stop."
   (interactive)
-  (if jotain-profiler--running
+  (if my-profiler--running
       (progn (profiler-stop)
-             (setq jotain-profiler--running nil)
+             (setq my-profiler--running nil)
              (profiler-report)
              (message "Profiler stopped — see *CPU/Memory Profiler Report*"))
     (profiler-start 'cpu+mem)
-    (setq jotain-profiler--running t)
-    (message "Profiler started — run `M-x jotain-profile-toggle' again to report")))
+    (setq my-profiler--running t)
+    (message "Profiler started — run `M-x my-profile-toggle' again to report")))
 
 ;;;; macOS — minimal modifier-key fix
 ;;
@@ -316,18 +316,18 @@ Useful for diagnosing freezes: start, reproduce, stop."
 (use-package recentf
   :ensure nil
   :custom
-  (recentf-save-file (jotain-var-file "recentf-save.el"))
+  (recentf-save-file (my-var-file "recentf-save.el"))
   (recentf-max-saved-items 200)
   :config
   (recentf-mode 1)
-  (add-to-list 'recentf-exclude jotain-var-dir))
+  (add-to-list 'recentf-exclude my-var-dir))
 
 ;;; @doc Persist minibuffer history (M-p / M-n, vertico ordering, etc.)
 ;;; across sessions. Built-in, enabled globally.
 (use-package savehist
   :ensure nil
   :custom
-  (savehist-file (jotain-var-file "savehist.el"))
+  (savehist-file (my-var-file "savehist.el"))
   ;; Also persist the kill and search rings. savehist drops a variable
   ;; whole if any part is unprintable; these hold only strings.
   ;; `register-alist' is excluded: one marker (C-x r SPC) or window
@@ -345,7 +345,7 @@ Useful for diagnosing freezes: start, reproduce, stop."
   ;; `bookmark-jump'/`consult-bookmark' load it.
   :defer t
   :custom
-  (bookmark-default-file (jotain-var-file "bookmarks.el"))
+  (bookmark-default-file (my-var-file "bookmarks.el"))
   (bookmark-fringe-mark nil)
   (bookmark-save-flag 1))
 
@@ -392,7 +392,7 @@ Useful for diagnosing freezes: start, reproduce, stop."
   :ensure nil
   :custom
   (network-security-level 'high)
-  (nsm-settings-file (jotain-var-file "network-security.data")))
+  (nsm-settings-file (my-var-file "network-security.data")))
 
 (provide 'init-core)
 ;;; init-core.el ends here

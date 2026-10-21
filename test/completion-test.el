@@ -197,18 +197,18 @@ This is why `init-snippets.el' wraps its eglot merge."
 
 (ert-deftest completion-test-defcustom-defaults ()
   "The opt-out knobs carry their documented defaults."
-  (should (equal jotain-completion-auto-modes '(prog-mode-hook)))
-  (should (equal jotain-completion-auto-delay 0.2))
-  (should (equal jotain-completion-auto-prefix 3))
-  (should (equal jotain-completion-key "C-M-i"))
-  (should (eq jotain-completion-free-return t))
-  (should (eq jotain-completion-free-tab nil))
-  (should (eq jotain-completion-fallbacks t))
-  (should (eq jotain-completion-snippets t))
-  (should (eq jotain-completion-eglot-nonexclusive t))
-  (should (eq jotain-completion-doc-popup t))
-  (should (eq jotain-completion-inline-preview t))
-  (should (key-valid-p jotain-completion-key)))
+  (should (equal my-completion-auto-modes '(prog-mode-hook)))
+  (should (equal my-completion-auto-delay 0.2))
+  (should (equal my-completion-auto-prefix 3))
+  (should (equal my-completion-key "C-M-i"))
+  (should (eq my-completion-free-return t))
+  (should (eq my-completion-free-tab nil))
+  (should (eq my-completion-fallbacks t))
+  (should (eq my-completion-snippets t))
+  (should (eq my-completion-eglot-nonexclusive t))
+  (should (eq my-completion-doc-popup t))
+  (should (eq my-completion-inline-preview t))
+  (should (key-valid-p my-completion-key)))
 
 (ert-deftest completion-test-corfu-preview-current-off ()
   "The popup inserts nothing until asked: `corfu-preview-current' is nil.
@@ -217,17 +217,17 @@ corfu's default `insert' commits the selected candidate on further input."
 
 (ert-deftest completion-test-tab-indents-and-completes ()
   "TAB indents and completes: `tab-always-indent' is `complete'.
-That is the default, with `jotain-completion-free-tab' nil."
-  (should (eq jotain-completion-free-tab nil))
+That is the default, with `my-completion-free-tab' nil."
+  (should (eq my-completion-free-tab nil))
   (should (eq tab-always-indent 'complete)))
 
 (ert-deftest completion-test-auto-popup-is-opt-in-per-mode ()
   "Auto-popup is off globally and opted into per mode hook, buffer-locally."
   (should (eq (default-value 'corfu-auto) nil))
-  (should (memq #'jotain-completion--enable-auto prog-mode-hook))
-  (should-not (memq #'jotain-completion--enable-auto text-mode-hook))
+  (should (memq #'my-completion--enable-auto prog-mode-hook))
+  (should-not (memq #'my-completion--enable-auto text-mode-hook))
   (with-temp-buffer
-    (jotain-completion--enable-auto)
+    (my-completion--enable-auto)
     (should (local-variable-p 'corfu-auto))
     (should (eq corfu-auto t)))
   ;; The opt-in never touches the global value.
@@ -256,7 +256,7 @@ TAB and `<tab>' run `corfu-insert', which also runs the candidate's
 (ert-deftest completion-test-inline-preview-is-global ()
   "Inline preview is enabled globally where Emacs supports it.
 Emacs 31 has `global-completion-preview-mode'; on Emacs 30 the config
-falls back to the `jotain-completion-auto-modes' hooks."
+falls back to the `my-completion-auto-modes' hooks."
   (if (fboundp 'global-completion-preview-mode)
       (should (bound-and-true-p global-completion-preview-mode))
     (should (memq #'completion-preview-mode prog-mode-hook))))
@@ -267,7 +267,7 @@ A remap only fires for the command a key resolves to, so binding the
 command is what lets the same key accept inside the popup.  The remap
 points at `corfu-insert' rather than corfu's `corfu-complete', which only
 extends the common prefix and skips the `:exit-function'."
-  (should (eq (keymap-global-lookup jotain-completion-key)
+  (should (eq (keymap-global-lookup my-completion-key)
               #'completion-at-point))
   (should (eq (lookup-key corfu-map [remap completion-at-point])
               #'corfu-insert)))
@@ -294,10 +294,10 @@ the key from the popup mid-snippet."
 
 (ert-deftest completion-test-capf-wiring ()
   "Snippets lead the buffer-local list; the cape fallbacks are global."
-  (should (memq #'jotain-tempel-setup-capf prog-mode-hook))
-  (should (memq #'jotain-tempel-setup-capf text-mode-hook))
+  (should (memq #'my-tempel-setup-capf prog-mode-hook))
+  (should (memq #'my-tempel-setup-capf text-mode-hook))
   (with-temp-buffer
-    (jotain-tempel-setup-capf)
+    (my-tempel-setup-capf)
     (should (eq (car completion-at-point-functions) #'tempel-complete))
     ;; The `t' sentinel is what lets the global list run afterwards.
     (should (eq (car (last completion-at-point-functions)) t)))

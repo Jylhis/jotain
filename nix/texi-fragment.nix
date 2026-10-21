@@ -1,9 +1,9 @@
 # nix/texi-fragment.nix — post-processing for a pandoc-generated Texinfo
-# fragment that docs/jotain.texi `@include's.
+# fragment that docs/emacs-config.texi `@include's.
 #
 # Pandoc's texinfo writer emits a standalone document (@node/@top/@menu
 # plus @refs between those nodes). In the master manual the nodes would
-# collide with docs/jotain.texi's and the @refs would dangle; makeinfo
+# collide with docs/emacs-config.texi's and the @refs would dangle; makeinfo
 # re-derives nodes from the surviving @section hierarchy.
 #
 # Used by nix/info-manual.nix, nix/options-doc.nix, nix/packages-doc.nix

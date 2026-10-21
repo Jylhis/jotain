@@ -4,16 +4,16 @@
 
 ;; Two things in `init-org.el' can rot silently:
 ;;
-;; - `jotain-org-babel-languages': a typo, or a language moved out to
+;; - `my-org-babel-languages': a typo, or a language moved out to
 ;;   org-contrib, passes byte-compilation and breaks `C-c C-c' later.
 ;;   The tests `require' every `ob-LANG'.
 ;;
-;; - `jotain-org-babel-confirm-evaluate' is a security boundary: if it
+;; - `my-org-babel-confirm-evaluate' is a security boundary: if it
 ;;   returned nil unconditionally, source blocks from any `.org' file
 ;;   would run without confirmation.
 ;;
 ;; Like `test-ui.el', these read `init-org.el' as data instead of loading
-;; it (its `:custom' forms need `jotain-notes-directory' from
+;; it (its `:custom' forms need `my-notes-directory' from
 ;; `init-writing'), and evaluate only the forms under test.
 
 ;;; Code:
@@ -50,7 +50,7 @@ data, so no `use-package' form is expanded and no package is loaded."
 
 (defun test-org-babel--languages ()
   "Return the language list `init-org.el' enables."
-  (let ((form (test-org-babel--top-level-form 'defconst 'jotain-org-babel-languages)))
+  (let ((form (test-org-babel--top-level-form 'defconst 'my-org-babel-languages)))
     (should form)
     (eval (nth 2 form) t)))
 
@@ -76,21 +76,21 @@ Catches a language renamed or moved to org-contrib by an Org bump."
 
 (ert-deftest test-org-babel-trusts-files-under-org-directory ()
   "A file in the notes tree needs no evaluation prompt."
-  (test-org-babel--define 'jotain-org-babel-trusted-p)
-  (let* ((notes (file-name-as-directory (make-temp-file "jotain-notes" t)))
+  (test-org-babel--define 'my-org-babel-trusted-p)
+  (let* ((notes (file-name-as-directory (make-temp-file "my-notes" t)))
          (org-directory notes)
          ;; No project anywhere, so only the notes-tree branch can match.
          (project-find-functions nil))
     (unwind-protect
         (with-temp-buffer
           (setq buffer-file-name (expand-file-name "notebook.org" notes))
-          (should (jotain-org-babel-trusted-p)))
+          (should (my-org-babel-trusted-p)))
       (delete-directory notes t))))
 
 (ert-deftest test-org-babel-trusts-files-inside-a-project ()
   "A file in the current project needs no evaluation prompt."
-  (test-org-babel--define 'jotain-org-babel-trusted-p)
-  (let* ((root (file-name-as-directory (make-temp-file "jotain-project" t)))
+  (test-org-babel--define 'my-org-babel-trusted-p)
+  (let* ((root (file-name-as-directory (make-temp-file "my-project" t)))
          (org-directory (expand-file-name "elsewhere" temporary-file-directory))
          (project-find-functions
           (list (lambda (dir) (and (file-in-directory-p dir root)
@@ -98,39 +98,39 @@ Catches a language renamed or moved to org-contrib by an Org bump."
     (unwind-protect
         (with-temp-buffer
           (setq buffer-file-name (expand-file-name "README.org" root))
-          (should (jotain-org-babel-trusted-p)))
+          (should (my-org-babel-trusted-p)))
       (delete-directory root t))))
 
 (ert-deftest test-org-babel-does-not-trust-foreign-files ()
   "An Org file from outside the notes tree and outside any project asks.
 The security-relevant direction: a downloaded `.org' must not run code
 on `C-c C-c' without confirmation."
-  (test-org-babel--define 'jotain-org-babel-trusted-p)
-  (let* ((elsewhere (file-name-as-directory (make-temp-file "jotain-foreign" t)))
+  (test-org-babel--define 'my-org-babel-trusted-p)
+  (let* ((elsewhere (file-name-as-directory (make-temp-file "my-foreign" t)))
          (org-directory (expand-file-name "notes" temporary-file-directory))
          (project-find-functions nil))
     (unwind-protect
         (with-temp-buffer
           (setq buffer-file-name (expand-file-name "downloaded.org" elsewhere))
-          (should-not (jotain-org-babel-trusted-p)))
+          (should-not (my-org-babel-trusted-p)))
       (delete-directory elsewhere t))))
 
 (ert-deftest test-org-babel-does-not-trust-buffers-without-a-file ()
   "A buffer with no backing file is not trusted."
-  (test-org-babel--define 'jotain-org-babel-trusted-p)
+  (test-org-babel--define 'my-org-babel-trusted-p)
   (let ((org-directory (expand-file-name "notes" temporary-file-directory))
         (project-find-functions nil))
     (with-temp-buffer
-      (should-not (jotain-org-babel-trusted-p)))))
+      (should-not (my-org-babel-trusted-p)))))
 
 (ert-deftest test-org-babel-confirm-inverts-trust ()
   "`org-confirm-babel-evaluate' prompts exactly when the file is untrusted.
 Also guards the arity: Org calls the predicate with two arguments."
-  (test-org-babel--define 'jotain-org-babel-confirm-evaluate)
-  (cl-letf (((symbol-function 'jotain-org-babel-trusted-p) (lambda () t)))
-    (should-not (jotain-org-babel-confirm-evaluate "python" "print(1)")))
-  (cl-letf (((symbol-function 'jotain-org-babel-trusted-p) (lambda () nil)))
-    (should (jotain-org-babel-confirm-evaluate "python" "print(1)"))))
+  (test-org-babel--define 'my-org-babel-confirm-evaluate)
+  (cl-letf (((symbol-function 'my-org-babel-trusted-p) (lambda () t)))
+    (should-not (my-org-babel-confirm-evaluate "python" "print(1)")))
+  (cl-letf (((symbol-function 'my-org-babel-trusted-p) (lambda () nil)))
+    (should (my-org-babel-confirm-evaluate "python" "print(1)"))))
 
 (provide 'test-org-babel)
 ;;; test-org-babel.el ends here

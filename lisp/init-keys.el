@@ -8,7 +8,7 @@
 
 ;;; Code:
 
-(defun jotain-toggle-window-split ()
+(defun my-toggle-window-split ()
   "Toggle between horizontal and vertical window split.
 Works with exactly two windows; their buffers and focus are kept."
   (interactive)
@@ -37,7 +37,7 @@ Works with exactly two windows; their buffers and focus are kept."
 
 ;; The default `keyboard-quit' doesn't close a minibuffer that isn't the
 ;; selected window, a frequent papercut with recursive minibuffers.
-(defun jotain-keyboard-quit-dwim ()
+(defun my-keyboard-quit-dwim ()
   "Do-What-I-Mean `keyboard-quit'.
 Minibuffer open (even when point is in another window) → abort
 recursive edit (this also dismisses any `*Completions*' popup).
@@ -61,9 +61,9 @@ Region active → deactivate it.  Otherwise call regular
   :bind
   (("C-z" . nil)
    ("C-x C-z" . nil)
-   ([remap keyboard-quit] . jotain-keyboard-quit-dwim)
+   ([remap keyboard-quit] . my-keyboard-quit-dwim)
    ("M-o" . other-window)
-   ("C-x j" . jotain-toggle-window-split)))
+   ("C-x j" . my-toggle-window-split)))
 
 ;;; @doc Remove unwanted stock menu-bar entries and disable the commands
 ;;; behind them: Read Mail, Read Net News, all Games (including the Emacs
@@ -138,7 +138,7 @@ Region active → deactivate it.  Otherwise call regular
 ;; The command symbols are quoted, not `#'', so byte-compiling on
 ;; Emacs 30 sees data rather than unknown functions.
 (when (fboundp 'window-layout-transpose)
-  (defvar-keymap jotain-window-layout-repeat-map
+  (defvar-keymap my-window-layout-repeat-map
     :doc "Repeat map for `window-layout-*' frame transforms."
     :repeat t
     "t" 'window-layout-transpose
@@ -146,7 +146,7 @@ Region active → deactivate it.  Otherwise call regular
     "R" 'window-layout-rotate-anticlockwise
     "h" 'window-layout-flip-leftright
     "v" 'window-layout-flip-topdown)
-  (keymap-global-set "C-x W" jotain-window-layout-repeat-map))
+  (keymap-global-set "C-x W" my-window-layout-repeat-map))
 
 (provide 'init-keys)
 ;;; init-keys.el ends here

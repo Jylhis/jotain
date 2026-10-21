@@ -1,4 +1,4 @@
-;;; init.el --- Jotain Emacs configuration -*- lexical-binding: t; -*-
+;;; init.el --- Emacs configuration -*- lexical-binding: t; -*-
 
 ;; Author: Markus Jylhänkangas <markus@jylhis.com>
 ;; URL: https://github.com/Jylhis/jotain
@@ -41,7 +41,7 @@
 (require 'init-ui)           ; Theme, modeline, fonts, frame tweaks
 (require 'init-tabs)         ; Workspace tabs via tab-bar-mode
 (require 'init-help)         ; helpful + built-in help tweaks
-(require 'init-docs)         ; Surface jotain.info under C-h i
+(require 'init-docs)         ; Surface emacs-config.info under C-h i
 (require 'init-editing)      ; Electric pairs, delsel, whitespace, region tools
 (require 'init-completion)   ; Vertico, marginalia, orderless, consult, corfu
 (require 'init-navigation)   ; Dired + dirvish, winner

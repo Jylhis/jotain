@@ -4,7 +4,7 @@
  * of the wrong theme. Dark mode is data-mode="dark" on <html>.
  */
 try {
-  var t = localStorage.getItem('jotain-theme');
+  var t = localStorage.getItem('emacs-config-theme');
   document.documentElement.dataset.mode =
     (t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : '';
 } catch (e) { /* no storage — fall back to light */ }

@@ -1,11 +1,11 @@
 ---
 title: Installation
-description: How to build and install Jotain
+description: How to build and install the configuration
 ---
 
 # Installation
 
-Jotain uses [Nix](https://nixos.org/) to build Emacs, driven by a `Justfile` task runner. Development happens in a [devenv](https://devenv.sh) shell: enter it with `devenv shell` (no `.envrc` is tracked; direnv users can create their own).
+This configuration uses [Nix](https://nixos.org/) to build Emacs, driven by a `Justfile` task runner. Development happens in a [devenv](https://devenv.sh) shell: enter it with `devenv shell` (no `.envrc` is tracked; direnv users can create their own).
 
 ## Prerequisites
 
@@ -23,11 +23,11 @@ The default build targets the current system and includes every tree-sitter gram
 just build
 ```
 
-This runs plain `nix-build`, which evaluates `default.nix` (a flake-compat wrapper around `flake.nix`) and builds `packages.<system>.default`: the full `jotainEmacsPackages` distribution (Emacs + use-package-scanned packages + tree-sitter grammars + the Info manual) assembled by `nix/mk-overlay.nix`. Its Emacs is the emacs-overlay `unstable` variant (the newest Emacs release or pretest tag, currently 31.1). The cache-parity invariant in `emacs.nix` makes its store path match emacs-overlay's prebuilt `emacs-unstable-pgtk` on Linux, so the base Emacs comes from `nix-community.cachix.org` instead of compiling.
+This runs plain `nix-build`, which evaluates `default.nix` (a flake-compat wrapper around `flake.nix`) and builds `packages.<system>.default`: the full `emacsConfigPackages` distribution (Emacs + use-package-scanned packages + tree-sitter grammars + the Info manual) assembled by `nix/mk-overlay.nix`. Its Emacs is the emacs-overlay `unstable` variant (the newest Emacs release or pretest tag, currently 31.1). The cache-parity invariant in `emacs.nix` makes its store path match emacs-overlay's prebuilt `emacs-unstable-pgtk` on Linux, so the base Emacs comes from `nix-community.cachix.org` instead of compiling.
 
 ### Build Matrix
 
-Jotain ships four builds on {x86_64, aarch64} × {Linux, Darwin}: on Linux a pgtk/Wayland GUI and a terminal-only build; on Darwin a patched NS/Cocoa GUI (system-appearance, round-undecorated-frame, and fix-ns-x-colors, applied by default, so always built from source) and a terminal-only build. X11/Lucid/GTK3-x11/Motif/Athena and the macport fork are not supported; `emacs.nix` asserts them away.
+This configuration ships four builds on {x86_64, aarch64} × {Linux, Darwin}: on Linux a pgtk/Wayland GUI and a terminal-only build; on Darwin a patched NS/Cocoa GUI (system-appearance, round-undecorated-frame, and fix-ns-x-colors, applied by default, so always built from source) and a terminal-only build. X11/Lucid/GTK3-x11/Motif/Athena and the macport fork are not supported; `emacs.nix` asserts them away.
 
 ```bash
 just build           # full distribution: Emacs 31 (unstable) + every grammar (default)
@@ -57,45 +57,45 @@ nix-build emacs.nix  --arg variant '"igc"'               # MPS GC branch
 
 ## Installing from a Consumer Flake
 
-Jotain exposes Home Manager, NixOS, and nix-darwin modules. By default they install the full distribution (`jotainEmacsPackages`):
+This configuration exposes Home Manager, NixOS, and nix-darwin modules. By default they install the full distribution (`emacsConfigPackages`):
 
 ```nix
 {
-  imports = [ inputs.jotain.homeManagerModules.default ];
+  imports = [ inputs.emacs-config.homeManagerModules.default ];
 
-  services.jotain.enable = true;
+  services.emacsConfig.enable = true;
 }
 ```
 
-`services.jotain.package` swaps in another Jotain-shaped distribution, for example the terminal-only build:
+`services.emacsConfig.package` swaps in another configuration-shaped distribution, for example the terminal-only build:
 
 ```nix
 {
-  imports = [ inputs.jotain.homeManagerModules.default ];
+  imports = [ inputs.emacs-config.homeManagerModules.default ];
 
-  services.jotain = {
+  services.emacsConfig = {
     enable = true;
-    package = inputs.jotain.packages.${system}.emacs-nox;
+    package = inputs.emacs-config.packages.${system}.emacs-nox;
   };
 }
 ```
 
 ### nix-on-droid (Android)
 
-Jotain also ships a [nix-on-droid](https://github.com/nix-community/nix-on-droid) module for Emacs on Android (Termux/proot). Android is headless under proot, so the module installs a **terminal-only** Emacs into `environment.packages` and points `EDITOR`/`VISUAL` at an `emacsclient` wrapper. There is no systemd daemon, launchd agent, or GUI.
+This configuration also ships a [nix-on-droid](https://github.com/nix-community/nix-on-droid) module for Emacs on Android (Termux/proot). Android is headless under proot, so the module installs a **terminal-only** Emacs into `environment.packages` and points `EDITOR`/`VISUAL` at an `emacsclient` wrapper. There is no systemd daemon, launchd agent, or GUI.
 
 ```nix
 {
-  imports = [ jotain.nixOnDroidModules.default ];
+  imports = [ emacs-config.nixOnDroidModules.default ];
 
-  services.jotain.enable = true;
+  services.emacsConfig.enable = true;
 }
 ```
 
-Switch it in with `nix-on-droid switch --flake .#default`. `nixOnDroidConfigurations.default` in Jotain's `flake.nix` is a complete example.
+Switch it in with `nix-on-droid switch --flake .#default`. `nixOnDroidConfigurations.default` in the configuration's `flake.nix` is a complete example.
 
 <Note>
-Like the NixOS / nix-darwin module (`module-system.nix`), this module installs the **Jotain Emacs package** (its Emacs packages, tree-sitter grammars, themes, and Info manual are on the `load-path`) but not Jotain's own `early-init.el` / `init.el` / `lisp/`. To boot the full configuration, point Emacs at a checkout with `--init-directory` (as `just run-built` does), or layer the Home Manager module through nix-on-droid's `home-manager.config`, which installs the config into `~/.config/emacs`. An `--init-directory` inside the read-only Nix store won't work, because Jotain writes `var/`, `elpa/`, and `eln-cache/` under `user-emacs-directory`.
+Like the NixOS / nix-darwin module (`module-system.nix`), this module installs the **configured Emacs package** (its Emacs packages, tree-sitter grammars, themes, and Info manual are on the `load-path`) but not the configuration's own `early-init.el` / `init.el` / `lisp/`. To boot the full configuration, point Emacs at a checkout with `--init-directory` (as `just run-built` does), or layer the Home Manager module through nix-on-droid's `home-manager.config`, which installs the config into `~/.config/emacs`. An `--init-directory` inside the read-only Nix store won't work, because the configuration writes `var/`, `elpa/`, and `eln-cache/` under `user-emacs-directory`.
 </Note>
 
 ### Overriding nixpkgs
@@ -103,14 +103,14 @@ Like the NixOS / nix-darwin module (`module-system.nix`), this module installs t
 Downstream flakes may pin a different nixpkgs (release branches **24.05+** through unstable) by following the input:
 
 ```nix
-inputs.jotain.inputs.nixpkgs.follows = "nixpkgs";
+inputs.emacs-config.inputs.nixpkgs.follows = "nixpkgs";
 ```
 
-`emacs.nix` only forwards the build flags the base `make-emacs.nix` defines, so the modules still evaluate and build on older releases. On 24.05, `pkgs.emacs` is Emacs 29 while Jotain's Elisp targets Emacs 30/31: the build succeeds, but runtime behaviour is only guaranteed on the pinned unstable.
+`emacs.nix` only forwards the build flags the base `make-emacs.nix` defines, so the modules still evaluate and build on older releases. On 24.05, `pkgs.emacs` is Emacs 29 while the configuration's Elisp targets Emacs 30/31: the build succeeds, but runtime behaviour is only guaranteed on the pinned unstable.
 
 ## Running
 
-Jotain is launched from its own checkout via `--init-directory`, so it never touches `~/.emacs.d`.
+This configuration is launched from its own checkout via `--init-directory`, so it never touches `~/.emacs.d`.
 
 ```bash
 just run-built          # build for this platform, then launch result/bin/emacs

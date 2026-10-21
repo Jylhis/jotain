@@ -1,7 +1,7 @@
 # website — page.jylhis.com/jotain
 
-The landing page and docs site for Jotain, styled as an Emacs frame: a tab
-bar of three buffers (`README.org` landing, `*Man JOTAIN(7)*` docs index,
+The landing page and docs site for the configuration, styled as an Emacs frame: a tab
+bar of three buffers (`README.org` landing, `*Man EMACS-CONFIG(7)*` docs index,
 `keybindings`), a modeline, and a minibuffer with `I-search` over the site's
 sections. Built on the [Jylhis design system](https://github.com/jylhis/design)
 v3 (the single `jylhis` theme, Print/Negative modes, bronze accent, Zilla
@@ -30,12 +30,12 @@ Slab + Hanken Grotesk + IBM Plex Mono + IBM Plex Sans Condensed).
 
 - `/docs/…`: every `docs/**/*.mdx` page rendered to HTML, ordered by
   `docs/docs.json`
-- `/manual/`: the Jotain manual (`docs/jotain.texi`) as HTML, one page per
-  chapter, plus `/manual/jotain.info` for `C-h i`
-- `/man/`: `jotain(7)` (from `docs/jotain.7.md`, also served as raw
+- `/manual/`: the manual (`docs/emacs-config.texi`) as HTML, one page per
+  chapter, plus `/manual/emacs-config.info` for `C-h i`
+- `/man/`: `emacs-config(7)` (from `docs/emacs-config.7.md`, also served as raw
   troff) and the man pages shipped by the Emacs build, via mandoc
 - `/info/emacs/`, `/info/elisp/`: the GNU Emacs and Emacs Lisp manuals,
-  rendered from the Emacs source revision Jotain builds
+  rendered from the Emacs source revision the configuration builds
 - `/options/`: Nix module options reference (`nix/options-doc.nix`)
 - `/help/packages/`: per-package reference from `;;; @doc` markers
   (`nix/packages-doc.nix`)

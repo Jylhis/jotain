@@ -236,7 +236,7 @@ let
     let
       base =
         pkgs.${baseAttr} or (throw (
-          "jotain emacs.nix: variant \"${variant}\" needs nix-community/emacs-overlay "
+          "emacs.nix: variant \"${variant}\" needs nix-community/emacs-overlay "
           + "composed into `pkgs` (this flake's overlays.default provides `${baseAttr}`). "
           + "For stock nixpkgs Emacs use variant = \"mainline\"."
         ));

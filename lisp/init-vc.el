@@ -9,7 +9,7 @@
 
 ;; Defined in init-project.el, which loads after this file; only magit's
 ;; deferred :config reads it.
-(defvar jotain-repositories-roots)
+(defvar my-repositories-roots)
 
 ;;; @doc Built-in version control, limited to Git and Jujutsu: every
 ;;; other backend probes each visited file's parent directories for
@@ -51,10 +51,10 @@
 (use-package vc-git
   :ensure nil
   ;; Not C-x C-g: a sequence ending in C-g would break C-g as abort.
-  :bind ("C-x G" . jotain-switch-git-status-buffer)
+  :bind ("C-x G" . my-switch-git-status-buffer)
   :preface
   (declare-function vc-git-root "vc-git" (file))
-  (defun jotain-switch-git-status-buffer ()
+  (defun my-switch-git-status-buffer ()
     "Switch to a file git status reports as changed in this repo.
 Parses `git status --porcelain=v1 -z -uall': -z keeps spaces and
 non-ASCII paths verbatim, and -uall lists untracked files whatever
@@ -117,9 +117,9 @@ is no file to open."
 ;;; interactive view is `majutsu' (C-c j).
 (use-package vc-jj
   :after vc
-  :bind ("C-x J" . jotain-switch-jj-status-buffer)
+  :bind ("C-x J" . my-switch-jj-status-buffer)
   :preface
-  (defun jotain-switch-jj-status-buffer ()
+  (defun my-switch-jj-status-buffer ()
     "Switch to a file `jj' reports as changed in the working copy.
 Parses `jj diff --summary -r @' (lines are \"<LETTER> <path>\").
 Deletions are omitted, since there is no file to open."
@@ -165,9 +165,9 @@ Deletions are omitted, since there is no file to open."
   (magit-diff-context-lines 5)
   (magit-save-repository-buffers 'dontask)
   :config
-  ;; Not :custom: `jotain-repositories-roots' is defined later.
+  ;; Not :custom: `my-repositories-roots' is defined later.
   (setopt magit-repository-directories
-          (mapcar (lambda (root) (cons root 2)) jotain-repositories-roots))
+          (mapcar (lambda (root) (cons root 2)) my-repositories-roots))
   (add-hook 'magit-status-sections-hook 'magit-insert-worktrees t))
 
 ;;; @doc The Jujutsu porcelain, a magit-style interface for jj that sits
@@ -196,8 +196,8 @@ Deletions are omitted, since there is no file to open."
 (use-package forge
   :after magit
   :custom
-  (forge-database-file (jotain-var-file "forge/database.sqlite"))
-  (forge-post-directory (jotain-var-file "forge/posts/"))
+  (forge-database-file (my-var-file "forge/database.sqlite"))
+  (forge-post-directory (my-var-file "forge/posts/"))
   (forge-database-connector 'emacsql-sqlite-builtin))
 
 ;;; @doc Built-in transient menu system that magit/forge are built on.
@@ -209,9 +209,9 @@ Deletions are omitted, since there is no file to open."
   :defer t
   :init
   (with-eval-after-load 'transient
-    (setopt transient-history-file (jotain-var-file "transient/history.el")
-            transient-values-file  (jotain-var-file "transient/values.el")
-            transient-levels-file  (jotain-var-file "transient/levels.el"))))
+    (setopt transient-history-file (my-var-file "transient/history.el")
+            transient-values-file  (my-var-file "transient/values.el")
+            transient-levels-file  (my-var-file "transient/levels.el"))))
 
 ;;; @doc Fringe indicators for added/changed/removed lines.
 ;;; `diff-hl-flydiff-mode` updates them before saving, too.
@@ -245,67 +245,67 @@ Deletions are omitted, since there is no file to open."
 ;;; directory selects jj). N changes face at configurable thresholds, a
 ;;; nudge that the WIP is getting too large for one commit. Probes run
 ;;; async, so rendering never blocks.
-(defgroup jotain-vc nil
-  "Version-control modeline knobs for the Jotain configuration."
-  :group 'jotain-ui)
+(defgroup my-vc nil
+  "Version-control modeline knobs for the configuration."
+  :group 'my-ui)
 
-(defcustom jotain-git-stats-update-interval 30
+(defcustom my-git-stats-update-interval 30
   "Seconds between background refreshes of the git-stats counters."
   :type 'integer
-  :group 'jotain-vc)
+  :group 'my-vc)
 
-(defcustom jotain-git-stats-warning-threshold 250
-  "Uncommitted-change count above which the counter uses `jotain-git-stats-warning'."
+(defcustom my-git-stats-warning-threshold 250
+  "Uncommitted-change count above which the counter uses `my-git-stats-warning'."
   :type 'integer
-  :group 'jotain-vc)
+  :group 'my-vc)
 
-(defcustom jotain-git-stats-urgent-threshold 500
-  "Uncommitted-change count above which the counter uses `jotain-git-stats-urgent'."
+(defcustom my-git-stats-urgent-threshold 500
+  "Uncommitted-change count above which the counter uses `my-git-stats-urgent'."
   :type 'integer
-  :group 'jotain-vc)
+  :group 'my-vc)
 
-(defface jotain-git-stats-normal '((t :inherit success))
+(defface my-git-stats-normal '((t :inherit success))
   "Face for the uncommitted-changes counter below the warning threshold."
-  :group 'jotain-vc)
+  :group 'my-vc)
 
-(defface jotain-git-stats-warning '((t :inherit warning))
+(defface my-git-stats-warning '((t :inherit warning))
   "Face for the uncommitted-changes counter above the warning threshold."
-  :group 'jotain-vc)
+  :group 'my-vc)
 
-(defface jotain-git-stats-urgent '((t :inherit error))
+(defface my-git-stats-urgent '((t :inherit error))
   "Face for the uncommitted-changes counter above the urgent threshold."
-  :group 'jotain-vc)
+  :group 'my-vc)
 
-(defface jotain-git-stats-commits '((t :inherit font-lock-keyword-face))
+(defface my-git-stats-commits '((t :inherit font-lock-keyword-face))
   "Face for the commits-today counter."
-  :group 'jotain-vc)
+  :group 'my-vc)
 
-(defvar jotain-git-stats--cache (make-hash-table :test 'equal)
+(defvar my-git-stats--cache (make-hash-table :test 'equal)
   "Hash table keyed by git repo root.
 Each value is a plist (:changes N :commits M :ts TIMESTAMP :busy BOOL).")
 
-(defvar jotain-git-stats--timer nil
+(defvar my-git-stats--timer nil
   "Idle timer that periodically invalidates every cache entry.")
 
-(defcustom jotain-git-stats-max-dotgit-bytes 4096
+(defcustom my-git-stats-max-dotgit-bytes 4096
   "Maximum number of bytes read from a regular `.git' file.
 Worktree indirection files are tiny; larger files are treated as
-untrusted and ignored by `jotain-git-stats--git-dir'."
+untrusted and ignored by `my-git-stats--git-dir'."
   :type 'integer
-  :group 'jotain-vc)
+  :group 'my-vc)
 
-(defun jotain-git-stats--entry (root)
+(defun my-git-stats--entry (root)
   "Return the cache plist for ROOT, creating a zeroed one if missing."
-  (or (gethash root jotain-git-stats--cache)
+  (or (gethash root my-git-stats--cache)
       (puthash root (list :changes 0 :commits 0 :ts 0 :busy nil)
-               jotain-git-stats--cache)))
+               my-git-stats--cache)))
 
-(defun jotain-git-stats--fresh-p (entry)
+(defun my-git-stats--fresh-p (entry)
   "Return non-nil if ENTRY's cached values are still within the update interval."
   (< (- (float-time) (plist-get entry :ts))
-     jotain-git-stats-update-interval))
+     my-git-stats-update-interval))
 
-(defun jotain-git-stats--git-dir (root)
+(defun my-git-stats--git-dir (root)
   "Resolve the git-dir for ROOT.
 Handles both normal repos (`.git' is a directory) and worktrees
 (`.git' is a regular file holding `gitdir: <path>'). Returns nil
@@ -316,7 +316,7 @@ when ROOT is not under git control or parsing fails."
      ((file-regular-p dotgit)
       (condition-case nil
           (with-temp-buffer
-            (insert-file-contents dotgit nil 0 jotain-git-stats-max-dotgit-bytes)
+            (insert-file-contents dotgit nil 0 my-git-stats-max-dotgit-bytes)
             (goto-char (point-min))
             (when (re-search-forward "^gitdir: \\(.+\\)$" nil t)
               (let ((git-dir (expand-file-name (string-trim (match-string 1)) root)))
@@ -325,18 +325,18 @@ when ROOT is not under git control or parsing fails."
         (file-error nil)))
      (t nil))))
 
-(defun jotain-git-stats--git-busy-p (root)
+(defun my-git-stats--git-busy-p (root)
   "Return non-nil if ROOT has a long-running git op in progress.
 Probes the files git leaves while a rebase, merge, bisect or
 cherry-pick is in flight, so the refresh can stay out of its way."
-  (when-let* ((git-dir (jotain-git-stats--git-dir root)))
+  (when-let* ((git-dir (my-git-stats--git-dir root)))
     (or (file-exists-p (expand-file-name "rebase-merge" git-dir))
         (file-exists-p (expand-file-name "rebase-apply" git-dir))
         (file-exists-p (expand-file-name "MERGE_HEAD" git-dir))
         (file-exists-p (expand-file-name "BISECT_LOG" git-dir))
         (file-exists-p (expand-file-name "CHERRY_PICK_HEAD" git-dir)))))
 
-(defun jotain-git-stats--parse-numstat (output)
+(defun my-git-stats--parse-numstat (output)
   "Sum the added + deleted columns of `--numstat' OUTPUT.
 Lines are \"ADDED<TAB>DELETED<TAB>FILE\"; binary files show \"-\" and
 are skipped.  Unlike `--shortstat' prose, this is locale-independent."
@@ -351,13 +351,13 @@ are skipped.  Unlike `--shortstat' prose, this is locale-independent."
                        (string-to-number (nth 1 cols)))))))
     sum))
 
-(defun jotain-git-stats--count-lines (output)
+(defun my-git-stats--count-lines (output)
   "Count non-empty lines in OUTPUT."
   (if (string-empty-p (string-trim output))
       0
     (length (split-string output "\n" t))))
 
-(defun jotain-git-stats--count-diff-churn (output)
+(defun my-git-stats--count-diff-churn (output)
   "Count added + deleted lines in a unified-diff OUTPUT.
 Used for jj's `jj diff --git'.  Skips lines starting with a doubled
 marker (the `+++'/`---' headers), matching git's `--numstat'."
@@ -370,7 +370,7 @@ marker (the `+++'/`---' headers), matching git's `--numstat'."
         (setq sum (1+ sum))))
     sum))
 
-(defun jotain-git-stats--run (root command extra-env parse-fn callback)
+(defun my-git-stats--run (root command extra-env parse-fn callback)
   "Run COMMAND (a full argv list) with `default-directory' set to ROOT.
 EXTRA-ENV is a list of \"VAR=VALUE\" strings prepended to
 `process-environment'.  PARSE-FN is applied to stdout; CALLBACK
@@ -382,12 +382,12 @@ Git callers pass `GIT_OPTIONAL_LOCKS=0' so a background refresh never
 takes `.git/index.lock' and races the user's own git commands; jj
 callers pass `--ignore-working-copy' so jj does not snapshot (and lock)
 the working copy."
-  (let* ((buffer (generate-new-buffer " *jotain-git-stats*"))
+  (let* ((buffer (generate-new-buffer " *my-git-stats*"))
          (default-directory root)
          (process-environment (append extra-env process-environment)))
     (condition-case nil
         (make-process
-         :name "jotain-git-stats"
+         :name "my-git-stats"
          :buffer buffer
          :command command
          :noquery t
@@ -411,7 +411,7 @@ the working copy."
          (kill-buffer buffer))
        (funcall callback 0)))))
 
-(defun jotain-git-stats--root-and-backend (file-or-dir)
+(defun my-git-stats--root-and-backend (file-or-dir)
   "Return (ROOT . BACKEND) covering FILE-OR-DIR, or nil when uncontrolled.
 BACKEND is `jj' when a `.jj' directory dominates (checked first, since
 jj repos are typically colocated with a `.git'), otherwise `git'.  ROOT
@@ -423,10 +423,10 @@ is `expand-file-name'd."
         (when-let* ((git-root (locate-dominating-file file-or-dir ".git")))
           (cons (expand-file-name git-root) 'git))))))
 
-(defun jotain-git-stats--refresh (root backend)
+(defun my-git-stats--refresh (root backend)
   "Kick off the two async probes that populate the cache for ROOT.
 BACKEND selects the command set (`git' or `jj')."
-  (let ((entry (jotain-git-stats--entry root)))
+  (let ((entry (my-git-stats--entry root)))
     (unless (plist-get entry :busy)
       (plist-put entry :busy t)
       (let* ((pending 2)
@@ -442,74 +442,74 @@ BACKEND selects the command set (`git' or `jj')."
           ('jj
            ;; Changes: added + deleted lines in @.  Commits today:
            ;; non-empty changes authored since local midnight.
-           (jotain-git-stats--run
+           (my-git-stats--run
             root '("jj" "--no-pager" "--ignore-working-copy"
                    "diff" "--git" "-r" "@")
-            nil #'jotain-git-stats--count-diff-churn set-changes)
-           (jotain-git-stats--run
+            nil #'my-git-stats--count-diff-churn set-changes)
+           (my-git-stats--run
             root '("jj" "--no-pager" "--ignore-working-copy"
                    "log" "--no-graph"
                    "-r" "author_date(after:\"00:00\") ~ root() ~ empty()"
                    "-T" "\"x\\n\"")
-            nil #'jotain-git-stats--count-lines set-commits))
+            nil #'my-git-stats--count-lines set-commits))
           (_
-           (jotain-git-stats--run
+           (my-git-stats--run
             root '("git" "--no-pager" "-c" "core.fsmonitor=false"
                    "-c" "diff.external=" "diff-index" "--numstat" "HEAD")
             '("GIT_OPTIONAL_LOCKS=0")
-            #'jotain-git-stats--parse-numstat set-changes)
-           (jotain-git-stats--run
+            #'my-git-stats--parse-numstat set-changes)
+           (my-git-stats--run
             root '("git" "--no-pager" "-c" "core.fsmonitor=false"
                    "-c" "diff.external=" "log" "--since=midnight"
                    "--oneline" "--no-merges")
             '("GIT_OPTIONAL_LOCKS=0")
-            #'jotain-git-stats--count-lines set-commits)))))))
+            #'my-git-stats--count-lines set-commits)))))))
 
-(defun jotain-git-stats--maybe-refresh (root backend)
+(defun my-git-stats--maybe-refresh (root backend)
   "Refresh ROOT's cache if it's stale and no refresh is already in flight.
 BACKEND is `git' or `jj'.  For git, also wait while a rebase, merge,
 bisect or cherry-pick is in progress, keeping the cached counts.  jj
 needs no such wait: its probes pass `--ignore-working-copy'."
-  (let ((entry (jotain-git-stats--entry root)))
+  (let ((entry (my-git-stats--entry root)))
     (unless (or (plist-get entry :busy)
-                (jotain-git-stats--fresh-p entry)
+                (my-git-stats--fresh-p entry)
                 (and (eq backend 'git)
-                     (jotain-git-stats--git-busy-p root)))
-      (jotain-git-stats--refresh root backend))))
+                     (my-git-stats--git-busy-p root)))
+      (my-git-stats--refresh root backend))))
 
-(defun jotain-git-stats--face-for-changes (n)
+(defun my-git-stats--face-for-changes (n)
   "Pick the appropriate face for N uncommitted changes."
-  (cond ((>= n jotain-git-stats-urgent-threshold)  'jotain-git-stats-urgent)
-        ((>= n jotain-git-stats-warning-threshold) 'jotain-git-stats-warning)
-        (t                                         'jotain-git-stats-normal)))
+  (cond ((>= n my-git-stats-urgent-threshold)  'my-git-stats-urgent)
+        ((>= n my-git-stats-warning-threshold) 'my-git-stats-warning)
+        (t                                         'my-git-stats-normal)))
 
-(defun jotain-git-stats--render (root)
+(defun my-git-stats--render (root)
   "Return the propertised `N/M' string for ROOT, or nil when empty."
-  (let* ((entry (jotain-git-stats--entry root))
+  (let* ((entry (my-git-stats--entry root))
          (n (plist-get entry :changes))
          (m (plist-get entry :commits)))
     (when (or (> n 0) (> m 0))
       (concat " "
               (propertize (number-to-string n)
-                          'face (jotain-git-stats--face-for-changes n))
+                          'face (my-git-stats--face-for-changes n))
               (propertize "/" 'face 'shadow)
               (propertize (number-to-string m)
-                          'face 'jotain-git-stats-commits)
+                          'face 'my-git-stats-commits)
               " "))))
 
-(defun jotain-git-stats--invalidate-current-buffer (&rest _)
+(defun my-git-stats--invalidate-current-buffer (&rest _)
   "Drop the cached freshness for this buffer's repo so the next render refreshes.
 Uses `default-directory' in file-less buffers, so magit status buffers
 also invalidate after `magit-post-refresh-hook'."
   (when-let* ((file-or-dir (or buffer-file-name default-directory))
-              (rb (jotain-git-stats--root-and-backend file-or-dir)))
-    (let ((entry (jotain-git-stats--entry (car rb))))
+              (rb (my-git-stats--root-and-backend file-or-dir)))
+    (let ((entry (my-git-stats--entry (car rb))))
       (plist-put entry :ts 0))))
 
-(defun jotain-git-stats--tick ()
+(defun my-git-stats--tick ()
   "Idle-timer callback: invalidate every cache entry so visible buffers re-fetch."
   (maphash (lambda (_root entry) (plist-put entry :ts 0))
-           jotain-git-stats--cache)
+           my-git-stats--cache)
   (force-mode-line-update t))
 
 ;; `mode-line-misc-info' is shown by doom-modeline's `main' and the stock
@@ -517,17 +517,17 @@ also invalidate after `magit-post-refresh-hook'."
 (add-to-list 'mode-line-misc-info
              '(:eval (when-let* ((file buffer-file-name)
                                  (rb (and (mode-line-window-selected-p)
-                                          (jotain-git-stats--root-and-backend file))))
-                       (progn (jotain-git-stats--maybe-refresh (car rb) (cdr rb))
-                              (or (jotain-git-stats--render (car rb)) ""))))
+                                          (my-git-stats--root-and-backend file))))
+                       (progn (my-git-stats--maybe-refresh (car rb) (cdr rb))
+                              (or (my-git-stats--render (car rb)) ""))))
              t)
 
-(add-hook 'after-save-hook #'jotain-git-stats--invalidate-current-buffer)
-(add-hook 'magit-post-refresh-hook #'jotain-git-stats--invalidate-current-buffer)
-(unless jotain-git-stats--timer
-  (setq jotain-git-stats--timer
-        (run-with-idle-timer jotain-git-stats-update-interval t
-                             #'jotain-git-stats--tick)))
+(add-hook 'after-save-hook #'my-git-stats--invalidate-current-buffer)
+(add-hook 'magit-post-refresh-hook #'my-git-stats--invalidate-current-buffer)
+(unless my-git-stats--timer
+  (setq my-git-stats--timer
+        (run-with-idle-timer my-git-stats-update-interval t
+                             #'my-git-stats--tick)))
 
 ;; smerge-mode needs no block: it turns on for files with conflict
 ;; markers and binds C-c ^ (`smerge-command-prefix').

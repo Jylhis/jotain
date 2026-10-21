@@ -11,11 +11,11 @@ let
   inherit (pkgs) lib;
   emacsBin = "${lib.getBin package}/bin";
 
-  editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
+  editorFallback = pkgs.writeShellScript "emacs-config-editor-fallback" ''
     exec ${emacsBin}/emacs -nw -- "$@"
   '';
 in
-pkgs.writeShellScriptBin "jotain-editor" ''
+pkgs.writeShellScriptBin "emacs-config-editor" ''
   exec ${emacsBin}/emacsclient \
     --tty \
     --alternate-editor=${editorFallback} \

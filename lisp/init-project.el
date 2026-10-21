@@ -16,10 +16,10 @@
 
 ;;;; project.el (built-in)
 
-(defcustom jotain-repositories-roots
+(defcustom my-repositories-roots
   (list "~/Developer" "~/Projects")
   "Roots whose immediate subdirectories are treated as repositories.
-Feeds `jotain-find-projects-and-switch' (C-x p P) and
+Feeds `my-find-projects-and-switch' (C-x p P) and
 `magit-repository-directories' (init-vc.el).  Missing roots are
 skipped."
   :type '(repeat directory)
@@ -27,11 +27,11 @@ skipped."
 
 (declare-function project-remember-project "project" (pr &optional no-write))
 
-(defun jotain-find-projects-and-switch ()
-  "Scan `jotain-repositories-roots', pick a project, remember and open it.
+(defun my-find-projects-and-switch ()
+  "Scan `my-repositories-roots', pick a project, remember and open it.
 Labels include the parent root, so same-named projects stay distinct."
   (interactive)
-  (let* ((dirs (cl-loop for root in jotain-repositories-roots
+  (let* ((dirs (cl-loop for root in my-repositories-roots
                         when (file-directory-p root)
                         nconc (directory-files root t "\\`[^.]" t)))
          (choices (cl-loop for d in dirs
@@ -42,7 +42,7 @@ Labels include the parent root, so same-named projects stay distinct."
                                           (file-name-directory d)))
                            collect (cons (format "%s (%s)" name parent) d))))
     (unless choices
-      (user-error "No project candidates under %s" jotain-repositories-roots))
+      (user-error "No project candidates under %s" my-repositories-roots))
     (let* ((pick (completing-read "Project: " choices nil t))
            (dir  (cdr (assoc pick choices))))
       (when dir
@@ -53,13 +53,13 @@ Labels include the parent root, so same-named projects stay distinct."
 ;;; @doc Built-in project tracker. The extra root markers make a
 ;;; directory with, e.g., `flake.nix` or `go.mod` a project root, even
 ;;; without VCS or inside a larger repository. The project list lives
-;;; under var/. `C-x p P` scans `jotain-repositories-roots` to add and
+;;; under var/. `C-x p P` scans `my-repositories-roots` to add and
 ;;; open projects not yet known.
 (use-package project
   :ensure nil
-  :bind (:map project-prefix-map ("P" . jotain-find-projects-and-switch))
+  :bind (:map project-prefix-map ("P" . my-find-projects-and-switch))
   :custom
-  (project-list-file (jotain-var-file "projects.el"))
+  (project-list-file (my-var-file "projects.el"))
   (project-buffers-viewer 'project-list-buffers-ibuffer)
   ;; go.mod scopes gopls, `project-find-file' and `consult-ripgrep' to the
   ;; module, not the git root.  The deepest marker wins, so a module's

@@ -1,6 +1,6 @@
 # nix/lang-eval.nix — Per-language IDE-feature evaluation.
 #
-# Reads etc/lang-eval/jotain-lang-registry.el (the declarative per-language
+# Reads etc/lang-eval/my-lang-registry.el (the declarative per-language
 # feature standard) and produces three artifacts plus one gate:
 #
 #   • lang-eval-doc      the *declared* matrix as a Mintlify `.mdx`
@@ -10,7 +10,7 @@
 #                        introspected per language (mode routing, tree-sitter
 #                        readiness, resolved eglot server, formatter, on-PATH
 #                        markers). Fails on a routing or explicit eglot
-#                        override regression (JOTAIN_LANG_EVAL_STRICT).
+#                        override regression (EMACS_CONFIG_LANG_EVAL_STRICT).
 #   • lang-eval-live     Tier-2 probe: a real eglot session per fixture
 #                        project for a curated subset whose servers it
 #                        bundles, recording the negotiated capabilities.
@@ -35,10 +35,10 @@ let
   engineSrc = fs.toSource {
     root = root + "/etc/lang-eval";
     fileset = fs.unions [
-      (root + "/etc/lang-eval/jotain-lang-registry.el")
-      (root + "/etc/lang-eval/jotain-lang-doc.el")
-      (root + "/etc/lang-eval/jotain-lang-eval.el")
-      (root + "/etc/lang-eval/jotain-lang-live.el")
+      (root + "/etc/lang-eval/my-lang-registry.el")
+      (root + "/etc/lang-eval/my-lang-doc.el")
+      (root + "/etc/lang-eval/my-lang-eval.el")
+      (root + "/etc/lang-eval/my-lang-live.el")
     ];
   };
 
@@ -60,8 +60,8 @@ let
     ];
   };
 
-  emacsFull = pkgs.jotainEmacsPackages; # wrapper: full closure + tree-sitter grammars
-  emacsBare = pkgs.jotainEmacs; # enough to render the registry doc
+  emacsFull = pkgs.emacsConfigPackages; # wrapper: full closure + tree-sitter grammars
+  emacsBare = pkgs.emacsConfig; # enough to render the registry doc
 
   # Servers for the live probe. nixd/qmlls/likec4 already ride the
   # distribution wrapper (nix/runtime-deps.nix).
@@ -80,7 +80,7 @@ let
 
   # 1. Declared matrix -> .mdx (registry only).
   lang-eval-doc =
-    pkgs.runCommand "jotain-lang-eval-doc"
+    pkgs.runCommand "emacs-config-lang-eval-doc"
       {
         nativeBuildInputs = [ emacsBare ];
         meta.description = "Language-support reference (.mdx) generated from the registry";
@@ -89,13 +89,13 @@ let
         set -euo pipefail
         export HOME="$(mktemp -d)"
         mkdir -p "$out"
-        JOTAIN_LANG_DOC_OUT="$out/language-support.mdx" \
-          emacs -Q --batch -L ${engineSrc} -l jotain-lang-doc
+        EMACS_CONFIG_LANG_DOC_OUT="$out/language-support.mdx" \
+          emacs -Q --batch -L ${engineSrc} -l my-lang-doc
       '';
 
   # 2. Tier-1 live matrix (full config load), strict routing gate.
   lang-eval-matrix =
-    pkgs.runCommand "jotain-lang-eval-matrix"
+    pkgs.runCommand "emacs-config-lang-eval-matrix"
       {
         nativeBuildInputs = [
           emacsFull
@@ -109,20 +109,20 @@ let
         cp -r --no-preserve=mode ${configSrc}/. "$HOME/config"
         chmod -R u+w "$HOME/config"
         mkdir -p "$out"
-        if ! JOTAIN_LANG_EVAL_OUT="$out" JOTAIN_LANG_EVAL_STRICT=1 \
+        if ! EMACS_CONFIG_LANG_EVAL_OUT="$out" EMACS_CONFIG_LANG_EVAL_STRICT=1 \
              emacs --batch --init-directory="$HOME/config" \
-               -L ${engineSrc} -l jotain-lang-eval > "$out/generate.log" 2>&1; then
+               -L ${engineSrc} -l my-lang-eval > "$out/generate.log" 2>&1; then
           echo "lang-eval: strict gate failed — see the log:" >&2
           cat "$out/generate.log" >&2
           exit 1
         fi
         pandoc "$out/matrix.md" -f gfm -o "$out/index.html" --standalone \
-          --metadata title="Jotain — Language support matrix" --wrap=none || true
+          --metadata title="Emacs configuration — Language support matrix" --wrap=none || true
       '';
 
   # 3. Tier-2 end-to-end live LSP probe (bundles the curated servers).
   lang-eval-live =
-    pkgs.runCommand "jotain-lang-eval-live"
+    pkgs.runCommand "emacs-config-lang-eval-live"
       {
         nativeBuildInputs = [
           emacsFull
@@ -137,10 +137,10 @@ let
         cp -r --no-preserve=mode ${configSrc}/. "$HOME/config"
         chmod -R u+w "$HOME/config"
         mkdir -p "$out"
-        JOTAIN_LANG_EVAL_OUT="$out" JOTAIN_LANG_LIVE=1 \
-        JOTAIN_LANG_FIXTURES="${fixturesSrc}/fixtures" \
+        EMACS_CONFIG_LANG_EVAL_OUT="$out" EMACS_CONFIG_LANG_LIVE=1 \
+        EMACS_CONFIG_LANG_FIXTURES="${fixturesSrc}/fixtures" \
           emacs --batch --init-directory="$HOME/config" \
-            -L ${engineSrc} -l jotain-lang-live > "$out/generate.log" 2>&1 || true
+            -L ${engineSrc} -l my-lang-live > "$out/generate.log" 2>&1 || true
         if [ ! -e "$out/live.md" ]; then
           echo "lang-eval-live: probe produced no output — see the log:" >&2
           cat "$out/generate.log" >&2
@@ -159,7 +159,7 @@ let
         if ! diff -u "$tracked" "$generated"; then
           echo "" >&2
           echo "docs/reference/language-support.mdx is out of sync with" >&2
-          echo "etc/lang-eval/jotain-lang-registry.el." >&2
+          echo "etc/lang-eval/my-lang-registry.el." >&2
           echo "Refresh it with: just docs-refresh-lang-matrix" >&2
           exit 1
         fi

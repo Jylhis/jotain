@@ -1,4 +1,4 @@
-;;; jotain-elisp-doc.el --- Batch API-reference generator for jotain -*- lexical-binding: t; -*-
+;;; my-elisp-doc.el --- Batch API-reference generator for the configuration -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026 Markus Jylhänkangas
 
@@ -16,7 +16,7 @@
 
 ;;; Commentary:
 ;;
-;; jotain's replacement for elisp-doc's `elisp-doc-main.el'.  Where the
+;; The configuration's replacement for elisp-doc's `elisp-doc-main.el'.  Where the
 ;; upstream driver documents *all* of Emacs across versions (with tmux /
 ;; socket sharding), this one documents only the packages this config
 ;; bundles: it requires the config's package features, then exports only
@@ -41,15 +41,15 @@
 ;;
 ;; Invocation (see nix/emacs-api-doc.nix):
 ;;
-;;   emacs --batch -L etc/elisp-doc -l jotain-elisp-doc
+;;   emacs --batch -L etc/elisp-doc -l my-elisp-doc
 ;;
 ;; Environment:
 ;;   ELISP_DOC_OUTPUT_DIR   destination html directory (required; listing.eld
 ;;                          is written to its parent in package mode)
-;;   JOTAIN_DOC_MODE        "package" (default) or "aggregate"
-;;   JOTAIN_PKG_FEATURES    newline-separated feature names (package mode)
-;;   JOTAIN_DOC_LISTINGS    newline-separated listing.eld paths (aggregate mode)
-;;   JOTAIN_DOC_QUICK       if set, only export this many symbols per kind
+;;   EMACS_CONFIG_DOC_MODE        "package" (default) or "aggregate"
+;;   EMACS_CONFIG_PKG_FEATURES    newline-separated feature names (package mode)
+;;   EMACS_CONFIG_DOC_LISTINGS    newline-separated listing.eld paths (aggregate mode)
+;;   EMACS_CONFIG_DOC_QUICK       if set, only export this many symbols per kind
 ;;                          (fast smoke test)
 
 ;;; Code:
@@ -89,48 +89,48 @@
 
 ;;;; Configuration from the environment
 
-(defun jotain-doc--env (name)
+(defun my-doc--env (name)
   "Return non-empty environment variable NAME, or nil."
   (let ((v (getenv name)))
     (and v (not (string-empty-p v)) v)))
 
-(let ((out (jotain-doc--env "ELISP_DOC_OUTPUT_DIR")))
+(let ((out (my-doc--env "ELISP_DOC_OUTPUT_DIR")))
   (unless out
-    (error "jotain-elisp-doc: ELISP_DOC_OUTPUT_DIR is required"))
+    (error "my-elisp-doc: ELISP_DOC_OUTPUT_DIR is required"))
   (setq elisp-doc-output-dir (expand-file-name out)
         elisp-doc-cache-dir (expand-file-name "cache" out)))
 (make-directory elisp-doc-output-dir t)
 
-(defvar jotain-doc--quick
-  (when-let* ((q (jotain-doc--env "JOTAIN_DOC_QUICK")))
+(defvar my-doc--quick
+  (when-let* ((q (my-doc--env "EMACS_CONFIG_DOC_QUICK")))
     (string-to-number q))
   "When set, limit each export pass to this many symbols (smoke test).")
-(when jotain-doc--quick
-  (setq elisp-doc--debug-quick jotain-doc--quick))
+(when my-doc--quick
+  (setq elisp-doc--debug-quick my-doc--quick))
 
-(defun jotain-doc--features ()
+(defun my-doc--features ()
   "Return the list of feature symbols to document."
-  (if-let* ((raw (jotain-doc--env "JOTAIN_PKG_FEATURES")))
+  (if-let* ((raw (my-doc--env "EMACS_CONFIG_PKG_FEATURES")))
       (mapcar #'intern
               (seq-remove #'string-empty-p
                           (split-string raw "[\n\r]+" t "[ \t]+")))
-    (error "jotain-elisp-doc: JOTAIN_PKG_FEATURES is required")))
+    (error "my-elisp-doc: EMACS_CONFIG_PKG_FEATURES is required")))
 
 ;;;; Load the packages and build package-provenance tables
 
-(defmacro jotain-doc--ignoring (&rest body)
+(defmacro my-doc--ignoring (&rest body)
   "Run BODY, logging and swallowing any error."
   `(condition-case err (progn ,@body)
-     (error (message "jotain-elisp-doc: %s" (error-message-string err)) nil)))
+     (error (message "my-elisp-doc: %s" (error-message-string err)) nil)))
 
-(defvar jotain-doc--pkg-dirs (make-hash-table :test 'equal)
+(defvar my-doc--pkg-dirs (make-hash-table :test 'equal)
   "Map of package directory (a store path) -> package name string.")
-(defvar jotain-doc--skipped nil
+(defvar my-doc--skipped nil
   "List of (FEATURE . REASON) that failed to load.")
 
-(defun jotain-doc--register-feature (feature)
+(defun my-doc--register-feature (feature)
   "`require' FEATURE and record its install directory for scoping.
-On failure, record the actual error message in `jotain-doc--skipped' so
+On failure, record the actual error message in `my-doc--skipped' so
 the \"Not documented\" list explains why the package could not load."
   (let ((inhibit-message t))
     (condition-case err
@@ -139,10 +139,10 @@ the \"Not documented\" list explains why the package could not load."
           (when-let* ((lib (locate-library (symbol-name feature)))
                       (dir (file-name-directory (file-truename lib))))
             (puthash (directory-file-name dir) (symbol-name feature)
-                     jotain-doc--pkg-dirs)))
-      (error (push (cons feature (error-message-string err)) jotain-doc--skipped)))))
+                     my-doc--pkg-dirs)))
+      (error (push (cons feature (error-message-string err)) my-doc--skipped)))))
 
-(defun jotain-doc--file-pkg (file)
+(defun my-doc--file-pkg (file)
   "Return the package name owning FILE, or nil if out of scope."
   (when (stringp file)
     (let ((true (file-truename file)) found)
@@ -150,49 +150,49 @@ the \"Not documented\" list explains why the package could not load."
                  (when (and (not found)
                             (string-prefix-p (file-name-as-directory dir) true))
                    (setq found name)))
-               jotain-doc--pkg-dirs)
+               my-doc--pkg-dirs)
       found)))
 
 ;; Provenance tables built from `load-history': the exact symbols each
 ;; in-scope file defined.  This is more reliable than per-symbol
 ;; `symbol-file' and captures "everything the package defines".
-(defvar jotain-doc--fun-syms (make-hash-table :test 'eq))
-(defvar jotain-doc--var-syms (make-hash-table :test 'eq))
-(defvar jotain-doc--face-syms (make-hash-table :test 'eq))
-(defvar jotain-doc--sym-pkg (make-hash-table :test 'eq)
+(defvar my-doc--fun-syms (make-hash-table :test 'eq))
+(defvar my-doc--var-syms (make-hash-table :test 'eq))
+(defvar my-doc--face-syms (make-hash-table :test 'eq))
+(defvar my-doc--sym-pkg (make-hash-table :test 'eq)
   "Map of in-scope symbol -> owning package name string.")
 
-(defun jotain-doc--classify (sym pkg)
+(defun my-doc--classify (sym pkg)
   "Record SYM under PKG in the appropriate provenance table."
   (when (symbolp sym)
-    (puthash sym pkg jotain-doc--sym-pkg)
+    (puthash sym pkg my-doc--sym-pkg)
     (cond
-     ((facep sym) (puthash sym t jotain-doc--face-syms))
-     ((fboundp sym) (puthash sym t jotain-doc--fun-syms))
-     ((boundp sym) (puthash sym t jotain-doc--var-syms)))
+     ((facep sym) (puthash sym t my-doc--face-syms))
+     ((fboundp sym) (puthash sym t my-doc--fun-syms))
+     ((boundp sym) (puthash sym t my-doc--var-syms)))
     ;; A symbol can be both a function and a variable.
     (when (and (fboundp sym) (boundp sym) (not (keywordp sym)))
-      (puthash sym t jotain-doc--var-syms))))
+      (puthash sym t my-doc--var-syms))))
 
-(defun jotain-doc--scan-load-history ()
+(defun my-doc--scan-load-history ()
   "Populate the provenance tables from `load-history'."
   (dolist (entry load-history)
     (when-let* ((file (car-safe entry))
-                (pkg (jotain-doc--file-pkg file)))
+                (pkg (my-doc--file-pkg file)))
       (dolist (form (cdr entry))
         (cond
          ;; Bare symbol: a defvar/defconst.
-         ((symbolp form) (jotain-doc--classify form pkg))
+         ((symbolp form) (my-doc--classify form pkg))
          ;; (TYPE . SYM): defun, macro, t (autoload), defface, define-type…
          ((and (consp form) (symbolp (cdr form)))
-          (jotain-doc--classify (cdr form) pkg))
+          (my-doc--classify (cdr form) pkg))
          ;; (cl-defmethod SYM …) and similar: SYM is the cadr.
          ((and (consp form) (consp (cdr form)) (symbolp (cadr form)))
-          (jotain-doc--classify (cadr form) pkg)))))))
+          (my-doc--classify (cadr form) pkg)))))))
 
 ;;;; Scoped predicates
 
-(defun jotain-doc--pred (base table)
+(defun my-doc--pred (base table)
   "Return a predicate: in TABLE and satisfying BASE."
   (lambda (sym)
     (and (gethash sym table)
@@ -200,7 +200,7 @@ the \"Not documented\" list explains why the package could not load."
 
 ;;;; Manual (plaintext markdown) output, one file per package
 
-(defun jotain-doc--symbol-md (sym kind)
+(defun my-doc--symbol-md (sym kind)
   "Return a markdown block documenting SYM as KIND, or nil if undocumented."
   (let* ((doc (pcase kind
                 ('fun (ignore-errors (documentation sym t)))
@@ -217,11 +217,11 @@ the \"Not documented\" list explains why the package could not load."
                 (concat "`" (string-trim sig) "`\n\n"))
               (string-trim doc) "\n"))))
 
-(defun jotain-doc--write-package-md (pkg syms)
+(defun my-doc--write-package-md (pkg syms)
   "Write md/PKG.md documenting SYMS (an alist of (SYM . KIND))."
   (let ((blocks (delq nil
                       (mapcar (lambda (cell)
-                                (jotain-doc--symbol-md (car cell) (cdr cell)))
+                                (my-doc--symbol-md (car cell) (cdr cell)))
                               (sort (copy-sequence syms)
                                     (lambda (a b)
                                       (string-lessp (symbol-name (car a))
@@ -234,31 +234,31 @@ the \"Not documented\" list explains why the package could not load."
           (insert (string-join blocks "\n"))
           (insert "\n"))))))
 
-(defun jotain-doc--collect-package-symbols ()
+(defun my-doc--collect-package-symbols ()
   "Return a map of package name -> alist of (SYM . KIND)."
   (let ((by-pkg (make-hash-table :test 'equal)))
     (cl-flet ((add (sym kind)
-                (when-let* ((pkg (gethash sym jotain-doc--sym-pkg)))
+                (when-let* ((pkg (gethash sym my-doc--sym-pkg)))
                   (push (cons sym kind) (gethash pkg by-pkg)))))
-      (maphash (lambda (s _) (add s 'fun)) jotain-doc--fun-syms)
-      (maphash (lambda (s _) (add s 'var)) jotain-doc--var-syms)
-      (maphash (lambda (s _) (add s 'face)) jotain-doc--face-syms))
+      (maphash (lambda (s _) (add s 'fun)) my-doc--fun-syms)
+      (maphash (lambda (s _) (add s 'var)) my-doc--var-syms)
+      (maphash (lambda (s _) (add s 'face)) my-doc--face-syms))
     by-pkg))
 
 ;;;; Per-package HTML index pages and the top index
 
-(defun jotain-doc--pkg-items (pkg)
+(defun my-doc--pkg-items (pkg)
   "Return elisp-doc source-file items for PKG: list of (HELPFUL-FN . SYM)."
   (let (items)
     (maphash (lambda (file file-items)
-               (when (equal pkg (jotain-doc--file-pkg file))
+               (when (equal pkg (my-doc--file-pkg file))
                  (setq items (nconc (copy-sequence file-items) items))))
              elisp-doc--source-files)
     items))
 
-(defun jotain-doc--create-package-index (pkg)
+(defun my-doc--create-package-index (pkg)
   "Write pkg/PKG.html listing every documented symbol of PKG."
-  (when-let* ((items (jotain-doc--pkg-items pkg)))
+  (when-let* ((items (my-doc--pkg-items pkg)))
     (let ((dir (file-name-concat elisp-doc-output-dir "pkg")))
       (make-directory dir t)
       (with-temp-buffer
@@ -273,16 +273,16 @@ the \"Not documented\" list explains why the package could not load."
         (write-region (point-min) (point-max)
                       (file-name-concat dir (concat pkg ".html")))))))
 
-(defun jotain-doc--documented-packages ()
+(defun my-doc--documented-packages ()
   "Return the sorted list of package names that produced any output."
   (let (names)
     (maphash (lambda (file _items)
-               (when-let* ((pkg (jotain-doc--file-pkg file)))
+               (when-let* ((pkg (my-doc--file-pkg file)))
                  (cl-pushnew pkg names :test #'equal)))
              elisp-doc--source-files)
     (sort names #'string-lessp)))
 
-(defun jotain-doc--create-top-index (packages)
+(defun my-doc--create-top-index (packages)
   "Write index.html: PACKAGES plus links to the global indexes."
   (with-temp-buffer
     (insert "<p>Generated API reference for the Emacs packages this "
@@ -303,43 +303,43 @@ the \"Not documented\" list explains why the package could not load."
               ".html\"><code>" (htmlize-protect-string pkg)
               "</code></a></td></tr>"))
     (insert "</tbody></table></div>")
-    (when jotain-doc--skipped
+    (when my-doc--skipped
       (insert (format (concat "<h2>Not documented (%d)</h2>\n<p>These packages "
                               "failed to load headless and were skipped:</p>\n<p>")
-                      (length jotain-doc--skipped)))
+                      (length my-doc--skipped)))
       (insert (string-join
                (mapcar (lambda (c) (concat "<code>" (htmlize-protect-string
                                                      (symbol-name (car c)))
                                            "</code>"))
-                       jotain-doc--skipped)
+                       my-doc--skipped)
                ", "))
       (insert "</p>\n"))
     (elisp-doc-wrap-page-body
-     "Jotain — Emacs package API reference"
+     "Emacs configuration — Emacs package API reference"
      "Emacs package API reference"
-     "Docstring-level reference for every package the Jotain Emacs configuration bundles.")
+     "Docstring-level reference for every package the Emacs configuration bundles.")
     (write-region (point-min) (point-max)
                   (file-name-concat elisp-doc-output-dir "index.html"))))
 
 ;;;; Drive everything
 
-(defun jotain-doc--source-file-in-scope (orig path)
+(defun my-doc--source-file-in-scope (orig path)
   "Advice for `elisp-doc--get-source-file': suppress links to unbuilt
 source pages for our packages (we don't render `../src/'), while keeping
 upstream behaviour for core Emacs paths."
-  (if (jotain-doc--file-pkg path)
+  (if (my-doc--file-pkg path)
       nil
     (funcall orig path)))
 (advice-add 'elisp-doc--get-source-file :around
-            #'jotain-doc--source-file-in-scope)
+            #'my-doc--source-file-in-scope)
 
-;; Keep our manual (info) cross-links pointing at the jotain site layout,
+;; Keep our manual (info) cross-links pointing at the site layout,
 ;; which mounts the Emacs and Elisp manuals under /info/.
-(defun jotain-doc--info-under-info (url)
+(defun my-doc--info-under-info (url)
   "Advice for `elisp-doc--info-url-for-node': prefix /info to URL."
   (if (string-prefix-p "/" url) (concat "/info" url) url))
 (advice-add 'elisp-doc--info-url-for-node :filter-return
-            #'jotain-doc--info-under-info)
+            #'my-doc--info-under-info)
 
 ;;;; Enriched per-package listing (package mode) → aggregate mode input
 
@@ -353,13 +353,13 @@ upstream behaviour for core Emacs paths."
 ;; and the aggregate pass builds the global indexes from the merged
 ;; listings without loading any package.
 
-(defun jotain-doc--listing-path ()
+(defun my-doc--listing-path ()
   "Path of this package's listing file, a sibling of the html output dir."
   (file-name-concat
    (file-name-directory (directory-file-name elisp-doc-output-dir))
    "listing.eld"))
 
-(defun jotain-doc--collect-listing-rows ()
+(defun my-doc--collect-listing-rows ()
   "Return listing plists for every symbol in `elisp-doc--source-files'.
 Must run while the package's symbols are still live: the summary column
 and (for faces) the stylized name are rendered from the live symbol."
@@ -391,33 +391,33 @@ and (for faces) the stylized name are rendered from the live symbol."
      elisp-doc--source-files)
     rows))
 
-(defun jotain-doc--write-listing (package)
-  "Serialize the enriched listing for PACKAGE to `jotain-doc--listing-path'."
+(defun my-doc--write-listing (package)
+  "Serialize the enriched listing for PACKAGE to `my-doc--listing-path'."
   (let ((data (list :package package
-                    :skipped jotain-doc--skipped
-                    :symbols (jotain-doc--collect-listing-rows)))
+                    :skipped my-doc--skipped
+                    :symbols (my-doc--collect-listing-rows)))
         (print-length nil)
         (print-level nil))
-    (with-temp-file (jotain-doc--listing-path)
+    (with-temp-file (my-doc--listing-path)
       (prin1 data (current-buffer))
       (insert "\n"))))
 
-(defconst jotain-doc--kind-helpful
+(defconst my-doc--kind-helpful
   '(("fun" . helpful-function)
     ("var" . helpful-variable)
     ("face" . describe-face))
   "Map the short kind string back to the helpful/describe function symbol.")
 
-(defun jotain-doc--read-listings ()
-  "Read every listing named in JOTAIN_DOC_LISTINGS.
+(defun my-doc--read-listings ()
+  "Read every listing named in EMACS_CONFIG_DOC_LISTINGS.
 Return (SYMBOLS PACKAGES SKIPPED): the merged symbol plists, the sorted
 list of packages that documented at least one symbol, and the merged
 skipped alist."
-  (let ((raw (jotain-doc--env "JOTAIN_DOC_LISTINGS"))
+  (let ((raw (my-doc--env "EMACS_CONFIG_DOC_LISTINGS"))
         symbols packages skipped)
     (dolist (path (and raw (split-string raw "[\n\r]+" t "[ \t]+")))
       (when (file-exists-p path)
-        (jotain-doc--ignoring
+        (my-doc--ignoring
          (let* ((data (with-temp-buffer
                         (insert-file-contents path)
                         (goto-char (point-min))
@@ -439,7 +439,7 @@ skipped alist."
 
 ;;;; Aggregate-mode global indexes (from merged listings, no live packages)
 
-(defun jotain-doc--agg-json-index (symbols)
+(defun my-doc--agg-json-index (symbols)
   "Write symbols.json from the merged listing SYMBOLS.
 Same shape as `elisp-doc--create-json-index'."
   (let (fun var face)
@@ -453,12 +453,12 @@ Same shape as `elisp-doc--create-json-index'."
                          var ,(vconcat (sort var #'string-lessp))
                          face ,(vconcat (sort face #'string-lessp)))))))
 
-(defun jotain-doc--agg-type-index (kind symbols)
+(defun my-doc--agg-type-index (kind symbols)
   "Write KIND.html (a global type index) from the merged listing SYMBOLS.
 Reproduces `elisp-doc--create-type-index' markup from the precomputed
 listing rows — the summary/stylized name are read, not recomputed, so no
 package needs to be loaded."
-  (let* ((type (cdr (assoc kind jotain-doc--kind-helpful)))
+  (let* ((type (cdr (assoc kind my-doc--kind-helpful)))
          (title (elisp-doc-entry-type-desc type))
          (name (elisp-doc-entry-type-short type))
          (rows (sort (seq-filter (lambda (s) (equal kind (plist-get s :kind))) symbols)
@@ -490,16 +490,16 @@ package needs to be loaded."
 
 ;;;; Search index (powers the site's /packages/ search page)
 
-(defun jotain-doc--pkg-page-href (pkg)
+(defun my-doc--pkg-page-href (pkg)
   "Return PKG's generated package-index page href, relative to the html root."
   (concat "pkg/" (url-hexify-string (elisp-doc--encode-url-part pkg t)) ".html"))
 
-(defun jotain-doc--sym-page-href (kind name)
+(defun my-doc--sym-page-href (kind name)
   "Return the per-symbol page href for NAME of KIND, relative to the html root.
 KIND is the short type string (\"fun\", \"var\", \"face\")."
   (concat kind "/" (url-hexify-string (elisp-doc--encode-url-part name t)) ".html"))
 
-(defun jotain-doc--agg-search-index (symbols packages)
+(defun my-doc--agg-search-index (symbols packages)
   "Write search-index.json for the site's client-side package search.
 
 Shape (hrefs are relative to the /help/api/ mount so the page can prepend
@@ -509,7 +509,7 @@ its base path):
    \"symbols\":  [{\"name\", \"kind\", \"package\", \"href\", \"summary\"}...]}
 
 SYMBOLS are the merged listing rows (each tagged with :package by
-`jotain-doc--read-listings'); PACKAGES the sorted names that documented at
+`my-doc--read-listings'); PACKAGES the sorted names that documented at
 least one symbol."
   (let ((counts (make-hash-table :test 'equal))
         sym-objs)
@@ -522,13 +522,13 @@ least one symbol."
         (push (list 'name name
                     'kind kind
                     'package pkg
-                    'href (jotain-doc--sym-page-href kind name)
+                    'href (my-doc--sym-page-href kind name)
                     'summary summary)
               sym-objs)))
     (let ((pkg-objs
            (mapcar (lambda (pkg)
                      (list 'name pkg
-                           'href (jotain-doc--pkg-page-href pkg)
+                           'href (my-doc--pkg-page-href pkg)
                            'count (gethash pkg counts 0)))
                    packages)))
       (with-temp-file (file-name-concat elisp-doc-output-dir "search-index.json")
@@ -537,83 +537,83 @@ least one symbol."
 
 ;;;; The two generation modes
 
-(defun jotain-doc--generate-package ()
+(defun my-doc--generate-package ()
   "Package mode: document one feature and serialize its enriched listing."
-  (let ((features (jotain-doc--features)))
-    (message "jotain-elisp-doc: loading %d package features" (length features))
+  (let ((features (my-doc--features)))
+    (message "my-elisp-doc: loading %d package features" (length features))
     (dolist (feature features)
-      (jotain-doc--register-feature feature))
-    (message "jotain-elisp-doc: %d package dirs, %d skipped"
-             (hash-table-count jotain-doc--pkg-dirs)
-             (length jotain-doc--skipped))
-    (jotain-doc--scan-load-history)
-    (message "jotain-elisp-doc: in scope — %d funcs, %d vars, %d faces"
-             (hash-table-count jotain-doc--fun-syms)
-             (hash-table-count jotain-doc--var-syms)
-             (hash-table-count jotain-doc--face-syms))
+      (my-doc--register-feature feature))
+    (message "my-elisp-doc: %d package dirs, %d skipped"
+             (hash-table-count my-doc--pkg-dirs)
+             (length my-doc--skipped))
+    (my-doc--scan-load-history)
+    (message "my-elisp-doc: in scope — %d funcs, %d vars, %d faces"
+             (hash-table-count my-doc--fun-syms)
+             (hash-table-count my-doc--var-syms)
+             (hash-table-count my-doc--face-syms))
 
     ;; HTML per-symbol export, reusing the vendored engine.
     (elisp-doc--export-reset)
     (elisp-doc--export-all
-     (jotain-doc--pred #'elisp-doc--functionp jotain-doc--fun-syms)
+     (my-doc--pred #'elisp-doc--functionp my-doc--fun-syms)
      #'helpful-function 'defun)
-    (message "jotain-elisp-doc: functions exported")
+    (message "my-elisp-doc: functions exported")
 
     (elisp-doc--export-reset)
     (elisp-doc--export-all
-     (jotain-doc--pred #'elisp-doc--variablep jotain-doc--var-syms)
+     (my-doc--pred #'elisp-doc--variablep my-doc--var-syms)
      #'helpful-variable 'defvar)
-    (message "jotain-elisp-doc: variables exported")
+    (message "my-elisp-doc: variables exported")
 
     (elisp-doc--export-reset)
     (elisp-doc--export-all
-     (jotain-doc--pred #'facep jotain-doc--face-syms)
+     (my-doc--pred #'facep my-doc--face-syms)
      #'describe-face 'defface)
-    (message "jotain-elisp-doc: faces exported")
+    (message "my-elisp-doc: faces exported")
     (elisp-doc--export-reset)
 
-    ;; jotain per-package HTML index (global indexes + top index are the
+    ;; Per-package HTML index (global indexes + top index are the
     ;; aggregate pass's job).
-    (dolist (pkg (jotain-doc--documented-packages))
-      (jotain-doc--ignoring (jotain-doc--create-package-index pkg)))
+    (dolist (pkg (my-doc--documented-packages))
+      (my-doc--ignoring (my-doc--create-package-index pkg)))
 
     ;; Plaintext markdown, per package, for the Info manual.
-    (let ((by-pkg (jotain-doc--collect-package-symbols)))
+    (let ((by-pkg (my-doc--collect-package-symbols)))
       (maphash (lambda (pkg syms)
-                 (jotain-doc--ignoring (jotain-doc--write-package-md pkg syms)))
+                 (my-doc--ignoring (my-doc--write-package-md pkg syms)))
                by-pkg))
 
     ;; Enriched listing for the aggregate pass.
-    (jotain-doc--write-listing (symbol-name (car features)))
-    (message "jotain-elisp-doc: package done")))
+    (my-doc--write-listing (symbol-name (car features)))
+    (message "my-elisp-doc: package done")))
 
-(defun jotain-doc--generate-aggregate ()
+(defun my-doc--generate-aggregate ()
   "Aggregate mode: build the global indexes from the merged listings.
 No package is loaded here — only the engine and its tooling — so this
 pass is independent of any package bump."
-  (pcase-let ((`(,symbols ,packages ,skipped) (jotain-doc--read-listings)))
-    (message "jotain-elisp-doc: aggregate — %d symbols, %d packages, %d skipped"
+  (pcase-let ((`(,symbols ,packages ,skipped) (my-doc--read-listings)))
+    (message "my-elisp-doc: aggregate — %d symbols, %d packages, %d skipped"
              (length symbols) (length packages) (length skipped))
-    (jotain-doc--ignoring (jotain-doc--agg-json-index symbols))
-    (jotain-doc--ignoring (jotain-doc--agg-search-index symbols packages))
+    (my-doc--ignoring (my-doc--agg-json-index symbols))
+    (my-doc--ignoring (my-doc--agg-search-index symbols packages))
     (dolist (kind '("fun" "var" "face"))
-      (jotain-doc--ignoring (jotain-doc--agg-type-index kind symbols)))
-    (jotain-doc--ignoring (elisp-doc-export-shortdoc))
-    (setq jotain-doc--skipped skipped)
-    (jotain-doc--create-top-index packages)
-    (message "jotain-elisp-doc: aggregate done")))
+      (my-doc--ignoring (my-doc--agg-type-index kind symbols)))
+    (my-doc--ignoring (elisp-doc-export-shortdoc))
+    (setq my-doc--skipped skipped)
+    (my-doc--create-top-index packages)
+    (message "my-elisp-doc: aggregate done")))
 
-(defun jotain-doc-generate ()
-  "Top-level generation entry point, dispatching on JOTAIN_DOC_MODE."
-  (let ((mode (or (jotain-doc--env "JOTAIN_DOC_MODE") "package")))
-    (message "jotain-elisp-doc: mode=%s" mode)
+(defun my-doc-generate ()
+  "Top-level generation entry point, dispatching on EMACS_CONFIG_DOC_MODE."
+  (let ((mode (or (my-doc--env "EMACS_CONFIG_DOC_MODE") "package")))
+    (message "my-elisp-doc: mode=%s" mode)
     (if (equal mode "aggregate")
-        (jotain-doc--generate-aggregate)
-      (jotain-doc--generate-package))))
+        (my-doc--generate-aggregate)
+      (my-doc--generate-package))))
 
-(jotain-doc-generate)
+(my-doc-generate)
 (kill-emacs 0)
 
-(provide 'jotain-elisp-doc)
+(provide 'my-elisp-doc)
 
-;;; jotain-elisp-doc.el ends here
+;;; my-elisp-doc.el ends here

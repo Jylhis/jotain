@@ -1,22 +1,22 @@
-;;; jotain-lang-eval.el --- Tier-1 static per-language capability probe -*- lexical-binding: t; -*-
+;;; my-lang-eval.el --- Tier-1 static per-language capability probe -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 
 ;; With the full config loaded, inspects the live config for every entry in
-;; `jotain-lang-registry' to see which IDE features are wired up.  Needs no
+;; `my-lang-registry' to see which IDE features are wired up.  Needs no
 ;; language toolchains.  Whether a server actually responds is the Tier-2
-;; probe's job (`jotain-lang-live.el').
+;; probe's job (`my-lang-live.el').
 ;;
 ;; Per language it records:
 ;;   • the major mode a sample file resolves to (via `set-auto-mode') and
 ;;     whether the tree-sitter grammar is loadable (`treesit-ready-p');
 ;;   • whether eglot resolves a language server for the buffer
-;;     (reusing `jotain-prog--eglot-guess-program') and whether any declared
+;;     (reusing `my-prog--eglot-guess-program') and whether any declared
 ;;     server binary is on PATH in the build environment;
 ;;   • the apheleia formatter mapping and its binary's availability;
 ;;   • the declared DAP adapter and whether a `dape-configs' entry targets
 ;;     the mode;
-;;   • whether templates/jotain.eld has a section for the mode, and the
+;;   • whether templates/default.eld has a section for the mode, and the
 ;;     registry's inlay-hint flag.
 ;;
 ;; Each inspection runs under `condition-case', so a broken language
@@ -24,16 +24,16 @@
 ;;
 ;; Batch entry point (nix/lang-eval.nix `lang-eval-matrix'):
 ;;   emacs --batch --init-directory=<writable config copy> \
-;;     -L <this dir> -l jotain-lang-eval.el
-;; with JOTAIN_LANG_EVAL_OUT pointing at the output directory.  The
-;; derivation also sets JOTAIN_LANG_EVAL_STRICT=1, which exits non-zero on
+;;     -L <this dir> -l my-lang-eval.el
+;; with EMACS_CONFIG_LANG_EVAL_OUT pointing at the output directory.  The
+;; derivation also sets EMACS_CONFIG_LANG_EVAL_STRICT=1, which exits non-zero on
 ;; a routing or override regression.
 ;;
-;; Outside lisp/ and test/ on purpose (see jotain-lang-registry.el).
+;; Outside lisp/ and test/ on purpose (see my-lang-registry.el).
 
 ;;; Code:
 
-(require 'jotain-lang-registry)
+(require 'my-lang-registry)
 (require 'seq)
 (require 'subr-x)
 
@@ -42,17 +42,17 @@
 (require 'eglot)
 (require 'apheleia nil t)
 (require 'dape nil t)
-(declare-function jotain-prog--eglot-guess-program "init-prog")
+(declare-function my-prog--eglot-guess-program "init-prog")
 
 ;;;; Helpers
 
-(defun jotain-lang-eval--snippet-modes ()
+(defun my-lang-eval--snippet-modes ()
   "Return the major-mode symbols that have a tempel section.
-Reads templates/jotain.eld directly: bare symbols are section headers,
+Reads templates/default.eld directly: bare symbols are section headers,
 lists are templates."
   (let* ((root (locate-dominating-file
                 (or load-file-name buffer-file-name default-directory) "init.el"))
-         (eld (and root (expand-file-name "templates/jotain.eld" root)))
+         (eld (and root (expand-file-name "templates/default.eld" root)))
          (modes '()))
     (when (and eld (file-readable-p eld))
       (with-temp-buffer
@@ -65,7 +65,7 @@ lists are templates."
           (end-of-file nil))))
     modes))
 
-(defun jotain-lang-eval--formatter-symbol ()
+(defun my-lang-eval--formatter-symbol ()
   "Return the apheleia formatter symbol for the current buffer's mode, or nil."
   (when (boundp 'apheleia-mode-alist)
     (cdr (seq-find (lambda (cell)
@@ -73,7 +73,7 @@ lists are templates."
                           (provided-mode-derived-p major-mode (car cell))))
                    apheleia-mode-alist))))
 
-(defun jotain-lang-eval--dape-configured-p ()
+(defun my-lang-eval--dape-configured-p ()
   "Return non-nil when some `dape-configs' entry targets the current mode."
   (when (boundp 'dape-configs)
     (seq-some
@@ -84,13 +84,13 @@ lists are templates."
                    (if (listp modes) modes (list modes)))))
      dape-configs)))
 
-(defun jotain-lang-eval--any-executable (names)
+(defun my-lang-eval--any-executable (names)
   "Return the first of NAMES found on PATH, or nil."
   (seq-find #'executable-find names))
 
 ;;;; Per-language evaluation
 
-(defun jotain-lang-eval--one (entry snippet-modes)
+(defun my-lang-eval--one (entry snippet-modes)
   "Evaluate one registry ENTRY, returning a result plist.
 SNIPPET-MODES is the set of modes with a tempel section."
   (condition-case err
@@ -102,51 +102,51 @@ SNIPPET-MODES is the set of modes with a tempel section."
           ;; spurious errors.
           (delay-mode-hooks (set-auto-mode))
           (let* ((expected (plist-get entry :mode))
-                 (classic (jotain-lang-get entry :classic))
-                 (grammar (jotain-lang-get entry :grammar))
-                 (servers (jotain-lang-get entry :servers))
-                 (formatter (jotain-lang-get entry :formatter))
-                 (dape (jotain-lang-get entry :dape))
+                 (classic (my-lang-get entry :classic))
+                 (grammar (my-lang-get entry :grammar))
+                 (servers (my-lang-get entry :servers))
+                 (formatter (my-lang-get entry :formatter))
+                 (dape (my-lang-get entry :dape))
                  (mode-ok (or (eq major-mode expected)
                               (and classic (eq major-mode classic))
                               (provided-mode-derived-p major-mode expected)))
-                 (guessed (ignore-errors (jotain-prog--eglot-guess-program))))
+                 (guessed (ignore-errors (my-prog--eglot-guess-program))))
             (list :id (plist-get entry :id)
                   :name (plist-get entry :name)
                   :expected-mode expected
                   :actual-mode major-mode
                   :mode-ok mode-ok
-                  :skip-mode (jotain-lang-get entry :skip-mode)
+                  :skip-mode (my-lang-get entry :skip-mode)
                   :grammar grammar
                   :grammar-ready (and grammar
                                       (fboundp 'treesit-ready-p)
                                       (treesit-ready-p grammar t))
                   :servers servers
-                  :override (jotain-lang-get entry :override)
+                  :override (my-lang-get entry :override)
                   :server-wired (and guessed t)
                   :server-guessed guessed
-                  :server-avail (and servers (jotain-lang-eval--any-executable servers))
+                  :server-avail (and servers (my-lang-eval--any-executable servers))
                   :formatter formatter
-                  :formatter-mapped (and (jotain-lang-eval--formatter-symbol) t)
+                  :formatter-mapped (and (my-lang-eval--formatter-symbol) t)
                   :formatter-avail (and formatter (executable-find formatter))
                   :dape dape
-                  :dape-configured (jotain-lang-eval--dape-configured-p)
+                  :dape-configured (my-lang-eval--dape-configured-p)
                   :snippets (and (memq expected snippet-modes) t)
-                  :inlay (and (jotain-lang-get entry :inlay) t)
-                  :live (and (jotain-lang-get entry :live) t)))))
+                  :inlay (and (my-lang-get entry :inlay) t)
+                  :live (and (my-lang-get entry :live) t)))))
     (error (list :id (plist-get entry :id)
                  :name (plist-get entry :name)
                  :error (error-message-string err)))))
 
-(defun jotain-lang-eval-run ()
+(defun my-lang-eval-run ()
   "Evaluate every registry entry, returning a list of result plists."
-  (let ((snippet-modes (jotain-lang-eval--snippet-modes)))
-    (mapcar (lambda (e) (jotain-lang-eval--one e snippet-modes))
-            jotain-lang-registry)))
+  (let ((snippet-modes (my-lang-eval--snippet-modes)))
+    (mapcar (lambda (e) (my-lang-eval--one e snippet-modes))
+            my-lang-registry)))
 
 ;;;; Rendering
 
-(defun jotain-lang-eval--cell (result key)
+(defun my-lang-eval--cell (result key)
   "Render RESULT's KEY as a matrix cell string."
   (pcase key
     (:mode
@@ -177,7 +177,7 @@ SNIPPET-MODES is the set of modes with a tempel section."
     (:inlay (if (plist-get result :inlay) "✓" "—"))
     (:live (if (plist-get result :live) "✓" "—"))))
 
-(defconst jotain-lang-eval--legend
+(defconst my-lang-eval--legend
   "\
 **Baseline for every `prog-mode` buffer, no server required:** in-buffer
 completion (corfu + cape), on-the-fly diagnostics (flymake), echo-area
@@ -192,7 +192,7 @@ Legend: ✓ wired · — not wired · ⚠ wired but the live config disagrees wi
 registry · *·on PATH* the binary was found in this build environment (servers
 normally come from the project's own devenv, so absence here is expected).")
 
-(defun jotain-lang-eval--render-markdown (results)
+(defun my-lang-eval--render-markdown (results)
   "Return the capability matrix for RESULTS as a Markdown string."
   (let ((rows
          (mapconcat
@@ -202,27 +202,27 @@ normally come from the project's own devenv, so absence here is expected).")
                         (plist-get r :name) (plist-get r :error))
               (format "| %s | %s | %s | %s | %s | %s | %s | %s |"
                       (plist-get r :name)
-                      (jotain-lang-eval--cell r :mode)
-                      (jotain-lang-eval--cell r :grammar)
-                      (jotain-lang-eval--cell r :lsp)
-                      (jotain-lang-eval--cell r :format)
-                      (jotain-lang-eval--cell r :debug)
-                      (jotain-lang-eval--cell r :snippets)
-                      (jotain-lang-eval--cell r :inlay))))
+                      (my-lang-eval--cell r :mode)
+                      (my-lang-eval--cell r :grammar)
+                      (my-lang-eval--cell r :lsp)
+                      (my-lang-eval--cell r :format)
+                      (my-lang-eval--cell r :debug)
+                      (my-lang-eval--cell r :snippets)
+                      (my-lang-eval--cell r :inlay))))
           results "\n")))
     (concat
      "# Language support matrix\n\n"
-     "Which editor features Jotain wires up for each language it supports, "
+     "Which editor features the configuration wires up for each language it supports, "
      "generated by inspecting the live configuration. Do not edit by hand — "
      "regenerate with `just docs-refresh-lang-matrix`.\n\n"
-     jotain-lang-eval--legend
+     my-lang-eval--legend
      "\n\n"
      "| Language | Major mode | Tree-sitter | Language server | Formatter | Debug (DAP) | Snippets | Inlay hints |\n"
      "| --- | --- | --- | --- | --- | --- | --- | --- |\n"
      rows
      "\n")))
 
-(defun jotain-lang-eval--plist->alist (pl)
+(defun my-lang-eval--plist->alist (pl)
   "Convert plist PL to an alist with string keys and JSON-friendly values."
   (let (out)
     (while pl
@@ -237,15 +237,15 @@ normally come from the project's own devenv, so absence here is expected).")
               out)))
     (nreverse out)))
 
-(defun jotain-lang-eval--json (results)
+(defun my-lang-eval--json (results)
   "Return RESULTS as a pretty JSON array string."
   (require 'json)
   (let ((json-encoding-pretty-print t))
-    (json-encode (vconcat (mapcar #'jotain-lang-eval--plist->alist results)))))
+    (json-encode (vconcat (mapcar #'my-lang-eval--plist->alist results)))))
 
 ;;;; Batch driver
 
-(defun jotain-lang-eval--strict-failures (results)
+(defun my-lang-eval--strict-failures (results)
   "Return a list of human-readable regression strings in RESULTS."
   (let (fails)
     (dolist (r results)
@@ -263,30 +263,30 @@ normally come from the project's own devenv, so absence here is expected).")
                 fails)))))
     (nreverse fails)))
 
-(defun jotain-lang-eval-batch ()
-  "Run the probe and write matrix.md + matrix.json to JOTAIN_LANG_EVAL_OUT.
-With JOTAIN_LANG_EVAL_STRICT set, exit non-zero on any regression."
-  (let* ((out (or (getenv "JOTAIN_LANG_EVAL_OUT")
-                  (error "JOTAIN_LANG_EVAL_OUT is not set")))
-         (results (jotain-lang-eval-run)))
+(defun my-lang-eval-batch ()
+  "Run the probe and write matrix.md + matrix.json to EMACS_CONFIG_LANG_EVAL_OUT.
+With EMACS_CONFIG_LANG_EVAL_STRICT set, exit non-zero on any regression."
+  (let* ((out (or (getenv "EMACS_CONFIG_LANG_EVAL_OUT")
+                  (error "EMACS_CONFIG_LANG_EVAL_OUT is not set")))
+         (results (my-lang-eval-run)))
     (make-directory out t)
     (with-temp-file (expand-file-name "matrix.md" out)
-      (insert (jotain-lang-eval--render-markdown results)))
+      (insert (my-lang-eval--render-markdown results)))
     (with-temp-file (expand-file-name "matrix.json" out)
-      (insert (jotain-lang-eval--json results)))
-    (let ((fails (jotain-lang-eval--strict-failures results)))
+      (insert (my-lang-eval--json results)))
+    (let ((fails (my-lang-eval--strict-failures results)))
       (when fails
-        (message "jotain-lang-eval: %d regression(s):" (length fails))
+        (message "my-lang-eval: %d regression(s):" (length fails))
         (dolist (f fails) (message "  - %s" f))
-        (when (getenv "JOTAIN_LANG_EVAL_STRICT")
+        (when (getenv "EMACS_CONFIG_LANG_EVAL_STRICT")
           (kill-emacs 1))))
-    (message "jotain-lang-eval: wrote matrix for %d languages to %s"
+    (message "my-lang-eval: wrote matrix for %d languages to %s"
              (length results) out)))
 
 ;; Auto-run only in batch with an output directory set, so `require' has
 ;; no side effects.
-(when (and noninteractive (getenv "JOTAIN_LANG_EVAL_OUT"))
-  (jotain-lang-eval-batch))
+(when (and noninteractive (getenv "EMACS_CONFIG_LANG_EVAL_OUT"))
+  (my-lang-eval-batch))
 
-(provide 'jotain-lang-eval)
-;;; jotain-lang-eval.el ends here
+(provide 'my-lang-eval)
+;;; my-lang-eval.el ends here

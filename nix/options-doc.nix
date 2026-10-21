@@ -63,21 +63,21 @@ let
   devenvDoc = mkDoc (src + "/nix/devenv-emacs-lisp.nix");
 
 in
-pkgs.runCommand "jotain-options-doc"
+pkgs.runCommand "emacs-config-options-doc"
   {
     nativeBuildInputs = [ pkgs.pandoc ];
     # Appendix of the Info manual (nix/info-manual.nix).
-    passthru.texinfoFragment = "jotain-options.texi";
+    passthru.texinfoFragment = "emacs-config-options.texi";
   }
   # shellcheck disable=SC2016,SC2086
   ''
         mkdir -p $out
 
         cat > combined.md <<'HEADER'
-    # Jotain — Module Options Reference
+    # Emacs configuration — Module Options Reference
 
     Auto-generated reference for all Nix module options exposed by
-    [Jotain](${gitHubUrl}).
+    [the Emacs configuration](${gitHubUrl}).
 
     - [Home Manager Module](#home-manager-module) — per-user Emacs daemon, client wrapper, desktop entry
     - [System Module](#system-module-nixos--nix-darwin) — overlay and system packages
@@ -91,8 +91,8 @@ pkgs.runCommand "jotain-options-doc"
 
     ```nix
     {
-      imports = [ jotain.homeManagerModules.default ];
-      services.jotain = {
+      imports = [ emacs-config.homeManagerModules.default ];
+      services.emacsConfig = {
         enable = true;
         defaultEditor = true;
         client.enable = true;
@@ -110,13 +110,13 @@ pkgs.runCommand "jotain-options-doc"
 
     # System Module (NixOS / nix-darwin)
 
-    Applies the Jotain overlay and adds the package to system environment.
+    Applies the overlay and adds the package to system environment.
     For per-user daemon management, use the Home Manager module instead.
 
     ```nix
     {
-      imports = [ jotain.nixosModules.default ];  # or darwinModules.default
-      services.jotain.enable = true;
+      imports = [ emacs-config.nixosModules.default ];  # or darwinModules.default
+      services.emacsConfig.enable = true;
     }
     ```
 
@@ -216,13 +216,13 @@ pkgs.runCommand "jotain-options-doc"
         pandoc combined.md \
           -o $out/index.html \
           --standalone \
-          --metadata title="Jotain — Module Options" \
+          --metadata title="Emacs configuration — Module Options" \
           --css style.css \
           --highlight-style=kate \
           --wrap=none
 
         # Texinfo fragment for nix/info-manual.nix. Shifting headings by one
-        # turns each `# …` into an @section under docs/jotain.texi's
+        # turns each `# …` into an @section under docs/emacs-config.texi's
         # @appendix. See nix/texi-fragment.nix.
         pandoc combined.md \
           -f gfm \
@@ -231,7 +231,7 @@ pkgs.runCommand "jotain-options-doc"
           --wrap=none \
         | awk '${texi.stripScaffolding}' \
         | sed -E '${texi.flattenRefs}' \
-          > $out/jotain-options.texi
+          > $out/emacs-config-options.texi
 
         touch $out/.nojekyll
   ''

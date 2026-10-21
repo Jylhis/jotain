@@ -12,7 +12,7 @@
   btn.addEventListener('click', function () {
     var dark = document.documentElement.dataset.mode !== 'dark';
     document.documentElement.dataset.mode = dark ? 'dark' : '';
-    try { localStorage.setItem('jotain-theme', dark ? 'dark' : 'light'); } catch (e) { /* private mode */ }
+    try { localStorage.setItem('emacs-config-theme', dark ? 'dark' : 'light'); } catch (e) { /* private mode */ }
     render();
   });
   render();

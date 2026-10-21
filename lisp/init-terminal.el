@@ -49,10 +49,10 @@
 (use-package clipetty
   :hook (after-init . global-clipetty-mode))
 
-(defun jotain-terminal--tty-setup ()
+(defun my-terminal--tty-setup ()
   "Per-frame tty setup hook."
   (xterm-mouse-mode 1))
-(add-hook 'tty-setup-hook #'jotain-terminal--tty-setup)
+(add-hook 'tty-setup-hook #'my-terminal--tty-setup)
 
 ;;; @doc Emacs 31+: tooltips (help-echo, button hints) in terminal frames.
 ;;; No-op in GUI; skipped on Emacs 30.

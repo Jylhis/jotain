@@ -1,5 +1,5 @@
 {
-  # Emacs source variant for jotainEmacs / jotainEmacsNoGui (see
+  # Emacs source variant for emacsConfig / emacsConfigNoGui (see
   # emacs.nix). Defaults to "unstable": emacs-overlay's emacs-unstable,
   # the newest Emacs release or pretest tag (currently 31.1), cached on
   # nix-community.cachix.org.
@@ -43,7 +43,7 @@ let
   );
   spellConf = "dict-dir ${spellEnv}/lib/aspell; data-dir ${spellEnv}/lib/aspell";
 
-  mkJotainEmacsPackages =
+  mkEmacsConfigEmacsPackages =
     {
       name,
       package,
@@ -68,7 +68,7 @@ let
             # Full grammar set: a linkFarm over cached upstream
             # derivations, so it costs closure size (~200 MB over a
             # curated subset, measured 2026-08-01), never build time, and
-            # keeps the `jotain-emacs-full' hash cache-stable.
+            # keeps the `emacs-config-full' hash cache-stable.
             epkgs.treesit-grammars.with-all-grammars
           ];
       };
@@ -86,7 +86,7 @@ let
         };
         passthru = (core.passthru or { }) // {
           inherit core package;
-          info = final.jotainInfo;
+          info = final.emacsConfigInfo;
         };
       }
       ''
@@ -102,7 +102,7 @@ let
           rm "$prog"
           makeBinaryWrapper "$orig" "$prog" \
             --suffix PATH : "${final.lib.makeBinPath runtimeDeps}" \
-            --suffix INFOPATH : "${final.jotainInfo}/share/info" \
+            --suffix INFOPATH : "${final.emacsConfigInfo}/share/info" \
             --set-default ASPELL_CONF "${spellConf}"
         done
       '';
@@ -120,7 +120,7 @@ in
   # it is byte-identical to nix-community's emacs-unstable-pgtk, and that
   # cache hit (Emacs plus every dependent ELPA package) is worth more than
   # any closure trim.
-  jotainEmacs = import ../emacs.nix (
+  emacsConfig = import ../emacs.nix (
     {
       pkgs = final;
       inherit variant;
@@ -134,7 +134,7 @@ in
 
   # Terminal-only build (nix-on-droid, headless). Off-parity by
   # construction, so the trim policy applies.
-  jotainEmacsNoGui = import ../emacs.nix {
+  emacsConfigNoGui = import ../emacs.nix {
     pkgs = final;
     inherit variant;
     noGui = true;
@@ -149,29 +149,29 @@ in
   # LikeC4 language server for `likec4-mode' (lisp/init-lang-devops.el).
   likec4Lsp = import ./likec4-lsp.nix { pkgs = final; };
 
-  jotainInfo = import ./info-manual.nix {
+  emacsConfigInfo = import ./info-manual.nix {
     pkgs = final;
     src = ../.;
   };
 
-  # The full distribution: mkJotainEmacsPackages lndirs the inner
+  # The full distribution: mkEmacsConfigEmacsPackages lndirs the inner
   # emacsWithPackages result (`core', whose share/info we cannot mutate)
   # and re-wraps its binaries with the runtime PATH, ASPELL_CONF and
-  # ${jotainInfo}/share/info on INFOPATH, so `C-h i d' finds jotain.info.
+  # ${emacsConfigInfo}/share/info on INFOPATH, so `C-h i d' finds emacs-config.info.
   #
   # INFOPATH gets the bare directory: makeBinaryWrapper rejects a value
   # that would create an empty PATH-like segment (GHSA-p7v3-pr2c-8584),
   # so the trailing ':' that makes info-initialize append
   # Info-default-directory-list must come from nixpkgs' site-start.el
   # (Emacs bug#81105), which adds it, keeping the built-in manuals visible.
-  jotainEmacsPackages = mkJotainEmacsPackages {
-    name = "jotain-emacs-full";
-    package = final.jotainEmacs;
+  emacsConfigPackages = mkEmacsConfigEmacsPackages {
+    name = "emacs-config-full";
+    package = final.emacsConfig;
   };
 
   # Full distribution on the terminal-only base (nix-on-droid / headless).
-  jotainEmacsPackagesNoGui = mkJotainEmacsPackages {
-    name = "jotain-emacs-full-nox";
-    package = final.jotainEmacsNoGui;
+  emacsConfigPackagesNoGui = mkEmacsConfigEmacsPackages {
+    name = "emacs-config-full-nox";
+    package = final.emacsConfigNoGui;
   };
 }

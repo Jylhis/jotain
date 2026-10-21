@@ -11,7 +11,7 @@
 #
 # Upstream does not commit the generated `jylhis-<light|dark>` outputs, so
 # nix/extra-packages.nix and nix/ds-assets.nix run the generator
-# in-derivation, mirroring upstream's nix/generated.nix. jotain loads the
+# in-derivation, mirroring upstream's nix/generated.nix. The configuration loads the
 # jylhis-light/jylhis-dark pair (lisp/init-ui.el).
 #
 # There is no v3.0.0 tag yet, so the rev is the pin.

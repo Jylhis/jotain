@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  var base = (window.JOTAIN_API_BASE || '').replace(/\/$/, '');
+  var base = (window.EMACS_CONFIG_API_BASE || '').replace(/\/$/, '');
   var input = document.getElementById('pkg-q');
   var count = document.getElementById('pkg-count');
   var results = document.getElementById('pkg-results');

@@ -5,7 +5,7 @@ human contributor guide. This file is the single source of truth for both.
 
 ## What this is
 
-Jotain is a GNU Emacs 31 configuration (floor: Emacs 30.1, per `init.el`'s
+This is a GNU Emacs 31 configuration (floor: Emacs 30.1, per `init.el`'s
 `Package-Requires`) plus the Nix expressions that build Emacs itself. The
 default build is emacs-overlay's `unstable` variant (the newest Emacs
 release or pretest tag, currently 31.1); nixpkgs' Emacs 30 is the `mainline` variant. The dev shell has
@@ -140,11 +140,11 @@ Build and launch (current system by default; override with
 - `just run-built-debug`: adds `--debug-init` and `debug-on-error`.
 - `just run-built-debug-log`: every debug facility on; loads
   `etc/debug-init.el` and mirrors messages, warnings, backtraces, and stderr
-  into `var/debug/<timestamp>/`. `M-x jotain-debug-dump-now` flushes mid-run.
+  into `var/debug/<timestamp>/`. `M-x my-debug-dump-now` flushes mid-run.
 - `just run-built-fast`: launch the AOT-compiled config (`.#config-compiled`)
   from `var/fast-home`. It reflects the last build, so use `run-built` while
   editing.
-- `just build`: full distribution (`jotainEmacsPackages`: Emacs, packages,
+- `just build`: full distribution (`emacsConfigPackages`: Emacs, packages,
   every tree-sitter grammar) via `nix-build`. `just build-nox-full`: the
   terminal-only distribution (`.#emacs-nox`).
 - `just build-bare` / `build-nox` / `build-git` / `build-igc` /
@@ -160,7 +160,7 @@ Build and launch (current system by default; override with
 - `just lang-matrix` / `just lang-eval-live`: live language-support matrix /
   end-to-end LSP probe.
 - `just docs` / `just info` / `just docs-all`: options HTML (`result-docs/`),
-  `jotain.info` (`result-info/share/info/`), or both.
+  `emacs-config.info` (`result-info/share/info/`), or both.
   `just build-api-doc`: the generated API reference (`result-api-doc/`).
 - `just docs-refresh-packages`: regenerate
   `docs/configuration/package-reference.mdx` from the `;;; @doc` blocks in
@@ -168,7 +168,7 @@ Build and launch (current system by default; override with
   fails.
 - `just docs-refresh-lang-matrix`: regenerate
   `docs/reference/language-support.mdx` from
-  `etc/lang-eval/jotain-lang-registry.el` (edit the registry, not the page).
+  `etc/lang-eval/my-lang-registry.el` (edit the registry, not the page).
 
 ## Emacs & Elisp knowledge base and skills
 
@@ -227,7 +227,7 @@ When a note conflicts with the installed Emacs, trust the running Emacs
   right point in `init.el`.
 - `lisp/devenv.el` and `lisp/repo-review.el` are the only non-`init-*`
   files in `lisp/`: standalone packages (own `devenv-` / `repo-review-`
-  namespaces, no `jotain-` dependencies) wired in by `lisp/init-devenv.el`
+  namespaces, no `my-` dependencies) wired in by `lisp/init-devenv.el`
   and `lisp/init-review.el`.
 - **LSP and formatters live in `init-prog.el`.** Per-language `eglot-ensure`
   hooks and `apheleia` formatters are centralised there; `init-lang-*.el`
@@ -278,7 +278,7 @@ nix-instantiate --eval --strict -E '
       pkgs = import nixpkgs { overlays = [ (import overlay) (import ./overlay.nix) ]; };
   in {
     # x86_64-linux: every GUI build maps to its *-pgtk sibling.
-    default       = pkgs.jotainEmacs.outPath == pkgs.emacs-unstable-pgtk.outPath;
+    default       = pkgs.emacsConfig.outPath == pkgs.emacs-unstable-pgtk.outPath;
     bare-default  = (import ./emacs.nix {}).outPath == pkgs.emacs-unstable-pgtk.outPath;
     mainline-pgtk = (import ./emacs.nix { variant = "mainline"; }).outPath == pkgs.emacs-pgtk.outPath;
     git-pgtk      = (import ./emacs.nix { variant = "git"; }).outPath == pkgs.emacs-git-pgtk.outPath;
@@ -299,13 +299,13 @@ target.
 `overlay.nix` is a standalone wrapper that composes emacs-overlay, pinned
 from `flake.lock`, underneath it):
 
-- `jotainEmacs` / `jotainEmacsNoGui`: bare Emacs from `emacs.nix`
+- `emacsConfig` / `emacsConfigNoGui`: bare Emacs from `emacs.nix`
   (pgtk on Linux, NS on Darwin; the noGui twin is for nix-on-droid).
-- `jotainInfo`: the `jotain.info` manual (`nix/info-manual.nix`).
-- `jotainEmacsPackages` / `jotainEmacsPackagesNoGui`: full distributions
+- `emacsConfigInfo`: the `emacs-config.info` manual (`nix/info-manual.nix`).
+- `emacsConfigPackages` / `emacsConfigPackagesNoGui`: full distributions
   (use-package auto-mapping, all tree-sitter grammars). A
   `makeBinaryWrapper` re-wrap adds the runtime deps (`nix/runtime-deps.nix`)
-  to `PATH`, `jotainInfo` to `INFOPATH` (so `C-h i d m Jotain RET` works),
+  to `PATH`, `emacsConfigInfo` to `INFOPATH` (so `C-h i d m Emacs config RET` works),
   and a default `ASPELL_CONF` for the bundled en/fi/de/fr dictionaries.
 - `eca`: prebuilt ECA server for `lisp/init-ai.el`.
 - `likec4Lsp`: the `@likec4/lsp` server for `likec4-mode`, on every
@@ -317,8 +317,8 @@ Variant builds target `emacs.nix` directly.
 
 **`flake.nix`** is wiring only. Outputs:
 
-- `packages.<system>`: `default` (`jotainEmacsPackages`), `emacs`
-  (`jotainEmacs`), `emacs-nox` (`jotainEmacsPackagesNoGui`), `likec4-lsp`,
+- `packages.<system>`: `default` (`emacsConfigPackages`), `emacs`
+  (`emacsConfig`), `emacs-nox` (`emacsConfigPackagesNoGui`), `likec4-lsp`,
   `info`, `docs` (options HTML), `packages-doc` (per-package reference),
   `emacs-api-doc`, `site`, `site-preview`, `ds-assets`.
 - `legacyPackages.<system>` (not built by `nix flake check`):
@@ -332,7 +332,7 @@ Variant builds target `emacs.nix` directly.
 - `formatter` (treefmt), `lib` (use-package scanner, `nix/use-package.nix`),
   `checks` (`nix/checks.nix`).
 
-All module outputs get the jotain overlay composed over emacs-overlay
+All module outputs get the overlay composed over emacs-overlay
 (`moduleOverlay`), so module installs resolve the same Emacs base and epkgs
 snapshot that CI builds and caches.
 
@@ -342,7 +342,7 @@ per-symbol HTML that `nix/site.nix` mounts at `/help/api/`. It is heavy and
 deploy-path-only: only `nix/site.nix` and its own check import it, never
 `nix/info-manual.nix` or `nix/mk-overlay.nix`, so editor builds stay cache
 hits. PR CI builds `.#site-preview` (`withApiDoc = false`) instead. Its
-`jotain-elisp-api.texi` fragment is produced but not yet included in the
+`emacs-config-elisp-api.texi` fragment is produced but not yet included in the
 Info manual.
 
 ### Dev shell
@@ -366,36 +366,35 @@ remains only as an options-doc source.
 
 ### Modules
 
-- **`module.nix`** (Home Manager, `services.jotain`): runs Jotain as a user
+- **`module.nix`** (Home Manager, `services.emacsConfig`): runs the configuration as a user
   Emacs daemon with `emacsclient` (systemd on Linux, launchd on macOS) and
   deploys the byte-compiled config (`nix/config-compiled.nix`).
-  `services.jotain.package` swaps the distribution (default
-  `jotainEmacsPackages`).
+  `services.emacsConfig.package` swaps the distribution (default
+  `emacsConfigPackages`).
   - Wrapper-`PATH` toggles (`<name>.enable`): `sonarlint` (pulls JDK 21),
     `devenv`, `dockerfileLsp`, `onePassword` (`op`, backs
     `auth-source-1password`), `sops`, `claudeCode`. `onePassword`, `sops`,
     and `claudeCode` are unfree. `spell.dictionaries` lists aspell
     dictionaries.
-  - Secrets: `services.jotain.environmentFile` is a runtime file loaded via
+  - Secrets: `services.emacsConfig.environmentFile` is a runtime file loaded via
     systemd `EnvironmentFile` (sourced before exec under launchd), inherited
-    by every subprocess and never copied to the store (`eca.environmentFile`
-    is an alias). Alternatively, `services.jotain.authSources` lists
-    authinfo/netrc files that are passed as `JOTAIN_AUTH_SOURCES` and
+    by every subprocess and never copied to the store.
+    Alternatively, `services.emacsConfig.authSources` lists
+    authinfo/netrc files that are passed as `EMACS_CONFIG_AUTH_SOURCES` and
     prepended to `auth-sources` by `lisp/init-systems.el`;
     `lisp/init-ai.el` exports the eca provider keys from auth-source before
     each eca session, since the eca server reads only the environment.
-  - `services.jotain.eca` generates `~/.config/eca/config.json` via
+  - `services.emacsConfig.eca` generates `~/.config/eca/config.json` via
     `nix/eca-config.nix` (defaults from `config/eca/config.json`, which the
     `eca-models-in-sync` check also reads).
-    `eca.openrouter.enable` adds the OpenRouter provider (old alias:
-    `services.jotain.openrouter.enable`); `eca.settings` is deep-merged over
-    it. gptel defaults to OpenRouter regardless.
+    `eca.openrouter.enable` adds the OpenRouter provider; `eca.settings` is
+    deep-merged over it. gptel defaults to OpenRouter regardless.
 - **`module-system.nix`** (shared NixOS / nix-darwin module): applies the
   overlay and adds packages to `environment.systemPackages`, with the same
   toggles and `spell.dictionaries`. ECA config and `environmentFile` stay
   Home-Manager-only (no per-user daemon or `~/.config` here).
 - **`module-nix-on-droid.nix`**: adds the terminal-only distribution
-  (`jotainEmacsPackagesNoGui`) and an `emacsclient` EDITOR wrapper to
+  (`emacsConfigPackagesNoGui`) and an `emacsclient` EDITOR wrapper to
   `environment.packages`, with `EDITOR`/`VISUAL` in
   `environment.sessionVariables`. Android under proot is headless, so a GUI
   build would only bloat the closure.
@@ -471,22 +470,22 @@ CI's artifact is what `home-manager switch` installs. `devenv test`
 
 ### Info manual
 
-`docs/jotain.texi` is the master file. `nix/info-manual.nix` converts each
+`docs/emacs-config.texi` is the master file. `nix/info-manual.nix` converts each
 `docs/*.md(x)` page into a chapter with pandoc, `@include`s them, and runs
 `makeinfo` + `install-info`. The options appendix comes from
 `nix/options-doc.nix`, which emits both `index.html` (Pages) and
-`jotain-options.texi` from one source. The distribution wrapper appends
-`${jotainInfo}/share/info` to `INFOPATH` without a trailing `:`
+`emacs-config-options.texi` from one source. The distribution wrapper appends
+`${emacsConfigInfo}/share/info` to `INFOPATH` without a trailing `:`
 (`makeBinaryWrapper` rejects empty segments); nixpkgs' Emacs `site-start.el`
 adds the separator, so the built-in manuals stay visible. For a source
 checkout, `lisp/init-docs.el` adds the first existing directory among
-`JOTAIN_INFO_DIR`, `result-info/share/info`, and `result/share/info` to
+`EMACS_CONFIG_INFO_DIR`, `result-info/share/info`, and `result/share/info` to
 `Info-additional-directory-list`.
 
 ## Coding Style & Naming Conventions
 
-Follow the module conventions above. Global Elisp symbols use the `jotain-`
-prefix (`jotain--` for internals); `lisp/devenv.el` uses `devenv-`. Nix
+Follow the module conventions above. Global Elisp symbols use the `my-`
+prefix (`my--` for internals); `lisp/devenv.el` uses `devenv-`. Nix
 formatting is enforced by `nix/treefmt.nix`. For Emacs internals and Elisp
 practice, use the `.claude/skills/` skills rather than memory.
 
@@ -511,6 +510,6 @@ screenshots only for UI-facing changes.
 - Generated files: edit the source, then regenerate.
   `docs/configuration/package-reference.mdx` comes from `;;; @doc` blocks
   (`just docs-refresh-packages`); `docs/reference/language-support.mdx` from
-  `etc/lang-eval/jotain-lang-registry.el` (`just docs-refresh-lang-matrix`);
+  `etc/lang-eval/my-lang-registry.el` (`just docs-refresh-lang-matrix`);
   `website/public/ds` from `nix/design-pin.nix` (`just ds-sync`).
 - Never commit generated state: `elpa/`, `var/`, `result*`, `*.elc`.

@@ -15,7 +15,7 @@ Trial only before any promotion. The distribution overlay already takes
 source).
 
 - `just build-igc`, then run the result as a **side daemon** on its own
-  socket (`./result/bin/emacs --fg-daemon=jotain-igc --init-directory=…`)
+  socket (`./result/bin/emacs --fg-daemon=emacs-config-igc --init-directory=…`)
   next to the release daemon. A/B it for about a week on real workloads
   (large files, LSP, magit); watch for crashes and confirm the pause
   reduction is real on this CPU.
@@ -30,7 +30,7 @@ a variant switch happens (e.g. to igc), replace it with `ultra-scroll`
 ### Verification (for the open work)
 
 1. Baseline: `just bench-built var/bench/before.txt`; profile a freeze with
-   `M-x jotain-profile-toggle`.
+   `M-x my-profile-toggle`.
 2. After build changes: re-run `just bench-built`, diff load times, and
    confirm the eln-cache holds `init-*.eln`.
 3. GC: `(setq garbage-collection-messages t)`, exercise completion/LSP under
@@ -47,7 +47,7 @@ a variant switch happens (e.g. to igc), replace it with `ultra-scroll`
   driver), magit-delta (delta-rendered magit diffs), and smerge/vc.el
   integration for syntax-aware conflict resolution.
 - `module.nix` / `module-system.nix` / `module-nix-on-droid.nix`: the
-  `services.jotain.spell.dictionaries` option and the hardcoded
+  `services.emacsConfig.spell.dictionaries` option and the hardcoded
   `aspellDicts.en` do nothing for spell-checking. libaspell's `NIX_PROFILES`
   patch only feeds dictionary enumeration, and the distribution wrapper's
   default `ASPELL_CONF` points at its own bundled en/fi/de/fr set

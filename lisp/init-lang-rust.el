@@ -7,13 +7,13 @@
 
 ;;; Code:
 
-(declare-function jotain-eglot-set-workspace-config "init-prog" (key settings))
+(declare-function my-eglot-set-workspace-config "init-prog" (key settings))
 
 ;; `check.command "clippy"' runs clippy on every save, slow on a cold
 ;; target directory; a project .dir-locals.el can switch back to `check'.
 ;; `cargo (:features "all")' is left out: costly on large workspaces, so
 ;; it stays a per-project choice.
-(jotain-eglot-set-workspace-config
+(my-eglot-set-workspace-config
  :rust-analyzer
  '(:check (:command "clippy")
    :cargo (:buildScripts (:enable t))

@@ -24,9 +24,9 @@
   :init
   ;; Register lazily, when a consumer first loads auth-source.
   (with-eval-after-load 'auth-source
-    ;; Module-declared authinfo files (colon-separated JOTAIN_AUTH_SOURCES)
+    ;; Module-declared authinfo files (colon-separated EMACS_CONFIG_AUTH_SOURCES)
     ;; take priority over ~/.authinfo(.gpg).
-    (when-let* ((paths (getenv "JOTAIN_AUTH_SOURCES")))
+    (when-let* ((paths (getenv "EMACS_CONFIG_AUTH_SOURCES")))
       (setopt auth-sources (append (split-string paths ":" t) auth-sources)))
     (require 'auth-source-1password)
     (auth-source-1password-enable))
@@ -47,7 +47,7 @@
   :functions (sops-save-file sops-cancel sops-edit-file)
   :init
   ;; after-init runs before command-line files are visited, so none are
-  ;; missed.  The `sops' CLI is opt-in (`services.jotain.sops.enable');
+  ;; missed.  The `sops' CLI is opt-in (`services.emacsConfig.sops.enable');
   ;; without it the mode logs "executable not found: sops" on every
   ;; candidate file.
   (when (executable-find "sops")
@@ -68,7 +68,7 @@
 (use-package logview
   :defer t
   :custom
-  (logview-cache-filename (jotain-var-file "logview-cache"))
+  (logview-cache-filename (my-var-file "logview-cache"))
   (logview-additional-submodes
    '(("ROS2" (format . "[LEVEL] [TIMESTAMP] [NAME]:")
              (levels . "SLF4J")

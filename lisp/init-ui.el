@@ -7,48 +7,48 @@
 
 ;;; Code:
 
-(defgroup jotain-ui nil
-  "User-facing UI knobs for the Jotain configuration."
+(defgroup my-ui nil
+  "User-facing UI knobs for the configuration."
   :group 'convenience)
 
 ;;;; Theme — Jylhis light/dark, switched by system appearance
 
-(defcustom jotain-theme-light 'jylhis-light
+(defcustom my-theme-light 'jylhis-light
   "Theme to use when the system is in light mode.
 The default is the Jylhis theme's light (Print) mode."
   :type 'symbol
-  :group 'jotain-ui)
+  :group 'my-ui)
 
-(defcustom jotain-theme-dark 'jylhis-dark
+(defcustom my-theme-dark 'jylhis-dark
   "Theme to use when the system is in dark mode.
 The default is the Jylhis theme's dark (Negative) mode."
   :type 'symbol
-  :group 'jotain-ui)
+  :group 'my-ui)
 
 ;; Trust all themes: the config loads only the Jylhis themes or the
 ;; built-in Modus fallback, never theme files from untrusted paths.
 (setopt custom-safe-themes t)
 
-(defun jotain-ui--disable-other-themes (_theme &optional _no-confirm no-enable)
+(defun my-ui--disable-other-themes (_theme &optional _no-confirm no-enable)
   "Disable any active themes before loading a new one.
 Without this, switching themes layers the new one on top of the old
 and the result is a face-attribute soup."
   (unless no-enable
     (mapc #'disable-theme (copy-sequence custom-enabled-themes))))
 
-(advice-add 'load-theme :before #'jotain-ui--disable-other-themes)
+(advice-add 'load-theme :before #'my-ui--disable-other-themes)
 
-(defun jotain-ui--fall-back-to-modus (reason)
+(defun my-ui--fall-back-to-modus (reason)
   "Point the theme variables at the built-in Modus themes.
 REASON is reported so the downgrade is visible in *Messages*."
-  (setopt jotain-theme-light 'modus-operandi
-          jotain-theme-dark 'modus-vivendi)
-  (message "jotain: %s; falling back to Modus themes" reason))
+  (setopt my-theme-light 'modus-operandi
+          my-theme-dark 'modus-vivendi)
+  (message "init-ui: %s; falling back to Modus themes" reason))
 
 ;; Requiring jylhis-themes puts the Jylhis themes on
 ;; `custom-theme-load-path'.
 (if (not (require 'jylhis-themes nil t))
-    (jotain-ui--fall-back-to-modus "jylhis-themes is unavailable")
+    (my-ui--fall-back-to-modus "jylhis-themes is unavailable")
   ;; Pre-load both themes so auto-dark can flip between them without
   ;; re-evaluating the files.  Skipped in batch, where
   ;; `custom-theme-load-path' may be incomplete.
@@ -59,11 +59,11 @@ REASON is reported so the downgrade is visible in *Messages*."
   (unless noninteractive
     (condition-case err
         (progn
-          (load-theme jotain-theme-light t t)
-          (load-theme jotain-theme-dark t t))
-      (error (jotain-ui--fall-back-to-modus (error-message-string err))))))
+          (load-theme my-theme-light t t)
+          (load-theme my-theme-dark t t))
+      (error (my-ui--fall-back-to-modus (error-message-string err))))))
 
-;;; @doc Flips between `jotain-theme-light` and `jotain-theme-dark`
+;;; @doc Flips between `my-theme-light` and `my-theme-dark`
 ;;; following the system appearance (macOS, GNOME, or anything exposing
 ;;; a dark/light setting). C-c t toggles manually.
 (use-package auto-dark
@@ -71,11 +71,11 @@ REASON is reported so the downgrade is visible in *Messages*."
   :bind ("C-c t" . auto-dark-toggle-appearance)
   :custom
   (auto-dark-allow-osascript t)
-  (auto-dark-themes `((,jotain-theme-dark) (,jotain-theme-light)))
+  (auto-dark-themes `((,my-theme-dark) (,my-theme-light)))
   :config
   (auto-dark-mode 1))
 
-(defun jotain-ui--ensure-tty-theme (&optional frame)
+(defun my-ui--ensure-tty-theme (&optional frame)
   "Enable a theme on terminal FRAME when `auto-dark' left none active.
 In a bare terminal `auto-dark' has no appearance source (no
 macOS/GNOME/D-Bus), so no theme gets enabled.  Pick the dark or light
@@ -88,18 +88,18 @@ frame-global, so a mixed GUI+tty daemon shares one theme."
       (with-selected-frame frame
         (ignore-errors
           (load-theme (if (eq (frame-parameter frame 'background-mode) 'light)
-                          jotain-theme-light
-                        jotain-theme-dark)
+                          my-theme-light
+                        my-theme-dark)
                       t))))))
 
-(add-hook 'server-after-make-frame-hook #'jotain-ui--ensure-tty-theme)
+(add-hook 'server-after-make-frame-hook #'my-ui--ensure-tty-theme)
 ;; Non-daemon `emacs -nw': apply once now; the daemon path is the hook.
 (unless (or noninteractive (daemonp) (display-graphic-p))
-  (jotain-ui--ensure-tty-theme))
+  (my-ui--ensure-tty-theme))
 
 ;;;; Modeline
 
-(defun jotain-ui--apply-modeline-icons (&optional frame)
+(defun my-ui--apply-modeline-icons (&optional frame)
   "Enable doom-modeline glyphs only on a graphical FRAME.
 Terminal frames have no Nerd Font, so the icons render as tofu.  Runs
 on `server-after-make-frame-hook' so a daemon's GUI frames get glyphs
@@ -119,13 +119,13 @@ even though no graphical frame exists at daemon start."
   (doom-modeline-github nil)
   (doom-modeline-buffer-encoding nil)
   :config
-  (jotain-ui--apply-modeline-icons)
-  (add-hook 'server-after-make-frame-hook #'jotain-ui--apply-modeline-icons)
+  (my-ui--apply-modeline-icons)
+  (add-hook 'server-after-make-frame-hook #'my-ui--apply-modeline-icons)
   ;; Upstream bug: the git-worktree indicator looks up the codicon
   ;; "nf-cod-worktree" in the `devicon' set, where no nerd-icons release
   ;; has it, and the lookup is unguarded, so the VCS segment errors on
   ;; every redisplay inside a worktree.  Disable just that probe; worktrees
-  ;; show in `jotain-git-stats' (init-vc) and magit's worktree section.
+  ;; show in `my-git-stats' (init-vc) and magit's worktree section.
   (when (fboundp 'doom-modeline--in-git-worktree-p)
     (advice-add 'doom-modeline--in-git-worktree-p :override #'ignore)))
 
@@ -137,30 +137,30 @@ even though no graphical frame exists at daemon start."
 
 ;;;; Fonts
 
-(defcustom jotain-font-scale 1.0
+(defcustom my-font-scale 1.0
   "Multiplier applied to every height in the font preference lists.
 Increase above 1.0 on large or high-density displays where the
 default sizes feel small (for example, set it to 1.25 in your
 machine-local config)."
   :type 'float
-  :group 'jotain-ui)
+  :group 'my-ui)
 
-(defcustom jotain-font-preferences
+(defcustom my-font-preferences
   '(("BlexMono Nerd Font"      . 140)
     ("JetBrainsMono Nerd Font" . 140)
     ("Iosevka Nerd Font"       . 140)
     ("DejaVu Sans Mono"        . 130))
   "Ordered list of (FAMILY . HEIGHT) pairs to try for the default face.
 HEIGHT is in 1/10 pt units (140 = 14 pt).  The first installed family
-wins.  All heights are multiplied by `jotain-font-scale' at runtime.
+wins.  All heights are multiplied by `my-font-scale' at runtime.
 
 BlexMono is IBM Plex Mono with Nerd Font glyphs, the mono role of the
 Jylhis design system.  Entries containing \"Nerd Font\" also supply
 `nerd-icons-font-family'; keep one ahead of the plain fallbacks."
   :type '(alist :key-type string :value-type integer)
-  :group 'jotain-ui)
+  :group 'my-ui)
 
-(defcustom jotain-variable-pitch-font-preferences
+(defcustom my-variable-pitch-font-preferences
   '(("Hanken Grotesk" . 150)
     ("Literata"       . 150)
     ("Iosevka Aile"   . 150)
@@ -172,53 +172,53 @@ visually smaller at the same point size.
 
 Hanken Grotesk is the body role of the Jylhis design system."
   :type '(alist :key-type string :value-type integer)
-  :group 'jotain-ui)
+  :group 'my-ui)
 
-(defun jotain-ui-apply-font (&optional frame)
-  "Set default and variable-pitch faces; honours `jotain-font-scale'.
+(defun my-ui-apply-font (&optional frame)
+  "Set default and variable-pitch faces; honours `my-font-scale'.
 FRAME is used to probe font availability on the right display; face
 attributes are applied globally so all frames see the update."
   (when (display-graphic-p frame)
-    (cl-loop for (family . height) in jotain-font-preferences
+    (cl-loop for (family . height) in my-font-preferences
              when (find-font (font-spec :family family) frame)
              return (set-face-attribute 'default nil
                                         :family family
-                                        :height (round (* height jotain-font-scale))))
-    (cl-loop for (family . height) in jotain-variable-pitch-font-preferences
+                                        :height (round (* height my-font-scale))))
+    (cl-loop for (family . height) in my-variable-pitch-font-preferences
              when (find-font (font-spec :family family) frame)
              return (set-face-attribute 'variable-pitch nil
                                         :family family
-                                        :height (round (* height jotain-font-scale))))))
+                                        :height (round (* height my-font-scale))))))
 
-(jotain-ui-apply-font)
-(add-hook 'server-after-make-frame-hook #'jotain-ui-apply-font)
+(my-ui-apply-font)
+(add-hook 'server-after-make-frame-hook #'my-ui-apply-font)
 
-(defcustom jotain-emoji-font-preferences
+(defcustom my-emoji-font-preferences
   (if (eq system-type 'darwin)
       '("Apple Color Emoji" "Noto Color Emoji" "Symbola")
     '("Noto Color Emoji" "Segoe UI Emoji" "Symbola"))
   "Ordered list of family names to try for the `emoji' and `symbol' charsets.
 The first installed family wins.  macOS ships Apple Color Emoji; on
-Linux the Jotain Home Manager and NixOS modules install Noto Color
+Linux the Home Manager and NixOS modules install Noto Color
 Emoji."
   :type '(repeat string)
-  :group 'jotain-ui)
+  :group 'my-ui)
 
-(defun jotain-ui-apply-emoji-font (&optional frame)
+(defun my-ui-apply-emoji-font (&optional frame)
   "Install a colour-emoji fallback for the `emoji' and `symbol' fontsets.
 Without this, code points like U+1F389 render as tofu when the
 default face's font lacks them.  FRAME is used to probe font
 availability on the right display."
   (when (display-graphic-p frame)
-    (let ((family (cl-loop for f in jotain-emoji-font-preferences
+    (let ((family (cl-loop for f in my-emoji-font-preferences
                            when (find-font (font-spec :family f) frame)
                            return f)))
       (when family
         (set-fontset-font t 'emoji  (font-spec :family family) frame 'prepend)
         (set-fontset-font t 'symbol (font-spec :family family) frame 'prepend)))))
 
-(jotain-ui-apply-emoji-font)
-(add-hook 'server-after-make-frame-hook #'jotain-ui-apply-emoji-font)
+(my-ui-apply-emoji-font)
+(add-hook 'server-after-make-frame-hook #'my-ui-apply-emoji-font)
 
 ;;; @doc Built-in emoji picker: `C-x 8 e e' inserts by name, `C-x 8 e s'
 ;;; searches, `C-x 8 e l' lists all, `C-x 8 e d' describes the emoji at
@@ -241,27 +241,27 @@ availability on the right display."
 ;; Compact the stock mode line only when it overflows the window
 ;; (mostly inert under doom-modeline).
 (setopt mode-line-compact 'long)
-;; System font as the default face until `jotain-ui-apply-font' runs.
+;; System font as the default face until `my-ui-apply-font' runs.
 ;; The variable only exists on builds with system-font support, so guard
 ;; it for the terminal-only distribution.
 (when (boundp 'font-use-system-font)
   (setopt font-use-system-font t))
 
-(defcustom jotain-line-numbers-in-prog t
+(defcustom my-line-numbers-in-prog t
   "When non-nil, show line numbers in `prog-mode' and `conf-mode' buffers."
   :type 'boolean
-  :group 'jotain-ui)
+  :group 'my-ui)
 
-(defun jotain-ui--maybe-line-numbers ()
-  "Enable `display-line-numbers-mode' if `jotain-line-numbers-in-prog' is set."
-  (when jotain-line-numbers-in-prog
+(defun my-ui--maybe-line-numbers ()
+  "Enable `display-line-numbers-mode' if `my-line-numbers-in-prog' is set."
+  (when my-line-numbers-in-prog
     (display-line-numbers-mode 1)))
 
 ;;; @doc Built-in line numbers in programming and config buffers only,
-;;; not prose or Org. Toggle with `jotain-line-numbers-in-prog'.
+;;; not prose or Org. Toggle with `my-line-numbers-in-prog'.
 (use-package display-line-numbers
   :ensure nil
-  :hook ((prog-mode conf-mode) . jotain-ui--maybe-line-numbers))
+  :hook ((prog-mode conf-mode) . my-ui--maybe-line-numbers))
 
 ;;; @doc Built-in smooth scrolling, tuned after James Cherti's
 ;;; "Enhancing Emacs Scrolling" (jamescherti.com). `pixel-scroll-mode'
@@ -327,26 +327,26 @@ availability on the right display."
 ;;;; Icons (Nerd Font glyphs in dired, ibuffer, corfu, marginalia)
 
 ;;; @doc Nerd Font glyphs for the nerd-icons-* family. The font family
-;;; comes from `jotain-font-preferences` so icons match the editor face.
+;;; comes from `my-font-preferences` so icons match the editor face.
 (use-package nerd-icons
   ;; Deferred: doom-modeline pulls it in at after-init, and the :after
   ;; chains below (corfu/completion/ibuffer glue) follow it there.
   :defer t
   :preface
-  (defun jotain-ui--apply-nerd-icons-font (&optional frame)
-    "Set `nerd-icons-font-family' from `jotain-font-preferences' for FRAME.
+  (defun my-ui--apply-nerd-icons-font (&optional frame)
+    "Set `nerd-icons-font-family' from `my-font-preferences' for FRAME.
 Runs on `server-after-make-frame-hook' because no graphical frame
 exists when a daemon loads the config."
     (when (display-graphic-p frame)
       (when-let* ((nerd-font
-                   (cl-loop for (family . _height) in jotain-font-preferences
+                   (cl-loop for (family . _height) in my-font-preferences
                             when (and (string-match-p "Nerd Font" family)
                                       (find-font (font-spec :family family) frame))
                             return family)))
         (setopt nerd-icons-font-family nerd-font))))
   :config
-  (jotain-ui--apply-nerd-icons-font)
-  (add-hook 'server-after-make-frame-hook #'jotain-ui--apply-nerd-icons-font))
+  (my-ui--apply-nerd-icons-font)
+  (add-hook 'server-after-make-frame-hook #'my-ui--apply-nerd-icons-font))
 
 ;;; @doc Kind-specific glyphs in the corfu candidate margin.
 (use-package nerd-icons-corfu
@@ -398,23 +398,23 @@ exists when a daemon loads the config."
 (use-package rainbow-delimiters
   :hook ((lisp-mode emacs-lisp-mode) . rainbow-delimiters-mode))
 
-(defcustom jotain-indent-bars-enabled t
+(defcustom my-indent-bars-enabled t
   "When non-nil, enable `indent-bars-mode' in `prog-mode'."
   :type 'boolean
-  :group 'jotain-ui)
+  :group 'my-ui)
 
 (declare-function indent-bars-mode "indent-bars" (&optional arg))
 
-(defun jotain-ui--maybe-indent-bars ()
-  "Enable `indent-bars-mode' when `jotain-indent-bars-enabled' is non-nil."
-  (when jotain-indent-bars-enabled
+(defun my-ui--maybe-indent-bars ()
+  "Enable `indent-bars-mode' when `my-indent-bars-enabled' is non-nil."
+  (when my-indent-bars-enabled
     (indent-bars-mode 1)))
 
 ;;; @doc Vertical indent guides for code, tree-sitter aware. Toggle with
-;;; `jotain-indent-bars-enabled'.
+;;; `my-indent-bars-enabled'.
 (use-package indent-bars
   :custom (indent-bars-treesit-support t)
-  :hook (prog-mode . jotain-ui--maybe-indent-bars))
+  :hook (prog-mode . my-ui--maybe-indent-bars))
 
 (provide 'init-ui)
 ;;; init-ui.el ends here

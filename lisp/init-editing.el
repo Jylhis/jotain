@@ -45,11 +45,11 @@
 (use-package whitespace
   :ensure nil
   :preface
-  (defun jotain-editing--whitespace-cleanup-unless-auto-save ()
+  (defun my-editing--whitespace-cleanup-unless-auto-save ()
     "Run `whitespace-cleanup' except during super-save's automatic saves."
     (unless (bound-and-true-p super-save-in-progress)
       (whitespace-cleanup)))
-  :hook (before-save . jotain-editing--whitespace-cleanup-unless-auto-save)
+  :hook (before-save . my-editing--whitespace-cleanup-unless-auto-save)
   :custom
   (whitespace-style '(face trailing tabs tab-mark)))
 
@@ -135,8 +135,8 @@
   :functions (keyfreq-mode keyfreq-autosave-mode)
   :hook (after-init . keyfreq-mode)
   :custom
-  (keyfreq-file (jotain-var-file "keyfreq.el"))
-  (keyfreq-file-lock (jotain-var-file "keyfreq.lock"))
+  (keyfreq-file (my-var-file "keyfreq.el"))
+  (keyfreq-file-lock (my-var-file "keyfreq.lock"))
   :config
   (keyfreq-autosave-mode 1))
 

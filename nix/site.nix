@@ -4,9 +4,9 @@
 # document the repo can generate:
 #
 #   /docs/…           docs/**/*.mdx rendered to HTML (nav from docs.json)
-#   /manual/          the Jotain manual, makeinfo --html (via info-manual.nix)
-#   /manual/jotain.info  the same manual as an Info file
-#   /man/             jotain(7) + the man pages shipped by the Emacs build
+#   /manual/          the manual, makeinfo --html (via info-manual.nix)
+#   /manual/emacs-config.info  the same manual as an Info file
+#   /man/             emacs-config(7) + the man pages shipped by the Emacs build
 #   /info/emacs/      the GNU Emacs manual from the pinned Emacs source
 #   /info/elisp/      the Emacs Lisp reference manual, same source
 #   /options/         Nix module options reference (options-doc.nix)
@@ -43,7 +43,7 @@ let
   infoManual = import ./info-manual.nix { inherit pkgs src; };
   # The shipped Emacs: its man pages and manual sources feed /man and
   # /info, so the site documents the exact revision users get.
-  emacs = pkgs.jotainEmacs;
+  emacs = pkgs.emacsConfig;
 
   # docs navigation, from the same docs.json Mintlify uses
   docsNav = builtins.fromJSON (builtins.readFile (src + "/docs/docs.json"));
@@ -121,7 +121,7 @@ let
             -o "$out/elisp" elisp.texi )
       '';
 in
-pkgs.runCommand "jotain-site"
+pkgs.runCommand "emacs-config-site"
   {
     nativeBuildInputs = [
       pkgs.pandoc
@@ -170,7 +170,7 @@ pkgs.runCommand "jotain-site"
     <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>''${title} — jotain</title>
+    <title>''${title} — emacs-config</title>
     <link rel="canonical" href="https://page.jylhis.com${baseHref}/">
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f8fc">
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c0f14">
@@ -185,7 +185,7 @@ pkgs.runCommand "jotain-site"
         <div class="tab-brand"><a class="tab-brand-link" href="${baseHref}/"><span class="tab-prompt">jy ❯</span></a></div>
         <nav class="tabs" aria-label="buffers">
           <a class="tab" href="${baseHref}/#readme">README.org</a>
-          <a class="tab" href="${baseHref}/#man">*Man JOTAIN(7)*</a>
+          <a class="tab" href="${baseHref}/#man">*Man EMACS-CONFIG(7)*</a>
           <a class="tab" href="${baseHref}/#keys">keybindings</a>
           <span class="tab tab-current" aria-current="page">''${bufname}</span>
         </nav>
@@ -207,7 +207,7 @@ pkgs.runCommand "jotain-site"
         <span class="modeline-buffer">''${bufname}</span>
         <span class="modeline-pos">Top L1</span>
         <span>''${mode}</span>
-        <span class="modeline-version">U:jotain 2026.07</span>
+        <span class="modeline-version">U:emacs-config 2026.07</span>
       </footer>
       <div class="minibuffer">
         <span class="echo">C-x C-f <a href="${baseHref}/docs/">/docs/</a> · <a href="${baseHref}/manual/">manual</a> · <a href="${baseHref}/man/">man</a> · <a href="${baseHref}/info/">info</a> · ☾ theme</span>
@@ -306,17 +306,17 @@ pkgs.runCommand "jotain-site"
 
     {
       echo '<h1 class="h1"><span class="star">*</span> Documentation</h1>'
-      echo '<p class="docs-index-lede">Generated from the Markdown sources under <code>docs/</code> — the same sources that produce the <a href="${baseHref}/manual/">manual</a>, the <a href="${baseHref}/manual/jotain.info">Info file</a>, and <a href="${baseHref}/man/jotain.7.html">jotain(7)</a>.</p>'
+      echo '<p class="docs-index-lede">Generated from the Markdown sources under <code>docs/</code> — the same sources that produce the <a href="${baseHref}/manual/">manual</a>, the <a href="${baseHref}/manual/emacs-config.info">Info file</a>, and <a href="${baseHref}/man/emacs-config.7.html">emacs-config(7)</a>.</p>'
       cat "$docs_index_body"
     } > index_body.html
     write_page "$out/public/docs/index.html" "Documentation" "*docs dired*" "(Dired)" index_body.html \
-      '<a href="${baseHref}/#man">← JOTAIN(7)</a><a href="${baseHref}/manual/">the manual →</a>'
+      '<a href="${baseHref}/#man">← EMACS-CONFIG(7)</a><a href="${baseHref}/manual/">the manual →</a>'
 
-    # /manual/ — the Jotain manual as HTML + Info
+    # /manual/ — the manual as HTML + Info
     mkdir -p "$out/public/manual"
-    cp -r "${infoManual}/share/doc/jotain/html/." "$out/public/manual/"
+    cp -r "${infoManual}/share/doc/emacs-config/html/." "$out/public/manual/"
     chmod -R u+w "$out/public/manual"
-    cp "${infoManual}/share/info/jotain.info" "$out/public/manual/jotain.info"
+    cp "${infoManual}/share/info/emacs-config.info" "$out/public/manual/emacs-config.info"
     cp "$out/public/css/manual.css" "$out/public/manual/manual.css"
     inject_head "$out/public/manual/"*.html
 
@@ -371,7 +371,7 @@ pkgs.runCommand "jotain-site"
           echo '<div id="pkg-list">'
           cat pkg_list_body.html
           echo '</div>'
-          echo '<script>window.JOTAIN_API_BASE = "${baseHref}/help/api";</script>'
+          echo '<script>window.EMACS_CONFIG_API_BASE = "${baseHref}/help/api";</script>'
           echo '<script src="${baseHref}/js/packages.js"></script>'
         } > packages_body.html
 
@@ -385,13 +385,13 @@ pkgs.runCommand "jotain-site"
     cat > help_body.html <<'HELP'
     <h1 class="h1"><span class="star">*</span> Help</h1>
     <p class="docs-index-lede">The <code>C-h</code> map, rendered for the web.</p>
-    <div class="man-entry"><a href="${baseHref}/help/packages/">C-h P — package reference</a><span class="man-dots">·····································································</span><span class="man-desc">every package Jotain ships, and why</span></div>
+    <div class="man-entry"><a href="${baseHref}/help/packages/">C-h P — package reference</a><span class="man-dots">·····································································</span><span class="man-desc">every package the configuration ships, and why</span></div>
     ${lib.optionalString withApiDoc pkgSearchRow}
     ${lib.optionalString withApiDoc apiHelpRow}
     <div class="man-entry"><a href="${baseHref}/options/">nix options</a><span class="man-dots">·····································································</span><span class="man-desc">Home Manager · NixOS/nix-darwin · devenv</span></div>
-    <div class="man-entry"><a href="${baseHref}/manual/">C-h i d m Jotain RET — the manual</a><span class="man-dots">·····································································</span><span class="man-desc">HTML, one page per chapter</span></div>
+    <div class="man-entry"><a href="${baseHref}/manual/">C-h i d m Emacs config RET — the manual</a><span class="man-dots">·····································································</span><span class="man-desc">HTML, one page per chapter</span></div>
     <div class="man-entry"><a href="${baseHref}/info/">C-h i — info directory</a><span class="man-dots">·····································································</span><span class="man-desc">GNU Emacs + Elisp manuals</span></div>
-    <div class="man-entry"><a href="${baseHref}/man/">M-x man — man pages</a><span class="man-dots">·····································································</span><span class="man-desc">jotain(7) and the Emacs man pages</span></div>
+    <div class="man-entry"><a href="${baseHref}/man/">M-x man — man pages</a><span class="man-dots">·····································································</span><span class="man-desc">emacs-config(7) and the Emacs man pages</span></div>
     HELP
     write_page "$out/public/help/index.html" "Help" "*Help*" "(Help)" help_body.html \
       '<a href="${baseHref}/#readme">← README.org</a><a href="${baseHref}/docs/">documentation →</a>'
@@ -406,14 +406,14 @@ pkgs.runCommand "jotain-site"
       body="$(mktemp)"
       mandoc -T html -O fragment "$roff" > "$body"
       write_page "$out/public/man/$name.html" "$name" "*Man $name*" "(Man)" "$body" \
-        '<a href="${baseHref}/man/">← man index</a><a href="${baseHref}/#man">JOTAIN(7) →</a>'
+        '<a href="${baseHref}/man/">← man index</a><a href="${baseHref}/#man">EMACS-CONFIG(7) →</a>'
       printf '<div class="man-entry"><a href="${baseHref}/man/%s.html">%s</a><span class="man-dots">·····································································</span><span class="man-desc">%s</span></div>\n' \
         "$name" "$name" "$desc" >> "$man_index_body"
     }
 
-    pandoc "$docsSrc/docs/jotain.7.md" -s -f markdown -t man -o jotain.7
-    cp jotain.7 "$out/public/man/jotain.7"
-    render_man jotain.7 "jotain.7" "the Jotain manual, troff edition"
+    pandoc "$docsSrc/docs/emacs-config.7.md" -s -f markdown -t man -o emacs-config.7
+    cp emacs-config.7 "$out/public/man/emacs-config.7"
+    render_man emacs-config.7 "emacs-config.7" "the manual, troff edition"
 
     for f in ${emacs}/share/man/man1/*.1.gz; do
       name="$(basename "$f" .gz)"
@@ -426,11 +426,11 @@ pkgs.runCommand "jotain-site"
 
     {
       echo '<h1 class="h1"><span class="star">*</span> Man pages</h1>'
-      echo '<p class="docs-index-lede">Rendered with mandoc. The Emacs pages come from the exact Emacs build Jotain ships; <a href="${baseHref}/man/jotain.7">jotain.7</a> is also available as raw troff.</p>'
+      echo '<p class="docs-index-lede">Rendered with mandoc. The Emacs pages come from the exact Emacs build the configuration ships; <a href="${baseHref}/man/emacs-config.7">emacs-config.7</a> is also available as raw troff.</p>'
       cat "$man_index_body"
     } > man_body.html
     write_page "$out/public/man/index.html" "Man pages" "*Man apropos*" "(Man)" man_body.html \
-      '<a href="${baseHref}/#man">← JOTAIN(7)</a><a href="${baseHref}/info/">info manuals →</a>'
+      '<a href="${baseHref}/#man">← EMACS-CONFIG(7)</a><a href="${baseHref}/info/">info manuals →</a>'
 
     # /info/ — the GNU Emacs + Elisp manuals
     mkdir -p "$out/public/info"
@@ -442,13 +442,13 @@ pkgs.runCommand "jotain-site"
 
     cat > info_body.html <<'INFO'
     <h1 class="h1"><span class="star">*</span> Info directory</h1>
-    <p class="docs-index-lede">Rendered from the exact Emacs source revision Jotain builds — what <code>C-h i</code> would show you, on the web.</p>
+    <p class="docs-index-lede">Rendered from the exact Emacs source revision the configuration builds — what <code>C-h i</code> would show you, on the web.</p>
     <div class="man-label">MANUALS</div>
-    <div class="man-entry"><a href="${baseHref}/manual/">jotain</a><span class="man-dots">·····································································</span><span class="man-desc">the Jotain manual</span></div>
+    <div class="man-entry"><a href="${baseHref}/manual/">emacs-config</a><span class="man-dots">·····································································</span><span class="man-desc">the manual</span></div>
     <div class="man-entry"><a href="${baseHref}/info/emacs/">emacs</a><span class="man-dots">·····································································</span><span class="man-desc">the GNU Emacs manual</span></div>
     <div class="man-entry"><a href="${baseHref}/info/elisp/">elisp</a><span class="man-dots">·····································································</span><span class="man-desc">the Emacs Lisp reference manual</span></div>
     <div class="man-label">FILES</div>
-    <div class="man-entry"><a href="${baseHref}/manual/jotain.info">jotain.info</a><span class="man-dots">·····································································</span><span class="man-desc">Info file — C-h i d m Jotain RET</span></div>
+    <div class="man-entry"><a href="${baseHref}/manual/emacs-config.info">emacs-config.info</a><span class="man-dots">·····································································</span><span class="man-desc">Info file — C-h i d m Emacs config RET</span></div>
     INFO
     write_page "$out/public/info/index.html" "Info directory" "*info* (dir)" "(Info)" info_body.html \
       '<a href="${baseHref}/man/">← man pages</a><a href="${baseHref}/docs/">documentation →</a>'

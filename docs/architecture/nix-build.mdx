@@ -1,11 +1,11 @@
 ---
 title: Nix Build System
-description: How Jotain builds Emacs from source using Nix
+description: How the configuration builds Emacs from source using Nix
 ---
 
 # Nix Build System
 
-Jotain builds Emacs with Nix, exposing the build options as arguments. nixpkgs comes from the revision pinned in `flake.lock`: `default.nix` and `emacs.nix` read it directly via `fetchTarball`, so non-flake `nix-build` consumers get the same pin. Pass `--arg pkgs '<nixpkgs>'` to use a different one.
+This configuration builds Emacs with Nix, exposing the build options as arguments. nixpkgs comes from the revision pinned in `flake.lock`: `default.nix` and `emacs.nix` read it directly via `fetchTarball`, so non-flake `nix-build` consumers get the same pin. Pass `--arg pkgs '<nixpkgs>'` to use a different one.
 
 ## Two-Layer Architecture
 
@@ -54,7 +54,7 @@ nix-instantiate --eval --strict -E '
     # On this x86_64-linux eval every GUI build maps to a *-pgtk sibling
     # (pgtk is the Linux GUI default in emacs.nix itself); non-pgtk Linux
     # GUIs are asserted away and cannot be evaluated.
-    default       = pkgs.jotainEmacs.outPath == pkgs.emacs-unstable-pgtk.outPath;
+    default       = pkgs.emacsConfig.outPath == pkgs.emacs-unstable-pgtk.outPath;
     bare-default  = (import ./emacs.nix {}).outPath == pkgs.emacs-unstable-pgtk.outPath;
     mainline-pgtk = (import ./emacs.nix { variant = "mainline"; }).outPath == pkgs.emacs-pgtk.outPath;
     git-pgtk      = (import ./emacs.nix { variant = "git"; }).outPath == pkgs.emacs-git-pgtk.outPath;
@@ -66,7 +66,7 @@ The override arg set is filtered through `lib.intersectAttrs (lib.functionArgs b
 
 ### default.nix
 
-A thin flake-compat wrapper. It reads the pinned `flake-compat` rev from `flake.lock`, evaluates `flake.nix`, and promotes the current system's packages to the top level: `nix-build` builds the full distribution (`jotainEmacsPackages`), `nix-build -A emacs` the bare Emacs. Variant builds target `emacs.nix` directly (e.g. `nix-build emacs.nix --arg variant '"git"'`).
+A thin flake-compat wrapper. It reads the pinned `flake-compat` rev from `flake.lock`, evaluates `flake.nix`, and promotes the current system's packages to the top level: `nix-build` builds the full distribution (`emacsConfigPackages`), `nix-build -A emacs` the bare Emacs. Variant builds target `emacs.nix` directly (e.g. `nix-build emacs.nix --arg variant '"git"'`).
 
 ### Tree-sitter grammars
 
@@ -113,7 +113,7 @@ The `igc` variant builds Emacs's `feature/igc3` branch, which replaces the mark-
 
 ## nix-on-droid
 
-`nixOnDroidModules.default` (`module-nix-on-droid.nix`) installs Jotain on Android via [nix-on-droid](https://github.com/nix-community/nix-on-droid). Android runs headless under proot, so the module is a trimmed `module-system.nix`: it `pkgs.extend`s the overlay and adds a **terminal-only** build (`jotainEmacsPackagesNoGui`) plus an `emacsclient` `EDITOR`/`VISUAL` wrapper via `environment.packages` and `environment.sessionVariables`. There is no systemd service, launchd agent, `fonts.packages`, or GUI.
+`nixOnDroidModules.default` (`module-nix-on-droid.nix`) installs the configuration on Android via [nix-on-droid](https://github.com/nix-community/nix-on-droid). Android runs headless under proot, so the module is a trimmed `module-system.nix`: it `pkgs.extend`s the overlay and adds a **terminal-only** build (`emacsConfigPackagesNoGui`) plus an `emacsclient` `EDITOR`/`VISUAL` wrapper via `environment.packages` and `environment.sessionVariables`. There is no systemd service, launchd agent, `fonts.packages`, or GUI.
 
 `flake.nix` also exposes an example `nixOnDroidConfigurations.default` (aarch64-linux). It only activates on a device or under aarch64 emulation, so `nix flake check` does not realise it; the module is eval-checked on x86_64 by `nix-on-droid-module-eval`.
 
@@ -122,7 +122,7 @@ The `igc` variant builds Emacs's `feature/igc3` branch, which replaces the mark-
 A downstream flake can follow a different nixpkgs (release branches **24.05+** through unstable):
 
 ```nix
-inputs.jotain.inputs.nixpkgs.follows = "nixpkgs";
+inputs.emacs-config.inputs.nixpkgs.follows = "nixpkgs";
 ```
 
-The argument filter described under [Cache-parity invariant](#cache-parity-invariant) keeps the modules evaluating and building on older releases. The caveat is the Emacs version: 24.05's `pkgs.emacs` is Emacs 29, while Jotain's Elisp targets 30/31, so the build succeeds but runtime behaviour is only guaranteed on the pinned unstable.
+The argument filter described under [Cache-parity invariant](#cache-parity-invariant) keeps the modules evaluating and building on older releases. The caveat is the Emacs version: 24.05's `pkgs.emacs` is Emacs 29, while the configuration's Elisp targets 30/31, so the build succeeds but runtime behaviour is only guaranteed on the pinned unstable.

@@ -11,12 +11,12 @@ The supported launch path is **`just run-built`**: build Emacs via Nix,
 then launch it with this configuration.
 </Note>
 
-Jotain supports three launch patterns. They're complementary: pick the
+This configuration supports three launch patterns. They're complementary: pick the
 one that fits the task.
 
 ## One-shot
 
-A fresh `emacs` process every time. Loads the full Jotain config and
+A fresh `emacs` process every time. Loads the full config and
 pays package-init cost on every launch.
 
 ```bash
@@ -62,20 +62,20 @@ terminal, or from any client:
 
 ### As an installed user (home-manager)
 
-The `services.jotain` module ships:
+The `services.emacsConfig` module ships:
 
 - A systemd user service (Linux) or launchd agent (macOS) that runs
-  `emacs --fg-daemon`. `services.jotain.startWithUserSession` controls
+  `emacs --fg-daemon`. `services.emacsConfig.startWithUserSession` controls
   whether it starts with the session.
-- `jotain-editor`: `emacsclient --tty`, falling back to `emacs -nw`
+- `emacs-config-editor`: `emacsclient --tty`, falling back to `emacs -nw`
   when no daemon is running. Set as `$EDITOR` when
-  `services.jotain.defaultEditor = true`.
-- `jotain-visual`: `emacsclient --create-frame`. Set as `$VISUAL` by
+  `services.emacsConfig.defaultEditor = true`.
+- `emacs-config-visual`: `emacsclient --create-frame`. Set as `$VISUAL` by
   the same option.
-- `jotctl {start|stop|status|restart|logs}` to manage the daemon (see
+- `emacsctl {start|stop|status|restart|logs}` to manage the daemon (see
   below).
-- A `.desktop` entry (`jotain-client.desktop`) for a GUI client,
-  enabled by `services.jotain.client.enable`.
+- A `.desktop` entry (`emacs-config-client.desktop`) for a GUI client,
+  enabled by `services.emacsConfig.client.enable`.
 
 See *Module Options* in the appendix for the full option reference.
 
@@ -85,7 +85,7 @@ Inspired by [Rahul Juliato's launching-emacs-terminal post][article-1],
 the module can install short aliases for the daemon and clients:
 
 ```nix
-services.jotain = {
+services.emacsConfig = {
   enable = true;
   shellAliases.enable = true;
   # shellAliases.prefix = "j";   # for "jemd"/"jem"/"jemg"
@@ -95,34 +95,34 @@ services.jotain = {
 | Alias | Expands to                              |
 | ----- | --------------------------------------- |
 | `emd` | `emacs --fg-daemon` (wrapped)           |
-| `em`  | `jotain-editor` (`emacsclient --tty`)   |
-| `emg` | `jotain-visual` (`emacsclient -c`)      |
+| `em`  | `emacs-config-editor` (`emacsclient --tty`)   |
+| `emg` | `emacs-config-visual` (`emacsclient -c`)      |
 
 They are added to the bash, zsh, and fish `shellAliases` that
 home-manager manages.
 
-### Managing the daemon (`jotctl`)
+### Managing the daemon (`emacsctl`)
 
 `emd` starts a *foreground* daemon. The supervised daemon (the launchd
-agent on macOS, the `jotain` systemd user service on Linux) is managed
-with `jotctl`, which is always on `PATH` when the module is enabled,
+agent on macOS, the `emacs-config` systemd user service on Linux) is managed
+with `emacsctl`, which is always on `PATH` when the module is enabled,
 whatever `shellAliases.enable` says:
 
 | Command          | macOS (launchd)                  | Linux (systemd --user)            |
 | ---------------- | -------------------------------- | --------------------------------- |
-| `jotctl status`  | `launchctl print …` (default)    | `systemctl --user status jotain`  |
-| `jotctl start`   | `launchctl bootstrap` / kickstart | `systemctl --user start jotain`   |
-| `jotctl stop`    | `launchctl bootout`              | `systemctl --user stop jotain`    |
-| `jotctl restart` | `launchctl kickstart -k`         | `systemctl --user restart jotain` |
-| `jotctl logs`    | launchd state + note¹            | `journalctl --user -u jotain -f`  |
+| `emacsctl status`  | `launchctl print …` (default)    | `systemctl --user status emacs-config`  |
+| `emacsctl start`   | `launchctl bootstrap` / kickstart | `systemctl --user start emacs-config`   |
+| `emacsctl stop`    | `launchctl bootout`              | `systemctl --user stop emacs-config`    |
+| `emacsctl restart` | `launchctl kickstart -k`         | `systemctl --user restart emacs-config` |
+| `emacsctl logs`    | launchd state + note¹            | `journalctl --user -u emacs-config -f`  |
 
 ¹ The launchd agent sets no `StandardOutPath`, so macOS doesn't capture
-the daemon's stdout; `jotctl logs` prints the launchd state instead.
+the daemon's stdout; `emacsctl logs` prints the launchd state instead.
 
 ## Quick edit (`-Q -nw`)
 
 For a stripped-down Emacs (editing `/etc/hosts` over SSH, a typo in a
-200 MB log file, a demo without custom bindings), bypass Jotain with any
+200 MB log file, a demo without custom bindings), bypass the configuration with any
 `emacs` on the host or the Nix-built one:
 
 ```bash

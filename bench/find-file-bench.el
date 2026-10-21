@@ -6,7 +6,7 @@
 ;; hook functions and known-expensive mode functions for a per-file and
 ;; per-hook breakdown.
 ;;
-;; Loaded by bench/init.el when JOTAIN_BENCH_OPEN_OUTPUT is set.  No
+;; Loaded by bench/init.el when EMACS_CONFIG_BENCH_OPEN_OUTPUT is set.  No
 ;; Justfile recipe sets it; export it by hand.
 
 ;;; Code:
@@ -15,77 +15,77 @@
 (require 'seq)
 
 ;; Defined in bench/early-init.el.
-(defvar jotain-bench--real-dir)
+(defvar my-bench--real-dir)
 
 ;;;; State
 
-(defvar jotain-bench-open--per-file nil
+(defvar my-bench-open--per-file nil
   "List of (FILE-NAME DESC MODE SECS MINOR-COUNT HOOK-TIMINGS).")
 
-(defvar jotain-bench-open--hook-accum nil
+(defvar my-bench-open--hook-accum nil
   "Alist of (FUNC-NAME . (CALLS TOTAL-SECS)).")
 
-(defvar jotain-bench-open--current-hooks nil
+(defvar my-bench-open--current-hooks nil
   "Per-file hook timings being collected for the current `find-file'.")
 
 ;;;; Hook instrumentation
 
-(defun jotain-bench-open--record (name elapsed)
+(defun my-bench-open--record (name elapsed)
   "Record ELAPSED seconds for hook/function NAME."
-  (push (cons name elapsed) jotain-bench-open--current-hooks)
-  (let ((entry (assoc name jotain-bench-open--hook-accum)))
+  (push (cons name elapsed) my-bench-open--current-hooks)
+  (let ((entry (assoc name my-bench-open--hook-accum)))
     (if entry
         (setcdr entry (list (1+ (car (cdr entry)))
                             (+ (cadr (cdr entry)) elapsed)))
-      (push (list name 1 elapsed) jotain-bench-open--hook-accum))))
+      (push (list name 1 elapsed) my-bench-open--hook-accum))))
 
-(defun jotain-bench-open--wrap-hook-fn (fn)
+(defun my-bench-open--wrap-hook-fn (fn)
   "Return advice that times calls to FN and records the result."
   (let ((fname (if (symbolp fn) (symbol-name fn)
                  (format "%s" fn))))
     (lambda (orig-fn &rest args)
       (let ((start (current-time)))
         (prog1 (apply orig-fn args)
-          (jotain-bench-open--record
+          (my-bench-open--record
            fname
            (float-time (time-subtract (current-time) start))))))))
 
-(defvar jotain-bench-open--advised nil
+(defvar my-bench-open--advised nil
   "Functions we have advised (for cleanup).")
 
-(defun jotain-bench-open--instrument-hook-var (hook-var)
+(defun my-bench-open--instrument-hook-var (hook-var)
   "Add timing advice to every function on HOOK-VAR."
   (when (boundp hook-var)
     (let ((fns (symbol-value hook-var)))
       (when (and fns (not (functionp fns)))
         (dolist (fn fns)
           (when (and (symbolp fn) (fboundp fn)
-                     (not (memq fn jotain-bench-open--advised)))
-            (let ((wrapper (jotain-bench-open--wrap-hook-fn fn)))
+                     (not (memq fn my-bench-open--advised)))
+            (let ((wrapper (my-bench-open--wrap-hook-fn fn)))
               (advice-add fn :around wrapper
-                          '((name . jotain-bench-open-timing)))
-              (push fn jotain-bench-open--advised))))))))
+                          '((name . my-bench-open-timing)))
+              (push fn my-bench-open--advised))))))))
 
-(defun jotain-bench-open--instrument-function (fn)
+(defun my-bench-open--instrument-function (fn)
   "Add timing advice to a single function FN."
   (when (and (symbolp fn) (fboundp fn)
-             (not (memq fn jotain-bench-open--advised)))
-    (let ((wrapper (jotain-bench-open--wrap-hook-fn fn)))
+             (not (memq fn my-bench-open--advised)))
+    (let ((wrapper (my-bench-open--wrap-hook-fn fn)))
       (advice-add fn :around wrapper
-                  '((name . jotain-bench-open-timing)))
-      (push fn jotain-bench-open--advised))))
+                  '((name . my-bench-open-timing)))
+      (push fn my-bench-open--advised))))
 
-(defun jotain-bench-open--cleanup ()
+(defun my-bench-open--cleanup ()
   "Remove all timing advice."
-  (dolist (fn jotain-bench-open--advised)
-    (advice-remove fn 'jotain-bench-open-timing))
-  (setq jotain-bench-open--advised nil))
+  (dolist (fn my-bench-open--advised)
+    (advice-remove fn 'my-bench-open-timing))
+  (setq my-bench-open--advised nil))
 
 ;;;; Test file list
 
-(defun jotain-bench-open--test-files ()
+(defun my-bench-open--test-files ()
   "Return list of (FILE . DESCRIPTION) pairs to benchmark."
-  (let ((dir jotain-bench--real-dir))
+  (let ((dir my-bench--real-dir))
     (cl-remove-if-not
      (lambda (entry) (file-exists-p (car entry)))
      (list
@@ -97,14 +97,14 @@
             "Elisp (init-prog.el)")
       (cons (expand-file-name "Justfile" dir)
             "Build file (Justfile)")
-      (cons (expand-file-name "docs/jotain.texi" dir)
-            "Texinfo (jotain.texi)")
+      (cons (expand-file-name "docs/emacs-config.texi" dir)
+            "Texinfo (emacs-config.texi)")
       (cons (expand-file-name "devenv.nix" dir)
             "Nix (devenv.nix)")))))
 
 ;;;; Known-expensive functions to instrument directly
 
-(defvar jotain-bench-open--target-functions
+(defvar my-bench-open--target-functions
   '(;; envrc
     envrc--update envrc-mode
     ;; zoxide
@@ -176,7 +176,7 @@
 
 ;;;; Main benchmark runner
 
-(defun jotain-bench-open--run ()
+(defun my-bench-open--run ()
   "Open the test files, collect timings, and write the report."
   (dolist (hook '(find-file-hook
                   after-change-major-mode-hook
@@ -186,16 +186,16 @@
                   nix-mode-hook
                   nix-ts-mode-hook
                   emacs-lisp-mode-hook))
-    (jotain-bench-open--instrument-hook-var hook))
+    (my-bench-open--instrument-hook-var hook))
 
-  (dolist (fn jotain-bench-open--target-functions)
-    (jotain-bench-open--instrument-function fn))
+  (dolist (fn my-bench-open--target-functions)
+    (my-bench-open--instrument-function fn))
 
-  (let ((files (jotain-bench-open--test-files)))
+  (let ((files (my-bench-open--test-files)))
     (dolist (entry files)
       (let* ((file (car entry))
              (desc (cdr entry))
-             (jotain-bench-open--current-hooks nil)
+             (my-bench-open--current-hooks nil)
              (start (current-time))
              (buf (find-file-noselect file)))
         (with-current-buffer buf
@@ -209,31 +209,31 @@
                         mode
                         elapsed
                         (length minors)
-                        (copy-sequence jotain-bench-open--current-hooks))
-                  jotain-bench-open--per-file)))
+                        (copy-sequence my-bench-open--current-hooks))
+                  my-bench-open--per-file)))
         (kill-buffer buf))))
 
-  (setq jotain-bench-open--per-file (nreverse jotain-bench-open--per-file))
+  (setq my-bench-open--per-file (nreverse my-bench-open--per-file))
 
-  (jotain-bench-open--write-report)
-  (jotain-bench-open--cleanup))
+  (my-bench-open--write-report)
+  (my-bench-open--cleanup))
 
 ;;;; Report writer
 
-(defun jotain-bench-open--write-report ()
-  "Write the benchmark report to JOTAIN_BENCH_OPEN_OUTPUT."
-  (let* ((outfile (getenv "JOTAIN_BENCH_OPEN_OUTPUT"))
-         (results jotain-bench-open--per-file)
+(defun my-bench-open--write-report ()
+  "Write the benchmark report to EMACS_CONFIG_BENCH_OPEN_OUTPUT."
+  (let* ((outfile (getenv "EMACS_CONFIG_BENCH_OPEN_OUTPUT"))
+         (results my-bench-open--per-file)
          (total-time (apply #'+ (mapcar (lambda (r) (nth 3 r)) results)))
          (file-count (length results))
          (avg-time (if (> file-count 0) (/ total-time file-count) 0))
-         (sorted-hooks (sort (copy-sequence jotain-bench-open--hook-accum)
+         (sorted-hooks (sort (copy-sequence my-bench-open--hook-accum)
                              (lambda (a b) (> (nth 2 a) (nth 2 b))))))
     (when outfile
       (with-temp-file outfile
         ;; Summary
         (insert
-         (format "Jotain File-Open Benchmark\n")
+         (format "File-Open Benchmark\n")
          (format "══════════════════════════════════════════════════════\n\n")
          (format "SUMMARY\n")
          (format "──────────────────────────────────────────────────────\n")

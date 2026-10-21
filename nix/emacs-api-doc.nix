@@ -7,12 +7,12 @@
 #
 # Per-package caching: a package bump rebuilds only that package's
 # fragment.
-#   • jotain-api-doc-<name>  runs a minimal doc Emacs (bare Emacs + that
+#   • emacs-config-api-doc-<name>  runs a minimal doc Emacs (bare Emacs + that
 #     package and its deps + engine tooling) in "package" mode, emitting
 #     its per-symbol pages, html/pkg/<name>.html, md/<name>.md and an
 #     enriched `listing.eld`. It deliberately avoids the combined package
 #     closure, whose store path changes on any bump.
-#   • jotain-emacs-api-doc  unions the fragments and runs a tooling-only
+#   • emacs-config-api-doc  unions the fragments and runs a tooling-only
 #     Emacs in "aggregate" mode for the global indexes (symbols.json,
 #     fun/var/face indexes, shortdoc.html) and index.html. Its closure is
 #     stable across package bumps, so this step is cheap.
@@ -20,8 +20,8 @@
 # Outputs:
 #   • $out/html/           the browsable tree, mounted at ${mountPath} by
 #                          nix/site.nix.
-#   • $out/jotain-elisp-api.texi   Texinfo fragment (not yet @included by
-#                          docs/jotain.texi).
+#   • $out/emacs-config-elisp-api.texi   Texinfo fragment (not yet @included by
+#                          docs/emacs-config.texi).
 #   • passthru.perPackage  the per-package derivations, keyed by feature.
 {
   pkgs,
@@ -62,7 +62,7 @@ let
   engineSrc = lib.fileset.toSource {
     root = ../etc/elisp-doc;
     fileset = lib.fileset.unions [
-      ../etc/elisp-doc/jotain-elisp-doc.el
+      ../etc/elisp-doc/my-elisp-doc.el
       ../etc/elisp-doc/elisp-doc-extract.el
       ../etc/elisp-doc/elisp-doc-index.el
       ../etc/elisp-doc/elisp-doc-shortdoc.el
@@ -78,9 +78,9 @@ let
     { feature, pkg }:
     let
       docEmacs = scope.withPackages (_: [ pkg ] ++ toolingPkgs scope);
-      featureFile = pkgs.writeText "jotain-doc-feature-${feature}" (feature + "\n");
+      featureFile = pkgs.writeText "emacs-config-doc-feature-${feature}" (feature + "\n");
     in
-    pkgs.runCommand "jotain-api-doc-${feature}"
+    pkgs.runCommand "emacs-config-api-doc-${feature}"
       {
         # magit/forge/magit-todos shell out to git while loading.
         nativeBuildInputs = [ pkgs.git ];
@@ -95,11 +95,11 @@ let
         # Load failures are trapped per-package inside the driver, so this
         # must not fail the build.
         ELISP_DOC_OUTPUT_DIR="$out/html" \
-        JOTAIN_DOC_MODE=package \
-        JOTAIN_PKG_FEATURES="$(cat ${featureFile})" \
+        EMACS_CONFIG_DOC_MODE=package \
+        EMACS_CONFIG_PKG_FEATURES="$(cat ${featureFile})" \
         ${docEmacs}/bin/emacs --batch -q \
           -L ${elispDir} \
-          -l jotain-elisp-doc 2>&1 | tee "$out/generate.log" || true
+          -l my-elisp-doc 2>&1 | tee "$out/generate.log" || true
 
         # Guarantee a listing so the aggregate pass always has an input,
         # even if the batch Emacs died before writing one.
@@ -121,17 +121,17 @@ let
   # Tooling only, so its closure never changes when a package bumps.
   aggEmacs = scope.withPackages (_: toolingPkgs scope);
 in
-pkgs.runCommand "jotain-emacs-api-doc"
+pkgs.runCommand "emacs-config-api-doc"
   {
     nativeBuildInputs = [ pkgs.pandoc ];
     passthru = {
-      texinfoFragment = "jotain-elisp-api.texi";
+      texinfoFragment = "emacs-config-elisp-api.texi";
       inherit featureNames perPackage;
       # The tooling-only aggregate Emacs used for the doc passes.
       docEmacs = aggEmacs;
     };
     meta = {
-      description = "Generated Emacs Lisp API reference for jotain's bundled packages";
+      description = "Generated Emacs Lisp API reference for the configuration's bundled packages";
     };
   }
   ''
@@ -157,11 +157,11 @@ pkgs.runCommand "jotain-emacs-api-doc"
     #    only the built-in `shortdoc--groups' (package-defined groups are
     #    missed), the price of independence from package bumps.
     ELISP_DOC_OUTPUT_DIR="$out/html" \
-    JOTAIN_DOC_MODE=aggregate \
-    JOTAIN_DOC_LISTINGS="$(cat listings.txt)" \
+    EMACS_CONFIG_DOC_MODE=aggregate \
+    EMACS_CONFIG_DOC_LISTINGS="$(cat listings.txt)" \
     ${aggEmacs}/bin/emacs --batch -q \
       -L ${elispDir} \
-      -l jotain-elisp-doc 2>&1 | tee "$out/generate.log" || true
+      -l my-elisp-doc 2>&1 | tee "$out/generate.log" || true
 
     if [ ! -e "$out/html/index.html" ]; then
       echo "emacs-api-doc: aggregate produced no index.html — see generate.log" >&2
@@ -197,7 +197,7 @@ pkgs.runCommand "jotain-emacs-api-doc"
       --wrap=none \
     | awk '${texi.stripScaffolding}' \
     | sed -E '${texi.flattenRefs}' \
-      > "$out/jotain-elisp-api.texi"
+      > "$out/emacs-config-elisp-api.texi"
 
     touch "$out/html/.nojekyll"
   ''

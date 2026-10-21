@@ -9,7 +9,7 @@ manual, this repo's workflow (`just test`, every `test/*.el`).
   backtrace debugger on any error. `just run-built-debug` starts Emacs
   with `--debug-init` and `debug-on-error` for startup problems;
   `just run-built-debug-log` also mirrors messages, warnings, and
-  backtraces into `var/debug/<timestamp>/` (`M-x jotain-debug-dump-now`).
+  backtraces into `var/debug/<timestamp>/` (`M-x my-debug-dump-now`).
   There is no Emacs in the dev shell, so these build one via Nix first.
 - `debug-on-entry` / `cancel-debug-on-entry` — break on entry to a function.
   `debug-on-variable-change` (add-variable-watcher) — break when a variable

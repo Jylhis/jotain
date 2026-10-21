@@ -1,23 +1,23 @@
-# nix/info-manual.nix — Build the bundled Info manual for Jotain.
+# nix/info-manual.nix — Build the bundled Info manual for the configuration.
 #
-# Converts the Markdown/MDX sources under docs/ to a single jotain.info
+# Converts the Markdown/MDX sources under docs/ to a single emacs-config.info
 # manual that Emacs discovers via the normal Info-directory-list search.
 #
 # Pipeline:
 #   docs/*.mdx  --preprocess-->  plain GFM  --pandoc-->  .texi fragment
 #                                                               |
-#                    docs/jotain.texi (@include ...)  <---------+
+#                    docs/emacs-config.texi (@include ...)  <---------+
 #                                |
 #                             makeinfo
 #                                |
-#                           jotain.info + install-info dir entry
+#                           emacs-config.info + install-info dir entry
 #
 # The options and package references come in as Texinfo fragments from
 # nix/options-doc.nix and nix/packages-doc.nix.
 #
 # Usage:
 #   nix build .#info
-#   info --file=result/share/info/jotain.info
+#   info --file=result/share/info/emacs-config.info
 {
   pkgs,
   lib ? pkgs.lib,
@@ -32,7 +32,7 @@ let
     root = src;
     fileset = lib.fileset.intersection (lib.fileset.maybeMissing (src + "/docs")) (
       lib.fileset.fileFilter (
-        f: lib.hasSuffix ".md" f.name || lib.hasSuffix ".mdx" f.name || f.name == "jotain.texi"
+        f: lib.hasSuffix ".md" f.name || lib.hasSuffix ".mdx" f.name || f.name == "emacs-config.texi"
       ) src
     );
   };
@@ -40,7 +40,7 @@ let
   optionsDoc = import ./options-doc.nix { inherit pkgs src; };
   packagesDoc = import ./packages-doc.nix { inherit pkgs src; };
 
-  # Chapters of jotain.texi: { src (relative to docs/), out (the
+  # Chapters of emacs-config.texi: { src (relative to docs/), out (the
   # @include name) }. Order mirrors docs/docs.json.
   chapters = [
     {
@@ -129,17 +129,17 @@ let
     c: "  convert ${lib.escapeShellArg c.src} ${lib.escapeShellArg c.out}"
   ) chapters;
 in
-pkgs.runCommand "jotain-info"
+pkgs.runCommand "emacs-config-info"
   {
     nativeBuildInputs = [
       pkgs.pandoc
       pkgs.texinfo
     ];
     src = docsSrc;
-    optionsFragment = "${optionsDoc}/jotain-options.texi";
-    packagesFragment = "${packagesDoc}/jotain-packages.texi";
+    optionsFragment = "${optionsDoc}/emacs-config-options.texi";
+    packagesFragment = "${packagesDoc}/emacs-config-packages.texi";
     meta = {
-      description = "Jotain Info manual (generated from docs/)";
+      description = "Emacs configuration Info manual (generated from docs/)";
     };
   }
   ''
@@ -156,7 +156,7 @@ pkgs.runCommand "jotain-info"
         #
         #   1. YAML frontmatter is stripped.
         #   2. <Note>…</Note> (single- or multi-line) becomes a blockquote.
-        #   3. The leading `# Title` is dropped: docs/jotain.texi's @chapter
+        #   3. The leading `# Title` is dropped: docs/emacs-config.texi's @chapter
         #      provides it, and the h2s then map to @section unshifted.
         convert() {
           local inpath="$1"
@@ -215,27 +215,27 @@ pkgs.runCommand "jotain-info"
         cd ..
 
         # Put the generated fragments on the include path.
-        cp "$optionsFragment"  docs/jotain-options.texi
-        cp "$packagesFragment" docs/jotain-packages.texi
+        cp "$optionsFragment"  docs/emacs-config-options.texi
+        cp "$packagesFragment" docs/emacs-config-packages.texi
 
         # A short manual: one unsplit .info file.
         mkdir -p "$out/share/info"
         makeinfo --no-split \
-          -o "$out/share/info/jotain.info" \
-          docs/jotain.texi
+          -o "$out/share/info/emacs-config.info" \
+          docs/emacs-config.texi
 
         # A `dir` file so Emacs's Info directory merge lists the manual.
         install-info \
           --dir-file="$out/share/info/dir" \
-          "$out/share/info/jotain.info"
+          "$out/share/info/emacs-config.info"
 
         # HTML, one page per chapter, for the site's /manual/. The relative
         # css-ref lets nix/site.nix ship manual.css beside the pages.
         # makeinfo only creates the last path component itself.
-        mkdir -p "$out/share/doc/jotain"
+        mkdir -p "$out/share/doc/emacs-config"
         makeinfo --html \
           --split=chapter \
           --css-ref=manual.css \
-          -o "$out/share/doc/jotain/html" \
-          docs/jotain.texi
+          -o "$out/share/doc/emacs-config/html" \
+          docs/emacs-config.texi
   ''

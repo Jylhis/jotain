@@ -12,19 +12,19 @@
 (require 'seq)
 
 ;; Defined in init-writing.el, which init.el loads before this file.
-(defvar jotain-notes-directory)
+(defvar my-notes-directory)
 
 (declare-function project-current "project" (&optional maybe-prompt directory))
 (declare-function project-root "project" (project))
 
 ;;; @doc Built-in Org: outline, agenda, capture, literate programming.
-;;; Notes, agenda and capture all live under `jotain-notes-directory`.
+;;; Notes, agenda and capture all live under `my-notes-directory`.
 ;;; C-c a agenda, C-c c capture, C-c l store link.
 (use-package org
   :ensure nil
   :commands (org-mode org-capture org-agenda)
   :preface
-  (defun jotain-org--disable-visual-wrap-prefix ()
+  (defun my-org--disable-visual-wrap-prefix ()
     "Turn off `visual-wrap-prefix-mode' in Org buffers.
 init-writing.el enables it in `text-mode', which Org derives from.  But
 `org-indent-mode' (`org-startup-indented') writes the same
@@ -37,11 +37,11 @@ stays on, and org-indent supplies the wrap prefix."
   (("C-c a" . org-agenda)
    ("C-c c" . org-capture)
    ("C-c l" . org-store-link))
-  :hook (org-mode . jotain-org--disable-visual-wrap-prefix)
+  :hook (org-mode . my-org--disable-visual-wrap-prefix)
   :custom
   ;; The shared notes root, so capture and org-roam land next to denote
   ;; notes.
-  (org-directory               jotain-notes-directory)
+  (org-directory               my-notes-directory)
   (org-agenda-files            (list org-directory))
   (org-default-notes-file      (expand-file-name "inbox.org" org-directory))
   (org-startup-indented        t)
@@ -78,7 +78,7 @@ stays on, and org-indent supplies the wrap prefix."
 ;; A plain `defvar' in ob-python, so `:config' sets it with `setq'.
 (defvar org-babel-default-header-args:python)
 
-(defconst jotain-org-babel-languages
+(defconst my-org-babel-languages
   '(emacs-lisp org
     shell eshell
     python C R haskell js css
@@ -92,7 +92,7 @@ dialect Org knows.  Enabling a language does not provide its
 interpreter: that comes from the project's environment, like the LSP
 servers in `init-prog'.")
 
-(defun jotain-org-babel-trusted-p ()
+(defun my-org-babel-trusted-p ()
   "Return non-nil when the current buffer is an Org file we consider ours.
 That is, it lives under `org-directory' or inside a project.  Anything
 else (a download, a mail attachment) is untrusted, because evaluating
@@ -104,14 +104,14 @@ a source block runs arbitrary code with the user's privileges."
           (when-let* ((project (project-current nil (file-name-directory file))))
             (file-in-directory-p file (project-root project)))))))
 
-(defun jotain-org-babel-confirm-evaluate (_lang _body)
+(defun my-org-babel-confirm-evaluate (_lang _body)
   "Decide whether to prompt before evaluating a source block.
 Value for `org-confirm-babel-evaluate', which passes the block's
 language and body and prompts on non-nil.  Both are ignored: only
-where the file lives matters (`jotain-org-babel-trusted-p')."
-  (not (jotain-org-babel-trusted-p)))
+where the file lives matters (`my-org-babel-trusted-p')."
+  (not (my-org-babel-trusted-p)))
 
-(defun jotain-org-babel-redisplay-images ()
+(defun my-org-babel-redisplay-images ()
   "Refresh inline images after a source block runs.
 So a block that writes a plot to `:file' shows the new image.  Org 9.8
 \(Emacs 31) made the old inline-image commands obsolete, so the command
@@ -124,7 +124,7 @@ Errors are demoted: a cosmetic refresh must not abort a block."
       (with-demoted-errors "Inline image refresh failed: %S"
         (funcall refresh)))))
 
-(defun jotain-org-babel-restart-session-and-execute-buffer ()
+(defun my-org-babel-restart-session-and-execute-buffer ()
   "Kill the session of the block at point, then re-run the whole buffer.
 A notebook's \"restart kernel and run all\".  Without a `:session'
 this is just `org-babel-execute-buffer'."
@@ -137,7 +137,7 @@ this is just `org-babel-execute-buffer'."
   (org-babel-execute-buffer))
 
 ;;; @doc Org Babel, configured as a notebook. Enables a curated set of
-;;; Org-provided languages (`jotain-org-babel-languages`). The evaluation
+;;; Org-provided languages (`my-org-babel-languages`). The evaluation
 ;;; prompt only appears for files outside your notes and projects. Inline
 ;;; images refresh after every run. `C-c b` prefix in Org buffers: `b` run
 ;;; buffer, `e` run subtree, `r` restart session and run buffer, `s`
@@ -150,13 +150,13 @@ this is just `org-babel-execute-buffer'."
   (:map org-mode-map
         ("C-c b b" . org-babel-execute-buffer)
         ("C-c b e" . org-babel-execute-subtree)
-        ("C-c b r" . jotain-org-babel-restart-session-and-execute-buffer)
+        ("C-c b r" . my-org-babel-restart-session-and-execute-buffer)
         ("C-c b s" . org-babel-switch-to-session)
         ("C-c b k" . org-babel-remove-result-one-or-many)
         ("C-c b t" . org-babel-tangle))
-  :hook (org-babel-after-execute . jotain-org-babel-redisplay-images)
+  :hook (org-babel-after-execute . my-org-babel-redisplay-images)
   :custom
-  (org-confirm-babel-evaluate #'jotain-org-babel-confirm-evaluate)
+  (org-confirm-babel-evaluate #'my-org-babel-confirm-evaluate)
   ;; Org's defaults plus `:exports both' and `:eval never-export', so
   ;; export publishes the code and the results already in the buffer.
   (org-babel-default-header-args
@@ -173,7 +173,7 @@ this is just `org-babel-execute-buffer'."
   (org-image-actual-width '(600))
   :config
   (setopt org-babel-load-languages
-          (mapcar (lambda (lang) (cons lang t)) jotain-org-babel-languages))
+          (mapcar (lambda (lang) (cons lang t)) my-org-babel-languages))
   ;; Org's Python default, `:results value', shows nothing for the
   ;; print-style code a notebook invites; capture stdout instead.
   (setq org-babel-default-header-args:python '((:results . "output replace"))))
