@@ -27,8 +27,8 @@ docs-refresh-packages:
     cd "{{ repo }}"
     out=$(nix build --no-link --print-out-paths --impure --expr '
       (import ./nix/inputs.nix { }).jotain.packages.${builtins.currentSystem}.packages-doc')
-    cp "$out/package-reference.mdx" lib/jotain/docs/configuration/package-reference.mdx
-    echo "Refreshed lib/jotain/docs/configuration/package-reference.mdx"
+    cp "$out/package-reference.mdx" lib/emacs/docs/configuration/package-reference.mdx
+    echo "Refreshed lib/emacs/docs/configuration/package-reference.mdx"
 
 # Re-vendor website/public/ds from the pinned jylhis/design rev
 # (the fix for a failing jotain-ds-in-sync gate).
@@ -41,11 +41,11 @@ ds-sync:
       let jotain = (import ./nix/inputs.nix { }).jotain;
       in jotain.packages.${builtins.currentSystem}.ds-assets')
     # Wipe first so files dropped upstream do not linger.
-    rm -rf lib/jotain/website/public/ds
-    mkdir -p lib/jotain/website/public/ds
-    cp -r "$out/." lib/jotain/website/public/ds/
-    chmod -R u+w lib/jotain/website/public/ds
-    echo "Re-vendored website/public/ds from $(nix eval --raw --file lib/jotain/nix/design-pin.nix rev)"
+    rm -rf lib/emacs/website/public/ds
+    mkdir -p lib/emacs/website/public/ds
+    cp -r "$out/." lib/emacs/website/public/ds/
+    chmod -R u+w lib/emacs/website/public/ds
+    echo "Re-vendored website/public/ds from $(nix eval --raw --file lib/emacs/nix/design-pin.nix rev)"
 
 # Build the full distribution for this system (flakeless shim entry).
 [group('build')]
@@ -60,11 +60,11 @@ run-built *ARGS:
     just build
     ./result/bin/emacs --init-directory="{{ justfile_directory() }}" {{ ARGS }}
 
-# lib/jotain is excluded from root treefmt; formatting is enforced by its
+# lib/emacs is excluded from root treefmt; formatting is enforced by its
 # own treefmt config (nix/treefmt.nix, run via devenv).
 [group('lint')]
 lint:
-    @echo "skip: lib/jotain formats via its own treefmt (nix/treefmt.nix; see devenv)"
+    @echo "skip: lib/emacs formats via its own treefmt (nix/treefmt.nix; see devenv)"
 
 [group('fmt')]
 fmt:
