@@ -11,7 +11,7 @@
 (declare-function global-jinx-mode "jinx" (&optional arg))
 
 (defgroup my-writing nil
-  "the configuration prose and note-taking settings."
+  "Prose and note-taking settings."
   :group 'text)
 
 (defcustom my-notes-directory (expand-file-name "~/Documents/notes/")
