@@ -58,8 +58,6 @@ update_eca() {
   local -A assets=(
     [x86_64-linux]="eca-native-static-linux-amd64.zip"
     [aarch64-linux]="eca-native-linux-aarch64.zip"
-    [aarch64-darwin]="eca-native-macos-aarch64.zip"
-    [x86_64-darwin]="eca-native-macos-amd64.zip"
   )
   local base="https://github.com/editor-code-assistant/eca/releases/download/${tag}"
   local sys asset hex

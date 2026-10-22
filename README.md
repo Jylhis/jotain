@@ -29,7 +29,7 @@ with no Nix, run `scripts/bootstrap-agent-env.sh` first.
 The flake exposes the full distribution (`packages.<system>.default`,
 Emacs + tree-sitter grammars), a bare `emacs`, a terminal-only
 `emacs-nox`, and modules for Home Manager (`services.emacsConfig` daemon),
-NixOS / nix-darwin, and nix-on-droid. See
+NixOS, and nix-on-droid. See
 [Installation](https://page.jylhis.com/jotain/docs/installation).
 
 ## Contributing

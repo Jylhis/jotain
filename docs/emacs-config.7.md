@@ -78,7 +78,7 @@ and this man page. Chapters:
     from the exact Emacs source revision the configuration builds
 
 */options/*
-:   Nix module options reference (Home Manager, NixOS/nix-darwin, devenv)
+:   Nix module options reference (Home Manager, NixOS, devenv)
 
 */help/packages/*
 :   every Emacs package the configuration ships, with the reason it is included

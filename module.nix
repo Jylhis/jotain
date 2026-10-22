@@ -25,7 +25,6 @@ let
   pkgsWithOverlay = pkgs.extend emacsConfigOverlay;
   selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.emacsConfigPackages;
   inherit (pkgs.stdenv.hostPlatform) isLinux;
-  inherit (pkgs.stdenv.hostPlatform) isDarwin;
   startWithSession =
     if cfg.startWithUserSession == "graphical" then true else cfg.startWithUserSession;
 
@@ -83,8 +82,8 @@ let
   ecaConfig = import ./nix/eca-config.nix { inherit lib pkgs; };
 
   # Shared runtime binaries (nix/runtime-deps.nix) plus the opt-in tools,
-  # prepended to PATH in emacsWrapper: launchd does not inherit the
-  # login-shell PATH.
+  # prepended to PATH in emacsWrapper, since the systemd user
+  # service does not inherit the login-shell PATH.
   runtimeDeps =
     import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; }
     ++ lib.optional cfg.devenv.enable pkgs.devenv
@@ -95,7 +94,7 @@ let
     ++ lib.optional cfg.claudeCode.enable pkgs.claude-code;
 
   # Colour-emoji fallback for the `emoji' / `symbol' fontsets
-  # (lisp/init-ui.el). macOS ships Apple Color Emoji.
+  # (lisp/init-ui.el).
   emojiFontPackages = lib.optional isLinux pkgs.noto-fonts-color-emoji;
 
   # Nerd Font glyphs for the icon stack. BlexMono is the first entry in
@@ -138,42 +137,18 @@ let
       "$@"
   '';
 
-  # Home Manager prefixes user agent labels with "org.nix-community.home.".
-  launchdLabel = "org.nix-community.home.emacs-config";
-  launchdPlist = "${config.home.homeDirectory}/Library/LaunchAgents/${launchdLabel}.plist";
-
-  # `emacsctl <start|stop|status|restart|logs>`: drives the launchd agent on
-  # macOS or the systemd user service on Linux.
-  emacsctlScript = pkgs.writeShellScriptBin "emacsctl" (
-    if isDarwin then
-      ''
-        label=${launchdLabel}
-        plist=${lib.escapeShellArg launchdPlist}
-        uid=$(${pkgs.coreutils}/bin/id -u)
-        target="gui/$uid/$label"
-        case "''${1:-status}" in
-          start)   launchctl bootstrap "gui/$uid" "$plist" 2>/dev/null \
-                     || launchctl kickstart "$target" ;;
-          stop)    launchctl bootout "$target" ;;
-          restart) launchctl kickstart -k "$target" ;;
-          status)  launchctl print "$target" ;;
-          logs)    echo "macOS launchd does not capture the daemon's stdout (no StandardOutPath set); showing launchd state:" >&2
-                   launchctl print "$target" ;;
-          *) echo "usage: emacsctl {start|stop|status|restart|logs}" >&2; exit 2 ;;
-        esac
-      ''
-    else
-      ''
-        case "''${1:-status}" in
-          start)   exec systemctl --user start emacs-config ;;
-          stop)    exec systemctl --user stop emacs-config ;;
-          restart) exec systemctl --user restart emacs-config ;;
-          status)  exec systemctl --user status emacs-config ;;
-          logs)    exec journalctl --user -u emacs-config -f ;;
-          *) echo "usage: emacsctl {start|stop|status|restart|logs}" >&2; exit 2 ;;
-        esac
-      ''
-  );
+  # `emacsctl <start|stop|status|restart|logs>`: drives the systemd user
+  # service.
+  emacsctlScript = pkgs.writeShellScriptBin "emacsctl" ''
+    case "''${1:-status}" in
+      start)   exec systemctl --user start emacs-config ;;
+      stop)    exec systemctl --user stop emacs-config ;;
+      restart) exec systemctl --user restart emacs-config ;;
+      status)  exec systemctl --user status emacs-config ;;
+      logs)    exec journalctl --user -u emacs-config -f ;;
+      *) echo "usage: emacsctl {start|stop|status|restart|logs}" >&2; exit 2 ;;
+    esac
+  '';
 
   systemdWantedBy =
     if cfg.startWithUserSession == "graphical" then "graphical-session.target" else "default.target";
@@ -196,8 +171,7 @@ in
       defaultText = lib.literalExpression "null";
       description = ''
         Custom Emacs package to use. Leave unset for the full
-        distribution (`emacsConfigPackages`: pgtk/Wayland GUI on Linux,
-        patched NS GUI on Darwin).
+        distribution (`emacsConfigPackages`: pgtk/Wayland GUI).
       '';
     };
 
@@ -287,9 +261,8 @@ in
         {env}`GEMINI_API_KEY` (lisp/init-ai.el) and the {command}`eca`
         server's provider keys. Point it at a runtime secret path
         (sops-nix, agenix, …); it is read at daemon start and never
-        copied into the Nix store. On Linux it becomes the service's
-        {var}`EnvironmentFile`; on macOS the launchd agent sources it
-        before exec. For auth-source alternatives see
+        copied into the Nix store. It becomes the service's
+        {var}`EnvironmentFile`. For auth-source alternatives see
         {option}`services.emacsConfig.onePassword.enable` and
         {option}`services.emacsConfig.authSources`.
       '';
@@ -564,35 +537,6 @@ in
       Install = {
         WantedBy = [ "sockets.target" ];
         RequiredBy = [ "emacs-config.service" ];
-      };
-    };
-
-    launchd.agents.emacs-config = lib.mkIf isDarwin {
-      enable = true;
-      config = {
-        # launchd has no EnvironmentFile: source the file in a shell
-        # before exec so Emacs and its children see the keys.
-        ProgramArguments =
-          if cfg.environmentFile != null then
-            [
-              pkgs.runtimeShell
-              "-c"
-              "set -a; . ${lib.escapeShellArg (toString cfg.environmentFile)}; set +a; exec ${emacsWrapper}/bin/emacs --fg-daemon ${lib.escapeShellArgs cfg.extraOptions}"
-            ]
-          else
-            [
-              "${emacsWrapper}/bin/emacs"
-              "--fg-daemon"
-            ]
-            ++ cfg.extraOptions;
-        RunAtLoad = true;
-        KeepAlive = {
-          Crashed = true;
-          SuccessfulExit = false;
-        };
-      }
-      // lib.optionalAttrs (cfg.authSources != [ ]) {
-        EnvironmentVariables.EMACS_CONFIG_AUTH_SOURCES = lib.concatStringsSep ":" cfg.authSources;
       };
     };
   };

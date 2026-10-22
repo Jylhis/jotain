@@ -388,7 +388,7 @@ pkgs.runCommand "emacs-config-site"
     <div class="man-entry"><a href="${baseHref}/help/packages/">C-h P — package reference</a><span class="man-dots">·····································································</span><span class="man-desc">every package the configuration ships, and why</span></div>
     ${lib.optionalString withApiDoc pkgSearchRow}
     ${lib.optionalString withApiDoc apiHelpRow}
-    <div class="man-entry"><a href="${baseHref}/options/">nix options</a><span class="man-dots">·····································································</span><span class="man-desc">Home Manager · NixOS/nix-darwin · devenv</span></div>
+    <div class="man-entry"><a href="${baseHref}/options/">nix options</a><span class="man-dots">·····································································</span><span class="man-desc">Home Manager · NixOS · devenv</span></div>
     <div class="man-entry"><a href="${baseHref}/manual/">C-h i d m Emacs config RET — the manual</a><span class="man-dots">·····································································</span><span class="man-desc">HTML, one page per chapter</span></div>
     <div class="man-entry"><a href="${baseHref}/info/">C-h i — info directory</a><span class="man-dots">·····································································</span><span class="man-desc">GNU Emacs + Elisp manuals</span></div>
     <div class="man-entry"><a href="${baseHref}/man/">M-x man — man pages</a><span class="man-dots">·····································································</span><span class="man-desc">emacs-config(7) and the Emacs man pages</span></div>

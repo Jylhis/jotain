@@ -80,7 +80,7 @@ pkgs.runCommand "emacs-config-options-doc"
     [the Emacs configuration](${gitHubUrl}).
 
     - [Home Manager Module](#home-manager-module) — per-user Emacs daemon, client wrapper, desktop entry
-    - [System Module](#system-module-nixos--nix-darwin) — overlay and system packages
+    - [System Module](#system-module-nixos) — overlay and system packages
     - [devenv Module](#devenv-module) — Emacs Lisp development environment
 
     ---
@@ -108,14 +108,14 @@ pkgs.runCommand "emacs-config-options-doc"
 
     ---
 
-    # System Module (NixOS / nix-darwin)
+    # System Module (NixOS)
 
     Applies the overlay and adds the package to system environment.
     For per-user daemon management, use the Home Manager module instead.
 
     ```nix
     {
-      imports = [ emacs-config.nixosModules.default ];  # or darwinModules.default
+      imports = [ emacs-config.nixosModules.default ];
       services.emacsConfig.enable = true;
     }
     ```

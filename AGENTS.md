@@ -67,7 +67,7 @@ checks one at a time, as PR CI does.
 
 ### CI
 
-All workflows run on x86_64-linux only (Darwin and aarch64 are not
+All workflows run on x86_64-linux only (aarch64 is not
 exercised). Every `uses:` must be GitHub-owned or `cachix/*`: the repo
 blocks other actions, and the run then fails at startup with no logs.
 
@@ -250,19 +250,17 @@ distribution uses the `unstable` variant (`nix/mk-overlay.nix`), cached on
 - Variants: `unstable` (default), `git`, and `igc` come from
   nix-community/emacs-overlay; `mainline` is nixpkgs' `pkgs.emacs`, kept as
   the parity canary (not a flake output).
-- **Build matrix**: four shipped builds on {x86_64, aarch64} ×
-  {Linux, Darwin}: pgtk/Wayland GUI + terminal-only on Linux, patched NS GUI
-  + terminal-only on Darwin. `emacs.nix` asserts every other toolkit away.
+- **Build matrix**: two shipped builds on {x86_64, aarch64}
+  Linux: pgtk/Wayland GUI and terminal-only. `emacs.nix` asserts every other toolkit away.
 - With `withPgtk = true` (the Linux GUI default), `basePackage` selects the
   prebuilt `*-pgtk` sibling (`emacs-unstable-pgtk`, `emacs-git-pgtk`,
   `emacs-igc-pgtk`, `emacs-pgtk`). Overriding `withPgtk` on the non-pgtk base
   builds identical content under a different derivation name, so it misses
   the cache.
-- Expected cache misses: custom `rev` pins, `useCcache = true`, `cpuTune`,
-  and every Darwin GUI build (its nix-giant patches are on by default via
-  `overrideAttrs`; CI is Linux-only).
+- Expected cache misses: custom `rev` pins, `useCcache = true`, and
+  `cpuTune`.
 - Flag trimming (mailutils/gpm/selinux) applies only to builds already off
-  parity (both noGui builds and the Darwin GUI), never to the Linux pgtk
+  parity (the noGui builds), never to the Linux pgtk
   build. See the policy comment in `nix/mk-overlay.nix`.
 
 Any edit to the `basePackage` / `basePackage.override { … }` block must keep
@@ -300,7 +298,7 @@ target.
 from `flake.lock`, underneath it):
 
 - `emacsConfig` / `emacsConfigNoGui`: bare Emacs from `emacs.nix`
-  (pgtk on Linux, NS on Darwin; the noGui twin is for nix-on-droid).
+  (pgtk; the noGui twin is for nix-on-droid).
 - `emacsConfigInfo`: the `emacs-config.info` manual (`nix/info-manual.nix`).
 - `emacsConfigPackages` / `emacsConfigPackagesNoGui`: full distributions
   (use-package auto-mapping, all tree-sitter grammars). A
@@ -325,8 +323,7 @@ Variant builds target `emacs.nix` directly.
   `emacs-packages.<name>` (every bundled package), `config-compiled` (for
   `run-built-fast`), `lang-eval-doc` / `lang-eval-matrix` / `lang-eval-live`.
 - `overlays.default`; `homeManagerModules.default` (`module.nix`);
-  `nixosModules.default` and `darwinModules.default` (both
-  `module-system.nix`); `nixOnDroidModules.default`
+  `nixosModules.default` (`module-system.nix`); `nixOnDroidModules.default`
   (`module-nix-on-droid.nix`); an example `nixOnDroidConfigurations.default`
   (aarch64, not built by CI).
 - `formatter` (treefmt), `lib` (use-package scanner, `nix/use-package.nix`),
@@ -367,7 +364,7 @@ remains only as an options-doc source.
 ### Modules
 
 - **`module.nix`** (Home Manager, `services.emacsConfig`): runs the configuration as a user
-  Emacs daemon with `emacsclient` (systemd on Linux, launchd on macOS) and
+  Emacs daemon with `emacsclient` (systemd) and
   deploys the byte-compiled config (`nix/config-compiled.nix`).
   `services.emacsConfig.package` swaps the distribution (default
   `emacsConfigPackages`).
@@ -377,7 +374,7 @@ remains only as an options-doc source.
     and `claudeCode` are unfree. `spell.dictionaries` lists aspell
     dictionaries.
   - Secrets: `services.emacsConfig.environmentFile` is a runtime file loaded via
-    systemd `EnvironmentFile` (sourced before exec under launchd), inherited
+    systemd `EnvironmentFile`, inherited
     by every subprocess and never copied to the store.
     Alternatively, `services.emacsConfig.authSources` lists
     authinfo/netrc files that are passed as `EMACS_CONFIG_AUTH_SOURCES` and
@@ -389,7 +386,7 @@ remains only as an options-doc source.
     `eca-models-in-sync` check also reads).
     `eca.openrouter.enable` adds the OpenRouter provider; `eca.settings` is
     deep-merged over it. gptel defaults to OpenRouter regardless.
-- **`module-system.nix`** (shared NixOS / nix-darwin module): applies the
+- **`module-system.nix`** (NixOS module): applies the
   overlay and adds packages to `environment.systemPackages`, with the same
   toggles and `spell.dictionaries`. ECA config and `environmentFile` stay
   Home-Manager-only (no per-user daemon or `~/.config` here).

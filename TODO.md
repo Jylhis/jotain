@@ -2,17 +2,17 @@
 
 ## Emacs performance optimization — open points (was plan.md)
 
-Target: the dev machine (x86_64-darwin, Emacs 31 NS daemon). Priority:
+Target: the dev machine (Linux, Emacs 31 pgtk daemon). Priority:
 **performance → stability → startup → feel**. Build-variant preference:
 **release > experimental (igc)**.
 
 ### §3 — igc / MPS concurrent GC trial (experimental, biggest GC-pause win)
 
-`emacs-igc` is verified buildable on x86_64-darwin via the pinned overlay.
+`emacs-igc` is available via the pinned overlay.
 Trial only before any promotion. The distribution overlay already takes
 `variant` (`nix/mk-overlay.nix`), so a full igc distribution is
-`import … { variant = "igc"; }`, a cache **miss** on Darwin (builds from
-source).
+`import … { variant = "igc"; }`, a cache **miss** unless
+the overlay pin is cached.
 
 - `just build-igc`, then run the result as a **side daemon** on its own
   socket (`./result/bin/emacs --fg-daemon=emacs-config-igc --init-directory=…`)

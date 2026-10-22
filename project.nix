@@ -6,7 +6,6 @@
     license = "GPL-3.0-or-later";
     platforms = [
       "x86_64-linux"
-      "x86_64-darwin"
     ];
   };
 

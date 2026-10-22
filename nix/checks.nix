@@ -87,10 +87,6 @@ let
         type = lib.types.attrsOf lib.types.anything;
         default = { };
       };
-      launchd.agents = lib.mkOption {
-        type = lib.types.attrsOf lib.types.anything;
-        default = { };
-      };
       programs = lib.mkOption {
         type = lib.types.attrsOf lib.types.anything;
         default = { };
@@ -269,13 +265,7 @@ in
     pkgs.runCommandLocal "check-module-eval"
       {
         defaultEditorConfigured = if defaultModule.config.home.sessionVariables ? EDITOR then "1" else "0";
-        graphicalTarget =
-          if pkgs.stdenv.hostPlatform.isLinux then
-            builtins.toJSON graphicalModule.config.systemd.user.services.emacs-config.Install.WantedBy
-          else
-            toString (
-              builtins.length graphicalModule.config.launchd.agents.emacs-config.config.ProgramArguments
-            );
+        graphicalTarget = builtins.toJSON graphicalModule.config.systemd.user.services.emacs-config.Install.WantedBy;
       }
       ''
         touch $out

@@ -23,14 +23,6 @@ let
       asset = "eca-native-linux-aarch64.zip";
       sha256 = "86656ad949ee647fac9b80ebf55ea9b8088472d1ed311d3367d7dbb1194bcbf1";
     };
-    aarch64-darwin = {
-      asset = "eca-native-macos-aarch64.zip";
-      sha256 = "7e8aec7c4964d56a0772cb2015b22479a74be3bec5844e94ea9fc118c1881ff4";
-    };
-    x86_64-darwin = {
-      asset = "eca-native-macos-amd64.zip";
-      sha256 = "d6fcaa9c67106573b1d9a633004fe67bff324ceb9ed2ebc655807c41529b9298";
-    };
   };
 
   source =

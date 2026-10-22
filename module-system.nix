@@ -1,17 +1,11 @@
-# module-system.nix — NixOS / nix-darwin module for the configured Emacs.
+# module-system.nix — NixOS module for the configured Emacs.
 #
-# Applies the overlay and adds the configured Emacs to environment.systemPackages;
-# one file serves both NixOS and nix-darwin. For a per-user daemon, use
-# the Home Manager module (module.nix).
+# Applies the overlay and adds the configured Emacs to environment.systemPackages.
+# For a per-user daemon, use the Home Manager module (module.nix).
 #
 # Usage in NixOS:
 #
 #   imports = [ emacs-config.nixosModules.default ];
-#   services.emacsConfig.enable = true;
-#
-# Usage in nix-darwin:
-#
-#   imports = [ emacs-config.darwinModules.default ];
 #   services.emacsConfig.enable = true;
 args@{
   config,
@@ -88,7 +82,7 @@ in
       enable = lib.mkEnableOption ''
         the {command}`devenv` CLI on the wrapper PATH, for the native
         environment loader (`devenv-env-global-mode`, lisp/devenv.el)
-        under launchd/systemd daemons whose login shell does not export
+        under systemd daemons whose login shell does not export
         it. Opt-in because exec-path-from-shell normally finds the
         user's own devenv, and `pkgs.devenv` bundles its own nix and
         can version-skew against per-project devenv installs
@@ -152,12 +146,8 @@ in
     # jinx dictionaries: libaspell finds $profile/lib/aspell via its
     # NIX_PROFILES patch, so they belong in the profile, not on PATH.
     ++ cfg.spell.dictionaries;
-    # Colour-emoji fallback for lisp/init-ui.el's fontsets. Skipped on
-    # Darwin: macOS ships Apple Color Emoji, and nix-darwin's
-    # `fonts.packages' differs from NixOS's.
-    fonts.packages = lib.mkIf pkgs.stdenv.hostPlatform.isLinux [
-      pkgs.noto-fonts-color-emoji
-    ];
+    # Colour-emoji fallback for lisp/init-ui.el's fontsets.
+    fonts.packages = [ pkgs.noto-fonts-color-emoji ];
     environment.variables = lib.mkIf cfg.defaultEditor {
       EDITOR = lib.mkOverride 900 "${lib.getBin editorScript}/bin/emacs-config-editor";
       VISUAL = lib.mkOverride 900 "${lib.getBin visualScript}/bin/emacs-config-visual";

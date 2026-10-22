@@ -1,13 +1,9 @@
 # nix/runtime-deps.nix — Runtime binaries the Elisp config invokes
 # unconditionally. Put on the Emacs wrapper's PATH (never the global
 # environment) by nix/mk-overlay.nix and every module, so they work in any
-# launch context (launchd/Dock, systemd) without GNU coreutils shadowing
+# launch context (systemd) without GNU coreutils shadowing
 # the host userland.
 { pkgs, pkgsWithOverlay }:
-let
-  inherit (pkgs) lib;
-  inherit (pkgs.stdenv.hostPlatform) isDarwin;
-in
 with pkgs;
 [
   ripgrep # xref-search-program, consult-ripgrep
@@ -28,8 +24,5 @@ with pkgs;
   # (init-lang-qml). Large Qt closure, accepted so QML support is
   # launch-context-independent; a project/devenv qmlls still wins.
 ]
-# GNU userland for the wrapper only. On darwin the g-prefixed variant is
-# required: init-navigation.el probes `gls' by name, and unprefixed GNU
-# coreutils would shadow BSD ls/stat/… for every subprocess Emacs spawns.
-++ lib.optional (!isDarwin) coreutils
-++ lib.optional isDarwin coreutils-prefixed
+# GNU userland for the wrapper only.
+++ [ coreutils ]

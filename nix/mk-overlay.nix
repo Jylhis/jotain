@@ -94,8 +94,7 @@ let
         lndir -silent ${core} $out
 
         # Re-wrap anything under bin/ that may launch Emacs, so the info
-        # path propagates through `emacs', `emacsclient', the `.app'
-        # bundle (macOS), and any helper tools that shell out to emacs.
+        # path propagates through `emacs', `emacsclient', and any helper tools that shell out to emacs.
         for prog in $out/bin/*; do
           [ -L "$prog" ] || continue
           orig=$(readlink -f "$prog")
@@ -114,23 +113,16 @@ in
   # a binary-cache hit.
   #
   # FLAG-TRIM POLICY: unused features (mailutils' movemail, gpm, SELinux)
-  # are dropped ONLY on builds already off binary-cache parity: the two
-  # noGui builds (cached only on jylhis cachix) and the Darwin GUI
-  # (patched, never cached). The Linux pgtk GUI keeps upstream defaults:
+  # are dropped ONLY on builds already off binary-cache parity: the
+  # noGui builds (cached only on jylhis cachix). The Linux pgtk GUI keeps upstream defaults:
   # it is byte-identical to nix-community's emacs-unstable-pgtk, and that
   # cache hit (Emacs plus every dependent ELPA package) is worth more than
   # any closure trim.
-  emacsConfig = import ../emacs.nix (
-    {
-      pkgs = final;
-      inherit variant;
-      withPgtk = final.stdenv.hostPlatform.isLinux;
-    }
-    // final.lib.optionalAttrs final.stdenv.hostPlatform.isDarwin {
-      # Off-parity anyway (NS patches). gpm/selinux are already off here.
-      withMailutils = false;
-    }
-  );
+  emacsConfig = import ../emacs.nix {
+    pkgs = final;
+    inherit variant;
+    withPgtk = final.stdenv.hostPlatform.isLinux;
+  };
 
   # Terminal-only build (nix-on-droid, headless). Off-parity by
   # construction, so the trim policy applies.

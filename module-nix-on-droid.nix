@@ -2,7 +2,7 @@
 #
 # Installs a terminal-only the configured Emacs plus an emacsclient EDITOR wrapper
 # into nix-on-droid (Nix on Android under proot). A trimmed cousin of
-# module-system.nix: no systemd/launchd, display server or
+# module-system.nix: no systemd, display server or
 # `fonts.packages`, and `environment.packages` instead of
 # `environment.systemPackages`.
 #
