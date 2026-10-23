@@ -118,11 +118,17 @@ nil means every file `project-files' returns."
       (user-error "Not in a code review queue buffer")))
 
 (defun repo-review--entry-file ()
-  "Return the absolute path of the file under the headline at point."
-  (let ((rel (org-entry-get nil "REVIEW_PATH")))
+  "Return the absolute path of the file under the headline at point.
+Reject entries with absolute paths or paths escaping REVIEW_ROOT."
+  (let* ((rel (org-entry-get nil "REVIEW_PATH"))
+         (root (repo-review--root))
+         (abs (expand-file-name rel root)))
     (unless rel
       (user-error "No :REVIEW_PATH: property at point"))
-    (expand-file-name rel (repo-review--root))))
+    (unless (file-in-directory-p abs root)
+      (user-error
+       "REVIEW_PATH escapes the review root: %s" rel))
+    abs))
 
 ;;; Commands
 

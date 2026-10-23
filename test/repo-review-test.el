@@ -90,5 +90,57 @@ Binds `root' to the project directory."
     (should view-mode)
     (should buffer-read-only)))
 
+(ert-deftest repo-review-rejects-absolute-paths ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (org-entry-put nil "REVIEW_PATH" "/etc/passwd")
+    (should-error (repo-review--entry-file) :type 'user-error)))
+
+(ert-deftest repo-review-rejects-parent-directory-escape ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (org-entry-put nil "REVIEW_PATH" "../../etc/passwd")
+    (should-error (repo-review--entry-file) :type 'user-error)))
+
+(ert-deftest repo-review-exclude-regexp-option ()
+  (repo-review-test--with-project
+    (let ((repo-review-exclude-regexp "\\.log$"))
+      (repo-review-start)
+      (should (equal (repo-review-test--paths) '(".gitignore" "b.nix" "src/a.py"))))))
+
+(ert-deftest repo-review-rebuild-with-confirmation ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (write-region "extra\n" nil (expand-file-name "extra.go" root))
+    (let ((confirmed nil))
+      (cl-letf (((symbol-function 'yes-or-no-p)
+                 (lambda (_prompt) (setq confirmed t) t)))
+        (repo-review-start t)
+        (should confirmed)))
+    (should (equal (repo-review-test--paths)
+                   '(".gitignore" "b.nix" "extra.go" "src/a.py")))))
+
+(ert-deftest repo-review-rebuild-cancel-with-confirmation ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (let ((original (repo-review-test--paths)))
+      (write-region "extra\n" nil (expand-file-name "extra.go" root))
+      (cl-letf (((symbol-function 'yes-or-no-p)
+                 (lambda (_prompt) nil)))
+        (repo-review-start t))
+      (should (equal (repo-review-test--paths) original)))))
+
+(ert-deftest repo-review-start-not-in-project ()
+  (let ((default-directory "/tmp"))
+    (should-error (repo-review-start) :type 'user-error)))
+
+(ert-deftest repo-review-entry-file-not-in-queue-buffer ()
+  (with-temp-buffer
+    (should-error (repo-review--entry-file) :type 'user-error)))
+
 (provide 'repo-review-test)
 ;;; repo-review-test.el ends here
