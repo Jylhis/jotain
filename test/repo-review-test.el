@@ -108,9 +108,23 @@ Binds `root' to the project directory."
 
 (ert-deftest repo-review-exclude-regexp-option ()
   (repo-review-test--with-project
-    (let ((repo-review-exclude-regexp "\\.log$"))
+    (let ((repo-review-exclude-regexp "\\.nix\\'"))
       (repo-review-start)
-      (should (equal (repo-review-test--paths) '(".gitignore" "b.nix" "src/a.py"))))))
+      (should (equal (repo-review-test--paths) '(".gitignore" "src/a.py"))))))
+
+(ert-deftest repo-review-rejects-absolute-path-inside-root ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (org-entry-put nil "REVIEW_PATH" (expand-file-name "b.nix" root))
+    (should-error (repo-review--entry-file) :type 'user-error)))
+
+(ert-deftest repo-review-missing-path-is-user-error ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (goto-char (point-min))
+    (should-error (repo-review--entry-file) :type 'user-error)))
 
 (ert-deftest repo-review-rebuild-with-confirmation ()
   (repo-review-test--with-project

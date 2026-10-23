@@ -120,15 +120,16 @@ nil means every file `project-files' returns."
 (defun repo-review--entry-file ()
   "Return the absolute path of the file under the headline at point.
 Reject entries with absolute paths or paths escaping REVIEW_ROOT."
-  (let* ((rel (org-entry-get nil "REVIEW_PATH"))
-         (root (repo-review--root))
-         (abs (expand-file-name rel root)))
+  (let ((rel (org-entry-get nil "REVIEW_PATH"))
+        (root (repo-review--root)))
     (unless rel
       (user-error "No :REVIEW_PATH: property at point"))
-    (unless (file-in-directory-p abs root)
-      (user-error
-       "REVIEW_PATH escapes the review root: %s" rel))
-    abs))
+    (when (file-name-absolute-p rel)
+      (user-error "REVIEW_PATH must be relative: %s" rel))
+    (let ((abs (expand-file-name rel root)))
+      (unless (file-in-directory-p abs root)
+        (user-error "REVIEW_PATH escapes the review root: %s" rel))
+      abs)))
 
 ;;; Commands
 
