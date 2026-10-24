@@ -11,8 +11,8 @@ default build is emacs-overlay's `unstable` variant (the newest Emacs
 release or pretest tag, currently 31.1); nixpkgs' Emacs 30 is the `mainline` variant. The dev shell has
 tooling only, **no `emacs`**: build and launch with `just run-built`.
 
-`journal/` and `TODO.md` are working notes and may be stale; when they
-disagree with the code, the code wins. Finding numbers cited there refer to
+`journal/` is a set of working notes and may be stale; when it
+disagrees with the code, the code wins. Finding numbers cited there refer to
 the reports under `docs/reviews/`.
 
 ## Project Structure & Module Organization
