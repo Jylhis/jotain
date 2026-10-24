@@ -141,8 +141,8 @@ update_design() {
   perl -pi -e "s/(rev = \")[^\"]*(\")/\${1}${rev}\${2}/;
                s/(sha256 = \")[^\"]*(\")/\${1}${sha}\${2}/;
                s/(version = \")[^\"]*(\")/\${1}${ver}\${2}/" "$file"
-  log "re-vendoring website/public/ds (just ds-sync)"
-  just ds-sync
+  log "re-vendoring usr.sbin/jotain-site/public/ds (just ds-sync)"
+  just --justfile ../../usr.sbin/jotain-site/justfile ds-sync
 }
 
 # --- dispatch -------------------------------------------------------------

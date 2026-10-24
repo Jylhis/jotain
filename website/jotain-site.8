@@ -1,0 +1,188 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd October 24, 2026
+.Dt JOTAIN-SITE 8
+.Os
+.Sh NAME
+.Nm jotain-site
+.Nd Static site for the Jotain Emacs configuration
+.Sh SYNOPSIS
+.Nm just
+.Op Cm build | test | serve | ds-sync
+.Sh DESCRIPTION
+The site presents the Emacs configuration in
+.Pa etc/emacs
+as a landing page and a set of generated references.
+The landing page looks like an Emacs frame.
+It has a tab bar with three buffers, a mode line, and an
+.Ql I-search
+minibuffer over the sections of the page.
+The design uses the Jylhis design system.
+.Pp
+The committed
+.Pa public/
+directory holds only the landing page, the shared CSS and JavaScript,
+and the vendored design assets.
+The Nix build in
+.Pa package.nix
+adds the generated content.
+.Pp
+The generated content is:
+.Bl -tag -width Ds
+.It Pa /docs/
+Each
+.Pa docs/**/*.mdx
+page of
+.Pa etc/emacs ,
+ordered by
+.Pa docs/docs.json .
+.It Pa /manual/
+The Info manual as HTML, and as
+.Pa emacs-config.info .
+.It Pa /man/
+.Xr emacs-config 7
+and the manual pages of the Emacs build.
+.It Pa /info/emacs/ , Pa /info/elisp/
+The GNU Emacs and Emacs Lisp manuals of the Emacs revision that the
+configuration builds.
+.It Pa /options/
+The Nix module option reference.
+.It Pa /help/packages/
+The reference for each package, from the
+.Ql ;;; @doc
+markers in the Lisp files.
+.It Pa /help/api/
+The docstring reference for each bundled package.
+.It Pa /packages/
+Search over
+.Pa /help/api/ .
+.El
+.Pp
+The preview variant of the build omits
+.Pa /help/api/
+and
+.Pa /packages/ .
+The
+.Va baseHref
+argument of
+.Pa site.nix
+prefixes every internal absolute URL.
+Its default is
+.Pa /jotain .
+Pass an empty string to serve the site from a root.
+.Sh COMMANDS
+Run these commands in this directory.
+.Bl -tag -width Ds
+.It Ic just build
+Build the full site into
+.Pa result/public .
+.It Ic just test
+Build the preview variant and run the
+.Ql ds-in-sync
+check.
+.It Ic just serve
+Build the site and serve it at
+.Pa http://localhost:8080/jotain/ .
+.It Ic just ds-sync
+Copy the design assets of the revision in
+.Pa etc/emacs/nix/design-pin.nix
+into
+.Pa public/ds .
+Run it when the
+.Ql ds-in-sync
+check fails.
+.El
+.Pp
+The Nix attributes are
+.Ql local.packages.jotain-site ,
+.Ql local.checks.jotain-site-build ,
+and
+.Ql local.checks.jotain-site-ds-in-sync .
+.Sh FILES
+.Bl -tag -width Ds
+.It Pa package.nix
+Builds the site and the checks.
+It takes the Emacs sources from
+.Pa ../../etc/emacs
+by path.
+.It Pa site.nix
+Assembles the site from
+.Pa public/
+and the generated references.
+.It Pa public/
+The deployed shell.
+.It Pa public/ds/
+Design system CSS and self-hosted fonts.
+Never edit these files.
+.It Pa wrangler.jsonc
+The assets-only Worker that serves
+.Pa public/ .
+.El
+.Sh CONVENTIONS
+.Bl -bullet
+.It
+No hex literals in
+.Pa public/css/site.css .
+Colors come from the custom properties in
+.Pa public/ds/tokens.css ,
+so both modes stay in step.
+.It
+Some places cannot use a custom property and hold copies of token values:
+the
+.Ql theme-color
+meta elements in
+.Pa public/index.html ,
+the page template in
+.Pa site.nix ,
+and
+.Pa public/favicon.svg .
+Update all of them when the theme changes.
+.It
+The style sheets for generated markup pin the heading elements to the
+mono font.
+An unstyled heading would use the large display face of the design system.
+.It
+Print (light) is the
+.Ql :root
+mode.
+Negative (dark) is
+.Ql data-mode="dark"
+on the
+.Ql html
+element.
+.It
+The fonts are self-hosted.
+The site makes no third-party requests.
+.El
+.Sh DEPLOYMENT
+A service-mode static site.
+Cloudflare Workers Builds watches green
+.Ql main
+and deploys
+.Pa public/
+as the
+.Ql jotain-site
+Worker.
+CI
+.Pq Pa .github/workflows/sites.yml
+only checks the build.
+.Pp
+Workers Builds has no Nix.
+It cannot build the generated pages, so it deploys only the committed shell.
+To publish the full site, build
+.Ql local.packages.jotain-site
+and deploy the
+.Pa public/
+directory of the result with
+.Xr wrangler 1 .
+.Pp
+Connect the Worker to Workers Builds once, as
+.Xr jylhis-deploying-static-sites 7
+describes.
+.Sh SEE ALSO
+.Xr emacs-config 7 ,
+.Xr jylhis-deploying-static-sites 7 ,
+.Xr jylhis-manual 7
+.Sh HISTORY
+The site started inside the Emacs configuration repository and was served
+by GitHub Pages at page.jylhis.com/jotain.
+It moved to this project with the configuration.

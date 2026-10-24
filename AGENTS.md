@@ -24,8 +24,7 @@ the reports under `docs/reviews/`.
   repo root `nix/inputs.nix` builds the `emacs-config` attrset (overlay,
   modules, checks, packages) from these files. Helpers live in `nix/`
   (`mk-overlay.nix` is the overlay implementation, `checks.nix` the checks).
-- `docs/` (documentation sources), `website/` (shell of the
-  page.jylhis.com/jotain site), `bench/` (startup benchmarks), `test/` (ERT;
+- `docs/` (documentation sources), `bench/` (startup benchmarks), `test/` (ERT;
   every `test/*.el` is loaded by the test check), `etc/` (debug harness,
   vendored `elisp-doc`, lang-eval registry), `scripts/`.
 
@@ -75,8 +74,8 @@ blocks other actions, and the run then fails at startup with no logs.
 - **PR CI** (`ci.yml`, `pull_request` + `workflow_dispatch`). Job `check`:
   `just verify` (lock sync), then one named step per check: formatting,
   statix, deadnix, module-eval, packages-doc-in-sync, eca-models-in-sync,
-  ds-in-sync, packages-doc, options-doc, elisp-lint, scanner-fidelity,
-  elisp-compile, config-startup. Job `site`: builds `.#site-preview`. Job
+  packages-doc, options-doc, elisp-lint, scanner-fidelity,
+  elisp-compile, config-startup. Job
   `test`: `devenv test`. Cachix is pull-only (no writer token for PR code).
   Superseded runs are cancelled. Pushes from the Claude Code GitHub App do
   not trigger `pull_request` runs; start CI with
@@ -84,15 +83,8 @@ blocks other actions, and the run then fails at startup with no logs.
 - **Full validation** (`deploy.yml`, push to `main`/`next` + dispatch): full
   `nix flake check` (including the heavy package builds, `elisp-test`, and
   `emacs-api-doc`) plus `devenv test`, pushing results to the jylhis cache.
-  Runs are never cancelled, so cache pushes finish. On `main`, `build-pages`
-  builds the full `.#site` and `deploy-pages` publishes it to GitHub Pages
-  (Actions source) at **page.jylhis.com/jotain/** (`baseHref = "/jotain"` in
-  `nix/site.nix`).
-- **PR previews** (`preview.yml`; Pages hosts one deployment, so previews
-  are artifacts): build the full `.#site` and upload it as
-  the artifact `site-preview-pr-<N>` holding `site.tgz` (tarred because
-  `upload-artifact` rejects the `:` in some `/help/api/` filenames). A bot
-  comment links it; serve it under `/jotain/`, as `just serve-site` does.
+  Runs are never cancelled, so cache pushes finish. The site lives in
+  `usr.sbin/jotain-site` (see `jotain-site(8)`); it builds from this tree.
   Same-repo PRs get the cachix writer token (so a cold `/help/api/` build
   warms the cache); fork PRs stay pull-only and get no comment.
 - **Dependabot lock sync** (`sync-devenv.yml`, `dependabot/nix/**` branches
@@ -124,10 +116,10 @@ Checks and maintenance:
 - `just verify`: assert both locks agree on every shared input
   (`scripts/verify-locks.sh`, the same script as the `locks-in-sync` check).
 - `just update-pins [names]`: bump the hand-pinned upstreams (see Pinning).
-- `just site` / `just serve-site`: build `.#site` to `result-site/` / serve it
+- `just serve` in `usr.sbin/jotain-site`: build and serve the site
   at `http://localhost:8080/jotain/`.
-- `just ds-sync`: re-vendor `website/public/ds` from `nix/design-pin.nix`
-  (the fix for a failing `ds-in-sync`).
+- `just ds-sync` (in `usr.sbin/jotain-site`): re-vendor `public/ds` from
+  `nix/design-pin.nix` (the fix for a failing `jotain-site-ds-in-sync`).
 - `just clean`: remove `*.elc`, autosaves, eln-cache, `result`.
   `just clean-all` also wipes `elpa/`, `var/`, `.dev-home/` (next startup is
   slow).
@@ -319,7 +311,7 @@ Variant builds target `emacs.nix` directly.
 - `packages.<system>`: `default` (`emacsConfigPackages`), `emacs`
   (`emacsConfig`), `emacs-nox` (`emacsConfigPackagesNoGui`), `likec4-lsp`,
   `info`, `docs` (options HTML), `packages-doc` (per-package reference),
-  `emacs-api-doc`, `site`, `site-preview`, `ds-assets`.
+  `emacs-api-doc`, `ds-assets`.
 - `legacyPackages.<system>` (not built by `nix flake check`):
   `emacs-packages.<name>` (every bundled package), `config-compiled` (for
   `run-built-fast`), `lang-eval-doc` / `lang-eval-matrix` / `lang-eval-live`.
@@ -336,10 +328,10 @@ snapshot that CI builds and caches.
 
 `emacs-api-doc` (`nix/emacs-api-doc.nix`, forking the vendored
 `etc/elisp-doc/`) runs a batch Emacs over the package closure and emits the
-per-symbol HTML that `nix/site.nix` mounts at `/help/api/`. It is heavy and
-deploy-path-only: only `nix/site.nix` and its own check import it, never
+per-symbol HTML that `usr.sbin/jotain-site/site.nix` mounts at `/help/api/`. It is heavy and
+deploy-path-only: only the site and its own check import it, never
 `nix/info-manual.nix` or `nix/mk-overlay.nix`, so editor builds stay cache
-hits. PR CI builds `.#site-preview` (`withApiDoc = false`) instead. Its
+hits. The site check builds without it (`withApiDoc = false`). Its
 `emacs-config-elisp-api.texi` fragment is produced but not yet included in the
 Info manual.
 
@@ -358,7 +350,7 @@ and `nix-community`.
 `tagref`, …) with `trivialBuild`, plus overrides such as built-in shims and
 an Elisp-only `ghostel`. `jylhis-emacs-themes` takes its revision from
 `nix/design-pin.nix`, the single pin for github.com/Jylhis/design, shared
-with the CSS vendored in `website/public/ds` so editor and site never
+with the CSS vendored in `usr.sbin/jotain-site/public/ds` so editor and site never
 diverge. `nix/devenv-emacs-lisp.nix` is no longer imported by the shell; it
 remains only as an options-doc source.
 
@@ -438,8 +430,7 @@ Flake checks (`nix/checks.nix`) cover the application and configuration:
 - **Docs**: `options-doc`, `packages-doc`, `packages-doc-in-sync` (fix:
   `just docs-refresh-packages`), and `emacs-api-doc` (build-only, deploy
   path only).
-- **In-sync gates**: `ds-in-sync` (fix: `just ds-sync`);
-  `lang-eval-doc-in-sync` (fix: `just docs-refresh-lang-matrix`; not in PR
+- **In-sync gates**: `lang-eval-doc-in-sync` (fix: `just docs-refresh-lang-matrix`; not in PR
   CI); `eca-models-in-sync`, which compares the OpenRouter models in
   `config/eca/config.json` with gptel's `:models` in `lisp/init-ai.el`
   (reconcile both by hand).
@@ -509,5 +500,5 @@ screenshots only for UI-facing changes.
   `docs/configuration/package-reference.mdx` comes from `;;; @doc` blocks
   (`just docs-refresh-packages`); `docs/reference/language-support.mdx` from
   `etc/lang-eval/my-lang-registry.el` (`just docs-refresh-lang-matrix`);
-  `website/public/ds` from `nix/design-pin.nix` (`just ds-sync`).
+  `usr.sbin/jotain-site/public/ds` from `nix/design-pin.nix` (`just ds-sync`).
 - Never commit generated state: `elpa/`, `var/`, `result*`, `*.elc`.

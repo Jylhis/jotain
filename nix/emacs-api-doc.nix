@@ -19,14 +19,14 @@
 #
 # Outputs:
 #   • $out/html/           the browsable tree, mounted at ${mountPath} by
-#                          nix/site.nix.
+#                          usr.sbin/jotain-site/site.nix.
 #   • $out/emacs-config-elisp-api.texi   Texinfo fragment (not yet @included by
 #                          docs/emacs-config.texi).
 #   • passthru.perPackage  the per-package derivations, keyed by feature.
 {
   pkgs,
   src ? ../.,
-  # Where nix/site.nix mounts $out/html. Absolute site paths in the
+  # Where usr.sbin/jotain-site/site.nix mounts $out/html. Absolute site paths in the
   # generated HTML (/style.css, /emacs.css) are rewritten to this prefix.
   mountPath ? "/help/api",
 }:

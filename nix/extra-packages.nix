@@ -75,7 +75,7 @@ in
     '';
   };
 
-  # Pinned in nix/design-pin.nix, shared with the website's vendored CSS.
+  # Pinned in nix/design-pin.nix, shared with the site's vendored CSS.
   # The generated jylhis-{light,dark} themes are not committed upstream, so
   # the generator runs here; jylhis-themes.el is a committed source.
   jylhis-emacs-themes =

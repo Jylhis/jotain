@@ -1,0 +1,43 @@
+# jotain-site -- Jotain Emacs configuration site (static, Cloudflare Workers Builds)
+# Run `just` to list commands
+
+default:
+    @just --list --justfile {{justfile()}}
+
+# Shared helpers: _require-devenv, _with_nix
+import '../../share/just/project.just'
+
+# Build the full generated site (result/public) with Nix
+build: nix-build
+
+# The Nix build of the site and the ds-in-sync gate
+test:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ repo }}"
+    nix build --no-link -f . local.checks.jotain-site-build local.checks.jotain-site-ds-in-sync
+
+# Serve the full site under /jotain/ at http://localhost:8080/jotain/
+serve:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    out=$(nix build --no-link --print-out-paths -f "{{ repo }}" local.packages.jotain-site)
+    dir=$(mktemp -d)
+    trap 'rm -rf "$dir"' EXIT
+    ln -s "$out/public" "$dir/jotain"
+    python3 -m http.server -d "$dir" 8080
+
+# Re-vendor public/ds from the pinned jylhis/design rev
+# (the fix for a failing jotain-site-ds-in-sync gate).
+[group('pins')]
+ds-sync:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ repo }}"
+    out=$(nix-build --no-out-link -E '
+      (import ./nix/inputs.nix { }).emacs-config.packages.${builtins.currentSystem}.ds-assets')
+    rm -rf usr.sbin/jotain-site/public/ds
+    mkdir -p usr.sbin/jotain-site/public/ds
+    cp -r "$out/." usr.sbin/jotain-site/public/ds/
+    chmod -R u+w usr.sbin/jotain-site/public/ds
+    echo "Re-vendored public/ds from $(nix eval --raw --file etc/emacs/nix/design-pin.nix rev)"

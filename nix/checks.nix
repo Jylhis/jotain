@@ -165,8 +165,7 @@ in
   packages-doc = import ./packages-doc.nix { inherit pkgs src; };
 
   # Build-only (the output is not checked in). Heavy, so deploy-path
-  # only: PR CI's subset skips it and its `site` job builds
-  # `.#site-preview`, which omits it.
+  # only: the jotain-site build check omits it.
   emacs-api-doc = import ./emacs-api-doc.nix { inherit pkgs src; };
 
   # docs/configuration/package-reference.mdx is checked in so Mintlify
@@ -231,31 +230,6 @@ in
           echo "OpenRouter model list (they are hand-kept copies of one" >&2
           echo "catalogue). Reconcile both. Diff (< json, > elisp):" >&2
           diff <(echo "$jsonModels") <(echo "$elispModels") >&2 || true
-          exit 1
-        fi
-        touch $out
-      '';
-
-  # website/public/ds is committed (website/public needs no build step)
-  # and must match nix/design-pin.nix, which the Emacs themes also use.
-  ds-in-sync =
-    let
-      dsAssets = import ./ds-assets.nix {
-        inherit pkgs;
-        inherit (pkgs) bun;
-      };
-    in
-    pkgs.runCommandLocal "check-ds-in-sync"
-      {
-        inherit dsAssets;
-        vendoredDs = repoRoot + "/website/public/ds";
-      }
-      ''
-        if ! diff -r "$dsAssets" "$vendoredDs"; then
-          echo "" >&2
-          echo "website/public/ds is out of sync with the jylhis/design rev" >&2
-          echo "pinned in nix/design-pin.nix." >&2
-          echo "Re-vendor it with: just ds-sync" >&2
           exit 1
         fi
         touch $out

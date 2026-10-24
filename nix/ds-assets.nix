@@ -1,9 +1,9 @@
-# The design-system assets vendored into website/public/ds, taken from the
-# pinned jylhis/design rev (nix/design-pin.nix).
+# The design-system assets vendored into usr.sbin/jotain-site/public/ds, taken
+# from the pinned jylhis/design rev (nix/design-pin.nix).
 #
-# website/public/ needs no build step, so these files are committed;
-# `just ds-sync` copies from this derivation and the ds-in-sync check diffs
-# the committed copy against it.
+# public/ needs no build step, so these files are committed; `just ds-sync`
+# (in usr.sbin/jotain-site) copies from this derivation and the jotain-site
+# ds-in-sync check diffs the committed copy against it.
 #
 # tokens.css and density.css are generator outputs (upstream no longer
 # commits them; `tokens.core.json` is the source of truth). The other CSS

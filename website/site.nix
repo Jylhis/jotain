@@ -1,6 +1,6 @@
-# nix/site.nix — Assemble the full static site for page.jylhis.com/jotain.
+# usr.sbin/jotain-site/site.nix: assemble the full static site for page.jylhis.com/jotain.
 #
-# Composes the hand-written landing SPA (website/public) with every
+# Composes the hand-written landing SPA (./public) with every
 # document the repo can generate:
 #
 #   /docs/…           docs/**/*.mdx rendered to HTML (nav from docs.json)
@@ -14,25 +14,26 @@
 #   /help/api/        generated docstring-level API reference (emacs-api-doc.nix)
 #   /packages/        third-party package search over /help/api/ (withApiDoc)
 #
-# The site is $out/public/ (the GitHub Pages artifact). Preview it under
-# the base path with `just serve-site`.
+# The site is $out/public/, the static assets directory for Cloudflare.
+# Preview it under the base path with `just serve` in this directory.
 {
   pkgs,
   lib ? pkgs.lib,
-  src ? ../.,
-  # Mount the heavy /help/api/ reference. Off for `.#site-preview` (PR CI);
+  # The Emacs configuration tree the docs and references are generated from.
+  src ? ../../etc/emacs,
+  # Mount the heavy /help/api/ reference. Off for the preview variant;
   # guarded lazily so `false` never realizes emacsApiDoc.
   withApiDoc ? true,
-  # Prefix of every internal absolute URL: the site is the GitHub Pages
-  # project site page.jylhis.com/jotain/. Use "" to serve from a root.
+  # Prefix of every internal absolute URL: the site is served under
+  # page.jylhis.com/jotain/. Use "" to serve from a root.
   baseHref ? "/jotain",
 }:
 let
-  optionsDoc = import ./options-doc.nix { inherit pkgs src; };
-  packagesDoc = import ./packages-doc.nix { inherit pkgs src; };
+  optionsDoc = import (src + "/nix/options-doc.nix") { inherit pkgs src; };
+  packagesDoc = import (src + "/nix/packages-doc.nix") { inherit pkgs src; };
   # The mount path is baked into the pages' stylesheet links; keep it in
   # sync with where html/ is copied below.
-  emacsApiDoc = import ./emacs-api-doc.nix {
+  emacsApiDoc = import (src + "/nix/emacs-api-doc.nix") {
     inherit pkgs src;
     mountPath = "${baseHref}/help/api";
   };
@@ -40,7 +41,7 @@ let
   apiHelpRow = ''<div class="man-entry"><a href="${baseHref}/help/api/">C-h S — elisp API reference</a><span class="man-dots">·····································································</span><span class="man-desc">docstrings for every bundled package</span></div>'';
   # /packages/ row, likewise only under withApiDoc.
   pkgSearchRow = ''<div class="man-entry"><a href="${baseHref}/packages/">M-x list-packages — package search</a><span class="man-dots">·····································································</span><span class="man-desc">search every third-party package and symbol</span></div>'';
-  infoManual = import ./info-manual.nix { inherit pkgs src; };
+  infoManual = import (src + "/nix/info-manual.nix") { inherit pkgs src; };
   # The shipped Emacs: its man pages and manual sources feed /man and
   # /info, so the site documents the exact revision users get.
   emacs = pkgs.emacsConfig;
@@ -81,8 +82,8 @@ let
     );
   };
   webSrc = lib.fileset.toSource {
-    root = src;
-    fileset = lib.fileset.maybeMissing (src + "/website/public");
+    root = ./public;
+    fileset = ./public;
   };
 
   # The GNU Emacs + Elisp manuals from that Emacs's source. Separate
@@ -138,11 +139,11 @@ pkgs.runCommand "emacs-config-site"
     set -eu
 
     mkdir -p "$out/public"
-    cp -r "$webSrc/website/public/." "$out/public/"
+    cp -r "$webSrc/." "$out/public/"
     chmod -R u+w "$out/public"
 
     ${lib.optionalString (!withApiDoc) ''
-      # This variant (site-preview) omits /help/api/ and, with it, the
+      # This variant (the preview variant) omits /help/api/ and, with it, the
       # /packages/ search page. Drop the landing page's link to /packages/
       # so an API-free build advertises no 404 route (the /help/ index's
       # rows for it are already withApiDoc-gated).

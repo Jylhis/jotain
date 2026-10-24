@@ -2,9 +2,9 @@
 #
 # Consumed by:
 #   nix/extra-packages.nix  → jylhis-emacs-themes (platforms/emacs)
-#   nix/ds-assets.nix       → the CSS + fonts vendored into website/public/ds
-#   nix/checks.nix          → ds-in-sync (vendored copy == pinned upstream)
-#   Justfile                → just ds-sync
+#   nix/ds-assets.nix       → the CSS + fonts vendored into usr.sbin/jotain-site/public/ds
+#   usr.sbin/jotain-site     → ds-in-sync check (vendored copy == pinned upstream)
+#   jotain-site justfile     → just ds-sync
 #
 # The Emacs themes and the website CSS are generated from the same token
 # sources, so one pin keeps them in step.
