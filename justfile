@@ -27,8 +27,8 @@ docs-refresh-packages:
     cd "{{ repo }}"
     out=$(nix build --no-link --print-out-paths --impure --expr '
       (import ./nix/inputs.nix { }).emacs-config.packages.${builtins.currentSystem}.packages-doc')
-    cp "$out/package-reference.mdx" lib/emacs/docs/configuration/package-reference.mdx
-    echo "Refreshed lib/emacs/docs/configuration/package-reference.mdx"
+    cp "$out/package-reference.mdx" etc/emacs/docs/configuration/package-reference.mdx
+    echo "Refreshed etc/emacs/docs/configuration/package-reference.mdx"
 
 # Re-vendor website/public/ds from the pinned jylhis/design rev
 # (the fix for a failing emacs-ds-in-sync gate).
@@ -41,11 +41,11 @@ ds-sync:
       let emacs-config = (import ./nix/inputs.nix { }).emacs-config;
       in emacs-config.packages.${builtins.currentSystem}.ds-assets')
     # Wipe first so files dropped upstream do not linger.
-    rm -rf lib/emacs/website/public/ds
-    mkdir -p lib/emacs/website/public/ds
-    cp -r "$out/." lib/emacs/website/public/ds/
-    chmod -R u+w lib/emacs/website/public/ds
-    echo "Re-vendored website/public/ds from $(nix eval --raw --file lib/emacs/nix/design-pin.nix rev)"
+    rm -rf etc/emacs/website/public/ds
+    mkdir -p etc/emacs/website/public/ds
+    cp -r "$out/." etc/emacs/website/public/ds/
+    chmod -R u+w etc/emacs/website/public/ds
+    echo "Re-vendored website/public/ds from $(nix eval --raw --file etc/emacs/nix/design-pin.nix rev)"
 
 # Build the full distribution for this system (flakeless shim entry).
 [group('build')]
@@ -60,11 +60,11 @@ run-built *ARGS:
     just build
     ./result/bin/emacs --init-directory="{{ justfile_directory() }}" {{ ARGS }}
 
-# lib/emacs is excluded from root treefmt; formatting is enforced by its
+# etc/emacs is excluded from root treefmt; formatting is enforced by its
 # own treefmt config (nix/treefmt.nix, run via devenv).
 [group('lint')]
 lint:
-    @echo "skip: lib/emacs formats via its own treefmt (nix/treefmt.nix; see devenv)"
+    @echo "skip: etc/emacs formats via its own treefmt (nix/treefmt.nix; see devenv)"
 
 [group('fmt')]
 fmt:

@@ -19,10 +19,11 @@ the reports under `docs/reviews/`.
 
 - `early-init.el`, `init.el`, and `lisp/init-*.el` (feature modules,
   `require`d from `init.el` in order).
-- Nix at the root: `flake.nix`, `emacs.nix`, `overlay.nix`, `default.nix`,
-  `module.nix`, `module-system.nix`, `module-nix-on-droid.nix`. Helpers live
-  in `nix/` (`mk-overlay.nix` is the overlay implementation, `checks.nix` the
-  flake checks).
+- Nix at the root: `emacs.nix`, `overlay.nix`, `default.nix`, `module.nix`,
+  `module-system.nix`, `module-nix-on-droid.nix`. There is no `flake.nix`: the
+  repo root `nix/inputs.nix` builds the `emacs-config` attrset (overlay,
+  modules, checks, packages) from these files. Helpers live in `nix/`
+  (`mk-overlay.nix` is the overlay implementation, `checks.nix` the checks).
 - `docs/` (documentation sources), `website/` (shell of the
   page.jylhis.com/jotain site), `bench/` (startup benchmarks), `test/` (ERT;
   every `test/*.el` is loaded by the test check), `etc/` (debug harness,
