@@ -66,5 +66,17 @@ the real mode hooks."
       (my-writing--disable-visual-wrap-prefix)
       (should-not visual-wrap-prefix-mode))))
 
+(ert-deftest test-writing-mixed-pitch-faces-extended-after-load ()
+  "The mixed-pitch form adds the Markdown faces in `:config', not `:custom'.
+A `:custom' value that reads `mixed-pitch-fixed-pitch-faces' runs before
+the deferred package loads and signals `void-variable' in every
+`text-mode' hook, which leaves Markdown buffers without font lock."
+  (let ((form (test-writing--use-package 'mixed-pitch)))
+    (should form)
+    (should-not (memq :custom form))
+    (should (string-match-p
+             "markdown-code-face"
+             (prin1-to-string (test-writing--keyword form :config))))))
+
 (provide 'test-writing)
 ;;; test-writing.el ends here

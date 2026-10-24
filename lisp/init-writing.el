@@ -48,13 +48,14 @@ one tree.  It need not exist yet."
   (defun my-writing--keep-monospace ()
     "Turn off `mixed-pitch-mode' in a column-sensitive text-mode buffer."
     (mixed-pitch-mode -1))
-  :custom
-  (mixed-pitch-fixed-pitch-faces
-   (append '(markdown-list-face markdown-code-face markdown-inline-code-face)
-           mixed-pitch-fixed-pitch-faces))
   :hook ((text-mode        . mixed-pitch-mode)
          (git-commit-setup . my-writing--keep-monospace)
-         (message-mode     . my-writing--keep-monospace)))
+         (message-mode     . my-writing--keep-monospace))
+  :config
+  ;; Extend the list after load: a `:custom' value that reads the
+  ;; variable runs before the deferred package defines it.
+  (dolist (face '(markdown-list-face markdown-code-face markdown-inline-code-face))
+    (add-to-list 'mixed-pitch-fixed-pitch-faces face)))
 
 ;;; @doc Just-in-time spell check using enchant. `global-jinx-mode'
 ;;; replaces `flyspell-mode' and `flyspell-prog-mode': jinx keys off
