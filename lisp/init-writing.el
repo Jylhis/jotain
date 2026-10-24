@@ -48,6 +48,10 @@ one tree.  It need not exist yet."
   (defun my-writing--keep-monospace ()
     "Turn off `mixed-pitch-mode' in a column-sensitive text-mode buffer."
     (mixed-pitch-mode -1))
+  :custom
+  (mixed-pitch-fixed-pitch-faces
+   (append '(markdown-list-face markdown-code-face markdown-inline-code-face)
+           mixed-pitch-fixed-pitch-faces))
   :hook ((text-mode        . mixed-pitch-mode)
          (git-commit-setup . my-writing--keep-monospace)
          (message-mode     . my-writing--keep-monospace)))
@@ -80,8 +84,19 @@ remaining `emacs-startup-hook' functions."
 ;;; heading scaling, and nested imenu. README.md opens in gfm-mode. Beside
 ;;; the stock `C-c C-...' bindings, a `C-c m ...' prefix holds the common
 ;;; ones: markup/image hiding, link and code-block insertion, follow-link,
-;;; promote/demote, and live preview. gfm-mode inherits them.
+;;; promote/demote, and live preview. gfm-mode inherits them. Wrapped
+;;; lines get no hanging indent (`visual-wrap-prefix-mode' is off here:
+;;; it makes list items shake under a proportional font).
 (use-package markdown-mode
+  :preface
+  (defun my-writing--disable-visual-wrap-prefix ()
+    "Turn off `visual-wrap-prefix-mode' in the current buffer.
+The `text-mode' hook enables it, and `markdown-mode' derives from
+`text-mode'.  The mode measures the list marker prefix in pixels and
+re-measures it while font lock reruns, so with a proportional font the
+text of a list item shifts as you type.  `visual-line-mode' stays on."
+    (when (bound-and-true-p visual-wrap-prefix-mode)
+      (visual-wrap-prefix-mode -1)))
   :mode (("README\\.md\\'" . gfm-mode)
          ("\\.md\\'"       . markdown-mode)
          ("\\.markdown\\'" . markdown-mode))
@@ -89,6 +104,7 @@ remaining `emacs-startup-hook' functions."
   (markdown-fontify-code-blocks-natively t)
   (markdown-header-scaling t)
   (markdown-nested-imenu-heading-index t)
+  :hook (markdown-mode . my-writing--disable-visual-wrap-prefix)
   :bind (:map markdown-mode-map
               ("C-c m h" . markdown-toggle-markup-hiding)
               ("C-c m i" . markdown-toggle-inline-images)

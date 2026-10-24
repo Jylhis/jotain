@@ -228,8 +228,17 @@ this is just `org-babel-execute-buffer'."
   :hook (org-mode . org-appear-mode))
 
 ;;; @doc Modern visual styling for Org buffers and agenda — typographic
-;;; bullets, faux-rendered blocks, agenda decorations.
+;;; bullets (fixed-pitch, so list items keep their width), faux-rendered
+;;; blocks, agenda decorations.
 (use-package org-modern
+  :custom
+  ;; The replacement bullets carry no face of their own, so they take the
+  ;; proportional `mixed-pitch' font and change width when font lock reruns.
+  ;; A fixed-pitch face keeps the list indentation stable while typing.
+  (org-modern-list
+   (mapcar (pcase-lambda (`(,char . ,bullet))
+             (cons char (propertize bullet 'face 'fixed-pitch)))
+           '((?+ . "◦") (?- . "–") (?* . "•"))))
   :hook ((org-mode            . org-modern-mode)
          (org-agenda-finalize . org-modern-agenda)))
 
