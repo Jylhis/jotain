@@ -530,22 +530,7 @@ existing language server, adding code-quality and security diagnostics."
 (use-package xref
   :ensure nil
   :custom
-  (xref-search-program 'ripgrep)
-  :config
-  ;; mouse-1 on an identifier jumps to its definition.
-  (global-xref-mouse-mode 1)
-  ;; Regenerates a project TAGS table on demand, a definition source for
-  ;; buffers without an LSP server.
-  (etags-regen-mode 1))
-
-;;;; imenu
-
-;;; @doc Built-in symbol index (behind `consult-imenu', M-g i), rescanned
-;;; automatically so it never goes stale.
-(use-package imenu
-  :ensure nil
-  :custom
-  (imenu-auto-rescan t))
+  (xref-search-program 'ripgrep))
 
 ;;;; tagref
 
@@ -571,23 +556,13 @@ every prog-mode buffer."
 
 ;;;; Compile
 
-;;; @doc Built-in compile / recompile. Scrolls output until the first
-;;; error, skips the save prompt, and kills a running compilation
-;;; without asking.
+;;; @doc Built-in compile / recompile. Skips the save prompt and kills
+;;; a running compilation without asking.
 (use-package compile
   :ensure nil
   :custom
-  (compilation-scroll-output 'first-error)
   (compilation-ask-about-save nil)
   (compilation-always-kill t))
-
-;;;; editorconfig (built-in since 30)
-
-;;; @doc Honour `.editorconfig` files (indent style/width, line endings,
-;;; trailing whitespace). Built-in since Emacs 30.
-(use-package editorconfig
-  :ensure nil
-  :hook (prog-mode . editorconfig-mode))
 
 ;;;; Per-project environment + format-on-save + grep refactor
 

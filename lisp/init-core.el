@@ -76,8 +76,6 @@ immediately for writes."
   (use-short-answers t)
   (read-answer-short t)
   (list-matching-lines-jump-to-current-line nil)
-  ;; Read-only files open in `view-mode' (SPC/DEL to page, q to quit).
-  (view-read-only t)
   (use-dialog-box nil)
   (create-lockfiles nil)
   (delete-by-moving-to-trash t)
@@ -87,14 +85,7 @@ immediately for writes."
   (visible-bell nil)
   (ring-bell-function #'ignore)
   (scroll-preserve-screen-position 1)
-  (mouse-yank-at-point t)
-  ;; Drag a region to move/copy it (also to and from other programs);
-  ;; drag the mode-line buffer name to move the buffer to another window.
-  (mouse-drag-and-drop-region t)
-  (mouse-drag-and-drop-region-cross-program t)
-  (mouse-drag-mode-line-buffer t)
   (kill-do-not-save-duplicates t)
-  (save-interprogram-paste-before-kill t)
   (set-mark-command-repeat-pop t)
   (redisplay-skip-fontification-on-input t)
   (enable-recursive-minibuffers t)
@@ -107,18 +98,15 @@ immediately for writes."
   (read-buffer-completion-ignore-case t)
   (read-file-name-completion-ignore-case t)
   :config
-  (context-menu-mode 1)
   (line-number-mode 1)
-  (column-number-mode 1)
   (minibuffer-depth-indicate-mode 1))
 
-;;; @doc Persist point per file across sessions. Built-in.
+;;; @doc Persist point per file across sessions. Built-in; the
+;;; newcomers-presets theme turns on `save-place-mode'.
 (use-package saveplace
   :ensure nil
   :custom (save-place-file (my-var-file "save-place.el"))
   :config
-  (save-place-mode 1)
-
   ;; Recenter after `save-place-mode' restores point, or a reopened file
   ;; can leave point on the bottom line. Deferred with a zero-delay timer
   ;; because the window doesn't exist yet when the hook fires.
@@ -180,26 +168,16 @@ immediately for writes."
 (advice-add 'custom-save-all :around
             #'my-core--custom-save-without-supersession)
 
-;;;; package.el conveniences (newcomers-presets theme)
-
-;; `package-autosuggest-mode' offers to install
-;; a mode for unknown file types; `package-menu-use-current-if-no-marks'
-;; nil makes package-menu actions apply only to marked entries, never to
-;; the line at point. `package' is already loaded (init.el).
-(setopt package-menu-use-current-if-no-marks nil)
-(package-autosuggest-mode 1)
-
 ;;; @doc Repeat-mode lets you press the trailing key alone after a prefix
-;;; command (e.g. C-x o o o instead of C-x o C-x o). Built-in, enabled
-;;; globally. `repeat-exit-timeout' drops the repeat map after two idle
-;;; seconds. Built-in maps already cover window resizing
-;;; (`C-x ^ ^ v'); init-keys.el only adds a map for the Emacs 31
+;;; command (e.g. C-x o o o instead of C-x o C-x o). Built-in; the
+;;; newcomers-presets theme turns it on. `repeat-exit-timeout' drops the
+;;; repeat map after two idle seconds. Built-in maps already cover window
+;;; resizing (`C-x ^ ^ v'); init-keys.el only adds a map for the
 ;;; `window-layout-*' commands.
 (use-package repeat
   :ensure nil
   :custom
-  (repeat-exit-timeout 2)
-  :config (repeat-mode 1))
+  (repeat-exit-timeout 2))
 
 ;;; @doc Disambiguate same-name buffers by directory prefix instead of
 ;;; the default `<2>` suffix. `forward` style mirrors the path.
@@ -308,18 +286,19 @@ Useful for diagnosing freezes: start, reproduce, stop."
   :config (global-auto-revert-mode 1))
 
 ;;; @doc Built-in recently-visited files list, used by
-;;; `consult-recent-file'. State lives under var/.
+;;; `consult-recent-file'. State lives under var/; the newcomers-presets
+;;; theme turns on `recentf-mode'.
 (use-package recentf
   :ensure nil
   :custom
   (recentf-save-file (my-var-file "recentf-save.el"))
   (recentf-max-saved-items 200)
   :config
-  (recentf-mode 1)
   (add-to-list 'recentf-exclude my-var-dir))
 
 ;;; @doc Persist minibuffer history (M-p / M-n, vertico ordering, etc.)
-;;; across sessions. Built-in, enabled globally.
+;;; across sessions. Built-in; the newcomers-presets theme turns on
+;;; `savehist-mode'.
 (use-package savehist
   :ensure nil
   :custom
@@ -329,9 +308,7 @@ Useful for diagnosing freezes: start, reproduce, stop."
   ;; `register-alist' is excluded: one marker (C-x r SPC) or window
   ;; configuration (C-x r w) register would discard every register.
   (savehist-additional-variables
-   '(kill-ring search-ring regexp-search-ring))
-  :config
-  (savehist-mode 1))
+   '(kill-ring search-ring regexp-search-ring)))
 
 ;;; @doc Built-in bookmark store, kept under var/. `save-flag 1` writes
 ;;; on every change so a crash never loses bookmarks; no fringe mark.

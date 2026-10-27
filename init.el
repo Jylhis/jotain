@@ -72,5 +72,10 @@
 (require 'init-lang-systems)   ; C/C++, CMake, Meson, Haskell, OCaml, Zig
 (require 'init-lang-qml)        ; QML (Quickshell / Qt Quick)
 
+;; Emacs 31's newcomers-presets theme supplies the alternative defaults
+;; (savehist, recentf, which-key, ...).  Last, so the modes it turns on
+;; start with the var/ paths the modules set (init-ui.el).
+(my-ui-enable-newcomers-presets)
+
 (provide 'init)
 ;;; init.el ends here

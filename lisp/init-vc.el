@@ -18,24 +18,12 @@
 (use-package vc
   :ensure nil
   :custom
-  (vc-follow-symlinks t)
   (vc-handled-backends '(Git JJ))
   :config
   ;; Rewriting pushed history is normal in jj and force-push workflows; a
   ;; `vc-dir' revert hides up-to-date entries.
   (setopt vc-allow-rewriting-published-history t)
-  (setopt vc-dir-auto-hide-up-to-date 'revert)
-  ;; Run `C-x v' from non-VC buffers (backend from `default-directory');
-  ;; save buffers before a `vc-dir' revert; view old revisions without
-  ;; temp files on disk; and use the `C-x v I'/`C-x v O' incoming/outgoing
-  ;; prefixes.
-  (setopt vc-deduce-backend-nonvc-modes t)
-  (setopt vc-dir-save-some-buffers-on-revert t)
-  (setopt vc-find-revision-no-save t)
-  (setopt vc-use-incoming-outgoing-prefixes t)
-  ;; Largely covered by `global-auto-revert-mode' (init-core.el); adopted
-  ;; from the newcomers-presets theme.
-  (vc-auto-revert-mode 1))
+  (setopt vc-dir-auto-hide-up-to-date 'revert))
 
 ;;; @doc C-x G jumps to a file git status reports as changed (modified,
 ;;; added, renamed, copied, unmerged, type-changed or untracked).

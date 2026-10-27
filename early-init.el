@@ -78,6 +78,8 @@
 
 ;; Don't resize the frame when the font, fringes, or bars change during
 ;; startup: each implied resize is a round-trip to the window system.
+;; The newcomers-presets theme sets it too, but only at the end of
+;; init.el, after the first frame exists.
 (setq frame-inhibit-implied-resize t)
 
 (setq inhibit-startup-screen t

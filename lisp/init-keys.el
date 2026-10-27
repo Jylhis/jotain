@@ -88,8 +88,8 @@ Region active → deactivate it.  Otherwise call regular
 
 ;;; @doc Short `which-key' labels for the global `C-c' and `C-x' keys.
 ;;; The bindings themselves stay in their `use-package' blocks; only the
-;;; labels live here. Registered after which-key loads (init-ui.el), so
-;;; load order doesn't matter.
+;;; labels live here. Registered after which-key loads (the
+;;; newcomers-presets theme turns it on), so load order doesn't matter.
 (with-eval-after-load 'which-key
   (which-key-add-key-based-replacements
     ;; C-c <letter> — global user namespace.
@@ -128,7 +128,7 @@ Region active → deactivate it.  Otherwise call regular
 
 ;;;; Repeat maps — Emacs-native "one-shot modifier" pattern
 ;;
-;; `repeat-mode' is enabled in init-core.el, and many built-ins
+;; The newcomers-presets theme enables `repeat-mode', and many built-ins
 ;; (`other-window', `next-buffer', `undo', window resizing) ship their
 ;; own repeat maps.  See the "Ergonomics" chapter of the Info manual.
 

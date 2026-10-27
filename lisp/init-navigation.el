@@ -35,7 +35,6 @@
   (dired-recursive-copies 'always)
   (dired-recursive-deletes 'top)
   (dired-deletion-confirmer #'y-or-n-p)
-  (dired-auto-revert-buffer #'dired-buffer-stale-p)
   ;; Revert the destination after copy/rename, but not over TRAMP, where
   ;; a round-trip per file op would stall the UI.
   (dired-do-revert-buffer (lambda (dir) (not (file-remote-p dir))))
@@ -45,7 +44,6 @@
   (dired-vc-rename-file t)
   ;; Keep point on file lines, off the header and trailing blank lines.
   (dired-movement-style 'bounded-files)
-  (dired-mouse-drag-files t)
   :hook (dired-mode . dired-hide-details-mode)
   :bind (:map dired-mode-map
               ("M-s R" . dired-do-replace-regexp-as-diff))

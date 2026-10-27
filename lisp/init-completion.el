@@ -122,7 +122,8 @@ candidate's docstring or source location.  Read at load time."
 
 (defcustom my-completion-inline-preview t
   "When non-nil, show inline \"ghost text\" of the top candidate as you type.
-Enables `global-completion-preview-mode'.
+The newcomers-presets theme enables `global-completion-preview-mode';
+nil turns it off again.
 
 TAB accepts the preview unless `my-completion-free-tab' is set;
 `M-RET' accepts it too, and `M-i' completes the common prefix.  RET stays
@@ -133,20 +134,13 @@ per buffer."
 
 ;;;; Minibuffer defaults
 
-;;; @doc Built-in minibuffer customisation: detailed annotations and
-;;; historical sorting so frequent commands surface first.
+;;; @doc Built-in minibuffer customisation: one-column *Completions*
+;;; and historical sorting so frequent commands surface first.
 (use-package minibuffer
   :ensure nil
   :custom
-  (completions-detailed t)
   (completions-format 'one-column)
-  (completions-sort 'historical)
-  ;; Newcomers-presets theme knobs; with vertico on, these only affect
-  ;; the default *Completions* UI.
-  (minibuffer-visible-completions t)
-  (completions-group t)
-  (completion-auto-select 'second-tab)
-  (completion-eager-update t))
+  (completions-sort 'historical))
 
 ;;; @doc Fuzzy, space-separated, order-independent completion. Pairs with
 ;;; partial-completion (path globbing) so `/u/s/a` matches
@@ -514,9 +508,15 @@ where the built-in returns nil: comments and docstrings."
   (add-hook 'emacs-lisp-mode-hook #'my-cape-setup-elisp)
   (add-hook 'lisp-interaction-mode-hook #'my-cape-setup-elisp))
 
+;; The theme turns the preview on everywhere; this opt-out wins over it
+;; (see `my-ui--keep-config-overrides').
+(unless my-completion-inline-preview
+  (setopt global-completion-preview-mode nil))
+
 ;;; @doc Inline completion preview (built-in): greys out the most likely
 ;;; completion after point, drawn from the same capfs as the corfu popup.
-;;; Enabled in every buffer via `global-completion-preview-mode'. Gated on
+;;; The newcomers-presets theme enables `global-completion-preview-mode'
+;;; in every buffer. Gated on
 ;;; `my-completion-inline-preview'. TAB (unless
 ;;; `my-completion-free-tab') and `M-RET' accept the preview, `M-i'
 ;;; its common prefix; RET stays a newline. Suppressed in comments and
@@ -525,7 +525,7 @@ where the built-in returns nil: comments and docstrings."
   :ensure nil
   :when my-completion-inline-preview
   :defer t
-  :functions (completion-preview-insert global-completion-preview-mode)
+  :functions (completion-preview-insert)
   :preface
   ;; Neither library is loaded at byte-compile time.
   (defvar completion-preview-active-mode-map)
@@ -537,8 +537,6 @@ where the built-in returns nil: comments and docstrings."
 Added to `completion-preview-inhibit-functions' so the ghost
 text does not appear where symbol completion is meaningless."
     (nth 8 (syntax-ppss)))
-  :init
-  (global-completion-preview-mode 1)
   :config
   ;; Match the popup's delay so one keystroke does not fire two capf
   ;; passes at different times (costly with an LSP capf).

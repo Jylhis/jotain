@@ -29,12 +29,21 @@ The default is the Jylhis theme's dark (Negative) mode."
 ;; built-in Modus fallback, never theme files from untrusted paths.
 (setopt custom-safe-themes t)
 
+(defun my-ui--user-options-theme-p (theme)
+  "Return non-nil when THEME sets user options rather than faces."
+  (eq (plist-get (get theme 'theme-properties) :kind) 'user-options))
+
+(defun my-ui--color-themes ()
+  "Return `custom-enabled-themes' without the user-options themes."
+  (seq-remove #'my-ui--user-options-theme-p custom-enabled-themes))
+
 (defun my-ui--disable-other-themes (_theme &optional _no-confirm no-enable)
-  "Disable any active themes before loading a new one.
+  "Disable any active color themes before loading a new one.
 Without this, switching themes layers the new one on top of the old
-and the result is a face-attribute soup."
+and the result is a face-attribute soup.  User-options themes such as
+`newcomers-presets' stay on."
   (unless no-enable
-    (mapc #'disable-theme (copy-sequence custom-enabled-themes))))
+    (mapc #'disable-theme (my-ui--color-themes))))
 
 (advice-add 'load-theme :before #'my-ui--disable-other-themes)
 
@@ -84,7 +93,7 @@ theme by the frame's background mode.  Runs on
 frame-global, so a mixed GUI+tty daemon shares one theme."
   (let ((frame (or frame (selected-frame))))
     (when (and (not (display-graphic-p frame))
-               (null custom-enabled-themes))
+               (null (my-ui--color-themes)))
       (with-selected-frame frame
         (ignore-errors
           (load-theme (if (eq (frame-parameter frame 'background-mode) 'light)
@@ -96,6 +105,41 @@ frame-global, so a mixed GUI+tty daemon shares one theme."
 ;; Non-daemon `emacs -nw': apply once now; the daemon path is the hook.
 (unless (or noninteractive (daemonp) (display-graphic-p))
   (my-ui--ensure-tty-theme))
+
+;;;; newcomers-presets: Emacs 31's user-options theme
+
+;; Bound before the theme file loads, so its `defvar' keeps nil: the
+;; theme's mode hooks (flyspell, line numbers in text-mode, flymake) stay
+;; off.  jinx (init-writing), `my-line-numbers-in-prog' and init-prog own
+;; those.
+(defvar newcomers-presets-mode-enabled-local-modes nil)
+
+(defun my-ui--keep-config-overrides (theme)
+  "Record the config's own values of THEME's options in the `user' theme.
+A theme enabled after `setopt' or use-package `:custom' overrides their
+values, and auto-dark re-enables the theme on every flip.  The `user'
+theme always takes precedence, so copy each option that `:custom' set
+\(the `use-package' theme) or `setopt' set (`custom-check-value') there."
+  (pcase-dolist (`(,prop ,var . ,_) (get theme 'theme-settings))
+    (when (eq prop 'theme-value)
+      (if-let* ((custom (assq 'use-package (get var 'theme-value))))
+          (custom-push-theme 'theme-value var 'user 'set (cadr custom))
+        (when (get var 'custom-check-value)
+          (custom-push-theme 'theme-value var 'user 'set
+                             (custom-quote (symbol-value var))))))))
+
+(defun my-ui-enable-newcomers-presets ()
+  "Enable the `newcomers-presets' theme below the config's own settings.
+init.el calls this last, so savehist, recentf and save-place start with
+the var/ paths set by init-core.  auto-dark disables every theme that
+is not in its lists, so the theme joins both lists."
+  (load-theme 'newcomers-presets t t)
+  (my-ui--keep-config-overrides 'newcomers-presets)
+  (enable-theme 'newcomers-presets)
+  (when (featurep 'auto-dark)
+    (setopt auto-dark-themes
+            (mapcar (lambda (themes) (append themes '(newcomers-presets)))
+                    auto-dark-themes))))
 
 ;;;; Modeline
 
@@ -232,20 +276,6 @@ availability on the right display."
 (setopt cursor-in-non-selected-windows nil)
 (setopt highlight-nonselected-windows nil)
 
-;; Resize frames and windows by pixel, not whole character cells, so a
-;; frame sits flush in a tiling window manager and splits divide evenly.
-(setopt frame-resize-pixelwise t)
-(setopt window-resize-pixelwise t)
-
-;; Compact the stock mode line only when it overflows the window
-;; (mostly inert under doom-modeline).
-(setopt mode-line-compact 'long)
-;; System font as the default face until `my-ui-apply-font' runs.
-;; The variable only exists on builds with system-font support, so guard
-;; it for the terminal-only distribution.
-(when (boundp 'font-use-system-font)
-  (setopt font-use-system-font t))
-
 (defcustom my-line-numbers-in-prog t
   "When non-nil, show line numbers in `prog-mode' and `conf-mode' buffers."
   :type 'boolean
@@ -262,10 +292,9 @@ availability on the right display."
   :ensure nil
   :hook ((prog-mode conf-mode) . my-ui--maybe-line-numbers))
 
-;;; @doc Built-in smooth scrolling, tuned after James Cherti's
-;;; "Enhancing Emacs Scrolling" (jamescherti.com). `pixel-scroll-mode'
-;;; smooths mouse-wheel scrolling; like the newcomers-presets theme, it is
-;;; preferred over `pixel-scroll-precision-mode' (bug#69972).
+;;; @doc Scrolling, tuned after James Cherti's "Enhancing Emacs
+;;; Scrolling" (jamescherti.com). The newcomers-presets theme turns on
+;;; `pixel-scroll-mode', which smooths mouse-wheel scrolling.
 ;;; `fast-but-imprecise-scrolling' skips exact fontification on large
 ;;; jumps. `scroll-conservatively' 20 scrolls just enough to keep point
 ;;; visible instead of recentering; `auto-window-vscroll' nil avoids
@@ -280,8 +309,7 @@ availability on the right display."
   (scroll-error-top-bottom t)
   (auto-window-vscroll nil)
   (hscroll-margin 2)
-  (hscroll-step 1)
-  :config (pixel-scroll-mode 1))
+  (hscroll-step 1))
 
 ;;; @doc Built-in current-line highlight in code, config, and prose
 ;;; buffers only.
@@ -300,11 +328,6 @@ availability on the right display."
   (show-paren-when-point-inside-paren t)
   (show-paren-when-point-in-periphery t))
 
-;;; @doc Built-in keybinding cheatsheet: after a prefix key, a popup
-;;; lists the keys that can follow it.
-(use-package which-key
-  :ensure nil
-  :config (which-key-mode 1))
 
 ;;; @doc Built-in calendar with ISO week numbers and a Monday week
 ;;; start.
