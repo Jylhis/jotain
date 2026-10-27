@@ -33,7 +33,6 @@
   (dired-dwim-target t)
   (dired-kill-when-opening-new-dired-buffer t)
   (dired-recursive-copies 'always)
-  (dired-recursive-deletes 'top)
   (dired-deletion-confirmer #'y-or-n-p)
   ;; Revert the destination after copy/rename, but not over TRAMP, where
   ;; a round-trip per file op would stall the UI.
@@ -113,8 +112,6 @@
   :custom
   (ls-lisp-dirs-first t)
   (ls-lisp-use-insert-directory-program nil)
-  (ls-lisp-use-string-collate t)
-  (ls-lisp-UCA-like-collation t)
   (ls-lisp-verbosity '(links uid gid)))
 
 ;;; @doc Built-in writable dired: C-c C-e makes the listing editable,
@@ -125,7 +122,6 @@
   :after dired
   :custom
   (wdired-allow-to-change-permissions t)
-  (wdired-create-parent-directories t)
   :bind (:map dired-mode-map ("C-c C-e" . wdired-change-to-wdired-mode)))
 
 ;;; @doc Extra dired colours by file type, permissions and more.
@@ -142,9 +138,7 @@
 (use-package trashed
   :commands trashed
   :custom
-  (trashed-action-confirmer 'y-or-n-p)
-  (trashed-use-header-line t)
-  (trashed-sort-key '("Date deleted" . t)))
+  (trashed-action-confirmer 'y-or-n-p))
 
 ;;; @doc Shortens `/nix/store/abc123-foo-1.0` to `…foo-1.0` in dired and
 ;;; shell buffers.

@@ -140,7 +140,6 @@ Deletions are omitted, since there is no file to open."
    ("C-c g"   . magit-file-dispatch))
   :custom
   (magit-diff-refine-hunk t)
-  (magit-diff-refine-ignore-whitespace t)
   (magit-diff-hide-trailing-cr-characters t)
   (magit-diff-context-lines 5)
   (magit-save-repository-buffers 'dontask)
@@ -200,7 +199,6 @@ Deletions are omitted, since there is no file to open."
   :custom
   (diff-hl-draw-borders nil)
   (fringes-outside-margins t)
-  (diff-hl-side 'left)
   :hook
   ;; No `:after magit': hooking before magit loads is fine, and gating on
   ;; it would miss after-init.  `diff-hl-magit-pre-refresh' is obsolete
@@ -520,7 +518,6 @@ also invalidate after `magit-post-refresh-hook'."
   :custom
   (ediff-window-setup-function 'ediff-setup-windows-plain)
   (ediff-split-window-function 'split-window-horizontally)
-  (ediff-merge-split-window-function 'split-window-horizontally)
   (ediff-diff-options "-w")
   (ediff-custom-diff-options "-u")
   (ediff-merge-revisions-with-ancestor t)

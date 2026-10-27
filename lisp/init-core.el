@@ -75,21 +75,18 @@ immediately for writes."
   (fill-column 100)
   (use-short-answers t)
   (read-answer-short t)
-  (list-matching-lines-jump-to-current-line nil)
   (use-dialog-box nil)
   (create-lockfiles nil)
   (delete-by-moving-to-trash t)
   (sentence-end-double-space nil)
   (require-final-newline t)
   (word-wrap t)
-  (visible-bell nil)
   (ring-bell-function #'ignore)
   (scroll-preserve-screen-position 1)
   (kill-do-not-save-duplicates t)
   (set-mark-command-repeat-pop t)
   (redisplay-skip-fontification-on-input t)
   (enable-recursive-minibuffers t)
-  (minibuffer-follows-selected-frame t)
   (minibuffer-prompt-properties
    '(read-only t cursor-intangible t face minibuffer-prompt))
   (read-extended-command-predicate #'command-completion-default-include-p)
@@ -328,8 +325,7 @@ Useful for diagnosing freezes: start, reproduce, stop."
   :ensure nil
   :custom
   (isearch-lazy-count t)
-  (lazy-count-prefix-format "(%s/%s) ")
-  (lazy-count-suffix-format nil))
+  (lazy-count-prefix-format "(%s/%s) "))
 
 ;;; @doc Live-highlight regexp constructs (groups, alternation, escapes,
 ;;; char classes) in the minibuffer while typing a regexp for

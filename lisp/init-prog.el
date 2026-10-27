@@ -149,7 +149,6 @@ names (`sh-mode' to `bash-ts-mode') are missed; those are remapped in
   :ensure nil
   :defer t
   :commands combobulate-mode
-  :custom (combobulate-key-prefix "C-c o")
   :bind (:map combobulate-key-map
               ("M-P" . combobulate-drag-up)
               ("M-N" . combobulate-drag-down)))
@@ -301,7 +300,6 @@ Both speak stdio by default."
   (eglot-autoshutdown t)
   (eglot-extend-to-xref t)
   (eglot-confirm-server-edits nil)
-  (eglot-send-changes-idle-time 0.5)
   (eglot-events-buffer-config '(:size 0 :format short))
   (eglot-report-progress nil)
   :bind
@@ -485,7 +483,6 @@ existing language server, adding code-quality and security diagnostics."
   :ensure nil
   :hook (prog-mode . flymake-mode)
   :custom
-  (flymake-fringe-indicator-position 'left-fringe)
   (flymake-suppress-zero-counters t)
   ;; `short' needs Flymake 1.3.6+.
   (flymake-show-diagnostics-at-end-of-line 'short)

@@ -104,7 +104,6 @@ text of a list item shifts as you type.  `visual-line-mode' stays on."
   :custom
   (markdown-fontify-code-blocks-natively t)
   (markdown-header-scaling t)
-  (markdown-nested-imenu-heading-index t)
   :hook (markdown-mode . my-writing--disable-visual-wrap-prefix)
   :bind (:map markdown-mode-map
               ("C-c m h" . markdown-toggle-markup-hiding)

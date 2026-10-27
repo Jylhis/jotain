@@ -185,8 +185,6 @@ this is just `org-babel-execute-buffer'."
   :ensure nil
   :after org
   :custom
-  (org-src-fontify-natively t)
-  (org-src-tab-acts-natively t)
   (org-src-preserve-indentation t)
   (org-edit-src-content-indentation 0)
   (org-src-window-setup 'current-window)
@@ -217,7 +215,6 @@ this is just `org-babel-execute-buffer'."
   :custom
   (org-clock-persist t)
   (org-clock-idle-time 15)
-  (org-clock-into-drawer t)
   :config
   (org-clock-persistence-insinuate))
 

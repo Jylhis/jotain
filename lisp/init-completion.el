@@ -221,9 +221,6 @@ per buffer."
   (vertico-posframe-poshandler 'posframe-poshandler-frame-bottom-center)
   ;; Inner padding so candidate text does not sit against the border.
   (vertico-posframe-parameters '((left-fringe . 8) (right-fringe . 8)))
-  ;; On a tty stay in the minibuffer; `vertico-buffer-mode' would take
-  ;; over a whole window for every M-x.
-  (vertico-posframe-fallback-mode 'ignore)
   :custom-face
   ;; Inherit corfu's faces so both floating panels match; posframe reads
   ;; faces at display time, so a theme toggle restyles both.
@@ -435,7 +432,6 @@ once.  Major-mode hooks run first; `corfu-mode-hook' would be too late."
     (add-hook hook #'my-completion--enable-auto))
   :custom
   (corfu-cycle t)
-  (corfu-auto nil)
   (corfu-auto-prefix my-completion-auto-prefix)
   (corfu-auto-delay my-completion-auto-delay)
   ;; corfu's default `insert' commits the selected candidate when you
@@ -493,7 +489,6 @@ once.  Major-mode hooks run first; `corfu-mode-hook' would be too late."
   :defer t
   :functions (cape-dabbrev cape-file cape-keyword cape-elisp-symbol)
   :custom
-  (cape-file-directory-must-exist t)
   (cape-file-prefix '("~" "/" "./" "../"))
   :init
   (when my-completion-fallbacks

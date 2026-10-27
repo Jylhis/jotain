@@ -158,9 +158,6 @@ even though no graphical frame exists at daemon start."
   :hook (after-init . doom-modeline-mode)
   :custom
   (doom-modeline-height 28)
-  (doom-modeline-bar-width 4)
-  (doom-modeline-lsp t)
-  (doom-modeline-github nil)
   (doom-modeline-buffer-encoding nil)
   :config
   (my-ui--apply-modeline-icons)
@@ -272,9 +269,8 @@ availability on the right display."
 
 ;;;; Built-in display tweaks
 
-;; Don't draw cursors or highlight selections in non-focused windows.
+;; Don't draw cursors in non-focused windows.
 (setopt cursor-in-non-selected-windows nil)
-(setopt highlight-nonselected-windows nil)
 
 (defcustom my-line-numbers-in-prog t
   "When non-nil, show line numbers in `prog-mode' and `conf-mode' buffers."
@@ -324,7 +320,6 @@ availability on the right display."
   :hook (after-init . show-paren-mode)
   :custom
   (show-paren-delay 0.1)
-  (show-paren-highlight-openparen t)
   (show-paren-when-point-inside-paren t)
   (show-paren-when-point-in-periphery t))
 
