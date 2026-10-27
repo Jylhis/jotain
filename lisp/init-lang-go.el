@@ -44,17 +44,9 @@
          ("/go\\.mod\\'"  . go-mod-ts-mode))
   :custom
   ;; 8 matches the default `tab-width', so one level is one gofmt tab.
-  ;; Emacs 31 renames this `go-ts-indent-offset' (obsolete alias kept);
-  ;; switch when the floor moves to 31.
-  (go-ts-mode-indent-offset 8))
+  (go-ts-indent-offset 8))
 
-;; go.work: `go-work-ts-mode' on Emacs 31, else `go-mod-ts-mode' (the
-;; gomod grammar handles the near-identical syntax).
-(add-to-list 'auto-mode-alist
-             (cons "/go\\.work\\'"
-                   (if (fboundp 'go-work-ts-mode)
-                       'go-work-ts-mode
-                     'go-mod-ts-mode)))
+(add-to-list 'auto-mode-alist '("/go\\.work\\'" . go-work-ts-mode))
 
 ;; go-tag/gotest pull in classic `go-mode' as a dependency, and its
 ;; autoloads add global state that breaks unrelated buffers:
@@ -74,11 +66,10 @@
 
 ;; If anything else still selects a classic Go mode (e.g. a stale
 ;; `package-quickstart' autoload), remap it to the tree-sitter mode.
-(when (fboundp 'go-ts-mode)
-  (dolist (remap '((go-mode         . go-ts-mode)
-                   (go-dot-mod-mode . go-mod-ts-mode)
-                   (go-mod-mode     . go-mod-ts-mode)))
-    (add-to-list 'major-mode-remap-alist remap)))
+(dolist (remap '((go-mode         . go-ts-mode)
+                 (go-dot-mod-mode . go-mod-ts-mode)
+                 (go-mod-mode     . go-mod-ts-mode)))
+  (add-to-list 'major-mode-remap-alist remap))
 
 ;;; @doc Struct-tag editing (`json:"..."`, `db:"..."`, ...) via the
 ;;; project's `gomodifytags`. Bound under the mode-local `C-c C-t` Go

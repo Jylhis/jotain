@@ -24,9 +24,8 @@
   :hook
   (prog-mode . display-fill-column-indicator-mode)
   :config
-  ;; Emacs 31+: no warning face past the column.
-  (when (boundp 'display-fill-column-indicator-warning)
-    (setopt display-fill-column-indicator-warning nil)))
+  ;; No warning face past the column.
+  (setopt display-fill-column-indicator-warning nil))
 
 ;;;; Tree-sitter
 
@@ -321,16 +320,13 @@ Both speak stdio by default."
                 #'eldoc-documentation-compose-eagerly))
   (add-hook 'eglot-managed-mode-hook #'my-prog--eldoc-compose-eagerly)
 
-  ;; Emacs 31+: render hover/signature docs with the tree-sitter markdown
-  ;; viewer.  markdown-ts-mode.el has no autoloads, so require it.
-  (when (and (boundp 'eglot-documentation-renderer)
-             (require 'markdown-ts-mode nil t)
-             (fboundp 'markdown-ts-view-mode))
-    (setopt eglot-documentation-renderer 'markdown-ts-view-mode))
+  ;; Render hover/signature docs with the tree-sitter markdown viewer.
+  ;; markdown-ts-mode.el has no autoloads, so require it.
+  (require 'markdown-ts-mode)
+  (setopt eglot-documentation-renderer 'markdown-ts-view-mode)
 
-  ;; Emacs 31+: hide the inline "code action available" indicators.
-  (when (boundp 'eglot-code-action-indications)
-    (setopt eglot-code-action-indications nil))
+  ;; Hide the inline "code action available" indicators.
+  (setopt eglot-code-action-indications nil)
 
   (defun my-prog--maybe-enable-inlay-hints ()
     "Enable inlay hints in the major modes that opt in to them."
@@ -523,10 +519,9 @@ existing language server, adding code-quality and security diagnostics."
   ;; Use the doc buffer instead of the echo area when it is visible.
   (eldoc-echo-area-prefer-doc-buffer t)
   :config
-  ;; Emacs 31+: also show `help-at-pt' text (flymake diagnostics, button
-  ;; help) through eldoc.
-  (when (boundp 'eldoc-help-at-pt)
-    (setopt eldoc-help-at-pt t)))
+  ;; Also show `help-at-pt' text (flymake diagnostics, button help)
+  ;; through eldoc.
+  (setopt eldoc-help-at-pt t))
 
 ;;;; xref
 
@@ -537,13 +532,11 @@ existing language server, adding code-quality and security diagnostics."
   :custom
   (xref-search-program 'ripgrep)
   :config
-  ;; Emacs 31+: mouse-1 on an identifier jumps to its definition.
-  (when (fboundp 'global-xref-mouse-mode)
-    (global-xref-mouse-mode 1))
+  ;; mouse-1 on an identifier jumps to its definition.
+  (global-xref-mouse-mode 1)
   ;; Regenerates a project TAGS table on demand, a definition source for
   ;; buffers without an LSP server.
-  (when (fboundp 'etags-regen-mode)
-    (etags-regen-mode 1)))
+  (etags-regen-mode 1))
 
 ;;;; imenu
 

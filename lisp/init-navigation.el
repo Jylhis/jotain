@@ -50,9 +50,8 @@
   :bind (:map dired-mode-map
               ("M-s R" . dired-do-replace-regexp-as-diff))
   :config
-  ;; Emacs 31+: `dired-hide-details-mode' also hides the absolute path.
-  (when (boundp 'dired-hide-details-hide-absolute-location)
-    (setopt dired-hide-details-hide-absolute-location t))
+  ;; `dired-hide-details-mode' also hides the absolute path.
+  (setopt dired-hide-details-hide-absolute-location t)
   ;; `!'/`&' suggest the OS default handler for documents, images and
   ;; media.
   (when-let* ((opener (cond

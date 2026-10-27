@@ -21,29 +21,21 @@
   (vc-follow-symlinks t)
   (vc-handled-backends '(Git JJ))
   :config
-  ;; Emacs 31+ options, guarded for Emacs 30.  Rewriting pushed history is
-  ;; normal in jj and force-push workflows; a `vc-dir' revert hides
-  ;; up-to-date entries.
-  (when (boundp 'vc-allow-rewriting-published-history)
-    (setopt vc-allow-rewriting-published-history t))
-  (when (boundp 'vc-dir-auto-hide-up-to-date)
-    (setopt vc-dir-auto-hide-up-to-date 'revert))
+  ;; Rewriting pushed history is normal in jj and force-push workflows; a
+  ;; `vc-dir' revert hides up-to-date entries.
+  (setopt vc-allow-rewriting-published-history t)
+  (setopt vc-dir-auto-hide-up-to-date 'revert)
   ;; Run `C-x v' from non-VC buffers (backend from `default-directory');
   ;; save buffers before a `vc-dir' revert; view old revisions without
   ;; temp files on disk; and use the `C-x v I'/`C-x v O' incoming/outgoing
   ;; prefixes.
-  (when (boundp 'vc-deduce-backend-nonvc-modes)
-    (setopt vc-deduce-backend-nonvc-modes t))
-  (when (boundp 'vc-dir-save-some-buffers-on-revert)
-    (setopt vc-dir-save-some-buffers-on-revert t))
-  (when (boundp 'vc-find-revision-no-save)
-    (setopt vc-find-revision-no-save t))
-  (when (boundp 'vc-use-incoming-outgoing-prefixes)
-    (setopt vc-use-incoming-outgoing-prefixes t))
+  (setopt vc-deduce-backend-nonvc-modes t)
+  (setopt vc-dir-save-some-buffers-on-revert t)
+  (setopt vc-find-revision-no-save t)
+  (setopt vc-use-incoming-outgoing-prefixes t)
   ;; Largely covered by `global-auto-revert-mode' (init-core.el); adopted
   ;; from the newcomers-presets theme.
-  (when (fboundp 'vc-auto-revert-mode)
-    (vc-auto-revert-mode 1)))
+  (vc-auto-revert-mode 1))
 
 ;;; @doc C-x G jumps to a file git status reports as changed (modified,
 ;;; added, renamed, copied, unmerged, type-changed or untracked).

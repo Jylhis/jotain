@@ -29,11 +29,11 @@ win where they overlap.
    obsolete APIs).
 6. LSP (`eglot-ensure` hooks) and formatters (apheleia) are centralised in
    `lisp/init-prog.el` — don't scatter them into language modules.
-7. Two Emacs versions at once: the default build is **31.1** (so its
-   obsoletions, e.g. `if-let`/`when-let` or unquoted font-lock face
-   variables, are compile warnings and fail CI), and the floor is **30.1**
-   (so 31-only APIs like `incf`, `setopt-local`, `cond*` need a
-   `static-if`/version gate). See `references/emacs-30-31-changes.md`.
+7. The default build and the floor are both **31.1**: its obsoletions,
+   e.g. `if-let`/`when-let` or unquoted font-lock face variables, are
+   compile warnings and fail CI, and 31 APIs like `incf`, `setopt-local`
+   and `cond*` need no version gate. Do not add `boundp`/`fboundp` guards
+   for symbols that 31.1 has. See `references/emacs-30-31-changes.md`.
 
 ## Reference files
 
@@ -47,7 +47,7 @@ Read the one(s) relevant to the task:
 | `references/customization.md` | `defcustom` `:type`/`:set`/`:initialize`, why `setopt` matters, buffer-local options, themes vs. custom |
 | `references/modern-libraries.md` | `pcase`/`pcase-let`, `seq`, `map`, `cl-lib`, `rx`, threading macros, `named-let`, generalized variables (`setf`), string utilities |
 | `references/debugging-and-testing.md` | edebug, `debug-on-error`, `M-x profiler`, benchmarking, ERT patterns (fixtures, `should` forms, `ert-deftest` naming, running via `just test`) |
-| `references/emacs-30-31-changes.md` | Emacs 30 (floor) / 31.1 (default) NEWS filtered for config authors — new APIs to adopt, obsoletions to avoid, startup-order changes, version-gating |
+| `references/emacs-30-31-changes.md` | Emacs 30 / 31.1 (floor and default) NEWS filtered for config authors: new APIs to adopt, obsoletions to avoid, startup-order changes, version-gating |
 
 ## Workflow in this repo
 

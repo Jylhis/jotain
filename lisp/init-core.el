@@ -182,14 +182,12 @@ immediately for writes."
 
 ;;;; package.el conveniences (newcomers-presets theme)
 
-;; Emacs 31, guarded for 30: `package-autosuggest-mode' offers to install
+;; `package-autosuggest-mode' offers to install
 ;; a mode for unknown file types; `package-menu-use-current-if-no-marks'
 ;; nil makes package-menu actions apply only to marked entries, never to
 ;; the line at point. `package' is already loaded (init.el).
-(when (boundp 'package-menu-use-current-if-no-marks)
-  (setopt package-menu-use-current-if-no-marks nil))
-(when (fboundp 'package-autosuggest-mode)
-  (package-autosuggest-mode 1))
+(setopt package-menu-use-current-if-no-marks nil)
+(package-autosuggest-mode 1)
 
 ;;; @doc Repeat-mode lets you press the trailing key alone after a prefix
 ;;; command (e.g. C-x o o o instead of C-x o C-x o). Built-in, enabled
@@ -215,9 +213,8 @@ immediately for writes."
   :ensure nil
   :bind ([remap list-buffers] . ibuffer)
   :config
-  ;; Emacs 31+: human-readable Size column (KB/MB).
-  (when (boundp 'ibuffer-human-readable-size)
-    (setopt ibuffer-human-readable-size t)))
+  ;; Human-readable Size column (KB/MB).
+  (setopt ibuffer-human-readable-size t))
 
 ;;; @doc Tame `find-file-at-point` so an unknown hostname doesn't block
 ;;; the editor on a DNS lookup — reject means "treat as not a host".
@@ -242,9 +239,8 @@ immediately for writes."
      ("Asia/Bangkok"    "Bangkok")
      ("Asia/Shanghai"   "Shanghai")))
   :config
-  ;; Emacs 31+: list zones in chronological order.
-  (when (boundp 'world-clock-sort-order)
-    (setopt world-clock-sort-order "%FT%T")))
+  ;; List zones in chronological order.
+  (setopt world-clock-sort-order "%FT%T"))
 
 (defun my-display-ansi-colors ()
   "Render ANSI escape sequences in the current buffer."

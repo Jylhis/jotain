@@ -68,7 +68,9 @@
   #   "git"       — bleeding-edge master from git.savannah.gnu.org
   #   "igc"       — feature/igc3 incremental garbage collector branch
   #   "mainline"  — nixpkgs default emacs attr (Hydra-cached; the
-  #                 cache-parity canary, not a shipped build)
+  #                 cache-parity canary, not a shipped build). Emacs 30
+  #                 is below the config's 31.1 floor, so the Elisp
+  #                 config does not support it.
   variant ? "unstable",
 
   # Source overrides — pin a custom commit instead of the overlay pin.

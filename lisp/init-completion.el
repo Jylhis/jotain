@@ -122,9 +122,7 @@ candidate's docstring or source location.  Read at load time."
 
 (defcustom my-completion-inline-preview t
   "When non-nil, show inline \"ghost text\" of the top candidate as you type.
-Enables `global-completion-preview-mode' (Emacs 31); on Emacs 30, which
-lacks it, `completion-preview-mode' goes on the
-`my-completion-auto-modes' hooks instead.
+Enables `global-completion-preview-mode'.
 
 TAB accepts the preview unless `my-completion-free-tab' is set;
 `M-RET' accepts it too, and `M-i' completes the common prefix.  RET stays
@@ -136,7 +134,7 @@ per buffer."
 ;;;; Minibuffer defaults
 
 ;;; @doc Built-in minibuffer customisation: detailed annotations and
-;;; historical sorting (Emacs 30) so frequent commands surface first.
+;;; historical sorting so frequent commands surface first.
 (use-package minibuffer
   :ensure nil
   :custom
@@ -148,10 +146,7 @@ per buffer."
   (minibuffer-visible-completions t)
   (completions-group t)
   (completion-auto-select 'second-tab)
-  :config
-  ;; `completion-eager-update' is Emacs 31; guarded for the 30.1 floor.
-  (when (boundp 'completion-eager-update)
-    (setopt completion-eager-update t)))
+  (completion-eager-update t))
 
 ;;; @doc Fuzzy, space-separated, order-independent completion. Pairs with
 ;;; partial-completion (path globbing) so `/u/s/a` matches
@@ -519,11 +514,9 @@ where the built-in returns nil: comments and docstrings."
   (add-hook 'emacs-lisp-mode-hook #'my-cape-setup-elisp)
   (add-hook 'lisp-interaction-mode-hook #'my-cape-setup-elisp))
 
-;;; @doc Inline completion preview (built-in, Emacs 30+): greys out the
-;;; most likely completion after point, drawn from the same capfs as the
-;;; corfu popup. Enabled in every buffer via
-;;; `global-completion-preview-mode' on Emacs 31; on Emacs 30 only in
-;;; `my-completion-auto-modes'. Gated on
+;;; @doc Inline completion preview (built-in): greys out the most likely
+;;; completion after point, drawn from the same capfs as the corfu popup.
+;;; Enabled in every buffer via `global-completion-preview-mode'. Gated on
 ;;; `my-completion-inline-preview'. TAB (unless
 ;;; `my-completion-free-tab') and `M-RET' accept the preview, `M-i'
 ;;; its common prefix; RET stays a newline. Suppressed in comments and
@@ -532,9 +525,7 @@ where the built-in returns nil: comments and docstrings."
   :ensure nil
   :when my-completion-inline-preview
   :defer t
-  :functions (completion-preview-insert
-              completion-preview-mode
-              global-completion-preview-mode)
+  :functions (completion-preview-insert global-completion-preview-mode)
   :preface
   ;; Neither library is loaded at byte-compile time.
   (defvar completion-preview-active-mode-map)
@@ -543,16 +534,11 @@ where the built-in returns nil: comments and docstrings."
   (defvar corfu-sort-function)
   (defun my-completion--preview-inhibit-in-comment ()
     "Return non-nil inside a comment or string.
-Added to `completion-preview-inhibit-functions' (Emacs 31) so the ghost
+Added to `completion-preview-inhibit-functions' so the ghost
 text does not appear where symbol completion is meaningless."
     (nth 8 (syntax-ppss)))
   :init
-  ;; Require first so the `fboundp' probe can see the Emacs 31 global mode.
-  (require 'completion-preview)
-  (if (fboundp 'global-completion-preview-mode)
-      (global-completion-preview-mode 1)
-    (dolist (hook my-completion-auto-modes)
-      (add-hook hook #'completion-preview-mode)))
+  (global-completion-preview-mode 1)
   :config
   ;; Match the popup's delay so one keystroke does not fire two capf
   ;; passes at different times (costly with an LSP capf).
@@ -567,15 +553,12 @@ text does not appear where symbol completion is meaningless."
   ;; Accept without TAB or RET.
   (keymap-set completion-preview-active-mode-map "M-RET"
               #'completion-preview-insert)
-  ;; Match corfu's top row.  `completion-preview-sort-function' is a user
-  ;; option only in Emacs 31.
-  (when (and (get 'completion-preview-sort-function 'custom-type)
-             (boundp 'corfu-sort-function))
+  ;; Match corfu's top row (when corfu has loaded).
+  (when (boundp 'corfu-sort-function)
     (setopt completion-preview-sort-function corfu-sort-function))
-  ;; Suppress in comments/strings (Emacs 31 hook; absent on 30).
-  (when (boundp 'completion-preview-inhibit-functions)
-    (add-hook 'completion-preview-inhibit-functions
-              #'my-completion--preview-inhibit-in-comment)))
+  ;; Suppress in comments/strings.
+  (add-hook 'completion-preview-inhibit-functions
+            #'my-completion--preview-inhibit-in-comment))
 
 (provide 'init-completion)
 ;;; init-completion.el ends here

@@ -132,21 +132,18 @@ Region active → deactivate it.  Otherwise call regular
 ;; (`other-window', `next-buffer', `undo', window resizing) ship their
 ;; own repeat maps.  See the "Ergonomics" chapter of the Info manual.
 
-;; Emacs 31+: transpose/rotate/flip the whole window tree.  Emacs binds
+;; Transpose/rotate/flip the whole window tree.  Emacs binds
 ;; these under `C-x w' with arrow keys; this adds single-letter keys
 ;; under `C-x W' with a repeat map, so `C-x W r r r' keeps rotating.
-;; The command symbols are quoted, not `#'', so byte-compiling on
-;; Emacs 30 sees data rather than unknown functions.
-(when (fboundp 'window-layout-transpose)
-  (defvar-keymap my-window-layout-repeat-map
-    :doc "Repeat map for `window-layout-*' frame transforms."
-    :repeat t
-    "t" 'window-layout-transpose
-    "r" 'window-layout-rotate-clockwise
-    "R" 'window-layout-rotate-anticlockwise
-    "h" 'window-layout-flip-leftright
-    "v" 'window-layout-flip-topdown)
-  (keymap-global-set "C-x W" my-window-layout-repeat-map))
+(defvar-keymap my-window-layout-repeat-map
+  :doc "Repeat map for `window-layout-*' frame transforms."
+  :repeat t
+  "t" #'window-layout-transpose
+  "r" #'window-layout-rotate-clockwise
+  "R" #'window-layout-rotate-anticlockwise
+  "h" #'window-layout-flip-leftright
+  "v" #'window-layout-flip-topdown)
+(keymap-global-set "C-x W" my-window-layout-repeat-map)
 
 (provide 'init-keys)
 ;;; init-keys.el ends here

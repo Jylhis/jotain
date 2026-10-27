@@ -130,10 +130,9 @@ even though no graphical frame exists at daemon start."
     (advice-add 'doom-modeline--in-git-worktree-p :override #'ignore)))
 
 ;; doom-modeline hides minor-mode lighters by default.  For the stock
-;; mode line, Emacs 31's `mode-line-collapse-minor-modes' collapses them
-;; behind one indicator.
-(when (boundp 'mode-line-collapse-minor-modes)
-  (setopt mode-line-collapse-minor-modes t))
+;; mode line, `mode-line-collapse-minor-modes' collapses them behind one
+;; indicator.
+(setopt mode-line-collapse-minor-modes t)
 
 ;;;; Fonts
 

@@ -54,46 +54,35 @@
 ;;;; CUDA
 
 ;; `cuda-ts-mode' derives from `c-ts-base-mode' and reuses its font-lock
-;; and indent builders, so load the library.  `treesit-language-remap-alist'
-;; does not exist on Emacs 30; declare it for the byte-compiler.
+;; and indent builders, so load the library.
 (require 'c-ts-mode)
-(defvar treesit-language-remap-alist)
 
-;; CUDA has no upstream tree-sitter mode (Emacs bug#72388).  On Emacs 31
-;; with the `cuda' grammar (shipped with the distribution),
+;; CUDA has no upstream tree-sitter mode (Emacs bug#72388).  With the
+;; `cuda' grammar (shipped with the distribution),
 ;; `treesit-language-remap-alist' resolves the `cpp'/`c' grammars to
 ;; `cuda', so c-ts-mode's cpp-tagged rules parse real CUDA while staying
 ;; labelled `cpp'.  Kernel launches parse as `call_expression'; the extra
-;; rules only colour `<<<'/`>>>' and the `__device__'-family keywords.  On
-;; Emacs 30 or without the grammar it behaves as plain C++.
+;; rules only colour `<<<'/`>>>' and the `__device__'-family keywords.
+;; Without the grammar it behaves as plain C++.
 (define-derived-mode cuda-ts-mode c-ts-base-mode "CUDA"
   "Major mode for editing CUDA, powered by tree-sitter.
 
-On Emacs 31 with the `cuda' grammar available this parses with the CUDA
+With the `cuda' grammar available this parses with the CUDA
 grammar (a superset of C++); otherwise it falls back to the C++ grammar,
 where the `<<<...>>>' launch syntax parses as an error node."
   :group 'c
   :after-hook (c-ts-mode-set-modeline)
   (when (treesit-ready-p 'cpp t)
-    (let ((cuda-p (and (boundp 'treesit-language-remap-alist)
-                       (treesit-ready-p 'cuda t))))
+    (let ((cuda-p (treesit-ready-p 'cuda t)))
       ;; Must be set before the parser is created or any query compiled.
       (when cuda-p
         (setq-local treesit-language-remap-alist '((cpp . cuda) (c . cuda))))
       (treesit-parser-create 'cpp)
       (setq-local syntax-propertize-function #'c-ts-mode--syntax-propertize)
-      ;; The indent-rules builder is `c-ts-mode--get-indent-style' (MODE)
-      ;; on Emacs 30 and `c-ts-mode--simple-indent-rules' (MODE STYLE) on
-      ;; 31.  Calling via a quoted symbol keeps byte-compilation clean on
-      ;; the version lacking the other.
       (setq-local treesit-simple-indent-rules
-                  (cond
-                   ((functionp c-ts-mode-indent-style)
-                    (funcall c-ts-mode-indent-style))
-                   ((fboundp 'c-ts-mode--simple-indent-rules)
-                    (funcall 'c-ts-mode--simple-indent-rules 'cpp c-ts-mode-indent-style))
-                   ((fboundp 'c-ts-mode--get-indent-style)
-                    (funcall 'c-ts-mode--get-indent-style 'cpp))))
+                  (if (functionp c-ts-mode-indent-style)
+                      (funcall c-ts-mode-indent-style)
+                    (c-ts-mode--simple-indent-rules 'cpp c-ts-mode-indent-style)))
       (setq-local treesit-font-lock-settings
                   (append
                    (c-ts-mode--font-lock-settings 'cpp)

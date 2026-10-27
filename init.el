@@ -2,7 +2,7 @@
 
 ;; Author: Markus Jylhänkangas <markus@jylhis.com>
 ;; URL: https://github.com/Jylhis/jotain
-;; Package-Requires: ((emacs "30.1"))
+;; Package-Requires: ((emacs "31.1"))
 
 ;;; Commentary:
 

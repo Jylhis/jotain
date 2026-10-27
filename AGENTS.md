@@ -5,10 +5,12 @@ human contributor guide. This file is the single source of truth for both.
 
 ## What this is
 
-This is a GNU Emacs 31 configuration (floor: Emacs 30.1, per `init.el`'s
+This is a GNU Emacs 31 configuration (floor: Emacs 31.1, per `init.el`'s
 `Package-Requires`) plus the Nix expressions that build Emacs itself. The
 default build is emacs-overlay's `unstable` variant (the newest Emacs
-release or pretest tag, currently 31.1); nixpkgs' Emacs 30 is the `mainline` variant. The dev shell has
+release or pretest tag, currently 31.1). nixpkgs' Emacs 30 is the `mainline`
+variant: it stays as the cache-parity canary, but the Elisp config no longer
+supports it. The dev shell has
 tooling only, **no `emacs`**: build and launch with `just run-built`.
 
 `journal/` is a set of working notes and may be stale; when it

@@ -254,12 +254,8 @@ TAB and `<tab>' run `corfu-insert', which also runs the candidate's
               #'completion-preview-insert)))
 
 (ert-deftest completion-test-inline-preview-is-global ()
-  "Inline preview is enabled globally where Emacs supports it.
-Emacs 31 has `global-completion-preview-mode'; on Emacs 30 the config
-falls back to the `my-completion-auto-modes' hooks."
-  (if (fboundp 'global-completion-preview-mode)
-      (should (bound-and-true-p global-completion-preview-mode))
-    (should (memq #'completion-preview-mode prog-mode-hook))))
+  "Inline preview is enabled globally via `global-completion-preview-mode'."
+  (should (bound-and-true-p global-completion-preview-mode)))
 
 (ert-deftest completion-test-one-key-opens-and-accepts ()
   "`C-M-i' resolves to `completion-at-point', which `corfu-map' remaps.
