@@ -7,7 +7,7 @@
 #   * Linux terminal:  noGui.
 #
 # Called standalone (`nix-build emacs.nix`), the default `pkgs` applies
-# emacs-overlay pinned from flake.lock.
+# emacs-overlay pinned by nix/tamal (nix/inputs.nix).
 #
 # Usage:
 #   nix-build emacs.nix                                            # unstable variant (Emacs 31.1);
@@ -25,7 +25,7 @@
 # back:
 #   nix-build emacs.nix --arg variant '"git"' --argstr rev "abc123..." --argstr hash "sha256-..."
 #
-# nixpkgs is the flake.lock pin; pass --arg pkgs '<nixpkgs>' to override.
+# nixpkgs is the nix/tamal pin (nix/inputs.nix); pass --arg pkgs '<nixpkgs>' to override.
 #
 # Based on:
 #   - NixOS/nixpkgs       pkgs/applications/editors/emacs/ (make-emacs.nix)
@@ -33,33 +33,13 @@
 {
   system ? builtins.currentSystem,
   pkgs ?
-    import
-      (
-        let
-          lock = builtins.fromJSON (builtins.readFile ./flake.lock);
-          nixpkgsNode = lock.nodes.root.inputs.nixpkgs;
-          n = lock.nodes.${nixpkgsNode}.locked;
-        in
-        fetchTarball {
-          url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz";
-          sha256 = n.narHash;
-        }
-      )
-      {
-        inherit system;
-        overlays = [
-          (import (
-            let
-              lock = builtins.fromJSON (builtins.readFile ./flake.lock);
-              n = lock.nodes.emacs-overlay.locked;
-            in
-            fetchTarball {
-              url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz";
-              sha256 = n.narHash;
-            }
-          ))
-        ];
-      },
+    let
+      inputs = import ../../nix/inputs.nix { };
+    in
+    import inputs.nixpkgs {
+      inherit system;
+      overlays = [ inputs.emacs-overlay.overlays.default ];
+    },
 
   # Source variant
   #   "unstable"  — the newest Emacs release or pretest tag (currently
