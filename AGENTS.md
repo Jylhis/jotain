@@ -120,8 +120,6 @@ Checks and maintenance:
 - `just update-pins [names]`: bump the hand-pinned upstreams (see Pinning).
 - `just serve` in `usr.sbin/jotain-site`: build and serve the site
   at `http://localhost:8080/jotain/`.
-- `just ds-sync` (in `usr.sbin/jotain-site`): re-vendor `public/ds` from
-  `nix/design-pin.nix` (the fix for a failing `jotain-site-ds-in-sync`).
 - `just clean`: remove `*.elc`, autosaves, eln-cache, `result`.
   `just clean-all` also wipes `elpa/`, `var/`, `.dev-home/` (next startup is
   slow).
@@ -350,9 +348,9 @@ and `nix-community`.
 `nix/extra-packages.nix` builds the archive-absent packages
 (`jylhis-emacs-themes`, `claude-code-ide`, `combobulate`, `majutsu`,
 `tagref`, …) with `trivialBuild`, plus overrides such as built-in shims and
-an Elisp-only `ghostel`. `jylhis-emacs-themes` takes its revision from
-`nix/design-pin.nix`, the single pin for github.com/Jylhis/design, shared
-with the CSS vendored in `usr.sbin/jotain-site/public/ds` so editor and site never
+an Elisp-only `ghostel`. `jylhis-emacs-themes` is built from the in-tree
+design system (`lib/design/nix/emacs.nix`), and the jotain site copies its
+CSS from the same tree (`nix/ds-assets.nix`), so editor and site never
 diverge. `nix/devenv-emacs-lisp.nix` is no longer imported by the shell; it
 remains only as an options-doc source.
 
@@ -405,14 +403,14 @@ PRs). Drift fails the `locks-in-sync` check and PR CI. `default.nix`,
 #### Hand-pinned upstreams (not in `flake.lock`)
 
 Not bumped by `just update` or Dependabot: the GitHub-built Emacs packages
-(`nix/extra-packages.nix`), the ECA server (`nix/eca-server.nix`), the
-vendored npm language servers (`nix/likec4-lsp.nix`, `nix/ellsp.nix`), and
-the design pin (`nix/design-pin.nix`). `just update-pins` bumps them via
+(`nix/extra-packages.nix`), the ECA server (`nix/eca-server.nix`) and the
+vendored npm language servers (`nix/likec4-lsp.nix`, `nix/ellsp.nix`).
+`just update-pins` bumps them via
 `scripts/update-pins.sh`: [nix-update](https://github.com/Mic92/nix-update)
 for the plain `fetchFromGitHub` packages (tagged repos follow the newest
 tag, untagged ones the branch HEAD), and bespoke steps for eca (four-platform
-hash table), the two npm wrappers (regenerated `package-lock.json`), and the
-design pin (which also re-runs `just ds-sync`). Scope it with pin names
+hash table) and the two npm wrappers (regenerated `package-lock.json`).
+Scope it with pin names
 (`just update-pins combobulate eca`); `--list` prints them. Two pins are
 manual by design: `ghostel` (a temporary Elisp-only rebuild of
 emacs-overlay's epkg; revert it, don't bump)
@@ -501,6 +499,5 @@ screenshots only for UI-facing changes.
 - Generated files: edit the source, then regenerate.
   `docs/configuration/package-reference.mdx` comes from `;;; @doc` blocks
   (`just docs-refresh-packages`); `docs/reference/language-support.mdx` from
-  `etc/lang-eval/my-lang-registry.el` (`just docs-refresh-lang-matrix`);
-  `usr.sbin/jotain-site/public/ds` from `nix/design-pin.nix` (`just ds-sync`).
+  `etc/lang-eval/my-lang-registry.el` (`just docs-refresh-lang-matrix`).
 - Never commit generated state: `elpa/`, `var/`, `result*`, `*.elc`.

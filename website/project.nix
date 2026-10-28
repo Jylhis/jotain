@@ -9,7 +9,7 @@
   package = ./package.nix;
 
   checks = {
-    # The vendored public/ds equals the design revision pinned in etc/emacs.
+    # The vendored public/ds equals the in-tree design system's assets.
     ds-in-sync.hermetic = "sandbox";
     # The generated site without the heavy /help/api/ reference.
     build.hermetic = "sandbox";

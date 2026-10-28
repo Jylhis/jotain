@@ -75,44 +75,11 @@ in
     '';
   };
 
-  # Pinned in nix/design-pin.nix, shared with the site's vendored CSS.
-  # The generated jylhis-{light,dark} themes are not committed upstream, so
-  # the generator runs here; jylhis-themes.el is a committed source.
-  jylhis-emacs-themes =
-    let
-      pin = import ./design-pin.nix;
-      src = pkgs.fetchFromGitHub {
-        inherit (pin)
-          owner
-          repo
-          rev
-          sha256
-          ;
-      };
-      generated =
-        pkgs.runCommandLocal "jylhis-generated"
-          {
-            nativeBuildInputs = [ pkgs.bun ];
-          }
-          ''
-            cp -r ${src}/. "$TMP/src/"
-            chmod -R u+w "$TMP/src"
-            export HOME="$TMPDIR"
-            cd "$TMP/src"
-            bun scripts/generate.mjs --out "$out"
-          '';
-    in
-    efinal.trivialBuild {
-      pname = "jylhis-emacs-themes";
-      inherit (pin) version;
-      src = pkgs.symlinkJoin {
-        name = "jylhis-emacs-themes-src";
-        paths = [
-          "${generated}/platforms/emacs"
-          "${src}/platforms/emacs"
-        ];
-      };
-    };
+  # The Jylhis themes from the in-tree design system (lib/design), the same
+  # tokens every other target is generated from.
+  jylhis-emacs-themes = pkgs.callPackage ../../../lib/design/nix/emacs.nix {
+    inherit (efinal) trivialBuild;
+  };
 
   claude-code-ide = efinal.trivialBuild {
     pname = "claude-code-ide";

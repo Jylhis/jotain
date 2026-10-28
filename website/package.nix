@@ -11,10 +11,7 @@ let
   );
   mkSite = args: import ./site.nix ({ pkgs = emacsPkgs; } // args);
 
-  dsAssets = import ../../etc/emacs/nix/ds-assets.nix {
-    pkgs = emacsPkgs;
-    inherit (emacsPkgs) bun;
-  };
+  dsAssets = import ../../etc/emacs/nix/ds-assets.nix { pkgs = emacsPkgs; };
 
   ds-in-sync =
     pkgs.runCommandLocal "check-ds-in-sync"
@@ -25,8 +22,8 @@ let
       ''
         if ! diff -r "$dsAssets" "$vendoredDs"; then
           echo "" >&2
-          echo "public/ds is out of sync with the jylhis/design rev pinned in" >&2
-          echo "etc/emacs/nix/design-pin.nix. Re-vendor it with: just ds-sync" >&2
+          echo "public/ds is out of sync with the in-tree design system" >&2
+          echo "(lib/design). Re-vendor it with: just ds-sync" >&2
           exit 1
         fi
         touch $out

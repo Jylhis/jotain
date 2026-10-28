@@ -31,7 +31,6 @@ declare -A PINS=(
   [eca]="fn:update_eca"
   [likec4-lsp]="fn:update_likec4"
   [ellsp]="fn:update_ellsp"
-  [design]="fn:update_design"
 )
 
 log() { printf '\n# %s\n' "$*"; }
@@ -125,26 +124,6 @@ build_ellsp() {
     in pkgs.callPackage ./nix/ellsp.nix { emacs = f.packages.${builtins.currentSystem}.emacs; }'
 }
 
-# --- design: multi-consumer pin tracking a rewritten-history branch -------
-
-update_design() {
-  local file="nix/design-pin.nix" branch rev date prefix ver sha
-  branch="$(gh api repos/Jylhis/design --jq .default_branch)"
-  rev="$(gh api "repos/Jylhis/design/commits/${branch}" --jq .sha)"
-  date="$(gh api "repos/Jylhis/design/commits/${branch}" --jq '.commit.committer.date' | cut -dT -f1)"
-  sha="$(nix-prefetch-url --unpack "https://github.com/Jylhis/design/archive/${rev}.tar.gz")"
-  # Keep the semantic-version prefix from the current pin (it comes from the
-  # upstream CHANGELOG, which this script cannot read); refresh only the date.
-  prefix="$(sed -n 's/.*version = "\([0-9.]*\)-unstable.*/\1/p' "$file")"
-  ver="${prefix:-0}-unstable-${date}"
-  log "design -> ${rev} (${ver})"
-  perl -pi -e "s/(rev = \")[^\"]*(\")/\${1}${rev}\${2}/;
-               s/(sha256 = \")[^\"]*(\")/\${1}${sha}\${2}/;
-               s/(version = \")[^\"]*(\")/\${1}${ver}\${2}/" "$file"
-  log "re-vendoring usr.sbin/jotain-site/public/ds (just ds-sync)"
-  just --justfile ../../usr.sbin/jotain-site/justfile ds-sync
-}
-
 # --- dispatch -------------------------------------------------------------
 
 run_one() {
@@ -164,4 +143,4 @@ targets=("$@")
 [ "${#targets[@]}" -eq 0 ] && targets=("${!PINS[@]}")
 for t in "${targets[@]}"; do run_one "$t"; done
 
-log "done. Review the diff, then commit (design also touched website/public/ds)."
+log "done. Review the diff, then commit."
