@@ -285,6 +285,33 @@ falling back to the `likec4' CLI's `lsp' subcommand."
         '("likec4-lsp" "--stdio")
       '("likec4" "lsp" "--stdio")))
 
+  (defun my-prog--astro-tsdk ()
+    "TypeScript lib dir with the JS API for astro-ls, or nil.
+Prefers the project's node_modules, then the package of the `tsc' on
+PATH: an npm symlink (bin/tsc -> ../lib) or a Nix wrapper (bin/tsc
+beside lib/node_modules/typescript).  TypeScript 7 ships no
+lib/typescript.js, so each candidate is checked."
+    (let ((tsc (executable-find "tsc")))
+      (seq-find
+       (lambda (dir) (file-exists-p (expand-file-name "typescript.js" dir)))
+       (delq nil
+             (list (when-let* ((pr (project-current)))
+                     (expand-file-name "node_modules/typescript/lib"
+                                       (project-root pr)))
+                   (when tsc
+                     (expand-file-name "../lib" (file-name-directory
+                                                 (file-truename tsc))))
+                   (when tsc
+                     (expand-file-name "../lib/node_modules/typescript/lib"
+                                       (file-name-directory tsc))))))))
+
+  (defun my-prog--astro-server (&optional _interactive)
+    "Resolve the astro-ls contact, passing a usable TypeScript SDK.
+astro-ls needs `typescript.tsdk'; see `my-prog--astro-tsdk'."
+    `("astro-ls" "--stdio"
+      ,@(when-let* ((tsdk (my-prog--astro-tsdk)))
+          `(:initializationOptions (:typescript (:tsdk ,tsdk))))))
+
   (defun my-prog--robot-server (&optional _interactive)
     "Resolve the Robot Framework server contact against the buffer's PATH.
 Prefers `robotcode language-server', falling back to `robotframework_ls'.
@@ -388,7 +415,10 @@ Both speak stdio by default."
                (cons '(likec4-mode) #'my-prog--likec4-server))
   ;; Robot Framework (init-lang-devops).
   (add-to-list 'eglot-server-programs
-               (cons '(robot-mode) #'my-prog--robot-server)))
+               (cons '(robot-mode) #'my-prog--robot-server))
+  ;; Astro (init-lang-web).
+  (add-to-list 'eglot-server-programs
+               (cons '(astro-ts-mode) #'my-prog--astro-server)))
 
 ;;; @doc Wrap local stdio language servers in emacs-lsp-booster, which
 ;;; converts server JSON into Elisp bytecode and buffers I/O so a busy

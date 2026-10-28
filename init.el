@@ -66,7 +66,7 @@
 (require 'init-lang-rust)
 (require 'init-lang-python)
 (require 'init-lang-go)
-(require 'init-lang-web)       ; TS/TSX/CSS/HTML/JSON/web-mode
+(require 'init-lang-web)       ; TS/TSX/CSS/HTML/JSON/Astro/web-mode
 (require 'init-lang-devops)    ; Dockerfile, terraform, just, ansible
 (require 'init-lang-data)      ; yaml, csv, sql, jinja2, gnuplot
 (require 'init-lang-systems)   ; C/C++, CMake, Meson, Haskell, OCaml, Zig
