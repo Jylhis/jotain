@@ -159,6 +159,10 @@
      :sample "eval.html"           :mode mhtml-ts-mode :classic web-mode :grammar html
      :servers ("vscode-html-language-server" "html-languageserver") :override t)
 
+    (:id astro      :name "Astro"          :file "init-lang-web.el"
+     :sample "eval.astro"          :mode astro-ts-mode :grammar astro
+     :servers ("astro-ls") :override t)
+
     (:id csv        :name "CSV"            :file "init-lang-data.el"
      :sample "eval.csv"            :mode csv-mode :grammar nil)
 
