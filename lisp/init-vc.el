@@ -23,7 +23,11 @@
   ;; Rewriting pushed history is normal in jj and force-push workflows; a
   ;; `vc-dir' revert hides up-to-date entries.
   (setopt vc-allow-rewriting-published-history t)
-  (setopt vc-dir-auto-hide-up-to-date 'revert))
+  ;; `setq', not `setopt': Emacs 31.1 declares this option :type
+  ;; boolean although its docstring documents `revert', so `setopt'
+  ;; warns.  The option has no :set function.  Switch back to `setopt'
+  ;; once upstream widens the :type.
+  (setq vc-dir-auto-hide-up-to-date 'revert))
 
 ;;; @doc C-x G jumps to a file git status reports as changed (modified,
 ;;; added, renamed, copied, unmerged, type-changed or untracked).
