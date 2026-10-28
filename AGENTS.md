@@ -350,7 +350,8 @@ and `nix-community`.
 `tagref`, …) with `trivialBuild`, plus overrides such as built-in shims and
 an Elisp-only `ghostel`. `jylhis-emacs-themes` is built from the in-tree
 design system (`lib/design/nix/emacs.nix`), and the jotain site copies its
-CSS from the same tree (`nix/ds-assets.nix`), so editor and site never
+CSS from the same tree (`nix/ds-assets.nix`, a wrapper over
+`lib/design/nix/web-assets.nix`), so editor and site never
 diverge. `nix/devenv-emacs-lisp.nix` is no longer imported by the shell; it
 remains only as an options-doc source.
 
