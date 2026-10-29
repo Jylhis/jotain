@@ -99,7 +99,11 @@ let
 
   # Nerd Font glyphs for the icon stack. BlexMono is the first entry in
   # `my-font-preferences' (lisp/init-ui.el); keep the two in step.
-  iconFontPackages = [ pkgs.nerd-fonts.blex-mono ];
+  # Geist is the variable-pitch (body) face of the design system.
+  iconFontPackages = [
+    pkgs.nerd-fonts.blex-mono
+    pkgs.geist-font
+  ];
 
   runtimePath = lib.makeBinPath runtimeDeps;
 

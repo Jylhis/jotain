@@ -66,11 +66,9 @@ in
       nerd-fonts.jetbrains-mono
       nerd-fonts.iosevka
       # Only the families init-ui.el probes; the full set is ~1 GB.
+      geist-font
       (google-fonts.override {
-        fonts = [
-          "Hanken Grotesk"
-          "Literata"
-        ];
+        fonts = [ "Literata" ];
       })
     ]
     # Virtual X server for `just screenshot` (Linux-only).

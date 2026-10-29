@@ -1,5 +1,5 @@
 /*
- * theme-init.js — set the Print/Negative mode before first paint.
+ * theme-init.js — set the Paper/Black mode before first paint.
  * Loaded synchronously in <head> by every page so there is no flash
  * of the wrong theme. Dark mode is data-mode="dark" on <html>.
  */
