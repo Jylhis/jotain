@@ -146,11 +146,13 @@ in
     # jinx dictionaries: libaspell finds $profile/lib/aspell via its
     # NIX_PROFILES patch, so they belong in the profile, not on PATH.
     ++ cfg.spell.dictionaries;
-    # Colour-emoji fallback for lisp/init-ui.el's fontsets, and Geist and
-    # Geist Mono, its variable-pitch and default faces.
+    # Colour-emoji fallback for lisp/init-ui.el's fontsets, and the design
+    # system's families (Fira Sans is the variable-pitch face).
     fonts.packages = [
       pkgs.noto-fonts-color-emoji
-      pkgs.geist-font
+      pkgs.jost
+      pkgs.fira-sans
+      pkgs.ibm-plex
     ];
     environment.variables = lib.mkIf cfg.defaultEditor {
       EDITOR = lib.mkOverride 900 "${lib.getBin editorScript}/bin/emacs-config-editor";

@@ -186,9 +186,7 @@ machine-local config)."
   :group 'my-ui)
 
 (defcustom my-font-preferences
-  '(("GeistMono Nerd Font"     . 140)
-    ("Geist Mono"              . 140)
-    ("BlexMono Nerd Font"      . 140)
+  '(("BlexMono Nerd Font"      . 140)
     ("JetBrainsMono Nerd Font" . 140)
     ("Iosevka Nerd Font"       . 140)
     ("DejaVu Sans Mono"        . 130))
@@ -196,15 +194,14 @@ machine-local config)."
 HEIGHT is in 1/10 pt units (140 = 14 pt).  The first installed family
 wins.  All heights are multiplied by `my-font-scale' at runtime.
 
-Geist Mono is the mono role of the Jylhis design system; the Nerd Font
-patch comes first for its icon glyphs.  Entries containing \"Nerd Font\"
-also supply `nerd-icons-font-family'; keep one ahead of the plain
-fallbacks."
+BlexMono is IBM Plex Mono with Nerd Font glyphs, the mono role of the
+Jylhis design system.  Entries containing \"Nerd Font\" also supply
+`nerd-icons-font-family'; keep one ahead of the plain fallbacks."
   :type '(alist :key-type string :value-type integer)
   :group 'my-ui)
 
 (defcustom my-variable-pitch-font-preferences
-  '(("Geist"          . 150)
+  '(("Fira Sans"      . 150)
     ("Literata"       . 150)
     ("Iosevka Aile"   . 150)
     ("Noto Sans"      . 150)
@@ -213,7 +210,7 @@ fallbacks."
 Heights are larger than the monospace default: proportional fonts render
 visually smaller at the same point size.
 
-Geist is the body role of the Jylhis design system."
+Fira Sans is the body role of the Jylhis design system."
   :type '(alist :key-type string :value-type integer)
   :group 'my-ui)
 

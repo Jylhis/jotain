@@ -97,13 +97,15 @@ let
   # (lisp/init-ui.el).
   emojiFontPackages = lib.optional isLinux pkgs.noto-fonts-color-emoji;
 
-  # Nerd Font glyphs for the icon stack. GeistMono Nerd Font is the first
-  # entry in `my-font-preferences' (lisp/init-ui.el); keep the two in step.
-  # geist-font carries Geist (variable pitch, the body role) and the plain
-  # Geist Mono fallback.
+  # Nerd Font glyphs for the icon stack. BlexMono is the first entry in
+  # `my-font-preferences' (lisp/init-ui.el); keep the two in step.
+  # Fira Sans is the variable-pitch (body) face of the design system; Jost and
+  # IBM Plex Mono are its display and mono faces.
   iconFontPackages = [
-    pkgs.nerd-fonts.geist-mono
-    pkgs.geist-font
+    pkgs.nerd-fonts.blex-mono
+    pkgs.jost
+    pkgs.fira-sans
+    pkgs.ibm-plex
   ];
 
   runtimePath = lib.makeBinPath runtimeDeps;
