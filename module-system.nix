@@ -146,8 +146,8 @@ in
     # jinx dictionaries: libaspell finds $profile/lib/aspell via its
     # NIX_PROFILES patch, so they belong in the profile, not on PATH.
     ++ cfg.spell.dictionaries;
-    # Colour-emoji fallback for lisp/init-ui.el's fontsets, and Geist, its
-    # variable-pitch face.
+    # Colour-emoji fallback for lisp/init-ui.el's fontsets, and Geist and
+    # Geist Mono, its variable-pitch and default faces.
     fonts.packages = [
       pkgs.noto-fonts-color-emoji
       pkgs.geist-font

@@ -60,9 +60,9 @@ in
       texinfo
 
       # Fonts init-ui.el probes by name, active only inside the shell.
-      # BlexMono (IBM Plex Mono + Nerd Font glyphs) is the first
+      # GeistMono Nerd Font (Geist Mono + Nerd Font glyphs) is the first
       # default-face candidate.
-      nerd-fonts.blex-mono
+      nerd-fonts.geist-mono
       nerd-fonts.jetbrains-mono
       nerd-fonts.iosevka
       # Only the families init-ui.el probes; the full set is ~1 GB.
