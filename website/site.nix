@@ -173,8 +173,8 @@ pkgs.runCommand "emacs-config-site"
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>''${title} — emacs-config</title>
     <link rel="canonical" href="https://page.jylhis.com${baseHref}/">
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f8fc">
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c0f14">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4efe4">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0b0b">
     <link rel="icon" type="image/svg+xml" href="${baseHref}/favicon.svg">
     <script src="${baseHref}/js/theme-init.js"></script>
     <link rel="stylesheet" href="${baseHref}/css/site.css">
