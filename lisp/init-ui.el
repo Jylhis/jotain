@@ -201,7 +201,7 @@ Jylhis design system.  Entries containing \"Nerd Font\" also supply
   :group 'my-ui)
 
 (defcustom my-variable-pitch-font-preferences
-  '(("Hanken Grotesk" . 150)
+  '(("Geist"          . 150)
     ("Literata"       . 150)
     ("Iosevka Aile"   . 150)
     ("Noto Sans"      . 150)
@@ -210,7 +210,7 @@ Jylhis design system.  Entries containing \"Nerd Font\" also supply
 Heights are larger than the monospace default: proportional fonts render
 visually smaller at the same point size.
 
-Hanken Grotesk is the body role of the Jylhis design system."
+Geist is the body role of the Jylhis design system."
   :type '(alist :key-type string :value-type integer)
   :group 'my-ui)
 
