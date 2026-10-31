@@ -146,10 +146,12 @@ in
     # jinx dictionaries: libaspell finds $profile/lib/aspell via its
     # NIX_PROFILES patch, so they belong in the profile, not on PATH.
     ++ cfg.spell.dictionaries;
-    # Colour-emoji fallback for lisp/init-ui.el's fontsets, and the design
+    # Colour-emoji fallback for lisp/init-ui.el's fontsets, BlexMono (the
+    # default face and nerd-icons font, as in module.nix), and the design
     # system's families (Fira Sans is the variable-pitch face).
     fonts.packages = [
       pkgs.noto-fonts-color-emoji
+      pkgs.nerd-fonts.blex-mono
       pkgs.jost
       pkgs.fira-sans
       pkgs.ibm-plex

@@ -187,6 +187,7 @@ machine-local config)."
 
 (defcustom my-font-preferences
   '(("BlexMono Nerd Font"      . 140)
+    ("IBM Plex Mono"           . 140)
     ("JetBrainsMono Nerd Font" . 140)
     ("Iosevka Nerd Font"       . 140)
     ("DejaVu Sans Mono"        . 130))
@@ -195,8 +196,9 @@ HEIGHT is in 1/10 pt units (140 = 14 pt).  The first installed family
 wins.  All heights are multiplied by `my-font-scale' at runtime.
 
 BlexMono is IBM Plex Mono with Nerd Font glyphs, the mono role of the
-Jylhis design system.  Entries containing \"Nerd Font\" also supply
-`nerd-icons-font-family'; keep one ahead of the plain fallbacks."
+Jylhis design system; plain IBM Plex Mono follows it for systems
+without the Nerd Font build.  Entries containing \"Nerd Font\" also
+supply `nerd-icons-font-family'; keep one ahead of the plain fallbacks."
   :type '(alist :key-type string :value-type integer)
   :group 'my-ui)
 
