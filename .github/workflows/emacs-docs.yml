@@ -1,0 +1,79 @@
+name: emacs-docs
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'usr.sbin/emacs-docs/**'
+      - 'etc/emacs/**'
+      - 'lib/design/**'
+      - 'nix/**'
+      - '.github/workflows/emacs-docs.yml'
+  pull_request:
+    paths:
+      - 'usr.sbin/emacs-docs/**'
+      - 'etc/emacs/**'
+      - 'lib/design/**'
+      - 'nix/**'
+      - '.github/workflows/emacs-docs.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: emacs-docs-${{ github.ref }}
+  cancel-in-progress: true
+# The generated pages (docs, manual, man, info, options, API reference) need Nix,
+# Cachix and the pinned Emacs, which Cloudflare Workers Builds cannot provide --
+# so this project is deploy.mode = "push" (jylhis-deployment-model(7)): CI builds on
+# every push/PR, and on green main the deploy job runs `wrangler deploy` with the
+# Nix result as the assets directory. The docs.example.org custom domain is bound by
+# the infra engine (project.nix requires.dns), not here. This workflow's existence
+# also tells the generic sites.yml to skip emacs-docs.
+jobs:
+  build:
+    name: build (full site)
+    # Fork PRs never reach the lab runner.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Self-hosted lab runner (sys/lab/github-runner.nix): Nix + the configured
+    # substituters (jylhis.cachix.org, cache.nixos.org) live here.
+    runs-on: [self-hosted, nixos]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the full site
+        run: nix build -f . packages.x86_64-linux.emacs-docs -L
+      - name: Check the vendored design copy
+        run: nix build -f . checks.x86_64-linux.emacs-docs-ds-in-sync -L
+  # Push-mode delivery. On green main only, rebuild the site (a store cache hit:
+  # the build job on this same self-hosted runner already produced it) and deploy
+  # it as the emacs-docs Worker. wrangler comes from the repo's own nixpkgs (same
+  # pattern as nix-docs.yml / infra-plan.yml).
+  deploy:
+    name: deploy (wrangler)
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, nixos]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the full site
+        run: nix build -f . packages.x86_64-linux.emacs-docs -L -o result
+      # Dereference the read-only store symlink into a writable tree.
+      - name: Materialize the built site
+        run: |
+          rm -rf dist
+          cp -RL result/public dist
+          chmod -R u+w dist
+      - name: Deploy the Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          cd usr.sbin/emacs-docs
+          nix shell -f ../.. legacyPackages.x86_64-linux.wrangler --command \
+            wrangler deploy --assets ../../dist

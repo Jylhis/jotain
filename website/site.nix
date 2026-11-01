@@ -1,4 +1,4 @@
-# usr.sbin/jotain-site/site.nix: assemble the full static site for page.jylhis.com/jotain.
+# usr.sbin/emacs-docs/site.nix: assemble the full static site for docs.example.org.
 #
 # Composes the hand-written landing SPA (./public) with every
 # document the repo can generate:
@@ -15,7 +15,7 @@
 #   /packages/        third-party package search over /help/api/ (withApiDoc)
 #
 # The site is $out/public/, the static assets directory for Cloudflare.
-# Preview it under the base path with `just serve` in this directory.
+# Preview it with `just serve` in this directory.
 {
   pkgs,
   lib ? pkgs.lib,
@@ -24,9 +24,10 @@
   # Mount the heavy /help/api/ reference. Off for the preview variant;
   # guarded lazily so `false` never realizes emacsApiDoc.
   withApiDoc ? true,
-  # Prefix of every internal absolute URL: the site is served under
-  # page.jylhis.com/jotain/. Use "" to serve from a root.
-  baseHref ? "/jotain",
+  # Prefix of every internal absolute URL. The site is served from the root of
+  # docs.example.org, so the default is empty; set e.g. "/docs" to serve it under
+  # a sub-path.
+  baseHref ? "",
 }:
 let
   optionsDoc = import (src + "/nix/options-doc.nix") { inherit pkgs src; };
@@ -133,7 +134,7 @@ pkgs.runCommand "emacs-config-site"
       pkgs.jq
     ];
     inherit docsSrc webSrc;
-    meta.description = "page.jylhis.com/jotain static site (landing SPA + generated docs)";
+    meta.description = "docs.example.org static site (landing SPA + generated docs)";
   }
   ''
     set -eu
@@ -172,7 +173,7 @@ pkgs.runCommand "emacs-config-site"
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>''${title} — emacs-config</title>
-    <link rel="canonical" href="https://page.jylhis.com${baseHref}/">
+    <link rel="canonical" href="https://docs.example.org${baseHref}/">
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4efe4">
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0b0b">
     <link rel="icon" type="image/svg+xml" href="${baseHref}/favicon.svg">

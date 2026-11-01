@@ -165,7 +165,7 @@ in
   packages-doc = import ./packages-doc.nix { inherit pkgs src; };
 
   # Build-only (the output is not checked in). Heavy, so deploy-path
-  # only: the jotain-site build check omits it.
+  # only: the emacs-docs build check omits it.
   emacs-api-doc = import ./emacs-api-doc.nix { inherit pkgs src; };
 
   # docs/configuration/package-reference.mdx is checked in so Mintlify

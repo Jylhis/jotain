@@ -5,7 +5,7 @@ layer and no framework underneath. Nix builds the editor, with binary-cache
 parity as an invariant; modular Elisp (`lisp/init-*.el`, one file per
 concern) configures it.
 
-Documentation: **<https://page.jylhis.com/jotain>** has the rendered docs,
+Documentation: **<https://docs.example.org>** has the rendered docs,
 the full manual (HTML/Info/man), the Nix module options reference, and a
 per-package "why is this here" reference.
 
@@ -30,7 +30,7 @@ The flake exposes the full distribution (`packages.<system>.default`,
 Emacs + tree-sitter grammars), a bare `emacs`, a terminal-only
 `emacs-nox`, and modules for Home Manager (`services.emacsConfig` daemon),
 NixOS, and nix-on-droid. See
-[Installation](https://page.jylhis.com/jotain/docs/installation).
+[Installation](https://docs.example.org/docs/installation).
 
 ## Contributing
 

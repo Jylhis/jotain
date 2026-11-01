@@ -86,7 +86,7 @@ blocks other actions, and the run then fails at startup with no logs.
   `nix flake check` (including the heavy package builds, `elisp-test`, and
   `emacs-api-doc`) plus `devenv test`, pushing results to the jylhis cache.
   Runs are never cancelled, so cache pushes finish. The site lives in
-  `usr.sbin/jotain-site` (see `jotain-site(8)`); it builds from this tree.
+  `usr.sbin/emacs-docs` (see `emacs-docs(8)`); it builds from this tree.
   Same-repo PRs get the cachix writer token (so a cold `/help/api/` build
   warms the cache); fork PRs stay pull-only and get no comment.
 - **Dependabot lock sync** (`sync-devenv.yml`, `dependabot/nix/**` branches
@@ -118,8 +118,8 @@ Checks and maintenance:
 - `just verify`: assert both locks agree on every shared input
   (`scripts/verify-locks.sh`, the same script as the `locks-in-sync` check).
 - `just update-pins [names]`: bump the hand-pinned upstreams (see Pinning).
-- `just serve` in `usr.sbin/jotain-site`: build and serve the site
-  at `http://localhost:8080/jotain/`.
+- `just serve` in `usr.sbin/emacs-docs`: build and serve the site
+  at `http://localhost:8080/`.
 - `just clean`: remove `*.elc`, autosaves, eln-cache, `result`.
   `just clean-all` also wipes `elpa/`, `var/`, `.dev-home/` (next startup is
   slow).
@@ -328,7 +328,7 @@ snapshot that CI builds and caches.
 
 `emacs-api-doc` (`nix/emacs-api-doc.nix`, forking the vendored
 `etc/elisp-doc/`) runs a batch Emacs over the package closure and emits the
-per-symbol HTML that `usr.sbin/jotain-site/site.nix` mounts at `/help/api/`. It is heavy and
+per-symbol HTML that `usr.sbin/emacs-docs/site.nix` mounts at `/help/api/`. It is heavy and
 deploy-path-only: only the site and its own check import it, never
 `nix/info-manual.nix` or `nix/mk-overlay.nix`, so editor builds stay cache
 hits. The site check builds without it (`withApiDoc = false`). Its

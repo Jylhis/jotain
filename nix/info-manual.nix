@@ -230,7 +230,7 @@ pkgs.runCommand "emacs-config-info"
           "$out/share/info/emacs-config.info"
 
         # HTML, one page per chapter, for the site's /manual/. The relative
-        # css-ref lets usr.sbin/jotain-site/site.nix ship manual.css beside the pages.
+        # css-ref lets usr.sbin/emacs-docs/site.nix ship manual.css beside the pages.
         # makeinfo only creates the last path component itself.
         mkdir -p "$out/share/doc/emacs-config"
         makeinfo --html \

@@ -1,6 +1,6 @@
 {
   meta = {
-    description = "Jotain Emacs configuration site (landing page, manual, references)";
+    description = "Jotain Emacs configuration site (landing page, manual, references) at docs.example.org";
     stack = "nix";
     status = "experimental";
     platforms = [ "x86_64-linux" ];
@@ -15,12 +15,18 @@
     build.hermetic = "sandbox";
   };
 
-  # Workers Builds deploys the committed public/ shell on green main. The
-  # generated pages need Nix, which Workers Builds does not have; see jotain-site(8).
+  # PUSH, not service: the generated pages (docs, manual, man, info, options,
+  # API reference) need Nix, Cachix and the pinned Emacs, none of which
+  # Cloudflare Workers Builds has (jylhis-deployment-model(7)). On green main the
+  # dedicated workflow (.github/workflows/emacs-docs.yml) builds the full site
+  # with Nix and runs `wrangler deploy`; `just deploy` is the manual path. That
+  # workflow's existence also makes the generic sites.yml skip this project.
   deploy = {
     type = "static-site";
-    mode = "service";
-    preview = true;
-    service.provider = "cloudflare-workers-builds";
+    mode = "push";
   };
+
+  # docs.example.org -> a Workers custom domain (libexec/engines/infra/modules/
+  # workers.nix binds the hostname to this project's Worker script, emacs-docs).
+  requires.dns = "docs.example.org";
 }

@@ -1,4 +1,4 @@
-# jotain-site -- Jotain Emacs configuration site (static, Cloudflare Workers Builds)
+# emacs-docs -- Jotain Emacs configuration site (static, Cloudflare Workers, push deploy)
 # Run `just` to list commands
 
 default:
@@ -22,21 +22,34 @@ test:
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{ repo }}"
-    nix build --no-link -f . local.checks.jotain-site-build local.checks.jotain-site-ds-in-sync
+    nix build --no-link -f . local.checks.emacs-docs-build local.checks.emacs-docs-ds-in-sync
 
-# Serve the full site under /jotain/ at http://localhost:8080/jotain/
+# Serve the full site at http://localhost:8080/
 serve:
     #!/usr/bin/env bash
     set -euo pipefail
-    out=$(nix build --no-link --print-out-paths -f "{{ repo }}" local.packages.jotain-site)
+    out=$(nix build --no-link --print-out-paths -f "{{ repo }}" local.packages.emacs-docs)
+    python3 -m http.server -d "$out/public" 8080
+
+# CI does the same on green main (.github/workflows/emacs-docs.yml); this is the
+# manual path and needs wrangler on PATH plus CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID.
+
+# Deliver the site (push mode): build the full site with Nix, then wrangler deploy
+deploy:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ repo }}"
+    out=$(nix build --no-link --print-out-paths -f . local.packages.emacs-docs)
     dir=$(mktemp -d)
     trap 'rm -rf "$dir"' EXIT
-    ln -s "$out/public" "$dir/jotain"
-    python3 -m http.server -d "$dir" 8080
+    cp -RL "$out/public" "$dir/public"
+    chmod -R u+w "$dir/public"
+    cd usr.sbin/emacs-docs
+    wrangler deploy --assets "$dir/public"
 
-# Re-vendor public/ds from the in-tree design system (lib/design)
-# (the fix for a failing jotain-site-ds-in-sync gate). Workers Builds deploys
-# the committed public/ without Nix, so the copy stays tracked.
+# The copy stays tracked because the package reads it as a store path.
+
+# Re-vendor public/ds from lib/design (the fix for a failing emacs-docs-ds-in-sync gate)
 [group('pins')]
 ds-sync:
     #!/usr/bin/env bash
@@ -44,8 +57,8 @@ ds-sync:
     cd "{{ repo }}"
     out=$(nix-build --no-out-link -E '
       (import ./nix/inputs.nix { }).emacs-config.packages.${builtins.currentSystem}.ds-assets')
-    rm -rf usr.sbin/jotain-site/public/ds
-    mkdir -p usr.sbin/jotain-site/public/ds
-    cp -r "$out/." usr.sbin/jotain-site/public/ds/
-    chmod -R u+w usr.sbin/jotain-site/public/ds
+    rm -rf usr.sbin/emacs-docs/public/ds
+    mkdir -p usr.sbin/emacs-docs/public/ds
+    cp -r "$out/." usr.sbin/emacs-docs/public/ds/
+    chmod -R u+w usr.sbin/emacs-docs/public/ds
     echo "Re-vendored public/ds from lib/design"

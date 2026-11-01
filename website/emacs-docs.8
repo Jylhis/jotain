@@ -1,10 +1,10 @@
 .\" Assisted-by: Claude Code:claude-sonnet-5-5
 .\" Assisted-by: Claude Code:claude-opus-5-5
 .Dd October 24, 2026
-.Dt JOTAIN-SITE 8
+.Dt EMACS-DOCS 8
 .Os
 .Sh NAME
-.Nm jotain-site
+.Nm emacs-docs
 .Nd Static site for the Jotain Emacs configuration
 .Sh SYNOPSIS
 .Nm just
@@ -67,9 +67,11 @@ The
 argument of
 .Pa site.nix
 prefixes every internal absolute URL.
-Its default is
-.Pa /jotain .
-Pass an empty string to serve the site from a root.
+Its default is the empty string, because the site is served from the root of
+docs.example.org.
+Pass a path such as
+.Pa /docs
+to serve it under a sub-path.
 .Sh COMMANDS
 Run these commands in this directory.
 .Bl -tag -width Ds
@@ -82,23 +84,31 @@ Build the preview variant and run the
 check.
 .It Ic just serve
 Build the site and serve it at
-.Pa http://localhost:8080/jotain/ .
+.Pa http://localhost:8080/ .
+.It Ic just deploy
+Build the full site with Nix and run
+.Ql wrangler deploy
+with the build result as the assets directory.
+Needs
+.Ev CLOUDFLARE_API_TOKEN
+and
+.Ev CLOUDFLARE_ACCOUNT_ID .
 .It Ic just ds-sync
 Copy the design assets of the in-tree design system
 .Pq Pa lib/design
 into
 .Pa public/ds .
-Workers Builds deploys the committed copy.
+The package reads the committed copy.
 Run it when the
 .Ql ds-in-sync
 check fails.
 .El
 .Pp
 The Nix attributes are
-.Ql local.packages.jotain-site ,
-.Ql local.checks.jotain-site-build ,
+.Ql local.packages.emacs-docs ,
+.Ql local.checks.emacs-docs-build ,
 and
-.Ql local.checks.jotain-site-ds-in-sync .
+.Ql local.checks.emacs-docs-ds-in-sync .
 .Sh FILES
 .Bl -tag -width Ds
 .It Pa package.nix
@@ -116,8 +126,11 @@ The deployed shell.
 Design system CSS and self-hosted fonts.
 Never edit these files.
 .It Pa wrangler.jsonc
-The assets-only Worker that serves
-.Pa public/ .
+The assets-only Worker that serves the site.
+Its
+.Va assets.directory
+is the committed shell for local use;
+the deploy overrides it with the Nix build result.
 .El
 .Sh CONVENTIONS
 .Bl -bullet
@@ -156,32 +169,52 @@ The fonts are self-hosted.
 The site makes no third-party requests.
 .El
 .Sh DEPLOYMENT
-A service-mode static site.
-Cloudflare Workers Builds watches green
+A push-mode static site, served at
+.Lk https://docs.example.org
+from the root.
+Cloudflare Workers Builds has no Nix, so it cannot build the generated pages;
+see
+.Xr jylhis-deployment-model 7 .
+Instead
+.Pa .github/workflows/emacs-docs.yml
+builds the full site with Nix on every push and pull request that touches
+the site, the Emacs configuration or the design system.
+On green
 .Ql main
-and deploys
+it copies the
 .Pa public/
-as the
-.Ql jotain-site
+directory of the
+.Ql packages.x86_64-linux.emacs-docs
+result and runs
+.Ql wrangler deploy --assets
+for the
+.Ql emacs-docs
 Worker.
-CI
-.Pq Pa .github/workflows/sites.yml
-only checks the build.
+The job needs the
+.Ev CLOUDFLARE_API_TOKEN
+and
+.Ev CLOUDFLARE_ACCOUNT_ID
+repository secrets.
+The workflow's existence makes the generic
+.Pa .github/workflows/sites.yml
+skip this project.
 .Pp
-Workers Builds has no Nix.
-It cannot build the generated pages, so it deploys only the committed shell.
-To publish the full site, build
-.Ql local.packages.jotain-site
-and deploy the
-.Pa public/
-directory of the result with
-.Xr wrangler 1 .
+The
+.Ql requires.dns
+entry in
+.Pa project.nix
+makes the infra engine
+.Pq Xr jylhis-infra 7
+bind
+.Ql docs.example.org
+to the Worker as a Workers custom domain.
+Apply the infra plan before the first deploy.
 .Pp
-Connect the Worker to Workers Builds once, as
-.Xr jylhis-deploying-static-sites 7
-describes.
+The old GitHub Pages site at jylhis.github.io/jotain (page.jylhis.com/jotain) should redirect to
+docs.example.org once this site is live.
 .Sh SEE ALSO
 .Xr emacs-config 7 ,
+.Xr jylhis-deployment-model 7 ,
 .Xr jylhis-deploying-static-sites 7 ,
 .Xr jylhis-manual 7
 .Sh HISTORY
