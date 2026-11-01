@@ -152,8 +152,10 @@ Build and launch (current system by default; override with
   display, so prefix `xvfb-run` when headless.
 - `just lang-matrix` / `just lang-eval-live`: live language-support matrix /
   end-to-end LSP probe.
-- `just docs` / `just info` / `just docs-all`: options HTML (`result-docs/`),
-  `emacs-config.info` (`result-info/share/info/`), or both.
+- `just docs` / `just docs-all`: options HTML (`result-docs/`), or that plus
+  `emacs-config.info`. For the Info manual alone, run
+  `nix build -f . local.packages.info-manual -o etc/emacs/result-info` at the
+  repo root; root `just info` opens it in `info`.
   `just build-api-doc`: the generated API reference (`result-api-doc/`).
 - `just docs-refresh-packages`: regenerate
   `docs/configuration/package-reference.mdx` from the `;;; @doc` blocks in
