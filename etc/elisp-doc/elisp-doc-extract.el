@@ -235,10 +235,18 @@ buffer, make the buffer no longer read-only, and then returns a
 (defun elisp-doc--encode-url-part (s &optional keep-most)
   "Make S suitable for urls.
 
-If KEEP-MOST, leave most characters as is. Otherwise, encode them as
-what Info mode might do."
+If KEEP-MOST, build a file name safe for any static host: keep only
+[A-Za-z0-9.~-] and escape every other UTF-8 byte (including \"_\") as
+\"_XX\" with uppercase hex.  The mapping is injective, so distinct
+symbols never share a file.  Otherwise, encode them as what Info mode
+might do."
   (if keep-most
-      (string-replace "/" "_002f" s)
+      (mapconcat (lambda (b)
+                   (if (or (<= ?a b ?z) (<= ?A b ?Z) (<= ?0 b ?9)
+                           (memq b '(?. ?~ ?-)))
+                       (char-to-string b)
+                     (format "_%02X" b)))
+                 (encode-coding-string s 'utf-8) "")
     (mapconcat (lambda (ch)
                  ;; info.el
                  (if (or (< ch 32)      ; ^@^A-^Z^[^\^]^^^-
