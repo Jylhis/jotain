@@ -35,9 +35,7 @@ Entries up to 2026-11 were reconstructed from git history (first commit 2026-10-
 - **design:** Follow the OS mode; either mode scopes to any element ([ac54b87d9c](https://github.com/Jylhis/monorepo/commit/ac54b87d9c))
 - Etc/emacs, jotain-site: build the design assets from lib/design ([7a5e40a333](https://github.com/Jylhis/monorepo/commit/7a5e40a333))
 - **jotain-site:** Move the Emacs website to usr.sbin/jotain-site ([cef5b12c12](https://github.com/Jylhis/monorepo/commit/cef5b12c12))
-- **emacs:** Move lib/emacs to etc/emacs ([6fb57b973c](https://github.com/Jylhis/monorepo/commit/6fb57b973c))
 - **emacs:** Drop the Jotain name ([515c4ee27a](https://github.com/Jylhis/monorepo/commit/515c4ee27a))
-- **emacs:** Move lib/jotain to lib/emacs ([103d2dd7b1](https://github.com/Jylhis/monorepo/commit/103d2dd7b1))
 - **jotain:** Restore vendored ds byte parity with the design pin ([74fccf9887](https://github.com/Jylhis/monorepo/commit/74fccf9887))
 - **jotain:** Trim trailing whitespace the pre-push hook enforces ([37ce3ed579](https://github.com/Jylhis/monorepo/commit/37ce3ed579))
 
