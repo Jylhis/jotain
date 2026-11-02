@@ -4,7 +4,7 @@ All notable changes to emacs-docs are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project has no versioned releases, so entries are grouped by month.
-Entries up to 2026-11 were reconstructed from git history (first commit 2026-10-18).
+Entries up to 2026-11 were reconstructed from git history (first commit 2026-07-21).
 
 ## [Unreleased]
 
@@ -38,6 +38,7 @@ Entries up to 2026-11 were reconstructed from git history (first commit 2026-10-
 - **emacs:** Drop the Jotain name ([515c4ee27a](https://github.com/Jylhis/monorepo/commit/515c4ee27a))
 - **jotain:** Restore vendored ds byte parity with the design pin ([74fccf9887](https://github.com/Jylhis/monorepo/commit/74fccf9887))
 - **jotain:** Trim trailing whitespace the pre-push hook enforces ([37ce3ed579](https://github.com/Jylhis/monorepo/commit/37ce3ed579))
+- Trim comments and docs, fix stale claims ([6a0c033b68](https://github.com/Jylhis/monorepo/commit/6a0c033b68))
 
 ### Fixed
 
@@ -46,3 +47,26 @@ Entries up to 2026-11 were reconstructed from git history (first commit 2026-10-
 - **marchyo,design:** Resolve hex collisions the 4.0 palette introduced ([43fb67ddef](https://github.com/Jylhis/monorepo/commit/43fb67ddef))
 - **design:** Scoped modes, touch boxes, field edges, platform copies ([f3849591f4](https://github.com/Jylhis/monorepo/commit/f3849591f4))
 - **design:** Subtle Card variant wins, warning ink clears 4.5:1 on its tint ([84f337af22](https://github.com/Jylhis/monorepo/commit/84f337af22))
+
+## 2026-09
+
+### Added
+
+- **design:** Track Jylhis design v2.0.0 theming framework ([2f5e5760df](https://github.com/Jylhis/monorepo/commit/2f5e5760df))
+
+### Changed
+
+- **elisp:** Update jylhis design system to 3.0.0 ([61e3ed9a50](https://github.com/Jylhis/monorepo/commit/61e3ed9a50))
+- **preview:** Archive site to a tarball before upload-artifact ([0547f97e98](https://github.com/Jylhis/monorepo/commit/0547f97e98))
+- **site:** Switch to Actions-source Pages + downloadable artifact previews ([5f6419b9b0](https://github.com/Jylhis/monorepo/commit/5f6419b9b0))
+- **site:** Address Codex review — Pages deploy token, preview 404, stale docs ([302d9141c3](https://github.com/Jylhis/monorepo/commit/302d9141c3))
+- **site:** Add /packages/ third-party API search page + branch-based Pages previews ([92f9c9e6ad](https://github.com/Jylhis/monorepo/commit/92f9c9e6ad))
+- Migrate the site to GitHub Pages under a /jotain base path ([3c5b3b9d39](https://github.com/Jylhis/monorepo/commit/3c5b3b9d39))
+
+## 2026-07
+
+### Changed
+
+- **design:** Adopt jylhis/design v2 "The Survey" ([2d27344773](https://github.com/Jylhis/monorepo/commit/2d27344773))
+- **site:** Generate the docs site from every source the repo has ([3dd89f5d8b](https://github.com/Jylhis/monorepo/commit/3dd89f5d8b))
+- **website:** Add landing page and docs site for docs.example.org ([60bec618af](https://github.com/Jylhis/monorepo/commit/60bec618af))
