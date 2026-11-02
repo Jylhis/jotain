@@ -68,6 +68,30 @@ jobs:
           rm -rf dist
           cp -RL result/public dist
           chmod -R u+w dist
+      # wrangler sends file names to the assets manifest verbatim, and the API
+      # rejects anything that is not URI encoded (code 10304). The API reference
+      # has pages such as "(setf foo).html" and "bar-*.html", so percent-encode
+      # every file name byte outside the unreserved set; Workers Assets decodes
+      # request paths against the manifest. Directories are already safe.
+      - name: URI-encode asset file names
+        run: |
+          set -euo pipefail
+          export LC_ALL=C
+          encode() {
+            local s=$1 out="" c i
+            for ((i = 0; i < ${#s}; i++)); do
+              c=${s:i:1}
+              case $c in
+                [A-Za-z0-9._~-]) out+=$c ;;
+                *) out+=$(printf '%%%02X' "'$c") ;;
+              esac
+            done
+            printf '%s' "$out"
+          }
+          find dist -type f -name '*[!A-Za-z0-9._~-]*' -print0 |
+            while IFS= read -r -d '' f; do
+              mv -- "$f" "$(dirname -- "$f")/$(encode "$(basename -- "$f")")"
+            done
       - name: Deploy the Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
