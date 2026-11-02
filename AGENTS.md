@@ -354,8 +354,9 @@ an Elisp-only `ghostel`. `jylhis-emacs-themes` is built from the in-tree
 design system (`lib/design/nix/emacs.nix`), and the jotain site copies its
 CSS from the same tree (`nix/ds-assets.nix`, a wrapper over
 `lib/design/nix/web-assets.nix`), so editor and site never
-diverge. `nix/devenv-emacs-lisp.nix` is no longer imported by the shell; it
-remains only as an options-doc source.
+diverge. The Emacs Lisp devenv module (`languages.emacs-lisp`, with ellsp)
+lives in [devenv-extra](https://github.com/Jylhis/devenv-extra), its packages
+in nixpkgs-extra.
 
 ### Modules
 
@@ -407,7 +408,7 @@ PRs). Drift fails the `locks-in-sync` check and PR CI. `default.nix`,
 
 Not bumped by `just update` or Dependabot: the GitHub-built Emacs packages
 (`nix/extra-packages.nix`), the ECA server (`nix/eca-server.nix`) and the
-vendored npm language servers (`nix/likec4-lsp.nix`, `nix/ellsp.nix`).
+vendored npm language server (`nix/likec4-lsp.nix`).
 `just update-pins` bumps them via
 `scripts/update-pins.sh`: [nix-update](https://github.com/Mic92/nix-update)
 for the plain `fetchFromGitHub` packages (tagged repos follow the newest
