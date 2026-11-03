@@ -19,6 +19,7 @@ Entries up to 2026-11 were reconstructed from git history (first commit 2024-05-
 
 ### Fixed
 
+- Links between docs pages point at the matching Info node instead of the docs site's routes such as `/usage/launching`, and the whole-repo review queue page joins the Info manual.
 - The HTML manual ships its own `manual.css`, so it has a stylesheet where it is served outside the emacs-docs site.
 - Generated API reference pages get URL-safe file names, so symbols such as `consult--keep!` are served correctly. ([dbaf2352c4](https://github.com/Jylhis/monorepo/commit/dbaf2352c4))
 
