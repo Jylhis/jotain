@@ -22,7 +22,9 @@ args@{
 let
   cfg = config.services.emacsConfig;
   emacsConfigOverlay = args.emacsConfigOverlay or (import ./overlay.nix);
-  pkgsWithOverlay = pkgs.extend emacsConfigOverlay;
+  # A host whose pkgs already carry the overlay (the jylhis hosts) skips a
+  # second nixpkgs fixpoint.
+  pkgsWithOverlay = if pkgs ? emacsConfigPackages then pkgs else pkgs.extend emacsConfigOverlay;
   selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.emacsConfigPackages;
   inherit (pkgs.stdenv.hostPlatform) isLinux;
   startWithSession =
