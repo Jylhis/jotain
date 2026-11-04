@@ -486,11 +486,7 @@ Both speak stdio by default."
                                                  "target/debug/")
                                "target/debug/")))))
 
-;;;; SonarLint (SonarCloud connected mode)
-
-;; SonarCloud connected mode is opt-in per project via a .dir-locals.el
-;; `eglot-workspace-configuration' entry (:sonarlint :connectedMode with
-;; the :sonarcloud org key and token, connectionId/projectKey).
+;;;; SonarLint
 
 (defun my-sonarlint ()
   "Start SonarLint analysis in the current project.
