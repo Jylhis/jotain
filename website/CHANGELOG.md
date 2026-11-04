@@ -11,6 +11,7 @@ Entries up to 2026-11 were reconstructed from git history (first commit 2026-07-
 ### Changed
 
 - The full Nix-built site is served from the root of docs.example.org: a dedicated workflow builds it and runs wrangler deploy when main is green, replacing the Workers Builds shell that could only ship the committed landing page. ([aab05e8d5d](https://github.com/Jylhis/monorepo/commit/aab05e8d5d))
+- The manual page links `jylhis-infra-engine(7)`, and `project.nix` points at the engine's `emitters/` directory.
 
 ## 2026-10
 
