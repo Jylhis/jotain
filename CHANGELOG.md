@@ -14,6 +14,8 @@ Entries up to 2026-11 were reconstructed from git history (first commit 2024-05-
 
 ### Changed
 
+- Use the plain `epkgs.ghostel` again: the zig-deps fetch that forced the Elisp-only workaround builds now.
+
 - The NixOS and Home Manager modules reuse `pkgs` when it already has the overlay, instead of `pkgs.extend`, which built another nixpkgs instance per module.
 - Claude models route to the direct Anthropic API on the desktop with OpenRouter twins as fallback, and the gptel and eca model lists move to the 5.5 models. ([645d85fc1d](https://github.com/Jylhis/monorepo/commit/645d85fc1d))
 - The documentation site is renamed `emacs-docs` and deployed to docs.example.org from its own workflow. ([aab05e8d5d](https://github.com/Jylhis/monorepo/commit/aab05e8d5d))
