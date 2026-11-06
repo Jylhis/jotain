@@ -4,15 +4,13 @@
 # nixosOptionsDoc, and assembles a self-contained HTML page.
 #
 # Usage:
-#   nix build .#docs
+#   nix build -f . local.checks.emacs-options-doc
 #   open result/index.html
 { pkgs, src }:
 let
   inherit (pkgs) lib;
 
   texi = import ./texi-fragment.nix;
-
-  gitHubUrl = "https://github.com/Jylhis/jotain";
 
   # Evaluate a module in isolation — no HM/NixOS/devenv stubs needed
   # because config sections are gated by mkIf cfg.enable (default false).
@@ -28,25 +26,6 @@ let
       };
     };
 
-  # Rewrite declaration paths from /nix/store/... to GitHub source links.
-  transformOptions =
-    opt:
-    opt
-    // {
-      declarations = map (
-        decl:
-        let
-          declStr = toString decl;
-          srcPrefix = toString src + "/";
-          rel = lib.removePrefix srcPrefix declStr;
-        in
-        {
-          url = "${gitHubUrl}/blob/main/${rel}";
-          name = rel;
-        }
-      ) opt.declarations;
-    };
-
   # Generate CommonMark option docs for a single module.
   mkDoc =
     modulePath:
@@ -55,7 +34,7 @@ let
     in
     pkgs.nixosOptionsDoc {
       options = builtins.removeAttrs eval.options [ "_module" ];
-      inherit transformOptions;
+      transformOptions = opt: opt // { declarations = [ ]; };
     };
 
   hmDoc = mkDoc (src + "/module.nix");
@@ -76,7 +55,7 @@ pkgs.runCommand "emacs-config-options-doc"
     # Emacs configuration — Module Options Reference
 
     Auto-generated reference for all Nix module options exposed by
-    [the Emacs configuration](${gitHubUrl}).
+    the Emacs configuration.
 
     - [Home Manager Module](#home-manager-module) — per-user Emacs daemon, client wrapper, desktop entry
     - [System Module](#system-module-nixos) — overlay and system packages
