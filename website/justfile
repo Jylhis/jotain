@@ -19,16 +19,13 @@ build: nix-build
 
 # The Nix build of the site and the ds-in-sync gate
 test:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cd "{{ repo }}"
-    nix build --no-link -f . local.checks.emacs-docs-build local.checks.emacs-docs-ds-in-sync
+    nix build --no-link {{ entry }} checks.build checks.ds-in-sync
 
 # Serve the full site at http://localhost:8080/
 serve:
     #!/usr/bin/env bash
     set -euo pipefail
-    out=$(nix build --no-link --print-out-paths -f "{{ repo }}" local.packages.emacs-docs)
+    out=$(nix build --no-link --print-out-paths {{ entry }} package)
     python3 -m http.server -d "$out/public" 8080
 
 # CI does the same on green main (.github/workflows/emacs-docs.yml); this is the
@@ -38,13 +35,12 @@ serve:
 deploy:
     #!/usr/bin/env bash
     set -euo pipefail
-    cd "{{ repo }}"
-    out=$(nix build --no-link --print-out-paths -f . local.packages.emacs-docs)
+    out=$(nix build --no-link --print-out-paths {{ entry }} package)
     dir=$(mktemp -d)
     trap 'rm -rf "$dir"' EXIT
     cp -RL "$out/public" "$dir/public"
     chmod -R u+w "$dir/public"
-    cd usr.sbin/emacs-docs
+    cd {{ justfile_directory() }}
     wrangler deploy --assets "$dir/public"
 
 # The copy stays tracked because the package reads it as a store path.
