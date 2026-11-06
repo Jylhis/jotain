@@ -165,11 +165,12 @@ Build and launch (current system by default; override with
   `docs/reference/language-support.mdx` from
   `etc/lang-eval/my-lang-registry.el` (edit the registry, not the page).
 
-## Emacs & Elisp knowledge base and skills
+## Emacs & Elisp knowledge base
 
-Two skills in `.agents/skills/` hold source-cited references for Emacs 30/31
-(index: `.claude/knowledge/emacs/README.md`). **Use them instead of answering
-Emacs questions from memory.**
+Two archived reference sets in `attic/skills/local/emacs/` hold source-cited
+notes for Emacs 30/31 (index: `.claude/knowledge/emacs/README.md`). They are
+no longer loaded as skills: read their `SKILL.md` and `references/` files
+directly. **Use them instead of answering Emacs questions from memory.**
 
 - **`emacs-internals`**: GC and objects, buffers/markers/overlays,
   redisplay, the command loop and keymaps, byte and native compilation,
@@ -480,7 +481,7 @@ checkout, `lisp/init-docs.el` adds the first existing directory among
 Follow the module conventions above. Global Elisp symbols use the `my-`
 prefix (`my--` for internals); `lisp/devenv.el` uses `devenv-`. Nix
 formatting is enforced by `nix/treefmt.nix`. For Emacs internals and Elisp
-practice, use the `.agents/skills/` skills rather than memory.
+practice, use the `attic/skills/local/emacs/` references rather than memory.
 
 ## Testing Guidelines
 
