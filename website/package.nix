@@ -29,10 +29,11 @@ let
         touch $out
       '';
 in
-{
-  default = mkSite { };
-  checks = {
-    inherit ds-in-sync;
-    build = mkSite { withApiDoc = false; };
+(mkSite { }).overrideAttrs (old: {
+  passthru = (old.passthru or { }) // {
+    tests = {
+      inherit ds-in-sync;
+      lite = mkSite { withApiDoc = false; };
+    };
   };
-}
+})

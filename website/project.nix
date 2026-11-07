@@ -8,11 +8,11 @@
 
   package = ./package.nix;
 
-  checks = {
+  tests = {
     # The vendored public/ds equals the in-tree design system's assets.
     ds-in-sync.hermetic = "sandbox";
     # The generated site without the heavy /help/api/ reference.
-    build.hermetic = "sandbox";
+    lite.hermetic = "sandbox";
   };
 
   # PUSH, not service: the generated pages (docs, manual, man, info, options,
