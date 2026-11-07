@@ -22,6 +22,10 @@ Entries up to 2026-11 were reconstructed from git history (first commit 2024-05-
 - The documentation site is renamed `emacs-docs` and deployed to docs.example.org from its own workflow. ([aab05e8d5d](https://github.com/Jylhis/monorepo/commit/aab05e8d5d))
 - The SonarLint section drops the SonarCloud connected-mode notes.
 
+### Removed
+
+- The `.agents/skills` Emacs reference skills moved to `attic/skills/local/emacs`; `AGENTS.md` points at the archived notes.
+
 ### Fixed
 
 - Links between docs pages point at the matching Info node instead of the docs site's routes such as `/usage/launching`, and the whole-repo review queue page joins the Info manual.
