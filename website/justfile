@@ -14,18 +14,18 @@ token_dirs := "public/css"
 # The local pre-commit gate: lint, tests, token guard
 check: lint test check-tokens
 
-# Build the full generated site (result/public) with Nix
+# Build the site without the third-party API reference (result/public) with Nix
 build: nix-build
 
 # The Nix build of the site and the ds-in-sync gate
 test:
     nix build --no-link {{ entry }} checks.build checks.ds-in-sync
 
-# Serve the full site at http://localhost:8080/
+# Serve the full site, with the API reference, at http://localhost:8080/
 serve:
     #!/usr/bin/env bash
     set -euo pipefail
-    out=$(nix build --no-link --print-out-paths {{ entry }} package)
+    out=$(nix build --no-link --print-out-paths {{ entry }} package.withApiDoc)
     python3 -m http.server -d "$out/public" 8080
 
 # CI does the same on green main (.github/workflows/emacs-docs.yml); this is the
@@ -35,7 +35,7 @@ serve:
 deploy:
     #!/usr/bin/env bash
     set -euo pipefail
-    out=$(nix build --no-link --print-out-paths {{ entry }} package)
+    out=$(nix build --no-link --print-out-paths {{ entry }} package.withApiDoc)
     dir=$(mktemp -d)
     trap 'rm -rf "$dir"' EXIT
     cp -RL "$out/public" "$dir/public"

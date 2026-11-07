@@ -29,11 +29,13 @@ let
         touch $out
       '';
 in
-(mkSite { }).overrideAttrs (old: {
+# The site documents Emacs and the configuration. The third-party API
+# reference is input it ingests for the deployed site, not part of the build.
+(mkSite { withApiDoc = false; }).overrideAttrs (old: {
   passthru = (old.passthru or { }) // {
+    withApiDoc = mkSite { };
     tests = {
       inherit ds-in-sync;
-      lite = mkSite { withApiDoc = false; };
     };
   };
 })
