@@ -15,7 +15,9 @@ tooling only, **no `emacs`**: build and launch with `just run-built`.
 
 `journal/` is a set of working notes and may be stale; when it
 disagrees with the code, the code wins. Finding numbers cited there refer to
-the reports under `docs/reviews/`.
+the reports under `docs/reviews/`. Older notes and docs may still mention the
+retired standalone repo (`flake.nix`, `flake.lock`, GitHub workflows); the
+in-tree build replaces them.
 
 ## Project Structure & Module Organization
 
@@ -32,138 +34,50 @@ the reports under `docs/reviews/`.
 
 ## Development environment
 
-Run recipes inside the devenv shell: `devenv shell`, or prefix a command,
-e.g. `devenv shell -- just check`. No `.envrc` is tracked; direnv users keep
-their own untracked one (`eval "$(devenv direnvrc)"` + `use devenv`).
-
-The shell has Nix/lint/docs tooling and the language servers the config
-shells out to, but no Emacs (its ~1 GB closure made `direnv allow` slow).
-Paren/compile/test coverage comes from the `elisp-lint`, `elisp-compile`,
-and `elisp-test` flake checks.
-
-### Fresh container / no Nix (AI agent sessions)
-
-A bare container has no `nix`, `just`, `devenv`, or `emacs`. Run
-`scripts/bootstrap-agent-env.sh` as root (Debian/Ubuntu). It installs distro
-`nix-bin` via apt, writes `/etc/nix/nix.conf` with flakes and the three
-caches (`cache.nixos.org`, `nix-community.cachix.org`, `jylhis.cachix.org`),
-installs current `nix` + `just` from nixpkgs, and pre-fetches every
-`flake.lock` source from the caches by narHash. The tracked
-`.claude/settings.json` runs it as a SessionStart hook in remote Claude Code
-sessions; in the Claude Code cloud, putting it in the environment's setup
-script is better (that result is cached).
-
-If the egress proxy blocks github.com tarballs (403), only **flake-CLI**
-builds work offline: `nix build .#default -o result`, or
-`nix build --no-link .#checks.x86_64-linux.<name>`. Recipes built on
-`nix-build` (`just build`, `just screenshot`, `just run-built`) go through
-flake-compat's `builtins.fetchTree`, which re-downloads by URL; use the
-flake-CLI equivalent and run the remaining steps against `./result` by hand.
-
-Cost guide: `formatting`/`statix`/`deadnix`/`module-eval` take seconds;
-`elisp-lint` needs the bare Emacs from the nix-community cache;
-`elisp-compile`/`elisp-test` need the distribution closure. All three have
-`lib.fileset`-narrowed inputs, so when a PR touches neither `lisp/` nor
-`test/` they substitute from the jylhis cache without realising Emacs. Build
-checks one at a time, as PR CI does.
+Run recipes from `etc/emacs`, inside the devenv shell (`devenv shell`, or
+prefix a command, e.g. `devenv shell -- just fmt`). The shell has Nix/lint/docs
+tooling and the language servers the config shells out to, but no Emacs (its
+~1 GB closure made `direnv allow` slow). Paren, compile and test coverage
+comes from the `elisp-lint`, `elisp-compile` and `elisp-test` checks. The
+root `AGENTS.md` covers the tree-wide commands, commits, changelogs and
+pins; this file covers only what is specific to the Emacs project.
 
 ### CI
 
-All workflows run on x86_64-linux only (aarch64 is not
-exercised). Every `uses:` must be GitHub-owned or `cachix/*`: the repo
-blocks other actions, and the run then fails at startup with no logs.
-
-- **PR CI** (`ci.yml`, `pull_request` + `workflow_dispatch`). Job `check`:
-  `just verify` (lock sync), then one named step per check: formatting,
-  statix, deadnix, module-eval, packages-doc-in-sync, eca-models-in-sync,
-  packages-doc, options-doc, elisp-lint, scanner-fidelity,
-  elisp-compile, config-startup. Job
-  `test`: `devenv test`. Cachix is pull-only (no writer token for PR code).
-  Superseded runs are cancelled. Pushes from the Claude Code GitHub App do
-  not trigger `pull_request` runs; start CI with
-  `gh workflow run ci.yml --ref <branch>`.
-- **Full validation** (`deploy.yml`, push to `main`/`next` + dispatch): full
-  `nix flake check` (including the heavy package builds, `elisp-test`, and
-  `emacs-api-doc`) plus `devenv test`, pushing results to the jylhis cache.
-  Runs are never cancelled, so cache pushes finish. The site lives in
-  `usr.sbin/emacs-docs` (see `emacs-docs(8)`); it builds from this tree.
-  Same-repo PRs get the cachix writer token (so a cold `/help/api/` build
-  warms the cache); fork PRs stay pull-only and get no comment.
-- **Dependabot lock sync** (`sync-devenv.yml`, `dependabot/nix/**` branches
-  only): Dependabot bumps `flake.lock` but not `devenv.yaml`/`devenv.lock`,
-  so `just verify` would fail. This job runs `just sync-devenv` and pushes
-  the fix with the `DEVENV_SYNC_TOKEN` PAT (a `GITHUB_TOKEN` push starts no
-  new CI run). The secret must exist in both the Actions and the Dependabot
-  secret stores: Dependabot-triggered runs can't read Actions secrets, and
-  the follow-up `synchronize` run can't read Dependabot ones. The commit carries `[dependabot skip]` so Dependabot keeps
-  rebasing.
-
-A local `nix flake check` is heavier than PR CI and can fail on checks PR CI
-never runs. PRs target `main`; `next` is a second full-validation branch.
+No workflow is specific to this project. The checks in `nix/checks.nix` appear
+as `emacs-<name>` in the root `checks` (`outputs.nix`), so `just nix-check` at
+the repo root builds them with everything else. The site that serves the
+generated docs lives in `usr.sbin/emacs-docs` (see `emacs-docs(8)`).
 
 ## Common commands
 
-Checks and maintenance:
+All recipes below run in `etc/emacs`. The shared recipes (`nix-build`,
+`nix-check`, `info`, ...) come from `share/just/project.just`.
 
-- `just check`: `nix flake check` (every check in `nix/checks.nix`; not
-  `devenv test`).
-- `just test`: build the `elisp-test` check.
-- `just fmt`: `nix fmt` (treefmt: nixfmt-rfc-style, deadnix, statix).
-- `just update`: `nix flake update`, then `just sync-devenv all`.
-- `just sync-devenv [shared|all]`: rewrite `devenv.yaml`'s shared-input URLs
-  (nixpkgs, treefmt-nix, emacs-overlay) to the revs in `flake.lock` and
-  re-lock `devenv.lock`. Never runs `nix flake update`, so it is safe on a
-  Dependabot PR. `shared` (default) re-locks only the shared inputs; `all`
-  also re-resolves the unpinned `devenv` input.
-- `just verify`: assert both locks agree on every shared input
-  (`scripts/verify-locks.sh`, the same script as the `locks-in-sync` check).
-- `just update-pins [names]`: bump the hand-pinned upstreams (see Pinning).
-- `just serve` in `usr.sbin/emacs-docs`: build and serve the site
-  at `http://localhost:8080/`.
-- `just clean`: remove `*.elc`, autosaves, eln-cache, `result`.
-  `just clean-all` also wipes `elpa/`, `var/`, `.dev-home/` (next startup is
-  slow).
-
-Build and launch (current system by default; override with
-`just system=x86_64-linux …`):
-
-- `just run-built [ARGS]`: **the way to launch this config**. Builds the full
-  distribution (terminal-only on aarch64-linux) and runs
-  `./result/bin/emacs --init-directory=<repo>`, isolated from `~/.emacs.d`.
-- `just run-built-debug`: adds `--debug-init` and `debug-on-error`.
-- `just run-built-debug-log`: every debug facility on; loads
-  `etc/debug-init.el` and mirrors messages, warnings, backtraces, and stderr
-  into `var/debug/<timestamp>/`. `M-x my-debug-dump-now` flushes mid-run.
-- `just run-built-fast`: launch the AOT-compiled config (`.#config-compiled`)
-  from `var/fast-home`. It reflects the last build, so use `run-built` while
-  editing.
-- `just build`: full distribution (`emacsConfigPackages`: Emacs, packages,
-  every tree-sitter grammar) via `nix-build`. `just build-nox-full`: the
-  terminal-only distribution (`.#emacs-nox`).
-- `just build-bare` / `build-nox` / `build-git` / `build-igc` /
-  `build-igc-ccache` / `build-perf` / `build-android`: bare Emacs from
-  `emacs.nix`. Default revisions are cache hits on Linux, except
-  `build-igc-ccache` and `build-perf` (`cpuTune`: `-O3 -march/-mtune`),
-  which build from source by design. A custom `--argstr rev` fails once and
-  reports the hash to pass as `--argstr hash`.
-- `just screenshot [out]`: headless PNG under Xvfb (Linux; needs `xvfb-run`
-  from the shell; first run is slow).
-- `just bench-built [output]`: startup benchmark via `bench/`; needs a
-  display, so prefix `xvfb-run` when headless.
-- `just lang-matrix` / `just lang-eval-live`: live language-support matrix /
-  end-to-end LSP probe.
-- `just docs` / `just docs-all`: options HTML (`result-docs/`), or that plus
-  `emacs-config.info`. For the Info manual alone, run
-  `nix build -f . local.packages.info-manual -o etc/emacs/result-info` at the
-  repo root; root `just info` opens it in `info`.
-  `just build-api-doc`: the generated API reference (`result-api-doc/`).
+- `just test`: build every `emacs-*` check of the tree (elisp-lint,
+  elisp-compile, scanner-fidelity, packages-doc-in-sync, config-startup,
+  elisp-test, the doc and module checks). Build one with
+  `nix build -f . local.checks.emacs-<name>` at the repo root.
+- `just fmt`: treefmt (nixfmt, deadnix, statix) through the devenv shell.
+  `just lint` is a no-op: `etc/emacs` is excluded from the root treefmt.
+- `just build`: the full distribution (`emacsConfigPackages`: Emacs,
+  packages, every tree-sitter grammar) via `nix-build`.
+- `just run-built [ARGS]`: **the way to launch this config.** Builds the
+  distribution and runs `./result/bin/emacs --init-directory=<etc/emacs>`,
+  isolated from `~/.emacs.d`.
 - `just docs-refresh-packages`: regenerate
   `docs/configuration/package-reference.mdx` from the `;;; @doc` blocks in
   `lisp/`. Run it after editing any `@doc` block, or `packages-doc-in-sync`
   fails.
-- `just docs-refresh-lang-matrix`: regenerate
-  `docs/reference/language-support.mdx` from
-  `etc/lang-eval/my-lang-registry.el` (edit the registry, not the page).
+- `just cache-parity`: the cache-parity check below.
+- `just clean`: remove `*.elc`, `var/eln-cache` and `result`.
+- Info manual: `nix build -f . local.packages.info-manual -o etc/emacs/result-info`
+  at the repo root; root `just info` opens it in `info`.
+- Options HTML: `nix build -f . local.checks.emacs-options-doc`.
+
+Other variants build `emacs.nix` directly, e.g.
+`nix-build emacs.nix --arg noGui true` (see the header of `emacs.nix` for the
+full list of arguments).
 
 ## Emacs & Elisp knowledge base
 
@@ -245,7 +159,7 @@ distribution uses the `unstable` variant (`nix/mk-overlay.nix`), cached on
 
 - Variants: `unstable` (default), `git`, and `igc` come from
   nix-community/emacs-overlay; `mainline` is nixpkgs' `pkgs.emacs`, kept as
-  the parity canary (not a flake output).
+  the parity canary.
 - **Build matrix**: two shipped builds on {x86_64, aarch64}
   Linux: pgtk/Wayland GUI and terminal-only. `emacs.nix` asserts every other toolkit away.
 - With `withPgtk = true` (the Linux GUI default), `basePackage` selects the
@@ -259,26 +173,10 @@ distribution uses the `unstable` variant (`nix/mk-overlay.nix`), cached on
   parity (the noGui builds), never to the Linux pgtk
   build. See the policy comment in `nix/mk-overlay.nix`.
 
-Any edit to the `basePackage` / `basePackage.override { … }` block must keep
-parity for the `unstable` pgtk sibling and the noGui overrides. Verify:
-
-```
-nix-instantiate --eval --strict -E '
-  let lock = builtins.fromJSON (builtins.readFile ./flake.lock);
-      n  = lock.nodes.${lock.nodes.root.inputs.nixpkgs}.locked;
-      ov = lock.nodes.${lock.nodes.root.inputs.emacs-overlay}.locked;
-      nixpkgs = fetchTarball { url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz"; sha256 = n.narHash; };
-      overlay = fetchTarball { url = "https://github.com/${ov.owner}/${ov.repo}/archive/${ov.rev}.tar.gz"; sha256 = ov.narHash; };
-      pkgs = import nixpkgs { overlays = [ (import overlay) (import ./overlay.nix) ]; };
-  in {
-    # x86_64-linux: every GUI build maps to its *-pgtk sibling.
-    default       = pkgs.emacsConfig.outPath == pkgs.emacs-unstable-pgtk.outPath;
-    bare-default  = (import ./emacs.nix {}).outPath == pkgs.emacs-unstable-pgtk.outPath;
-    mainline-pgtk = (import ./emacs.nix { variant = "mainline"; }).outPath == pkgs.emacs-pgtk.outPath;
-    git-pgtk      = (import ./emacs.nix { variant = "git"; }).outPath == pkgs.emacs-git-pgtk.outPath;
-    igc-pgtk      = (import ./emacs.nix { variant = "igc"; }).outPath == pkgs.emacs-igc-pgtk.outPath;
-  }'
-```
+Any edit to the `basePackage` / `basePackage.override { ... }` block must keep
+parity for the `unstable` pgtk sibling and the noGui overrides. Verify with
+`just cache-parity` (`nix/cache-parity.nix`, `nix-instantiate` over the tree's
+nixpkgs and emacs-overlay pins); every value must be `true`.
 
 **Older-nixpkgs portability.** The override args are filtered through
 `lib.intersectAttrs (lib.functionArgs basePackage.override) overrideArgs`, so
@@ -290,8 +188,7 @@ override. On 24.05 `pkgs.emacs` is Emacs 29, which the Elisp config does not
 target.
 
 **Overlay** (`nix/mk-overlay.nix`, parameterised on `variant`;
-`overlay.nix` is a standalone wrapper that composes emacs-overlay, pinned
-from `flake.lock`, underneath it):
+`overlay.nix` is a standalone wrapper that composes emacs-overlay underneath it):
 
 - `emacsConfig` / `emacsConfigNoGui`: bare Emacs from `emacs.nix`
   (pgtk; the noGui twin is for nix-on-droid).
@@ -305,29 +202,22 @@ from `flake.lock`, underneath it):
 - `likec4Lsp`: the `@likec4/lsp` server for `likec4-mode`, on every
   distribution's `PATH`.
 
-**`default.nix`** wraps the flake via flake-compat (rev from `flake.lock`):
-`nix-build` builds the distribution, `nix-build -A emacs` bare Emacs.
-Variant builds target `emacs.nix` directly.
+**`default.nix`** selects `emacs-config.packages.<system>.default` from the
+repo root `nix/inputs.nix`: `nix-build` builds the distribution. Variant builds
+target `emacs.nix` directly.
 
-**`flake.nix`** is wiring only. Outputs:
+**Outputs** (the `emacs-config` attrset in the root `nix/inputs.nix`):
 
 - `packages.<system>`: `default` (`emacsConfigPackages`), `emacs`
-  (`emacsConfig`), `emacs-nox` (`emacsConfigPackagesNoGui`), `likec4-lsp`,
-  `info`, `docs` (options HTML), `packages-doc` (per-package reference),
-  `emacs-api-doc`, `ds-assets`.
-- `legacyPackages.<system>` (not built by `nix flake check`):
-  `emacs-packages.<name>` (every bundled package), `config-compiled` (for
-  `run-built-fast`), `lang-eval-doc` / `lang-eval-matrix` / `lang-eval-live`.
+  (`emacsConfig`), `emacs-nox` (`emacsConfigPackagesNoGui`), `docs` (options
+  HTML), `packages-doc` (per-package reference), `ds-assets`, `info`.
 - `overlays.default`; `homeManagerModules.default` (`module.nix`);
-  `nixosModules.default` (`module-system.nix`); `nixOnDroidModules.default`
-  (`module-nix-on-droid.nix`); an example `nixOnDroidConfigurations.default`
-  (aarch64, not built by CI).
-- `formatter` (treefmt), `lib` (use-package scanner, `nix/use-package.nix`),
-  `checks` (`nix/checks.nix`).
+  `nixosModules.default` (`module-system.nix`).
+- `formatter` (treefmt) and `checks` (`nix/checks.nix`).
 
-All module outputs get the overlay composed over emacs-overlay
-(`moduleOverlay`), so module installs resolve the same Emacs base and epkgs
-snapshot that CI builds and caches.
+Module outputs get the overlay composed over emacs-overlay
+(`emacsConfigModuleOverlay`), so module installs resolve the same Emacs base
+and epkgs snapshot that the checks build and cache.
 
 `emacs-api-doc` (`nix/emacs-api-doc.nix`, forking the vendored
 `etc/elisp-doc/`) runs a batch Emacs over the package closure and emits the
@@ -352,7 +242,7 @@ and `nix-community`.
 (`jylhis-emacs-themes`, `claude-code-ide`, `combobulate`, `majutsu`,
 `tagref`, …) with `trivialBuild`, plus overrides such as built-in shims and
 an Elisp-only `ghostel`. `jylhis-emacs-themes` is built from the in-tree
-design system (`lib/design/nix/emacs.nix`), and the jotain site copies its
+design system (`lib/design/nix/emacs.nix`), and the emacs-docs site copies its
 CSS from the same tree (`nix/ds-assets.nix`, a wrapper over
 `lib/design/nix/web-assets.nix`), so editor and site never
 diverge. The Emacs Lisp devenv module (`languages.emacs-lisp`, with ellsp)
@@ -396,50 +286,39 @@ in nixpkgs-extra.
 
 ### Pinning
 
-`flake.lock` is the source of truth for input revisions. `devenv.yaml` pins
-the shared inputs (`nixpkgs`, `treefmt-nix`, `emacs-overlay`) to the same
-commits so the shell hits the same caches, and `devenv.lock` must agree. Use
-`just update` to bump, `just verify` to check, and `just sync-devenv` when
-`flake.lock` moved on its own (`sync-devenv.yml` does this for Dependabot
-PRs). Drift fails the `locks-in-sync` check and PR CI. `default.nix`,
-`emacs.nix`, and `overlay.nix` read their pins from `flake.lock` via
-`fetchTarball`, resolving nodes through the root input map.
+The tree's nixtamal pins (`nix/tamal/`, see the root `AGENTS.md`) are the
+source of truth for nixpkgs and emacs-overlay; `just update` at the repo root
+bumps them together with the devenv locks. Nothing in `etc/emacs` carries its
+own `flake.lock`.
 
-#### Hand-pinned upstreams (not in `flake.lock`)
+#### Hand-pinned upstreams
 
-Not bumped by `just update` or Dependabot: the GitHub-built Emacs packages
+Not bumped by `just update`: the GitHub-built Emacs packages
 (`nix/extra-packages.nix`), the ECA server (`nix/eca-server.nix`) and the
-vendored npm language server (`nix/likec4-lsp.nix`).
-`just update-pins` bumps them via
-`scripts/update-pins.sh`: [nix-update](https://github.com/Mic92/nix-update)
-for the plain `fetchFromGitHub` packages (tagged repos follow the newest
-tag, untagged ones the branch HEAD), and bespoke steps for eca (four-platform
-hash table) and the two npm wrappers (regenerated `package-lock.json`).
-Scope it with pin names
-(`just update-pins combobulate eca`); `--list` prints them. Two pins are
-manual by design: `ghostel` (a temporary Elisp-only rebuild of
-emacs-overlay's epkg; revert it, don't bump)
-and `etc/elisp-doc` (vendored verbatim from a Codeberg fork).
+vendored npm language server (`nix/likec4-lsp.nix`). `scripts/update-pins.sh`
+bumps them with [nix-update](https://github.com/Mic92/nix-update) (`--list`
+prints the pin names). It and `scripts/verify-locks.sh` date from the
+standalone flake: check them against the in-tree build before relying on them.
+Two pins are manual by design: `ghostel` (a temporary Elisp-only rebuild of
+emacs-overlay's epkg; revert it, don't bump) and `etc/elisp-doc` (vendored
+verbatim from a Codeberg fork).
 
 ### Shared treefmt configuration
 
 `nix/treefmt.nix` defines the formatters (`nixfmt`, `deadnix`, `statix`) for
-both `flake.nix` (`nix fmt`, the `formatting` check) and `devenv.nix`. Add
+both the root `nix/inputs.nix` (the `formatting` check and formatter) and `devenv.nix`. Add
 new formatters there.
 
 ### Check / test responsibility split
 
-Flake checks (`nix/checks.nix`) cover the application and configuration:
+Checks (`nix/checks.nix`) cover the application and configuration:
 
 - **Package builds**: `packages-default`, `packages-emacs`, `packages-info`.
 - **Docs**: `options-doc`, `packages-doc`, `packages-doc-in-sync` (fix:
-  `just docs-refresh-packages`), and `emacs-api-doc` (build-only, deploy
-  path only).
-- **In-sync gates**: `lang-eval-doc-in-sync` (fix: `just docs-refresh-lang-matrix`; not in PR
-  CI); `eca-models-in-sync`, which compares the OpenRouter models in
+  `just docs-refresh-packages`), and `emacs-api-doc` (build-only).
+- **In-sync gates**: `eca-models-in-sync`, which compares the OpenRouter models in
   `config/eca/config.json` with gptel's `:models` in `lisp/init-ai.el`
   (reconcile both by hand).
-- **Locks**: `locks-in-sync` (fix: `just sync-devenv`).
 - **Module evaluation** without the host frameworks: `module-eval`,
   `nix-on-droid-module-eval`.
 - **Nix linting**: `formatting`, `statix`, `deadnix`.
@@ -467,7 +346,7 @@ CI's artifact is what `home-manager switch` installs. `devenv test`
 `docs/emacs-config.texi` is the master file. `nix/info-manual.nix` converts each
 `docs/*.md(x)` page into a chapter with pandoc, `@include`s them, and runs
 `makeinfo` + `install-info`. The options appendix comes from
-`nix/options-doc.nix`, which emits both `index.html` (Pages) and
+`nix/options-doc.nix`, which emits both `index.html` and
 `emacs-config-options.texi` from one source. The distribution wrapper appends
 `${emacsConfigInfo}/share/info` to `INFOPATH` without a trailing `:`
 (`makeBinaryWrapper` rejects empty segments); nixpkgs' Emacs `site-start.el`
@@ -487,22 +366,16 @@ practice, use the `attic/skills/local/emacs/` references rather than memory.
 
 Put ERT files in `test/`: the `elisp-test` check loads every `test/*.el`
 (with `-L lisp`), so new files need no registration. Test module behaviour
-or helper functions. Run `just test` for ERT alone and `just check` before
-opening a PR.
+or helper functions. Run `just test` before committing.
 
 ## Commit & Pull Request Guidelines
 
-Commits use `scope: subject` with a short imperative subject, e.g.
-`elisp: default to the unstable variant`, `ci: gate lock-file sync`. Common
-scopes: `docs`, `elisp`, `nix`, `ci`, `site`, `ui`, `completion`, `themes`,
-`build(deps)`. PRs include a summary, issue links, check results, and
-screenshots only for UI-facing changes.
+Follow the root `AGENTS.md` (Conventional Commits, scope `emacs`, a line under
+`## [Unreleased]` in `CHANGELOG.md`).
 
 ## Security & Configuration Tips
 
-- Keep the locks aligned (see Pinning).
 - Generated files: edit the source, then regenerate.
   `docs/configuration/package-reference.mdx` comes from `;;; @doc` blocks
-  (`just docs-refresh-packages`); `docs/reference/language-support.mdx` from
-  `etc/lang-eval/my-lang-registry.el` (`just docs-refresh-lang-matrix`).
+  (`just docs-refresh-packages`).
 - Never commit generated state: `elpa/`, `var/`, `result*`, `*.elc`.

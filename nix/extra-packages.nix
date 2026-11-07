@@ -1,10 +1,10 @@
 # Emacs packages Nix builds itself (absent from every archive), plus
-# overrides of archive packages: built-in shims, ghostel, and version
+# overrides of archive packages: built-in shims and version
 # pins. Overlaid onto the package scope by nix/mk-overlay.nix and
 # nix/emacs-package-set.nix.
 { pkgs }:
 
-efinal: eprev:
+efinal: _eprev:
 let
   # Emacs 31 ships newer xref/project/eglot/flymake in-tree, but
   # transitive `Package-Requires' (consult-eglot, eglot-tempel,
@@ -50,30 +50,6 @@ in
   project = emptyElpaPackage "project";
   eglot = emptyElpaPackage "eglot";
   flymake = emptyElpaPackage "flymake";
-
-  # TEMPORARY (2026-07-21): emacs-overlay's ghostel epkg builds the
-  # libghostty-vt native module with zig, and the module's zig-deps
-  # fixed-output fetch is currently unbuildable on GitHub CI runners
-  # (zig's fetcher fails against github.com: HttpConnectionClosing /
-  # WriteFailed). Rebuild the package Elisp-only from the same pinned
-  # MELPA source so the distribution stays buildable. Until reverted the
-  # distribution has no module: auto-install downloads into the package
-  # directory, which is the read-only store path. Revert to the plain
-  # epkgs.ghostel once the upstream fetch works.
-  ghostel = efinal.trivialBuild {
-    pname = "ghostel";
-    version = eprev.ghostel.version or "0";
-    src = eprev.ghostel.src;
-    packageRequires = eprev.ghostel.packageRequires or [ ];
-    # The MELPA recipe cherry-picks the elisp out of the repo; trivialBuild
-    # wants it at the source root, so point sourceRoot at ghostel.el's dir.
-    postUnpack = ''
-      elFile=$(find "$sourceRoot" -name ghostel.el -print -quit)
-      if [ -n "$elFile" ]; then
-        sourceRoot=$(dirname "$elFile")
-      fi
-    '';
-  };
 
   # The Jylhis themes from the in-tree design system (lib/design), the same
   # tokens every other target is generated from.

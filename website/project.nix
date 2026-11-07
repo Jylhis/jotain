@@ -29,4 +29,10 @@
   # docs.example.org -> a Workers custom domain (libexec/engines/infra/emitters/
   # workers.nix binds the hostname to this project's Worker script, emacs-docs).
   requires.dns = "docs.example.org";
+
+  # Read outside the project directory (project.nix(5) uses).
+  uses = [
+    "lib/design"
+    "etc/emacs"
+  ];
 }

@@ -53,6 +53,12 @@ lint:
 fmt:
     devenv shell -- treefmt .
 
+# Assert the bare Emacs builds still equal their prebuilt cache siblings
+# (every value must be true; see "Nix build layer" in AGENTS.md).
+[group('test')]
+cache-parity:
+    nix-instantiate --eval --strict {{ justfile_directory() }}/nix/cache-parity.nix
+
 # Remove build artifacts (compiled elisp, results).
 [group('clean')]
 clean:

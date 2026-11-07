@@ -522,7 +522,8 @@ Content of the documentation pages is part of <a href=\"https://www.gnu.org/soft
             helpful-edebug-button       ; ~
             helpful-trace-button        ; ~
             ;; helpful-navigate-button ; [[link]]: file
-            helpful-buffer-button    ; switch to buffer (TODO: when?)
+            helpful-buffer-button    ; switch to the associated buffer, in the
+                             ; "Value in #<buffer ...>" variable heading
             helpful-customize-button ; ~
             helpful-associated-buffer-button ; change associated buffer
             helpful-toggle-button            ; ~
@@ -844,7 +845,9 @@ Content of the documentation pages is part of <a href=\"https://www.gnu.org/soft
 (defun elisp-doc--find-text-fragment (text section pred)
   "Produce a tentative text fragment link fragment for TEXT in SECTION.
 
-TODO: The caller may use PRED to check if the fragment if valid."
+Search SECTION for occurrences of TEXT and call PRED with point after each
+match.  Use the first occurrence for which PRED returns non-nil.  Return nil
+if there is none.  The caller decides what makes an occurrence valid."
   (goto-char (elisp-doc-entry-section-start section))
   (catch 'break
     (while (search-forward text (elisp-doc-entry-section-end section) t)
