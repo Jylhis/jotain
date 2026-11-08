@@ -370,8 +370,8 @@ or helper functions. Run `just test` before committing.
 
 ## Commit & Pull Request Guidelines
 
-Follow the root `AGENTS.md` (Conventional Commits, scope `emacs`, a line under
-`## [Unreleased]` in `CHANGELOG.md`).
+Follow the root `AGENTS.md` (Conventional Commits, scope `emacs`, a changie
+fragment for project `etc/emacs`).
 
 ## Security & Configuration Tips
 
