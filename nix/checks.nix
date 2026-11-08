@@ -1,7 +1,6 @@
 # nix/checks.nix — Flake check derivations for the configuration.
 #
-# Application and configuration checks; dev-shell assertions live in
-# devenv.nix enterTest.
+# Application and configuration checks.
 {
   pkgs,
   src,

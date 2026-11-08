@@ -34,8 +34,8 @@ in-tree build replaces them.
 
 ## Development environment
 
-Run recipes from `etc/emacs`, inside the devenv shell (`devenv shell`, or
-prefix a command, e.g. `devenv shell -- just fmt`). The shell has Nix/lint/docs
+Run recipes from `etc/emacs`, inside the project shell (`direnv allow`, or
+prefix a command, e.g. `just _with_nix treefmt .`). The shell has Nix/lint/docs
 tooling and the language servers the config shells out to, but no Emacs (its
 ~1 GB closure made `direnv allow` slow). Paren, compile and test coverage
 comes from the `elisp-lint`, `elisp-compile` and `elisp-test` checks. The
@@ -58,7 +58,7 @@ All recipes below run in `etc/emacs`. The shared recipes (`nix-build`,
   elisp-compile, scanner-fidelity, packages-doc-in-sync, config-startup,
   elisp-test, the doc and module checks). Build one with
   `nix build -f . local.checks.emacs-<name>` at the repo root.
-- `just fmt`: treefmt (nixfmt, deadnix, statix) through the devenv shell.
+- `just fmt`: treefmt (nixfmt, deadnix, statix) through the project shell.
   `just lint` is a no-op: `etc/emacs` is excluded from the root treefmt.
 - `just build`: the full distribution (`emacsConfigPackages`: Emacs,
   packages, every tree-sitter grammar) via `nix-build`.
@@ -230,7 +230,7 @@ Info manual.
 
 ### Dev shell
 
-`devenv.nix` provides tooling only: Nix tooling and linters (`nil`,
+`shell.nix` provides tooling only: Nix tooling and linters (`nil`,
 `nixfmt`, `statix`, `deadnix`), build tools that modes shell out to
 (`meson`, `ninja`, `buildifier`), the language servers and CLIs the config
 invokes (`sonarlint-ls`, `rass`, `eca`, `tagref`,
@@ -288,7 +288,7 @@ in nixpkgs-extra.
 
 The tree's nixtamal pins (`nix/tamal/`, see the root `AGENTS.md`) are the
 source of truth for nixpkgs and emacs-overlay; `just update` at the repo root
-bumps them together with the devenv locks. Nothing in `etc/emacs` carries its
+bumps them. Nothing in `etc/emacs` carries its
 own `flake.lock`.
 
 #### Hand-pinned upstreams
@@ -306,7 +306,7 @@ verbatim from a Codeberg fork).
 ### Shared treefmt configuration
 
 `nix/treefmt.nix` defines the formatters (`nixfmt`, `deadnix`, `statix`) for
-both the root `nix/inputs.nix` (the `formatting` check and formatter) and `devenv.nix`. Add
+both the root `nix/inputs.nix` (the `formatting` check and formatter) and `shell.nix`. Add
 new formatters there.
 
 ### Check / test responsibility split
@@ -337,9 +337,8 @@ Checks (`nix/checks.nix`) cover the application and configuration:
 
 `elisp-compile` is the same `nix/config-compiled.nix` derivation that
 `module.nix` deploys as `compiledConfig`, so on the default configuration
-CI's artifact is what `home-manager switch` installs. `devenv test`
-(`enterTest` in `devenv.nix`) only checks that the shell tooling is on
-`PATH` and lives in the Nix store.
+CI's artifact is what `home-manager switch` installs. The shell has no
+test of its own: `checks.<system>.emacs-binaries` covers the binaries.
 
 ### Info manual
 
