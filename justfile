@@ -44,14 +44,14 @@ run-built *ARGS:
     ./result/bin/emacs --init-directory="{{ justfile_directory() }}" {{ ARGS }}
 
 # etc/emacs is excluded from root treefmt; formatting is enforced by its
-# own treefmt config (nix/treefmt.nix, run via devenv).
+# own treefmt config (nix/treefmt.nix, run from shell.nix).
 [group('lint')]
 lint:
-    @echo "skip: etc/emacs formats via its own treefmt (nix/treefmt.nix; see devenv)"
+    @echo "skip: etc/emacs formats via its own treefmt (nix/treefmt.nix; see shell.nix)"
 
 [group('fmt')]
 fmt:
-    devenv shell -- treefmt .
+    @just _with_nix treefmt .
 
 # Assert the bare Emacs builds still equal their prebuilt cache siblings
 # (every value must be true; see "Nix build layer" in AGENTS.md).
