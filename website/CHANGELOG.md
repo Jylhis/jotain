@@ -8,14 +8,6 @@ Entries up to 2026-11 were reconstructed from git history (first commit 2026-07-
 
 ## [Unreleased]
 
-### Changed
-
-- The package builds the site without the third-party API reference; the deployed site builds `passthru.withApiDoc`, which ingests it.
-- **Tests:** `package.nix` returns the package and keeps its tests in `passthru.tests`; `project.nix` declares them as `tests`. The package itself is the `build` check.
-- `test`, `serve` and `deploy` build the package and checks through the project entry point instead of the root `local.packages` and `local.checks`.
-- The full Nix-built site is served from the root of docs.example.org: a dedicated workflow builds it and runs wrangler deploy when main is green, replacing the Workers Builds shell that could only ship the committed landing page. ([aab05e8d5d](https://github.com/Jylhis/monorepo/commit/aab05e8d5d))
-- The manual page links `jylhis-infra-engine(7)`, and `project.nix` points at the engine's `emitters/` directory.
-
 ## 2026-10
 
 ### Added

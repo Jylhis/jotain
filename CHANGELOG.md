@@ -8,32 +8,6 @@ Entries up to 2026-11 were reconstructed from git history (first commit 2024-05-
 
 ## [Unreleased]
 
-### Added
-
-- `magit-land` (`lisp/magit-land.el`, `C-x p L`): a summary buffer for the current branch against origin/main. It lists each commit with the result kinds of `refs/notes/checks` and the `refs/notes/review` note, and binds `L` (git-land), `S` (git-results show) and `D` (wt remove).
-- `just info` builds and opens a combined Info manual covering the jylhis man pages and the Emacs configuration. ([cb838529c6](https://github.com/Jylhis/monorepo/commit/cb838529c6))
-
-### Changed
-
-- Use the plain `epkgs.ghostel` again: the zig-deps fetch that forced the Elisp-only workaround builds now.
-
-- likec4-lsp fetches its npm dependencies with `importNpmLock` from the vendored lockfile, so it no longer pins an `npmDepsHash`.
-- likec4-lsp fetches its npm dependencies with `importNpmLock` from the vendored lockfile, so it no longer pins an `npmDepsHash`.
-- The NixOS and Home Manager modules reuse `pkgs` when it already has the overlay, instead of `pkgs.extend`, which built another nixpkgs instance per module.
-- Claude models route to the direct Anthropic API on the desktop with OpenRouter twins as fallback, and the gptel and eca model lists move to the 5.5 models. ([645d85fc1d](https://github.com/Jylhis/monorepo/commit/645d85fc1d))
-- The documentation site is renamed `emacs-docs` and deployed to docs.example.org from its own workflow. ([aab05e8d5d](https://github.com/Jylhis/monorepo/commit/aab05e8d5d))
-- The SonarLint section drops the SonarCloud connected-mode notes.
-
-### Removed
-
-- The `.agents/skills` Emacs reference skills moved to `attic/skills/local/emacs`; `AGENTS.md` points at the archived notes.
-
-### Fixed
-
-- Links between docs pages point at the matching Info node instead of the docs site's routes such as `/usage/launching`, and the whole-repo review queue page joins the Info manual.
-- The HTML manual ships its own `manual.css`, so it has a stylesheet where it is served outside the emacs-docs site.
-- Generated API reference pages get URL-safe file names, so symbols such as `consult--keep!` are served correctly. ([dbaf2352c4](https://github.com/Jylhis/monorepo/commit/dbaf2352c4))
-
 ## 2026-10
 
 ### Added
