@@ -21,6 +21,18 @@
   :custom
   (repo-review-queue-dir (my-var-file "repo-review/")))
 
+;;; @doc Landing summary for a task branch (the in-repo
+;;; `lisp/magit-land.el' library). `C-x p L' lists the commits of the
+;;; current branch that are not on origin/main yet, with the check
+;;; kinds from refs/notes/checks and the review note from
+;;; refs/notes/review under each. `L' runs git-land in a compilation
+;;; buffer (`C-u L' adds --yes), `S' shows the check results of the
+;;; commit at point with git-results, `D' removes the worktree with
+;;; `wt remove' after a prompt, and `g' refreshes.
+(use-package magit-land
+  :ensure nil
+  :bind (:map project-prefix-map ("L" . magit-land)))
+
 ;;; @doc Marginal notes and highlights for files visited from the review
 ;;; queue. `repo-review' enables `org-remark-mode' in each visited file
 ;;; and points the notes at a per-project file beside the review queue,

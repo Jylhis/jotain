@@ -10,6 +10,7 @@ Entries up to 2026-11 were reconstructed from git history (first commit 2024-05-
 
 ### Added
 
+- `magit-land` (`lisp/magit-land.el`, `C-x p L`): a summary buffer for the current branch against origin/main. It lists each commit with the result kinds of `refs/notes/checks` and the `refs/notes/review` note, and binds `L` (git-land), `S` (git-results show) and `D` (wt remove).
 - `just info` builds and opens a combined Info manual covering the jylhis man pages and the Emacs configuration. ([cb838529c6](https://github.com/Jylhis/monorepo/commit/cb838529c6))
 
 ### Changed
