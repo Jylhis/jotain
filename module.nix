@@ -2,7 +2,7 @@
 #
 # Import this module from your home-manager configuration and enable:
 #
-#   imports = [ /path/to/etc/emacs/module.nix ];
+#   imports = [ /path/to/projects/distros/emacs/module.nix ];
 #
 #   services.emacsConfig = {
 #     enable = true;

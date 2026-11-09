@@ -49,7 +49,7 @@ let
     root = repoRoot;
     # Not devenv's generated .devenv.flake.nix (platform/kit/source.nix).
     fileset =
-      fileset.intersection ((import ../../../platform/kit/source.nix).cleanFileset lib repoRoot)
+      fileset.intersection ((import ../../../../platform/kit/source.nix).cleanFileset lib repoRoot)
         (fileset.fileFilter (f: lib.hasSuffix ".nix" f.name) repoRoot);
   };
 

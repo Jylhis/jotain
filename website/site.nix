@@ -20,7 +20,7 @@
   pkgs,
   lib ? pkgs.lib,
   # The Emacs configuration tree the docs and references are generated from.
-  src ? ../../../etc/emacs,
+  src ? ../../../projects/distros/emacs,
   # Mount the heavy /help/api/ reference. Off for the preview variant;
   # guarded lazily so `false` never realizes emacsApiDoc.
   withApiDoc ? true,

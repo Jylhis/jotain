@@ -24,7 +24,7 @@ let
   eca = import ./nix/eca-server.nix { inherit pkgs; };
 
   # The Emacs tree is excluded from the root treefmt; `just fmt` runs this one.
-  treefmt = (import ../../nix/inputs.nix { }).treefmt-nix.lib.mkWrapper pkgs {
+  treefmt = (import ../../../nix/inputs.nix { }).treefmt-nix.lib.mkWrapper pkgs {
     projectRootFile = "project.nix";
     programs = import ./nix/treefmt.nix;
   };

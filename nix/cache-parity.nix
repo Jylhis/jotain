@@ -3,7 +3,7 @@
 #
 #   just cache-parity
 let
-  inputs = import ../../../nix/inputs.nix { };
+  inputs = import ../../../../nix/inputs.nix { };
   pkgs = import inputs.nixpkgs {
     system = builtins.currentSystem;
     overlays = [

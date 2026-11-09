@@ -10,6 +10,6 @@
   system ? builtins.currentSystem,
 }:
 let
-  inputs = import ../../nix/inputs.nix { };
+  inputs = import ../../../nix/inputs.nix { };
 in
 inputs.emacs-config.packages.${system}.default

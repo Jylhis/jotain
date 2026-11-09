@@ -34,7 +34,7 @@
   system ? builtins.currentSystem,
   pkgs ?
     let
-      inputs = import ../../nix/inputs.nix { };
+      inputs = import ../../../nix/inputs.nix { };
     in
     import inputs.nixpkgs {
       inherit system;

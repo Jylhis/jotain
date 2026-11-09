@@ -19,7 +19,7 @@
 let
   emacsOverlay = import (
     let
-      pin = (builtins.fromJSON (builtins.readFile ../../nix/tamal/lock.json)).i.emacs-overlay;
+      pin = (builtins.fromJSON (builtins.readFile ../../../nix/tamal/lock.json)).i.emacs-overlay;
       url = (builtins.elemAt pin.kd 1).ur;
       sha = pin.ha.vl;
     in

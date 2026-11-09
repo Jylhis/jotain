@@ -31,6 +31,6 @@
   # Read outside the project directory (project.nix(5) uses).
   uses = [
     "projects/libs/design"
-    "etc/emacs"
+    "projects/distros/emacs"
   ];
 }

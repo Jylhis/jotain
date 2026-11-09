@@ -34,7 +34,7 @@ in-tree build replaces them.
 
 ## Development environment
 
-Run recipes from `etc/emacs`, inside the project shell (`direnv allow`, or
+Run recipes from `projects/distros/emacs`, inside the project shell (`direnv allow`, or
 prefix a command, e.g. `just _with_nix treefmt .`). The shell has Nix/lint/docs
 tooling and the language servers the config shells out to, but no Emacs (its
 ~1 GB closure made `direnv allow` slow). Paren, compile and test coverage
@@ -51,7 +51,7 @@ generated docs lives in `projects/services/emacs-docs` (see `emacs-docs(8)`).
 
 ## Common commands
 
-All recipes below run in `etc/emacs`. The shared recipes (`nix-build`,
+All recipes below run in `projects/distros/emacs`. The shared recipes (`nix-build`,
 `nix-check`, `info`, ...) come from `platform/just/project.just`.
 
 - `just test`: build every `emacs-*` check of the tree (elisp-lint,
@@ -59,11 +59,11 @@ All recipes below run in `etc/emacs`. The shared recipes (`nix-build`,
   elisp-test, the doc and module checks). Build one with
   `nix build -f . local.checks.emacs-<name>` at the repo root.
 - `just fmt`: treefmt (nixfmt, deadnix, statix) through the project shell.
-  `just lint` is a no-op: `etc/emacs` is excluded from the root treefmt.
+  `just lint` is a no-op: `projects/distros/emacs` is excluded from the root treefmt.
 - `just build`: the full distribution (`emacsConfigPackages`: Emacs,
   packages, every tree-sitter grammar) via `nix-build`.
 - `just run-built [ARGS]`: **the way to launch this config.** Builds the
-  distribution and runs `./result/bin/emacs --init-directory=<etc/emacs>`,
+  distribution and runs `./result/bin/emacs --init-directory=<projects/distros/emacs>`,
   isolated from `~/.emacs.d`.
 - `just docs-refresh-packages`: regenerate
   `docs/configuration/package-reference.mdx` from the `;;; @doc` blocks in
@@ -71,7 +71,7 @@ All recipes below run in `etc/emacs`. The shared recipes (`nix-build`,
   fails.
 - `just cache-parity`: the cache-parity check below.
 - `just clean`: remove `*.elc`, `var/eln-cache` and `result`.
-- Info manual: `nix build -f . local.packages.info-manual -o etc/emacs/result-info`
+- Info manual: `nix build -f . local.packages.info-manual -o projects/distros/emacs/result-info`
   at the repo root; root `just info` opens it in `info`.
 - Options HTML: `nix build -f . local.checks.emacs-options-doc`.
 
@@ -288,7 +288,7 @@ in nixpkgs-extra.
 
 The tree's nixtamal pins (`nix/tamal/`, see the root `AGENTS.md`) are the
 source of truth for nixpkgs and emacs-overlay; `just update` at the repo root
-bumps them. Nothing in `etc/emacs` carries its
+bumps them. Nothing in `projects/distros/emacs` carries its
 own `flake.lock`.
 
 #### Hand-pinned upstreams
@@ -370,7 +370,7 @@ or helper functions. Run `just test` before committing.
 ## Commit & Pull Request Guidelines
 
 Follow the root `AGENTS.md` (Conventional Commits, scope `emacs`, a changie
-fragment for project `etc/emacs`).
+fragment for project `projects/distros/emacs`).
 
 ## Security & Configuration Tips
 

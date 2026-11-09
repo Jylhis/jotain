@@ -1,7 +1,7 @@
 default:
     @just --list --justfile {{justfile()}}
 
-import '../../platform/just/project.just'
+import '../../../platform/just/project.just'
 
 # The elisp gates (elisp-lint, elisp-compile, scanner-fidelity,
 # packages-doc-in-sync, config-startup, elisp-test) via the tree's checks.
@@ -27,8 +27,8 @@ docs-refresh-packages:
     cd "{{ repo }}"
     out=$(nix build --no-link --print-out-paths --impure --expr '
       (import ./nix/inputs.nix { }).emacs-config.packages.${builtins.currentSystem}.packages-doc')
-    cp "$out/package-reference.mdx" etc/emacs/docs/configuration/package-reference.mdx
-    echo "Refreshed etc/emacs/docs/configuration/package-reference.mdx"
+    cp "$out/package-reference.mdx" projects/distros/emacs/docs/configuration/package-reference.mdx
+    echo "Refreshed projects/distros/emacs/docs/configuration/package-reference.mdx"
 
 # Build the full distribution for this system (flakeless shim entry).
 [group('build')]
@@ -43,11 +43,11 @@ run-built *ARGS:
     just build
     ./result/bin/emacs --init-directory="{{ justfile_directory() }}" {{ ARGS }}
 
-# etc/emacs is excluded from root treefmt; formatting is enforced by its
+# projects/distros/emacs is excluded from root treefmt; formatting is enforced by its
 # own treefmt config (nix/treefmt.nix, run from shell.nix).
 [group('lint')]
 lint:
-    @echo "skip: etc/emacs formats via its own treefmt (nix/treefmt.nix; see shell.nix)"
+    @echo "skip: projects/distros/emacs formats via its own treefmt (nix/treefmt.nix; see shell.nix)"
 
 [group('fmt')]
 fmt:

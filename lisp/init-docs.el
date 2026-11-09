@@ -7,7 +7,7 @@
 ;; This module is the fallback for a host Emacs that isn't the configuration
 ;; wrapper: if a built manual is found (EMACS_CONFIG_INFO_DIR, or the
 ;; checkout's result-info/ from `nix build -f . local.packages.info-manual
-;; -o etc/emacs/result-info' at the repo root), add its directory to
+;; -o projects/distros/emacs/result-info' at the repo root), add its directory to
 ;; `Info-additional-directory-list'.
 
 ;;; Code:
@@ -22,7 +22,7 @@
         (list
          ;; Explicit override for unusual checkouts.
          (getenv "EMACS_CONFIG_INFO_DIR")
-         ;; `nix build -f . local.packages.info-manual -o etc/emacs/result-info'
+         ;; `nix build -f . local.packages.info-manual -o projects/distros/emacs/result-info'
          ;; drops the result symlink here.
          (expand-file-name "result-info/share/info" user-emacs-directory)
          ;; Fallback: `nix build .#info -o result' without a custom name.
