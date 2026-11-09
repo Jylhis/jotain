@@ -47,7 +47,7 @@ pins; this file covers only what is specific to the Emacs project.
 No workflow is specific to this project. The checks in `nix/checks.nix` appear
 as `emacs-<name>` in the root `checks` (`outputs.nix`), so `just nix-check` at
 the repo root builds them with everything else. The site that serves the
-generated docs lives in `usr.sbin/emacs-docs` (see `emacs-docs(8)`).
+generated docs lives in `projects/services/emacs-docs` (see `emacs-docs(8)`).
 
 ## Common commands
 
@@ -221,7 +221,7 @@ and epkgs snapshot that the checks build and cache.
 
 `emacs-api-doc` (`nix/emacs-api-doc.nix`, forking the vendored
 `etc/elisp-doc/`) runs a batch Emacs over the package closure and emits the
-per-symbol HTML that `usr.sbin/emacs-docs/site.nix` mounts at `/help/api/`. It is heavy and
+per-symbol HTML that `projects/services/emacs-docs/site.nix` mounts at `/help/api/`. It is heavy and
 deploy-path-only: only the site and its own check import it, never
 `nix/info-manual.nix` or `nix/mk-overlay.nix`, so editor builds stay cache
 hits. The site check builds without it (`withApiDoc = false`). Its

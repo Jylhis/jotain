@@ -268,7 +268,7 @@ pkgs.runCommand "emacs-config-info"
 
         # HTML, one page per chapter, for the site's /manual/. The relative
         # css-ref names the manual.css installed beside the pages;
-        # usr.sbin/emacs-docs/site.nix writes its own over it.
+        # projects/services/emacs-docs/site.nix writes its own over it.
         # makeinfo only creates the last path component itself.
         mkdir -p "$out/share/doc/emacs-config"
         makeinfo --html \

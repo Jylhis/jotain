@@ -3,15 +3,15 @@
   pkgs,
 }:
 let
-  inputs = import ../../nix/inputs.nix { };
+  inputs = import ../../../nix/inputs.nix { };
   emacsPkgs = pkgs.extend (
     lib.composeExtensions inputs.emacs-overlay.overlays.default (
-      import ../../etc/emacs/nix/mk-overlay.nix { }
+      import ../../../etc/emacs/nix/mk-overlay.nix { }
     )
   );
   mkSite = args: import ./site.nix ({ pkgs = emacsPkgs; } // args);
 
-  dsAssets = import ../../etc/emacs/nix/ds-assets.nix { pkgs = emacsPkgs; };
+  dsAssets = import ../../../etc/emacs/nix/ds-assets.nix { pkgs = emacsPkgs; };
 
   ds-in-sync =
     pkgs.runCommandLocal "check-ds-in-sync"

@@ -1,4 +1,4 @@
-# usr.sbin/emacs-docs/site.nix: assemble the full static site for docs.example.org.
+# projects/services/emacs-docs/site.nix: assemble the full static site for docs.example.org.
 #
 # Composes the hand-written landing SPA (./public) with every
 # document the repo can generate:
@@ -20,7 +20,7 @@
   pkgs,
   lib ? pkgs.lib,
   # The Emacs configuration tree the docs and references are generated from.
-  src ? ../../etc/emacs,
+  src ? ../../../etc/emacs,
   # Mount the heavy /help/api/ reference. Off for the preview variant;
   # guarded lazily so `false` never realizes emacsApiDoc.
   withApiDoc ? true,
