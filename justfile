@@ -1,7 +1,7 @@
 default:
     @just --list --justfile {{justfile()}}
 
-import '../../share/just/project.just'
+import '../../platform/just/project.just'
 
 # The elisp gates (elisp-lint, elisp-compile, scanner-fidelity,
 # packages-doc-in-sync, config-startup, elisp-test) via the tree's checks.

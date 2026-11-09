@@ -52,7 +52,7 @@ generated docs lives in `usr.sbin/emacs-docs` (see `emacs-docs(8)`).
 ## Common commands
 
 All recipes below run in `etc/emacs`. The shared recipes (`nix-build`,
-`nix-check`, `info`, ...) come from `share/just/project.just`.
+`nix-check`, `info`, ...) come from `platform/just/project.just`.
 
 - `just test`: build every `emacs-*` check of the tree (elisp-lint,
   elisp-compile, scanner-fidelity, packages-doc-in-sync, config-startup,
