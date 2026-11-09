@@ -9,14 +9,14 @@ internals and Elisp practice come from the canonical manuals — not from memory
 The substance is packaged as two **skills** (auto-discoverable, loaded on
 demand) plus this index:
 
-- **`attic/skills/local/emacs/emacs-internals/`** — how Emacs works underneath:
+- **`skills/local/emacs/emacs-internals/`** — how Emacs works underneath:
   garbage collection & object representation, the gap buffer / markers /
   overlays, the redisplay engine, the command loop & keymaps, byte & native
   compilation, threads, and the build/dump pipeline. Reach for it when
   explaining or debugging core behavior, tuning performance (GC, redisplay,
   startup), or reasoning about native-comp / eln caches.
 
-- **`attic/skills/local/emacs/elisp-dev/`** — how to write good Elisp here: naming and
+- **`skills/local/emacs/elisp-dev/`** — how to write good Elisp here: naming and
   file conventions, lexical binding, macro hygiene, hooks vs. advice,
   `defcustom`/`setopt`, `use-package` patterns, modern libraries
   (pcase/seq/map/cl-lib/rx), debugging & ERT testing, and an Emacs 30/31

@@ -81,7 +81,7 @@ full list of arguments).
 
 ## Emacs & Elisp knowledge base
 
-Two archived reference sets in `attic/skills/local/emacs/` hold source-cited
+Two archived reference sets in `skills/local/emacs/` in the `jylhis-attic` repository hold source-cited
 notes for Emacs 30/31 (index: `.claude/knowledge/emacs/README.md`). They are
 no longer loaded as skills: read their `SKILL.md` and `references/` files
 directly. **Use them instead of answering Emacs questions from memory.**
@@ -359,7 +359,7 @@ checkout, `lisp/init-docs.el` adds the first existing directory among
 Follow the module conventions above. Global Elisp symbols use the `my-`
 prefix (`my--` for internals); `lisp/devenv.el` uses `devenv-`. Nix
 formatting is enforced by `nix/treefmt.nix`. For Emacs internals and Elisp
-practice, use the `attic/skills/local/emacs/` references rather than memory.
+practice, use the `skills/local/emacs/` references in the `jylhis-attic` repository rather than memory.
 
 ## Testing Guidelines
 
