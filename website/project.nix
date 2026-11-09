@@ -24,7 +24,7 @@
     mode = "push";
   };
 
-  # docs.example.org -> a Workers custom domain (libexec/engines/infra/emitters/
+  # docs.example.org -> a Workers custom domain (platform/engines/infra/emitters/
   # workers.nix binds the hostname to this project's Worker script, emacs-docs).
   requires.dns = "docs.example.org";
 
