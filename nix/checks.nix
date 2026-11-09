@@ -47,10 +47,10 @@ let
   };
   nixSrc = fileset.toSource {
     root = repoRoot;
-    # Not devenv's generated .devenv.flake.nix (lib/kit/source.nix).
-    fileset = fileset.intersection ((import ../../../lib/kit/source.nix).cleanFileset lib repoRoot) (
-      fileset.fileFilter (f: lib.hasSuffix ".nix" f.name) repoRoot
-    );
+    # Not devenv's generated .devenv.flake.nix (platform/kit/source.nix).
+    fileset =
+      fileset.intersection ((import ../../../platform/kit/source.nix).cleanFileset lib repoRoot)
+        (fileset.fileFilter (f: lib.hasSuffix ".nix" f.name) repoRoot);
   };
 
   # The inner emacsWithPackages result (`passthru.core'), not the outer
