@@ -23,7 +23,7 @@ let
         if ! diff -r "$dsAssets" "$vendoredDs"; then
           echo "" >&2
           echo "public/ds is out of sync with the in-tree design system" >&2
-          echo "(lib/design). Re-vendor it with: just ds-sync" >&2
+          echo "(projects/libs/design). Re-vendor it with: just ds-sync" >&2
           exit 1
         fi
         touch $out

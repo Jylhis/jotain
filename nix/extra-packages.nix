@@ -51,9 +51,9 @@ in
   eglot = emptyElpaPackage "eglot";
   flymake = emptyElpaPackage "flymake";
 
-  # The Jylhis themes from the in-tree design system (lib/design), the same
+  # The Jylhis themes from the in-tree design system (projects/libs/design), the same
   # tokens every other target is generated from.
-  jylhis-emacs-themes = pkgs.callPackage ../../../lib/design/nix/emacs.nix {
+  jylhis-emacs-themes = pkgs.callPackage ../../../projects/libs/design/nix/emacs.nix {
     inherit (efinal) trivialBuild;
   };
 

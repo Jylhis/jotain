@@ -30,7 +30,7 @@
 
   # Read outside the project directory (project.nix(5) uses).
   uses = [
-    "lib/design"
+    "projects/libs/design"
     "etc/emacs"
   ];
 }

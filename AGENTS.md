@@ -242,9 +242,9 @@ and `nix-community`.
 (`jylhis-emacs-themes`, `claude-code-ide`, `combobulate`, `majutsu`,
 `tagref`, …) with `trivialBuild`, plus overrides such as built-in shims and
 an Elisp-only `ghostel`. `jylhis-emacs-themes` is built from the in-tree
-design system (`lib/design/nix/emacs.nix`), and the emacs-docs site copies its
+design system (`projects/libs/design/nix/emacs.nix`), and the emacs-docs site copies its
 CSS from the same tree (`nix/ds-assets.nix`, a wrapper over
-`lib/design/nix/web-assets.nix`), so editor and site never
+`projects/libs/design/nix/web-assets.nix`), so editor and site never
 diverge. The Emacs Lisp devenv module (`languages.emacs-lisp`, with ellsp)
 lives in [devenv-extra](https://github.com/Jylhis/devenv-extra), its packages
 in nixpkgs-extra.

@@ -2,7 +2,7 @@
 
 ;;; Commentary:
 
-;; The Jylhis themes come from the in-tree design system (lib/design),
+;; The Jylhis themes come from the in-tree design system (projects/libs/design),
 ;; so the theme symbols `init-ui.el' names can drift from the theme files
 ;; it generates (as renames have done).  On drift `load-theme'
 ;; signals and init-ui falls back to Modus.  Byte compilation can't
