@@ -5,7 +5,7 @@ description: How to build and install the configuration
 
 # Installation
 
-This configuration uses [Nix](https://nixos.org/) to build Emacs, driven by a `Justfile` task runner. Development happens in a [devenv](https://devenv.sh) shell: enter it with `devenv shell` (no `.envrc` is tracked; direnv users can create their own).
+This configuration uses [Nix](https://nixos.org/) to build Emacs, driven by a `justfile` task runner. It lives in the jylhis tree at `etc/emacs`; there is no flake. Development happens in a [devenv](https://devenv.sh) shell: enter it with `devenv shell` (no `.envrc` is tracked; direnv users can create their own).
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ This configuration uses [Nix](https://nixos.org/) to build Emacs, driven by a `J
 - [just](https://github.com/casey/just) task runner (not shipped by the devenv shell)
 - [devenv](https://devenv.sh) (optional but recommended for development)
 
-All `just` recipes assume the devenv shell is active. Without direnv, prefix any command with `devenv shell --`, e.g. `devenv shell -- just check`.
+All `just` recipes assume the devenv shell is active. Without direnv, prefix any command with `devenv shell --`, e.g. `devenv shell -- just test`.
 
 ## Building Emacs
 
@@ -23,29 +23,22 @@ The default build targets the current system and includes every tree-sitter gram
 just build
 ```
 
-This runs plain `nix-build`, which evaluates `default.nix` (a flake-compat wrapper around `flake.nix`) and builds `packages.<system>.default`: the full `emacsConfigPackages` distribution (Emacs + use-package-scanned packages + tree-sitter grammars + the Info manual) assembled by `nix/mk-overlay.nix`. Its Emacs is the emacs-overlay `unstable` variant (the newest Emacs release or pretest tag, currently 31.1). The cache-parity invariant in `emacs.nix` makes its store path match emacs-overlay's prebuilt `emacs-unstable-pgtk` on Linux, so the base Emacs comes from `nix-community.cachix.org` instead of compiling.
+This runs plain `nix-build`, which evaluates `default.nix` (a shim over the tree's `nix/inputs.nix`) and builds `emacs-config.packages.<system>.default`: the full `emacsConfigPackages` distribution (Emacs + use-package-scanned packages + tree-sitter grammars + the Info manual) assembled by `nix/mk-overlay.nix`. Its Emacs is the emacs-overlay `unstable` variant (the newest Emacs release or pretest tag, currently 31.1). The cache-parity invariant in `emacs.nix` makes its store path match emacs-overlay's prebuilt `emacs-unstable-pgtk` on Linux, so the base Emacs comes from `nix-community.cachix.org` instead of compiling.
 
 ### Build Matrix
 
 This configuration ships two builds on {x86_64, aarch64} Linux: a pgtk/Wayland GUI and a terminal-only build. X11/Lucid/GTK3-x11/Motif/Athena and the macport fork are not supported; `emacs.nix` asserts them away.
 
 ```bash
-just build           # full distribution: Emacs 31 (unstable) + every grammar (default)
-just build-nox-full  # full terminal-only distribution (same attr the nix-on-droid module ships)
-just build-bare      # bare Emacs from emacs.nix: the platform's matrix GUI
-just build-nox       # --without-x --without-ns (terminal only, bare)
-just build-git       # bleeding-edge master from git.savannah.gnu.org
-just build-igc       # feature/igc3 MPS incremental GC branch
-just build-igc-ccache # igc via ccacheStdenv (for from-source platforms; see emacs.nix)
-just build-perf      # CPU-tuned perf build: -O3 -march/-mtune (opt-in; off every binary cache)
-just build-android   # bare aarch64-linux nox, kept for cache-parity testing
+just build           # full distribution: Emacs 31 (unstable) + every grammar
 ```
 
-Or call `nix-build` directly. `default.nix` exposes the flake packages, and bare-Emacs builds target `emacs.nix` with any argument the file accepts:
+The other builds have no recipe. Bare-Emacs builds target `emacs.nix` with any argument the file accepts:
 
 ```bash
-nix-build                                                # full distribution
-nix-build -A emacs                                       # bare Emacs only
+nix-build                                                # full distribution (same as just build)
+nix-build emacs.nix                                      # bare Emacs: the pgtk GUI
+nix-build emacs.nix  --arg noGui true                    # terminal only, bare
 nix-build emacs.nix  --arg withNativeCompilation false   # no native-comp
 nix-build emacs.nix  --arg variant '"git"'               # master
 nix-build emacs.nix  --arg variant '"igc"'               # MPS GC branch
@@ -55,13 +48,16 @@ nix-build emacs.nix  --arg variant '"igc"'               # MPS GC branch
 `git`/`unstable`/`igc` build the revision pinned by emacs-overlay and are binary-cache hits on Linux. When pinning a custom commit via `--argstr rev "..."`, the first build fails and reports the hash to pass back via `--argstr hash "sha256-..."`.
 </Note>
 
-## Installing from a Consumer Flake
+## Installing the modules
 
-This configuration exposes Home Manager and NixOS modules. By default they install the full distribution (`emacsConfigPackages`):
+The tree's `nix/inputs.nix` builds a flake-shaped `emacs-config` attrset with Home Manager and NixOS modules. The jylhis hosts get both through `outputs.nix`; anything else imports them from a checkout. By default they install the full distribution (`emacsConfigPackages`):
 
 ```nix
+let
+  emacs-config = (import /path/to/jylhis/nix/inputs.nix { }).emacs-config;
+in
 {
-  imports = [ inputs.emacs-config.homeManagerModules.default ];
+  imports = [ emacs-config.homeManagerModules.default ];
 
   services.emacsConfig.enable = true;
 }
@@ -71,50 +67,42 @@ This configuration exposes Home Manager and NixOS modules. By default they insta
 
 ```nix
 {
-  imports = [ inputs.emacs-config.homeManagerModules.default ];
-
   services.emacsConfig = {
     enable = true;
-    package = inputs.emacs-config.packages.${system}.emacs-nox;
+    package = emacs-config.packages.${system}.emacs-nox;
   };
 }
 ```
 
 ### nix-on-droid (Android)
 
-This configuration also ships a [nix-on-droid](https://github.com/nix-community/nix-on-droid) module for Emacs on Android (Termux/proot). Android is headless under proot, so the module installs a **terminal-only** Emacs into `environment.packages` and points `EDITOR`/`VISUAL` at an `emacsclient` wrapper. There is no systemd daemon, launchd agent, or GUI.
+`module-nix-on-droid.nix` is a [nix-on-droid](https://github.com/nix-community/nix-on-droid) module for Emacs on Android (Termux/proot). Android is headless under proot, so the module installs a **terminal-only** Emacs into `environment.packages` and points `EDITOR`/`VISUAL` at an `emacsclient` wrapper. It is not part of the `emacs-config` attrset: import the file by path.
 
 ```nix
 {
-  imports = [ emacs-config.nixOnDroidModules.default ];
+  imports = [ /path/to/jylhis/etc/emacs/module-nix-on-droid.nix ];
 
   services.emacsConfig.enable = true;
 }
 ```
 
-Switch it in with `nix-on-droid switch --flake .#default`. `nixOnDroidConfigurations.default` in the configuration's `flake.nix` is a complete example.
-
 <Note>
-Like the NixOS module (`module-system.nix`), this module installs the **configured Emacs package** (its Emacs packages, tree-sitter grammars, themes, and Info manual are on the `load-path`) but not the configuration's own `early-init.el` / `init.el` / `lisp/`. To boot the full configuration, point Emacs at a checkout with `--init-directory` (as `just run-built` does), or layer the Home Manager module through nix-on-droid's `home-manager.config`, which installs the config into `~/.config/emacs`. An `--init-directory` inside the read-only Nix store won't work, because the configuration writes `var/`, `elpa/`, and `eln-cache/` under `user-emacs-directory`.
+Like the NixOS module (`module-system.nix`), this module installs the **configured Emacs package** (its Emacs packages, tree-sitter grammars, themes, and Info manual are on the `load-path`) but not the configuration's own `early-init.el` / `init.el` / `lisp/`. To boot the full configuration, point Emacs at a checkout with `--init-directory`.
 </Note>
 
-### Overriding nixpkgs
+### Older nixpkgs
 
-Downstream flakes may pin a different nixpkgs (release branches **24.05+** through unstable) by following the input:
+The modules take whatever `pkgs` the importing configuration has (release branches **24.05+** through unstable).
 
-```nix
-inputs.emacs-config.inputs.nixpkgs.follows = "nixpkgs";
-```
-
-`emacs.nix` only forwards the build flags the base `make-emacs.nix` defines, so the modules still evaluate and build on older releases. On 24.05, `pkgs.emacs` is Emacs 29 while the configuration's Elisp targets Emacs 30/31: the build succeeds, but runtime behaviour is only guaranteed on the pinned unstable.
+`emacs.nix` only forwards the build flags the base `make-emacs.nix` defines, so the modules still evaluate and build on older releases. On 24.05, `pkgs.emacs` is Emacs 29 while the configuration's Elisp needs Emacs 31.1: the build succeeds, but runtime behaviour is only guaranteed on the pinned unstable.
 
 ## Running
 
 This configuration is launched from its own checkout via `--init-directory`, so it never touches `~/.emacs.d`.
 
 ```bash
-just run-built          # build for this platform, then launch result/bin/emacs
-just run-built-debug    # same, with --debug-init and debug-on-error
+just run-built               # build, then launch result/bin/emacs
+just run-built --debug-init  # arguments are passed on to Emacs
 ```
 
 The devenv shell has no Emacs. See [Launching Emacs](/usage/launching) for the daemon + client pattern.

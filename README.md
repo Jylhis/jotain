@@ -20,13 +20,12 @@ just run-built
 Development happens in the [devenv](https://devenv.sh) shell
 (`devenv shell`, or prefix commands with `devenv shell --`). It provides
 linters, language servers, and the docs toolchain, but not Emacs, which
-`just run-built` builds on demand. `just check` runs the full
-`nix flake check`; `just` alone lists every recipe. In a bare container
-with no Nix, run `scripts/bootstrap-agent-env.sh` first.
+`just run-built` builds on demand. `just test` builds every `emacs-*`
+check of the tree; `just` alone lists every recipe.
 
 ## Installing
 
-The flake exposes the full distribution (`packages.<system>.default`,
+The tree's `nix/inputs.nix` exposes the full distribution (`emacs-config.packages.<system>.default`,
 Emacs + tree-sitter grammars), a bare `emacs`, a terminal-only
 `emacs-nox`, and modules for Home Manager (`services.emacsConfig` daemon),
 NixOS, and nix-on-droid. See

@@ -25,7 +25,7 @@ it.
 
 The repository ships a modular Elisp configuration (*early-init.el*,
 *init.el*, *lisp/init-\*.el*) and the Nix expressions that build Emacs
-(*emacs.nix*, *overlay.nix*, *default.nix*, *flake.nix*). The dev shell
+(*emacs.nix*, *overlay.nix*, *default.nix*; wired in by the tree's *nix/inputs.nix*). The dev shell
 provides tooling only, not Emacs; **just run-built** builds the editor
 via Nix and launches it with this configuration.
 
