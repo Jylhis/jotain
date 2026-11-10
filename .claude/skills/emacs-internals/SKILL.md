@@ -9,7 +9,7 @@ Reference notes distilled from the GNU Emacs Lisp Reference Manual (Internals
 appendix and related chapters), the `src/xdisp.c` design commentary, and the
 native-compilation literature, checked against the Emacs 31.1 manual and
 `etc/NEWS`. Targets Emacs 31.1 (released 2026-08-24, the repo's default
-build) with Emacs 30.1 as the floor (see `emacs.nix`).
+build) with Emacs 31.1 as the floor (see `emacs.nix`).
 
 ## How to use this skill
 

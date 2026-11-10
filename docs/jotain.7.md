@@ -19,7 +19,7 @@ jotain — a custom GNU Emacs configuration built from scratch
 # DESCRIPTION
 
 *Jotain* is Finnish for "something": a GNU Emacs 31 configuration
-(floor: Emacs 30.1) built from scratch, with no framework such as Doom
+(floor: Emacs 31.1) built from scratch, with no framework such as Doom
 or Spacemacs underneath. Nix builds the editor; plain Elisp configures
 it.
 

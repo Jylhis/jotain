@@ -3,13 +3,13 @@
 Source: `etc/NEWS.30`, `etc/NEWS` (31.1), use-package manual, checked
 against the shipped 31.1 binary. Filtered to what matters for a config repo
 like this one. **Emacs 31.1 is released (2026-08-24) and is the repo's
-default build; the floor is 30.1** (`init.el` `Package-Requires`). Gate
-31-only APIs with `static-if` / `(when (>= emacs-major-version 31) …)`, or
-keep the `cl-` spellings where both exist. Conversely, don't guard for
-versions at or below the 30 floor (e.g. `(>= emacs-major-version 29)`):
-such guards are dead and misleading.
+default build and the floor** (`init.el` `Package-Requires` is 31.1). Use
+31 APIs directly: do not gate them with `static-if`, `emacs-major-version`
+or `boundp`/`fboundp` probes. Such guards are dead and misleading. Keep a
+guard only when it is about the build (e.g. native-comp, GUI-only
+features), not the version.
 
-## Emacs 30 (the floor)
+## Emacs 30
 
 ### Runtime / compiler
 - **Native compilation on by default** at configure time when libgccjit

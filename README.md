@@ -1,7 +1,7 @@
 # Jotain
 
 **Jotain** (Finnish for "something") is a GNU Emacs 31 configuration
-(floor: Emacs 30.1) with a Nix build layer and no framework underneath.
+(floor: Emacs 31.1) with a Nix build layer and no framework underneath.
 Nix builds the editor, with binary-cache parity as an invariant; modular
 Elisp (`lisp/init-*.el`, one file per concern) configures it.
 
