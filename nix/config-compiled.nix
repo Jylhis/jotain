@@ -65,7 +65,7 @@ pkgs.runCommand "jotain-config-compiled"
       -L lisp \
       --eval "(require 'pcre2el)" \
       --eval "(setq byte-compile-error-on-warn t)" \
-      -f batch-byte-compile early-init.el init.el lisp/devenv.el lisp/init-*.el
+      -f batch-byte-compile early-init.el init.el lisp/devenv.el lisp/repo-review.el lisp/init-*.el
 
     ${lib.optionalString nativeCompile ''
       # Modelled on nixpkgs build-support/emacs/generic.nix' postInstall:
@@ -79,6 +79,6 @@ pkgs.runCommand "jotain-config-compiled"
         -L lisp \
         --eval "(setq native-comp-speed 2 native-comp-async-jobs-number 0)" \
         --eval "(add-to-list 'native-comp-eln-load-path \"$out/share/emacs/native-lisp/\")" \
-        -f batch-native-compile early-init.el init.el lisp/devenv.el lisp/init-*.el
+        -f batch-native-compile early-init.el init.el lisp/devenv.el lisp/repo-review.el lisp/init-*.el
     ''}
   ''

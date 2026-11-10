@@ -22,7 +22,9 @@ args@{
 let
   cfg = config.services.jotain;
   jotainOverlay = args.jotainOverlay or (import ./overlay.nix);
-  pkgsWithOverlay = pkgs.extend jotainOverlay;
+  # A host whose pkgs already carry the overlay skips a second nixpkgs
+  # fixpoint.
+  pkgsWithOverlay = if pkgs ? jotainEmacsPackages then pkgs else pkgs.extend jotainOverlay;
   selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.jotainEmacsPackages;
   inherit (pkgs.stdenv.hostPlatform) isLinux;
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
@@ -100,7 +102,14 @@ let
 
   # Nerd Font glyphs for the icon stack. BlexMono is the first entry in
   # `jotain-font-preferences' (lisp/init-ui.el); keep the two in step.
-  iconFontPackages = [ pkgs.nerd-fonts.blex-mono ];
+  # Fira Sans is the variable-pitch (body) face of the design system; Jost and
+  # IBM Plex Mono are its display and mono faces.
+  iconFontPackages = [
+    pkgs.nerd-fonts.blex-mono
+    pkgs.jost
+    pkgs.fira-sans
+    pkgs.ibm-plex
+  ];
 
   runtimePath = lib.makeBinPath runtimeDeps;
 

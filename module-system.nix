@@ -22,7 +22,9 @@ args@{
 let
   cfg = config.services.jotain;
   jotainOverlay = args.jotainOverlay or (import ./overlay.nix);
-  pkgsWithOverlay = pkgs.extend jotainOverlay;
+  # A host whose pkgs already carry the overlay skips a second nixpkgs
+  # fixpoint.
+  pkgsWithOverlay = if pkgs ? jotainEmacsPackages then pkgs else pkgs.extend jotainOverlay;
   selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.jotainEmacsPackages;
 
   # Shared runtime binaries plus the opt-in tools (mirrors module.nix).
@@ -157,6 +159,12 @@ in
     # `fonts.packages' differs from NixOS's.
     fonts.packages = lib.mkIf pkgs.stdenv.hostPlatform.isLinux [
       pkgs.noto-fonts-color-emoji
+      # BlexMono (default face and nerd-icons font, as in module.nix) and
+      # the design system's families (Fira Sans is the variable-pitch face).
+      pkgs.nerd-fonts.blex-mono
+      pkgs.jost
+      pkgs.fira-sans
+      pkgs.ibm-plex
     ];
     environment.variables = lib.mkIf cfg.defaultEditor {
       EDITOR = lib.mkOverride 900 "${lib.getBin editorScript}/bin/jotain-editor";
