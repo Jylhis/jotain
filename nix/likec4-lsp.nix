@@ -8,8 +8,9 @@
 # Not in nixpkgs, and the npm tarball ships no lockfile, so
 # nix/likec4-lsp/ vendors a wrapper package.json + package-lock.json
 # pinning `@likec4/lsp@1.59.4`. `just update-pins likec4-lsp` regenerates
-# the lock (`npm install --package-lock-only --ignore-scripts`) and the
-# hash (`prefetch-npm-deps`).
+# the lock (`npm install --package-lock-only --ignore-scripts`).
+# importNpmLock fetches each locked tarball, so there is no npmDepsHash to
+# keep in step.
 #
 # The package pulls esbuild (via bundle-require). Its platform-binary
 # postinstall is skipped and nixpkgs' esbuild used via ESBUILD_BINARY_PATH.
@@ -24,7 +25,8 @@ pkgs.buildNpmPackage {
 
   src = ./likec4-lsp;
 
-  npmDepsHash = "sha256-l2NrBh1O3P/oKy9DpW5XER7OlZq4GZXmQyoxrTcwJGM=";
+  npmDeps = pkgs.importNpmLock { npmRoot = ./likec4-lsp; };
+  inherit (pkgs.importNpmLock) npmConfigHook;
 
   inherit nodejs;
 

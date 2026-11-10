@@ -40,88 +40,124 @@ let
   optionsDoc = import ./options-doc.nix { inherit pkgs src; };
   packagesDoc = import ./packages-doc.nix { inherit pkgs src; };
 
-  # Chapters of jotain.texi: { src (relative to docs/), out (the
-  # @include name) }. Order mirrors docs/docs.json.
+  # Chapters of jotain.texi: { src (relative to docs/), node (its
+  # @node in jotain.texi), out (the @include name) }. Order mirrors
+  # docs/docs.json.
   chapters = [
     {
       src = "introduction.mdx";
+      node = "Introduction";
       out = "introduction.texi";
     }
     {
       src = "installation.mdx";
+      node = "Installation";
       out = "installation.texi";
     }
     {
       src = "quickstart.mdx";
+      node = "Quickstart";
       out = "quickstart.texi";
     }
     {
       src = "architecture/overview.mdx";
+      node = "Architecture Overview";
       out = "architecture-overview.texi";
     }
     {
       src = "architecture/nix-build.mdx";
+      node = "Nix Build Layer";
       out = "architecture-nix-build.texi";
     }
     {
       src = "architecture/modules.mdx";
+      node = "Module Reference";
       out = "architecture-modules.texi";
     }
     {
       src = "configuration/init.mdx";
+      node = "Init File";
       out = "configuration-init.texi";
     }
     {
       src = "configuration/early-init.mdx";
+      node = "Early Init";
       out = "configuration-early-init.texi";
     }
     {
       src = "configuration/packages.mdx";
+      node = "Packages";
       out = "configuration-packages.texi";
     }
     # configuration/package-reference.mdx is skipped: packages-doc.nix's
     # own texinfo fragment is copied in below.
     {
       src = "usage/launching.mdx";
+      node = "Launching Emacs";
       out = "usage-launching.texi";
     }
     {
       src = "usage/devenv.mdx";
+      node = "Devenv Integration";
       out = "usage-devenv.texi";
     }
     {
+      src = "usage/review.mdx";
+      node = "Review Queue";
+      out = "usage-review.texi";
+    }
+    {
       src = "usage/notebooks.mdx";
+      node = "Notebooks";
       out = "usage-notebooks.texi";
     }
     {
       src = "usage/ai-screenshot.mdx";
+      node = "AI Screenshots";
       out = "usage-ai-screenshot.texi";
     }
     {
       src = "finding-information-in-emacs.mdx";
+      node = "Finding Information in Emacs";
       out = "finding-information-in-emacs.texi";
     }
     {
       src = "compilation-mode.mdx";
+      node = "Compilation Mode";
       out = "compilation-mode.texi";
     }
     {
       src = "keybindings.mdx";
+      node = "Keybindings";
       out = "keybindings.texi";
     }
     {
       src = "setting-variables.mdx";
+      node = "Setting Variables";
       out = "setting-variables.texi";
     }
     {
       src = "ergonomics.mdx";
+      node = "Ergonomics";
       out = "ergonomics.texi";
     }
     {
       src = "inspiration.mdx";
+      node = "Inspiration";
       out = "inspiration.texi";
     }
   ];
+
+  # Links between pages use the docs site's routes ([x](/usage/launching)),
+  # which pandoc keeps as @uref{/usage/launching,x}. Point each route at its
+  # chapter node; package-reference is the packages-doc.nix fragment.
+  packageReference = {
+    src = "configuration/package-reference.mdx";
+    node = "Package Reference";
+  };
+  routeRef =
+    c: "s|@uref\\{/${lib.removeSuffix ".mdx" c.src}(#[^,}]*)?,([^}]*)\\}|@ref{${c.node},,\\2}|g; ";
+  routeRefs = lib.concatMapStrings routeRef (chapters ++ [ packageReference ]);
 
   # One `convert "docs/foo.mdx" "foo.texi"` line per chapter, emitted
   # into the build script below.
@@ -205,6 +241,7 @@ pkgs.runCommand "jotain-info"
             --wrap=none \
           | awk '${texi.stripScaffolding}' \
           | sed -E '${texi.flattenRefs}' \
+          | sed -E '${routeRefs}' \
             > "$outname"
 
           rm -f "$tmpfile"
@@ -216,7 +253,7 @@ pkgs.runCommand "jotain-info"
 
         # Put the generated fragments on the include path.
         cp "$optionsFragment"  docs/jotain-options.texi
-        cp "$packagesFragment" docs/jotain-packages.texi
+        sed -E '${routeRefs}' "$packagesFragment" > docs/jotain-packages.texi
 
         # A short manual: one unsplit .info file.
         mkdir -p "$out/share/info"
@@ -230,7 +267,8 @@ pkgs.runCommand "jotain-info"
           "$out/share/info/jotain.info"
 
         # HTML, one page per chapter, for the site's /manual/. The relative
-        # css-ref lets nix/site.nix ship manual.css beside the pages.
+        # css-ref names the manual.css installed beside the pages;
+        # nix/site.nix writes its own over it.
         # makeinfo only creates the last path component itself.
         mkdir -p "$out/share/doc/jotain"
         makeinfo --html \
@@ -238,4 +276,5 @@ pkgs.runCommand "jotain-info"
           --css-ref=manual.css \
           -o "$out/share/doc/jotain/html" \
           docs/jotain.texi
+        install -m444 ${./manual.css} "$out/share/doc/jotain/html/manual.css"
   ''

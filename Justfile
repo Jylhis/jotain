@@ -20,6 +20,11 @@ default:
 check:
     nix flake check
 
+# Assert each bare Emacs build equals its prebuilt sibling (Linux).
+[group('check')]
+cache-parity:
+    nix build .#checks.{{system}}.cache-parity --no-link --print-build-logs
+
 # Run the ERT tests under test/ via the elisp-test flake check.
 [group('check')]
 test:

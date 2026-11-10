@@ -82,6 +82,10 @@ let
       title = "devenv.sh integration";
     }
     {
+      file = "init-review.el";
+      title = "Whole-repo review queue";
+    }
+    {
       file = "init-ai.el";
       title = "AI assistants";
     }
