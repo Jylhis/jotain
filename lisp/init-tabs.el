@@ -2,9 +2,10 @@
 
 ;;; Commentary:
 
-;; Frame-local tabs as tmux-like workspaces.  `tab-bar-history-mode'
-;; adds per-tab layout undo/redo.  Switching project selects that
-;; project's tab, creating one named after the directory if needed.
+;; Frame-local tabs as tmux-like workspaces.  `tab-bar-history-mode' (on
+;; through the newcomers-presets theme) adds per-tab layout undo/redo.
+;; Switching project selects that project's tab, creating one named
+;; after the directory if needed.
 ;;
 ;; Built-in keybindings (C-x t prefix):
 ;;   C-x t 2  new tab            C-x t 0  close tab
@@ -23,15 +24,13 @@
 (use-package tab-bar
   :ensure nil
   :hook (after-init . tab-bar-mode)
-  :functions (tab-bar-history-mode)
   :custom
+  ;; Overrides the newcomers-presets theme's 0 (always shown).
   (tab-bar-show 1)
   (tab-bar-new-tab-choice "*scratch*")
   (tab-bar-close-button-show nil)
   (tab-bar-new-button-show nil)
-  (tab-bar-tab-hints t)
-  :config
-  (tab-bar-history-mode 1))
+  (tab-bar-tab-hints t))
 
 (defun jotain-tabs--switch-project-in-tab (orig dir)
   "Around advice for ORIG: open project DIR in its own tab.

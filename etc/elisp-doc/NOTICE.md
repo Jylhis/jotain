@@ -4,7 +4,7 @@ This directory forks parts of **elisp-doc** by gudzpoz, the generator behind
 <https://doc.emacsen.de/>:
 
 - Upstream: <https://codeberg.org/gudzpoz/elisp-doc>
-- License: GNU GPL, version 3 or later (same as jotain — see the top-level
+- License: GNU GPL, version 3 or later (same as the configuration — see the top-level
   `LICENSE`).
 
 ## What is vendored, verbatim
@@ -28,17 +28,17 @@ into standalone HTML.
   [Water.css](https://github.com/kognise/water.css) (MIT; the MIT notice is
   retained at the top of the file).
 
-## What is jotain's own
+## What is the configuration's own
 
 - `jotain-elisp-doc.el` — the batch entry point for **this** repo. It replaces
   elisp-doc's `elisp-doc-main.el` (which documents *all* of Emacs across
   versions with tmux/socket sharding). Instead it loads only the packages this
   config bundles and exports only the symbols those packages define, scoping the
-  corpus to jotain. It reuses the vendored engine above without modifying it.
+  corpus to the configuration. It reuses the vendored engine above without modifying it.
 
 Not vendored: elisp-doc's `elisp-doc-main.el`, `elisp-doc-theme.el` (theme
 gallery), its `texi/` VitePress manuals site, its `build/` podman/Rust bundler,
 its `specials/search.js` (imports minisearch from a CDN, incompatible with
-jotain's self-contained site), and its site-specific landing pages
-(`specials/helpful.html`, `specials/nil-and-t.html`). jotain renders manuals in
+the configuration's self-contained site), and its site-specific landing pages
+(`specials/helpful.html`, `specials/nil-and-t.html`). The configuration renders manuals in
 `nix/site.nix` and builds everything through Nix.

@@ -191,8 +191,8 @@ This is why `init-snippets.el' wraps its eglot merge."
 (require 'tempel)
 (require 'init-completion)
 (require 'init-snippets)
-;; Already loaded by `init-completion's `:init', which has therefore run
-;; its keymap edits; required here to make the dependency explicit.
+;; Deferred in `init-completion' (the theme loads it at startup); loading
+;; it here runs the `:config' keymap edits the tests check.
 (require 'completion-preview)
 
 (ert-deftest completion-test-defcustom-defaults ()
@@ -253,13 +253,15 @@ TAB and `<tab>' run `corfu-insert', which also runs the candidate's
   (should (eq (lookup-key completion-preview-active-mode-map (kbd "M-RET"))
               #'completion-preview-insert)))
 
-(ert-deftest completion-test-inline-preview-is-global ()
-  "Inline preview is enabled globally where Emacs supports it.
-Emacs 31 has `global-completion-preview-mode'; on Emacs 30 the config
-falls back to the `jotain-completion-auto-modes' hooks."
-  (if (fboundp 'global-completion-preview-mode)
-      (should (bound-and-true-p global-completion-preview-mode))
-    (should (memq #'completion-preview-mode prog-mode-hook))))
+(ert-deftest completion-test-inline-preview-comes-from-theme ()
+  "The newcomers-presets theme (init.el) turns the inline preview on.
+With the default `jotain-completion-inline-preview', the config sets
+`global-completion-preview-mode' neither by `setopt' nor by `:custom',
+so the theme value applies."
+  (should jotain-completion-inline-preview)
+  (should-not (get 'global-completion-preview-mode 'custom-check-value))
+  (should-not (assq 'use-package
+                    (get 'global-completion-preview-mode 'theme-value))))
 
 (ert-deftest completion-test-one-key-opens-and-accepts ()
   "`C-M-i' resolves to `completion-at-point', which `corfu-map' remaps.

@@ -88,8 +88,8 @@ Region active → deactivate it.  Otherwise call regular
 
 ;;; @doc Short `which-key' labels for the global `C-c' and `C-x' keys.
 ;;; The bindings themselves stay in their `use-package' blocks; only the
-;;; labels live here. Registered after which-key loads (init-ui.el), so
-;;; load order doesn't matter.
+;;; labels live here. Registered after which-key loads (the
+;;; newcomers-presets theme turns it on), so load order doesn't matter.
 (with-eval-after-load 'which-key
   (which-key-add-key-based-replacements
     ;; C-c <letter> — global user namespace.
@@ -128,25 +128,22 @@ Region active → deactivate it.  Otherwise call regular
 
 ;;;; Repeat maps — Emacs-native "one-shot modifier" pattern
 ;;
-;; `repeat-mode' is enabled in init-core.el, and many built-ins
+;; The newcomers-presets theme enables `repeat-mode', and many built-ins
 ;; (`other-window', `next-buffer', `undo', window resizing) ship their
 ;; own repeat maps.  See the "Ergonomics" chapter of the Info manual.
 
-;; Emacs 31+: transpose/rotate/flip the whole window tree.  Emacs binds
+;; Transpose/rotate/flip the whole window tree.  Emacs binds
 ;; these under `C-x w' with arrow keys; this adds single-letter keys
 ;; under `C-x W' with a repeat map, so `C-x W r r r' keeps rotating.
-;; The command symbols are quoted, not `#'', so byte-compiling on
-;; Emacs 30 sees data rather than unknown functions.
-(when (fboundp 'window-layout-transpose)
-  (defvar-keymap jotain-window-layout-repeat-map
-    :doc "Repeat map for `window-layout-*' frame transforms."
-    :repeat t
-    "t" 'window-layout-transpose
-    "r" 'window-layout-rotate-clockwise
-    "R" 'window-layout-rotate-anticlockwise
-    "h" 'window-layout-flip-leftright
-    "v" 'window-layout-flip-topdown)
-  (keymap-global-set "C-x W" jotain-window-layout-repeat-map))
+(defvar-keymap jotain-window-layout-repeat-map
+  :doc "Repeat map for `window-layout-*' frame transforms."
+  :repeat t
+  "t" #'window-layout-transpose
+  "r" #'window-layout-rotate-clockwise
+  "R" #'window-layout-rotate-anticlockwise
+  "h" #'window-layout-flip-leftright
+  "v" #'window-layout-flip-topdown)
+(keymap-global-set "C-x W" jotain-window-layout-repeat-map)
 
 (provide 'init-keys)
 ;;; init-keys.el ends here

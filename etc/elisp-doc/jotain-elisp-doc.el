@@ -1,4 +1,4 @@
-;;; jotain-elisp-doc.el --- Batch API-reference generator for jotain -*- lexical-binding: t; -*-
+;;; jotain-elisp-doc.el --- Batch API-reference generator for the configuration -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026 Markus Jylhänkangas
 
@@ -16,7 +16,7 @@
 
 ;;; Commentary:
 ;;
-;; jotain's replacement for elisp-doc's `elisp-doc-main.el'.  Where the
+;; The configuration's replacement for elisp-doc's `elisp-doc-main.el'.  Where the
 ;; upstream driver documents *all* of Emacs across versions (with tmux /
 ;; socket sharding), this one documents only the packages this config
 ;; bundles: it requires the config's package features, then exports only
@@ -333,7 +333,7 @@ upstream behaviour for core Emacs paths."
 (advice-add 'elisp-doc--get-source-file :around
             #'jotain-doc--source-file-in-scope)
 
-;; Keep our manual (info) cross-links pointing at the jotain site layout,
+;; Keep our manual (info) cross-links pointing at the site layout,
 ;; which mounts the Emacs and Elisp manuals under /info/.
 (defun jotain-doc--info-under-info (url)
   "Advice for `elisp-doc--info-url-for-node': prefix /info to URL."
@@ -572,7 +572,7 @@ least one symbol."
     (message "jotain-elisp-doc: faces exported")
     (elisp-doc--export-reset)
 
-    ;; jotain per-package HTML index (global indexes + top index are the
+    ;; Per-package HTML index (global indexes + top index are the
     ;; aggregate pass's job).
     (dolist (pkg (jotain-doc--documented-packages))
       (jotain-doc--ignoring (jotain-doc--create-package-index pkg)))

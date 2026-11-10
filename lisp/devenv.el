@@ -5,7 +5,7 @@
 ;; Author: Markus Jylhänkangas <markus@jylhis.com>
 ;; Maintainer: Markus Jylhänkangas <markus@jylhis.com>
 ;; URL: https://github.com/Jylhis/jotain
-;; Version: 0.1.0
+;; Version: 0.2.0
 ;; Package-Requires: ((emacs "30.1") (transient "0.7.4"))
 ;; Keywords: processes, tools, unix
 
@@ -45,6 +45,10 @@
 ;;   `devenv-reload'           Refresh the environment (delegates to
 ;;                             envrc when it manages the project) and
 ;;                             offer to reconnect eglot servers.
+;;   `devenv-shell'            Apply the project's shell environment to
+;;                             this buffer (or, with a prefix argument,
+;;                             the project's buffers) without recording
+;;                             trust for auto-activation.
 ;;   `devenv-env-global-mode'  Native environment loader: reproduces a
 ;;                             terminal `devenv shell' and applies it
 ;;                             buffer-locally, envrc-style.
@@ -72,6 +76,11 @@
 ;; read from the cache on every interactive path, and an unknown
 ;; verdict is resolved by a background probe whose completion enables
 ;; the loader in the project's buffers (`devenv--probe-trust').
+;;
+;; `devenv-shell' is the manual counterpart: per-buffer activation on
+;; explicit request, with no `devenv allow'.  It counts as consent to
+;; source the dev-env for the session (`devenv-env--manual-roots');
+;; `devenv-revoke' withdraws that consent.
 ;;
 ;; With direnv, envrc.el plus `use devenv' in .envrc is an equally good
 ;; substrate: `devenv-env-defer-to-direnv' (default t) keeps the native
@@ -107,6 +116,9 @@
 ;; Defined later in this file; declared for forward references.
 (defvar devenv-env-global-mode)
 (defvar devenv-env-mode)
+(defvar devenv-env--manual-roots)
+(defvar devenv-env--fetching)
+(defvar devenv-env--pending)
 
 ;;;; Customization
 
@@ -150,7 +162,8 @@ the resulting environment.  This runs the project's shellHook, so
 hook-only variables (LOCALE_ARCHIVE, MANPATH, PATH additions such as
 $CARGO_HOME/bin, anything `enterShell' exports) are included, exactly
 as in a terminal shell.  Only projects trusted for auto-activation
-\(`devenv-allow') are sourced.
+\(`devenv-allow') or activated per buffer (`devenv-shell') are
+sourced.
 
 The symbol `json' parses `devenv print-dev-env --json' and filters it
 down to what a shell would keep.  No project code runs, but the
@@ -615,6 +628,14 @@ to preserve that version's behaviour)."
   "Return non-nil when trust STATE permits automatic env loading."
   (memq state '(allowed unsupported)))
 
+(defun devenv-env--consent-p (root)
+  "Return non-nil when ROOT's dev-env may be sourced this session.
+True when ROOT is trusted for auto-activation (see
+`devenv--trust-state') or was activated per buffer with
+`devenv-shell' (`devenv-env--manual-roots')."
+  (or (gethash root devenv-env--manual-roots)
+      (devenv--activation-permits-p (devenv--trust-state root))))
+
 (defun devenv--cached-trust (root)
   "Return ROOT's trust state from the cache, or nil when unknown.
 Never runs devenv: interactive paths (find-file, redisplay) must
@@ -719,12 +740,55 @@ buffer `devenv-env-mode' was managing."
     (dolist (buffer (devenv-env--buffers root))
       (with-current-buffer buffer
         (devenv-env-mode -1)))
+    ;; Manual consent goes with trust, and an in-flight fetch must not
+    ;; land an environment in buffers the loop above just cleaned; the
+    ;; pending list is dropped so its completion applies to nobody.
+    (remhash root devenv-env--manual-roots)
+    (remhash root devenv-env--fetching)
+    (remhash root devenv-env--pending)
     ;; Eglot calls parked while a probe was still deciding must not
     ;; strand: release them to connect with the global environment,
     ;; which is what an untrusted project always uses.
     (devenv-env--release-parked root)
     (devenv-modeline--refresh-root root)
     (message "devenv: revoked %s" (abbreviate-file-name root))))
+
+;;;###autoload
+(defun devenv-shell (&optional arg)
+  "Apply this project's devenv shell environment to this buffer.
+The buffer-local counterpart of running `devenv shell' in a
+terminal: the environment is fetched asynchronously and applied
+like `devenv-env-mode' does for trusted projects, PATH layered over
+the login one, shellHook included when `devenv-env-loader' permits
+sourcing.  Unlike `devenv-allow', no trust is recorded:
+auto-activation for the project stays off.  With ARG, enable it in
+every buffer under the project instead of just this one.  Called
+again in a buffer it manages, turn it off there."
+  (interactive "P")
+  (if devenv-env-mode
+      (progn
+        (devenv-env-mode -1)
+        (message "devenv: shell environment off in this buffer"))
+    (let ((root (devenv--root-or-error)))
+      (when (and devenv-env-defer-to-direnv
+                 (or (bound-and-true-p envrc-mode)
+                     (locate-dominating-file default-directory ".envrc")))
+        (user-error "Buffer is direnv-managed; let envrc own it, or set \
+`devenv-env-defer-to-direnv' nil"))
+      (devenv--ensure-executable)
+      ;; Manual activation is consent to source for this session; it
+      ;; is not trust, so auto-activation stays gated.
+      (puthash root t devenv-env--manual-roots)
+      (dolist (buffer (if arg
+                          (devenv--project-buffers root)
+                        (list (current-buffer))))
+        (with-current-buffer buffer
+          (unless devenv-env-mode
+            (devenv-env-mode 1))))
+      (let ((enabled (length (devenv-env--buffers root))))
+        (message "devenv: shell environment enabled in %d buffer%s (no \
+trust recorded)"
+                 enabled (if (= enabled 1) "" "s"))))))
 
 ;;;; Introspection: eval, info, search
 
@@ -978,7 +1042,7 @@ otherwise attached in a live `devenv-log-mode' buffer."
           (devenv-log-mode))
         (make-process
          :name "devenv-up" :buffer buffer
-         :command (devenv--command args)
+         :command (devenv--command args nil (devenv--ensure-executable))
          :noquery t :connection-type 'pipe
          :filter #'devenv--insert-filter
          :sentinel (lambda (proc event)
@@ -1285,6 +1349,19 @@ reconnect any eglot servers so they see the new environment."
 (defvar devenv-env--pending (make-hash-table :test #'equal)
   "Roots with an environment fetch in flight, mapped to buffers.")
 
+(defvar devenv-env--fetching (make-hash-table :test #'equal)
+  "Roots whose environment fetch is running.
+A second `devenv-env--fetch' for such a root is a no-op: the
+running fetch's completion applies to every buffer registered in
+`devenv-env--pending' meanwhile.  `devenv-env--handle-pairs'
+clears the entry on every path, failures included.")
+
+(defvar devenv-env--manual-roots (make-hash-table :test #'equal)
+  "Roots activated per buffer with `devenv-shell' this session.
+Manual activation is consent to source the dev-env without
+`devenv-allow'; auto-activation stays gated on trust.
+`devenv-revoke' withdraws the consent.")
+
 (defvar devenv-env--eglot-replay nil
   "Buffers whose deferred `eglot-ensure' replays after env load.")
 
@@ -1423,6 +1500,7 @@ would be the wrong toolchain for a project whose server only exists
 inside devenv."
   (let ((buffers (gethash root devenv-env--pending)))
     (remhash root devenv-env--pending)
+    (remhash root devenv-env--fetching)
     (unwind-protect
         (when pairs
           (puthash (cons root 'env) (cons (float-time) pairs) devenv--cache)
@@ -1550,11 +1628,12 @@ cannot park the loader forever."
 (defun devenv-env--shell-loader-p (root)
   "Return non-nil when ROOT's environment may be loaded by sourcing bash.
 Sourcing evaluates the project's shellHook, so it is limited to
-projects trusted for auto-activation (`devenv-allow')."
+projects trusted for auto-activation (`devenv-allow') or activated
+per buffer this session (`devenv-shell')."
   (and (eq devenv-env-loader 'shell)
        (let ((exec-path (default-value 'exec-path)))
          (and (executable-find "bash") t))
-       (devenv--activation-permits-p (devenv--trust-state root))))
+       (devenv-env--consent-p root)))
 
 (defun devenv-env--fetch-json (root &optional reason)
   "Fetch ROOT's environment from `print-dev-env --json' and apply it.
@@ -1606,12 +1685,16 @@ project is never left without an environment."
 (defun devenv-env--fetch (root)
   "Fetch ROOT's environment asynchronously and apply it when done.
 All buffers registered under ROOT in `devenv-env--pending' get the
-result; deferred `eglot-ensure' calls are replayed.  A trusted project
-is loaded by sourcing the printed dev-env script so its shellHook runs
-\(see `devenv-env-loader'); otherwise the JSON form is parsed."
-  (if (devenv-env--with-global-env (devenv-env--shell-loader-p root))
-      (devenv-env--fetch-shell root)
-    (devenv-env--fetch-json root)))
+result; deferred `eglot-ensure' calls are replayed.  A trusted
+project is loaded by sourcing the printed dev-env script so its
+shellHook runs (see `devenv-env-loader'); otherwise the JSON form
+is parsed.  A fetch already running for ROOT absorbs this call:
+its completion serves every registered buffer."
+  (unless (gethash root devenv-env--fetching)
+    (puthash root t devenv-env--fetching)
+    (if (devenv-env--with-global-env (devenv-env--shell-loader-p root))
+        (devenv-env--fetch-shell root)
+      (devenv-env--fetch-json root))))
 
 (defun devenv-env--buffers (root)
   "Return live buffers under ROOT that have `devenv-env-mode' on."
@@ -1631,10 +1714,12 @@ is loaded by sourcing the printed dev-env script so its shellHook runs
   "Apply the project's devenv environment buffer-locally.
 Fetches the environment asynchronously (cached per project, see
 `devenv-env-loader') and sets `process-environment' and `exec-path'
-locally in this buffer, in the style of envrc.  Activation is gated
-on the project's cached trust state; an unknown verdict is resolved
-in the background (see `devenv-env--turn-on').  The result mirrors a
-terminal `devenv shell': PATH is layered over the login one and the
+locally in this buffer, in the style of envrc.  Automatic
+activation is gated on the project's cached trust state; an
+unknown verdict is resolved in the background (see
+`devenv-env--turn-on').  Enable it manually per buffer, with no
+trust, via `devenv-shell'.  The result mirrors a terminal `devenv
+shell': PATH is layered over the login one and the
 derivation-only variables the JSON form carries are dropped.  Where
 direnv is in charge, envrc + `use devenv' does the same job; see
 `devenv-env-defer-to-direnv'."
@@ -1646,11 +1731,11 @@ direnv is in charge, envrc + `use devenv' does the same job; see
           (let ((pairs (devenv-env--cached-pairs root)))
             (if pairs
                 (devenv-env--apply (current-buffer) pairs)
-              (let ((pending (gethash root devenv-env--pending)))
-                (push (current-buffer)
-                      (gethash root devenv-env--pending))
-                (unless pending
-                  (devenv-env--fetch root)))))))
+              (push (current-buffer)
+                    (gethash root devenv-env--pending))
+              ;; Deduplicated by `devenv-env--fetching': a fetch
+              ;; already running for the root picks this buffer up.
+              (devenv-env--fetch root)))))
     (kill-local-variable 'process-environment)
     (kill-local-variable 'exec-path)))
 
@@ -2031,6 +2116,7 @@ mcp-hub, then M-x gptel-mcp-connect exposes its tools to gptel"
     ("$" "Show invocation log" devenv-show-log)]]
   ["Environment"
    [("r" "Reload environment" devenv-reload)
+    ("S" "Shell env: this buffer (no allow)" devenv-shell)
     ("e" "Native env loader (global)" devenv-env-global-mode)
     ("m" "Modeline status (global)" devenv-modeline-mode)]
    [("a" "Allow auto-activation" devenv-allow)

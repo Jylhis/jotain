@@ -7,36 +7,17 @@
 
 ;;; Code:
 
-;;; @doc Auto-insert matching delimiters as you type. Built-in.
-(use-package elec-pair
-  :ensure nil
-  :config (electric-pair-mode 1))
-
-;;; @doc Typing replaces the active region, as in most editors.
-;;; Built-in.
-(use-package delsel
-  :ensure nil
-  :config (delete-selection-mode 1))
-
-;;; @doc Small built-in editing knobs. The shell-command prompt shows
-;;; the working directory. On Emacs 31+, `kill-region-dwim' makes C-w
+;;; @doc Small built-in editing knobs. `kill-region-dwim' makes C-w
 ;;; with no active region kill the previous word instead of erroring,
 ;;; and `delete-pair-push-mark' leaves a mark on the former pair
-;;; contents so C-x C-x re-selects them.
+;;; contents so C-x C-x re-selects them. Pair insertion, typing over the
+;;; region and spaces for indentation come from the newcomers-presets
+;;; theme.
 (use-package simple
   :ensure nil
-  :custom
-  (shell-command-prompt-show-cwd t)
   :config
-  (when (boundp 'kill-region-dwim)
-    (setopt kill-region-dwim 'emacs-word))
-  (when (boundp 'delete-pair-push-mark)
-    (setopt delete-pair-push-mark t)))
-
-;; Spaces by default.  editorconfig and dtrt-indent (init-prog.el) still
-;; override per project/file, and tab-requiring modes (makefile-mode,
-;; go-ts-mode) set it themselves.
-(setopt indent-tabs-mode nil)
+  (setopt kill-region-dwim 'emacs-word)
+  (setopt delete-pair-push-mark t))
 
 ;;; @doc Strip trailing whitespace and stray tabs on save without
 ;;; reformatting the rest of the buffer. Built-in. Skipped during

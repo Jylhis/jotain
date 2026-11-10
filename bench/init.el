@@ -54,7 +54,7 @@
                 (when outfile
                   (with-temp-file outfile
                     (insert
-                     (format "Jotain Startup Benchmark\n")
+                     (format "Startup Benchmark\n")
                      (format "══════════════════════════════════════════════════════\n\n")
                      (format "SUMMARY\n")
                      (format "──────────────────────────────────────────────────────\n")

@@ -82,7 +82,7 @@
 
 (ert-deftest lang-eval-test-override-servers-present ()
   "Each :override language's server appears in init-prog.el's server-programs.
-These are the servers Jotain sets explicitly (not eglot built-ins), so a
+These are the servers the configuration sets explicitly (not eglot built-ins), so a
 removed override must fail here."
   (let ((prog (lang-eval-test--contents "lisp/init-prog.el")))
     (dolist (e jotain-lang-registry)
@@ -93,7 +93,7 @@ removed override must fail here."
 
 (ert-deftest lang-eval-test-override-formatters-present ()
   "apheleia formatter overrides declared in the registry appear in init-prog.el.
-Only the formatters Jotain adds itself are checked; apheleia built-ins
+Only the formatters the configuration adds itself are checked; apheleia built-ins
 (ruff/prettier/rustfmt/clang-format) are not in our source."
   (let ((prog (lang-eval-test--contents "lisp/init-prog.el"))
         (ours '("meson" "zig" "goimports" "buildifier" "nixfmt" "qmlformat")))

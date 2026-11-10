@@ -10,6 +10,10 @@
 
 ;;; Code:
 
+(defgroup jotain-prog nil
+  "Programming-mode, tree-sitter and LSP settings."
+  :group 'convenience)
+
 ;;;; prog-mode
 
 ;;; @doc Built-in `prog-mode` parent. Turns on the fill-column
@@ -20,9 +24,8 @@
   :hook
   (prog-mode . display-fill-column-indicator-mode)
   :config
-  ;; Emacs 31+: no warning face past the column.
-  (when (boundp 'display-fill-column-indicator-warning)
-    (setopt display-fill-column-indicator-warning nil)))
+  ;; No warning face past the column.
+  (setopt display-fill-column-indicator-warning nil))
 
 ;;;; Tree-sitter
 
@@ -107,12 +110,12 @@ leaves the classic mode in place."
   "When non-nil, log if a classic major mode is used despite a ready ts-mode.
 Modes in `jotain-prog-warn-non-ts-exclude' are never reported."
   :type 'boolean
-  :group 'jotain)
+  :group 'jotain-prog)
 
 (defcustom jotain-prog-warn-non-ts-exclude nil
   "Classic major modes the non-ts diagnostic deliberately skips."
   :type '(repeat symbol)
-  :group 'jotain)
+  :group 'jotain-prog)
 
 (defun jotain-prog--warn-non-ts-mode ()
   "Log when `major-mode' is classic but a ready tree-sitter mode exists.
@@ -128,7 +131,7 @@ names (`sh-mode' to `bash-ts-mode') are missed; those are remapped in
                (ts-mode (intern-soft (concat base "-ts-mode")))
                (lang (intern base)))
           (when (and ts-mode (fboundp ts-mode) (treesit-ready-p lang t))
-            (message "jotain: %s opened in %s; %s (tree-sitter, grammar `%s') is available"
+            (message "init-prog: %s opened in %s; %s (tree-sitter, grammar `%s') is available"
                      (buffer-name) major-mode ts-mode lang)))))))
 
 (add-hook 'after-change-major-mode-hook #'jotain-prog--warn-non-ts-mode)
@@ -146,7 +149,6 @@ names (`sh-mode' to `bash-ts-mode') are missed; those are remapped in
   :ensure nil
   :defer t
   :commands combobulate-mode
-  :custom (combobulate-key-prefix "C-c o")
   :bind (:map combobulate-key-map
               ("M-P" . combobulate-drag-up)
               ("M-N" . combobulate-drag-down)))
@@ -163,7 +165,7 @@ names (`sh-mode' to `bash-ts-mode') are missed; those are remapped in
   "When non-nil, include ESLint and Tailwind LSP servers in TS/TSX `rass` sessions.
 These servers may evaluate project JavaScript configuration files."
   :type 'boolean
-  :group 'jotain)
+  :group 'jotain-prog)
 
 (defvar eglot-workspace-configuration) ; defined in eglot.el
 
@@ -283,6 +285,33 @@ falling back to the `likec4' CLI's `lsp' subcommand."
         '("likec4-lsp" "--stdio")
       '("likec4" "lsp" "--stdio")))
 
+  (defun jotain-prog--astro-tsdk ()
+    "TypeScript lib dir with the JS API for astro-ls, or nil.
+Prefers the project's node_modules, then the package of the `tsc' on
+PATH: an npm symlink (bin/tsc -> ../lib) or a Nix wrapper (bin/tsc
+beside lib/node_modules/typescript).  TypeScript 7 ships no
+lib/typescript.js, so each candidate is checked."
+    (let ((tsc (executable-find "tsc")))
+      (seq-find
+       (lambda (dir) (file-exists-p (expand-file-name "typescript.js" dir)))
+       (delq nil
+             (list (when-let* ((pr (project-current)))
+                     (expand-file-name "node_modules/typescript/lib"
+                                       (project-root pr)))
+                   (when tsc
+                     (expand-file-name "../lib" (file-name-directory
+                                                 (file-truename tsc))))
+                   (when tsc
+                     (expand-file-name "../lib/node_modules/typescript/lib"
+                                       (file-name-directory tsc))))))))
+
+  (defun jotain-prog--astro-server (&optional _interactive)
+    "Resolve the astro-ls contact, passing a usable TypeScript SDK.
+astro-ls needs `typescript.tsdk'; see `jotain-prog--astro-tsdk'."
+    `("astro-ls" "--stdio"
+      ,@(when-let* ((tsdk (jotain-prog--astro-tsdk)))
+          `(:initializationOptions (:typescript (:tsdk ,tsdk))))))
+
   (defun jotain-prog--robot-server (&optional _interactive)
     "Resolve the Robot Framework server contact against the buffer's PATH.
 Prefers `robotcode language-server', falling back to `robotframework_ls'.
@@ -298,7 +327,6 @@ Both speak stdio by default."
   (eglot-autoshutdown t)
   (eglot-extend-to-xref t)
   (eglot-confirm-server-edits nil)
-  (eglot-send-changes-idle-time 0.5)
   (eglot-events-buffer-config '(:size 0 :format short))
   (eglot-report-progress nil)
   :bind
@@ -317,16 +345,13 @@ Both speak stdio by default."
                 #'eldoc-documentation-compose-eagerly))
   (add-hook 'eglot-managed-mode-hook #'jotain-prog--eldoc-compose-eagerly)
 
-  ;; Emacs 31+: render hover/signature docs with the tree-sitter markdown
-  ;; viewer.  markdown-ts-mode.el has no autoloads, so require it.
-  (when (and (boundp 'eglot-documentation-renderer)
-             (require 'markdown-ts-mode nil t)
-             (fboundp 'markdown-ts-view-mode))
-    (setopt eglot-documentation-renderer 'markdown-ts-view-mode))
+  ;; Render hover/signature docs with the tree-sitter markdown viewer.
+  ;; markdown-ts-mode.el has no autoloads, so require it.
+  (require 'markdown-ts-mode)
+  (setopt eglot-documentation-renderer 'markdown-ts-view-mode)
 
-  ;; Emacs 31+: hide the inline "code action available" indicators.
-  (when (boundp 'eglot-code-action-indications)
-    (setopt eglot-code-action-indications nil))
+  ;; Hide the inline "code action available" indicators.
+  (setopt eglot-code-action-indications nil)
 
   (defun jotain-prog--maybe-enable-inlay-hints ()
     "Enable inlay hints in the major modes that opt in to them."
@@ -390,7 +415,10 @@ Both speak stdio by default."
                (cons '(likec4-mode) #'jotain-prog--likec4-server))
   ;; Robot Framework (init-lang-devops).
   (add-to-list 'eglot-server-programs
-               (cons '(robot-mode) #'jotain-prog--robot-server)))
+               (cons '(robot-mode) #'jotain-prog--robot-server))
+  ;; Astro (init-lang-web).
+  (add-to-list 'eglot-server-programs
+               (cons '(astro-ts-mode) #'jotain-prog--astro-server)))
 
 ;;; @doc Wrap local stdio language servers in emacs-lsp-booster, which
 ;;; converts server JSON into Elisp bytecode and buffers I/O so a busy
@@ -458,11 +486,7 @@ Both speak stdio by default."
                                                  "target/debug/")
                                "target/debug/")))))
 
-;;;; SonarLint (SonarCloud connected mode)
-
-;; SonarCloud connected mode is opt-in per project via a .dir-locals.el
-;; `eglot-workspace-configuration' entry (:sonarlint :connectedMode with
-;; the :sonarcloud org key and token, connectionId/projectKey).
+;;;; SonarLint
 
 (defun jotain-sonarlint ()
   "Start SonarLint analysis in the current project.
@@ -485,7 +509,6 @@ existing language server, adding code-quality and security diagnostics."
   :ensure nil
   :hook (prog-mode . flymake-mode)
   :custom
-  (flymake-fringe-indicator-position 'left-fringe)
   (flymake-suppress-zero-counters t)
   ;; `short' needs Flymake 1.3.6+.
   (flymake-show-diagnostics-at-end-of-line 'short)
@@ -519,10 +542,9 @@ existing language server, adding code-quality and security diagnostics."
   ;; Use the doc buffer instead of the echo area when it is visible.
   (eldoc-echo-area-prefer-doc-buffer t)
   :config
-  ;; Emacs 31+: also show `help-at-pt' text (flymake diagnostics, button
-  ;; help) through eldoc.
-  (when (boundp 'eldoc-help-at-pt)
-    (setopt eldoc-help-at-pt t)))
+  ;; Also show `help-at-pt' text (flymake diagnostics, button help)
+  ;; through eldoc.
+  (setopt eldoc-help-at-pt t))
 
 ;;;; xref
 
@@ -531,24 +553,7 @@ existing language server, adding code-quality and security diagnostics."
 (use-package xref
   :ensure nil
   :custom
-  (xref-search-program 'ripgrep)
-  :config
-  ;; Emacs 31+: mouse-1 on an identifier jumps to its definition.
-  (when (fboundp 'global-xref-mouse-mode)
-    (global-xref-mouse-mode 1))
-  ;; Regenerates a project TAGS table on demand, a definition source for
-  ;; buffers without an LSP server.
-  (when (fboundp 'etags-regen-mode)
-    (etags-regen-mode 1)))
-
-;;;; imenu
-
-;;; @doc Built-in symbol index (behind `consult-imenu', M-g i), rescanned
-;;; automatically so it never goes stale.
-(use-package imenu
-  :ensure nil
-  :custom
-  (imenu-auto-rescan t))
+  (xref-search-program 'ripgrep))
 
 ;;;; tagref
 
@@ -574,23 +579,13 @@ every prog-mode buffer."
 
 ;;;; Compile
 
-;;; @doc Built-in compile / recompile. Scrolls output until the first
-;;; error, skips the save prompt, and kills a running compilation
-;;; without asking.
+;;; @doc Built-in compile / recompile. Skips the save prompt and kills
+;;; a running compilation without asking.
 (use-package compile
   :ensure nil
   :custom
-  (compilation-scroll-output 'first-error)
   (compilation-ask-about-save nil)
   (compilation-always-kill t))
-
-;;;; editorconfig (built-in since 30)
-
-;;; @doc Honour `.editorconfig` files (indent style/width, line endings,
-;;; trailing whitespace). Built-in since Emacs 30.
-(use-package editorconfig
-  :ensure nil
-  :hook (prog-mode . editorconfig-mode))
 
 ;;;; Per-project environment + format-on-save + grep refactor
 

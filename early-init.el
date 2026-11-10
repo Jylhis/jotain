@@ -78,6 +78,8 @@
 
 ;; Don't resize the frame when the font, fringes, or bars change during
 ;; startup: each implied resize is a round-trip to the window system.
+;; The newcomers-presets theme sets it too, but only at the end of
+;; init.el, after the first frame exists.
 (setq frame-inhibit-implied-resize t)
 
 (setq inhibit-startup-screen t
@@ -103,8 +105,8 @@
 ;; them.
 (defvar native-comp-speed nil)
 (defvar native-comp-async-jobs-number 0)
-;; Emacs 31+ defcustom in the not-yet-loaded comp-run.el: pre-declare it
-;; so the value set below survives its later defcustom.
+;; A defcustom in the not-yet-loaded comp-run.el: pre-declare it so the
+;; value set below survives its later defcustom.
 (defvar native-comp-async-on-battery-power nil)
 (when (and (fboundp 'native-comp-available-p)
            (native-comp-available-p))
@@ -113,13 +115,11 @@
   ;; machines; small hosts (2-core VMs, nix-on-droid) get one job.
   (setq native-comp-speed 2
         native-comp-async-jobs-number (max 1 (min 3 (/ (num-processors) 2)))
-        ;; Emacs 31+: no background native compilation on battery.
-        ;; Inert on Emacs 30.
+        ;; No background native compilation on battery.
         native-comp-async-on-battery-power nil)
-  (when (fboundp 'startup-redirect-eln-cache)
-    (startup-redirect-eln-cache
-     (convert-standard-filename
-      (expand-file-name "var/eln-cache/" user-emacs-directory))))
+  (startup-redirect-eln-cache
+   (convert-standard-filename
+    (expand-file-name "var/eln-cache/" user-emacs-directory)))
   ;; JOTAIN_ELN_PATH: store-resident AOT .eln for this config
   ;; (nix/config-compiled.nix), exported by module.nix's wrapper when
   ;; `services.jotain.nativeCompile.enable' is on and by

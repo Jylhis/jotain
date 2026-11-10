@@ -233,7 +233,7 @@
       (with-temp-file outfile
         ;; Summary
         (insert
-         (format "Jotain File-Open Benchmark\n")
+         (format "File-Open Benchmark\n")
          (format "══════════════════════════════════════════════════════\n\n")
          (format "SUMMARY\n")
          (format "──────────────────────────────────────────────────────\n")

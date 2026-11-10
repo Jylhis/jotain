@@ -81,9 +81,7 @@ Labels include the parent root, so same-named projects stay distinct."
   ;; for performance.
   (add-hook 'project-find-functions #'project-nix-store-try)
   :config
-  ;; `project-list-exclude' is newer than Emacs 30.1.
-  (when (boundp 'project-list-exclude)
-    (add-to-list 'project-list-exclude #'project-nix-store-p)))
+  (add-to-list 'project-list-exclude #'project-nix-store-p))
 
 ;;;; projection — per-project commands keyed off .dir-locals.el
 

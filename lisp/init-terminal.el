@@ -54,10 +54,9 @@
   (xterm-mouse-mode 1))
 (add-hook 'tty-setup-hook #'jotain-terminal--tty-setup)
 
-;;; @doc Emacs 31+: tooltips (help-echo, button hints) in terminal frames.
-;;; No-op in GUI; skipped on Emacs 30.
-(when (fboundp 'tty-tip-mode)
-  (tty-tip-mode 1))
+;;; @doc Tooltips (help-echo, button hints) in terminal frames. No-op in
+;;; GUI.
+(tty-tip-mode 1)
 
 (provide 'init-terminal)
 ;;; init-terminal.el ends here

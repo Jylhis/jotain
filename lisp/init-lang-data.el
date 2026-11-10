@@ -18,7 +18,7 @@
 (defun jotain-lang-data--enable-prog-mode-features ()
   "Run `prog-mode-hook' in a `text-mode'-derived config buffer.
 Both `yaml-mode' and `yaml-ts-mode' derive from `text-mode', so
-prog-mode features (line numbers, flymake, editorconfig, hl-todo,
+prog-mode features (line numbers, flymake, hl-todo,
 indent-bars, ...) never fire in YAML.  The `derived-mode-p' guard
 avoids running the hook twice if the mode ever reparents onto
 `prog-mode'.  Then turn off the prose features `text-mode-hook'

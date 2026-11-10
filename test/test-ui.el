@@ -2,9 +2,9 @@
 
 ;;; Commentary:
 
-;; The Jylhis themes come from an out-of-tree pin (nix/design-pin.nix),
+;; The Jylhis themes come from the in-tree design system (lib/design),
 ;; so the theme symbols `init-ui.el' names can drift from the theme files
-;; the pin ships (as upstream renames have done).  On drift `load-theme'
+;; it generates (as renames have done).  On drift `load-theme'
 ;; signals and init-ui falls back to Modus.  Byte compilation can't
 ;; catch it: the `load-theme' calls are skipped in batch.
 ;;

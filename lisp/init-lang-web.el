@@ -2,8 +2,8 @@
 
 ;;; Commentary:
 
-;; Web frontend modes: TypeScript/TSX, JavaScript, HTML, CSS/SCSS, and
-;; `web-mode' for HTML templating languages.  JSON routes to
+;; Web frontend modes: TypeScript/TSX, JavaScript, HTML, CSS/SCSS, Astro,
+;; and `web-mode' for HTML templating languages.  JSON routes to
 ;; `json-ts-mode' through `jotain-prog-ts-remaps', and all eglot wiring
 ;; lives in `init-prog.el'.
 
@@ -36,6 +36,11 @@
 (use-package mhtml-ts-mode
   :ensure nil
   :mode "\\.html?\\'")
+
+;;; @doc Tree-sitter Astro mode (`.astro` components), with embedded
+;;; TypeScript and CSS. astro-ls is wired in init-prog.
+(use-package astro-ts-mode
+  :mode "\\.astro\\'")
 
 ;;; @doc One mode for HTML templating languages: ERB, Mustache, Django,
 ;;; ASP, JSP, PHP. `M-o` is rebound so web-mode-map does not shadow the

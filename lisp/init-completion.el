@@ -21,7 +21,7 @@
 ;; popup in the current buffer and `M-x global-corfu-mode' everywhere.
 
 (defgroup jotain-completion nil
-  "In-buffer completion behaviour for the Jotain configuration."
+  "In-buffer completion behaviour for the configuration."
   :group 'convenience)
 
 (defcustom jotain-completion-auto-modes '(prog-mode-hook)
@@ -122,9 +122,8 @@ candidate's docstring or source location.  Read at load time."
 
 (defcustom jotain-completion-inline-preview t
   "When non-nil, show inline \"ghost text\" of the top candidate as you type.
-Enables `global-completion-preview-mode' (Emacs 31); on Emacs 30, which
-lacks it, `completion-preview-mode' goes on the
-`jotain-completion-auto-modes' hooks instead.
+The newcomers-presets theme enables `global-completion-preview-mode';
+nil turns it off again.
 
 TAB accepts the preview unless `jotain-completion-free-tab' is set;
 `M-RET' accepts it too, and `M-i' completes the common prefix.  RET stays
@@ -135,23 +134,13 @@ per buffer."
 
 ;;;; Minibuffer defaults
 
-;;; @doc Built-in minibuffer customisation: detailed annotations and
-;;; historical sorting (Emacs 30) so frequent commands surface first.
+;;; @doc Built-in minibuffer customisation: one-column *Completions*
+;;; and historical sorting so frequent commands surface first.
 (use-package minibuffer
   :ensure nil
   :custom
-  (completions-detailed t)
   (completions-format 'one-column)
-  (completions-sort 'historical)
-  ;; Newcomers-presets theme knobs; with vertico on, these only affect
-  ;; the default *Completions* UI.
-  (minibuffer-visible-completions t)
-  (completions-group t)
-  (completion-auto-select 'second-tab)
-  :config
-  ;; `completion-eager-update' is Emacs 31; guarded for the 30.1 floor.
-  (when (boundp 'completion-eager-update)
-    (setopt completion-eager-update t)))
+  (completions-sort 'historical))
 
 ;;; @doc Fuzzy, space-separated, order-independent completion. Pairs with
 ;;; partial-completion (path globbing) so `/u/s/a` matches
@@ -232,9 +221,6 @@ per buffer."
   (vertico-posframe-poshandler 'posframe-poshandler-frame-bottom-center)
   ;; Inner padding so candidate text does not sit against the border.
   (vertico-posframe-parameters '((left-fringe . 8) (right-fringe . 8)))
-  ;; On a tty stay in the minibuffer; `vertico-buffer-mode' would take
-  ;; over a whole window for every M-x.
-  (vertico-posframe-fallback-mode 'ignore)
   :custom-face
   ;; Inherit corfu's faces so both floating panels match; posframe reads
   ;; faces at display time, so a theme toggle restyles both.
@@ -446,7 +432,6 @@ once.  Major-mode hooks run first; `corfu-mode-hook' would be too late."
     (add-hook hook #'jotain-completion--enable-auto))
   :custom
   (corfu-cycle t)
-  (corfu-auto nil)
   (corfu-auto-prefix jotain-completion-auto-prefix)
   (corfu-auto-delay jotain-completion-auto-delay)
   ;; corfu's default `insert' commits the selected candidate when you
@@ -504,7 +489,6 @@ once.  Major-mode hooks run first; `corfu-mode-hook' would be too late."
   :defer t
   :functions (cape-dabbrev cape-file cape-keyword cape-elisp-symbol)
   :custom
-  (cape-file-directory-must-exist t)
   (cape-file-prefix '("~" "/" "./" "../"))
   :init
   (when jotain-completion-fallbacks
@@ -519,11 +503,15 @@ where the built-in returns nil: comments and docstrings."
   (add-hook 'emacs-lisp-mode-hook #'jotain-cape-setup-elisp)
   (add-hook 'lisp-interaction-mode-hook #'jotain-cape-setup-elisp))
 
-;;; @doc Inline completion preview (built-in, Emacs 30+): greys out the
-;;; most likely completion after point, drawn from the same capfs as the
-;;; corfu popup. Enabled in every buffer via
-;;; `global-completion-preview-mode' on Emacs 31; on Emacs 30 only in
-;;; `jotain-completion-auto-modes'. Gated on
+;; The theme turns the preview on everywhere; this opt-out wins over it
+;; (see `jotain-ui--keep-config-overrides').
+(unless jotain-completion-inline-preview
+  (setopt global-completion-preview-mode nil))
+
+;;; @doc Inline completion preview (built-in): greys out the most likely
+;;; completion after point, drawn from the same capfs as the corfu popup.
+;;; The newcomers-presets theme enables `global-completion-preview-mode'
+;;; in every buffer. Gated on
 ;;; `jotain-completion-inline-preview'. TAB (unless
 ;;; `jotain-completion-free-tab') and `M-RET' accept the preview, `M-i'
 ;;; its common prefix; RET stays a newline. Suppressed in comments and
@@ -532,9 +520,7 @@ where the built-in returns nil: comments and docstrings."
   :ensure nil
   :when jotain-completion-inline-preview
   :defer t
-  :functions (completion-preview-insert
-              completion-preview-mode
-              global-completion-preview-mode)
+  :functions (completion-preview-insert)
   :preface
   ;; Neither library is loaded at byte-compile time.
   (defvar completion-preview-active-mode-map)
@@ -543,16 +529,9 @@ where the built-in returns nil: comments and docstrings."
   (defvar corfu-sort-function)
   (defun jotain-completion--preview-inhibit-in-comment ()
     "Return non-nil inside a comment or string.
-Added to `completion-preview-inhibit-functions' (Emacs 31) so the ghost
+Added to `completion-preview-inhibit-functions' so the ghost
 text does not appear where symbol completion is meaningless."
     (nth 8 (syntax-ppss)))
-  :init
-  ;; Require first so the `fboundp' probe can see the Emacs 31 global mode.
-  (require 'completion-preview)
-  (if (fboundp 'global-completion-preview-mode)
-      (global-completion-preview-mode 1)
-    (dolist (hook jotain-completion-auto-modes)
-      (add-hook hook #'completion-preview-mode)))
   :config
   ;; Match the popup's delay so one keystroke does not fire two capf
   ;; passes at different times (costly with an LSP capf).
@@ -567,15 +546,12 @@ text does not appear where symbol completion is meaningless."
   ;; Accept without TAB or RET.
   (keymap-set completion-preview-active-mode-map "M-RET"
               #'completion-preview-insert)
-  ;; Match corfu's top row.  `completion-preview-sort-function' is a user
-  ;; option only in Emacs 31.
-  (when (and (get 'completion-preview-sort-function 'custom-type)
-             (boundp 'corfu-sort-function))
+  ;; Match corfu's top row (when corfu has loaded).
+  (when (boundp 'corfu-sort-function)
     (setopt completion-preview-sort-function corfu-sort-function))
-  ;; Suppress in comments/strings (Emacs 31 hook; absent on 30).
-  (when (boundp 'completion-preview-inhibit-functions)
-    (add-hook 'completion-preview-inhibit-functions
-              #'jotain-completion--preview-inhibit-in-comment)))
+  ;; Suppress in comments/strings.
+  (add-hook 'completion-preview-inhibit-functions
+            #'jotain-completion--preview-inhibit-in-comment))
 
 (provide 'init-completion)
 ;;; init-completion.el ends here
