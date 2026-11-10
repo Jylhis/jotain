@@ -91,10 +91,8 @@ update_likec4() {
   ( cd "$dir"
     HOME="$(mktemp -d)" nix shell nixpkgs#nodejs_22 --command \
       npm install --package-lock-only --ignore-scripts >/dev/null )
-  local hash
-  hash="$(nix run nixpkgs#prefetch-npm-deps -- "${dir}/package-lock.json")"
+  # importNpmLock reads the lock directly: no npmDepsHash to refresh.
   perl -pi -e "s/(version = \")[^\"]*(\";)/\${1}${ver}\${2}/ if /version = \"1\./ || /version = \"[0-9]/;
-               s|(npmDepsHash = \")[^\"]*(\")|\${1}${hash}\${2}|;
                s|(\@likec4/lsp\@)[0-9][^\`]*|\${1}${ver}|" "$file"
   [ -n "$build_flag" ] && { log "build: likec4-lsp"; nix build --no-link ".#likec4-lsp"; }
 }

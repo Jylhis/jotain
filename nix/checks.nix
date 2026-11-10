@@ -162,6 +162,9 @@ in
   packages-default = pkgs.jotainEmacsPackages;
   packages-emacs = pkgs.jotainEmacs;
   packages-info = pkgs.jotainInfo;
+  # The terminal-only distribution (`.#emacs-nox`, the nix-on-droid
+  # default): no other check realises it.
+  packages-emacs-nox = pkgs.jotainEmacsPackagesNoGui;
 
   options-doc = import ./options-doc.nix { inherit pkgs src; };
 
@@ -302,6 +305,34 @@ in
             toString (builtins.length graphicalModule.config.launchd.agents.jotain.config.ProgramArguments);
       }
       ''
+        test "$defaultEditorConfigured" = "1" || { echo "EDITOR not set"; exit 1; }
+        case "$graphicalTarget" in
+          *graphical-session.target*) ;; # systemd WantedBy
+          [1-9]*) ;; # launchd ProgramArguments length
+          *) echo "graphical start target not wired: $graphicalTarget"; exit 1 ;;
+        esac
+        touch $out
+      '';
+
+  # The cache-parity invariant (AGENTS.md): each bare build equals its
+  # prebuilt sibling. Eval-only; Linux only (nix/cache-parity.nix).
+  cache-parity =
+    let
+      parity = lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux (
+        import ./cache-parity.nix { inherit pkgs; }
+      );
+      broken = lib.attrNames (lib.filterAttrs (_: ok: !ok) parity);
+    in
+    pkgs.runCommandLocal "check-cache-parity"
+      {
+        broken = lib.concatStringsSep " " broken;
+      }
+      ''
+        if [ -n "$broken" ]; then
+          echo "off cache parity: $broken" >&2
+          echo "see the cache-parity invariant in AGENTS.md" >&2
+          exit 1
+        fi
         touch $out
       '';
 
@@ -398,7 +429,7 @@ in
         cd $src
         emacs -Q --batch --eval '
           (let ((files (append (list "early-init.el" "init.el")
-                               (directory-files "lisp" t "^\\(init-.*\\|devenv\\)\\.el$")
+                               (directory-files "lisp" t "^\\(init-.*\\|devenv\\|repo-review\\)\\.el$")
                                (directory-files "test" t "\\.el$")))
                 (failed nil))
             ;; Guard against a narrowed fileset that silently lost
@@ -527,11 +558,15 @@ in
     emacs = elispEmacs;
   };
 
-  # ERT suite. Sandbox-safe: no devenv binary, network or subprocesses.
+  # ERT suite. Sandbox-safe: no devenv binary or network. git is on
+  # PATH for the tests that build throwaway VC projects (repo-review).
   elisp-test =
     pkgs.runCommand "check-elisp-test"
       {
-        nativeBuildInputs = [ elispEmacs ];
+        nativeBuildInputs = [
+          elispEmacs
+          pkgs.git
+        ];
         src = elispTestSrc;
       }
       ''
