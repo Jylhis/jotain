@@ -67,9 +67,6 @@ in
       wrappedPackage
       editorScript
       pkgsWithOverlay.eca
-      # jinx dictionary: libaspell finds $profile/lib/aspell via its
-      # NIX_PROFILES patch, so it belongs in the profile, not on PATH.
-      pkgs.aspellDicts.en
     ];
 
     environment.sessionVariables = lib.mkIf cfg.defaultEditor {

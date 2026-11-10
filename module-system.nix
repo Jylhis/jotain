@@ -58,6 +58,16 @@ let
   '';
 in
 {
+  imports = [
+    # Removed: it only added dictionaries to the profile, which the
+    # distribution wrapper's ASPELL_CONF (nix/mk-overlay.nix) never reads.
+    (lib.mkRemovedOptionModule [ "services" "jotain" "spell" "dictionaries" ] ''
+      It never affected spell-checking: the Jotain distribution bundles
+      its own aspell dictionaries (en, fi, de, fr) and points ASPELL_CONF
+      at them. To change the set, override ASPELL_CONF for the daemon.
+    '')
+  ];
+
   options.services.jotain = {
     enable = lib.mkEnableOption "the Jotain Emacs configuration";
 
@@ -95,21 +105,6 @@ in
         user's own devenv, and `pkgs.devenv` bundles its own nix and
         can version-skew against per-project devenv installs
       '';
-    };
-
-    spell = {
-      dictionaries = lib.mkOption {
-        type = with lib.types; listOf package;
-        default = [ pkgs.aspellDicts.en ];
-        defaultText = lib.literalExpression "[ pkgs.aspellDicts.en ]";
-        example = lib.literalExpression "[ pkgs.aspellDicts.en pkgs.aspellDicts.fi ]";
-        description = ''
-          Aspell dictionary packages for jinx spell-checking
-          (lisp/init-writing.el). Installed into the system profile, where
-          libaspell's NIX_PROFILES patch finds them at runtime and
-          enchant's aspell backend hands them to jinx.
-        '';
-      };
     };
 
     dockerfileLsp = {
@@ -150,10 +145,7 @@ in
       editorScript
       visualScript
       pkgsWithOverlay.eca
-    ]
-    # jinx dictionaries: libaspell finds $profile/lib/aspell via its
-    # NIX_PROFILES patch, so they belong in the profile, not on PATH.
-    ++ cfg.spell.dictionaries;
+    ];
     # Colour-emoji fallback for lisp/init-ui.el's fontsets. Skipped on
     # Darwin: macOS ships Apple Color Emoji, and nix-darwin's
     # `fonts.packages' differs from NixOS's.

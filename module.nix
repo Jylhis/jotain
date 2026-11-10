@@ -197,17 +197,13 @@ let
 in
 {
   imports = [
-    # Old spelling of eca.openrouter.enable (warns on use).
-    (lib.mkRenamedOptionModule
-      [ "services" "jotain" "openrouter" "enable" ]
-      [ "services" "jotain" "eca" "openrouter" "enable" ]
-    )
-    # The secrets file is daemon-wide, not eca-specific; keep the old
-    # path as an alias.
-    (lib.mkAliasOptionModule
-      [ "services" "jotain" "eca" "environmentFile" ]
-      [ "services" "jotain" "environmentFile" ]
-    )
+    # Removed: it only added dictionaries to the profile, which the
+    # distribution wrapper's ASPELL_CONF (nix/mk-overlay.nix) never reads.
+    (lib.mkRemovedOptionModule [ "services" "jotain" "spell" "dictionaries" ] ''
+      It never affected spell-checking: the Jotain distribution bundles
+      its own aspell dictionaries (en, fi, de, fr) and points ASPELL_CONF
+      at them. To change the set, override ASPELL_CONF for the daemon.
+    '')
   ];
 
   options.services.jotain = {
@@ -378,21 +374,6 @@ in
       '';
     };
 
-    spell = {
-      dictionaries = lib.mkOption {
-        type = with lib.types; listOf package;
-        default = [ pkgs.aspellDicts.en ];
-        defaultText = lib.literalExpression "[ pkgs.aspellDicts.en ]";
-        example = lib.literalExpression "[ pkgs.aspellDicts.en pkgs.aspellDicts.fi ]";
-        description = ''
-          Aspell dictionary packages for jinx spell-checking
-          (lisp/init-writing.el). Installed into the profile, where
-          libaspell's NIX_PROFILES patch finds them at runtime and
-          enchant's aspell backend hands them to jinx.
-        '';
-      };
-    };
-
     eca = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -493,7 +474,6 @@ in
       # that ships inside the selected package.
       (lib.hiPrio emacsWrapper)
     ]
-    ++ cfg.spell.dictionaries
     ++ emojiFontPackages
     ++ iconFontPackages
     ++ lib.optional (cfg.client.enable && pkgs.stdenv.hostPlatform.isLinux) (
