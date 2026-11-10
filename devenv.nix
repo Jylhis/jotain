@@ -30,6 +30,13 @@ in
   packages =
     with pkgs;
     [
+      # The enterTest store checks assert these on PATH; listing them
+      # here does not depend on what languages.nix or treefmt expose.
+      nil
+      nixfmt-rfc-style
+      statix
+      deadnix
+
       # apheleia formats Meson files with the Meson CLI; compile-multi
       # commands assume Ninja-backed builddirs.
       meson
