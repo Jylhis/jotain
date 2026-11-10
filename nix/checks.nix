@@ -245,6 +245,11 @@ in
         graphicalTarget = builtins.toJSON graphicalModule.config.systemd.user.services.emacs-config.Install.WantedBy;
       }
       ''
+        test "$defaultEditorConfigured" = "1" || { echo "EDITOR not set"; exit 1; }
+        case "$graphicalTarget" in
+          *graphical-session.target*) ;;
+          *) echo "graphical start target not wired: $graphicalTarget"; exit 1 ;;
+        esac
         touch $out
       '';
 
@@ -341,7 +346,7 @@ in
         cd $src
         emacs -Q --batch --eval '
           (let ((files (append (list "early-init.el" "init.el")
-                               (directory-files "lisp" t "^\\(init-.*\\|devenv\\)\\.el$")
+                               (directory-files "lisp" t "^\\(init-.*\\|devenv\\|repo-review\\)\\.el$")
                                (directory-files "test" t "\\.el$")))
                 (failed nil))
             ;; Guard against a narrowed fileset that silently lost
