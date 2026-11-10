@@ -10,6 +10,7 @@ Entries up to 2026-11 were reconstructed from git history (first commit 2026-07-
 
 ### Changed
 
+- Styles use the design system's current variable names (`--color-link`, `--type-<style>-size`, `--radius`) in place of the removed `--color-accent*`, `--type-scale-N` and `--radius-<step>` aliases. The values are the same.
 - The package builds the site without the third-party API reference; the deployed site builds `passthru.withApiDoc`, which ingests it.
 - **Tests:** `package.nix` returns the package and keeps its tests in `passthru.tests`; `project.nix` declares them as `tests`. The package itself is the `build` check.
 - `test`, `serve` and `deploy` build the package and checks through the project entry point instead of the root `local.packages` and `local.checks`.
