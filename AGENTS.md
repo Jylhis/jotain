@@ -11,9 +11,9 @@ default build is emacs-overlay's `unstable` variant (the newest Emacs
 release or pretest tag, currently 31.1); nixpkgs' Emacs 30 is the `mainline` variant (below the Elisp floor: a parity canary, not a runtime). The dev shell has
 tooling only, **no `emacs`**: build and launch with `just run-built`.
 
-`journal/` and `TODO.md` are working notes and may be stale; when they
-disagree with the code, the code wins. Finding numbers cited there refer to
-the reports under `docs/reviews/`.
+`TODO.md` holds working notes and may be stale; when it disagrees with the
+code, the code wins. Finding numbers cited in comments refer to the reports
+under `docs/reviews/`.
 
 ## Project Structure & Module Organization
 
@@ -73,9 +73,9 @@ blocks other actions, and the run then fails at startup with no logs.
 
 - **PR CI** (`ci.yml`, `pull_request` + `workflow_dispatch`). Job `check`:
   `just verify` (lock sync), then one named step per check: formatting,
-  statix, deadnix, module-eval, packages-doc-in-sync, eca-models-in-sync,
-  ds-in-sync, packages-doc, options-doc, elisp-lint, scanner-fidelity,
-  elisp-compile, config-startup. Job `site`: builds `.#site-preview`. Job
+  statix, deadnix, module-eval, cache-parity, packages-doc-in-sync,
+  eca-models-in-sync, ds-in-sync, packages-doc, options-doc, elisp-lint,
+  scanner-fidelity, elisp-compile, config-startup, elisp-test. Job `site`: builds `.#site-preview`. Job
   `test`: `devenv test`. Cachix is pull-only (no writer token for PR code).
   Superseded runs are cancelled. Pushes from the Claude Code GitHub App do
   not trigger `pull_request` runs; start CI with
@@ -113,6 +113,8 @@ Checks and maintenance:
 - `just check`: `nix flake check` (every check in `nix/checks.nix`; not
   `devenv test`).
 - `just test`: build the `elisp-test` check.
+- `just cache-parity`: build the `cache-parity` check (see the invariant
+  under Nix build layer).
 - `just fmt`: `nix fmt` (treefmt: nixfmt-rfc-style, deadnix, statix).
 - `just update`: `nix flake update`, then `just sync-devenv all`.
 - `just sync-devenv [shared|all]`: rewrite `devenv.yaml`'s shared-input URLs
@@ -127,8 +129,8 @@ Checks and maintenance:
   at `http://localhost:8080/jotain/`.
 - `just ds-sync`: re-vendor `website/public/ds` from `nix/design-pin.nix`
   (the fix for a failing `ds-in-sync`).
-- `just clean`: remove `*.elc`, autosaves, eln-cache, `result`.
-  `just clean-all` also wipes `elpa/`, `var/`, `.dev-home/` (next startup is
+- `just clean`: remove `*.elc`, autosaves, `var/eln-cache`, `result*`.
+  `just clean-all` also wipes `elpa/` and `var/` (next startup is
   slow).
 
 Build and launch (current system by default; override with
@@ -148,7 +150,7 @@ Build and launch (current system by default; override with
   every tree-sitter grammar) via `nix-build`. `just build-nox-full`: the
   terminal-only distribution (`.#emacs-nox`).
 - `just build-bare` / `build-nox` / `build-git` / `build-igc` /
-  `build-igc-ccache` / `build-perf` / `build-android`: bare Emacs from
+  `build-igc-ccache` / `build-perf`: bare Emacs from
   `emacs.nix`. Default revisions are cache hits on Linux, except
   `build-igc-ccache` and `build-perf` (`cpuTune`: `-O3 -march/-mtune`),
   which build from source by design. A custom `--argstr rev` fails once and
@@ -332,8 +334,7 @@ Variant builds target `emacs.nix` directly.
 - `overlays.default`; `homeManagerModules.default` (`module.nix`);
   `nixosModules.default` and `darwinModules.default` (both
   `module-system.nix`); `nixOnDroidModules.default`
-  (`module-nix-on-droid.nix`); an example `nixOnDroidConfigurations.default`
-  (aarch64, not built by CI).
+  (`module-nix-on-droid.nix`).
 - `formatter` (treefmt), `lib` (use-package scanner, `nix/use-package.nix`),
   `checks` (`nix/checks.nix`).
 
@@ -366,8 +367,7 @@ and `nix-community`.
 an Elisp-only `ghostel`. `jylhis-emacs-themes` takes its revision from
 `nix/design-pin.nix`, the single pin for github.com/Jylhis/design, shared
 with the CSS vendored in `website/public/ds` so editor and site never
-diverge. `nix/devenv-emacs-lisp.nix` is no longer imported by the shell; it
-remains only as an options-doc source.
+diverge.
 
 ### Modules
 
@@ -379,12 +379,10 @@ remains only as an options-doc source.
   - Wrapper-`PATH` toggles (`<name>.enable`): `sonarlint` (pulls JDK 21),
     `devenv`, `dockerfileLsp`, `onePassword` (`op`, backs
     `auth-source-1password`), `sops`, `claudeCode`. `onePassword`, `sops`,
-    and `claudeCode` are unfree. `spell.dictionaries` lists aspell
-    dictionaries.
+    and `claudeCode` are unfree.
   - Secrets: `services.jotain.environmentFile` is a runtime file loaded via
     systemd `EnvironmentFile` (sourced before exec under launchd), inherited
-    by every subprocess and never copied to the store (`eca.environmentFile`
-    is an alias). Alternatively, `services.jotain.authSources` lists
+    by every subprocess and never copied to the store. Alternatively, `services.jotain.authSources` lists
     authinfo/netrc files that are passed as `JOTAIN_AUTH_SOURCES` and
     prepended to `auth-sources` by `lisp/init-systems.el`;
     `lisp/init-ai.el` exports the eca provider keys from auth-source before
@@ -392,12 +390,11 @@ remains only as an options-doc source.
   - `services.jotain.eca` generates `~/.config/eca/config.json` via
     `nix/eca-config.nix` (defaults from `config/eca/config.json`, which the
     `eca-models-in-sync` check also reads).
-    `eca.openrouter.enable` adds the OpenRouter provider (old alias:
-    `services.jotain.openrouter.enable`); `eca.settings` is deep-merged over
+    `eca.openrouter.enable` adds the OpenRouter provider; `eca.settings` is deep-merged over
     it. gptel defaults to OpenRouter regardless.
 - **`module-system.nix`** (shared NixOS / nix-darwin module): applies the
   overlay and adds packages to `environment.systemPackages`, with the same
-  toggles and `spell.dictionaries`. ECA config and `environmentFile` stay
+  toggles. ECA config and `environmentFile` stay
   Home-Manager-only (no per-user daemon or `~/.config` here).
 - **`module-nix-on-droid.nix`**: adds the terminal-only distribution
   (`jotainEmacsPackagesNoGui`) and an `emacsclient` EDITOR wrapper to
@@ -420,12 +417,12 @@ PRs). Drift fails the `locks-in-sync` check and PR CI. `default.nix`,
 
 Not bumped by `just update` or Dependabot: the GitHub-built Emacs packages
 (`nix/extra-packages.nix`), the ECA server (`nix/eca-server.nix`), the
-vendored npm language servers (`nix/likec4-lsp.nix`, `nix/ellsp.nix`), and
+vendored npm language server (`nix/likec4-lsp.nix`), and
 the design pin (`nix/design-pin.nix`). `just update-pins` bumps them via
 `scripts/update-pins.sh`: [nix-update](https://github.com/Mic92/nix-update)
 for the plain `fetchFromGitHub` packages (tagged repos follow the newest
 tag, untagged ones the branch HEAD), and bespoke steps for eca (four-platform
-hash table), the two npm wrappers (regenerated `package-lock.json`), and the
+hash table), the npm wrapper (regenerated `package-lock.json`), and the
 design pin (which also re-runs `just ds-sync`). Scope it with pin names
 (`just update-pins combobulate eca`); `--list` prints them. Two pins are
 manual by design: `ghostel` (a temporary Elisp-only rebuild of
@@ -442,7 +439,8 @@ new formatters there.
 
 Flake checks (`nix/checks.nix`) cover the application and configuration:
 
-- **Package builds**: `packages-default`, `packages-emacs`, `packages-info`.
+- **Package builds**: `packages-default`, `packages-emacs`,
+  `packages-emacs-nox` (the terminal-only distribution), `packages-info`.
 - **Docs**: `options-doc`, `packages-doc`, `packages-doc-in-sync` (fix:
   `just docs-refresh-packages`), and `emacs-api-doc` (build-only, deploy
   path only).
@@ -454,6 +452,8 @@ Flake checks (`nix/checks.nix`) cover the application and configuration:
 - **Locks**: `locks-in-sync` (fix: `just sync-devenv`).
 - **Module evaluation** without the host frameworks: `module-eval`,
   `nix-on-droid-module-eval`.
+- **Cache parity**: `cache-parity` (eval-only, Linux) asserts the invariant
+  below via `nix/cache-parity.nix`; `just cache-parity` builds it.
 - **Nix linting**: `formatting`, `statix`, `deadnix`.
 - **Elisp**: `elisp-lint` (balanced parens), `elisp-compile` (byte-compile,
   warnings are errors), `elisp-test` (ERT), and `config-startup`, which
