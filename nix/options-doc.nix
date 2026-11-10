@@ -60,7 +60,6 @@ let
 
   hmDoc = mkDoc (src + "/module.nix");
   systemDoc = mkDoc (src + "/module-system.nix");
-  devenvDoc = mkDoc (src + "/nix/devenv-emacs-lisp.nix");
 
 in
 pkgs.runCommand "jotain-options-doc"
@@ -81,7 +80,6 @@ pkgs.runCommand "jotain-options-doc"
 
     - [Home Manager Module](#home-manager-module) — per-user Emacs daemon, client wrapper, desktop entry
     - [System Module](#system-module-nixos--nix-darwin) — overlay and system packages
-    - [devenv Module](#devenv-module) — Emacs Lisp development environment
 
     ---
 
@@ -123,27 +121,6 @@ pkgs.runCommand "jotain-options-doc"
     SECTION2
 
         cat ${systemDoc.optionsCommonMark} >> combined.md
-
-        cat >> combined.md <<'SECTION3'
-
-    ---
-
-    # devenv Module
-
-    Emacs Lisp development support for [devenv](https://devenv.sh) shells.
-
-    ```nix
-    {
-      languages.emacs-lisp = {
-        enable = true;
-        lsp.enable = true;
-      };
-    }
-    ```
-
-    SECTION3
-
-        cat ${devenvDoc.optionsCommonMark} >> combined.md
 
         cat > $out/style.css <<'CSS'
     :root {

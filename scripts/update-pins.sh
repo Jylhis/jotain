@@ -30,7 +30,6 @@ declare -A PINS=(
   [majutsu]="branch" # tags lag the fixes we want; track HEAD
   [eca]="fn:update_eca"
   [likec4-lsp]="fn:update_likec4"
-  [ellsp]="fn:update_ellsp"
   [design]="fn:update_design"
 )
 
@@ -95,34 +94,6 @@ update_likec4() {
   perl -pi -e "s/(version = \")[^\"]*(\";)/\${1}${ver}\${2}/ if /version = \"1\./ || /version = \"[0-9]/;
                s|(\@likec4/lsp\@)[0-9][^\`]*|\${1}${ver}|" "$file"
   [ -n "$build_flag" ] && { log "build: likec4-lsp"; nix build --no-link ".#likec4-lsp"; }
-}
-
-# --- ellsp: buildNpmPackage from a GitHub tag -----------------------------
-
-update_ellsp() {
-  local file="nix/ellsp.nix" tag src srchash npmhash
-  tag="$(gh api repos/elisp-lsp/Ellsp/tags --jq '.[].name' | sort -V | tail -1)"
-  log "ellsp -> ${tag}"
-  srchash="$(nix-prefetch-url --unpack "https://github.com/elisp-lsp/Ellsp/archive/${tag}.tar.gz" \
-    | xargs nix hash to-sri --type sha256)"
-  src="$(nix-build --no-out-link -E \
-    "(import <nixpkgs> {}).fetchFromGitHub { owner=\"elisp-lsp\"; repo=\"Ellsp\"; rev=\"${tag}\"; hash=\"${srchash}\"; }")"
-  npmhash="$(nix run nixpkgs#prefetch-npm-deps -- "${src}/proxy/package-lock.json")"
-  # version appears once at the top-level `let`; the src hash is the one in
-  # the Ellsp fetchFromGitHub block (msgu keeps its own).
-  perl -pi -e "s/(version = \")[^\"]*(\";)/\${1}${tag}\${2}/ if \$. < 12;" "$file"
-  perl -0pi -e "s/(repo = \"Ellsp\";\s*\n\s*rev = version;\s*\n\s*hash = \")[^\"]*(\")/\${1}${srchash}\${2}/" "$file"
-  perl -0pi -e "s/(npmDepsHash = \")[^\"]*(\")/\${1}${npmhash}\${2}/" "$file"
-  [ -n "$build_flag" ] && build_ellsp
-}
-
-build_ellsp() {
-  log "build: ellsp"
-  # shellcheck disable=SC2016 # ${...} is Nix interpolation, not shell
-  nix build --no-link --impure --expr '
-    let f = builtins.getFlake (toString ./.);
-        pkgs = import f.inputs.nixpkgs { system = builtins.currentSystem; };
-    in pkgs.callPackage ./nix/ellsp.nix { emacs = f.packages.${builtins.currentSystem}.emacs; }'
 }
 
 # --- design: multi-consumer pin tracking a rewritten-history branch -------
