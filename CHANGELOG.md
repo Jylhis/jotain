@@ -11,6 +11,7 @@ Entries up to 2026-11 were reconstructed from git history (first commit 2024-05-
 ### Added
 
 - `just info` builds and opens a combined Info manual covering the jylhis man pages and the Emacs configuration. ([cb838529c6](https://github.com/Jylhis/monorepo/commit/cb838529c6))
+- `services.emacsConfig.users.<user>` (`module-system.nix`) builds the wrapped Emacs, the EDITOR and VISUAL scripts, `emacsctl` and the dictionaries for one user (`nix/user-programs.nix`, shared with `module.nix`) and installs them in the user's profile. The Home Manager module takes them from there and keeps the config files and the daemon unit.
 
 ### Changed
 
