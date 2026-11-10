@@ -5,11 +5,12 @@ description: Get up and running with the configuration in minutes
 
 # Quickstart
 
-## Clone the repository
+## Go to the configuration
+
+The configuration lives in the jylhis tree. From a checkout:
 
 ```bash
-git clone https://github.com/Jylhis/jotain.git
-cd jotain
+cd projects/distros/emacs
 ```
 
 ## Enter the development shell
@@ -23,35 +24,33 @@ devenv shell
 ## Build and run Emacs with the configuration
 
 ```bash
-just run-built            # build for the current platform, then launch result/bin/emacs
-just run-built-debug      # same, with --debug-init and debug-on-error
+just run-built               # build, then launch result/bin/emacs
+just run-built --debug-init  # arguments are passed on to Emacs
 ```
 
-`just run-built` builds the full distribution (Emacs 31 + packages + tree-sitter grammars, usually a binary-cache pull rather than a compile) and launches `./result/bin/emacs` with `--init-directory=<repo>`, so it never touches `~/.emacs.d`. The first launch installs any package Nix doesn't provide from MELPA; later launches load from the package cache.
+`just run-built` builds the full distribution (Emacs 31 + packages + tree-sitter grammars, usually a binary-cache pull rather than a compile) and launches `./result/bin/emacs` with `--init-directory=<projects/distros/emacs>`, so it never touches `~/.emacs.d`. The first launch installs any package Nix doesn't provide from MELPA; later launches load from the package cache.
 
 [Launching Emacs](/usage/launching) covers the daemon + client pattern and the `emd` / `em` / `emg` shell aliases (`services.emacsConfig.shellAliases`).
 
 ## Sanity-check the configuration
 
 ```bash
-just check          # nix flake check: package builds, Nix linting, docs checks,
+just test           # every emacs-* check of the tree: Nix linting, docs checks,
                     # elisp paren check, byte-compile (warnings as errors), ERT tests
-just test           # build only the elisp-test flake check (ERT tests under test/)
-just fmt            # nix fmt: treefmt with nixfmt-rfc-style, deadnix, statix
+just fmt            # treefmt with nixfmt-rfc-style, deadnix, statix
 ```
 
 ## Clean build artifacts
 
 ```bash
-just clean          # .elc files, autosaves, eln-cache, result
-just clean-all      # also elpa/, var/, .dev-home/ (forces a full re-fetch)
+just clean          # .elc files, var/eln-cache, result
 ```
 
 ## Update pinned sources
 
-`flake.lock` is the single source of truth for input revs; `devenv.yaml` mirrors the shared ones (`nixpkgs`, `treefmt-nix`, `emacs-overlay`).
+The tree's nixtamal pins (`nix/tamal/` at the repo root) are the source of truth for nixpkgs and emacs-overlay.
 
 ```bash
-just update             # update every flake input, then sync devenv.yaml + devenv.lock
-just verify             # assert flake.lock and devenv.lock agree on every shared input
+just update             # at the repo root: bump the tree's pins
+just cache-parity       # here: assert the bare builds still match their prebuilt siblings
 ```

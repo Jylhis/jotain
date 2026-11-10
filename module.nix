@@ -25,7 +25,17 @@ let
   # A host whose pkgs already carry the overlay (the jylhis hosts) skips a
   # second nixpkgs fixpoint.
   pkgsWithOverlay = if pkgs ? emacsConfigPackages then pkgs else pkgs.extend emacsConfigOverlay;
-  selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.emacsConfigPackages;
+  # With services.emacsConfig.users.<user> on in NixOS (module-system.nix) the system
+  # builds the programs and installs them; this module takes them from there.
+  osConfig = args.osConfig or { };
+  system = osConfig.services.emacsConfig.users.${config.home.username} or { enable = false; };
+  selectedPackage =
+    if system.enable then
+      system.built.package
+    else if cfg.package != null then
+      cfg.package
+    else
+      pkgsWithOverlay.emacsConfigPackages;
   inherit (pkgs.stdenv.hostPlatform) isLinux;
   startWithSession =
     if cfg.startWithUserSession == "graphical" then true else cfg.startWithUserSession;
@@ -65,35 +75,8 @@ let
   # here so a stray ~/.emacs.d/ is never picked up.
   initDirectory = "${config.xdg.configHome}/emacs";
 
-  # Byte-compiled config, so the daemon loads .elc instead of
-  # interpreting .el (and deferred native compilation, which never fires
-  # for plain .el loads, can fill var/eln-cache).
-  #
-  # Same derivation as nix/checks.nix' `elisp-compile', so on the default
-  # configuration `home-manager switch' substitutes CI's cachix artifact.
-  # A custom `services.emacsConfig.package' or nixpkgs pin builds it locally.
-  # `.core' is the inner emacsWithPackages result (see
-  # nix/config-compiled.nix); the `or' covers a custom package.
-  compiledConfig = import ./nix/config-compiled.nix {
-    inherit pkgs;
-    emacs = selectedPackage.core or selectedPackage;
-    nativeCompile = cfg.nativeCompile.enable;
-  };
-
   # Generator for ~/.config/eca/config.json (see nix/eca-config.nix).
   ecaConfig = import ./nix/eca-config.nix { inherit lib pkgs; };
-
-  # Shared runtime binaries (nix/runtime-deps.nix) plus the opt-in tools,
-  # prepended to PATH in emacsWrapper, since the systemd user
-  # service does not inherit the login-shell PATH.
-  runtimeDeps =
-    import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; }
-    ++ lib.optional cfg.devenv.enable pkgs.devenv
-    ++ lib.optional cfg.sonarlint.enable pkgs.sonarlint-ls
-    ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server
-    ++ lib.optional cfg.onePassword.enable pkgs._1password-cli
-    ++ lib.optional cfg.sops.enable pkgs.sops
-    ++ lib.optional cfg.claudeCode.enable pkgs.claude-code;
 
   # Colour-emoji fallback for the `emoji' / `symbol' fontsets
   # (lisp/init-ui.el).
@@ -110,54 +93,30 @@ let
     pkgs.ibm-plex
   ];
 
-  runtimePath = lib.makeBinPath runtimeDeps;
-
-  # `emacs` with --init-directory always set, for the daemon and any
-  # interactive invocation.
-  emacsWrapper = pkgs.writeShellScriptBin "emacs" ''
-    export PATH=${runtimePath}''${PATH:+:$PATH}
-    ${lib.optionalString cfg.nativeCompile.enable ''
-      export EMACS_CONFIG_ELN_PATH=${compiledConfig}/share/emacs/native-lisp
-    ''}
-    exec ${emacsBinPath}/emacs --init-directory=${lib.escapeShellArg initDirectory} "$@"
-  '';
-
-  # EDITOR fallback without a daemon; via emacsWrapper to keep
-  # --init-directory.
-  editorFallback = pkgs.writeShellScript "emacs-config-editor-fallback" ''
-    exec ${emacsWrapper}/bin/emacs -nw -- "$@"
-  '';
-
-  # EDITOR — terminal-friendly emacsclient (works over SSH, in git commit, etc.)
-  editorScript = pkgs.writeShellScriptBin "emacs-config-editor" ''
-    exec ${lib.getBin selectedPackage}/bin/emacsclient \
-      --tty \
-      --alternate-editor=${editorFallback} \
-      -- \
-      "$@"
-  '';
-
-  # VISUAL — opens a GUI emacsclient frame.
-  visualScript = pkgs.writeShellScriptBin "emacs-config-visual" ''
-    exec ${lib.getBin selectedPackage}/bin/emacsclient \
-      --create-frame \
-      --alternate-editor=${emacsWrapper}/bin/emacs \
-      -- \
-      "$@"
-  '';
-
-  # `emacsctl <start|stop|status|restart|logs>`: drives the systemd user
-  # service.
-  emacsctlScript = pkgs.writeShellScriptBin "emacsctl" ''
-    case "''${1:-status}" in
-      start)   exec systemctl --user start emacs-config ;;
-      stop)    exec systemctl --user stop emacs-config ;;
-      restart) exec systemctl --user restart emacs-config ;;
-      status)  exec systemctl --user status emacs-config ;;
-      logs)    exec journalctl --user -u emacs-config -f ;;
-      *) echo "usage: emacsctl {start|stop|status|restart|logs}" >&2; exit 2 ;;
-    esac
-  '';
+  built =
+    if system.enable then
+      system.built
+    else
+      import ./nix/user-programs.nix {
+        inherit pkgs pkgsWithOverlay initDirectory;
+        package = selectedPackage;
+        nativeCompile = cfg.nativeCompile.enable;
+        tools = {
+          devenv = cfg.devenv.enable;
+          sonarlint = cfg.sonarlint.enable;
+          dockerfileLsp = cfg.dockerfileLsp.enable;
+          onePassword = cfg.onePassword.enable;
+          sops = cfg.sops.enable;
+          claudeCode = cfg.claudeCode.enable;
+        };
+      };
+  inherit (built)
+    compiledConfig
+    emacsWrapper
+    editorScript
+    visualScript
+    emacsctlScript
+    ;
 
   systemdWantedBy =
     if cfg.startWithUserSession == "graphical" then "graphical-session.target" else "default.target";
@@ -443,21 +402,25 @@ in
     };
     fonts.fontconfig.enable = lib.mkIf isLinux true;
 
-    home.packages = [
-      selectedPackage
-      editorScript
-      visualScript
-      emacsctlScript
-      # hiPrio so the wrapped `emacs` shadows the unwrapped binary
-      # that ships inside the selected package.
-      (lib.hiPrio emacsWrapper)
-    ]
-    ++ cfg.spell.dictionaries
-    ++ emojiFontPackages
-    ++ iconFontPackages
-    ++ lib.optional (cfg.client.enable && pkgs.stdenv.hostPlatform.isLinux) (
-      lib.hiPrio clientDesktopItem
-    );
+    # The programs come from the system where services.emacsConfig.users.<user> is on.
+    home.packages =
+      lib.optionals (!system.enable) (
+        [
+          selectedPackage
+          editorScript
+          visualScript
+          emacsctlScript
+          # hiPrio so the wrapped `emacs` shadows the unwrapped binary
+          # that ships inside the selected package.
+          (lib.hiPrio emacsWrapper)
+        ]
+        ++ cfg.spell.dictionaries
+      )
+      ++ emojiFontPackages
+      ++ iconFontPackages
+      ++ lib.optional (cfg.client.enable && pkgs.stdenv.hostPlatform.isLinux) (
+        lib.hiPrio clientDesktopItem
+      );
 
     # Entry files and lisp/ come from compiledConfig: an .eln is named
     # after a hash of its source path, so sources from any other store path

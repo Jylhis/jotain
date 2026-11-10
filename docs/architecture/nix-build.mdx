@@ -5,7 +5,7 @@ description: How the configuration builds Emacs from source using Nix
 
 # Nix Build System
 
-This configuration builds Emacs with Nix, exposing the build options as arguments. nixpkgs comes from the revision pinned in `flake.lock`: `default.nix` and `emacs.nix` read it directly via `fetchTarball`, so non-flake `nix-build` consumers get the same pin. Pass `--arg pkgs '<nixpkgs>'` to use a different one.
+This configuration builds Emacs with Nix, exposing the build options as arguments. nixpkgs comes from the tree's nixtamal pins (`nix/tamal/` at the repo root): `default.nix` and `emacs.nix` read them through `nix/inputs.nix`. Pass `--arg pkgs '<nixpkgs>'` to use a different one.
 
 ## Two-Layer Architecture
 
@@ -36,36 +36,14 @@ produces the *exact* store path of the matching base attr. On Linux each GUI bui
 Verify after any change to defaults:
 
 ```bash
-nix-instantiate --eval --strict -E '
-  let lock = builtins.fromJSON (builtins.readFile ./flake.lock);
-      n  = lock.nodes.${lock.nodes.root.inputs.nixpkgs}.locked;
-      ov = lock.nodes.${lock.nodes.root.inputs.emacs-overlay}.locked;
-      nixpkgs = fetchTarball {
-        url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz";
-        sha256 = n.narHash;
-      };
-      overlay = fetchTarball {
-        url = "https://github.com/${ov.owner}/${ov.repo}/archive/${ov.rev}.tar.gz";
-        sha256 = ov.narHash;
-      };
-      pkgs = import nixpkgs { overlays = [ (import overlay) (import ./overlay.nix) ]; };
-  in {
-    # On this x86_64-linux eval every GUI build maps to a *-pgtk sibling
-    # (pgtk is the Linux GUI default in emacs.nix itself); non-pgtk Linux
-    # GUIs are asserted away and cannot be evaluated.
-    default       = pkgs.emacsConfig.outPath == pkgs.emacs-unstable-pgtk.outPath;
-    bare-default  = (import ./emacs.nix {}).outPath == pkgs.emacs-unstable-pgtk.outPath;
-    mainline-pgtk = (import ./emacs.nix { variant = "mainline"; }).outPath == pkgs.emacs-pgtk.outPath;
-    git-pgtk      = (import ./emacs.nix { variant = "git"; }).outPath == pkgs.emacs-git-pgtk.outPath;
-    igc-pgtk      = (import ./emacs.nix { variant = "igc"; }).outPath == pkgs.emacs-igc-pgtk.outPath;
-  }'
+just cache-parity   # nix/cache-parity.nix: every value must be true
 ```
 
-The override arg set is filtered through `lib.intersectAttrs (lib.functionArgs basePackage.override)`, so only flags the base `make-emacs.nix` defines are forwarded. A downstream flake that overrides `nixpkgs` with an older release (24.05+) therefore still evaluates: flags added in newer `make-emacs.nix` versions are dropped instead of failing with "called with unexpected argument". On the pinned unstable every argument is accepted, so the filter is a no-op and parity is unaffected.
+The override arg set is filtered through `lib.intersectAttrs (lib.functionArgs basePackage.override)`, so only flags the base `make-emacs.nix` defines are forwarded. A consumer whose `pkgs` is an older release (24.05+) therefore still evaluates: flags added in newer `make-emacs.nix` versions are dropped instead of failing with "called with unexpected argument". On the pinned unstable every argument is accepted, so the filter is a no-op and parity is unaffected.
 
 ### default.nix
 
-A thin flake-compat wrapper. It reads the pinned `flake-compat` rev from `flake.lock`, evaluates `flake.nix`, and promotes the current system's packages to the top level: `nix-build` builds the full distribution (`emacsConfigPackages`), `nix-build -A emacs` the bare Emacs. Variant builds target `emacs.nix` directly (e.g. `nix-build emacs.nix --arg variant '"git"'`).
+A shim over the tree's `nix/inputs.nix`: `nix-build` builds the full distribution (`emacsConfigPackages`). Bare and variant builds target `emacs.nix` directly (e.g. `nix-build emacs.nix --arg variant '"git"'`).
 
 ### Tree-sitter grammars
 
@@ -73,14 +51,9 @@ Grammars are bundled in `nix/mk-overlay.nix`: the distribution's `withPackages` 
 
 ### emacs-packages
 
-`legacyPackages.<system>.emacs-packages` (`nix/emacs-package-set.nix`) exposes every Emacs package the configuration bundles, each individually buildable: the `lisp/` use-package scan with `:ensure` aliases resolved, the Nix-provided extras (`nix/nix-provided-packages.nix`), and the tree-sitter grammar set.
+`nix/emacs-package-set.nix` resolves every Emacs package the configuration bundles, each individually buildable: the `lisp/` use-package scan with `:ensure` aliases resolved, the Nix-provided extras (`nix/nix-provided-packages.nix`), and the tree-sitter grammar set.
 
-```bash
-nix build .#emacs-packages.magit
-nix build .#emacs-packages.treesit-grammars
-```
-
-Keys are use-package head names, so `dired-async` holds the `async` derivation its `:ensure async` resolves to. The set lives in `legacyPackages` so `nix flake check` never builds it; the eval-only `emacs-packages-eval` check verifies every name resolves to a derivation. It mirrors `packages.default` (the GUI build), not `emacs-nox`.
+Keys are use-package head names, so `dired-async` holds the `async` derivation its `:ensure async` resolves to. Nothing builds the set as a whole; the eval-only `emacs-packages-eval` check verifies every name resolves to a derivation. It mirrors `packages.default` (the GUI build), not `emacs-nox`.
 
 ## Key Build Options
 
@@ -94,30 +67,26 @@ Keys are use-package head names, so `dired-async` holds the `async` derivation i
 | `withSystemd` | Linux | `--with-systemd` (journal support) |
 | `rev` / `hash` | `null` | Pin a specific commit for the `git` / `unstable` / `igc` variants |
 | `useCcache` | `false` | Build with `pkgs.ccacheStdenv` (cache dir from `ccacheDir`, default `/var/cache/ccache`). Only for builds already off cache parity (custom `rev`); needs an `extra-sandbox-paths` entry first |
-| `cpuTune` | `null` | Appends `-O3 -march=<tune> -mtune=<tune>` to `NIX_CFLAGS_COMPILE` (`just build-perf` passes `icelake-client`). Off every binary cache by design |
+| `cpuTune` | `null` | Appends `-O3 -march=<tune> -mtune=<tune>` to `NIX_CFLAGS_COMPILE` (e.g. `icelake-client`). Off every binary cache by design |
 
 See `emacs.nix` for the full argument list.
 
 ## IGC Variant
 
-The `igc` variant builds Emacs's `feature/igc3` branch, which replaces the mark-and-sweep garbage collector with the [Memory Pool System](https://memory-pool-system.readthedocs.io). emacs-overlay's `emacs-igc` already carries `--with-mps=yes` and the `mps` input, and the default revision is a binary-cache hit. `just build-igc-ccache` makes repeat rebuilds cheaper once ccache is set up (see the `useCcache` comment in `emacs.nix`).
+The `igc` variant builds Emacs's `feature/igc3` branch, which replaces the mark-and-sweep garbage collector with the [Memory Pool System](https://memory-pool-system.readthedocs.io). emacs-overlay's `emacs-igc` already carries `--with-mps=yes` and the `mps` input, and the default revision is a binary-cache hit. `--arg useCcache true` makes repeat rebuilds cheaper once ccache is set up (see the `useCcache` comment in `emacs.nix`).
 
 ## Git Variants
 
-`git`, `unstable`, and `igc` build the revision pinned inside emacs-overlay (advanced here by `just update`) and are cache hits from `nix-community.cachix.org`. To pin another commit, pass `--argstr rev "..."`: `emacs.nix` fetches it from `https://git.savannah.gnu.org/git/emacs.git`, and the first build reports the hash to pass back via `--argstr hash "sha256-..."`. `postPatch` then writes the revision into `lisp/loadup.el` so `emacs-repository-get-version` works without a `.git` directory. The overlay's `--enable-check-lisp-object-type` on `aarch64-linux` (it avoids segfaults there) carries over to custom revisions.
+`git`, `unstable`, and `igc` build the revision pinned inside emacs-overlay (advanced by `just update` at the repo root) and are cache hits from `nix-community.cachix.org`. To pin another commit, pass `--argstr rev "..."`: `emacs.nix` fetches it from `https://git.savannah.gnu.org/git/emacs.git`, and the first build reports the hash to pass back via `--argstr hash "sha256-..."`. `postPatch` then writes the revision into `lisp/loadup.el` so `emacs-repository-get-version` works without a `.git` directory. The overlay's `--enable-check-lisp-object-type` on `aarch64-linux` (it avoids segfaults there) carries over to custom revisions.
 
 ## nix-on-droid
 
-`nixOnDroidModules.default` (`module-nix-on-droid.nix`) installs the configuration on Android via [nix-on-droid](https://github.com/nix-community/nix-on-droid). Android runs headless under proot, so the module is a trimmed `module-system.nix`: it `pkgs.extend`s the overlay and adds a **terminal-only** build (`emacsConfigPackagesNoGui`) plus an `emacsclient` `EDITOR`/`VISUAL` wrapper via `environment.packages` and `environment.sessionVariables`. There is no systemd service, launchd agent, `fonts.packages`, or GUI.
+`module-nix-on-droid.nix` installs the configuration on Android via [nix-on-droid](https://github.com/nix-community/nix-on-droid). Android runs headless under proot, so the module is a trimmed `module-system.nix`: it `pkgs.extend`s the overlay and adds a **terminal-only** build (`emacsConfigPackagesNoGui`) plus an `emacsclient` `EDITOR`/`VISUAL` wrapper via `environment.packages` and `environment.sessionVariables`. There is no systemd service, `fonts.packages`, or GUI.
 
-`flake.nix` also exposes an example `nixOnDroidConfigurations.default` (aarch64-linux). It only activates on a device or under aarch64 emulation, so `nix flake check` does not realise it; the module is eval-checked on x86_64 by `nix-on-droid-module-eval`.
+The module is not exported from `nix/inputs.nix`; import the file by path. It is eval-checked on x86_64 by `nix-on-droid-module-eval`.
 
-## Overriding nixpkgs
+## Older nixpkgs
 
-A downstream flake can follow a different nixpkgs (release branches **24.05+** through unstable):
+The modules use the importing configuration's `pkgs` (release branches **24.05+** through unstable).
 
-```nix
-inputs.emacs-config.inputs.nixpkgs.follows = "nixpkgs";
-```
-
-The argument filter described under [Cache-parity invariant](#cache-parity-invariant) keeps the modules evaluating and building on older releases. The caveat is the Emacs version: 24.05's `pkgs.emacs` is Emacs 29, while the configuration's Elisp targets 30/31, so the build succeeds but runtime behaviour is only guaranteed on the pinned unstable.
+The argument filter described under [Cache-parity invariant](#cache-parity-invariant) keeps the modules evaluating and building on older releases. The caveat is the Emacs version: 24.05's `pkgs.emacs` is Emacs 29, while the configuration's Elisp needs 31.1, so the build succeeds but runtime behaviour is only guaranteed on the pinned unstable.

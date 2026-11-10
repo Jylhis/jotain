@@ -7,8 +7,8 @@
 #
 # Not in nixpkgs, and the npm tarball ships no lockfile, so
 # nix/likec4-lsp/ vendors a wrapper package.json + package-lock.json
-# pinning `@likec4/lsp@1.59.4`. `just update-pins likec4-lsp` regenerates
-# the lock (`npm install --package-lock-only --ignore-scripts`).
+# pinning `@likec4/lsp@1.59.4`. To bump it, edit the version there and
+# regenerate the lock (`npm install --package-lock-only --ignore-scripts`).
 # importNpmLock fetches each locked tarball, so there is no npmDepsHash to
 # keep in step.
 #

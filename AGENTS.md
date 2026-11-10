@@ -30,7 +30,7 @@ in-tree build replaces them.
   (`mk-overlay.nix` is the overlay implementation, `checks.nix` the checks).
 - `docs/` (documentation sources), `bench/` (startup benchmarks), `test/` (ERT;
   every `test/*.el` is loaded by the test check), `etc/` (debug harness,
-  vendored `elisp-doc`, lang-eval registry), `scripts/`.
+  vendored `elisp-doc`, lang-eval registry).
 
 ## Development environment
 
@@ -44,7 +44,8 @@ pins; this file covers only what is specific to the Emacs project.
 
 ### CI
 
-No workflow is specific to this project. The checks in `nix/checks.nix` appear
+The only workflow that watches this directory is `emacs-docs.yml`, which
+rebuilds the docs site. The checks in `nix/checks.nix` appear
 as `emacs-<name>` in the root `checks` (`outputs.nix`), so `just nix-check` at
 the repo root builds them with everything else. The site that serves the
 generated docs lives in `projects/services/emacs-docs` (see `emacs-docs(8)`).
@@ -59,7 +60,8 @@ All recipes below run in `projects/distros/emacs`. The shared recipes (`nix-buil
   elisp-test, the doc and module checks). Build one with
   `nix build -f . local.checks.emacs-<name>` at the repo root.
 - `just fmt`: treefmt (nixfmt, deadnix, statix) through the project shell.
-  `just lint` is a no-op: `projects/distros/emacs` is excluded from the root treefmt.
+  `just lint` is a no-op here; the root treefmt still formats the Nix
+  files (it skips `projects/distros/emacs` only for shfmt, biome and prettier).
 - `just build`: the full distribution (`emacsConfigPackages`: Emacs,
   packages, every tree-sitter grammar) via `nix-build`.
 - `just run-built [ARGS]`: **the way to launch this config.** Builds the
@@ -213,7 +215,7 @@ target `emacs.nix` directly.
   HTML), `packages-doc` (per-package reference), `ds-assets`, `info`.
 - `overlays.default`; `homeManagerModules.default` (`module.nix`);
   `nixosModules.default` (`module-system.nix`).
-- `formatter` (treefmt) and `checks` (`nix/checks.nix`).
+- `checks` (`nix/checks.nix`, including the treefmt `formatting` check).
 
 Module outputs get the overlay composed over emacs-overlay
 (`emacsConfigModuleOverlay`), so module installs resolve the same Emacs base
@@ -240,8 +242,8 @@ and `nix-community`.
 
 `nix/extra-packages.nix` builds the archive-absent packages
 (`jylhis-emacs-themes`, `claude-code-ide`, `combobulate`, `majutsu`,
-`tagref`, …) with `trivialBuild`, plus overrides such as built-in shims and
-an Elisp-only `ghostel`. `jylhis-emacs-themes` is built from the in-tree
+`tagref`, …) with `trivialBuild`, plus overrides such as built-in shims.
+`jylhis-emacs-themes` is built from the in-tree
 design system (`projects/libs/design/nix/emacs.nix`), and the emacs-docs site copies its
 CSS from the same tree (`nix/ds-assets.nix`, a wrapper over
 `projects/libs/design/nix/web-assets.nix`), so editor and site never
@@ -288,20 +290,15 @@ in nixpkgs-extra.
 
 The tree's nixtamal pins (`nix/tamal/`, see the root `AGENTS.md`) are the
 source of truth for nixpkgs and emacs-overlay; `just update` at the repo root
-bumps them. Nothing in `projects/distros/emacs` carries its
-own `flake.lock`.
+bumps them. Nothing in `projects/distros/emacs` carries its own `flake.lock`.
 
 #### Hand-pinned upstreams
 
 Not bumped by `just update`: the GitHub-built Emacs packages
 (`nix/extra-packages.nix`), the ECA server (`nix/eca-server.nix`) and the
-vendored npm language server (`nix/likec4-lsp.nix`). `scripts/update-pins.sh`
-bumps them with [nix-update](https://github.com/Mic92/nix-update) (`--list`
-prints the pin names). It and `scripts/verify-locks.sh` date from the
-standalone flake: check them against the in-tree build before relying on them.
-Two pins are manual by design: `ghostel` (a temporary Elisp-only rebuild of
-emacs-overlay's epkg; revert it, don't bump) and `etc/elisp-doc` (vendored
-verbatim from a Codeberg fork).
+vendored npm language server (`nix/likec4-lsp.nix`). Bump them by hand
+(new rev and hash in the file). `etc/elisp-doc` is vendored verbatim from a
+Codeberg fork and is not bumped.
 
 ### Shared treefmt configuration
 

@@ -193,10 +193,6 @@ See the Commentary and the inline key documentation for the plist shape.")
   "Return KEY from registry ENTRY, or DEFAULT (nil) when absent."
   (if (plist-member entry key) (plist-get entry key) default))
 
-(defun my-lang-entry (id)
-  "Return the registry entry whose :id is ID, or nil."
-  (seq-find (lambda (e) (eq (plist-get e :id) id)) my-lang-registry))
-
 (defun my-lang-live-entries ()
   "Return the registry entries flagged for the Tier-2 live probe."
   (seq-filter (lambda (e) (my-lang-get e :live)) my-lang-registry))

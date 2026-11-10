@@ -118,6 +118,7 @@
 (defvar devenv-env-mode)
 (defvar devenv-env--manual-roots)
 (defvar devenv-env--fetching)
+(defvar devenv-env--pending)
 
 ;;;; Customization
 

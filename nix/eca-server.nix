@@ -11,7 +11,7 @@ let
 
   baseUrl = "https://github.com/editor-code-assistant/eca/releases/download/${version}";
 
-  # Hashes are each asset's `.sha256' sidecar (scripts/update-pins.sh).
+  # Hashes are each asset's `.sha256' sidecar on the release page.
   # x86_64-linux uses the static build; aarch64-linux is dynamic and
   # gets autoPatchelf below.
   sources = {
