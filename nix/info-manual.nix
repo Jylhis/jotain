@@ -30,11 +30,22 @@ let
   # (e.g. sockets).
   docsSrc = lib.fileset.toSource {
     root = src;
-    fileset = lib.fileset.intersection (lib.fileset.maybeMissing (src + "/docs")) (
-      lib.fileset.fileFilter (
-        f: lib.hasSuffix ".md" f.name || lib.hasSuffix ".mdx" f.name || f.name == "jotain.texi"
-      ) src
-    );
+    # docs/reviews and docs/design are working notes, not chapters:
+    # leaving them out keeps their edits from changing jotainInfo, and
+    # with it every distribution's store path.
+    fileset =
+      lib.fileset.intersection
+        (lib.fileset.difference (lib.fileset.maybeMissing (src + "/docs")) (
+          lib.fileset.unions [
+            (lib.fileset.maybeMissing (src + "/docs/reviews"))
+            (lib.fileset.maybeMissing (src + "/docs/design"))
+          ]
+        ))
+        (
+          lib.fileset.fileFilter (
+            f: lib.hasSuffix ".md" f.name || lib.hasSuffix ".mdx" f.name || f.name == "jotain.texi"
+          ) src
+        );
   };
 
   optionsDoc = import ./options-doc.nix { inherit pkgs src; };
