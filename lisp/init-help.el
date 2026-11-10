@@ -15,9 +15,8 @@
   (help-window-select t)
   (help-window-keep-selected t)
   :config
-  ;; Emacs 31+: the keystroke log (C-h l) updates live.
-  (when (boundp 'view-lossage-auto-refresh)
-    (setopt view-lossage-auto-refresh t)))
+  ;; The keystroke log (C-h l) updates live.
+  (setopt view-lossage-auto-refresh t))
 
 ;;; @doc Built-in echo-area help for buttons and links when point
 ;;; lingers on them.

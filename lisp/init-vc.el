@@ -18,32 +18,16 @@
 (use-package vc
   :ensure nil
   :custom
-  (vc-follow-symlinks t)
   (vc-handled-backends '(Git JJ))
   :config
-  ;; Emacs 31+ options, guarded for Emacs 30.  Rewriting pushed history is
-  ;; normal in jj and force-push workflows; a `vc-dir' revert hides
-  ;; up-to-date entries.
-  (when (boundp 'vc-allow-rewriting-published-history)
-    (setopt vc-allow-rewriting-published-history t))
-  (when (boundp 'vc-dir-auto-hide-up-to-date)
-    (setopt vc-dir-auto-hide-up-to-date 'revert))
-  ;; Run `C-x v' from non-VC buffers (backend from `default-directory');
-  ;; save buffers before a `vc-dir' revert; view old revisions without
-  ;; temp files on disk; and use the `C-x v I'/`C-x v O' incoming/outgoing
-  ;; prefixes.
-  (when (boundp 'vc-deduce-backend-nonvc-modes)
-    (setopt vc-deduce-backend-nonvc-modes t))
-  (when (boundp 'vc-dir-save-some-buffers-on-revert)
-    (setopt vc-dir-save-some-buffers-on-revert t))
-  (when (boundp 'vc-find-revision-no-save)
-    (setopt vc-find-revision-no-save t))
-  (when (boundp 'vc-use-incoming-outgoing-prefixes)
-    (setopt vc-use-incoming-outgoing-prefixes t))
-  ;; Largely covered by `global-auto-revert-mode' (init-core.el); adopted
-  ;; from the newcomers-presets theme.
-  (when (fboundp 'vc-auto-revert-mode)
-    (vc-auto-revert-mode 1)))
+  ;; Rewriting pushed history is normal in jj and force-push workflows; a
+  ;; `vc-dir' revert hides up-to-date entries.
+  (setopt vc-allow-rewriting-published-history t)
+  ;; `setq', not `setopt': Emacs 31.1 declares this option :type
+  ;; boolean although its docstring documents `revert', so `setopt'
+  ;; warns.  The option has no :set function.  Switch back to `setopt'
+  ;; once upstream widens the :type.
+  (setq vc-dir-auto-hide-up-to-date 'revert))
 
 ;;; @doc C-x G jumps to a file git status reports as changed (modified,
 ;;; added, renamed, copied, unmerged, type-changed or untracked).
@@ -160,7 +144,6 @@ Deletions are omitted, since there is no file to open."
    ("C-c g"   . magit-file-dispatch))
   :custom
   (magit-diff-refine-hunk t)
-  (magit-diff-refine-ignore-whitespace t)
   (magit-diff-hide-trailing-cr-characters t)
   (magit-diff-context-lines 5)
   (magit-save-repository-buffers 'dontask)
@@ -220,7 +203,6 @@ Deletions are omitted, since there is no file to open."
   :custom
   (diff-hl-draw-borders nil)
   (fringes-outside-margins t)
-  (diff-hl-side 'left)
   :hook
   ;; No `:after magit': hooking before magit loads is fine, and gating on
   ;; it would miss after-init.  `diff-hl-magit-pre-refresh' is obsolete
@@ -246,7 +228,7 @@ Deletions are omitted, since there is no file to open."
 ;;; nudge that the WIP is getting too large for one commit. Probes run
 ;;; async, so rendering never blocks.
 (defgroup jotain-vc nil
-  "Version-control modeline knobs for the Jotain configuration."
+  "Version-control modeline knobs for the configuration."
   :group 'jotain-ui)
 
 (defcustom jotain-git-stats-update-interval 30
@@ -540,7 +522,6 @@ also invalidate after `magit-post-refresh-hook'."
   :custom
   (ediff-window-setup-function 'ediff-setup-windows-plain)
   (ediff-split-window-function 'split-window-horizontally)
-  (ediff-merge-split-window-function 'split-window-horizontally)
   (ediff-diff-options "-w")
   (ediff-custom-diff-options "-u")
   (ediff-merge-revisions-with-ancestor t)

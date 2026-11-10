@@ -8,7 +8,7 @@
 ;;; Code:
 
 (defgroup jotain-ui nil
-  "User-facing UI knobs for the Jotain configuration."
+  "User-facing UI knobs for the configuration."
   :group 'convenience)
 
 ;;;; Theme — Jylhis light/dark, switched by system appearance
@@ -29,12 +29,21 @@ The default is the Jylhis theme's dark (Negative) mode."
 ;; built-in Modus fallback, never theme files from untrusted paths.
 (setopt custom-safe-themes t)
 
+(defun jotain-ui--user-options-theme-p (theme)
+  "Return non-nil when THEME sets user options rather than faces."
+  (eq (plist-get (get theme 'theme-properties) :kind) 'user-options))
+
+(defun jotain-ui--color-themes ()
+  "Return `custom-enabled-themes' without the user-options themes."
+  (seq-remove #'jotain-ui--user-options-theme-p custom-enabled-themes))
+
 (defun jotain-ui--disable-other-themes (_theme &optional _no-confirm no-enable)
-  "Disable any active themes before loading a new one.
+  "Disable any active color themes before loading a new one.
 Without this, switching themes layers the new one on top of the old
-and the result is a face-attribute soup."
+and the result is a face-attribute soup.  User-options themes such as
+`newcomers-presets' stay on."
   (unless no-enable
-    (mapc #'disable-theme (copy-sequence custom-enabled-themes))))
+    (mapc #'disable-theme (jotain-ui--color-themes))))
 
 (advice-add 'load-theme :before #'jotain-ui--disable-other-themes)
 
@@ -43,7 +52,7 @@ and the result is a face-attribute soup."
 REASON is reported so the downgrade is visible in *Messages*."
   (setopt jotain-theme-light 'modus-operandi
           jotain-theme-dark 'modus-vivendi)
-  (message "jotain: %s; falling back to Modus themes" reason))
+  (message "init-ui: %s; falling back to Modus themes" reason))
 
 ;; Requiring jylhis-themes puts the Jylhis themes on
 ;; `custom-theme-load-path'.
@@ -84,7 +93,7 @@ theme by the frame's background mode.  Runs on
 frame-global, so a mixed GUI+tty daemon shares one theme."
   (let ((frame (or frame (selected-frame))))
     (when (and (not (display-graphic-p frame))
-               (null custom-enabled-themes))
+               (null (jotain-ui--color-themes)))
       (with-selected-frame frame
         (ignore-errors
           (load-theme (if (eq (frame-parameter frame 'background-mode) 'light)
@@ -96,6 +105,41 @@ frame-global, so a mixed GUI+tty daemon shares one theme."
 ;; Non-daemon `emacs -nw': apply once now; the daemon path is the hook.
 (unless (or noninteractive (daemonp) (display-graphic-p))
   (jotain-ui--ensure-tty-theme))
+
+;;;; newcomers-presets: Emacs 31's user-options theme
+
+;; Bound before the theme file loads, so its `defvar' keeps nil: the
+;; theme's mode hooks (flyspell, line numbers in text-mode, flymake) stay
+;; off.  jinx (init-writing), `jotain-line-numbers-in-prog' and init-prog own
+;; those.
+(defvar newcomers-presets-mode-enabled-local-modes nil)
+
+(defun jotain-ui--keep-config-overrides (theme)
+  "Record the config's own values of THEME's options in the `user' theme.
+A theme enabled after `setopt' or use-package `:custom' overrides their
+values, and auto-dark re-enables the theme on every flip.  The `user'
+theme always takes precedence, so copy each option that `:custom' set
+\(the `use-package' theme) or `setopt' set (`custom-check-value') there."
+  (pcase-dolist (`(,prop ,var . ,_) (get theme 'theme-settings))
+    (when (eq prop 'theme-value)
+      (if-let* ((custom (assq 'use-package (get var 'theme-value))))
+          (custom-push-theme 'theme-value var 'user 'set (cadr custom))
+        (when (get var 'custom-check-value)
+          (custom-push-theme 'theme-value var 'user 'set
+                             (custom-quote (symbol-value var))))))))
+
+(defun jotain-ui-enable-newcomers-presets ()
+  "Enable the `newcomers-presets' theme below the config's own settings.
+init.el calls this last, so savehist, recentf and save-place start with
+the var/ paths set by init-core.  auto-dark disables every theme that
+is not in its lists, so the theme joins both lists."
+  (load-theme 'newcomers-presets t t)
+  (jotain-ui--keep-config-overrides 'newcomers-presets)
+  (enable-theme 'newcomers-presets)
+  (when (featurep 'auto-dark)
+    (setopt auto-dark-themes
+            (mapcar (lambda (themes) (append themes '(newcomers-presets)))
+                    auto-dark-themes))))
 
 ;;;; Modeline
 
@@ -114,9 +158,6 @@ even though no graphical frame exists at daemon start."
   :hook (after-init . doom-modeline-mode)
   :custom
   (doom-modeline-height 28)
-  (doom-modeline-bar-width 4)
-  (doom-modeline-lsp t)
-  (doom-modeline-github nil)
   (doom-modeline-buffer-encoding nil)
   :config
   (jotain-ui--apply-modeline-icons)
@@ -130,10 +171,9 @@ even though no graphical frame exists at daemon start."
     (advice-add 'doom-modeline--in-git-worktree-p :override #'ignore)))
 
 ;; doom-modeline hides minor-mode lighters by default.  For the stock
-;; mode line, Emacs 31's `mode-line-collapse-minor-modes' collapses them
-;; behind one indicator.
-(when (boundp 'mode-line-collapse-minor-modes)
-  (setopt mode-line-collapse-minor-modes t))
+;; mode line, `mode-line-collapse-minor-modes' collapses them behind one
+;; indicator.
+(setopt mode-line-collapse-minor-modes t)
 
 ;;;; Fonts
 
@@ -147,6 +187,7 @@ machine-local config)."
 
 (defcustom jotain-font-preferences
   '(("BlexMono Nerd Font"      . 140)
+    ("IBM Plex Mono"           . 140)
     ("JetBrainsMono Nerd Font" . 140)
     ("Iosevka Nerd Font"       . 140)
     ("DejaVu Sans Mono"        . 130))
@@ -155,13 +196,14 @@ HEIGHT is in 1/10 pt units (140 = 14 pt).  The first installed family
 wins.  All heights are multiplied by `jotain-font-scale' at runtime.
 
 BlexMono is IBM Plex Mono with Nerd Font glyphs, the mono role of the
-Jylhis design system.  Entries containing \"Nerd Font\" also supply
-`nerd-icons-font-family'; keep one ahead of the plain fallbacks."
+Jylhis design system; plain IBM Plex Mono follows it for systems
+without the Nerd Font build.  Entries containing \"Nerd Font\" also
+supply `nerd-icons-font-family'; keep one ahead of the plain fallbacks."
   :type '(alist :key-type string :value-type integer)
   :group 'jotain-ui)
 
 (defcustom jotain-variable-pitch-font-preferences
-  '(("Hanken Grotesk" . 150)
+  '(("Fira Sans"      . 150)
     ("Literata"       . 150)
     ("Iosevka Aile"   . 150)
     ("Noto Sans"      . 150)
@@ -170,7 +212,7 @@ Jylhis design system.  Entries containing \"Nerd Font\" also supply
 Heights are larger than the monospace default: proportional fonts render
 visually smaller at the same point size.
 
-Hanken Grotesk is the body role of the Jylhis design system."
+Fira Sans is the body role of the Jylhis design system."
   :type '(alist :key-type string :value-type integer)
   :group 'jotain-ui)
 
@@ -199,7 +241,7 @@ attributes are applied globally so all frames see the update."
     '("Noto Color Emoji" "Segoe UI Emoji" "Symbola"))
   "Ordered list of family names to try for the `emoji' and `symbol' charsets.
 The first installed family wins.  macOS ships Apple Color Emoji; on
-Linux the Jotain Home Manager and NixOS modules install Noto Color
+Linux the Home Manager and NixOS modules install Noto Color
 Emoji."
   :type '(repeat string)
   :group 'jotain-ui)
@@ -229,23 +271,8 @@ availability on the right display."
 
 ;;;; Built-in display tweaks
 
-;; Don't draw cursors or highlight selections in non-focused windows.
+;; Don't draw cursors in non-focused windows.
 (setopt cursor-in-non-selected-windows nil)
-(setopt highlight-nonselected-windows nil)
-
-;; Resize frames and windows by pixel, not whole character cells, so a
-;; frame sits flush in a tiling window manager and splits divide evenly.
-(setopt frame-resize-pixelwise t)
-(setopt window-resize-pixelwise t)
-
-;; Compact the stock mode line only when it overflows the window
-;; (mostly inert under doom-modeline).
-(setopt mode-line-compact 'long)
-;; System font as the default face until `jotain-ui-apply-font' runs.
-;; The variable only exists on builds with system-font support, so guard
-;; it for the terminal-only distribution.
-(when (boundp 'font-use-system-font)
-  (setopt font-use-system-font t))
 
 (defcustom jotain-line-numbers-in-prog t
   "When non-nil, show line numbers in `prog-mode' and `conf-mode' buffers."
@@ -263,10 +290,9 @@ availability on the right display."
   :ensure nil
   :hook ((prog-mode conf-mode) . jotain-ui--maybe-line-numbers))
 
-;;; @doc Built-in smooth scrolling, tuned after James Cherti's
-;;; "Enhancing Emacs Scrolling" (jamescherti.com). `pixel-scroll-mode'
-;;; smooths mouse-wheel scrolling; like the newcomers-presets theme, it is
-;;; preferred over `pixel-scroll-precision-mode' (bug#69972).
+;;; @doc Scrolling, tuned after James Cherti's "Enhancing Emacs
+;;; Scrolling" (jamescherti.com). The newcomers-presets theme turns on
+;;; `pixel-scroll-mode', which smooths mouse-wheel scrolling.
 ;;; `fast-but-imprecise-scrolling' skips exact fontification on large
 ;;; jumps. `scroll-conservatively' 20 scrolls just enough to keep point
 ;;; visible instead of recentering; `auto-window-vscroll' nil avoids
@@ -281,8 +307,7 @@ availability on the right display."
   (scroll-error-top-bottom t)
   (auto-window-vscroll nil)
   (hscroll-margin 2)
-  (hscroll-step 1)
-  :config (pixel-scroll-mode 1))
+  (hscroll-step 1))
 
 ;;; @doc Built-in current-line highlight in code, config, and prose
 ;;; buffers only.
@@ -297,15 +322,9 @@ availability on the right display."
   :hook (after-init . show-paren-mode)
   :custom
   (show-paren-delay 0.1)
-  (show-paren-highlight-openparen t)
   (show-paren-when-point-inside-paren t)
   (show-paren-when-point-in-periphery t))
 
-;;; @doc Built-in keybinding cheatsheet: after a prefix key, a popup
-;;; lists the keys that can follow it.
-(use-package which-key
-  :ensure nil
-  :config (which-key-mode 1))
 
 ;;; @doc Built-in calendar with ISO week numbers and a Monday week
 ;;; start.
