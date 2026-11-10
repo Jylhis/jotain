@@ -46,11 +46,8 @@ a variant switch happens (e.g. to igc), replace it with `ultra-scroll`
 - `lisp/init-vc.el`: ideas not yet wired up: mergiraf (structural merge
   driver), magit-delta (delta-rendered magit diffs), and smerge/vc.el
   integration for syntax-aware conflict resolution.
-- `module.nix` / `module-system.nix` / `module-nix-on-droid.nix`: the
-  `services.jotain.spell.dictionaries` option and the hardcoded
-  `aspellDicts.en` do nothing for spell-checking. libaspell's `NIX_PROFILES`
-  patch only feeds dictionary enumeration, and the distribution wrapper's
-  default `ASPELL_CONF` points at its own bundled en/fi/de/fr set
-  (`nix/mk-overlay.nix`; see journal/2026-07-23.md). Build an
-  `aspellWithDicts` from the option and export `ASPELL_CONF` in the module
-  wrappers, replacing the profile install.
+- Spell dictionaries are fixed at the distribution's bundled en/fi/de/fr set
+  (`spellEnv` in `nix/mk-overlay.nix`). A module option to choose them would
+  build an `aspellWithDicts` and export `ASPELL_CONF` in the module wrappers
+  (the old `spell.dictionaries` option only fed the profile, which the
+  wrapper never reads, so it was removed).
