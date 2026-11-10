@@ -22,12 +22,6 @@
       url = "github:nix-community/emacs-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Android (proot) Nix environment, used only by the example
-    # `nixOnDroidConfigurations`.
-    nix-on-droid = {
-      url = "github:nix-community/nix-on-droid/master";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs =
@@ -189,23 +183,5 @@
           treefmtCheck = (treefmtEval system).config.build.check self;
         }
       );
-
-      # Example nix-on-droid config (aarch64-linux). `nix flake check`
-      # does not build it (unknown output type). Copy this shape into your
-      # own flake and run `nix-on-droid switch --flake .#default`.
-      nixOnDroidConfigurations.default = inputs.nix-on-droid.lib.nixOnDroidConfiguration {
-        pkgs = import nixpkgs {
-          system = "aarch64-linux";
-          overlays = [ inputs.nix-on-droid.overlays.default ];
-        };
-        modules = [
-          self.nixOnDroidModules.default
-          {
-            services.jotain.enable = true;
-            # No default upstream; required for a switchable config.
-            system.stateVersion = "24.05";
-          }
-        ];
-      };
     };
 }
