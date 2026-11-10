@@ -20,7 +20,6 @@
   :mode ("\\.py\\'" . python-ts-mode)
   :interpreter ("python3" . python-ts-mode)
   :custom
-  (python-indent-offset 4)
   (python-shell-interpreter "python3")
   :config
   ;; Since Org 9.7 a non-`auto' value overrides both

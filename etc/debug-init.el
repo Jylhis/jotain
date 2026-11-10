@@ -1,4 +1,4 @@
-;;; debug-init.el --- Full-debug launch harness for Jotain  -*- lexical-binding: t; -*-
+;;; debug-init.el --- Full-debug launch harness for the configuration  -*- lexical-binding: t; -*-
 
 ;; Loaded by `just run-built-debug-log' after the normal init.  Turns on
 ;; Emacs's debugging facilities and mirrors *Messages*, *Warnings*,

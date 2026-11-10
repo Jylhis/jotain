@@ -159,6 +159,10 @@
      :sample "eval.html"           :mode mhtml-ts-mode :classic web-mode :grammar html
      :servers ("vscode-html-language-server" "html-languageserver") :override t)
 
+    (:id astro      :name "Astro"          :file "init-lang-web.el"
+     :sample "eval.astro"          :mode astro-ts-mode :grammar astro
+     :servers ("astro-ls") :override t)
+
     (:id csv        :name "CSV"            :file "init-lang-data.el"
      :sample "eval.csv"            :mode csv-mode :grammar nil)
 
@@ -180,7 +184,7 @@
 
     (:id just       :name "Just"           :file "init-lang-devops.el"
      :sample "justfile"            :mode just-ts-mode :grammar just :skip-mode t))
-  "The per-language feature standard read by the Jotain language evaluation.
+  "The per-language feature standard read by the language evaluation.
 See the Commentary and the inline key documentation for the plist shape.")
 
 ;;;; Accessors

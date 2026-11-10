@@ -150,17 +150,19 @@ are skipped."
                         :user "apikey")))
             ;; Keep in sync with config/eca/config.json
             ;; (providers.openrouter.models); checked by eca-models-in-sync.
-            :models '(anthropic/claude-opus-4.8
-                      anthropic/claude-sonnet-4.6
+            :models '(anthropic/claude-opus-5.5
+                      anthropic/claude-sonnet-5.5
+                      anthropic/claude-haiku-5.5
                       openai/gpt-5.5
                       google/gemini-3.5-flash
                       deepseek/deepseek-v4-pro
                       qwen/qwen3.5-35b-a3b
                       z-ai/glm-4.7))
-          gptel-model 'anthropic/claude-sonnet-4.6)
+          gptel-model 'anthropic/claude-sonnet-5.5)
 
   (gptel-make-anthropic "Claude"
     :stream t
+    :models '(claude-opus-5-5 claude-sonnet-5-5 claude-haiku-5-5)
     :key (lambda ()
            (or (getenv "ANTHROPIC_API_KEY")
                (auth-source-pick-first-password

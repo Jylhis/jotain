@@ -11,7 +11,7 @@
 (declare-function global-jinx-mode "jinx" (&optional arg))
 
 (defgroup jotain-writing nil
-  "Jotain prose and note-taking settings."
+  "Prose and note-taking settings."
   :group 'text)
 
 (defcustom jotain-notes-directory (expand-file-name "~/Documents/notes/")
@@ -50,7 +50,12 @@ one tree.  It need not exist yet."
     (mixed-pitch-mode -1))
   :hook ((text-mode        . mixed-pitch-mode)
          (git-commit-setup . jotain-writing--keep-monospace)
-         (message-mode     . jotain-writing--keep-monospace)))
+         (message-mode     . jotain-writing--keep-monospace))
+  :config
+  ;; Extend the list after load: a `:custom' value that reads the
+  ;; variable runs before the deferred package defines it.
+  (dolist (face '(markdown-list-face markdown-code-face markdown-inline-code-face))
+    (add-to-list 'mixed-pitch-fixed-pitch-faces face)))
 
 ;;; @doc Just-in-time spell check using enchant. `global-jinx-mode'
 ;;; replaces `flyspell-mode' and `flyspell-prog-mode': jinx keys off
@@ -64,7 +69,7 @@ one tree.  It need not exist yet."
 Jinx compiles a native module against enchant on first load; if that
 fails (MELPA fallback without cc/enchant), a raw error would abort the
 remaining `emacs-startup-hook' functions."
-    (with-demoted-errors "jotain: jinx unavailable: %S"
+    (with-demoted-errors "init-writing: jinx unavailable: %S"
       (global-jinx-mode 1)))
   :custom
   ;; The Nix distribution bundles en/fi/de/fr aspell dictionaries
@@ -80,15 +85,26 @@ remaining `emacs-startup-hook' functions."
 ;;; heading scaling, and nested imenu. README.md opens in gfm-mode. Beside
 ;;; the stock `C-c C-...' bindings, a `C-c m ...' prefix holds the common
 ;;; ones: markup/image hiding, link and code-block insertion, follow-link,
-;;; promote/demote, and live preview. gfm-mode inherits them.
+;;; promote/demote, and live preview. gfm-mode inherits them. Wrapped
+;;; lines get no hanging indent (`visual-wrap-prefix-mode' is off here:
+;;; it makes list items shake under a proportional font).
 (use-package markdown-mode
+  :preface
+  (defun jotain-writing--disable-visual-wrap-prefix ()
+    "Turn off `visual-wrap-prefix-mode' in the current buffer.
+The `text-mode' hook enables it, and `markdown-mode' derives from
+`text-mode'.  The mode measures the list marker prefix in pixels and
+re-measures it while font lock reruns, so with a proportional font the
+text of a list item shifts as you type.  `visual-line-mode' stays on."
+    (when (bound-and-true-p visual-wrap-prefix-mode)
+      (visual-wrap-prefix-mode -1)))
   :mode (("README\\.md\\'" . gfm-mode)
          ("\\.md\\'"       . markdown-mode)
          ("\\.markdown\\'" . markdown-mode))
   :custom
   (markdown-fontify-code-blocks-natively t)
   (markdown-header-scaling t)
-  (markdown-nested-imenu-heading-index t)
+  :hook (markdown-mode . jotain-writing--disable-visual-wrap-prefix)
   :bind (:map markdown-mode-map
               ("C-c m h" . markdown-toggle-markup-hiding)
               ("C-c m i" . markdown-toggle-inline-images)
