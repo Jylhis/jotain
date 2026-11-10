@@ -5,10 +5,10 @@ human contributor guide. This file is the single source of truth for both.
 
 ## What this is
 
-Jotain is a GNU Emacs 31 configuration (floor: Emacs 30.1, per `init.el`'s
+Jotain is a GNU Emacs 31 configuration (floor: Emacs 31.1, per `init.el`'s
 `Package-Requires`) plus the Nix expressions that build Emacs itself. The
 default build is emacs-overlay's `unstable` variant (the newest Emacs
-release or pretest tag, currently 31.1); nixpkgs' Emacs 30 is the `mainline` variant. The dev shell has
+release or pretest tag, currently 31.1); nixpkgs' Emacs 30 is the `mainline` variant (below the Elisp floor: a parity canary, not a runtime). The dev shell has
 tooling only, **no `emacs`**: build and launch with `just run-built`.
 
 `journal/` and `TODO.md` are working notes and may be stale; when they
@@ -225,9 +225,15 @@ When a note conflicts with the installed Emacs, trust the running Emacs
 - **Module file shape**: `-*- lexical-binding: t; -*-` cookie, ends with
   `(provide 'init-<concern>)`, plus a `(require 'init-<concern>)` at the
   right point in `init.el`.
-- **`lisp/devenv.el`** is the only non-`init-*` file in `lisp/`: a
-  standalone package (`devenv-` namespace, no `jotain-` dependencies) wired
-  in by `lisp/init-devenv.el`.
+- **`lisp/devenv.el`** and **`lisp/repo-review.el`** are the two
+  non-`init-*` files in `lisp/`: standalone packages (own `devenv-` /
+  `repo-review-` namespaces, no `jotain-` dependencies) wired in by
+  `lisp/init-devenv.el` and `lisp/init-review.el`.
+- **No version guards.** The floor and the default build are both 31.1, so
+  use 31 APIs directly; `init.el` ends by enabling Emacs 31's
+  `newcomers-presets` theme (`jotain-ui-enable-newcomers-presets`), which
+  supplies savehist, recentf, which-key, electric pairs and similar
+  defaults. Don't restate a setting the theme already provides.
 - **LSP and formatters live in `init-prog.el`.** Per-language `eglot-ensure`
   hooks and `apheleia` formatters are centralised there; `init-lang-*.el`
   holds only mode regexes and language tweaks.
