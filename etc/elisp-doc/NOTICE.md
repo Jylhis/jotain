@@ -21,9 +21,6 @@ into standalone HTML.
 - `elisp-doc-index.el` — the batch export driver (`elisp-doc--export-all`) and
   the JSON / per-type / per-file index-page generators.
 - `elisp-doc-shortdoc.el` — the shortdoc cheatsheet page generator.
-- `full-feature-lister.el` — feature enumeration, itself taken by elisp-doc
-  from [Malabarba/emacs-online-documentation]
-  (https://github.com/Malabarba/emacs-online-documentation) (GPL).
 - `style.css` — elisp-doc's page stylesheet, itself modified from
   [Water.css](https://github.com/kognise/water.css) (MIT; the MIT notice is
   retained at the top of the file).
