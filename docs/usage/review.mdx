@@ -1,0 +1,71 @@
+---
+title: Whole-repo review queue
+description: Walk every file of a project with an Org-backed review queue and marginal notes
+---
+
+# Whole-repo review queue
+
+Jotain bundles `repo-review` (`lisp/repo-review.el`, standalone, wired in
+by `init-review.el`) for a review of a complete repository rather than a
+diff. It builds a per-project Org queue with one `TODO` headline per
+project file; you open each file read-only, annotate it, and mark the
+headline done. The package never changes the reviewed sources.
+
+## Entry point: `C-x p R`
+
+`C-x p R` (or `M-x repo-review-start`) opens the current project's
+queue, building it on first use. The file list comes from
+`project-files`, so `.gitignore` applies and untracked files are
+included. A prefix argument (`C-u`) asks for confirmation, discards all
+review state, and rebuilds the queue; `g` (`repo-review-refresh`)
+appends files added since the queue was built without touching existing
+headlines.
+
+Each project keeps its own queue under `var/repo-review/`, named after
+the project directory and a hash of its path. The first line of the
+queue file sets the major mode, so the queue keys come back when you
+reopen it; the `#+review_root:` keyword records the project root and
+each headline keeps its project-relative path in the `REVIEW_PATH`
+property.
+
+## Queue keys
+
+| Key | Command | What it does |
+| --- | --- | --- |
+| `RET` | `repo-review-visit` | Open the file at point in another window, read-only in `view-mode` |
+| `e` | `repo-review-visit-writable` | Open the file at point for editing |
+| `n` / `p` | `org-next-visible-heading` / `org-previous-visible-heading` | Next / previous headline |
+| `N` | `repo-review-next-todo` | Next headline still in the `TODO` state |
+| `t` | `org-todo` | Change the state: `TODO`, `REVIEWING`, `DONE`, `SKIP` |
+| `g` | `repo-review-refresh` | Append files new in the project since the last scan |
+| `/` | `org-sparse-tree` | Filter, for example to show only `TODO` files |
+| `q` | `quit-window` | Close the queue window |
+
+In a file opened with `RET`, the `view-mode` key `e` makes the buffer
+writable.
+
+## Marginal notes with org-remark
+
+Files visited from the queue enable `org-remark-mode` (bundled).
+Highlights and comments collect in a per-project notes file beside the
+review queue (`<project>-<hash>-notes.org`), never in the source tree.
+Set `repo-review-use-org-remark` to nil to visit files without
+annotation support.
+
+## Options
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `repo-review-queue-dir` | `var/repo-review/` | Directory for the per-project queue and notes files |
+| `repo-review-source-extensions` | nil | Lowercase extensions (no dot) to include; nil queues every file |
+| `repo-review-exclude-regexp` | nil | Regexp matched against project-relative paths to leave out |
+| `repo-review-use-org-remark` | t | Enable `org-remark-mode` in visited files |
+
+## Safety
+
+Queue files record project-relative paths in the `REVIEW_PATH` property.
+Absolute paths and paths containing `..` that escape the review root are
+rejected when opening a file. Hand-edited queue files must keep all paths
+relative to the project root.
+
+Deleted files stay in the queue; mark their headlines `SKIP`.
