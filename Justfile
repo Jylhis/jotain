@@ -97,11 +97,6 @@ build-igc-ccache:
 build-perf:
     nix-build --arg cpuTune '"icelake-client"' --argstr system {{system}} emacs.nix
 
-# Build a bare aarch64-linux terminal Emacs (cache-parity testing).
-[group('build')]
-build-android:
-    nix-build --arg noGui true --argstr system aarch64-linux emacs.nix
-
 # Build the full terminal-only distribution for the current system.
 [group('build')]
 build-nox-full:
@@ -114,8 +109,6 @@ run-built *ARGS:
     set -euo pipefail
     platform="$(uname -s)-$(uname -m)"
     case "$platform" in
-        Darwin-arm64)  target=build       ;;
-        Darwin-*)      target=build       ;;
         Linux-aarch64) target=build-nox-full ;;
         *)             target=build       ;;
     esac
@@ -393,16 +386,14 @@ clean:
     find "{{config_dir}}" -name '#*#'   -type f -delete 2>/dev/null || true
     find "{{config_dir}}" -name '.#*'   -type f -delete 2>/dev/null || true
     rm -rf "{{config_dir}}/var/eln-cache" 2>/dev/null || true
-    rm -rf "{{config_dir}}/eln-cache"     2>/dev/null || true
-    rm -f  "{{config_dir}}/result"        2>/dev/null || true
+    rm -f  "{{config_dir}}"/result "{{config_dir}}"/result-* 2>/dev/null || true
     echo "Cleaned compiled artifacts."
 
-# Run clean, then remove elpa/, var/ and .dev-home/ (forces a full re-fetch).
+# Run clean, then remove elpa/ and var/ (forces a full re-fetch).
 [group('clean')]
 clean-all: clean
     #!/usr/bin/env bash
     set -euo pipefail
     rm -rf "{{config_dir}}/elpa"      2>/dev/null || true
     rm -rf "{{config_dir}}/var"       2>/dev/null || true
-    rm -rf "{{config_dir}}/.dev-home" 2>/dev/null || true
-    echo "Nuked elpa/, var/, .dev-home/."
+    echo "Nuked elpa/ and var/."

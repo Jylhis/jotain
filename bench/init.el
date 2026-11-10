@@ -3,8 +3,7 @@
 ;;; Commentary:
 
 ;; Wrapper init: loads the real init.el, then on `emacs-startup-hook'
-;; writes a startup report to $JOTAIN_BENCH_OUTPUT (or runs the file-open
-;; benchmark when $JOTAIN_BENCH_OPEN_OUTPUT is set) and exits.
+;; writes a startup report to $JOTAIN_BENCH_OUTPUT and exits.
 ;;
 ;; Uses the state set up by bench/early-init.el.
 
@@ -15,13 +14,6 @@
 (add-hook 'emacs-startup-hook
           (lambda ()
             (cond
-             ;; File-open benchmark mode
-             ((getenv "JOTAIN_BENCH_OPEN_OUTPUT")
-              (load (expand-file-name "bench/find-file-bench.el"
-                                      jotain-bench--real-dir) nil t)
-              (jotain-bench-open--run)
-              (kill-emacs 0))
-
              ;; Startup benchmark mode
              ((getenv "JOTAIN_BENCH_OUTPUT")
               (let* ((init-time (float-time (time-subtract after-init-time before-init-time)))
