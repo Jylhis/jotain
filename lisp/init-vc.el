@@ -73,7 +73,9 @@ is no file to open."
                                                   path-info)
                                           path-info)
                                     files)))
-                           ((string-match-p "[MAUT?]" status)
+                           ((and (string-match-p "[MAUT?]" status)
+                                 ;; Deleted in the work tree: no file to open.
+                                 (not (string-match-p "\\`[MAT]D" status)))
                             (push (cons (format "%s %s"
                                                 status path-info)
                                         path-info)
@@ -88,6 +90,16 @@ is no file to open."
               (when file-path
                 (find-file (expand-file-name file-path
                                              expanded-root))))))))))
+
+(defun my-vc--jj-summary-path (text)
+  "Return the file to open for the path field TEXT of a `jj diff --summary' line.
+Renames and copies print \"{old => new}\", possibly inside a common
+prefix and suffix; the result is the new path."
+  (if (string-match "\\`\\(.*\\){[^}]* => \\([^}]*\\)}\\(.*\\)\\'" text)
+      (replace-regexp-in-string
+       "//+" "/"
+       (concat (match-string 1 text) (match-string 2 text) (match-string 3 text)))
+    text))
 
 ;;; @doc Jujutsu (jj) backend for built-in `vc' and `project', so
 ;;; `C-x v …', the modeline VC state and project.el work in jj repos.
@@ -120,7 +132,7 @@ Deletions are omitted, since there is no file to open."
                   (dolist (line (split-string cmd-output "\n" t))
                     (when (> (length line) 2)
                       (let ((status (substring line 0 1))
-                            (path (substring line 2)))
+                            (path (my-vc--jj-summary-path (substring line 2))))
                         (unless (string= status "D")
                           (push (cons (format "%s %s" status path) path)
                                 files)))))
@@ -170,7 +182,8 @@ Deletions are omitted, since there is no file to open."
   :after magit
   :commands (magit-todos-mode global-magit-todos-mode)
   :custom
-  (magit-todos-depth 1))
+  (magit-todos-depth 1)
+  :config (magit-todos-mode 1))
 
 ;;; @doc PRs, issues, and reviews from GitHub/GitLab/Forgejo inside
 ;;; magit. Uses Emacs's built-in sqlite, so no external emacsql binary is
@@ -498,6 +511,7 @@ also invalidate after `magit-post-refresh-hook'."
 ;; mode line alike, so there is no hand-copied segment list to drift.
 (add-to-list 'mode-line-misc-info
              '(:eval (when-let* ((file buffer-file-name)
+                                 ((not (file-remote-p file)))
                                  (rb (and (mode-line-window-selected-p)
                                           (my-git-stats--root-and-backend file))))
                        (progn (my-git-stats--maybe-refresh (car rb) (cdr rb))
