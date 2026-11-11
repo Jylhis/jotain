@@ -83,7 +83,7 @@ nil means every file `project-files' returns."
       (user-error "No project at %s" root))
     (sort (seq-filter #'repo-review--wanted-p
                       (mapcar (lambda (f) (file-relative-name f root))
-                              (project-files proj)))
+                              (seq-filter #'file-exists-p (project-files proj))))
           #'string<)))
 
 (defun repo-review--queue-file (root)
@@ -99,9 +99,10 @@ nil means every file `project-files' returns."
   "Insert a TODO headline for project-relative path REL."
   (insert (format "** TODO %s\n:PROPERTIES:\n:REVIEW_PATH: %s\n:END:\n" rel rel)))
 
-(defun repo-review--write-queue (file root)
-  "Write a fresh queue FILE for the project at ROOT; return the file count."
-  (let ((files (repo-review--files root)))
+(defun repo-review--write-queue (file root &optional files)
+  "Write a fresh queue FILE for the project at ROOT; return the file count.
+FILES, when non-nil, is the list `repo-review--files' already returned."
+  (let ((files (or files (repo-review--files root))))
     (make-directory (file-name-directory file) t)
     (with-temp-file file
       (insert "# -*- mode: repo-review-queue -*-\n"
@@ -146,8 +147,10 @@ With prefix argument REBUILD, discard review state and rebuild the queue."
                (not (yes-or-no-p "Discard all review state and rebuild? ")))
       (setq rebuild nil))
     (when (or rebuild (not (file-exists-p file)))
-      (when buf (kill-buffer buf))
-      (message "Queued %d files" (repo-review--write-queue file root)))
+      (let ((files (repo-review--files root)))
+        (when (and buf (not (kill-buffer buf)))
+          (user-error "Queue buffer was not killed; rebuild cancelled"))
+        (message "Queued %d files" (repo-review--write-queue file root files))))
     (pop-to-buffer (find-file-noselect file))
     (unless (derived-mode-p 'repo-review-queue-mode)
       (repo-review-queue-mode))

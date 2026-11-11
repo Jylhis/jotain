@@ -148,6 +148,21 @@ Binds `root' to the project directory."
         (repo-review-start t))
       (should (equal (repo-review-test--paths) original)))))
 
+(ert-deftest repo-review-queue-skips-deleted-tracked-files ()
+  (repo-review-test--with-project
+    (delete-file (expand-file-name "b.nix" root))
+    (repo-review-start)
+    (should (equal (repo-review-test--paths) '(".gitignore" "src/a.py")))))
+
+(ert-deftest repo-review-rebuild-keeps-buffer-when-kill-refused ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (let ((queue (current-buffer)))
+      (cl-letf (((symbol-function 'yes-or-no-p) (lambda (_prompt) t))
+                ((symbol-function 'kill-buffer) (lambda (&rest _) nil)))
+        (should-error (repo-review-start t) :type 'user-error))
+      (should (buffer-live-p queue)))))
+
 (ert-deftest repo-review-start-not-in-project ()
   (let ((default-directory "/tmp"))
     (should-error (repo-review-start) :type 'user-error)))
