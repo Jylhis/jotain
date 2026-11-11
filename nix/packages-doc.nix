@@ -233,7 +233,7 @@ pkgs.runCommand "emacs-config-packages-doc"
     };
   }
   ''
-        set -eu
+        set -euo pipefail
         mkdir -p $out
 
         cp ${combinedMd} combined.md

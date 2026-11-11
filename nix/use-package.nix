@@ -398,7 +398,7 @@ let
 
   emacsWithPackagesFromUsePackage =
     {
-      # Directory (or single file path) to scan. A list of paths is
+      # Directory to scan (not a single file). A list of paths is
       # also accepted if a config is split across several directories.
       config,
 

@@ -295,7 +295,7 @@ in
         cd $src
         emacs -Q --batch --eval '
           (let ((files (append (list "early-init.el" "init.el")
-                               (directory-files "lisp" t "^\\(init-.*\\|devenv\\|repo-review\\)\\.el$")
+                               (directory-files "lisp" t "\\.el$")
                                (directory-files "test" t "\\.el$")))
                 (failed nil))
             ;; Guard against a narrowed fileset that silently lost

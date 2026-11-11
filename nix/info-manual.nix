@@ -91,6 +91,9 @@ let
     }
     # configuration/package-reference.mdx is skipped: packages-doc.nix's
     # own texinfo fragment is copied in below.
+    # reference/language-support.mdx is skipped: it is a generated wide
+    # matrix (nix/lang-eval.nix) that reads badly in Info; the docs site
+    # carries it.
     {
       src = "usage/launching.mdx";
       node = "Launching Emacs";
