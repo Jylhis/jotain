@@ -200,7 +200,7 @@ complete normally* — with `C-M-i` bound to plain `completion-at-point`:
 prog-mode buffer, buffer-local completion-at-point-functions:
   tempel-expand           (depth -90)   exact template name → expand, else fall through
   eglot-completion-at-point (depth 0)   semantic candidates
-  t                                     → global list: cape-dabbrev, cape-file, cape-keyword
+  t                                     → global list: cape-keyword, cape-file, cape-dabbrev
 ```
 
 `tempel-complete` (all templates, shown in the popup) remains available on `M-+`

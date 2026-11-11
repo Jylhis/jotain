@@ -121,7 +121,7 @@ Region active → deactivate it.  Otherwise call regular
     "C-x g"     "magit-status"
     "C-x G"     "git-status-file"
     "C-x M-g"   "magit-dispatch"
-    "C-x j"     "rotate-window-split"
+    "C-x j"     "my-toggle-window-split"
     "C-x J"     "jj-status-file"
     "C-x u"     "vundo"
     "C-x P"     "project (projection)"))
