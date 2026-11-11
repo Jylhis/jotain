@@ -2,7 +2,7 @@
 
 ;;; Commentary:
 
-;; Modes for data-shaped files: YAML, CSV, SQL, Jinja2 templates, and
+;; Modes for data-shaped files: YAML, CSV, jq, SQL, Jinja2 templates, and
 ;; gnuplot scripts.
 
 ;;; Code:
@@ -46,6 +46,12 @@ enabled: mixed-pitch, visual-line wrapping, and jinx."
   :ensure nil
   :defer t
   :hook (yaml-ts-mode . my-lang-data--enable-prog-mode-features))
+
+;;; @doc jq filter major mode (`.jq` files): syntax highlighting and
+;;; indentation for jq programs. The mode derives from `prog-mode', so
+;;; the usual programming features apply.
+(use-package jq-mode
+  :mode "\\.jq\\'")
 
 ;;; @doc CSV major mode. csv-align-mode aligns columns visually without
 ;;; changing the file.
