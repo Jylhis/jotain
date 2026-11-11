@@ -112,7 +112,7 @@
            (native-comp-available-p))
   ;; Async jobs: half the logical cores, clamped to 1..3. The cap keeps
   ;; a background recompile from starving redisplay and input on big
-  ;; machines; small hosts (2-core VMs, nix-on-droid) get one job.
+  ;; machines; small hosts (2-core VMs) get one job.
   (setq native-comp-speed 2
         native-comp-async-jobs-number (max 1 (min 3 (/ (num-processors) 2)))
         ;; No background native compilation on battery.

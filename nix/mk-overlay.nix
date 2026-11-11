@@ -124,7 +124,7 @@ in
     withPgtk = final.stdenv.hostPlatform.isLinux;
   };
 
-  # Terminal-only build (nix-on-droid, headless). Off-parity by
+  # Terminal-only build (headless). Off-parity by
   # construction, so the trim policy applies.
   emacsConfigNoGui = import ../emacs.nix {
     pkgs = final;
@@ -161,7 +161,7 @@ in
     package = final.emacsConfig;
   };
 
-  # Full distribution on the terminal-only base (nix-on-droid / headless).
+  # Full distribution on the terminal-only base (headless).
   emacsConfigPackagesNoGui = mkEmacsConfigEmacsPackages {
     name = "emacs-config-full-nox";
     package = final.emacsConfigNoGui;

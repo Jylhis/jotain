@@ -120,42 +120,6 @@ let
   graphicalModule = evalHomeModule {
     startWithUserSession = "graphical";
   };
-
-  # Minimal stand-in for the nix-on-droid module system (eval only).
-  nixOnDroidStubModule = {
-    options = {
-      assertions = lib.mkOption {
-        type = lib.types.listOf lib.types.unspecified;
-        default = [ ];
-      };
-      environment.packages = lib.mkOption {
-        type = lib.types.listOf lib.types.package;
-        default = [ ];
-      };
-      environment.sessionVariables = lib.mkOption {
-        type = lib.types.attrsOf lib.types.str;
-        default = { };
-      };
-    };
-  };
-
-  evalNixOnDroidModule =
-    emacsConfigConfig:
-    lib.evalModules {
-      modules = [
-        nixOnDroidStubModule
-        ../module-nix-on-droid.nix
-        {
-          services.emacsConfig = {
-            enable = true;
-          }
-          // emacsConfigConfig;
-        }
-      ];
-      specialArgs = { inherit pkgs; };
-    };
-
-  nixOnDroidModule = evalNixOnDroidModule { };
 in
 {
   packages-default = pkgs.emacsConfigPackages;
@@ -249,20 +213,6 @@ in
           *graphical-session.target*) ;;
           *) echo "graphical start target not wired: $graphicalTarget"; exit 1 ;;
         esac
-        touch $out
-      '';
-
-  # Eval-only: the module evaluates and sets EDITOR.
-  nix-on-droid-module-eval =
-    pkgs.runCommandLocal "check-nix-on-droid-module-eval"
-      {
-        editorConfigured =
-          if nixOnDroidModule.config.environment.sessionVariables ? EDITOR then "1" else "0";
-        packageCount = toString (builtins.length nixOnDroidModule.config.environment.packages);
-      }
-      ''
-        test "$editorConfigured" = "1" || { echo "EDITOR not set"; exit 1; }
-        test "$packageCount" -ge 1 || { echo "no packages installed"; exit 1; }
         touch $out
       '';
 

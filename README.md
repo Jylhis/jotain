@@ -28,7 +28,7 @@ check of the tree; `just` alone lists every recipe.
 The tree's `nix/inputs.nix` exposes the full distribution (`emacs-config.packages.<system>.default`,
 Emacs + tree-sitter grammars), a bare `emacs`, a terminal-only
 `emacs-nox`, and modules for Home Manager (`services.emacsConfig` daemon),
-NixOS, and nix-on-droid. See
+and NixOS. See
 [Installation](https://docs.example.org/docs/installation).
 
 ## Contributing

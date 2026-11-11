@@ -24,7 +24,7 @@ in-tree build replaces them.
 - `early-init.el`, `init.el`, and `lisp/init-*.el` (feature modules,
   `require`d from `init.el` in order).
 - Nix at the root: `emacs.nix`, `overlay.nix`, `default.nix`, `module.nix`,
-  `module-system.nix`, `module-nix-on-droid.nix`. There is no `flake.nix`: the
+  `module-system.nix`. There is no `flake.nix`: the
   repo root `nix/inputs.nix` builds the `emacs-config` attrset (overlay,
   modules, checks, packages) from these files. Helpers live in `nix/`
   (`mk-overlay.nix` is the overlay implementation, `checks.nix` the checks).
@@ -193,7 +193,7 @@ target.
 `overlay.nix` is a standalone wrapper that composes emacs-overlay underneath it):
 
 - `emacsConfig` / `emacsConfigNoGui`: bare Emacs from `emacs.nix`
-  (pgtk; the noGui twin is for nix-on-droid).
+  (pgtk; the noGui twin is terminal-only).
 - `emacsConfigInfo`: the `emacs-config.info` manual (`nix/info-manual.nix`).
 - `emacsConfigPackages` / `emacsConfigPackagesNoGui`: full distributions
   (use-package auto-mapping, all tree-sitter grammars). A
@@ -280,11 +280,6 @@ in nixpkgs-extra.
   overlay and adds packages to `environment.systemPackages`, with the same
   toggles and `spell.dictionaries`. ECA config and `environmentFile` stay
   Home-Manager-only (no per-user daemon or `~/.config` here).
-- **`module-nix-on-droid.nix`**: adds the terminal-only distribution
-  (`emacsConfigPackagesNoGui`) and an `emacsclient` EDITOR wrapper to
-  `environment.packages`, with `EDITOR`/`VISUAL` in
-  `environment.sessionVariables`. Android under proot is headless, so a GUI
-  build would only bloat the closure.
 
 ### Pinning
 
@@ -316,8 +311,7 @@ Checks (`nix/checks.nix`) cover the application and configuration:
 - **In-sync gates**: `eca-models-in-sync`, which compares the OpenRouter models in
   `config/eca/config.json` with gptel's `:models` in `lisp/init-ai.el`
   (reconcile both by hand).
-- **Module evaluation** without the host frameworks: `module-eval`,
-  `nix-on-droid-module-eval`.
+- **Module evaluation** without the host frameworks: `module-eval`.
 - **Nix linting**: `formatting`, `statix`, `deadnix`.
 - **Elisp**: `elisp-lint` (balanced parens), `elisp-compile` (byte-compile,
   warnings are errors), `elisp-test` (ERT), and `config-startup`, which

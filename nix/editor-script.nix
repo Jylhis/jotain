@@ -1,5 +1,5 @@
 # nix/editor-script.nix — the terminal `emacsclient' wrapper used as EDITOR.
-# Shared by module-system.nix and module-nix-on-droid.nix.
+# Shared by module-system.nix.
 #
 # `--alternate-editor' falls back to a `-nw' Emacs from the same package
 # when no daemon is running.

@@ -1,6 +1,6 @@
 # nix/wrap-runtime-deps.nix: re-wrap an Emacs configuration distribution with the
 # runtime binaries (nix/runtime-deps.nix) appended to PATH. Shared by
-# module-system.nix and module-nix-on-droid.nix.
+# module-system.nix only.
 #
 # Appending keeps the host userland first. The wrapper PATH survives every
 # launch context, unlike environment.systemPackages.
