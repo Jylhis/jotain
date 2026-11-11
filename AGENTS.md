@@ -361,7 +361,7 @@ or helper functions. Run `just test` before committing.
 ## Commit & Pull Request Guidelines
 
 Follow the root `AGENTS.md` (Conventional Commits, scope `emacs`, a changie
-fragment for project `projects/distros/emacs`).
+fragment in `projects/distros/emacs/.changes/unreleased/`).
 
 ## Security & Configuration Tips
 
