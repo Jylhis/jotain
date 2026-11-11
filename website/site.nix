@@ -165,6 +165,8 @@ pkgs.runCommand "emacs-config-site"
     write_page() {
       local outfile="$1" title="$2" bufname="$3" mode="$4" content="$5" navhtml="$6"
       mkdir -p "$(dirname "$outfile")"
+      local rel="''${outfile#"$out/public"}"
+      rel="''${rel%index.html}"
       {
         cat <<HEAD
     <!DOCTYPE html>
@@ -173,7 +175,7 @@ pkgs.runCommand "emacs-config-site"
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>''${title} — emacs-config</title>
-    <link rel="canonical" href="https://docs.example.org${baseHref}/">
+    <link rel="canonical" href="https://docs.example.org${baseHref}''${rel}">
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4efe4">
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0b0b">
     <link rel="icon" type="image/svg+xml" href="${baseHref}/favicon.svg">
