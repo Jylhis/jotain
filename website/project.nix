@@ -22,10 +22,12 @@
   deploy = {
     type = "static-site";
     mode = "push";
+    # The engine does not manage the Worker or docs.example.org: CI deploys it.
+    provision = false;
   };
 
-  # docs.example.org -> a Workers custom domain (platform/engines/infra/emitters/
-  # workers.nix binds the hostname to this project's Worker script, emacs-docs).
+  # docs.example.org: the site's hostname. With deploy.provision = false the
+  # engine binds no custom domain; set it to true to have workers.nix bind it.
   requires.dns = "docs.example.org";
 
   # Read outside the project directory (project.nix(5) uses).
