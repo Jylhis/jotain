@@ -191,15 +191,14 @@ Return the temp directory, or nil when the fixture is missing."
       (mapcar
        (lambda (r)
          (list (cons "name" (plist-get r :name))
-               (cons "server" (or (plist-get r :found) :json-null))
+               (cons "server" (plist-get r :found))
                (cons "connected" (and (plist-get r :connected) t))
-               (cons "error" (or (plist-get r :error) :json-null))
+               (cons "error" (plist-get r :error))
                (cons "diagnostics" (and (plist-get r :diagnostics) t))
                (cons "completion_live" (and (plist-get r :completion-live) t))
                (cons "features"
-                     (or (mapcar (lambda (c) (cons (symbol-name (car c)) (and (cdr c) t)))
-                                 (plist-get r :features))
-                         :json-null))))
+                     (mapcar (lambda (c) (cons (symbol-name (car c)) (and (cdr c) t)))
+                             (plist-get r :features)))))
        results)))))
 
 ;;;; Batch driver

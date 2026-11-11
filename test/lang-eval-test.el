@@ -139,5 +139,11 @@ tree-sitter routing table in init-prog.el for remapped languages."
     (when (plist-get e :live)
       (should (plist-get e :servers)))))
 
+(ert-deftest lang-eval-test-json-encodes-nil-as-null ()
+  "A nil plist value is JSON null, not the string \"json-null\"."
+  (require 'my-lang-eval)
+  (should (string-match-p "\"server\": null"
+                          (my-lang-eval--json (list (list :name "x" :server nil))))))
+
 (provide 'lang-eval-test)
 ;;; lang-eval-test.el ends here
