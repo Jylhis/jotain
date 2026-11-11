@@ -100,7 +100,9 @@ Return the temp directory, or nil when the fixture is missing."
                 (with-current-buffer (find-file-noselect file)
                   (unwind-protect
                       (progn
-                        (eglot-ensure)
+                        ;; `eglot-ensure' only queues a `post-command-hook'
+                        ;; that never runs under `--batch'; connect directly.
+                        (apply #'eglot (eglot--guess-contact))
                         (let ((connected
                                (my-lang-live--wait
                                 (lambda ()
