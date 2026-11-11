@@ -9,10 +9,14 @@
 
 ;;; Code:
 
+(defun elisp-doc--group-id (group)
+  "Return the anchor symbol of shortdoc GROUP, distinct from function names."
+  (intern (concat "group-" (symbol-name group))))
+
 (defun elisp-doc--export-shortdoc-group (group data)
   "Insert GROUP of shortdoc DATA entries into the current buffer."
   (insert (string-trim (helpful--heading (propertize (concat "Group: " (symbol-name group))
-                                                     'symbol group)))
+                                                     'symbol (elisp-doc--group-id group))))
           "\n\n")
   (dolist (entry data)
     (cond
@@ -39,7 +43,7 @@
   (goto-char (point-min))
   (insert "<ul>")
   (dolist (group (sort (mapcar #'car shortdoc--groups) #'string-lessp))
-    (insert "<li><a href=\"#" (htmlize-attr-escape (symbol-name group)) "\">"
+    (insert "<li><a href=\"#" (htmlize-attr-escape (symbol-name (elisp-doc--group-id group))) "\">"
             (htmlize-protect-string (symbol-name group)) "</a></li>"))
   (insert "</ul>"))
 
