@@ -273,7 +273,7 @@ Useful for diagnosing freezes: start, reproduce, stop."
   ;; (nix/runtime-deps.nix), not the login shell. Keep it that way.
   :hook (after-init . exec-path-from-shell-initialize)
   :custom
-  (exec-path-from-shell-arguments nil)) ; skip the -i round-trip
+  (exec-path-from-shell-arguments '("-l"))) ; login shell only, skip -i
 
 ;;; @doc Auto-revert buffers when their file changes on disk (branch
 ;;; switches, external edits), and non-file buffers such as dired.
