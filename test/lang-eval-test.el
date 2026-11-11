@@ -100,7 +100,9 @@ Only the formatters the configuration adds itself are checked; apheleia built-in
     (dolist (e my-lang-registry)
       (let ((f (plist-get e :formatter)))
         (when (and f (member f ours))
-          (should (string-search f prog)))))))
+          (should (with-syntax-table emacs-lisp-mode-syntax-table
+                    (string-match-p (format "\\_<%s\\_>" (regexp-quote f))
+                                    prog))))))))
 
 (ert-deftest lang-eval-test-modes-registered ()
   "Each non-skip entry's mode is named in its owning file or init-prog.el.

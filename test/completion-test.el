@@ -176,6 +176,8 @@ This is why `init-snippets.el' wraps its eglot merge."
       (should-not (equal (completion-test--winning-collection
                           (list merged #'completion-test--capf-later))
                          '("later-capf-ran")))
+      (should (completion-test--winning-collection
+               (list merged #'completion-test--capf-later)))
       (should (equal (completion-test--winning-collection
                       (list (cape-capf-nonexclusive merged)
                             #'completion-test--capf-later))
