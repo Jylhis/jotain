@@ -275,7 +275,7 @@ in nixpkgs-extra.
     `nix/eca-config.nix` (defaults from `config/eca/config.json`, which the
     `eca-models-in-sync` check also reads).
     `eca.openrouter.enable` adds the OpenRouter provider; `eca.settings` is
-    deep-merged over it. gptel defaults to OpenRouter regardless.
+    deep-merged over it. gptel defaults to the direct Claude backend regardless.
 - **`module-system.nix`** (NixOS module): applies the
   overlay and adds packages to `environment.systemPackages`, with the same
   toggles and `spell.dictionaries`. ECA config and `environmentFile` stay

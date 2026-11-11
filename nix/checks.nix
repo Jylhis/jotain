@@ -164,7 +164,7 @@ in
   # config/eca/config.json and gptel's OpenRouter :models
   # (lisp/init-ai.el) are hand-kept copies of one list. The elisp side is
   # read with Emacs' reader, anchored on the OpenRouter form (not the
-  # Ollama :models further down).
+  # Claude or Ollama :models).
   eca-models-in-sync =
     pkgs.runCommand "check-eca-models-in-sync"
       {
@@ -183,7 +183,7 @@ in
         (with-temp-buffer
           (insert-file-contents (getenv "INIT_AI"))
           (goto-char (point-min))
-          (re-search-forward "gptel-make-openai")
+          (re-search-forward "gptel-make-openai \"OpenRouter\"")
           (re-search-forward ":models[[:space:]]*'")
           (dolist (m (read (current-buffer)))
             (princ (format "%s\n" m))))
