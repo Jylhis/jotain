@@ -430,6 +430,7 @@ silently disables eglot auto-start for the whole project."
           (root "/proj/"))
       (unwind-protect
           (progn
+            (with-current-buffer buffer (setq-local devenv-env-mode t))
             (puthash root (list buffer) devenv-env--pending)
             (setq devenv-env--eglot-replay (list buffer))
             (devenv-env--handle-pairs root '("DEVENV_TEST_OK=1"))
@@ -439,6 +440,19 @@ silently disables eglot auto-start for the whole project."
             (should (gethash (cons root 'env) devenv--cache))
             (with-current-buffer buffer
               (should (equal (getenv "DEVENV_TEST_OK") "1"))))
+        (kill-buffer buffer)))))
+
+(ert-deftest devenv-test-env-handle-pairs-skips-buffers-with-mode-off ()
+  "A pending buffer whose `devenv-env-mode' went off gets no environment."
+  (devenv-test--with-env-state
+    (let ((buffer (generate-new-buffer " *devenv-test-off*"))
+          (root "/proj/"))
+      (unwind-protect
+          (progn
+            (puthash root (list buffer) devenv-env--pending)
+            (devenv-env--handle-pairs root '("DEVENV_TEST_OFF=1"))
+            (with-current-buffer buffer
+              (should-not (getenv "DEVENV_TEST_OFF"))))
         (kill-buffer buffer)))))
 
 (ert-deftest devenv-test-env-release-eglot-keeps-other-roots ()
@@ -717,6 +731,7 @@ not trust."
         (should (gethash root devenv-env--fetching))
         (with-temp-buffer
           ;; A late-joining buffer is served by the running fetch.
+          (setq-local devenv-env-mode t)
           (push (current-buffer) (gethash root devenv-env--pending))
           (devenv-env--fetch root)
           (should (equal calls 1))
@@ -959,6 +974,13 @@ completion must leave the recorded state untouched."
     ;; The cut lands on the first newline, keeping only "line one".
     (should (string-prefix-p "line one\n" cut))
     (should-not (string-match-p "line three" cut))))
+
+(ert-deftest devenv-test-log-truncate-multibyte-under-char-cap ()
+  "Output under the cap in characters but over it in bytes does not signal."
+  (let* ((devenv-log-max-output 10)
+         (output "ääää\nääää\n")
+         (cut (devenv--log-truncate output)))
+    (should (string-match-p "truncated" cut))))
 
 (ert-deftest devenv-test-log-renders-ansi-and-keeps-failures ()
   "A failed entry strips ANSI escapes but keeps the trace text."

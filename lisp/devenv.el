@@ -322,7 +322,7 @@ buffer-local PATH must never be able to hide it."
 (defun devenv--log-truncate (output)
   "Return OUTPUT cut on a line boundary near `devenv-log-max-output'.
 A shadow-faced note reports how many bytes were elided."
-  (let* ((cap devenv-log-max-output)
+  (let* ((cap (min devenv-log-max-output (length output)))
          (nl (cl-position ?\n output :from-end t :end (min cap (length output))))
          (cut (or nl cap))
          (elided (- (string-bytes output) (string-bytes (substring output 0 cut)))))
@@ -1505,7 +1505,9 @@ inside devenv."
         (when pairs
           (puthash (cons root 'env) (cons (float-time) pairs) devenv--cache)
           (dolist (buffer buffers)
-            (devenv-env--apply buffer pairs))
+            (when (and (buffer-live-p buffer)
+                       (buffer-local-value 'devenv-env-mode buffer))
+              (devenv-env--apply buffer pairs)))
           (message "devenv: environment loaded for %s"
                    (abbreviate-file-name root)))
       (let ((released (devenv-env--release-eglot buffers (and pairs t))))
