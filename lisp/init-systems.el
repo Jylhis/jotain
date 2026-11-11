@@ -53,9 +53,9 @@
   (when (executable-find "sops")
     (add-hook 'after-init-hook #'global-sops-mode))
   :config
-  (define-key sops-mode-map (kbd "C-c C-c") #'sops-save-file)
-  (define-key sops-mode-map (kbd "C-c C-k") #'sops-cancel)
-  (define-key sops-mode-map (kbd "C-c C-d") #'sops-edit-file)
+  (keymap-set sops-mode-map "C-c C-c" #'sops-save-file)
+  (keymap-set sops-mode-map "C-c C-k" #'sops-cancel)
+  (keymap-set sops-mode-map "C-c C-d" #'sops-edit-file)
   (let ((entry (assq 'sops-mode minor-mode-map-alist)))
     (if entry
         (setcdr entry sops-mode-map)
