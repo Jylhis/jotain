@@ -101,7 +101,7 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
     (modify-syntax-entry ?} "){" table)
     (modify-syntax-entry ?\" "\"" table)
     ;; `#' is a line comment; `//' and `/* */' are the C-style forms.
-    (modify-syntax-entry ?#  "<"      table)
+    (modify-syntax-entry ?#  "< b"    table)
     (modify-syntax-entry ?/  ". 124b" table)
     (modify-syntax-entry ?*  ". 23"   table)
     (modify-syntax-entry ?\n "> b"    table)
