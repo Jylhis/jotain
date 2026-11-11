@@ -132,5 +132,21 @@ Also guards the arity: Org calls the predicate with two arguments."
   (cl-letf (((symbol-function 'my-org-babel-trusted-p) (lambda () nil)))
     (should (my-org-babel-confirm-evaluate "python" "print(1)"))))
 
+(ert-deftest test-org-babel-restart-kills-buffer-session ()
+  "Restart kills the old session when `org-babel-initiate-session' returns a buffer.
+ob-python returns a buffer, not a name."
+  (test-org-babel--define 'my-org-babel-restart-session-and-execute-buffer)
+  (let ((session (generate-new-buffer " *test-session*"))
+        (ran nil))
+    (unwind-protect
+        (cl-letf (((symbol-function 'org-babel-initiate-session)
+                   (lambda (&rest _) session))
+                  ((symbol-function 'org-babel-execute-buffer)
+                   (lambda (&rest _) (setq ran t))))
+          (my-org-babel-restart-session-and-execute-buffer)
+          (should-not (buffer-live-p session))
+          (should ran))
+      (when (buffer-live-p session) (kill-buffer session)))))
+
 (provide 'test-org-babel)
 ;;; test-org-babel.el ends here
