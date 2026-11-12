@@ -149,22 +149,15 @@ let
       '';
 
   # 4. In-sync gate: the checked-in .mdx must match a fresh render.
-  lang-eval-doc-in-sync =
-    pkgs.runCommandLocal "check-lang-eval-doc-in-sync"
-      {
-        tracked = root + "/docs/reference/language-support.mdx";
-        generated = "${lang-eval-doc}/language-support.mdx";
-      }
-      ''
-        if ! diff -u "$tracked" "$generated"; then
-          echo "" >&2
-          echo "docs/reference/language-support.mdx is out of sync with" >&2
-          echo "etc/lang-eval/my-lang-registry.el." >&2
-          echo "Refresh it with: just docs-refresh-lang-matrix" >&2
-          exit 1
-        fi
-        touch "$out"
-      '';
+  lang-eval-doc-in-sync = pkgs.testers.testEqualContents {
+    assertion = "lang-eval-doc-in-sync";
+    actual = root + "/docs/reference/language-support.mdx";
+    expected = "${lang-eval-doc}/language-support.mdx";
+    postFailureMessage = ''
+      docs/reference/language-support.mdx is out of sync with etc/lang-eval/my-lang-registry.el.
+      Refresh it with: just docs-refresh-lang-matrix
+    '';
+  };
 in
 {
   inherit

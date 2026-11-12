@@ -102,21 +102,15 @@ in
     let
       generated = import ./packages-doc.nix { inherit pkgs src; };
     in
-    pkgs.runCommandLocal "check-packages-doc-in-sync"
-      {
-        trackedMdx = repoRoot + "/docs/configuration/package-reference.mdx";
-        generatedMdx = "${generated}/package-reference.mdx";
-      }
-      ''
-        if ! diff -u "$trackedMdx" "$generatedMdx"; then
-          echo "" >&2
-          echo "docs/configuration/package-reference.mdx is out of sync with" >&2
-          echo "the ;;; @doc markers in lisp/init-*.el." >&2
-          echo "Refresh it with: just docs-refresh-packages" >&2
-          exit 1
-        fi
-        touch $out
+    pkgs.testers.testEqualContents {
+      assertion = "packages-doc-in-sync";
+      actual = repoRoot + "/docs/configuration/package-reference.mdx";
+      expected = "${generated}/package-reference.mdx";
+      postFailureMessage = ''
+        docs/configuration/package-reference.mdx is out of sync with the ;;; @doc markers in lisp/init-*.el.
+        Refresh it with: just docs-refresh-packages
       '';
+    };
 
   # docs/reference/language-support.mdx must match a fresh render of
   # etc/lang-eval/my-lang-registry.el. Cheap: registry only.
@@ -127,40 +121,46 @@ in
   # read with Emacs' reader, anchored on the OpenRouter form (not the
   # Claude or Ollama :models).
   eca-models-in-sync =
-    pkgs.runCommand "check-eca-models-in-sync"
-      {
-        nativeBuildInputs = [
-          pkgs.jq
-          elispEmacs
-        ];
-        ecaConfig = repoRoot + "/config/eca/config.json";
-        initAi = repoRoot + "/lisp/init-ai.el";
-      }
-      ''
-        jsonModels=$(jq -r '.providers.openrouter.models | keys[]' "$ecaConfig" | sort)
-
-        cat > extract.el <<'EOF'
-        ;;; extract.el --- read gptel :models -*- lexical-binding: t; -*-
-        (with-temp-buffer
-          (insert-file-contents (getenv "INIT_AI"))
-          (goto-char (point-min))
-          (re-search-forward "gptel-make-openai \"OpenRouter\"")
-          (re-search-forward ":models[[:space:]]*'")
-          (dolist (m (read (current-buffer)))
-            (princ (format "%s\n" m))))
-        EOF
-        elispModels=$(INIT_AI="$initAi" emacs -Q --batch -l extract.el | sort)
-
-        if [ "$jsonModels" != "$elispModels" ]; then
-          echo "" >&2
-          echo "config/eca/config.json and lisp/init-ai.el disagree on the" >&2
-          echo "OpenRouter model list (they are hand-kept copies of one" >&2
-          echo "catalogue). Reconcile both. Diff (< json, > elisp):" >&2
-          diff <(echo "$jsonModels") <(echo "$elispModels") >&2 || true
-          exit 1
-        fi
-        touch $out
+    let
+      jsonModels =
+        pkgs.runCommandLocal "eca-json-models"
+          {
+            nativeBuildInputs = [ pkgs.jq ];
+            ecaConfig = repoRoot + "/config/eca/config.json";
+          }
+          ''
+            jq -r '.providers.openrouter.models | keys[]' "$ecaConfig" | sort > $out
+          '';
+      elispModels =
+        pkgs.runCommandLocal "eca-elisp-models"
+          {
+            nativeBuildInputs = [ elispEmacs ];
+            initAi = repoRoot + "/lisp/init-ai.el";
+          }
+          ''
+            cat > extract.el <<'EOF'
+            ;;; extract.el --- read gptel :models -*- lexical-binding: t; -*-
+            (with-temp-buffer
+              (insert-file-contents (getenv "INIT_AI"))
+              (goto-char (point-min))
+              (re-search-forward "gptel-make-openai \"OpenRouter\"")
+              (re-search-forward ":models[[:space:]]*'")
+              (dolist (m (read (current-buffer)))
+                (princ (format "%s\n" m))))
+            EOF
+            INIT_AI="$initAi" emacs -Q --batch -l extract.el | sort > $out
+          '';
+    in
+    pkgs.testers.testEqualContents {
+      assertion = "eca-models-in-sync";
+      actual = elispModels;
+      expected = jsonModels;
+      postFailureMessage = ''
+        config/eca/config.json and lisp/init-ai.el disagree on the OpenRouter model list.
+        They are hand-kept copies of one catalogue. Reconcile both.
+        Actual is the gptel list in init-ai.el, expected is the eca config.json list.
       '';
+    };
 
   module-eval = pkgs.linkFarm "check-module-eval" {
     default = evalHomeModule "default" { } (
@@ -291,55 +291,57 @@ in
       scannerList = pkgs.writeText "scanner-use-package-names" (
         lib.concatStringsSep "\n" scannerNames + "\n"
       );
+      readerList =
+        pkgs.runCommand "scanner-reader-names"
+          {
+            nativeBuildInputs = [ elispEmacs ];
+            src = elispSrc;
+            inherit scannerList;
+          }
+          ''
+            # Stay in the writable build dir; $src is a read-only store path.
+            cat > collect.el <<'EOF'
+            ;;; collect.el --- reader-truth use-package heads -*- lexical-binding: t; -*-
+            (require 'cl-lib)
+            (let ((names '())
+                  (dir (expand-file-name "lisp" (getenv "SRC"))))
+              (cl-labels ((walk (form)
+                            (when (consp form)
+                              (when (and (eq (car form) 'use-package)
+                                         (symbolp (car-safe (cdr form)))
+                                         (cadr form)
+                                         (not (memq :disabled form)))
+                                (push (symbol-name (cadr form)) names))
+                              ;; cdr-walk (not dolist): forms contain dotted
+                              ;; pairs (alist entries like ("k" . cmd)).
+                              (let ((tail form))
+                                (while (consp tail)
+                                  (walk (car tail))
+                                  (setq tail (cdr tail)))))))
+                (dolist (file (directory-files-recursively dir "\\.el\\'"))
+                  (with-temp-buffer
+                    (insert-file-contents file)
+                    (goto-char (point-min))
+                    (condition-case nil
+                        (while t (walk (read (current-buffer))))
+                      (end-of-file nil)))))
+              (dolist (n (sort (delete-dups names) #'string<))
+                (princ (format "%s\n" n))))
+            EOF
+            SRC="$src" emacs -Q --batch -l collect.el > $out
+          '';
     in
-    pkgs.runCommand "check-scanner-fidelity"
-      {
-        nativeBuildInputs = [ elispEmacs ];
-        src = elispSrc;
-        inherit scannerList;
-      }
-      ''
-        # Stay in the writable build dir; $src is a read-only store path.
-        cat > collect.el <<'EOF'
-        ;;; collect.el --- reader-truth use-package heads -*- lexical-binding: t; -*-
-        (require 'cl-lib)
-        (let ((names '())
-              (dir (expand-file-name "lisp" (getenv "SRC"))))
-          (cl-labels ((walk (form)
-                        (when (consp form)
-                          (when (and (eq (car form) 'use-package)
-                                     (symbolp (car-safe (cdr form)))
-                                     (cadr form)
-                                     (not (memq :disabled form)))
-                            (push (symbol-name (cadr form)) names))
-                          ;; cdr-walk (not dolist): forms contain dotted
-                          ;; pairs (alist entries like ("k" . cmd)).
-                          (let ((tail form))
-                            (while (consp tail)
-                              (walk (car tail))
-                              (setq tail (cdr tail)))))))
-            (dolist (file (directory-files-recursively dir "\\.el\\'"))
-              (with-temp-buffer
-                (insert-file-contents file)
-                (goto-char (point-min))
-                (condition-case nil
-                    (while t (walk (read (current-buffer))))
-                  (end-of-file nil)))))
-          (dolist (n (sort (delete-dups names) #'string<))
-            (princ (format "%s\n" n))))
-        EOF
-        SRC="$src" emacs -Q --batch -l collect.el > reader-names.txt
-
-        if ! diff -u "$scannerList" reader-names.txt; then
-          echo "" >&2
-          echo "nix/use-package.nix regex scanner disagrees with the Emacs" >&2
-          echo "reader on the use-package heads in lisp/ (< scanner, > reader)." >&2
-          echo "A commented-out, quoted, or string-embedded '(use-package X'" >&2
-          echo "is the usual cause. Reconcile the source or the scanner." >&2
-          exit 1
-        fi
-        touch $out
+    pkgs.testers.testEqualContents {
+      assertion = "scanner-fidelity";
+      actual = scannerList;
+      expected = readerList;
+      postFailureMessage = ''
+        nix/use-package.nix regex scanner disagrees with the Emacs reader on the use-package heads in lisp/.
+        Actual is the scanner list, expected is the reader list.
+        A commented-out, quoted, or string-embedded '(use-package X' is the usual cause.
+        Reconcile the source or the scanner.
       '';
+    };
 
   # legacyPackages.emacs-packages must cover every declared package with
   # a derivation. The expected set is recomputed from lisp/ +
