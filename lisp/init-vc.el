@@ -234,6 +234,19 @@ Deletions are omitted, since there is no file to open."
   :ensure nil
   :hook (dired-mode . diff-hl-dired-mode))
 
+;; Backport of Emacs 32 (commit 0a8a5d4fadbe): without it a background
+;; dired revert can ask "has a running process; kill it?" (diff-hl#295),
+;; and on a daemon with no frame that prompt locks the keyboard.
+(defun my-vc--dir-status-no-query (&rest _)
+  "Clear the query-on-exit flag of the current buffer's process."
+  (when-let* ((proc (get-buffer-process (current-buffer))))
+    (set-process-query-on-exit-flag proc nil)))
+
+(when (< emacs-major-version 32)
+  (with-eval-after-load 'vc-git
+    (advice-add 'vc-git-dir-status-goto-stage :after
+                #'my-vc--dir-status-no-query)))
+
 ;;; @doc An `N/M` mode-line counter (via `mode-line-misc-info`): N is
 ;;; uncommitted added+deleted lines, M is commits made today (since local
 ;;; midnight, merges excluded). Works in git and jj repos (a `.jj`

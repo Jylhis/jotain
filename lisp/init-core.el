@@ -87,6 +87,9 @@ immediately for writes."
   (set-mark-command-repeat-pop t)
   (redisplay-skip-fontification-on-input t)
   (enable-recursive-minibuffers t)
+  ;; One user, one keyboard: a prompt opened on another terminal, or on
+  ;; the frameless daemon, must not lock input out of the GUI frame.
+  (multiple-terminals-merge-keyboards t)
   (minibuffer-prompt-properties
    '(read-only t cursor-intangible t face minibuffer-prompt))
   (read-extended-command-predicate #'command-completion-default-include-p)
