@@ -59,52 +59,17 @@ let
   # package set does (the lisp/ scan reads package names only).
   elispEmacs = pkgs.emacsConfigPackages.core;
 
-  hmStubModule = {
-    options = {
-      assertions = lib.mkOption {
-        type = lib.types.listOf lib.types.unspecified;
-        default = [ ];
-      };
-      home.sessionVariables = lib.mkOption {
-        type = lib.types.attrsOf lib.types.str;
-        default = { };
-      };
-      home.packages = lib.mkOption {
-        type = lib.types.listOf lib.types.package;
-        default = [ ];
-      };
-      xdg.configHome = lib.mkOption {
-        type = lib.types.str;
-        default = "/tmp/emacs-config-home/.config";
-      };
-      xdg.configFile = lib.mkOption {
-        type = lib.types.attrsOf lib.types.anything;
-        default = { };
-      };
-      systemd.user.services = lib.mkOption {
-        type = lib.types.attrsOf lib.types.anything;
-        default = { };
-      };
-      systemd.user.sockets = lib.mkOption {
-        type = lib.types.attrsOf lib.types.anything;
-        default = { };
-      };
-      programs = lib.mkOption {
-        type = lib.types.attrsOf lib.types.anything;
-        default = { };
-      };
-      fonts = lib.mkOption {
-        type = lib.types.attrsOf lib.types.anything;
-        default = { };
-      };
-    };
+  testNixOSModuleEval = pkgs.callPackage ../../../../platform/kit/testers/test-nixos-module-eval {
+    testAssertions = pkgs.callPackage ../../../../platform/kit/testers/test-assertions { };
   };
 
   evalHomeModule =
-    emacsConfigConfig:
-    lib.evalModules {
+    name: emacsConfigConfig: assertions:
+    testNixOSModuleEval {
+      name = "module-eval-${name}";
+      class = "homeManager";
+      specialArgs = { inherit pkgs; };
       modules = [
-        hmStubModule
         ../module.nix
         {
           services.emacsConfig = {
@@ -113,13 +78,9 @@ let
           // emacsConfigConfig;
         }
       ];
-      specialArgs = { inherit pkgs; };
+      inherit assertions;
     };
 
-  defaultModule = evalHomeModule { };
-  graphicalModule = evalHomeModule {
-    startWithUserSession = "graphical";
-  };
 in
 {
   packages-default = pkgs.emacsConfigPackages;
@@ -201,20 +162,17 @@ in
         touch $out
       '';
 
-  module-eval =
-    pkgs.runCommandLocal "check-module-eval"
-      {
-        defaultEditorConfigured = if defaultModule.config.home.sessionVariables ? EDITOR then "1" else "0";
-        graphicalTarget = builtins.toJSON graphicalModule.config.systemd.user.services.emacs-config.Install.WantedBy;
-      }
-      ''
-        test "$defaultEditorConfigured" = "1" || { echo "EDITOR not set"; exit 1; }
-        case "$graphicalTarget" in
-          *graphical-session.target*) ;;
-          *) echo "graphical start target not wired: $graphicalTarget"; exit 1 ;;
-        esac
-        touch $out
-      '';
+  module-eval = pkgs.linkFarm "check-module-eval" {
+    default = evalHomeModule "default" { } (
+      config: lib.optional (!(config.home.sessionVariables ? EDITOR)) "EDITOR is not set"
+    );
+    graphical = evalHomeModule "graphical" { startWithUserSession = "graphical"; } (
+      config:
+      lib.optional (
+        !lib.elem "graphical-session.target" config.systemd.user.services.emacs-config.Install.WantedBy
+      ) "the daemon is not wanted by graphical-session.target"
+    );
+  };
 
   # The dev shell has no Emacs, so emacsConfig is checked here: expected
   # binaries exist and run without touching paths outside the store.
