@@ -55,7 +55,8 @@ generated docs lives in `projects/services/emacs-docs` (see `emacs-docs(8)`).
 All recipes below run in `projects/distros/emacs`. The shared recipes (`nix-build`,
 `nix-check`, `info`, ...) come from `platform/just/project.just`.
 
-- `just test`: build every `emacs-*` check of the tree (elisp-lint,
+- `just test`: run the ERT suite of `test/*-test.el` with `emacs -batch` (seconds, no Nix build).
+- `just nix-check`: build every `emacs-*` check of the tree (elisp-lint,
   elisp-compile, scanner-fidelity, packages-doc-in-sync, config-startup,
   elisp-test, the doc and module checks). Build one with
   `nix build -f . local.checks.emacs-<name>` at the repo root.

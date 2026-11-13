@@ -20,8 +20,8 @@ just run-built
 Development happens in the [devenv](https://devenv.sh) shell
 (`devenv shell`, or prefix commands with `devenv shell --`). It provides
 linters, language servers, and the docs toolchain, but not Emacs, which
-`just run-built` builds on demand. `just test` builds every `emacs-*`
-check of the tree; `just` alone lists every recipe.
+`just run-built` builds on demand. `just test` runs the ERT suite;
+`just nix-check` builds every `emacs-*` check of the tree; `just` alone lists every recipe.
 
 ## Installing
 

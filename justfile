@@ -3,10 +3,25 @@ default:
 
 import '../../../platform/just/project.just'
 
+# The ERT suite of test/*-test.el under the emacs on PATH, with no Nix build.
+# The hermetic gates are `just nix-check`.
+[group('test')]
+test:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v emacs >/dev/null; then
+        echo "emacs: no emacs on PATH: skipping (try: just nix-check)"
+        exit 0
+    fi
+    cd "{{ justfile_directory() }}"
+    emacs --batch -L lisp -L test \
+        --eval '(dolist (f (directory-files "test" t "\\.el$")) (load f nil t))' \
+        -l ert -f ert-run-tests-batch-and-exit
+
 # The elisp gates (elisp-lint, elisp-compile, scanner-fidelity,
 # packages-doc-in-sync, config-startup, elisp-test) via the tree's checks.
 [group('test')]
-test:
+nix-check:
     #!/usr/bin/env bash
     set -euo pipefail
     system=$(nix eval --impure --raw --expr builtins.currentSystem)
@@ -16,7 +31,7 @@ test:
         nix eval --json -f . "checks.${system}" --apply builtins.attrNames \
         | jq -r '.[] | select(startswith("emacs-"))')
     [ "${#refs[@]}" -gt 0 ] || { echo "FAIL: no emacs-* checks registered yet"; exit 1; }
-    nix build --no-link -f . "${refs[@]}"
+    platform/kernel/build-lock.sh nix build --no-link -f . "${refs[@]}"
 
 # Regenerate docs/configuration/package-reference.mdx from the ;;; @doc
 # blocks in lisp/ (the fix for a failing packages-doc-in-sync gate).
