@@ -259,7 +259,13 @@ TAB and `<tab>' run `corfu-insert', which also runs the candidate's
   "The newcomers-presets theme (init.el) turns the inline preview on.
 With the default `my-completion-inline-preview', the config sets
 `global-completion-preview-mode' neither by `setopt' nor by `:custom',
-so the theme value applies."
+so the theme value applies.  The theme is loaded without enabling it, which
+would turn on savehist and recentf, and its settings are read back."
+  (load-theme 'newcomers-presets t t)
+  (let ((setting (seq-find (lambda (s) (eq (nth 1 s) 'global-completion-preview-mode))
+                           (get 'newcomers-presets 'theme-settings))))
+    (should setting)
+    (should (eq (nth 3 setting) t)))
   (should my-completion-inline-preview)
   (should-not (get 'global-completion-preview-mode 'custom-check-value))
   (should-not (assq 'use-package
