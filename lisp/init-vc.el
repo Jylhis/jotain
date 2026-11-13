@@ -538,8 +538,69 @@ also invalidate after `magit-post-refresh-hook'."
         (run-with-idle-timer my-git-stats-update-interval t
                              #'my-git-stats--tick)))
 
-;; smerge-mode needs no block: it turns on for files with conflict
-;; markers and binds C-c ^ (`smerge-command-prefix').
+(declare-function smerge-mode "smerge-mode" (&optional arg))
+(defvar smerge-begin-re)
+
+(defun my-vc--conflict-count ()
+  "Return the number of conflict markers opening a conflict in this buffer."
+  (require 'smerge-mode)
+  (save-excursion
+    (goto-char (point-min))
+    (let ((n 0))
+      (while (re-search-forward smerge-begin-re nil t)
+        (setq n (1+ n)))
+      n)))
+
+(defun my-vc-mergiraf-solve ()
+  "Re-resolve the conflicts of the current file with `mergiraf solve'.
+Needs diff3-style markers (a base section), as `merge.conflictStyle
+diff3' or `zdiff3' writes them.  Refuses when `mergiraf' is not on
+`exec-path', the buffer has no file, is modified, or has no conflict.
+Reverts the buffer, reports the conflicts left, and keeps `smerge-mode'
+on while any remain."
+  (interactive)
+  (cond
+   ((not (executable-find "mergiraf"))
+    (user-error "mergiraf is not on `exec-path'"))
+   ((not buffer-file-name)
+    (user-error "Buffer is not visiting a file"))
+   ((buffer-modified-p)
+    (user-error "Save the buffer first, mergiraf rewrites the file"))
+   ((zerop (my-vc--conflict-count))
+    (user-error "No conflict markers in this buffer"))
+   (t
+    (let ((out (generate-new-buffer " *mergiraf*"))
+          (file buffer-file-name))
+      (unwind-protect
+          (let ((status (call-process "mergiraf" nil out nil "solve"
+                                      "--keep-backup=false" file)))
+            (revert-buffer :ignore-auto :noconfirm)
+            (let ((left (my-vc--conflict-count)))
+              (if (zerop left)
+                  (smerge-mode -1)
+                (smerge-mode 1))
+              (message "mergiraf: %s (exit %s)"
+                       (if (zerop left)
+                           "all conflicts solved"
+                         (format "%d conflict%s remain" left
+                                 (if (= left 1) "" "s")))
+                       status)))
+        (kill-buffer out))))))
+
+;;; @doc Built-in conflict-marker editing; it turns on for files with
+;;; markers and binds `C-c ^' (`smerge-command-prefix'). `C-c ^ S' runs
+;;; `my-vc-mergiraf-solve', which re-resolves the file with mergiraf's
+;;; syntax-aware merge and leaves smerge-mode on for what remains. The
+;;; mergiraf binary rides the wrapper PATH; the markers must be diff3
+;;; style. Enable the git merge driver per repository with
+;;; `*.json merge=mergiraf' in `.gitattributes' and the driver
+;;; `mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P' in
+;;; `merge.mergiraf.driver'.
+(use-package smerge-mode
+  :ensure nil
+  :defer t
+  :config
+  (keymap-set smerge-basic-map "S" #'my-vc-mergiraf-solve))
 
 ;;; @doc Built-in interactive diff. The `plain` window setup keeps the
 ;;; control panel out of a separate frame; diffs ignore whitespace.
