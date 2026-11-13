@@ -13,21 +13,15 @@ let
 
   dsAssets = import ../../../projects/distros/emacs/nix/ds-assets.nix { pkgs = emacsPkgs; };
 
-  ds-in-sync =
-    pkgs.runCommandLocal "check-ds-in-sync"
-      {
-        inherit dsAssets;
-        vendoredDs = ./public/ds;
-      }
-      ''
-        if ! diff -r "$dsAssets" "$vendoredDs"; then
-          echo "" >&2
-          echo "public/ds is out of sync with the in-tree design system" >&2
-          echo "(projects/libs/design). Re-vendor it with: just ds-sync" >&2
-          exit 1
-        fi
-        touch $out
-      '';
+  ds-in-sync = pkgs.jylhis.testers.testEqualFiles {
+    assertion = "ds-in-sync";
+    actual = dsAssets;
+    expected = ./public/ds;
+    postFailureMessage = ''
+      public/ds is out of sync with the in-tree design system
+      (projects/libs/design). Re-vendor it with: just ds-sync
+    '';
+  };
 in
 # The site documents Emacs and the configuration. The third-party API
 # reference is input it ingests for the deployed site, not part of the build.
