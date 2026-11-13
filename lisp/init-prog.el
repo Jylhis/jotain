@@ -63,7 +63,7 @@
     ;; entry) still lands in the tree-sitter mode.
     (python      python-ts-mode      python-mode)
     (rust        rust-ts-mode        rust-mode)
-    (css         css-ts-mode         css-mode scss-mode)
+    (css         css-ts-mode         css-mode)
     (javascript  js-ts-mode          js-mode javascript-mode js2-mode)
     (typescript  typescript-ts-mode  typescript-mode)
     ;; C/C++ (init-lang-systems, which also maps `.cu'/`.cuh' straight
