@@ -5,6 +5,7 @@
   pkgs,
   src,
   treefmtCheck,
+  testEqualFiles,
 }:
 let
   inherit (pkgs) lib;
@@ -110,7 +111,7 @@ in
     let
       generated = import ./packages-doc.nix { inherit pkgs src; };
     in
-    pkgs.testers.testEqualContents {
+    testEqualFiles {
       assertion = "packages-doc-in-sync";
       actual = repoRoot + "/docs/configuration/package-reference.mdx";
       expected = "${generated}/package-reference.mdx";
@@ -122,7 +123,7 @@ in
 
   # docs/reference/language-support.mdx must match a fresh render of
   # etc/lang-eval/my-lang-registry.el. Cheap: registry only.
-  inherit ((import ./lang-eval.nix { inherit pkgs; })) lang-eval-doc-in-sync;
+  inherit ((import ./lang-eval.nix { inherit pkgs testEqualFiles; })) lang-eval-doc-in-sync;
 
   # config/eca/config.json and gptel's OpenRouter :models
   # (lisp/init-ai.el) are hand-kept copies of one list. The elisp side is
@@ -159,7 +160,7 @@ in
             INIT_AI="$initAi" emacs -Q --batch -l extract.el | sort > $out
           '';
     in
-    pkgs.testers.testEqualContents {
+    testEqualFiles {
       assertion = "eca-models-in-sync";
       actual = elispModels;
       expected = jsonModels;
@@ -359,7 +360,7 @@ in
             SRC="$src" emacs -Q --batch -l collect.el > $out
           '';
     in
-    pkgs.testers.testEqualContents {
+    testEqualFiles {
       assertion = "scanner-fidelity";
       actual = scannerList;
       expected = readerList;

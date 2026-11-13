@@ -23,6 +23,7 @@
 # via elisp-test).
 {
   pkgs,
+  testEqualFiles,
 }:
 let
   inherit (pkgs) lib;
@@ -149,7 +150,7 @@ let
       '';
 
   # 4. In-sync gate: the checked-in .mdx must match a fresh render.
-  lang-eval-doc-in-sync = pkgs.testers.testEqualContents {
+  lang-eval-doc-in-sync = testEqualFiles {
     assertion = "lang-eval-doc-in-sync";
     actual = root + "/docs/reference/language-support.mdx";
     expected = "${lang-eval-doc}/language-support.mdx";
