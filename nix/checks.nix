@@ -416,19 +416,43 @@ in
   # ERT suite. Sandbox-safe: no devenv binary or network. git is on
   # PATH for the tests that build throwaway VC projects (repo-review).
   elisp-test =
+    let
+      report =
+        pkgs.runCommand "check-elisp-test-report"
+          {
+            nativeBuildInputs = [
+              elispEmacs
+              git
+            ];
+            src = elispTestSrc;
+            ertJunit = pkgs.emacsPackages.ert-junit;
+          }
+          ''
+            mkdir -p $out
+            cd $src
+            status=0
+            emacs --batch -L lisp -L test \
+              -L "$(echo $ertJunit/share/emacs/site-lisp/elpa/ert-junit-*)" \
+              --eval '(dolist (f (directory-files "test" t "\\.el$")) (load f nil t))' \
+              -l ert -l ert-junit -f ert-junit-run-tests-batch-and-exit "$out/junit.xml" \
+              >$out/output.log 2>&1 || status=$?
+            cat $out/output.log
+            echo $status > $out/exit-code
+          '';
+    in
     pkgs.runCommand "check-elisp-test"
       {
-        nativeBuildInputs = [
-          elispEmacs
-          git
-        ];
-        src = elispTestSrc;
+        inherit report;
+        nativeBuildInputs = [ pkgs.gnugrep ];
+        passthru = { inherit report; };
       }
       ''
-        cd $src
-        emacs --batch -L lisp -L test \
-          --eval '(dolist (f (directory-files "test" t "\\.el$")) (load f nil t))' \
-          -l ert -f ert-run-tests-batch-and-exit
+        cat $report/output.log
+        [ "$(cat $report/exit-code)" = 0 ] || { echo "ERT failed" >&2; exit 1; }
+        if grep -lE '<(failure|error)[ />]' $report/*.xml; then
+          echo "a JUnit file records a failure" >&2
+          exit 1
+        fi
         touch $out
       '';
 
