@@ -10,6 +10,7 @@ with pkgs;
   fd # project/consult fallback finder
   git # magit, vc
   jujutsu # vc-jj, majutsu, my-vc-stats (jj binary)
+  delta # magit-delta (init-vc.el), off unless my-magit-delta-enable
   mergiraf # my-vc-mergiraf-solve (init-vc.el), C-c ^ S in smerge-mode
   zoxide # zoxide-add on find-file-hook, zoxide-find-file (M-g z)
   pkgsWithOverlay.eca # eca-emacs server; prevents runtime download fallback

@@ -602,6 +602,24 @@ on while any remain."
   :config
   (keymap-set smerge-basic-map "S" #'my-vc-mergiraf-solve))
 
+(defcustom my-magit-delta-enable nil
+  "Non-nil renders magit diffs through the `delta' pager.
+Takes effect when magit loads; `M-x magit-delta-mode' toggles it live.
+It changes how every magit diff looks, so it is off by default."
+  :type 'boolean
+  :group 'my-vc)
+
+;;; @doc Renders magit diffs through delta (`magit-delta-mode'). Off
+;;; until `my-magit-delta-enable' is non-nil, because it changes every
+;;; magit diff; `M-x magit-delta-mode' toggles it per session. The delta
+;;; binary rides the wrapper PATH.
+(use-package magit-delta
+  :after magit
+  :commands (magit-delta-mode)
+  :config
+  (when my-magit-delta-enable
+    (magit-delta-mode 1)))
+
 ;;; @doc Built-in interactive diff. The `plain` window setup keeps the
 ;;; control panel out of a separate frame; diffs ignore whitespace.
 (use-package ediff
