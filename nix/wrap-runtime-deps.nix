@@ -8,7 +8,15 @@
   pkgs,
   package,
   runtimeDeps,
+  # services.emacsConfig.spell.dictionaries; [ ] keeps the bundled dictionaries.
+  spellDictionaries ? [ ],
 }:
+let
+  aspellConf = import ./spell-conf.nix {
+    inherit pkgs;
+    dictionaries = spellDictionaries;
+  };
+in
 pkgs.runCommand "${package.name or "emacs-config"}-with-runtime-deps"
   {
     nativeBuildInputs = [
@@ -30,6 +38,10 @@ pkgs.runCommand "${package.name or "emacs-config"}-with-runtime-deps"
       orig=$(readlink -f "$prog")
       rm "$prog"
       makeBinaryWrapper "$orig" "$prog" \
-        --suffix PATH : "${pkgs.lib.makeBinPath runtimeDeps}"
+        --suffix PATH : "${pkgs.lib.makeBinPath runtimeDeps}" ${
+          pkgs.lib.optionalString (
+            aspellConf != null
+          ) "--set ASPELL_CONF ${pkgs.lib.escapeShellArg aspellConf}"
+        }
     done
   ''

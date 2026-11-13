@@ -14,6 +14,8 @@
   nativeCompile,
   # Booleans: devenv, sonarlint, dockerfileLsp, onePassword, sops, claudeCode.
   tools,
+  # services.emacsConfig.spell.dictionaries; [ ] keeps the bundled dictionaries.
+  spellDictionaries ? [ ],
 }:
 let
   inherit (pkgs) lib;
@@ -46,10 +48,18 @@ let
 
   runtimePath = lib.makeBinPath runtimeDeps;
 
+  aspellConf = import ./spell-conf.nix {
+    inherit pkgs;
+    dictionaries = spellDictionaries;
+  };
+
   # `emacs` with --init-directory always set, for the daemon and any
   # interactive invocation.
   emacsWrapper = pkgs.writeShellScriptBin "emacs" ''
     export PATH=${runtimePath}''${PATH:+:$PATH}
+    ${lib.optionalString (aspellConf != null) ''
+      export ASPELL_CONF=${lib.escapeShellArg aspellConf}
+    ''}
     ${lib.optionalString nativeCompile ''
       export EMACS_CONFIG_ELN_PATH=${compiledConfig}/share/emacs/native-lisp
     ''}

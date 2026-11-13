@@ -81,6 +81,14 @@ let
       inherit assertions;
     };
 
+  # The text of the wrapped `emacs' script (nix/user-programs.nix), or null.
+  emacsWrapperText =
+    config:
+    let
+      scripts = lib.filter (p: lib.hasInfix "--init-directory" (p.text or "")) config.home.packages;
+    in
+    if scripts == [ ] then null else (lib.head scripts).text;
+
 in
 {
   packages-default = pkgs.emacsConfigPackages;
@@ -172,6 +180,26 @@ in
         !lib.elem "graphical-session.target" config.systemd.user.services.emacs-config.Install.WantedBy
       ) "the daemon is not wanted by graphical-session.target"
     );
+    # The wrapped emacs sets ASPELL_CONF only when the option is non-empty.
+    spell-default = evalHomeModule "spell-default" { } (
+      config:
+      let
+        text = emacsWrapperText config;
+      in
+      lib.optional (text == null) "no emacs wrapper script found"
+      ++ lib.optional (text != null && lib.hasInfix "ASPELL_CONF" text) "the default sets ASPELL_CONF"
+    );
+    spell-dictionaries =
+      evalHomeModule "spell-dictionaries" { spell.dictionaries = [ pkgs.aspellDicts.fi ]; }
+        (
+          config:
+          let
+            text = emacsWrapperText config;
+          in
+          lib.optional (
+            text == null || !lib.hasInfix "ASPELL_CONF='dict-dir " text
+          ) "spell.dictionaries does not reach ASPELL_CONF in the wrapper"
+        );
   };
 
   # The dev shell has no Emacs, so emacsConfig is checked here: expected

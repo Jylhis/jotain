@@ -101,6 +101,7 @@ let
         inherit pkgs pkgsWithOverlay initDirectory;
         package = selectedPackage;
         nativeCompile = cfg.nativeCompile.enable;
+        spellDictionaries = cfg.spell.dictionaries;
         tools = {
           devenv = cfg.devenv.enable;
           sonarlint = cfg.sonarlint.enable;
@@ -299,14 +300,15 @@ in
     spell = {
       dictionaries = lib.mkOption {
         type = with lib.types; listOf package;
-        default = [ pkgs.aspellDicts.en ];
-        defaultText = lib.literalExpression "[ pkgs.aspellDicts.en ]";
+        default = [ ];
         example = lib.literalExpression "[ pkgs.aspellDicts.en pkgs.aspellDicts.fi ]";
         description = ''
           Aspell dictionary packages for jinx spell-checking
-          (lisp/init-writing.el). Installed into the profile, where
-          libaspell's NIX_PROFILES patch finds them at runtime and
-          enchant's aspell backend hands them to jinx.
+          (lisp/init-writing.el). A non-empty list replaces the bundled
+          en/fi/de/fr set: the wrapped emacs gets an ASPELL_CONF that points
+          at an {command}`aspellWithDicts` built from these packages. The
+          packages also go into the profile. The empty default keeps the
+          bundled dictionaries.
         '';
       };
     };

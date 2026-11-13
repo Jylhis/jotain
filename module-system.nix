@@ -41,6 +41,7 @@ let
   wrappedPackage = import ./nix/wrap-runtime-deps.nix {
     inherit pkgs runtimeDeps;
     package = selectedPackage;
+    spellDictionaries = cfg.spell.dictionaries;
   };
 
   userModule =
@@ -77,11 +78,10 @@ let
 
         spell.dictionaries = lib.mkOption {
           type = with lib.types; listOf package;
-          default = [ pkgs.aspellDicts.en ];
-          defaultText = lib.literalExpression "[ pkgs.aspellDicts.en ]";
+          default = [ ];
           description = ''
-            Aspell dictionaries for jinx. They sit in the profile, where libaspell's
-            NIX_PROFILES patch finds them.
+            Aspell dictionaries for jinx. A non-empty list replaces the bundled
+            set in this user's wrapped emacs; the empty default keeps it.
           '';
         };
 
@@ -95,6 +95,7 @@ let
             inherit (config) initDirectory;
             package = if config.package != null then config.package else selectedPackage;
             nativeCompile = config.nativeCompile.enable;
+            spellDictionaries = config.spell.dictionaries;
             tools = {
               devenv = config.devenv.enable;
               sonarlint = config.sonarlint.enable;
@@ -181,14 +182,15 @@ in
     spell = {
       dictionaries = lib.mkOption {
         type = with lib.types; listOf package;
-        default = [ pkgs.aspellDicts.en ];
-        defaultText = lib.literalExpression "[ pkgs.aspellDicts.en ]";
+        default = [ ];
         example = lib.literalExpression "[ pkgs.aspellDicts.en pkgs.aspellDicts.fi ]";
         description = ''
           Aspell dictionary packages for jinx spell-checking
-          (lisp/init-writing.el). Installed into the system profile, where
-          libaspell's NIX_PROFILES patch finds them at runtime and
-          enchant's aspell backend hands them to jinx.
+          (lisp/init-writing.el). A non-empty list replaces the bundled
+          en/fi/de/fr set: the wrapped emacs gets an ASPELL_CONF that points
+          at an {command}`aspellWithDicts` built from these packages. The
+          packages also go into the system profile. The empty default keeps
+          the bundled dictionaries.
         '';
       };
     };
@@ -247,8 +249,7 @@ in
         visualScript
         pkgsWithOverlay.eca
       ]
-      # jinx dictionaries: libaspell finds $profile/lib/aspell via its
-      # NIX_PROFILES patch, so they belong in the profile, not on PATH.
+      # jinx dictionaries; the wrapper's ASPELL_CONF is what jinx reads.
       ++ cfg.spell.dictionaries;
       # Colour-emoji fallback for lisp/init-ui.el's fontsets, BlexMono (the
       # default face and nerd-icons font, as in module.nix), and the design
