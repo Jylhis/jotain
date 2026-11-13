@@ -106,6 +106,20 @@ Binds `root' to the project directory."
     (org-entry-put nil "REVIEW_PATH" "../../etc/passwd")
     (should-error (repo-review--entry-file) :type 'user-error)))
 
+(ert-deftest repo-review-rejects-symlink-leaving-root-and-says-why ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (let ((outside (make-temp-file "repo-review-outside-")))
+      (unwind-protect
+          (progn
+            (make-symbolic-link outside (expand-file-name "link" root))
+            (org-entry-put nil "REVIEW_PATH" "link")
+            (let ((err (should-error (repo-review--entry-file) :type 'user-error)))
+              (should (string-match-p "symlink" (cadr err)))))
+        (delete-file outside)))))
+
 (ert-deftest repo-review-exclude-regexp-option ()
   (repo-review-test--with-project
     (let ((repo-review-exclude-regexp "\\.nix\\'"))

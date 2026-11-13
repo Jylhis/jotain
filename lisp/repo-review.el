@@ -129,7 +129,8 @@ Reject entries with absolute paths or paths escaping REVIEW_ROOT."
       (user-error "REVIEW_PATH must be relative: %s" rel))
     (let ((abs (expand-file-name rel root)))
       (unless (file-in-directory-p abs root)
-        (user-error "REVIEW_PATH escapes the review root: %s" rel))
+        (user-error "REVIEW_PATH is outside the review root or a symlink that leads out of it: %s"
+                    rel))
       abs)))
 
 ;;; Commands
