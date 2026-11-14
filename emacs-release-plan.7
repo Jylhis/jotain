@@ -1,0 +1,238 @@
+.\" Assisted-by: Claude Code:claude-fable-5-2
+.Dd November 14, 2026
+.Dt EMACS-RELEASE-PLAN 7
+.Os
+.Sh NAME
+.Nm emacs-release-plan
+.Nd plan to release the Emacs distribution 1.0 on 18 December 2026
+.Sh DESCRIPTION
+.Bd -ragged -offset indent
+Plan, not started.
+EM6 has owner steps that deploy
+.Ql docs.example.org .
+No step changes a host.
+.Ed
+.Pp
+The Emacs distribution is the third release of
+.Xr jylhis-ship-plan 7 .
+The owner uses it each day.
+Its largest task is a standalone entry point, which the ledger did not list.
+.Ss State on 2026-11-14
+.Bl -bullet
+.It
+Verified: the checks
+.Ql emacs-elisp-lint ,
+.Ql emacs-module-eval ,
+.Ql emacs-docs-ds-in-sync
+and
+.Ql emacs-docs-build
+pass.
+.It
+Not verified:
+.Ql emacs-elisp-test ,
+.Ql emacs-elisp-compile
+and
+.Ql emacs-config-startup .
+The cloud container could not download the package sources.
+EM4 runs them on local-lab.
+.It
+The distribution has no flake and no
+.Ql package.nix .
+It imports
+.Ql nix/inputs.nix ,
+.Ql nix/tamal/lock.json ,
+.Ql platform/kit
+and
+.Ql projects/libs/design .
+An outside user needs a checkout of the whole tree today.
+.It
+The licence is set: GPL-3.0-or-later in
+.Ql project.nix ,
+.Ql LICENSE
+and the README; the file headers are not uniform.
+.It
+14 test files cover 35 Lisp files; 47 fragments wait; no version is set.
+.It
+emacs-overlay is in use, and Emacs 31.1 comes from the binary cache.
+.It
+.Ql docs.example.org
+is not deployed, by TODO.md; the cloud container could not reach the address.
+.El
+.Ss Selected approach
+.Bl -bullet
+.It
+One flake in the project directory serves the tree and the public repository,
+so the two cannot differ.
+.It
+The design assets and the kit helpers that the distribution uses go into the
+export through
+.Ql publish.vendor ,
+as marchyo does.
+.It
+The landing page is the existing front page of emacs-docs, with the support
+section of the kit.
+.El
+.Ss Alternatives
+.Bl -tag -width Ds
+.It A synthesized flake
+The publish tool can write a flake for a project with a
+.Ql package.nix .
+The distribution has none and has many inputs, so a written flake is clearer.
+.It twist.nix as the build layer
+The ledger names it as one option.
+emacs-overlay already does that job in the tree, with cache parity, so a
+change gives nothing for 1.0.
+.El
+.Ss Definition of done
+.Bl -bullet
+.It
+The public repository exists under the name of EM1.
+.It
+.Ql nix flake check
+passes in a fresh clone, with no access to jylhis.
+.It
+.Ql nix run github:Jylhis/<name>
+starts Emacs with the configuration.
+.It
+The installation page describes the Home Manager module and the NixOS module,
+and a test evaluates each.
+.It
+The checks
+.Ql emacs-elisp-test ,
+.Ql emacs-elisp-compile
+and
+.Ql emacs-config-startup
+pass, with the result on record.
+.It
+.Ql https://docs.example.org
+answers with status 200; the old Pages addresses redirect to it.
+.It
+The tag
+.Ql v1.0.0
+exists in the public repository, with a release and its notes.
+.It
+Each Lisp file has the licence header.
+.It
+The landing page names the issue tracker, a mail address and the release feed.
+.It
+.Ql just release-verify emacs
+exits with 0.
+.El
+.Ss Tasks
+.Bl -tag -width Ds
+.It EM1 (owner; 15 minutes; after nothing)
+Decide the public name and repository of the distribution.
+The old public site used the name jotain.
+Confirm or change the licence, which is GPL-3.0-or-later today.
+.It EM2 (opus design, then sonnet; 4 sessions; after nothing)
+Give the distribution a standalone entry point.
+Add
+.Ql flake.nix
+with the inputs that
+.Ql nix/inputs.nix
+supplies today.
+Replace each import of
+.Ql platform/kit
+and
+.Ql projects/libs/design
+with a flake input or a
+.Ql publish.vendor
+entry.
+The monorepo build keeps one code path with the export.
+.It EM3 (sonnet; 2 sessions; after EM2, RK4)
+Add the
+.Ql publish
+block.
+Make
+.Ql just publish-verify
+pass on the export:
+.Ql nix flake check
+without the monorepo.
+.It EM4 (sonnet; 1 session; after nothing)
+Run
+.Ql emacs-elisp-test ,
+.Ql emacs-elisp-compile
+and
+.Ql emacs-config-startup
+on local-lab and record the results here.
+The session of 2026-11-14 ran in a cloud container, where the package sources
+returned HTTP 403.
+.It EM5 (sonnet; 1 session; after EM2)
+Rewrite
+.Ql docs/installation.mdx
+for the flake: try it with
+.Ql nix run ,
+install with the Home Manager module, install with the NixOS module.
+Correct the platform statement so that it matches
+.Ql project.nix .
+.It EM6 (owner, then haiku; owner 30 minutes, 1 session; after nothing)
+Owner: confirm the two Cloudflare Actions secrets, run the infra plan and
+apply for
+.Ql docs.example.org ,
+and merge so that the workflow deploys.
+Then redirect the old GitHub Pages site.
+.It EM7 (sonnet; 1 session; after EM6, RK2)
+Add the
+.Ql Support and updates
+section, the version and the install command to the landing page of
+.Ql projects/services/emacs-docs .
+.It EM8 (haiku; 1 session; after EM1)
+Give each file under
+.Ql lisp/
+the same licence header.
+Add a
+.Ql LICENSE
+file and
+.Ql meta.license
+to emacs-docs.
+.It EM9 (sonnet; 1 session; after EM3)
+Add a workflow to the export that builds the distribution from the public
+repository and starts it in batch mode.
+.It EM10 (sonnet, then owner; 1 session, owner 15 minutes; after EM3 to EM9, RK5, RK9)
+Set
+.Ql meta.version ,
+cut 1.0.0 from the 47 fragments.
+Owner: create the repository, publish and push the tag.
+Run
+.Ql just release-verify emacs
+and record the output.
+.El
+.Ss Schedule
+.Bl -tag -width Ds
+.It W3, 30 November to 6 December
+EM1, EM2, EM4.
+.It W4, 7 to 13 December
+EM3, EM5, EM6, EM8; the site is deployed.
+.It W5, 14 to 20 December
+EM7, EM9, EM10; the release is on Friday 18 December.
+.El
+.Ss Goals
+.Bl -bullet
+.It
+4 December: 3 of 10 tasks; the flake evaluates in the tree.
+.It
+11 December: 7 of 10 tasks;
+.Ql docs.example.org
+answers and the export passes its check.
+.It
+18 December: 10 of 10 tasks; every line of the definition of done is true.
+.El
+.Ss After 1.0
+.Bl -bullet
+.It
+1.1: the review queue for merge requests and pull requests with a viewed
+state.
+.It
+1.2: the daily code excerpt on the dashboard.
+.It
+Later: dokja as an xref backend, after the dokja cut-over.
+.It
+Later: context as a value and capability rings for the AI commands.
+.It
+Not a condition: the igc trial stays an owner item.
+.El
+.Sh SEE ALSO
+.Xr jylhis-publish 7 ,
+.Xr jylhis-ship-plan 7 ,
+.Xr release-kit-plan 7 ,
+.Xr emacs-docs 8
