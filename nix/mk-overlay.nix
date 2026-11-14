@@ -138,7 +138,7 @@ in
   # Prebuilt ECA server for eca-emacs (lisp/init-ai.el).
   eca = import ./eca-server.nix { pkgs = final; };
 
-  # LikeC4 language server for `likec4-mode' (lisp/init-lang-devops.el).
+  # LikeC4 language server for `my-likec4-mode' (lisp/init-lang-devops.el).
   likec4Lsp = import ./likec4-lsp.nix { pkgs = final; };
 
   emacsConfigInfo = import ./info-manual.nix {

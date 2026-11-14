@@ -152,7 +152,7 @@
      :servers ("qmlls") :override t :formatter "qmlformat")
 
     (:id likec4     :name "LikeC4"         :file "init-lang-devops.el"
-     :sample "eval.c4"             :mode likec4-mode :grammar nil
+     :sample "eval.c4"             :mode my-likec4-mode :grammar nil
      :servers ("likec4-lsp" "likec4") :override t)
 
     (:id html       :name "HTML"           :file "init-lang-web.el"

@@ -191,7 +191,7 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
     (modify-syntax-entry ?_ "_" table)
     (modify-syntax-entry ?- "_" table)
     table)
-  "Syntax table for `likec4-mode'.")
+  "Syntax table for `my-likec4-mode'.")
 
 (defvar my-likec4-font-lock-keywords
   (let ((keywords '("specification" "model" "views" "view" "element" "tag"
@@ -204,7 +204,7 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
       ("->" . font-lock-function-name-face)
       (,(rx symbol-start (group (+ (any word "_"))) (* space) (any "=:"))
        (1 font-lock-variable-name-face))))
-  "Font-lock rules for `likec4-mode'.")
+  "Font-lock rules for `my-likec4-mode'.")
 
 (defun my-likec4-indent-line ()
   "Indent the current LikeC4 line by its `{'/`}' nesting depth."
@@ -214,7 +214,7 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
                    (if (looking-at-p "}") (1- open) open)))))
     (indent-line-to (* my-likec4-indent-offset (max depth 0)))))
 
-(define-derived-mode likec4-mode prog-mode "LikeC4"
+(define-derived-mode my-likec4-mode prog-mode "LikeC4"
   "Major mode for editing LikeC4 architecture models."
   :syntax-table my-likec4-mode-syntax-table
   (setq-local comment-start "// "
@@ -224,8 +224,8 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
               font-lock-defaults '(my-likec4-font-lock-keywords nil t))
   (setq-local electric-indent-chars (cons ?} electric-indent-chars)))
 
-(add-to-list 'auto-mode-alist '("\\.c4\\'" . likec4-mode))
-(add-to-list 'auto-mode-alist '("\\.likec4\\'" . likec4-mode))
+(add-to-list 'auto-mode-alist '("\\.c4\\'" . my-likec4-mode))
+(add-to-list 'auto-mode-alist '("\\.likec4\\'" . my-likec4-mode))
 
 (provide 'init-lang-devops)
 ;;; init-lang-devops.el ends here

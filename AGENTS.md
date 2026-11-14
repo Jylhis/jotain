@@ -202,7 +202,7 @@ target.
   to `PATH`, `emacsConfigInfo` to `INFOPATH` (so `C-h i d m Emacs config RET` works),
   and a default `ASPELL_CONF` for the bundled en/fi/de/fr dictionaries.
 - `eca`: prebuilt ECA server for `lisp/init-ai.el`.
-- `likec4Lsp`: the `@likec4/lsp` server for `likec4-mode`, on every
+- `likec4Lsp`: the `@likec4/lsp` server for `my-likec4-mode`, on every
   distribution's `PATH`.
 
 **`default.nix`** selects `emacs-config.packages.<system>.default` from the

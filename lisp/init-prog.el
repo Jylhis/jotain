@@ -429,7 +429,7 @@ Both speak stdio by default."
                      #'my-prog--python-server))
   ;; LikeC4 architecture models (init-lang-devops).
   (add-to-list 'eglot-server-programs
-               (cons '(likec4-mode) #'my-prog--likec4-server))
+               (cons '(my-likec4-mode) #'my-prog--likec4-server))
   ;; Robot Framework (init-lang-devops).
   (add-to-list 'eglot-server-programs
                (cons '(robot-mode) #'my-prog--robot-server))
