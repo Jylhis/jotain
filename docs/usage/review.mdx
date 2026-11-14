@@ -42,6 +42,25 @@ Each request has its own queue file (`<project>-<hash>-pr<N>.org`) and
 notes file. Opening the same request again reuses the queue and its state.
 `e` opens the file as it is in the working tree.
 
+### Comments
+
+In a diff buffer, `c` (`repo-review-comment`) asks for a comment on the
+added or unchanged line at point and saves it as a draft: a `Draft` sub-headline
+under the file in the queue, with the line in the `DRAFT_LINE` property.
+Nothing leaves your machine. Edit or delete a draft as ordinary Org text.
+Comments on removed lines are not supported.
+
+`P` in the queue (`repo-review-post-comments`) lists the unposted drafts and asks
+`yes-or-no-p` before it sends them, one request each, through Ghub with the
+Forge token. GitHub gets a review comment on the pull request. GitLab gets a
+discussion on the merge request, with the diff position taken from the merge
+base. A posted draft gets a `POSTED` property and is never sent again. If a
+request fails, the drafts before it stay marked as posted and the rest stay
+drafts. The default `repo-review-post-function` refuses to run in a batch
+session. The queue records the forge, repository and revisions in its header
+keywords, so posting works after you restart Emacs. If the request moved on
+(a force push), rebuild the queue before you post.
+
 ## Queue keys
 
 | Key | Command | What it does |
@@ -51,6 +70,7 @@ notes file. Opening the same request again reuses the queue and its state.
 | `n` / `p` | `org-next-visible-heading` / `org-previous-visible-heading` | Next / previous headline |
 | `N` | `repo-review-next-todo` | Next headline still in the `TODO` state |
 | `t` | `org-todo` | Change the state: `TODO`, `REVIEWING`, `DONE`, `SKIP` |
+| `P` | `repo-review-post-comments` | Post the draft comments of a pull request queue after a confirmation |
 | `g` | `repo-review-refresh` | Append files new in the project since the last scan |
 | `/` | `org-sparse-tree` | Filter, for example to show only `TODO` files |
 | `q` | `quit-window` | Close the queue window |
@@ -73,6 +93,7 @@ annotation support.
 | `repo-review-queue-dir` | `var/repo-review/` | Directory for the per-project queue and notes files |
 | `repo-review-source-extensions` | nil | Lowercase extensions (no dot) to include; nil queues every file |
 | `repo-review-exclude-regexp` | nil | Regexp matched against project-relative paths to leave out |
+| `repo-review-post-function` | `repo-review--ghub-post` | Function that sends one comment request to the forge |
 | `repo-review-use-org-remark` | t | Enable `org-remark-mode` in visited files |
 
 ## Safety

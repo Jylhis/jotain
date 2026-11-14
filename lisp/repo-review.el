@@ -43,6 +43,8 @@
 (require 'org)
 (require 'project)
 (require 'eieio)
+(require 'cl-lib)
+(require 'url-util)
 
 (declare-function org-remark-mode "ext:org-remark")
 (declare-function forge-current-topic "ext:forge-topic")
@@ -50,6 +52,9 @@
 (declare-function forge-get-pullreq "ext:forge-pullreq")
 (declare-function forge-get-repository "ext:forge-repo")
 (defvar org-remark-notes-file-name)   ; ext:org-remark-global-tracking
+
+;; Optional: only called after the forge stack is loaded.
+(declare-function ghub-request "ext:ghub")
 
 (defgroup repo-review nil
   "Whole-repository code review queue."
@@ -69,6 +74,12 @@ nil means every file `project-files' returns."
   "Regexp matched against project-relative paths to leave out, or nil."
   :type '(choice (const nil) regexp))
 
+(defcustom repo-review-post-function #'repo-review--ghub-post
+  "Function that sends one review comment request to the forge.
+It receives a plist with the keys :forge, :host, :method, :resource and
+:payload, and runs only after the user confirmed the post."
+  :type 'function)
+
 (defcustom repo-review-use-org-remark t
   "Non-nil means enable `org-remark-mode' in files opened from the queue."
   :type 'boolean)
@@ -78,6 +89,7 @@ nil means every file `project-files' returns."
 (defvar-keymap repo-review-queue-mode-map
   "RET" #'repo-review-visit
   "e"   #'repo-review-visit-writable
+  "P"   #'repo-review-post-comments
   "n"   #'org-next-visible-heading
   "p"   #'org-previous-visible-heading
   "N"   #'repo-review-next-todo
@@ -245,7 +257,7 @@ In a pull request queue, show the diff of the file instead."
   (interactive)
   (let ((file (repo-review--entry-file)))
     (if (repo-review--pr-queue-p)
-        (repo-review--show-diff file)
+        (repo-review--show-diff (org-entry-get nil "REVIEW_PATH"))
       (repo-review--open file t))))
 
 (defun repo-review-visit-writable ()
@@ -298,21 +310,24 @@ The comparison uses the merge base, like the forge does."
 (defun repo-review--pr-info (pr)
   "Return a plist describing the Forge pull request PR.
 The keys are :number, :title, :base, :head (revisions), :forge (a
-symbol such as `github' or `gitlab') and :repo (\"owner/name\")."
+symbol such as `github' or `gitlab'), :host (the API host) and
+:repo (\"owner/name\")."
   (let ((repo (forge-get-repository pr)))
     (list :number (repo-review--slot pr 'number)
           :title (repo-review--slot pr 'title)
           :base (repo-review--slot pr 'base-rev)
           :head (repo-review--slot pr 'head-rev)
           :forge (repo-review--slot repo 'forge)
+          :host (repo-review--slot repo 'apihost)
           :repo (format "%s/%s" (repo-review--slot repo 'owner)
                                (repo-review--slot repo 'name)))))
 
 (defun repo-review--pr-header (info)
   "Return the queue header keyword lines for the pull request INFO."
-  (format "#+review_pr: %d\n#+review_base: %s\n#+review_head: %s\n#+review_forge: %s\n#+review_repo: %s\n"
+  (format "#+review_pr: %d\n#+review_base: %s\n#+review_head: %s\n#+review_forge: %s\n#+review_repo: %s\n#+review_host: %s\n"
           (plist-get info :number) (plist-get info :base) (plist-get info :head)
-          (plist-get info :forge) (plist-get info :repo)))
+          (plist-get info :forge) (plist-get info :repo)
+          (or (plist-get info :host) "")))
 
 (defvar-local repo-review--diff-queue nil
   "Queue file of the pull request whose diff the buffer shows.")
@@ -332,12 +347,205 @@ symbol such as `github' or `gitlab') and :repo (\"owner/name\")."
         (erase-buffer)
         (insert (string-join lines "\n") "\n"))
       (diff-mode)
+      (repo-review-diff-mode 1)
       (setq-local default-directory (file-name-as-directory root))
       (setq-local repo-review--diff-queue queue)
       (setq-local repo-review--diff-path rel)
       (goto-char (point-min))
       (view-mode 1))
     (pop-to-buffer buf)))
+
+;;; Comments
+
+(defvar-keymap repo-review-diff-mode-map
+  "c" #'repo-review-comment)
+
+(define-minor-mode repo-review-diff-mode
+  "Minor mode of a pull request diff buffer opened from a review queue.
+
+\\{repo-review-diff-mode-map}"
+  :lighter " RRdiff")
+
+(defun repo-review--diff-new-line ()
+  "Return the new-file line number of the diff line at point.
+Signal a `user-error' on a removed line or outside a hunk."
+  (let ((target (line-beginning-position)))
+    (save-excursion
+      (end-of-line)
+      (unless (re-search-backward
+               "^@@ -[0-9,]+ \\+\\([0-9]+\\)\\(?:,[0-9]+\\)? @@" nil t)
+        (user-error "Point is not inside a diff hunk"))
+      (when (= (point) target)
+        (user-error "Point is on a hunk header"))
+      (let ((n (string-to-number (match-string 1))))
+        (forward-line 1)
+        (while (< (point) target)
+          (unless (memq (char-after) '(?- ?\\))
+            (setq n (1+ n)))
+          (forward-line 1))
+        (when (memq (char-after target) '(?- ?\\))
+          (user-error "Comments go on added or unchanged lines"))
+        n))))
+
+(defun repo-review--escape-body (text)
+  "Return TEXT with lines that start with a star escaped for Org."
+  (replace-regexp-in-string "^\\(\\*\\|,\\*\\)" ",\\1" text))
+
+(defun repo-review--unescape-body (text)
+  "Return TEXT with the Org escape of `repo-review--escape-body' removed."
+  (replace-regexp-in-string "^,\\(,*\\*\\)" "\\1" text))
+
+(defun repo-review--add-draft (queue rel line text)
+  "Add a draft comment TEXT on LINE of REL to the QUEUE file's entry."
+  (with-current-buffer (find-file-noselect queue)
+    (org-with-wide-buffer
+     (let ((pos (or (org-find-property "REVIEW_PATH" rel)
+                    (user-error "%s is not in the queue" rel))))
+       (goto-char pos)
+       (org-end-of-subtree t t)
+       (unless (bolp) (insert "\n"))
+       (insert (format "*** Draft %s:%d\n:PROPERTIES:\n:DRAFT_LINE: %d\n:END:\n%s\n"
+                       rel line line (repo-review--escape-body text)))))
+    (save-buffer)))
+
+(defun repo-review-comment (&optional initial)
+  "Save a review comment on the diff line at point as a draft in the queue.
+INITIAL is the starting text.  Nothing is sent to the forge; see
+`repo-review-post-comments'."
+  (interactive)
+  (unless repo-review--diff-queue
+    (user-error "Not in a pull request diff buffer"))
+  (let* ((line (repo-review--diff-new-line))
+         (text (string-trim (read-string (format "Comment on line %d: " line)
+                                         initial))))
+    (when (string-empty-p text)
+      (user-error "Empty comment, not saved"))
+    (repo-review--add-draft repo-review--diff-queue repo-review--diff-path
+                            line text)
+    (message "Draft saved on %s:%d" repo-review--diff-path line)))
+
+(defun repo-review--drafts ()
+  "Return the unposted drafts of the current queue buffer.
+Each draft is a plist with :marker, :path, :line and :body."
+  (let (drafts)
+    (org-with-wide-buffer
+     (org-map-entries
+      (lambda ()
+        (when (and (org-entry-get nil "DRAFT_LINE")
+                   (not (org-entry-get nil "POSTED")))
+          (push (list :marker (point-marker)
+                      :path (org-entry-get nil "REVIEW_PATH" t)
+                      :line (string-to-number (org-entry-get nil "DRAFT_LINE"))
+                      :body (repo-review--draft-body))
+                drafts)))
+      nil 'file))
+    (nreverse drafts)))
+
+(defun repo-review--draft-body ()
+  "Return the comment text of the draft at point."
+  (save-excursion
+    (org-back-to-heading t)
+    (org-end-of-meta-data t)
+    (string-trim
+     (repo-review--unescape-body
+      (buffer-substring-no-properties (point) (org-end-of-subtree t t))))))
+
+(defun repo-review--pr-info-from-queue ()
+  "Return the pull request plist recorded in the current queue buffer."
+  (list :number (string-to-number (repo-review--keyword "REVIEW_PR"))
+        :base (repo-review--keyword "REVIEW_BASE")
+        :head (repo-review--keyword "REVIEW_HEAD")
+        :forge (intern (repo-review--keyword "REVIEW_FORGE"))
+        :repo (repo-review--keyword "REVIEW_REPO")
+        :host (let ((h (repo-review--keyword "REVIEW_HOST")))
+                (and h (not (string-empty-p h)) h))))
+
+(defun repo-review--comment-request (info draft root)
+  "Return the forge request for DRAFT on the pull request INFO in ROOT."
+  (let* ((n (plist-get info :number))
+         (repo (plist-get info :repo))
+         (path (plist-get draft :path))
+         (line (plist-get draft :line))
+         (head (plist-get info :head))
+         (common (list :forge (plist-get info :forge)
+                       :host (plist-get info :host) :method "POST")))
+    (pcase (plist-get info :forge)
+      ('github
+       (append common
+               (list :resource (format "/repos/%s/pulls/%d/comments" repo n)
+                     :payload `((body . ,(plist-get draft :body))
+                                (commit_id . ,head) (path . ,path)
+                                (line . ,line) (side . "RIGHT")))))
+      ('gitlab
+       (let ((mb (car (repo-review--git root "merge-base"
+                                        (plist-get info :base) head))))
+         (append common
+                 (list :resource
+                       (format "/projects/%s/merge_requests/%d/discussions"
+                               (url-hexify-string repo) n)
+                       :payload
+                       `((body . ,(plist-get draft :body))
+                         (position . ((position_type . "text")
+                                      (base_sha . ,mb) (start_sha . ,mb)
+                                      (head_sha . ,head)
+                                      (old_path . ,path) (new_path . ,path)
+                                      (new_line . ,line))))))))
+      (f (user-error "Posting is not supported for forge %s" f)))))
+
+(defun repo-review--ghub-post (request)
+  "Send REQUEST, a plist from `repo-review--comment-request', through Ghub."
+  (when noninteractive
+    (error "Refusing to post a review comment in a non-interactive session"))
+  (unless (require 'ghub nil t)
+    (user-error "Ghub is not installed"))
+  (ghub-request (plist-get request :method) (plist-get request :resource) nil
+                :payload (plist-get request :payload)
+                :forge (plist-get request :forge)
+                :host (plist-get request :host)
+                :auth 'forge))
+
+(defun repo-review--confirm-post (info drafts)
+  "Ask whether to post DRAFTS to the pull request INFO; return non-nil if yes."
+  (with-current-buffer (get-buffer-create "*repo-review: comments to post*")
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (dolist (d drafts)
+        (insert (format "%s:%d\n%s\n\n" (plist-get d :path) (plist-get d :line)
+                        (plist-get d :body))))
+      (special-mode)
+      (goto-char (point-min)))
+    (display-buffer (current-buffer)))
+  (yes-or-no-p (format "Post %d comment(s) to %s #%d? " (length drafts)
+                       (plist-get info :repo) (plist-get info :number))))
+
+(defun repo-review-post-comments ()
+  "Post the unposted drafts of this pull request queue as review comments.
+List the drafts and ask for confirmation first.  A posted draft gets a
+POSTED property and is not sent again."
+  (interactive)
+  (unless (repo-review--pr-queue-p)
+    (user-error "Not in a pull request review queue"))
+  (let ((info (repo-review--pr-info-from-queue))
+        (root (repo-review--root))
+        (drafts (repo-review--drafts)))
+    (unless drafts
+      (user-error "No unposted draft comments"))
+    (unless (repo-review--confirm-post info drafts)
+      (user-error "Nothing posted"))
+    (let ((requests (mapcar (lambda (d) (repo-review--comment-request info d root))
+                            drafts))
+          (done 0))
+      (unwind-protect
+          (cl-mapc
+           (lambda (d req)
+             (funcall repo-review-post-function req)
+             (org-with-wide-buffer
+              (goto-char (plist-get d :marker))
+              (org-entry-put nil "POSTED" (format-time-string "%FT%T%z")))
+             (setq done (1+ done)))
+           drafts requests)
+        (save-buffer))
+      (message "Posted %d comment(s)" done))))
 
 ;;;###autoload
 (defun repo-review-pullreq (&optional pr)

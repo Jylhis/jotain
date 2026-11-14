@@ -33,7 +33,9 @@
 ;;; built. A prefix argument rebuilds the queue after a confirmation.
 ;;; `C-x p V' (`repo-review-pullreq') does the same for the Forge pull
 ;;; request or merge request at point: the queue lists the changed
-;;; files and RET shows each as a read-only diff.
+;;; files and RET shows each as a read-only diff. `c' in a diff saves a
+;;; draft comment on the line at point into the queue; `P' in the queue
+;;; lists the drafts and posts them through Ghub after you confirm.
 ;;; Queues live under var/repo-review/.
 (use-package repo-review
   :ensure nil

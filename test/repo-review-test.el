@@ -254,5 +254,129 @@ Binds `root' to the project directory."
   (repo-review-test--with-project
     (should-error (repo-review--pr-files root "nope" "nada") :type 'user-error)))
 
+;;; Comments
+
+(defun repo-review-test--open-diff (path)
+  "Open the diff of PATH from the pull request queue in the current buffer."
+  (goto-char (point-min))
+  (goto-char (org-find-property "REVIEW_PATH" path))
+  (repo-review-visit))
+
+(defmacro repo-review-test--with-posts (var &rest body)
+  "Run BODY with the post function recording requests in VAR; confirm yes."
+  (declare (indent 1) (debug t))
+  `(let* ((,var nil)
+          (repo-review-post-function (lambda (r) (push r ,var))))
+     (cl-letf (((symbol-function 'yes-or-no-p) (lambda (&rest _) t)))
+       ,@body)))
+
+(ert-deftest repo-review-diff-new-line-counts-added-and-context ()
+  (with-temp-buffer
+    (insert "diff --git a/f b/f\n--- a/f\n+++ b/f\n@@ -1,3 +5,3 @@\n ctx\n-old\n+new\n tail\n")
+    (goto-char (point-min))
+    (forward-line 4)
+    (should (= (repo-review--diff-new-line) 5))
+    (forward-line 2)
+    (should (= (repo-review--diff-new-line) 6))
+    (forward-line 1)
+    (should (= (repo-review--diff-new-line) 7))
+    (forward-line -2)
+    (should-error (repo-review--diff-new-line) :type 'user-error)
+    (goto-char (point-min))
+    (should-error (repo-review--diff-new-line) :type 'user-error)))
+
+(ert-deftest repo-review-escape-body-roundtrip ()
+  (let ((text "* star\n,* comma\nplain"))
+    (should (equal (repo-review--unescape-body (repo-review--escape-body text))
+                   text))))
+
+(ert-deftest repo-review-comment-saves-draft-without-posting ()
+  (repo-review-test--with-pr
+    (repo-review-pullreq)
+    (let ((queue (current-buffer)))
+      (repo-review-test--with-posts sent
+        (repo-review-test--open-diff "new.txt")
+        (goto-char (point-min))
+        (re-search-forward "^\\+n")
+        (cl-letf (((symbol-function 'read-string) (lambda (&rest _) "* fix this")))
+          (repo-review-comment))
+        (should-not sent)
+        (with-current-buffer queue
+          (let ((d (car (repo-review--drafts))))
+            (should (equal (plist-get d :path) "new.txt"))
+            (should (= (plist-get d :line) 1))
+            (should (equal (plist-get d :body) "* fix this"))))))))
+
+(ert-deftest repo-review-comment-outside-diff-buffer ()
+  (with-temp-buffer
+    (should-error (repo-review-comment) :type 'user-error)))
+
+(ert-deftest repo-review-post-github-request-and-mark-posted ()
+  (repo-review-test--with-pr
+    (repo-review-pullreq)
+    (let ((queue (current-buffer)))
+      (repo-review--add-draft buffer-file-name "src/a.py" 1 "looks off")
+      (repo-review-test--with-posts sent
+        (repo-review-post-comments)
+        (should (= (length sent) 1))
+        (let ((r (car sent)))
+          (should (equal (plist-get r :resource) "/repos/o/r/pulls/7/comments"))
+          (should (equal (alist-get 'path (plist-get r :payload)) "src/a.py"))
+          (should (equal (alist-get 'commit_id (plist-get r :payload))
+                         (plist-get info :head)))
+          (should (equal (alist-get 'body (plist-get r :payload)) "looks off")))
+        (should-not (repo-review--drafts))
+        (should-error (repo-review-post-comments) :type 'user-error)
+        (should (= (length sent) 1))
+        (should (buffer-live-p queue))))))
+
+(ert-deftest repo-review-post-gitlab-request ()
+  (repo-review-test--with-pr
+    (setq info (plist-put info :forge 'gitlab))
+    (setq info (plist-put info :repo "grp/proj"))
+    (repo-review-pullreq)
+    (repo-review--add-draft buffer-file-name "new.txt" 1 "hm")
+    (repo-review-test--with-posts sent
+      (repo-review-post-comments)
+      (let* ((r (car sent)) (pos (alist-get 'position (plist-get r :payload))))
+        (should (equal (plist-get r :resource)
+                       "/projects/grp%2Fproj/merge_requests/7/discussions"))
+        (should (equal (alist-get 'new_line pos) 1))
+        (should (equal (alist-get 'head_sha pos) (plist-get info :head)))
+        (should (equal (alist-get 'base_sha pos) (plist-get info :base)))))))
+
+(ert-deftest repo-review-post-needs-confirmation ()
+  (repo-review-test--with-pr
+    (repo-review-pullreq)
+    (repo-review--add-draft buffer-file-name "src/a.py" 1 "x")
+    (let* ((sent nil)
+           (repo-review-post-function (lambda (r) (push r sent))))
+      (cl-letf (((symbol-function 'yes-or-no-p) (lambda (&rest _) nil)))
+        (should-error (repo-review-post-comments) :type 'user-error))
+      (should-not sent)
+      (should (repo-review--drafts)))))
+
+(ert-deftest repo-review-post-failure-keeps-later-drafts ()
+  (repo-review-test--with-pr
+    (repo-review-pullreq)
+    (repo-review--add-draft buffer-file-name "src/a.py" 1 "one")
+    (repo-review--add-draft buffer-file-name "src/a.py" 2 "two")
+    (let* ((calls 0)
+           (repo-review-post-function
+            (lambda (_r) (when (= (cl-incf calls) 2) (error "Network down")))))
+      (cl-letf (((symbol-function 'yes-or-no-p) (lambda (&rest _) t)))
+        (should-error (repo-review-post-comments)))
+      (should (equal (mapcar (lambda (d) (plist-get d :body)) (repo-review--drafts))
+                     '("two"))))))
+
+(ert-deftest repo-review-default-post-refuses-in-batch ()
+  (should noninteractive)
+  (should-error (repo-review--ghub-post '(:method "POST"))))
+
+(ert-deftest repo-review-post-outside-pr-queue ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (should-error (repo-review-post-comments) :type 'user-error)))
+
 (provide 'repo-review-test)
 ;;; repo-review-test.el ends here
