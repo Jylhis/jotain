@@ -173,25 +173,46 @@ for the flake: try it with
 install with the Home Manager module, install with the NixOS module.
 Correct the platform statement so that it matches
 .Ql project.nix .
-.It EM6 (owner, then haiku; owner 30 minutes, 1 session; after nothing)
-Owner: confirm the two Cloudflare Actions secrets, run the infra plan and
-apply for
-.Ql docs.example.org ,
-and merge so that the workflow deploys.
-Then redirect the old GitHub Pages site.
+.It EM6 (sonnet, then owner, then haiku; 1 session, owner 30 minutes, 1 session; after nothing)
+The engine cannot bind the domain today.
+.Ql projects/services/emacs-docs/project.nix
+sets
+.Ql deploy.provision = false ,
+and
+.Ql platform/engines/infra/emitters/workers.nix
+then creates no custom domain; the Wrangler configuration declares none.
+An infra apply alone leaves
+.Ql docs.example.org
+without a site.
 .Pp
-Idempotent: the infra apply and the redirect are idempotent;
+Step 1, agent, idempotent: bind the domain in
+.Ql wrangler.jsonc
+with a route
+.Ql { "pattern": "docs.example.org", "custom_domain": true } ,
+as the marchyo site does, and correct the comment there that names the engine.
+Commit b502bad70e moved the deploy to CI, so the deploy also owns the domain.
+The alternative is
+.Ql deploy.provision = true ;
+it makes the engine create a stub Worker again, which that commit removed.
+.Pp
+Step 2, owner: confirm the two Cloudflare Actions secrets, and merge so that
+the workflow deploys.
+No infra apply is necessary for the domain.
+.Pp
+Step 3, agent: redirect the old GitHub Pages site.
+.Pp
+Idempotent: the deploy and the redirect are idempotent;
 the merge is not, and a second merge is a new commit.
-Rollback: before the redirect, remove the DNS record of the site and apply again;
-after the redirect, revert the redirect commit of the old site.
+Rollback: before the redirect, remove the route from
+.Ql wrangler.jsonc
+and deploy again; this removes the custom domain.
+After the redirect, revert the redirect commit of the old site.
 This restores the old GitHub Pages site as the only address.
 No step of EM6 deletes the old site, so this rollback stays possible.
-Expected state: the plan shows one new Worker route and one DNS record;
+Expected state: the deploy log of the workflow names the custom domain
+.Ql docs.example.org ;
 the old address answers with a redirect.
 Check: run
-.Ql just infra-plan cloudflare
-before the apply and read it;
-then run
 .Ql curl -sI https://docs.example.org
 and expect a status 200, and run
 .Ql curl -sI
