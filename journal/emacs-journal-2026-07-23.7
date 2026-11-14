@@ -1,0 +1,169 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd July 23, 2026
+.Dt EMACS-JOURNAL-2026-07-23 7
+.Os
+.Sh NAME
+.Nm emacs-journal-2026-07-23
+.Nd working notes of 2026-07-23
+.Sh ENTRIES
+.Ss Fix Jinx: No dictionaries available for \(dqen_US\(dq — bundle aspell dicts
+.Ss Summary
+Resolved the jinx spell-check error deferred on 2026-06-09 and 2026-07-20 as a \(dqdeployment gap.\(dq
+The distribution now bundles its aspell dictionaries, so
+.Ql "just run-built" ,
+.Ql "just screenshot" ,
+and every module consumer spell-check out of the box.
+.Ss Corrected root cause
+The earlier notes were wrong on two counts, verified against the pinned nixpkgs:
+.Bl -bullet -compact
+.It
+\fBenchant \fIdoes\fP have the aspell backend.\fP
+.Ql "enchant-2.6.9"
+is built with
+.Ql "--with-aspell"
+(aspell sits in
+.Ql "propagatedBuildInputs" ),
+alongside hunspell/nuspell/voikko.
+There was never a missing-backend problem.
+.It
+\fBThe distribution shipped no dictionary data.\fP
+.Ql "jotainEmacsPackages*"
+.No \&( Ns Ql "nix/mk-overlay.nix" )
+pulled in the enchant + aspell \fIlibraries\fP via the
+.Ql "jinx"
+epkg, but nothing added an
+.Ql "aspell-dict-*"
+package to the closure. jinx's C module therefore loaded, enchant initialised, and libaspell found no
+.Ql "en_US"
+dictionary anywhere → the error.
+.El
+.Pp
+The modules install
+.Ql "pkgs.aspellDicts.en"
+into a profile and rely on nixpkgs' libaspell
+.Ql "data-dirs-from-nix-profiles.patch"
+to find
+.Ql "$NIX_PROFILES/*/lib/aspell"
+at runtime.
+That works only when
+.Ql "NIX_PROFILES"
+is populated at launch — so a bare
+.Ql "./result/bin/emacs"
+(the
+.Ql "just run-built"
+path) or a systemd/launchd daemon with an empty
+.Ql "NIX_PROFILES"
+still failed.
+.Ss Why NIX_PROFILES is not enough (the trap the modules fell into)
+nixpkgs' libaspell
+.Ql "data-dirs-from-nix-profiles.patch"
+feeds
+.Ql "$NIX_PROFILES/*/lib/aspell"
+into libaspell's data-dir list \fIonly\fP for dictionary \fBenumeration\fP.
+So
+.Ql "enchant_broker_list_dicts"
+(and
+.Ql "enchant-lsmod-2 -list-dicts" )
+happily report
+.Ql "en_GB (aspell)"
+when an
+.Ql "aspellDicts.en"
+is on
+.Ql "NIX_PROFILES"
+— but
+.Ql "enchant_broker_request_dict" ,
+the call jinx actually makes, builds a \fIspeller\fP, whose master word list resolves under the default
+.Ql "data-dir"
+.No \&( Ns Ql "${aspell}/lib/aspell/en" ,
+which does not exist).
+Result: enumeration passes, the speller fails, jinx still shows \(dqNo dictionaries available.\(dq
+Verified directly:
+.Ql "enchant-2 -d en_GB -l"
+with only
+.Ql "NIX_PROFILES"
+set →
+.Ql "The file \(dq…/aspell-0.60.8.2/lib/aspell/en\(dq can not be opened for reading" .
+This means the modules' profile-installed
+.Ql "aspellDicts.en"
+never actually worked for spell-checking either — only for the dict list.
+.Ss Changes
+.Bl -bullet -compact
+.It
+.No "\fB" Ns Ql "nix/mk-overlay.nix" Ns No "\fP"
+— build one
+.Ql "aspellWithDicts (d: [en fi de fr])"
+directory (libaspell data files + all four dicts under a single
+.Ql "lib/aspell" )
+and, in the
+.Ql "mkJotainEmacsPackages"
+re-wrap loop, set
+.Ql "ASPELL_CONF=\(dqdict-dir <env>/lib/aspell; data-dir <env>/lib/aspell\(dq"
+via
+.Ql "makeBinaryWrapper --set-default" .
+Pointing both
+.Ql "dict-dir"
+and
+.Ql "data-dir"
+at the combined directory is what makes
+.Ql "request_dict"
+succeed.
+Verified:
+.Ql "enchant-2 -d en_GB -l"
+accepts \(dqcolour\(dq, flags \(dqhelllo\(dq; and inside the wrapped Emacs
+.Ql "jinx--mod-dict"
+returns non-nil for en_GB/fi/de/fr.
+.Ql "--set-default"
+lets a user (or a module wrapper) still override
+.Ql "ASPELL_CONF"
+to add languages.
+.It
+.No "\fB" Ns Ql "lisp/init-writing.el" Ns No "\fP"
+— set
+.Ql "jinx-languages"
+to
+.Ql "\(dqen_GB\(dq"
+(British English) as the default. fi/de/fr are bundled and reachable per buffer via
+.Ql "C-M-$" ;
+a single default avoids foreign words silently passing as correct English.
+.El
+.Ss Notes
+.Bl -bullet -compact
+.It
+One edit covers all three distribution builds
+.No \&( Ns Ql "jotainEmacsPackages" ,
+.Ql "jotainEmacsPackagesNoGui" ,
+.Ql "jylhisEmacsPackages" )
+— they share the re-wrap loop.
+Module consumers
+.No \&( Ns Ql "module.nix" ,
+.Ql "module-system.nix" ,
+.Ql "module-nix-on-droid.nix" )
+exec this same wrapped binary without setting
+.Ql "ASPELL_CONF" ,
+so the
+.Ql "--set-default"
+applies and they get working spell-check for the four languages with no module change.
+.It
+Cache parity is untouched: the change lives in the custom
+.Ql "jotainEmacsPackages"
+derivation, not
+.Ql "emacs.nix" ,
+so the bare-Emacs store-path parity invariant is unaffected.
+.It
+\fBFollow-up:\fP the modules'
+.Ql "services.jotain.spell.dictionaries"
+option and the hardcoded
+.Ql "aspellDicts.en"
+in
+.Ql "module-system.nix"
+/
+.Ql "module-nix-on-droid.nix"
+(and the \(dqlibaspell finds
+.Ql "$profile/lib/aspell" Ns No "\(dq"
+comments) are now known to be no-ops for actual spell-checking.
+To make extra languages configurable, a later change should build an
+.Ql "aspellWithDicts"
+from that option and export
+.Ql "ASPELL_CONF"
+in the module wrappers, replacing the profile install.
+.El

@@ -1,0 +1,250 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd June 5, 2026
+.Dt EMACS-JOURNAL-2026-06-05 7
+.Os
+.Sh NAME
+.Nm emacs-journal-2026-06-05
+.Nd working notes of 2026-06-05
+.Sh ENTRIES
+.Ss Locally integrate 12 open GitHub PRs into main
+.Ss Summary
+Merged 12 open PRs into local
+.Ql "main"
+(no push) and validated the result with remote builders disabled
+.No \&( Ns Ql "--builders ''"
+/
+.Ql "NIX_CONFIG=\(dqbuilders =\(dq" ).
+Ten were ready Codex-authored security/hardening fixes; two were drafts (#145, #155) that overlapped ready PRs and were integrated on top.
+PR #123 was excluded — it targets the
+.Ql "next-new"
+branch, not
+.Ql "main" .
+.Ss PRs merged (in order)
+.Bl -bullet -compact
+.It
+\fB#150\fP
+.Ql "lisp/init-vc.el"
+— git-stats subprocess hardening:
+.Ql "--no-pager" ,
+.Ql "-c core.fsmonitor=false" ,
+.Ql "-c diff.external=" ,
+and
+.Ql "diff" Ns No "→" Ns Ql "diff-index" .
+.It
+\fB#164\fP
+.Ql "lisp/init-vc.el"
+—
+.Ql ".git" Ns No "-file"
+parsing hardened: bounded read
+.No \&( Ns Ql "jotain-git-stats-max-dotgit-bytes" ,
+4096), reject remote git-dir.
+Disjoint region from #150 — auto-merged.
+.It
+\fB#151\fP
+.Ql "lisp/init-prog.el"
+— ESLint/Tailwind LSP companions gated behind new
+.Ql "jotain-prog-enable-risky-js-lsp"
+defcustom (default nil).
+.It
+\fB#161\fP
+.Ql "lisp/init-core.el"
+— stop persisting
+.Ql "kill-ring"
+/
+.Ql "search-ring"
+/
+.Ql "regexp-search-ring"
+in savehist; dropped the now-unused
+.Ql "jotain-core--savehist-strip-properties"
+save-hook.
+.It
+\fB#160\fP
+.Ql "emacs.nix" ,
+.Ql "emacs-jylhis.nix"
+— resolve nixpkgs via
+.Ql "lock.nodes.root.inputs.nixpkgs"
+(see note below).
+.It
+\fB#163\fP
+.Ql "Justfile"
+— quote
+.Ql "{{config_dir}}"
+/
+.Ql "{{justfile()}}"
+interpolations (conflict, see below).
+.It
+\fB#165\fP
+.Ql "flake.lock"
+— bump
+.Ql "jylhis-emacs"
+.Ql "39c812b" Ns No "→" Ns Ql "32aa549" .
+.It
+\fB#158\fP
+.Ql ".github/workflows/ci.yml"
+— Cachix writer token only on push events.
+Superseded by #155 (below).
+.It
+\fB#162\fP
+.Ql ".github/workflows/pages.yml"
+— move
+.Ql "pages" Ns No "/" Ns Ql "id-token"
+perms to the deploy job, gate jobs on
+.Ql "main" .
+Superseded by #155.
+.It
+\fB#159\fP
+.Ql "module-system.nix" ,
+.Ql "module.nix"
+— add
+.Ql "pkgsWithOverlay.eca"
+so the ECA server is on PATH (prevents runtime download fallback).
+.It
+\fB#145\fP (draft)
+.Ql "module-system.nix" ,
+.Ql "module.nix"
+— add
+.Ql "--"
+option terminator to the editor/emacsclient wrappers (conflict, see below).
+.It
+\fB#155\fP (draft) split CI into a lean PR-only
+.Ql "ci.yml"
++ a new push/deploy
+.Ql "deploy.yml" ;
+deletes
+.Ql "pages.yml"
+(conflict, see below).
+.El
+.Ss Conflict resolutions
+.Bl -bullet -compact
+.It
+\fB#163 (Justfile):\fP
+.Ql "main"
+had already disabled the
+.Ql "run" Ns No "/" Ns Ql "debug" Ns No "/"
+.Ql "tty" Ns No "/" Ns Ql "daemon" Ns No "/" Ns Ql "client" Ns No "/" Ns Ql "client-tty" Ns No "/" Ns Ql "quick" Ns No "/" Ns Ql "compile" Ns No "/…"
+recipes (replaced commands with echo notices), so #163's quoting of those bodies was moot.
+Kept the disabled bodies; the quoting auto-applied to the still-active recipes
+.No \&( Ns Ql "default" ,
+.Ql "run-built" ,
+.Ql "clean" ,
+.Ql "clean-all" ).
+.It
+\fB#145 (module wrappers):\fP
+.Ql "main"
+had renamed
+.Ql "cfg.package"
+→
+.Ql "selectedPackage"
+in
+.Ql "module-system.nix"
+since the PR was opened.
+Re-applied #145's
+.Ql "--"
+additions onto the current
+.Ql "selectedPackage"
+wrapper bodies, keeping #159's
+.Ql "eca"
+entries.
+.Ql "module.nix"
+auto-merged.
+.It
+\fB#155 (CI restructure):\fP supersedes #158 and #162.
+The auto-merge produced a Frankenstein
+.Ql "ci.yml"
+(#155's PR-only trigger + #158's push-gated cachix steps that can never fire).
+Rewrote
+.Ql "ci.yml"
+to the clean intent: lean PR-only workflow with \fBpull-only\fP cachix on PRs (no
+.Ql "CACHIX_AUTH_TOKEN"
+— honours #158's \(dqno writer token on PR events\(dq).
+.Ql "pages.yml"
+was a modify/delete conflict (us=#162, them=#155 delete) → resolved as delete; the new
+.Ql "deploy.yml"
+carries #162's intent (per-job
+.Ql "pages" Ns No "/" Ns Ql "id-token"
+perms,
+.Ql "build-docs" Ns No "/" Ns Ql "deploy"
+gated
+.Ql "if: refs/heads/main" )
+and handles push-time cache pushes with the token.
+.El
+.Ss Note — #160 is a real fix, not cosmetic
+.Ql "flake.lock"
+has two nixpkgs nodes:
+.Ql "nixpkgs"
+(rev
+.Ql "4df1b885" ,
+a \fItransitive\fP dep of the
+.Ql "jylhis-emacs"
+input) and
+.Ql "nixpkgs_2"
+(rev
+.Ql "ffa10e26" ,
+the \fBroot\fP flake's actual nixpkgs).
+The standalone
+.Ql "emacs.nix" Ns No "/" Ns Ql "emacs-jylhis.nix"
+were reading the wrong node
+.No \&( Ns Ql "lock.nodes.nixpkgs" ).
+#160 switches to
+.Ql "lock.nodes.root.inputs.nixpkgs"
+→
+.Ql "nixpkgs_2"
+→
+.Ql "ffa10e26" ,
+realigning the standalone build with the flake and restoring the cache-parity invariant.
+Verified post-merge that
+.Ql "emacs.nix"
+now resolves nixpkgs to
+.Ql "ffa10e26" .
+(The verification snippet in
+.Ql "CLAUDE.md"
+still references the old
+.Ql "lock.nodes.nixpkgs.locked" ;
+updating it is an optional follow-up — #160 only patched the copy inside
+.Ql "emacs.nix" .)
+.Ss Verification (remote builders disabled)
+.Bl -bullet -compact
+.It
+.Ql "nix flake check --builders '' --print-build-logs"
+→ \fBall checks passed\fP (formatting, statix, deadnix, module-eval, packages-doc-in-sync, packages-doc, options-doc, elisp-lint, elisp-compile, packages-default/emacs/info, jylhis-emacs builds + smoke, emacs-binaries).
+.Ql "jylhis-emacs"
+rebuilt from source (expected — #165 bumped its rev; not yet cached).
+.It
+.Ql "nix build --builders '' .#emacs"
+→
+.Ql "emacs-git-20260604.0" ,
+.Ql "GNU Emacs 32.0.50" .
+.It
+.Ql "devenv test"
+→ exit 0 (all dev-environment
+.Ql "enterTest"
+assertions).
+.It
+.Ql "just verify"
+→ OK on
+.Ql "nixpkgs" ,
+.Ql "treefmt-nix" ,
+.Ql "emacs-overlay" .
+.El
+.Ss Notes
+.Bl -bullet -compact
+.It
+The pre-existing
+.Ql "statix.toml"
+uses
+.Ql "[disabled]"
+as a table; the installed
+.Ql "statix"
+rejects it
+.No \&( Ns Ql "TOML parse error … invalid type: map, expected a sequence" )
+but falls back to defaults and \fBexits 0\fP, so the
+.Ql "statix"
+check still passes.
+Not caused by these merges; fixing the config format
+.No \&( Ns Ql "disabled = [\(dqrepeated_keys\(dq]" )
+is a separate follow-up.
+.It
+Nothing pushed; the 12 merge commits and the conflict-resolution commits live on local
+.Ql "main"
+only.
+.El

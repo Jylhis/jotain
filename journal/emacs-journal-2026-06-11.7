@@ -1,0 +1,211 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd June 11, 2026
+.Dt EMACS-JOURNAL-2026-06-11 7
+.Os
+.Sh NAME
+.Nm emacs-journal-2026-06-11
+.Nd working notes of 2026-06-11
+.Sh ENTRIES
+.Ss Upstream survey + realign emacs.nix (nixpkgs emacs31, cached overlay variants, Darwin patch cleanup)
+.Ss Summary
+Surveyed upstream nixpkgs, nix-community/emacs-overlay, and nix-giant/nix-darwin-emacs (source of our macOS patches) against our packaging.
+Several upstream moves in the last week invalidated assumptions in
+.Ql "emacs.nix" :
+.Bl -bullet -compact
+.It
+\fBnixpkgs ships
+.Ql "emacs31"
+again\fP (31.0.90 prerelease, added 2026-06-05, Hydra-cached, plus
+.Ql "emacs31-gtk3/-nox/-pgtk" ).
+Our 2026-06-05 journal rationale for basing mainline on the overlay's
+.Ql "emacs-git"
+(\(dqemacs31 attribute no longer exists in nixpkgs\(dq) went stale within the week.
+.It
+\fBemacs-overlay ships prebuilt
+.Ql "emacs-unstable"
+and
+.Ql "emacs-igc" Ns No "\fP"
+(and pgtk siblings), all cached on nix-community.cachix.org with daily-updated rev pins.
+Our
+.Ql "unstable" Ns No "/" Ns Ql "igc"
+variants instead overrode
+.Ql "emacs-git" Ns No "'s"
+.Ql "src"
+with
+.Ql "lib.fakeHash" ,
+forcing the
+.Ql "--argstr hash"
+dance and a from-source build every time.
+.It
+\fBnix-darwin-emacs dropped
+.Ql "fix-window-role.patch"
+from
+.Ql "patches-31/" Ns No "\fP"
+(fixed upstream in Emacs 31) and added
+.Ql "adjust-ns-init-colors.patch"
+to
+.Ql "patches-unstable/" .
+Our
+.Ql "withFixWindowRolePatch"
+was doubly dead: its
+.Ql "patchBranch == \(dq30\(dq"
+gate could never be true, and the file it pointed at no longer exists.
+Separately, macport (Emacs 30.x) mapped to
+.Ql "patches-31"
+— the wrong branch.
+.It
+\fBnixpkgs
+.Ql "emacs30-macport" Ns No "\fP"
+now builds from the jdtsmith/emacs-mac fork (Mitsuharu's original is dormant) and does \fBnot\fP override
+.Ql "srcRepo" ,
+so the make-emacs default
+.No \&( Ns Ql "true" )
+applies — our
+.Ql "srcRepo = false"
+for macport silently busted its cache.
+.It
+.No "\fB" Ns Ql "withXwidgets"
+default divergence\fP: our extra
+.Ql "isDarwin"
+clause was a leftover mirror of the overlay's
+.Ql "withXwidgets = false"
+override; with mainline on nixpkgs
+.Ql "emacs31"
+it would have broken parity for
+.Ql "withPgtk = true"
+builds vs
+.Ql "emacs31-pgtk" .
+.El
+.Ss Changes
+.Bl -bullet -compact
+.It
+.No "\fB" Ns Ql "emacs.nix" Ns No "\fP"
+.Bl -bullet -compact
+.It
+Base package map:
+.Ql "mainline"
+→ nixpkgs
+.Ql "emacs31" ;
+.Ql "git" Ns No "/" Ns Ql "unstable" Ns No "/" Ns Ql "igc"
+→ the overlay's
+.Ql "emacs-git" Ns No "/" Ns Ql "emacs-unstable" Ns No "/" Ns Ql "emacs-igc" ;
+.Ql "macport"
+→ nixpkgs
+.Ql "emacs-macport"
+alias (emacs-overlay ships no macport).
+.It
+Source overrides only apply with an explicit
+.Ql "--argstr rev" ;
+default revisions ride the overlay/nixpkgs pins.
+Dropped the manual
+.Ql "gitMeta" Ns No "/fakeHash"
+plumbing, the duplicate aarch64
+.Ql "--enable-check-lisp-object-type" ,
+and the manual igc
+.Ql "--with-mps=yes"
++
+.Ql "mps"
+buildInput
+.No \&( Ns Ql "pkgs.emacs-igc"
+already carries them, and
+.Ql "makeOverridable"
+replays its
+.Ql "overrideAttrs"
+layers through
+.Ql ".override" ).
+.It
+.Ql "srcRepo ? true"
+for all variants (matches upstream; every base is a git checkout now that nixpkgs fetches via fetchgit/fetchFromGitHub).
+.It
+.Ql "withXwidgets"
+default now matches upstream make-emacs.nix:
+.Ql "!noGui && (withGTK3 || withPgtk || withNS || variant == \(dqmacport\(dq)" .
+.It
+Darwin patches: removed
+.Ql "withFixWindowRolePatch" ;
+added
+.Ql "withAdjustNsInitColorsPatch"
+(patches-unstable only, i.e. git/igc);
+.Ql "patchBranch"
+now maps macport →
+.Ql "\(dq30\(dq" ;
+replaced every
+.Ql "lib.fakeHash"
+with pinned per-branch fetchpatch hashes (31 and unstable currently carry byte-identical patch content; 30 differs).
+.El
+.It
+.No "\fB" Ns Ql "CLAUDE.md" Ns No "\fP"
+— cache-parity section retargeted to
+.Ql "pkgs.emacs31"
+(+ per-variant overlay parity checks in the verify snippet); base-package map and the \(dqfails on first run, reports hash\(dq wording corrected.
+.It
+.No "\fB" Ns Ql "Justfile" Ns No "\fP"
+—
+.Ql "build-git"
+comment no longer claims a hash dance.
+.It
+.No "\fB" Ns Ql "flake.nix" Ns No "\fP"
+— emacs-overlay input comment: the overlay now only supplies the git-based variants; mainline comes from nixpkgs.
+.It
+.No "\fB" Ns Ql "docs/" Ns No "\fP"
+.No \&( Ns Ql "introduction.mdx" ,
+.Ql "installation.mdx" ,
+.Ql "architecture/overview.mdx" ,
+.Ql "architecture/nix-build.mdx" )
+— parity target, variant table, IGC/Git-variant sections, and hash-dance notes updated to match the new base-package map.
+.El
+.Ss Verification
+.Bl -bullet -compact
+.It
+Parity eval is
+.Ql "true"
+for \fBall four\fP default-rev variants:
+.Ql "mainline == pkgs.emacs31" ,
+.Ql "git == pkgs.emacs-git" ,
+.Ql "unstable == pkgs.emacs-unstable" ,
+.Ql "igc == pkgs.emacs-igc" .
+.It
+.Ql "nix-build emacs.nix --dry-run"
+→ \(dqwill be fetched (75.1 MiB)\(dq, i.e. a pure Hydra substitution; no compilation.
+.It
+Darwin patch / macport / custom-rev paths instantiate cleanly
+.No \&( Ns Ql "nix-instantiate"
+with
+.Ql "system = \(dqaarch64-darwin\(dq"
+and a dummy rev).
+.It
+.Ql "nixfmt"
+clean;
+.Ql "nix flake check"
+green.
+.El
+.Ss Watch items (no action yet)
+.Bl -bullet -compact
+.It
+.No "\fB" Ns Ql "__structuredAttrs"
+enabled\fP for Emacs on nixpkgs master 2026-06-08 — not in our pin
+.No \&( Ns Ql "8c3cede7" );
+lands at the next
+.Ql "just update" .
+Our
+.Ql "overrideAttrs"
+list/string manipulation is compatible, but re-run the parity eval after the bump.
+.Ql "strictDeps = true"
+is already at our pin.
+.It
+\fBhomebrew-emacs-plus\fP has a
+.Ql "fix-ns-x-colors.patch"
+for Emacs 31 that nix-darwin-emacs has \fInot\fP adopted; their
+.Ql "adjust-ns-init-colors.patch"
+(unstable branch only) is the alternative approach to the same headless-dump color problem.
+.It
+nix-darwin-emacs has no
+.Ql "patches-32/"
+directory yet, while homebrew-emacs-plus added emacs-32 targets in May 2026 — if Emacs 32 patch branches appear,
+.Ql "patchBranch"
+may need a new mapping.
+.It
+The mainline base is now the 31.0.90 \fBprerelease\fP; nixpkgs will bump it through the 31.x release cycle, with each bump arriving via
+.Ql "just update"
+as a cache hit.
+.El

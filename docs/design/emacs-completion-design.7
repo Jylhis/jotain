@@ -1,0 +1,870 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd July 26, 2026
+.Dt EMACS-COMPLETION-DESIGN 7
+.Os
+.Sh NAME
+.Nm emacs-completion-design
+.Nd completion and snippets — design specification
+.Sh DESCRIPTION
+\fBDate:\fP 2026-07-26 \fBStatus:\fP Implemented 2026-07-27 in
+.Ql "lisp/init-completion.el"
+and
+.Ql "lisp/init-snippets.el" ,
+with coverage in
+.Ql "test/completion-test.el" .
+Both items recorded as blocking were settled by measurement (§2.3, §2.4).
+Where the implementation departs from the specification as first written, the section says so instead of being quietly edited to match.
+\fBEvidence base:\fP
+.Ql "docs/reviews/emacs-completion-research.7" .
+Section references below of the form \fI(research §2.1)\fP point into that report.
+Claims marked \fB[unverified]\fP here are ones the research explicitly could not establish — they are design intent, not evidence.
+.Sh 1. REQUIREMENTS
+These are the owner's stated requirements.
+They are inputs, not conclusions.
+.Bd -literal -offset indent
+| # | Requirement |
+| R1 | Completion pops up automatically in code, and only on request in prose (text/org/markdown/commit buffers). |
+| R2 | TAB indents. Only. TAB never triggers completion. (Superseded 2026-09-04 — TAB now indents and completes; see §7. Restore with my-completion-free-tab.) |
+| R3 | A separate, explicit key drives the snippet + completion chain. |
+| R4 | RET never accepts a completion. Enter inserts a newline, always. |
+| R5 | Sources that matter: eglot (LSP), dabbrev/file, tempel snippets, history/abbrev/spelling. AI inline suggestions are surveyed only — no adoption decision. |
+| R6 | Every feature here has a documented opt-out. |
+.Ed
+.Pp
+Two prior decisions are settled and not revisited: \fBtempel\fP is the snippet engine, and the AI layer gets \fBno recommendation\fP either way.
+.Sh 2. DESIGN
+.Ss 2.1 Trigger model (R1)
+\fBGlobal default: no auto-popup.\fP
+.Ql "corfu-auto"
+stays
+.Ql "nil"
+— which is also corfu's own shipped default (research §4.1).
+.Pp
+\fBCode buffers opt in\fP, per-mode, before the mode activates:
+.Bd -literal -offset indent
+(add-hook 'prog-mode-hook (lambda () (setq-local corfu-auto t)))
+.Ed
+.Pp
+This works with
+.Ql "global-corfu-mode"
+for a specific, verified reason:
+.Ql "corfu-auto"
+is read \fBexactly once\fP, in the
+.Ql "corfu-mode"
+body at enable time, and
+.Ql "global-corfu-mode"
+dispatches from
+.Ql "after-change-major-mode-hook" ,
+which
+.Ql "run-mode-hooks"
+runs \fIafter\fP major-mode hooks (research §4.1).
+The value latches;
+.Ql "corfu-auto--post-command"
+never re-reads it.
+.Pp
+Two failure modes this design must respect, both verified:
+.Bl -enum -compact
+.It
+.No "\fB" Ns Ql "corfu-mode-hook"
+is too late.\fP
+.Ql "define-minor-mode"
+runs the mode hook after the body.
+Setting
+.Ql "corfu-auto"
+there does nothing.
+.It
+\fBBuffers already open when
+.Ql "global-corfu-mode"
+first enables keep their old value\fP — they do not re-run major-mode hooks.
+Relevant at startup ordering and after a config reload.
+A buffer opened before corfu initialised will not have auto-popup until its mode is re-run.
+.El
+.Pp
+\fBProse buffers get nothing extra.\fP They inherit the global
+.Ql "nil" ,
+so completion there is manual-only via the key in §2.3.
+No
+.Ql "text-mode-hook"
+entry is needed — absence \fIis\fP the configuration.
+.Pp
+\fBScoping:\fP upstream's own per-mode knob is
+.Ql "global-corfu-modes" ,
+which toggles
+.Ql "corfu-mode"
+itself, not auto-vs-manual.
+The
+.Ql "setq-local" Ns No "-in-a-hook"
+technique is \fIa\fP mechanism the corfu README licenses (\(dqsetting
+.Ql "corfu-auto"
+to t locally … before enabling\(dq), not one upstream presents as \fIthe\fP prog/prose recipe (research §4.1).
+.Pp
+\fBTuning.\fP
+.Ql "corfu-auto-delay"
+and
+.Ql "corfu-auto-prefix"
+keep their current values
+.No \&( Ns Ql "0.1"
+/
+.Ql "2" )
+pending measurement.
+The research found \fBno evidence\fP for any particular tuning (research §6.6), so don't present these values as tuned.
+\fI(Moved to
+.Ql "0.2"
+/
+.Ql "3"
+in §6.2.)\fP
+.Ss 2.2 TAB (R2)
+.No "\fB" Ns Ql "tab-always-indent"
+=
+.Ql "t" Ns No ".\fP"
+.Pp
+This is the \fBstock Emacs default\fP on both 30 and 31, and
+.Ql "indent-for-tab-command" Ns No "'s"
+only
+.Ql "completion-at-point"
+call is guarded by
+.Ql "(eq tab-always-indent 'complete)" ,
+making that branch provably unreachable (research §2.1).
+The current config sets
+.Ql "'complete"
+.No \&( Ns Ql "lisp/init-completion.el" Ns No ":276);"
+this design reverts to the default.
+.Pp
+The claim that corfu recommends
+.Ql "'complete"
+— i.e. that this deviates from upstream — \fBwas refuted 0-3\fP (research §2.1).
+.Pp
+.No "\fB" Ns Ql "tab-first-completion"
+is out of scope.\fP It was added in Emacs \fB28.1\fP (not 30), takes exactly five fixed symbols (not a predicate), and is \fBinert unless
+.Ql "tab-always-indent"
+is
+.Ql "complete" Ns No "\fP"
+(research §2.3).
+It should be documented as irrelevant here, never tuned.
+This retires the \(dqguard\(dq option considered during scoping.
+.Pp
+\fBTAB must also be freed inside the popup.\fP
+.Ql "corfu-map"
+binds
+.Ql "TAB"
+→
+.Ql "corfu-complete"
+(research §6.5).
+Setting
+.Ql "tab-always-indent"
+alone leaves TAB completing whenever the popup is open, which violates R2 in exactly the moment it matters most:
+.Bd -literal -offset indent
+(keymap-unset corfu-map "TAB" t)
+(keymap-unset corfu-map "<tab>" t)
+.Ed
+.Pp
+\fBSuperseded — there is no exception.\fP This section originally kept
+.Ql "TAB"
+for snippet field navigation as the one deliberate exception.
+That exception is gone: fields now move on
+.Ql "M-}" Ns No "/" Ns Ql "M-{"
+(tempel's own keys) or
+.Ql "C-M-n" Ns No "/" Ns Ql "C-M-p" ,
+and
+.Ql "TAB"
+appears nowhere.
+.Pp
+The exception rested on a false premise: \fBupstream
+.Ql "tempel-map"
+never bound
+.Ql "TAB" Ns No "\fP."
+It ships
+.Ql "M-}" Ns No "/" Ns Ql "M-{" ,
+.Ql "M-RET"
+.No \&( Ns Ql "tempel-done" ),
+.Ql "M-<up>" Ns No "/" Ns Ql "M-<down>"
+and some command remaps; the
+.Ql "TAB" Ns No "/" Ns Ql "S-TAB"
+pair was this configuration's own addition in
+.Ql "init-snippets.el" .
+Removing it let tempel's own keys take over.
+.Pp
+.Ql "C-M-n" Ns No "/" Ns Ql "C-M-p"
+are added alongside as a mnemonic alias.
+No field key may collide with corfu's
+.Ql "M-n" Ns No "/" Ns Ql "M-p" :
+.Ql "tempel-map"
+is installed as an overlay
+.Ql "keymap"
+property, which is consulted \fIbefore\fP minor-mode maps, so a shared key would be stolen from the popup mid-snippet.
+.Ql "M-["
+would have been actively hostile on a TTY —
+.Ql "ESC ["
+is the CSI introducer.
+.Pp
+Other TAB consumers that bypass
+.Ql "tab-always-indent"
+entirely and are \fBnot\fP touched by this design (research §2.2):
+.Ql "org-cycle" ,
+.Ql "message-tab" ,
+shell-mode's TAB,
+.Ql "c-tab-always-indent" ,
+and the minibuffer.
+.Ss 2.3 The keys (R3, R4)
+.Bd -literal -offset indent
+| Key | Role |
+| C-M-i | The chain key. Opens completion; inside the popup, inserts the selected candidate. |
+| TAB | Indent. Only. (The snippet-field exception was dropped, §2.2; TAB completes since §7.) |
+| RET | Newline. Only. Never accepts a candidate. |
+| M-n / M-p | Navigate candidates. |
+| C-g | Dismiss. |
+| M-+ / M- | tempel by name / interactive insert (unchanged). |
+.Ed
+.Pp
+\fBWhy
+.Ql "C-M-i"
+and not
+.Ql "M-TAB" Ns No ".\fP"
+The Emacs manual directs users away from
+.Ql "M-TAB"
+because window managers reserve Alt+Tab, and recommends
+.Ql "C-M-i"
+or
+.Ql "ESC TAB"
+(research §2.4).
+On a TTY all three collapse to the same event, so
+.Ql "C-M-i"
+is the only choice that is safe on GUI \fIand\fP terminal — and this repo ships a terminal-only distribution.
+.Pp
+Binding a chain command to
+.Ql "C-M-i"
+\fBoverrides a documented standard binding\fP (global
+.Ql "C-M-i"
+→
+.Ql "complete-symbol"
+→
+.Ql "completion-at-point" ).
+That is a deliberate, documented choice, not a defect.
+Note
+.Ql "C-u C-M-i"
+currently runs
+.Ql "info-complete-symbol" ;
+a custom command replaces that behavior.
+.Pp
+\fBRET (R4).\fP Upstream documents freeing it explicitly (research §6.5):
+.Bd -literal -offset indent
+(keymap-unset corfu-map "RET" t)
+.Ed
+.Pp
+This is a supported configuration, not a workaround.
+If shell/comint buffers later need RET to send input, upstream's
+.Ql "menu-item"
+.Ql ":filter"
+form is the sanctioned pattern.
+.Pp
+\fBResolved — and it turned on a mechanism, not a preference.\fP
+.Ql "corfu-map"
+contains a
+.Ql "<remap> <completion-at-point>"
+entry, and a remap fires only for the command the key actually \fIresolves to\fP.
+Binding
+.Ql "C-M-i"
+to
+.Ql "completion-at-point"
+— rather than leaving the stock global
+.Ql "complete-symbol" ,
+which is not remapped — is therefore what makes the same key both open the popup and accept inside it.
+No second accept key is needed, and the choice of
+.Ql "completion-at-point"
+is load-bearing rather than cosmetic.
+.Pp
+The remap is repointed from corfu's default
+.Ql "corfu-complete"
+to
+.No "\fB" Ns Ql "corfu-insert" Ns No "\fP."
+.Ql "corfu-complete"
+only extends the common prefix (insert status
+.Ql "exact" ),
+so it neither commits the highlighted candidate nor runs a capf's
+.Ql ":exit-function"
+— so a tempel snippet name accepted with
+.Ql "C-M-i"
+would not expand.
+.Ql "corfu-insert"
+inserts the selected candidate with status
+.Ql "finished" :
+it commits the candidate and expands snippets, which is the \(dqfinish the completion\(dq gesture R3 wants.
+.Pp
+Asserted in
+.Ql "completion-test-one-key-opens-and-accepts" .
+.Pp
+This also settled the open question about how the accept gesture \fIfeels\fP: with
+.Ql "corfu-preview-current nil"
+and the default
+.Ql "corfu-preselect"
+.No \&( Ns Ql "valid" ),
+nothing is selected until you navigate with
+.Ql "M-n" ,
+so
+.Ql "C-M-i"
+extended the prefix and appeared to do nothing.
+The lever named here is now pulled —
+.No "\fB" Ns Ql "corfu-preselect"
+is set to
+.Ql "first" Ns No "\fP"
+so the top candidate is always selected and highlighted (via the
+.Ql "corfu-current"
+face), giving
+.Ql "corfu-insert"
+something to commit and showing the user what
+.Ql "C-M-i"
+will insert.
+.Ql "first"
+is safe precisely because RET/TAB are freed: only the explicit
+.Ql "C-M-i"
+commits, so it cannot cause the accidental accept
+.Ql "first"
+risks when RET/TAB accept.
+Asserted in
+.Ql "completion-test-corfu-preselects-first" .
+.Ss 2.4 The chain (R3)
+The chain is \fBdeclarative, via capf ordering\fP — not a custom dwim command.
+This falls out of two verified facts:
+.Bl -bullet -compact
+.It
+.Ql "tempel-expand"
+returns \fBonly the single exactly-matching template\fP and presents no UI (research §6.1).
+.It
+Both tempel capfs return
+.Ql ":exclusive 'no" ,
+so they \fBfall through\fP when nothing matches (research §1.3, §6.1).
+.El
+.Pp
+So ordering
+.Ql "tempel-expand"
+ahead of the semantic capf yields exactly the desired behavior — \fIexpand a snippet if the text before point names one, otherwise complete normally\fP — with
+.Ql "C-M-i"
+bound to plain
+.Ql "completion-at-point" :
+.Bd -literal -offset indent
+prog-mode buffer, buffer-local completion-at-point-functions:
+  tempel-expand           (depth -90)   exact template name → expand, else fall through
+  eglot-completion-at-point (depth 0)   semantic candidates
+  t                                     → global list: cape-keyword, cape-file, cape-dabbrev
+.Ed
+.Pp
+.Ql "tempel-complete"
+(all templates, shown in the popup) remains available on
+.Ql "M-+"
+for browsing by name.
+.Pp
+\fBPrior art:\fP
+.Ql "make-hippie-expand-function"
+is the sanctioned way to build a bespoke chain bound to its own key, and hippie-exp's Commentary explicitly recommends several such functions \(dqbound to different keys\(dq (research §6.4).
+This design reaches the same end through the capf list instead, which keeps a single
+.Ql "completion-at-point"
+entry point and avoids a second, parallel expansion mechanism.
+.Ql "hippie-expand"
+is \fBnot\fP adopted.
+.Pp
+\fBResolved by measurement — and it exposed a live bug.\fP All four facts below are asserted in
+.Ql "test/completion-test.el" ;
+none came from documentation.
+.Bl -enum -compact
+.It
+\fBAn exclusive capf shadows everything after it, unconditionally\fP — even when nothing it offers matches the text at point.
+.It
+.No "\fB" Ns Ql "cape-capf-nonexclusive"
+is the fix.\fP Wrapping the exclusive capf restores the fallthrough, while still keeping control when its own candidates match.
+.It
+.No "\fB" Ns Ql "cape-capf-super"
+propagates non-exclusivity only when \fIevery\fP input is non-exclusive.\fP One exclusive input makes the whole merge exclusive.
+.It
+\fBThe
+.Ql ":exclusive no"
+fallthrough ignores
+.Ql "completion-styles" Ns No ".\fP"
+It is decided by a bare
+.Ql "try-completion" ,
+so
+.Ql "foo"
+is discarded against
+.Ql "barfoo"
+under orderless exactly as under
+.Ql "basic"
+— even though orderless itself matches.
+The
+.Ql "minibuffer.el"
+FIXME is real, not theoretical.
+.El
+.Pp
+\fBFacts 1 and 3 together were a live bug.\fP
+.Ql "init-snippets.el"
+merges the snippet capf with eglot's.
+Tempel is non-exclusive but eglot is not, so the merged capf inherited eglot's exclusivity — meaning
+.No "\fB" Ns Ql "cape-dabbrev" ,
+.Ql "cape-file"
+and
+.Ql "cape-keyword"
+never ran in any LSP buffer.\fP They were configured and dead.
+The implementation wraps the merged capf in
+.Ql "cape-capf-nonexclusive" ,
+gated by
+.Ql "my-completion-eglot-nonexclusive" .
+.Pp
+\fBFact 4 bounds a residual weakness\fP, which the merge happens to mitigate.
+A non-exclusive capf loses candidates a non-prefix pattern would have matched.
+For
+.Ql "tempel-complete"
+alone that would mean snippet names vanishing whenever you type an orderless-style pattern.
+Inside the merge the collection also holds the server's candidates, so the prefix test generally succeeds and the merged capf is kept.
+This is a real argument for the merge that the original rationale never made — but it is mitigation, not a fix, and the underlying approximation is upstream's.
+.Pp
+\fBDeparture from the specification as written.\fP §2.4 originally proposed replacing
+.Ql "tempel-complete"
+with
+.Ql "tempel-expand"
+(exact-match, no popup entry).
+The implementation keeps
+.Ql "tempel-complete"
+and the merge, on the owner's decision that snippet names should stay visible in the popup.
+.Ql "tempel-expand"
+would have been structurally immune to fact 4 — it never hands the wrapper a partial prefix — so that immunity was traded for discoverability, knowingly.
+.Pp
+\fBCorrection to the current config's stated rationale.\fP
+.Ql "lisp/init-snippets.el" Ns No ":45-48"
+says prepending
+.Ql "tempel-complete"
+would shadow LSP candidates.
+It would not — tempel is non-exclusive and falls through (research §1.3).
+The
+.Ql "cape-capf-super"
+merge is still defensible, but for a \fIdifferent\fP reason than the comment gives: it makes snippet and server candidates appear in \fBone\fP popup simultaneously, rather than the server's list appearing only when no template matches.
+If that simultaneity is not wanted, the merge can be dropped in favour of plain ordering — which also sheds cape's documented whole-lifetime candidate cache, currently used with \fBno cache buster\fP (research §1.5).
+.Ss 2.5 Prose completion (R1, R5)
+Manual-only, via
+.Ql "C-M-i" .
+Sources in a prose buffer:
+.Bl -bullet -compact
+.It
+.Ql "tempel-expand"
+/
+.Ql "tempel-complete"
+(text-mode hook, already configured).
+.It
+.Ql "cape-dabbrev" ,
+.Ql "cape-file" ,
+.Ql "cape-keyword"
+from the global list.
+.It
+\fBNot\fP
+.Ql "ispell-completion-at-point" :
+.Ql "init-writing.el" Ns No ":42"
+sets
+.Ql "text-mode-ispell-word-completion"
+to
+.Ql "nil" .
+The research confirms this removes exactly two things — the (default-absent)
+.Ql "C-M-i"
+binding and the buffer-local ispell capf — and nothing else (research §5.4).
+The existing rationale (the capf throws \(dqNo plain word-list found\(dq where
+.Ql "ispell-alternate-dictionary"
+is absent, as on NixOS) stands, and jinx covers spell-checking.
+.El
+.Pp
+Worth recording: had that option been left at its default, the ispell capf sits at \fBdepth 10\fP and would have been a harmless late fallback, not a shadow (research §5.1).
+.Pp
+\fBDocumented hazard.\fP If
+.Ql "flyspell-mode"
+is ever enabled,
+.Ql "flyspell-mode-map"
+binds
+.Ql "M-TAB" Ns No "/" Ns Ql "ESC TAB" Ns No "/" Ns Ql "C-M-i"
+to
+.Ql "flyspell-auto-correct-word" ,
+and as a minor-mode map it \fBoutranks the global binding\fP — silently destroying the chain key in exactly the buffers prose completion is for (research §5.6).
+This config uses jinx, not flyspell, so it should not arise; the mitigation if it ever does is
+.Ql "(setopt flyspell-use-meta-tab nil)" .
+.Ss 2.6 AI / LLM inline suggestions (R5)
+\fBNo recommendation is made, per the stated constraint.\fP
+.Pp
+Both research rounds produced \fBzero verified claims\fP on the AI completion layer — copilot.el, minuet-ai, codeium/windsurf, aidermacs, gptel, eca-emacs — and on how ghost-text overlays interact with corfu's child frame or with core
+.Ql "completion-preview-mode"
+(research §6.6).
+Nothing in this document should be read as evidence for or against adoption.
+.Pp
+One structural note that \fIis\fP verified and would apply to any future adoption: Emacs 31's
+.Ql "completion-preview-inhibit-functions"
+is the sanctioned per-context suppression hook for core's ghost text (research §3.2), and core's preview binds TAB \fBonly while a preview is displayed\fP (research §3.1) — which would conflict with R2 in that window.
+Core
+.Ql "completion-preview-mode"
+is \fBoff by default\fP and this design does not enable it.
+.Sh 3. OPT-OUT DESIGN (R6)
+.Ss 3.1 Idiom
+\fBGrounded in this repo's own convention, not external evidence.\fP The research gathered nothing on opt-out idioms across two rounds — neither the Elisp manual's normative guidance nor any real-world config (research §6.6).
+Rather than invent an evidence claim, this section follows the pattern already established in
+.Ql "lisp/" :
+.Bl -bullet -compact
+.It
+a
+.Ql "defgroup my-<area>"
+.No \&( Ns Ql "my-ui" ,
+.Ql "my-writing" ,
+.Ql "my-vc" ,
+.Ql "my-devops" );
+.It
+boolean or list
+.Ql "defcustom my-<area>-<knob>"
+toggles with
+.Ql ":type"
+and
+.Ql ":group"
+.No \&( Ns Ql "my-prog-warn-non-ts-mode" ,
+.Ql "my-prog-enable-risky-js-lsp" ,
+.Ql "my-prog-warn-non-ts-exclude" );
+.It
+set with
+.Ql "setopt" ,
+per the repo rule.
+.El
+.Ss 3.2 Proposed knobs
+All under a new
+.Ql "(defgroup my-completion nil … :group 'convenience)"
+in
+.Ql "lisp/init-completion.el" .
+.Bd -literal -offset indent
+| Option | Default | Disables |
+| my-completion-auto-modes | '(prog-mode-hook) | Auto-popup. nil ⇒ manual-only everywhere, including code. Add hooks to extend auto-popup to more modes. |
+| my-completion-auto-delay | 0.1 | — (tuning; see §2.1 on the absence of evidence) |
+| my-completion-auto-prefix | 2 | — (tuning) |
+| my-completion-free-return | t | nil ⇒ restore corfu's default RET = corfu-insert. |
+| my-completion-free-tab | t | nil ⇒ restore corfu's default TAB = corfu-complete. |
+| my-completion-eglot-nonexclusive | t | nil ⇒ leave the LSP capf exclusive, so the cape fallbacks stay suppressed in LSP buffers (see §2.4). |
+| my-completion-key | "C-M-i" | The chain key. nil ⇒ bind nothing, leaving the stock global binding intact. |
+| my-completion-fallbacks | t | nil ⇒ omit cape-dabbrev / cape-file / cape-keyword from the global capf list. |
+| my-completion-snippets | t | nil ⇒ do not add any tempel capf (M-+/M- still work). |
+.Ed
+.Pp
+\fBGranularity rule:\fP every knob disables exactly one mechanism, and
+.Ql "nil"
+always means \(dqbehave as stock Emacs/corfu would\(dq.
+No knob silently re-enables another.
+.Pp
+\fBSubstitution, recorded:\fP the ninth knob was originally
+.Ql "my-completion-snippet-tab" ,
+gating the
+.Ql "TAB"
+field-navigation exception.
+That exception no longer exists (§2.2), so the knob would have gated nothing — and its
+.Ql "nil"
+branch would have meant \(dqrestore a binding upstream never had\(dq, violating the rule above.
+It is replaced by
+.Ql "my-completion-eglot-nonexclusive" ,
+which gates a mechanism the implementation genuinely adds and which the original table omitted.
+The count is still nine.
+.Ss 3.3 Timing semantics — stated, because it is not uniform
+This matters and cannot be papered over:
+.Bl -bullet -compact
+.It
+.Ql "my-completion-auto-modes" ,
+.Ql "-snippets" ,
+.Ql "-fallbacks"
+are read at \fBload time\fP (they add/remove hooks).
+Changing them needs a \fBrestart\fP, or manual
+.Ql "remove-hook" .
+.It
+.Ql "-auto-delay" ,
+.Ql "-auto-prefix"
+are read \fBper keystroke\fP — immediate.
+.It
+.Ql "-free-return" ,
+.Ql "-free-tab" ,
+.Ql "-snippet-tab" ,
+.Ql "-key"
+modify keymaps at load time; a
+.Ql ":set"
+function could make them immediate, at the cost of the
+.Ql "setopt" Ns No "-only"
+caveat that pattern implies.
+.El
+.Pp
+\fBRecommendation:\fP do \fBnot\fP add
+.Ql ":set"
+functions in the first implementation.
+Keep the knobs load-time and document the restart, rather than shipping half-reactive options.
+(The precedent is core's own
+.Ql "text-mode-ispell-word-completion" ,
+whose
+.Ql ":set"
+covers the keymap half while the capf half is read at mode entry — a split that demonstrably confused this research, twice.)
+.Ss 3.4 Escape hatches that need no knob
+Documented for the user, because they cost nothing to support:
+.Bl -bullet -compact
+.It
+\fBPer-buffer, right now:\fP
+.Ql "M-x corfu-mode"
+toggles the popup in the current buffer.
+.It
+\fBAuto-popup in one buffer:\fP
+.Ql "M-x eval-expression"
+→
+.Ql "(setq-local corfu-auto nil)"
+then re-run the major mode (the value latches at mode-enable time — §2.1).
+.It
+\fBEverything off:\fP
+.Ql "M-x global-corfu-mode"
+toggles the whole stack.
+.It
+.No "\fB" Ns Ql "var/custom.el"
+is write-only\fP in this config, so Customize-set values do not persist across sessions by design.
+Opt-outs belong in the user's own init or in a machine-local file, not in Customize.
+.El
+.Pp
+An environment-variable opt-out (precedent:
+.Ql "EMACS_CONFIG_INFO_DIR" )
+is \fBdeliberately not proposed\fP.
+That precedent exists for a value that must be readable before Lisp can discover it; completion behavior has no such constraint, and a defcustom is more discoverable.
+.Sh 4. DELTA FROM THE CURRENT CONFIGURATION
+What implementing this would change, as written before implementation (see Status for what landed).
+.Bd -literal -offset indent
+| File | Change |
+| lisp/init-completion.el:276 | tab-always-indent 'complete → t. |
+| lisp/init-completion.el:281-287 | corfu-auto t → nil globally; add prog-mode-hook opt-in. |
+| lisp/init-completion.el | New: defgroup my-completion + the §3.2 knobs; keymap-unset of RET/TAB in corfu-map; bind the chain key. |
+| lisp/init-snippets.el:45-48 | Correct the comment's rationale (research §1.3); decide whether to keep the cape-capf-super merge and, if kept, whether to add a cache buster. |
+| lisp/init-snippets.el:51 | Consider tempel-expand (exact-match, no UI) for the buffer-local prog-mode capf instead of tempel-complete, per §2.4. |
+| docs/ | Document the chain key and the opt-out table; regenerate the package reference if any @doc block changes. |
+.Ed
+.Pp
+\fBBoth preconditions are discharged.\fP They needed a live Emacs, but a \fIbatch\fP one: the
+.Ql "elisp-test"
+check runs
+.Ql "emacs --batch"
+against the full package set, so capf dispatch and keymap state are directly assertable. \(dqNeeds a running Emacs\(dq is not the same as \(dqneeds a human at a GUI\(dq.
+.Pp
+What still genuinely needs eyes on a screen is narrower than the original list: whether the auto-popup delay is comfortable — which has no evidence base at all (§2.1).
+The accept gesture itself is settled:
+.Ql "C-M-i"
+now runs
+.Ql "corfu-insert"
+against a
+.Ql "first" Ns No "-preselected"
+candidate (§2.3).
+.Sh 5. EXPLICITLY OUT OF SCOPE
+.Bl -bullet -compact
+.It
+\fByasnippet migration\fP — tempel is settled.
+.It
+\fBAI adoption\fP — surveyed only, no recommendation (§2.6).
+.It
+\fBcompany-mode\fP — not evaluated; corfu is the incumbent and nothing in the research challenged it.
+.It
+\fBMinibuffer completion\fP (vertico/consult/orderless) — untouched.
+This document covers the in-buffer side only.
+.It
+\fBPerformance tuning\fP — no evidence base exists (research §6.6).
+Any future tuning should start by measuring, not by copying numbers.
+.El
+.Sh 6. ADDENDUM — \(dqLESS ANNOYING, MORE NATURAL\(dq ROUND (2026-08-26)
+A second, narrow round on the in-buffer side, prompted by the request to make the popup \(dqless annoying and more natural.\(dq
+It does not revisit the trigger model, the freed RET/TAB, or the capf chain — those stand.
+Evidence base:
+.Ql "../reviews/emacs-completion-ux-research.7" .
+Everything here is opt-out-gated per R6 and validated in
+.Ql "test/completion-test.el" .
+.Pp
+\fB6.1 The popup no longer commits candidates you did not choose.\fP
+.Ql "corfu-preview-current"
+ships as
+.Ql "insert" ,
+which auto-inserts the selected candidate on \fIcontinued typing\fP — quietly undercutting the \(dqnever accept unless asked\(dq intent that R4 and the freed keys were built for.
+Set to
+.Ql "nil" :
+the menu shows, nothing enters the buffer until an explicit
+.Ql "corfu-insert"
+.No \&( Ns Ql "C-M-i" ).
+This is also what makes room for 6.4 — with corfu contributing no inline text, the ghost text is the sole inline surface.
+.Pp
+\fB6.2 The auto-popup timing moved onto corfu's documented defaults.\fP
+.Ql "my-completion-auto-delay"
+.Ql "0.1 → 0.2"
+and
+.Ql "my-completion-auto-prefix"
+.Ql "2 → 3" .
+§2.1 flagged the old
+.Ql "0.1" Ns No "/" Ns Ql "2"
+as unmeasured folklore; corfu's own defaults are
+.Ql "0.2" Ns No "/" Ns Ql "3" ,
+and its docstrings caution against sitting \fIbelow\fP them (load/flicker).
+With no measurement either way, the documented resting point is the better-justified one, and
+.Ql "3"
+now matches
+.Ql "completion-preview-minimum-symbol-length"
+so both surfaces start at the same keystroke.
+Still not \(dqtuned\(dq — just no longer below the values upstream warns about.
+.Pp
+\fB6.3 A documentation panel
+.No \&( Ns Ql "corfu-popupinfo" Ns No ").\fP"
+New knob
+.Ql "my-completion-doc-popup"
+(default
+.Ql "t" )
+enables
+.Ql "corfu-popupinfo-mode" ,
+the bundled IDE-style detail panel, delay
+.Ql "(1.0 . 0.5)" .
+It binds only
+.Ql "M-t" Ns No "/" Ns Ql "M-h" Ns No "/" Ns Ql "M-g" Ns No "/" Ns Ql "C-M-v"
+— no collision with the freed RET/TAB or
+.Ql "M-n" Ns No "/" Ns Ql "M-p" .
+.Ql "corfu-echo"
+is the documented lighter fallback.
+.Pp
+\fB6.4 Inline ghost text
+.No \&( Ns Ql "completion-preview-mode" )
+— Finding 12(b), adopted.\fP New knob
+.Ql "my-completion-inline-preview"
+(default
+.Ql "t" )
+enables the built-in inline preview in
+.Ql "my-completion-auto-modes"
+— the \fIsame\fP mode list as the auto-popup, so prose stays quiet (R1) and the minibuffer is never touched.
+It draws the top capf candidate as ghost text after point, the modern-editor feel.
+.Pp
+Two rule-preserving specifics, both measured in the test file:
+.Bl -bullet -compact
+.It
+\fBR2 landmine, fixed.\fP
+.Ql "completion-preview-active-mode-map"
+binds
+.Ql "C-i"
+→
+.Ql "completion-preview-insert" ,
+and
+.Ql "C-i"
+\fIis\fP the TAB event — so the shipped binding is \(dqTAB accepts the preview.\(dq
+.Ql "(keymap-unset … \(dqC-i\(dq t)"
+removes it; TAB still only indents while a preview shows.
+The whole-candidate accept moves to
+.Ql "M-RET"
+(R4-safe — R4 governs bare RET), and
+.Ql "M-i"
+(common-prefix) is left as upstream ships it.
+.It
+\fBR4 is safe out of the box\fP — the map binds no RET; the only obligation is not to add one.
+.El
+.Pp
+The previewed candidate's sort is paired with
+.Ql "corfu-sort-function"
+(Emacs 31 user option, guarded), and the preview is inhibited inside comments/strings (Emacs 31 hook, guarded), so nothing appears where symbol completion is meaningless.
+.Pp
+\fB6.5 What still needs eyes on a GUI.\fP As §4 already noted for
+.Ql "corfu-complete" ,
+two things batch tests cannot settle: whether ghost + popup together reads as integrated or busy, and whether the prefix-only ghost (preview keeps its own
+.Ql "'(basic)"
+style) ever disagrees jarringly with an orderless popup row.
+Both are structurally mitigated
+.No \&( Ns Ql "corfu-preview-current nil" ,
+matched sorts) and behind a one-line opt-out
+.No \&( Ns Ql "my-completion-inline-preview" ).
+.Pp
+\fB6.6 Considered, not taken this round:\fP
+.Ql "corfu-preselect 'prompt"
+(marginal once auto-insert is gone), a buffer-local
+.Ql "orderless-literal-only" Ns No "/" Ns Ql "basic"
+style for the corfu popup (a real predictability lever, but it changes matching semantics and is orthogonal to \(dqannoying popup\(dq — deferred as its own decision), and cosmetic width-pinning.
+See research §6.
+.Sh 7. ADDENDUM — TAB DRIVES COMPLETION (2026-09-04)
+\fBR2 is superseded on the owner's instruction.\fP The original R2 (\(dqTAB indents.
+Only.\(dq) put the whole completion gesture on
+.Ql "C-M-i" .
+In practice
+.Ql "C-M-i"
+is unreliable: it is the same event as
+.Ql "M-TAB"
+/
+.Ql "ESC TAB"
+(§2.3 already recorded this), which window managers grab for Alt+Tab and which a TTY cannot tell apart — so on the affected setups the chain key never reached Emacs and completion \(dqdid not work.\(dq
+The owner authorised using TAB for both indent and completion.
+This addendum records that reversal; it does not revisit the trigger model (§2.1), the freed \fBRET\fP (R4 — see below), the capf chain (§2.4), or the 2026-08 UX round (§6), all of which stand.
+Validated in
+.Ql "test/completion-test.el" .
+.Pp
+\fB7.1 What R2 becomes.\fP
+.Ql "tab-always-indent"
+moves from
+.Ql "t"
+back to
+.Ql "complete"
+(the value §2.2 had reverted): TAB first indents the line, and once the line is already indented
+.Ql "indent-for-tab-command"
+runs
+.Ql "completion-at-point" ,
+opening the popup.
+This is the standard Emacs idiom, not a fight with core.
+.Pp
+\fB7.2 TAB accepts inside the popup.\fP With the popup open,
+.Ql "corfu-map" Ns No "'s"
+.Ql "TAB"
+and
+.Ql "<tab>"
+are repointed from corfu's default
+.Ql "corfu-complete"
+to
+.No "\fB" Ns Ql "corfu-insert" Ns No "\fP"
+— the same \(dqfinish the completion, run the
+.Ql ":exit-function" ,
+expand a snippet\(dq command the
+.Ql "<remap> <completion-at-point>"
+already used for
+.Ql "C-M-i"
+(§2.3).
+So TAB is now the open-then-accept gesture, used twice exactly as
+.Ql "C-M-i"
+was, and
+.Ql "C-M-i"
+stays bound as the GUI-safe alternative. corfu installs
+.Ql "corfu-map"
+through
+.Ql "overriding-terminal-local-map"
+while the popup is shown, so this TAB wins over both
+.Ql "indent-for-tab-command"
+and completion-preview's
+.Ql "C-i" .
+.Pp
+\fB7.3 TAB accepts the inline ghost text.\fP
+.Ql "completion-preview-active-mode-map"
+ships
+.Ql "C-i"
+(the TAB event) →
+.Ql "completion-preview-insert" .
+§6.4 removed it to protect R2; that removal is reversed here (rebound explicitly, not left implicit), so when only the preview shows — before the popup opens — TAB accepts the ghost text.
+.Ql "M-RET"
+and
+.Ql "M-i"
+stay as §6.4 left them.
+.Pp
+\fB7.4 RET is untouched — R4 stands.\fP RET remains newline-only
+.No \&( Ns Ql "corfu-map"
+RET unbound, the preview map binds no RET).
+The owner kept R4 explicitly.
+Only TAB and
+.Ql "C-M-i"
+accept.
+.Pp
+\fB7.5 One knob, one meaning,
+.Ql "nil"
+= stricter core.\fP
+.Ql "my-completion-free-tab"
+flips default
+.Ql "t"
+→
+.Ql "nil" .
+Its meaning is unchanged (\(dqnon-nil ⇒ TAB never completes\(dq); only the default moved, so setting it restores the whole §2.2 / 2026-08 \(dqTAB indents only\(dq behaviour —
+.Ql "tab-always-indent"
+.Ql "t" ,
+corfu's TAB deleted, the preview's
+.Ql "C-i"
+deleted — in one place.
+The knob remains load-time (§3.3): changing it needs a restart.
+.Pp
+\fB7.6 Prose.\fP
+.Ql "tab-always-indent complete"
+is global, so TAB also completes in prose buffers — but only as a \fImanual\fP trigger (you pressed TAB, after the line is indented), which §2.5 already licenses alongside
+.Ql "C-M-i" .
+R1's rule is about the \fIauto\fP-popup, which stays prog-only; nothing here makes prose pop up on its own.

@@ -1,0 +1,240 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd June 9, 2026
+.Dt EMACS-JOURNAL-2026-06-09 7
+.Os
+.Sh NAME
+.Nm emacs-journal-2026-06-09
+.Nd working notes of 2026-06-09
+.Sh ENTRIES
+.Ss Fix jotain.service daemon crash (exit 255) + make package fetching optional
+.Ss Summary
+The
+.Ql "jotain.service"
+systemd user unit on an offline host was in a restart loop, exiting
+.Ql "255/EXCEPTION"
+on every start.
+The journal showed failing MELPA/NonGNU archive downloads, which \fIlooked\fP like the cause but are caught and non-fatal.
+The real fatal error was
+.Ql "tagref-mode" .
+.Ss Root cause
+.Ql "init-prog.el"
+hooked
+.Ql "tagref-mode"
+onto \fBevery\fP
+.Ql "prog-mode"
+buffer unconditionally.
+.Ql "tagref.el"
+.No \&( Ns Ql "tagref-mode" )
+calls
+.Ql "(user-error \(dqNot in a project; tagref-mode requires project.el\(dq)"
+when there is no project.
+During daemon startup
+.Ql "*scratch*"
+is created in
+.Ql "lisp-interaction-mode"
+(a
+.Ql "prog-mode"
+descendant); with the unit's
+.Ql "default-directory"
+=
+.Ql "$HOME"
+(not a project) the hook fired and signalled.
+This happens in
+.Ql "command-line"
+\fBbefore\fP
+.Ql "--fg-daemon" Ns No "'s"
+.Ql "server-start" Ns No "/sd_notify,"
+so the daemon died un-notified → systemd reported
+.Ql "255/EXCEPTION" .
+.Pp
+Confirmed by the journal ordering:
+.Ql "\(dqNot in a project; tagref-mode requires project.el\(dq"
+→
+.Ql "\(dqWrote …/var/recentf-save.el\(dq"
+(only runs from
+.Ql "kill-emacs-hook" )
+→ exit 255.
+.Ql "init.el"
+had fully loaded, so the MELPA failures never aborted startup.
+Dev machines hid the bug: their daemon usually starts inside the repo (a project), where
+.Ql "tagref-mode"
+enables cleanly.
+.Ss Changes
+.Bl -bullet -compact
+.It
+.No "\fB" Ns Ql "lisp/init-prog.el" Ns No "\fP"
+—
+.Ql "tagref"
+.Ql "use-package"
+block: replaced
+.Ql ":hook (prog-mode . tagref-mode)"
+with
+.Ql ":hook (prog-mode . jotain-tagref--maybe-enable)" ,
+a guard (defined in
+.Ql ":init" ,
+with
+.Ql ":commands (tagref-mode)"
+for the autoload) that enables
+.Ql "tagref-mode"
+only when
+.Ql "(project-current)"
+is non-nil.
+Outside a project it declines silently instead of signalling.
+This is the crash fix.
+.It
+.No "\fB" Ns Ql "init.el" Ns No "\fP"
+— reworked archive fetching to be optional, background, and non-fatal (per request):
+.Bl -bullet -compact
+.It
+New
+.Ql "jotain-refresh-package-archives"
+defvar, defaulting off when the
+.Ql "JOTAIN_NO_PACKAGE_REFRESH"
+env var is set — the per-host opt-out for offline machines, no shared-config edit needed.
+.It
+On-demand refresh advice now removes itself \fIbefore\fP refreshing and wraps
+.Ql "package-refresh-contents"
+in
+.Ql "with-demoted-errors" ,
+so a dead network is a log line, not a fatal error, and can't re-trigger on every later install.
+.It
+Added a background warm-up on
+.Ql "emacs-startup-hook"
+via
+.Ql "run-with-idle-timer"
+using async
+.Ql "(package-refresh-contents t)" ,
+also demoted — never blocks the daemon, never fails the service.
+.El
+.El
+.Ss Follow-up for the offline host
+Optional: set
+.Ql "Environment=JOTAIN_NO_PACKAGE_REFRESH=1"
+on the
+.Ql "jotain.service"
+unit (or via
+.Ql "services.jotain" )
+to silence the now-harmless download-failure log lines.
+Not changed in the shared default.
+.Ss Silence the corfu/ispell completion-at-point error storm
+.Ss Summary
+.Ql "*Messages*"
+was flooded with
+.Ql "Corfu detected an error: … ispell-lookup-words: No plain word-list found at system default locations"
+backtraces, one per keystroke in any
+.No "text/YAML/Markdown/" Ns Ql "COMMIT_EDITMSG"
+buffer.
+Corfu catches the error, but it spams the log and silently disables in-buffer completion there.
+.Ss Root cause
+Emacs 30 added the
+.Ql "text-mode-ispell-word-completion"
+option, which \fBdefaults to
+.Ql "completion-at-point" Ns No "\fP."
+With that default,
+.Ql "text-mode"
+adds
+.Ql "ispell-completion-at-point"
+to
+.Ql "completion-at-point-functions"
+in every text-mode-derived buffer.
+.Ql "ispell-completion-at-point"
+→
+.Ql "ispell-lookup-words"
+reads
+.Ql "ispell-alternate-dictionary" ,
+whose default is
+.Ql "/usr/share/dict/words"
+— \fBabsent on NixOS\fP, so every corfu auto-completion in a prose buffer throws.
+We spell-check with jinx, so the ispell capf is pure breakage here.
+.Ss Changes
+.Bl -bullet -compact
+.It
+.No "\fB" Ns Ql "lisp/init-writing.el" Ns No "\fP"
+— added
+.Ql "(text-mode-ispell-word-completion nil)"
+to the
+.Ql "text-mode"
+.Ql "use-package"
+.Ql ":custom"
+block, with a comment explaining the NixOS word-list gap.
+Verified: with the option nil,
+.Ql "ispell-completion-at-point"
+is no longer present in a text-mode buffer's
+.Ql "completion-at-point-functions" .
+.El
+.Ss Not changed (separate, deployment-dependent)
+.Bl -bullet -compact
+.It
+.No "\fB" Ns Ql "Jinx: No dictionaries available for \(dqen_US\(dq" Ns No "\fP"
+— enchant has no en_US dictionary backend on this host (no
+.Ql "enchant" Ns No "/dict"
+on PATH).
+Fix belongs at the deployment layer (provide a hunspell/nuspell en_US dict +
+.Ql "DICPATH" ,
+or switch the daily Emacs to the Nix-wrapped
+.Ql "jotainEmacsPackages"
+and add the dict there).
+Left for a follow-up once the daily-Emacs deployment path is confirmed.
+.It
+.No "\fB" Ns Ql "Failed to download 'melpa'/'melpa-stable' archive" Ns No "\fP"
+— the same transient, non-fatal background archive warm covered above; not a regression.
+.El
+.Ss Drop withJansson from emacs.nix (nixpkgs make-emacs.nix removed it)
+.Ss Summary
+.Ql "nix flake check --all-systems"
+failed during package evaluation with
+.Ql "function 'anonymous lambda' called with unexpected argument 'withJansson'"
+pointing at nixpkgs'
+.Ql "make-emacs.nix" .
+Surfaced after the in-progress flake update (nixpkgs →
+.Ql "8c3cede7" ,
+emacs-overlay →
+.Ql "2aba9beb" ).
+.Ss Root cause
+Upstream nixpkgs removed the
+.Ql "withJansson"
+argument from
+.Ql "pkgs/applications/editors/emacs/make-emacs.nix"
+— Emacs 30+ has built-in JSON, so the
+.Ql "--with-jansson"
+flag is gone.
+.Ql "emacs.nix"
+still declared
+.Ql "withJansson ? false"
+and forwarded it through
+.Ql "basePackage.override" ,
+so the override threw on the now-unknown argument.
+Confirmed
+.Ql "withJansson"
+is absent from the pinned
+.Ql "make-emacs.nix"
+formal argument list; every other flag we forward is still accepted.
+.Ss Changes
+.Bl -bullet -compact
+.It
+.No "\fB" Ns Ql "emacs.nix" Ns No "\fP"
+— removed the
+.Ql "withJansson ? false"
+parameter and its entry in the
+.Ql "basePackage.override"
+.Ql "inherit"
+block.
+No other forwarded flag changed.
+.El
+.Ss Verification
+.Bl -bullet -compact
+.It
+Cache-parity invariant still holds:
+.Ql "(import ./emacs.nix {}).outPath == pkgs.emacs-git.outPath"
+evaluates to
+.Ql "true" ,
+so the mainline build remains a binary-cache hit.
+.It
+Committed alongside the nixpkgs/emacs-overlay bump that triggered it;
+.Ql "just verify"
+confirms
+.Ql "flake.lock"
+and
+.Ql "devenv.lock"
+agree on all shared inputs.
+.El

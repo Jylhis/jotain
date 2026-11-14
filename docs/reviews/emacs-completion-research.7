@@ -1,0 +1,1583 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd July 26, 2026
+.Dt EMACS-COMPLETION-RESEARCH 7
+.Os
+.Sh NAME
+.Nm emacs-completion-research
+.Nd completion, snippets, and input assist — research report
+.Sh DESCRIPTION
+\fBDate:\fP 2026-07-26 \fBScope:\fP In-buffer completion, snippet expansion, and adjacent input-assist facilities for this configuration — built-in Emacs 30/31, the third-party corfu/cape/tempel stack, and the surrounding landscape.
+\fBStatus:\fP Research only.
+The companion design document is
+.Ql "docs/design/emacs-completion-design.7" ;
+no Elisp was changed in the round that produced this report.
+.Sh HOW TO READ THIS
+Every claim below carries a source.
+Claims are marked:
+.Bl -bullet -compact
+.It
+\fB[V]\fP — verified against a primary source (GNU manual, NEWS, or package source), and adversarially re-checked.
+.It
+\fB[I]\fP — a sound inference \fIfrom\fP a verified source, but not something the source states in those words.
+Flagged because the distinction matters when someone later quotes this document as authority.
+.It
+\fB[R]\fP — a claim that was investigated and \fBrefuted\fP.
+Recorded so it is not re-proposed.
+.It
+\fB[?]\fP — investigated, unresolved.
+Do not build on it.
+.El
+.Pp
+Where Emacs 30 and 31 differ, the difference is called out explicitly.
+NEWS files reset per release:
+.Ql "master/etc/NEWS"
+is Emacs 32 NEWS as of this writing, so all NEWS citations pin a branch
+.No \&( Ns Ql "emacs-30" ,
+.Ql "emacs-31" )
+or a versioned file
+.No \&( Ns Ql "etc/NEWS.28" ,
+.Ql "etc/NEWS.31" ).
+.Sh PART 1 — THE CAPF PROTOCOL
+.Ss 1.1 The contract [V]
+A function on
+.Ql "completion-at-point-functions"
+returns either
+.Ql "nil" ,
+or a list
+.Ql "(START END COLLECTION . PROPS)" .
+.Ql "START" Ns No "/" Ns Ql "END"
+delimit the text being completed and must enclose point;
+.Ql "COLLECTION"
+must be usable as
+.Ql "try-completion" Ns No "'s"
+second argument;
+.Ql "PROPS"
+accepts any property from
+.Ql "completion-extra-properties"
+plus the capf-specific
+.Ql ":predicate"
+and
+.Ql ":exclusive" .
+.Bd -ragged -offset indent
+.Pp
+\(dqEach function should return nil unless it can and wants to take responsibility for the completion data for the text at point.
+Otherwise it should return a list of the following form:
+.Ql "(start end collection . props)" Ns No "\(dq"
+.Pp
+— \fIGNU Emacs Lisp Reference Manual\fP, Completion in Buffers https://www.gnu.org/software/emacs/manual/html_node/elisp/Completion-in-Buffers.html
+.Ed
+.Pp
+A third return form exists and is discouraged: a function of no arguments, \(dqonly intended to help convert old code\(dq.
+A fourth, undocumented category is tracked internally —
+.Ql "completion--capf-misbehave-funs"
+.No \&( Ns Ql "lisp/minibuffer.el"
+:3256-3263) records capfs that complete immediately.
+.Pp
+\fBWhy this matters here:\fP
+.Ql "cape-capf-super"
+and corfu's wrappers only handle the list form.
+A capf returning the legacy function form will not compose.
+.Pp
+Two further specifics from the same
+.Ql "@defvar" ,
+both directly relevant to auto-popup tuning:
+.Bl -bullet -compact
+.It
+Capfs \(dqshould generally return quickly, since they may be called very often (e.g., from
+.Ql "post-command-hook" Ns No ")\(dq"
+— expensive collections should use
+.Ql "completion-table-dynamic" .
+.It
+\(dqthe collection should generally not be pre-filtered based on the current text between start and end, because that is the responsibility of the caller … according to the completion styles it decides to use\(dq — i.e. a capf must not do orderless's job.
+.El
+.Pp
+The manual text was diffed between the Emacs 31 tree and published Emacs 30: byte-for-byte identical.
+\fBNo 30-vs-31 drift.\fP
+.Ss 1.2 Chaining terminates at the first non-nil return [V]
+.Bd -ragged -offset indent
+.Pp
+\(dqThe first function in
+.Ql "completion-at-point-functions"
+to return a non-nil value is used by
+.Ql "completion-at-point" .
+The remaining functions are not called.
+The exception to this is when there is an
+.Ql ":exclusive"
+specification.\(dq
+.Pp
+— \fIElisp manual\fP, Completion in Buffers (minbuf.texi:2223-2226)
+.Ed
+.Pp
+The only documented escape is
+.Ql ":exclusive"
+with the value
+.No "\fB" Ns Ql "no" Ns No "\fP"
+— the manual documents no other value:
+.Bd -ragged -offset indent
+.Pp
+\(dq:exclusive — If the value is
+.Ql "no" ,
+then if the completion table fails to match the text at point,
+.Ql "completion-at-point"
+moves on to the next function.\(dq
+.Ed
+.Pp
+Implementation:
+.Ql "completion-at-point"
+runs
+.Ql "(run-hook-wrapped 'completion-at-point-functions #'completion--capf-wrapper 'all)" ,
+and the wrapper's sole fallthrough is
+.Bd -literal -offset indent
+(and (eq 'no (plist-get (nthcdr 3 res) :exclusive))
+     (null (try-completion ... (nth 2 res) ...))
+     (setq res nil))
+.Ed
+.Ss 1.3 The shadowing folklore is close to inverted [V]
+This is the single most consequential correction in this report for the current configuration.
+.Pp
+The common framing — \(dqprepending tempel shadows the LSP\(dq — does not hold:
+.Bl -bullet -compact
+.It
+\fBtempel is non-exclusive.\fP
+.Ql "tempel.el"
+(main, lines 806 and 833) returns
+.Ql ":exclusive 'no"
+from \fBboth\fP
+.Ql "tempel-expand"
+and
+.Ql "tempel-complete" .
+Prepended tempel is precisely the case the
+.Ql ":exclusive no"
+exception rescues: it falls through to eglot unless a template name actually prefix-matches.
+.It
+\fBeglot is exclusive.\fP
+.Ql "lisp/progmodes/eglot.el"
+on master contains \fBno occurrence of the string
+.Ql "exclusive"
+at all\fP, so eglot's capf is exclusive by default.
+.El
+.Pp
+The real-world shadowing is therefore \fBeglot suppressing capfs placed \fIafter\fP it\fP — which is exactly why cape ships
+.Ql "cape-capf-nonexclusive"
+/
+.Ql "cape-wrap-nonexclusive"
+.No \&( Ns Ql "cape.el" Ns No ":1173,"
+README:264).
+.Pp
+\fBCaveat on the fallthrough [V]:\fP it is approximate by design.
+.Ql "completion--capf-wrapper"
+carries its own FIXME —
+.Bd -ragged -offset indent
+.Pp
+\(dqdepends on the actual completion UI … We approximate this result by checking whether prefix completion might work, which means that non-prefix completion will not work (or not right) for completion functions that are non-exclusive.\(dq
+.Ed
+.Pp
+cape mirrors this in
+.Ql "cape-wrap-choose" .
+Since this config runs orderless (a non-prefix style), whether the approximation misfires here is a live question — see the gap-pass findings in Part 6.
+.Pp
+A grep of
+.Ql "etc/NEWS"
+(31 dev) and
+.Ql "etc/NEWS.30"
+shows \fBzero\fP changes to
+.Ql "completion-at-point-functions"
+or
+.Ql ":exclusive"
+semantics: 30 and 31 behave identically.
+.Ss 1.4 Hook ordering: buffer-local, global, and the t element [V]
+.Bd -ragged -offset indent
+.Pp
+\(dqthe Capfs which occur earlier in the list take precedence, such that the first Capf returning a result will win and the later Capfs may not get a chance to run.
+In order to merge Capfs you can try the function
+.Ql "cape-capf-super" Ns No ".\(dq"
+.Pp
+\(dqThe buffer-local value of the list takes precedence, but if the buffer-local list contains the symbol
+.Ql "t"
+at the end, it means that the functions specified in the global list should be executed afterwards.
+The special meaning of the value
+.Ql "t"
+is a feature of the
+.Ql "run-hooks"
+function.\(dq
+.Pp
+— cape README https://github.com/minad/cape/blob/main/README.org
+.Ed
+.Pp
+Independently corroborated by the Elisp manual's Running Hooks https://www.gnu.org/software/emacs/manual/html_node/elisp/Running-Hooks.html node: \(dqif the buffer-local variable contains the element
+.Ql "t" ,
+the global hook variable will be run as well.\(dq
+.Pp
+\fBPrecision [V]:\fP the
+.Ql "t"
+semantics are \fIpositional\fP — global capfs run where
+.Ql "t"
+appears in the list, not necessarily last. cape says \(dqat the end\(dq because that is what
+.Ql "add-hook"
+produces.
+.Ql "completion-at-point"
+iterates via
+.Ql "run-hook-wrapped" ,
+which honors the same convention.
+.Ss 1.5 Merging vs. trying in turn [V]
+.Ql "cape-capf-super"
+is \fBnot\fP the tool for sequential fallback:
+.Bd -ragged -offset indent
+.Pp
+.No "\(dq" Ns Ql "cape-capf-super"
+is not needed if multiple Capfs should be tried one after another … only necessary if you want to combine multiple Capfs, such that the candidates from multiple sources appear \fItogether\fP in the completion list at the same time.\(dq
+.Ed
+.Pp
+The try-in-turn combinator is
+.Ql "cape-capf-choose"
+.No \&( Ns Ql "defalias"
+of
+.Ql "cape-wrap-choose" ),
+whose docstring reads \(dqCall each of CAPFS in turn and return first non-nil result.\(dq
+.Pp
+.Ql "cape-capf-super" Ns No "'s"
+documented restrictions:
+.Bd -ragged -offset indent
+.Pp
+\(dqCapf merging requires completion functions which are sufficiently well-behaved and completion functions which do not define completion boundaries.
+.Ql "cape-capf-super"
+has the same restrictions as
+.Ql "completion-table-merge"
+and
+.Ql "completion-table-in-turn" .
+As a simple rule of thumb,
+.Ql "cape-capf-super"
+works for static completion functions like
+.Ql "cape-dabbrev" ,
+.Ql "cape-keyword" ,
+.Ql "cape-dict" ,
+etc., but not for multi-step completions like
+.Ql "cape-file" Ns No ".\(dq"
+.Ed
+.Pp
+And on caching:
+.Bd -ragged -offset indent
+.Pp
+.No "\(dq" Ns Ql "cape-capf-super"
+creates a Capf, which caches the candidates for the whole lifetime of the Capf.
+Therefore you may want to combine a merged Capf with a cache buster.\(dq
+.Ed
+.Pp
+.Ql "cape.el" Ns No ":930"
+adds: \(dqcape-capf-super currently cannot merge Capfs which trigger at different beginning positions.\(dq
+.Ql "cape-wrap-super"
+also accepts a
+.Ql ":with"
+keyword marking auxiliary capfs.
+.Pp
+\fBBearing on the current config:\fP
+.Ql "lisp/init-snippets.el" Ns No ":70"
+merges
+.Ql "tempel-complete"
+with
+.Ql "eglot-completion-at-point"
+via
+.Ql "cape-capf-super" .
+Given 1.3, the \fIshadowing\fP rationale for that merge is weaker than the comment in the file states — but the merge still buys a genuine benefit the fallthrough does not: snippet and server candidates appear in \fBone\fP popup simultaneously rather than the server's list only appearing when no template matches.
+The caching caveat above applies and is unaddressed (no cache buster).
+.Ss 1.6 :exit-function — what a composed capf must preserve [V]
+.Ql ":exit-function"
+takes two arguments
+.Ql "(STRING STATUS)" ,
+where STATUS is exactly one of
+.Ql "finished" ,
+.Ql "sole" ,
+.Ql "exact" :
+.Bd -ragged -offset indent
+.Pp
+\(dqThe function should accept two arguments, string and status …
+.Ql "finished"
+if text is now complete,
+.Ql "sole"
+if the text cannot be further completed but completion is not finished, or
+.Ql "exact"
+if the text is a valid completion but may be further completed.\(dq
+.Pp
+— \fIElisp manual\fP, Completion Variables https://www.gnu.org/software/emacs/manual/html_node/elisp/Completion-Variables.html
+.Ed
+.Pp
+This is the mechanism by which \fBeglot expands LSP snippets and applies
+.Ql "textEdit" Ns No "/" Ns Ql "additionalTextEdits" Ns No "\fP,"
+and by which \fBtempel expands a template\fP.
+Concretely:
+.Bd -literal -offset indent
+;; eglot.el:4068ff
+:exit-function (lambda (proxy status)
+                 (eglot--capf-session-flush)
+                 (when (memq status '(finished exact)) …))
+.Ed
+.Pp
+Note eglot does \fBnothing\fP on
+.Ql "sole" .
+tempel returns
+.Ql ":exit-function (apply-partially #'tempel--exit templates nil)"
+from
+.Ql "tempel-complete" ,
+and
+.Ql "(… templates region)"
+from
+.Ql "tempel-expand" .
+.Pp
+cape re-splices these per-candidate.
+.Ql "cape--super-functions"
+is
+.Bd -literal -offset indent
+\&'(:company-docsig :company-location :company-kind :company-doc-buffer
+  :company-deprecated :annotation-function :exit-function)
+.Ed
+.Pp
+dispatching back to the originating capf via a
+.Ql "cape--super"
+text property.
+.Ql "cape.el" Ns No ":528"
+and :734 carry the comment \(dqNo cycling since it breaks the
+.Ql ":exit-function" Ns No ".\(dq"
+.Pp
+corfu's
+.Ql "corfu--exit-function"
+restores text properties precisely because eglot reads
+.Ql "(get-text-property 0 'eglot--lsp-item proxy)" .
+.Pp
+\fBDesign rule [I]:\fP a custom dwim command that wraps or re-implements
+.Ql "completion-at-point"
+must preserve
+.Ql ":exit-function"
+and should guard on
+.Ql "(memq status '(finished exact))"
+as eglot does.
+.Ql "unknown"
+exists only as an internal pre-normalization sentinel in
+.Ql "completion--done"
+and never reaches an exit-function.
+.Ss 1.7 completion-styles is a fallback chain, not a union [V]
+.Bd -ragged -offset indent
+.Pp
+\(dqEmacs looks for the first style listed in
+.Ql "completion-styles"
+and calls its
+.Ql "try-completion"
+function.
+If this function returns nil, Emacs moves to the next listed completion style … until one of the try-completion functions successfully performs completion and returns a non-nil value.
+A similar procedure is used for listing completions, via the
+.Ql "all-completions"
+functions.\(dq
+.Ed
+.Pp
+Implementation:
+.Ql "completion--nth-completion"
+dispatches with
+.Ql "(seq-some (lambda (style) …) (completion--styles md))"
+—
+.Ql "seq-some"
+stops at the first non-nil — and is the shared entry point for both
+.Ql "completion-try-completion"
+and
+.Ql "completion-all-completions" .
+.Pp
+Candidate sets from different styles are therefore \fBnever merged\fP.
+This is the documented reason the position of
+.Ql "orderless"
+relative to
+.Ql "basic"
+/
+.Ql "partial-completion"
+/
+.Ql "flex"
+matters.
+The orderless README's own note that \(dqthe basic completion style needs to be tried \fIfirst\fP (not as a fallback) for TRAMP hostname completion to work\(dq would be meaningless under a union model.
+.Pp
+\fBRefinements [V]:\fP the per-category escape hatch is
+.Ql "completion-category-overrides"
+/
+.Ql "completion-category-defaults" ,
+so ordering must be reasoned about per category
+.No \&( Ns Ql "file" ,
+.Ql "buffer" ,
+.Ql "eglot-capf" ,
+…), not globally.
+Elements may take the form
+.Ql "(STYLE ((VARIABLE VALUE) …))"
+to bind variables only while that style runs.
+.Pp
+\fBScope note [I]:\fP the manual paragraph is framed around minibuffer commands.
+It applies to in-buffer corfu completion because corfu routes through
+.Ql "completion-all-completions"
+— that last step is inference, not manual text.
+.Sh PART 2 — TAB
+.Ss 2.1 \(dqTAB indents only\(dq is the stock default, not a deviation [V]
+.Ql "tab-always-indent"
+defaults to
+.No "\fB" Ns Ql "t" Ns No "\fP"
+in both Emacs 30 and Emacs 31:
+.Bd -literal -offset indent
+;; indent.el (master)
+(defcustom tab-always-indent t
+  "Controls the operation of the TAB key.
+If t, hitting TAB always just indents the current line. …
+Some programming language modes have their own variable to control this,
+e.g., `c-tab-always-indent', and do not respect this variable.")
+.Ed
+.Pp
+.Ql "indent-for-tab-command" Ns No "'s"
+\fBonly\fP call to
+.Ql "completion-at-point"
+sits in a cond arm whose first conjunct is
+.Ql "(eq tab-always-indent 'complete)" .
+With the default
+.Ql "t"
+that branch is provably unreachable: TAB cannot invoke a capf.
+.Pp
+A verifier diffed master's
+.Ql "indent.el"
+against the
+.Ql "emacs-30"
+branch: byte-identical except the copyright year.
+\fBNo 30-vs-31 drift.\fP
+.Pp
+The strongest available counter-evidence cuts the same way: Emacs 31 NEWS announces a new \fBopt-in\fP theme
+.Ql "newcomers-presets"
+whose body contains
+.Ql "'(tab-always-indent 'complete)"
+— i.e. 31 still defaults to
+.Ql "t"
+and needs an explicit theme to put completion on TAB.
+.Pp
+\fB[R] Refuted 0-3:\fP the claim that corfu's README recommends
+.Ql "tab-always-indent"
+=
+.Ql "complete" ,
+i.e. that moving completion off TAB deviates from upstream corfu guidance.
+There is no evidence of such a recommendation.
+.Pp
+\fB[R] Refuted 0-3:\fP the claim that
+.Ql "tab-always-indent"
+=
+.Ql "complete"
+is the \fIonly\fP documented way TAB invokes completion.
+Modes that rebind TAB in their own keymap are a counterexample — see 2.2.
+.Ss 2.2 What \(dqTAB never completes\(dq still requires [V]
+The claim in 2.1 is scoped to
+.Ql "indent-for-tab-command" .
+End-to-end, four things bypass the variable:
+.Bl -enum -compact
+.It
+\fBcorfu's own keymap.\fP
+.Ql "corfu-map"
+binds
+.Ql "\(dqTAB\(dq"
+→
+.Ql "corfu-complete"
+(plus
+.Ql "\(dqM-TAB\(dq"
+→
+.Ql "corfu-expand" ,
+.Ql "\(dqRET\(dq"
+→
+.Ql "corfu-insert" ).
+A literal \(dqTAB never completes\(dq therefore requires unbinding TAB in
+.Ql "corfu-map" .
+\fIThis is a live decision for the design document.\fP
+.It
+\fBModes that rebind TAB in their keymap\fP bypass the variable entirely:
+.Ql "org-cycle" ,
+message-mode's
+.Ql "message-tab" ,
+shell-mode's
+.Ql "(keymap-set shell-mode-map \(dqTAB\(dq 'completion-at-point)" .
+.It
+\fBModes with their own variable\fP:
+.Ql "c-tab-always-indent"
+(also default
+.Ql "t" ),
+.Ql "cperl-tab-always-indent" .
+Some modes
+.Ql "setq-local tab-always-indent nil"
+(asm-mode, change-log-mode, snmp-mode) — that inserts a literal tab past the indentation, still not completion.
+.It
+\fBMinibuffer and comint\fP TAB never routes through
+.Ql "tab-always-indent" .
+.El
+.Pp
+Additionally, this repo's
+.Ql "lisp/init-snippets.el" Ns No ":42"
+binds
+.Ql "TAB"
+→
+.Ql "tempel-next"
+in
+.Ql "tempel-map" ,
+which is active only while a template session is live.
+That is a fifth TAB consumer, and an intentional one.
+.Ss 2.3 tab-first-completion — scope correction [V]
+\fBThe variable was added in Emacs 28.1, not Emacs 30.\fP It carries
+.Ql ":version \(dq28.1\(dq" ,
+is announced in
+.Ql "etc/NEWS.28"
+(\(dqNew user option \&'tab-first-completion'\(dq), and is \fBabsent from
+.Ql "etc/NEWS.30" Ns No "\fP."
+Its defcustom body is byte-identical across the
+.Ql "emacs-30" ,
+.Ql "emacs-31" ,
+and
+.Ql "master"
+branches.
+.Pp
+\fBIt is not a predicate option.\fP The
+.Ql ":type"
+is a closed choice of exactly five symbols:
+.Bd -literal -offset indent
+(choice (const :tag "Always complete" nil)
+        (const :tag "Only complete at the end of a line" eol)
+        (const :tag "Unless looking at a word" word)
+        (const :tag "Unless at a word or parenthesis" word-or-paren)
+        (const :tag "Unless at a word, parenthesis, or punctuation." word-or-paren-or-punct))
+.Ed
+.Pp
+Dispatch is a
+.Ql "pcase"
+on a syntax class, not a
+.Ql "funcall"
+(indent.el ~189-194):
+.Bd -literal -offset indent
+(let ((syn (syntax-class (syntax-after (point)))))
+  (pcase tab-first-completion
+    ('nil t)
+    ('eol (eolp))
+    ('word (not (eql 2 syn)))
+    ('word-or-paren (not (memq syn '(2 4 5))))
+    ('word-or-paren-or-punct (not (memq syn '(2 4 5 1))))))
+.Ed
+.Pp
+A lambda would match no arm and silently degrade to \(dqnever complete on first TAB\(dq.
+The predicate reading is not merely undocumented — it is \fIunimplemented\fP.
+.Pp
+\fBIt is inert unless
+.Ql "tab-always-indent"
+is
+.Ql "complete" Ns No ".\fP"
+That pcase sits inside a cond clause guarded by
+.Ql "(eq tab-always-indent 'complete)" ,
+and a repo-wide code search finds only four references (indent.el, doc/emacs/indent.texi, doc/lispref/text.texi, etc/NEWS.28).
+There is no second code path.
+The docstring closes: \(dqThis variable has no effect unless
+.Ql "tab-always-indent' is " Ns No "complete'.\(dq"
+.Pp
+\fBConsequence for this configuration:\fP with TAB on indent-only,
+.Ql "tab-first-completion"
+is irrelevant and should be documented as such rather than tuned.
+(This retires the \(dq'complete + tab-first-completion guard\(dq option that was on the table during scoping.)
+.Pp
+Note also that the Emacs \fIuser\fP manual documents only one of the five values
+.No \&( Ns Ql "eol" )
+and defers to the Elisp node Mode-Specific Indent — that page alone cannot enumerate the option.
+.Ss 2.4 The explicit key: C-M-i / ESC TAB, never M-TAB [V]
+.Bd -ragged -offset indent
+.Pp
+\(dqIn most programming language modes,
+.Ql "C-M-i"
+(or
+.Ql "M-TAB" )
+invokes the command
+.Ql "completion-at-point"
+…\(dq
+.Pp
+\(dqOn graphical displays, the
+.Ql "M-TAB"
+key is usually reserved by the window manager for switching graphical windows, so you should type
+.Ql "C-M-i"
+or
+.Ql "ESC TAB"
+instead.\(dq
+.Pp
+— \fIEmacs manual\fP, Symbol Completion https://www.gnu.org/software/emacs/manual/html_node/emacs/Symbol-Completion.html
+.Ed
+.Pp
+The Elisp manual independently states \(dqIn many major modes, in-buffer completion is performed by the
+.Ql "C-M-i"
+or
+.Ql "M-TAB"
+command, bound to
+.Ql "completion-at-point" Ns No ".\(dq"
+Two primary manuals agree.
+.Pp
+\fBMechanism [V]:\fP the window manager steals the \fIfunction-key event\fP
+.Ql "<M-tab>"
+(Alt+Tab).
+.Ql "C-M-i"
+is the ASCII meta-C-i event, which is why Emacs still sees it.
+They are distinct events \fBonly on window systems\fP — on a TTY the terminal cannot distinguish TAB from C-i, so
+.Ql "C-M-i" ,
+.Ql "M-TAB"
+and
+.Ql "ESC TAB"
+all arrive as the same ESC+C-i sequence.
+.Pp
+\fBConsequences for the design:\fP
+.Bl -bullet -compact
+.It
+Binding a dwim command to
+.Ql "C-M-i"
+is safe on GUI \fBand\fP TTY.
+.It
+It cannot be made \fIdistinct\fP from
+.Ql "ESC TAB"
+in a terminal.
+.It
+Doing so \fBoverrides a documented standard binding\fP (the global binding is historically
+.Ql "complete-symbol"
+in
+.Ql "esc-map" ,
+delegating to
+.Ql "completion-at-point" ).
+That is a deliberate choice to document, not a correctness problem.
+.It
+The manual's \(dqin many/most major modes\(dq is a real hedge — modes do rebind these.
+.El
+.Pp
+\fBExistence proof [I]:\fP vanilla Emacs —
+.Ql "tab-always-indent"
+=
+.Ql "t" ,
+completion on
+.Ql "C-M-i"
+— \fIis\fP the configuration this design wants, minus the snippet chaining.
+.Sh PART 3 — CORE COMPLETION PREVIEW (EMACS 30/31)
+.Ss 3.1 What it is, and the conditional TAB conflict [V]
+Completion Preview mode is core inline ghost text, new in Emacs 30.
+Both
+.Ql "completion-preview-mode"
+and
+.Ql "global-completion-preview-mode"
+are \fBoff by default\fP.
+.Bd -ragged -offset indent
+.Pp
+\(dqCompletion Preview mode is a minor mode that shows completion suggestions as you type. … Emacs automatically displays the suggested completion for text around point as an in-line preview right after point; type TAB to accept the suggestion.\(dq
+.Ed
+.Pp
+The TAB binding lives in the \fBtransient\fP
+.Ql "completion-preview-active-mode-map"
+(binds
+.Ql "\(dqC-i\(dq"
+→
+.Ql "completion-preview-insert" ,
+.Ql "\(dqM-i\(dq"
+→
+.Ql "completion-preview-complete" ),
+active only while a preview overlay is displayed.
+.Pp
+Eshel Yaron, the implementer:
+.Bd -ragged -offset indent
+.Pp
+\(dqCrucially, whenever the preview is shown, TAB inserts its contents.
+Otherwise, Completion Preview mode doesn't bind any keys.\(dq
+.Ed
+.Pp
+\fBSo [I]:\fP with
+.Ql "tab-always-indent"
+=
+.Ql "t" ,
+TAB still indents normally; it is hijacked only during the preview window, via minor-mode keymap precedence over
+.Ql "indent-for-tab-command" .
+This is a genuine conflict for a TAB-indents-only design, but \fIconditional\fP and \fIonly if opted into\fP.
+The manual documents the binding; the conflict is a mechanically verifiable inference, not manual text.
+.Pp
+Defcustoms present:
+.Ql "completion-preview-minimum-symbol-length"
+(default \fB3\fP),
+.Ql "completion-preview-idle-delay"
+(default \fBnil\fP),
+.Ql "completion-preview-commands" ,
+.Ql "completion-preview-exact-match-only" ,
+.Ql "completion-preview-ignore-case" ,
+.Ql "completion-preview-adapt-background-color" ,
+.Ql "completion-preview-sort-function" .
+.Pp
+.Ql "global-completion-preview-mode"
+carries a
+.Ql ":predicate"
+excluding archive-mode, calc-mode, compilation-mode, diff-mode, dired-mode, image-mode, minibuffer-mode, minibuffer-inactive-mode, org-agenda-mode, special-mode, wdired-mode.
+.Pp
+Documented escapes from the TAB binding: rebind inside
+.Ql "completion-preview-active-mode-map" ,
+or (on 31) use
+.Ql "completion-preview-inhibit-functions" .
+.Ss 3.2 Emacs 31 adds the sanctioned per-context gate [V]
+.Ql "etc/NEWS.31"
+line 309:
+.Bd -ragged -offset indent
+.Pp
+\(dq\fI*\fP New user option \&'completion-preview-inhibit-functions'.
+This option provides fine-grained control over Completion Preview mode activation.
+You can use it to specify arbitrary conditions in which to inhibit the mode's operation.\(dq
+.Ed
+.Pp
+The defcustom
+.No \&( Ns Ql "completion-preview.el" Ns No ":179-185)"
+carries
+.Ql ":version \(dq31.1\(dq" :
+.Bd -ragged -offset indent
+.Pp
+\(dqCompletion Preview mode calls the functions on this hook without arguments during
+.No "`post-command-hook'. If any of these functions returns non-nil, it inhibits the preview display.\(dq"
+.Ed
+.Pp
+Wired in at line 648:
+.Ql "(not (run-hook-with-args-until-success 'completion-preview-inhibit-functions))"
+short-circuits
+.Ql "completion-preview--show" .
+.Pp
+\fBAbsent in Emacs 30 [V]:\fP a grep of the
+.Ql "emacs-30"
+branch finds only internal
+.Ql "completion-preview--inhibit-update-p"
+/
+.Ql "--inhibit-update" .
+Emacs 30 NEWS mentions completion-preview exactly once (\(dq** New minor mode \&'completion-preview-mode'.\(dq).
+.Pp
+Upstream's own Commentary shows the intended pattern:
+.Ql "(add-hook 'completion-preview-inhibit-functions (lambda () executing-kbd-macro))" .
+A
+.Ql "(nth 4 (syntax-ppss))"
+comment/string predicate is a straightforward application — \fB[I]\fP, that specific recipe is inference, not upstream wording.
+.Pp
+\fBPrecision [V]:\fP it inhibits the preview \fIdisplay\fP per command; it does not toggle the mode off.
+An already-shown preview is torn down via
+.Ql "(completion-preview-active-mode -1)" .
+.Ss 3.3 completion-preview-sort-function and the eglot no-op [V]
+.Ql "etc/NEWS.31" :
+.Bd -ragged -offset indent
+.Pp
+\(dqIf you use this mode together with an in-buffer completion popup interface, such as the interfaces that the GNU ELPA packages Corfu and Company provide, you can set this option to the same sort function that your popup interface uses for a more integrated experience.
+('completion-preview-sort-function' was already present in Emacs 30.1, but as a plain Lisp variable, not a user option.)\(dq
+.Ed
+.Pp
+Confirmed by commit
+.Ql "8b9194ae"
+(Eshel Yaron, 2025-02-28), whose diff shows
+.Ql "defvar"
+→
+.Ql "defcustom"
+with
+.Ql ":version \(dq31.1\(dq" .
+.Pp
+\fBDecision-relevant caveat [V]:\fP the docstring adds \(dqIf the completion table that produces the candidates already specifies a sort function, it takes precedence over this option.\(dq
+Since eglot's capf supplies
+.Ql ":display-sort-function" ,
+aligning this option with corfu's sorting is a \fBno-op in eglot-driven buffers\fP.
+.Pp
+\fB[I]\fP NEWS never contrasts coexistence with replacement. \(dqCompletion preview is intended to coexist with, rather than replace, corfu\(dq is a fair reading of the Corfu/Company sentence above, but it is an editorial gloss, not upstream wording.
+.Sh PART 4 — CORFU
+.Ss 4.1 corfu-auto latches at mode-enable time [V]
+This is the mechanism the \(dqauto in code, manual in prose\(dq requirement depends on.
+.Bd -ragged -offset indent
+.Pp
+\(dqAuto completion is disabled by default in Corfu. … Auto completion can be enabled by setting
+.Ql "corfu-auto"
+to t locally or globally \fBbefore enabling\fP the local
+.Ql "corfu-mode"
+or the
+.Ql "global-corfu-mode" Ns No ".\(dq"
+.Pp
+— corfu README https://raw.githubusercontent.com/minad/corfu/main/README.org
+.Ed
+.Pp
+A verifier grepped
+.Ql "corfu.el"
+for
+.Ql "corfu-auto"
+and found exactly \fBtwo\fP sites: the defcustom, and \fBone\fP runtime read in the mode body —
+.Bd -literal -offset indent
+(when corfu-auto
+  (require 'corfu-auto)
+  (add-hook 'post-command-hook 'corfu-auto--post-command 10 'local))
+.Ed
+.Pp
+The verifier specifically hunted for a runtime re-check that would refute the ordering requirement.
+.Ql "corfu-auto--post-command"
+gates on
+.Ql "completion-in-region-mode" ,
+.Ql "defining-kbd-macro" ,
+.Ql "buffer-read-only" ,
+.Ql "(corfu--match-symbol-p corfu-auto-commands this-command)" ,
+.Ql "corfu--popup-support-p" ,
+then
+.Ql "corfu-auto-delay"
+/
+.Ql "corfu-auto-trigger"
+— it \fBnever examines
+.Ql "corfu-auto" Ns No "\fP."
+The value genuinely latches at mode-enable time.
+The ordering requirement is real, not folklore.
+.Pp
+\fBWhy the
+.Ql "prog-mode-hook"
+pattern works [V]:\fP
+.Ql "global-corfu-mode"
+is a
+.Ql "define-globalized-minor-mode"
+dispatching through
+.Ql "corfu--on"
+from
+.Ql "after-change-major-mode-hook" ,
+which
+.Ql "run-mode-hooks"
+runs \fBafter\fP major-mode hooks.
+So:
+.Bd -literal -offset indent
+(add-hook 'prog-mode-hook (lambda () (setq-local corfu-auto t)))
+.Ed
+.Pp
+is correctly ordered against
+.Ql "global-corfu-mode" .
+.Pp
+\fBTwo failure modes [V]:\fP
+.Bl -enum -compact
+.It
+.Ql "define-minor-mode"
+runs the mode hook \fIafter\fP the body, so setting
+.Ql "corfu-auto"
+in
+.Ql "corfu-mode-hook"
+is \fBtoo late\fP.
+.It
+Buffers already open when
+.Ql "global-corfu-mode"
+is first enabled do not re-run their major-mode hooks and keep whatever
+.Ql "corfu-auto"
+value they had.
+Relevant at startup ordering and after a config reload.
+.El
+.Pp
+\fBHonest scoping [I]:\fP calling this \(dq\fIthe\fP prog/prose mechanism\(dq is editorializing.
+Upstream's own documented per-mode knob is
+.Ql "global-corfu-modes"
+(the
+.Ql ":predicate" Ns No "-generated"
+defcustom), which is an \fBon/off knob for corfu-mode itself, not an auto/manual knob\fP.
+The README also documents enabling
+.Ql "corfu-mode"
+per-mode via hooks instead of globally.
+The setq-local-in-hook technique is \fIa\fP mechanism licensed by the README sentence quoted above, not presented upstream as \fIthe\fP recipe.
+.Pp
+corfu 2.x moved auto-completion into
+.Ql "extensions/corfu-auto.el" ,
+which makes the latch behavior stronger, not weaker.
+.Ss 4.2 Trigger-character gating — upstream prior art [V]
+Upstream ships a first-party recipe for gating a merged snippet capf behind a \fBtrigger character\fP.
+From the cape README (appears twice — in the
+.Ql "cape-capf-super"
+section and as \(dqExample 1: Configure a merged Capf with a trigger prefix character\(dq):
+.Bd -literal -offset indent
+;; Trigger completion only after trigger character.
+(setq-local corfu-auto-trigger "/"
+            completion-at-point-functions
+            (list (cape-capf-trigger
+                   (cape-capf-super #'cape-abbrev #'tempel-complete) ?/)))
+.Ed
+.Pp
+Both APIs exist in shipped code, not just README prose:
+.Bl -bullet -compact
+.It
+.Ql "cape.el" Ns No ":1286"
+—
+.Ql "(defun cape-wrap-trigger (capf trigger) \(dqEnsure that TRIGGER character occurs before point and then call CAPF. See also " Ns No "corfu-auto-trigger'.\(dq)" Ns Ql ". It searches back to " Ns No "pos-bol" Ns Ql " for the trigger char, requires no whitespace between it and point, treats the trigger as punctuation syntax, and rewrites " Ns No "beg" Ns Ql " to " Ns No "(1+"
+.No "pos)" Ns Ql " with " Ns No ":company-prefix-length"
+.No "t`."
+.It
+.Ql "corfu-auto.el" Ns No ":35"
+—
+.Ql "(defcustom corfu-auto-trigger \(dq\(dq \(dqCharacters which trigger auto completion. If a trigger character is detected " Ns No "corfu-auto-prefix'"
+is ignored.\(dq :type
+.No "'string)" Ns Ql ", consumed via " Ns No "seq-contains-p" Ns Ql " on " Ns No "last-command-event" Ns Ql ", bypassing **both** " Ns No "corfu-auto-prefix" Ns Ql " and " Ns No "corfu-auto-delay`."
+.El
+.Pp
+\fBVersion floors [V]:\fP cape ≥ 2.3 and corfu ≥ 2.5 (both changelogs dated 2025-11-15); still present in cape 2.7 / corfu 2.11. corfu 2.x requires
+.Ql "extensions/corfu-auto.el"
+to be loaded.
+.Pp
+\fBTwo qualifications [V]:\fP
+.Bl -bullet -compact
+.It
+This is a \fBgated auto-popup\fP recipe, \fBnot a keybinding recipe\fP — the README proposes no key.
+Do not cite it as prior art for a dwim keybinding; cite it only for trigger-character gating.
+.It
+It replaces
+.Ql "completion-at-point-functions"
+buffer-locally with a \fBsingle\fP capf.
+\fBNo eglot coexistence is demonstrated.\fP
+.El
+.Ss 4.3 TTY child frames — a live 30-vs-31 split for this repo [V]
+corfu's child-frame popup renders natively in terminal Emacs starting with \fBEmacs 31\fP; the separate
+.Ql "corfu-terminal"
+package is needed only on 30 and below.
+.Pp
+corfu README, twice: \(dqCorfu relies on child frames to show the popup.
+On Emacs 31 this works for terminal Emacs.
+Use the
+.Ql "corfu-terminal"
+package on older Emacs versions.\(dq
+.Pp
+Decisive upstream corroboration —
+.Ql "etc/NEWS.31" :
+.Bd -ragged -offset indent
+.Pp
+\(dqChild frames are now supported on TTY frames.
+This supports use-cases like Posframe, Corfu, and child frames acting like tooltips.\(dq
+.Ed
+.Pp
+NEWS names Corfu explicitly and documents the feature-detection predicate
+.Ql "(featurep 'tty-child-frames)" .
+No opt-in variable gates general child-frame support
+.No \&( Ns Ql "tty-tip-mode"
+is tooltip-specific).
+Further confirmed by corfu commit
+.Ql "f17fe365d2"
+\(dqEmacs 31 supports child frames on TTY 🎉\(dq, which removed the old README text about falling back on non-graphical terminals.
+.Pp
+\fBRelevance to this repo [V]:\fP per
+.Ql "CLAUDE.md"
+the default build is the emacs-overlay
+.Ql "unstable"
+variant — the Emacs 31 release branch, currently the \fB31.0.90 pretest\fP — while the declared floor is \fB30.1\fP.
+This split is live here.
+Because the pretest is 31.0.90 rather than 31.1, \fBa
+.Ql "(featurep 'tty-child-frames)"
+gate is correct where a version comparison would be wrong.\fP The repo ships a terminal-only distribution
+.No \&( Ns Ql "jotainEmacsPackagesNoGui" ,
+used by the nix-on-droid module), so this is not hypothetical.
+.Pp
+Adjacent known bug: bug#76052 https://debbugs.gnu.org/76052, TTY child frames for Corfu offset upward at the bottom of a window — a polish issue that confirms rather than contradicts the mechanism.
+.Pp
+\fBStale-source warning:\fP corfu-terminal's NonGNU ELPA page (v0.7, 2024-03-31) still says flatly \(dqCorfu uses child frames … This makes Corfu unusable on terminal\(dq and never mentions Emacs 31.
+Stale silence, not a contradiction — but a reader consulting only that page would be misled.
+.Sh PART 5 — PROSE-MODE COMPLETION (THE M-TAB QUESTION), RESOLVED
+The first research round left this contradictory: one claim that \(dqM-TAB in Text mode completes from the spell-checker's dictionary\(dq was refuted 0-3, while a different verifier quoted the manual saying exactly that.
+A dedicated pass over source resolved it.
+\fBBoth prior positions were partly right.\fP
+.Ss 5.1 What text-mode actually installs [V]
+Since \fBEmacs 30.1\fP, the body of
+.Ql "(define-derived-mode text-mode …)"
+ends with — byte-identical on
+.Ql "emacs-30"
+(lines 157-158),
+.Ql "emacs-31"
+and
+.Ql "master"
+(155-156):
+.Bd -literal -offset indent
+(add-hook 'context-menu-functions 'text-mode-context-menu 10 t)
+(when (eq text-mode-ispell-word-completion 'completion-at-point)
+  (add-hook 'completion-at-point-functions #'ispell-completion-at-point 10 t))
+.Ed
+.Pp
+Decoded against
+.Ql "add-hook" Ns No "'s"
+signature
+.Ql "(hook function &optional depth local)" :
+\fBdepth 10, buffer-local\fP.
+This is the \fIonly\fP executable reference to
+.Ql "completion-at-point-functions"
+in
+.Ql "text-mode.el"
+(the other two occurrences are inside a docstring).
+.Pp
+.Ql "ispell-completion-at-point"
+is a real capf
+.No \&( Ns Ql "ispell.el" Ns No ":3718"
+on emacs-30, :3783 on emacs-31), docstring \(dqWord completion function for use in
+.Ql "completion-at-point-functions'\(dq, returning " Ns No "(list"
+beg end (cdr all) :exclusive
+.No "'no)`."
+.Pp
+\fBConsequence for this config [V]:\fP depth 10 appends \fBlate\fP.
+Any capf added at default depth 0 —
+.Ql "tempel-complete" ,
+.Ql "cape-dabbrev" ,
+eglot — runs \fIbefore\fP it.
+The ispell capf is a \fBfallback, not a shadow\fP.
+(\(dqDepth 10 = last\(dq is a loose gloss: depths range −100..100, and with
+.Ql "LOCAL=t"
+the
+.Ql "t"
+sentinel sits at the very end of the buffer-local list.)
+.Ss 5.2 The option [V]
+.Bd -literal -offset indent
+(defcustom text-mode-ispell-word-completion 'completion-at-point
+  "How Text mode provides Ispell word completion. …"
+  :group 'text
+  :type '(choice (const completion-at-point) boolean)
+  :version "30.1"
+  :set (lambda (sym val) …))
+.Ed
+.Pp
+Three meaningful values:
+.Ql "completion-at-point"
+(capf — the default), any other non-nil (bind
+.Ql "C-M-i"
+directly to
+.Ql "ispell-complete-word" ),
+.Ql "nil"
+(neither).
+.Pp
+Introduced via bug#67527 (patch by Eshel Yaron, installed 2024-01-27).
+Emacs 29 has no such defcustom at all — only an unconditional
+.Ql "\(dqC-M-i\(dq #'ispell-complete-word"
+in
+.Ql "text-mode-map" .
+.Pp
+\fBEmacs 30 vs 31 doc-only delta [V]:\fP emacs-30's docstring carries the sentence \(dqThis user option only takes effect when you customize it in Custom or with
+.Ql "setopt', not with " Ns No "setq'.\(dq"
+— \fBdeleted in 31 and master\fP while the
+.Ql ":set"
+lambda that motivated it was kept.
+Anyone citing that sentence for an Emacs 31 config is citing removed text.
+.Ss 5.3 The key path — a correction worth propagating [V]
+By default
+.Ql "text-mode-map"
+has \fBno\fP
+.Ql "C-M-i"
+/
+.Ql "M-TAB"
+binding.
+The defcustom's
+.Ql ":set"
+lambda \fIremoves\fP it via
+.Ql "(keymap-unset text-mode-map \(dqC-M-i\(dq t)"
+whenever the value is
+.Ql "nil"
+or
+.Ql "completion-at-point" .
+Because
+.Ql "text-mode.el"
+is preloaded
+.No \&( Ns Ql "loadup.el" Ns No ":283),"
+the dump-time
+.Ql "custom-initialize-reset"
+already ran that branch — C-M-i is unbound in
+.Ql "text-mode-map"
+out of the box.
+.Pp
+So
+.Ql "M-TAB"
+falls through to the \fBglobal\fP
+.Ql "esc-map"
+binding.
+And NEWS and the manual both say \(dqcompletion-at-point, globally bound to M-TAB\(dq — but the actual binding
+.No \&( Ns Ql "bindings.el" Ns No ":952"
+on 30, :1061-1063 on 31) is:
+.Bd -literal -offset indent
+(define-key esc-map "\et" 'complete-symbol)
+.Ed
+.Pp
+where
+.Ql "complete-symbol"
+is
+.Ql "(if arg (info-complete-symbol) (completion-at-point))" .
+Bare
+.Ql "C-M-i"
+is behaviorally identical;
+.No "\fB" Ns Ql "C-u C-M-i"
+runs
+.Ql "info-complete-symbol"
+instead\fP.
+Precise phrasing: \fIglobal
+.Ql "C-M-i"
+→
+.Ql "complete-symbol" ,
+which calls
+.Ql "completion-at-point" Ns No ".\fP"
+.Ss 5.4 What setting it to nil removes [V]
+Exactly two things: the (default-absent)
+.Ql "C-M-i"
+binding, and the buffer-local
+.Ql "ispell-completion-at-point"
+capf entry.
+Nothing else.
+Proven by grep, not inference: a tree-wide search for the option returns
+.Ql "total_count=3"
+—
+.Ql "text-mode.el" ,
+.Ql "doc/emacs/text.texi" ,
+.Ql "etc/NEWS.30" .
+No other Lisp file reads it;
+.Ql "ispell.el"
+never references it and has no
+.Ql "remove-hook"
+for the capf.
+.Pp
+It is read at \fBmode-entry\fP time, so
+.Ql "nil"
+does not retroactively strip the capf from already-live text-mode buffers.
+.Pp
+\fBA precision correction [V]:\fP the blanket \(dqsetq silently fails here\(dq is an overreach.
+Only the \fIkeymap\fP half lives in
+.Ql ":set" ,
+and since text-mode.el is preloaded a
+.Ql "setq"
+can never update
+.Ql "text-mode-map" .
+But the \fIcapf\fP half is read from the live variable inside the mode body, so
+.Ql "(setq text-mode-ispell-word-completion nil)"
+\fBdoes\fP stop the capf from being installed in newly-entered buffers — the practically decisive effect.
+.Ql "setq"
+genuinely fails only when moving to a non-nil,
+.No "non-" Ns Ql "completion-at-point"
+value.
+Given this repo's
+.Ql "setopt"
+rule the point is moot, but the mechanism should be stated correctly.
+.Pp
+\fBBearing on
+.Ql "init-writing.el" Ns No ":41-42"
+[V]:\fP the existing comment says the Emacs 30 ispell capf throws \(dqNo plain word-list found\(dq on NixOS where
+.Ql "ispell-alternate-dictionary"
+has no file.
+Setting the option to
+.Ql "nil"
+is a correct and sufficient fix for that, and it removes nothing else.
+.Ss 5.5 The manual now agrees [V]
+.Ql "emacs-31 doc/emacs/fixit.texi"
+(Spelling node):
+.Bd -literal -offset indent
+@item M-@key{TAB}
+@itemx @key{ESC} @key{TAB}
+@itemx C-M-i
+Complete the word before point based on the spelling dictionary and
+other completion sources (@code{completion-at-point}).
+.Ed
+.Pp
+The Emacs \fB29\fP manual said the opposite — \(dq(@code{ispell-complete-word})\(dq — which is almost certainly what the first round's 0-3 refutation was reasoning from.
+.Ql "ispell-complete-word"
+itself is \fBnot\fP obsolete: a live defun on both branches, with no
+.Ql "make-obsolete" .
+.Pp
+\fBAdjudication:\fP M-TAB in text modes \fIdoes\fP complete from the spell-checker's dictionary — but as \fBone capf among others\fP, at depth 10, reached via
+.Ql "complete-symbol"
+→
+.Ql "completion-at-point" ,
+not via a dedicated key binding.
+.Ss 5.6 A key-safety hazard the design must dodge [V]
+\fBWith
+.Ql "flyspell-mode"
+enabled,
+.Ql "M-TAB"
+/
+.Ql "ESC TAB"
+/
+.Ql "C-M-i"
+is not a completion key at all.\fP
+.Ql "flyspell.el" Ns No ":430-438:"
+.Bd -literal -offset indent
+(defvar flyspell-mode-map
+  (let ((map (make-sparse-keymap)))
+    (if flyspell-use-meta-tab (define-key map "\eM-\et" 'flyspell-auto-correct-word))
+    …))
+.Ed
+.Pp
+.Ql "flyspell-use-meta-tab"
+defaults to
+.Ql "t"
+on both 30 and 31.
+As a \fBminor-mode\fP keymap it outranks the global
+.Ql "esc-map"
+binding — so the completion key is fully shadowed by spell correction in exactly the buffers where dictionary completion was supposed to help.
+.Pp
+\fBOpt-out:\fP set
+.Ql "flyspell-use-meta-tab"
+to
+.Ql "nil" ;
+its
+.Ql ":set"
+lambda re-binds
+.Ql "\(dq\eM-\et\(dq"
+to nil live, so it works both before and after flyspell loads.
+.Pp
+\fBWhy this repo is \fIprobably\fP already safe [I]:\fP
+.Ql "init-writing.el"
+uses \fBjinx\fP, not flyspell
+.No \&( Ns Ql "global-jinx-mode"
+\(dqreplaces both
+.Ql "flyspell-mode"
+and
+.Ql "flyspell-prog-mode"
+in one shot\(dq).
+So
+.Ql "flyspell-mode-map"
+should never be active.
+This is inference from the config, not a verified runtime check — any future move back to flyspell, or any package enabling it transitively, silently breaks the dwim key.
+The design document treats this as a documented risk.
+.Sh PART 6 — TEMPEL, HIPPIE-EXPAND, AND WHAT REMAINS UNKNOWN
+.Ss 6.1 tempel's capf surface [V]
+Verified against
+.Ql "tempel.el"
+v1.14 (939 lines) on
+.Ql "main" ;
+the emacs-straight released mirror
+.Ql "diff -q" Ns No "s"
+\fBidentical\fP, so
+.Ql "main"
+== what a NixOS user installs.
+.Bd -literal -offset indent
+| Symbol | Kind | Returns |
+| tempel-complete | capf | all templates for the buffer |
+| tempel-expand | capf | single exactly-matching template |
+| tempel-insert | command (completing-read) | — |
+.Ed
+.Pp
+Both capfs return
+.Ql ":category 'tempel" ,
+.Ql ":exclusive 'no" ,
+and an
+.Ql ":exit-function"
+of
+.Ql "tempel--exit" .
+.Ql "tempel-expand" Ns No "'s"
+docstring: \(dqreturns only the single exactly matching template name.
+As a consequence the completion UI (e.g.
+Corfu) does not present the candidates for selection.\(dq
+.Ql "tempel-complete" Ns No "'s:"
+\(dqreturns a list of all possible template names, which are then displayed in the completion UI.\(dq
+.Pp
+Only
+.Ql "tempel-complete"
+emits
+.Ql ":company-kind"
+.No \&( Ns Ql "(lambda (_) 'snippet)" ),
+.Ql ":company-doc-buffer" ,
+.Ql ":company-location" ,
+and a \fBconditional\fP
+.Ql ":annotation-function"
+— nil if
+.Ql "tempel-complete-annotation"
+(default 20) is nil.
+.Ql "tempel-expand"
+emits none of these.
+.Ss 6.2 tempel-trigger-prefix does not exist [V]
+A scope correction:
+.No "\fB" Ns Ql "tempel-trigger-prefix"
+is not in tempel 1.14.\fP
+.Ql "grep"
+for
+.Ql "trigger-prefix"
+returns zero matches on both
+.Ql "main"
+and the released mirror.
+Prefix detection is the internal
+.Ql "tempel--prefix-bounds"
+(lines 770-780), which walks back over non-whitespace and accepts that span only if
+.Ql "try-completion"
+against the template list succeeds, else falls back to
+.Ql "(bounds-of-thing-at-point 'symbol)" .
+.Pp
+The complete defcustom set is \fBnine\fP:
+.Ql "tempel-path" ,
+.Ql "tempel-mark" ,
+.Ql "tempel-insert-annotation"
+(40),
+.Ql "tempel-complete-annotation"
+(20),
+.Ql "tempel-user-elements"
+(nil),
+.Ql "tempel-template-sources" ,
+.Ql "tempel-done-on-region"
+(t),
+.Ql "tempel-done-on-next"
+(t),
+.Ql "tempel-auto-reload"
+(t).
+.Ql "tempel-map"
+is a
+.Ql "defvar-keymap" ,
+not a defcustom, but is still user-configurable.
+.Pp
+\fB[?]\fP The suggested modern equivalent —
+.Ql "cape-capf-trigger"
+wrapped around
+.Ql "tempel-complete"
+— was \fInot\fP itself verified.
+Treat as unverified.
+.Ss 6.3 Template and file format [V]
+.Ql ".eld"
+files are a flat sequence
+.Ql "(MODES PLIST TEMPLATES MODES PLIST TEMPLATES…)" .
+Leading non-keyword symbols are mode names; keyword/value pairs form a per-section plist whose
+.Ql ":when"
+supplies a condition (defaulting to
+.Ql "t" );
+remaining conses are templates.
+Mode matching is
+.Ql "derived-mode-p"
+plus
+.Ql "major-mode-remap-alist"
+indirection, with
+.Ql "fundamental-mode"
+sections always matching.
+.Pp
+Only
+.Ql ":when"
+is consumed from the \fIsection\fP plist — any other section-level keyword is \fBsilently discarded\fP.
+Per-template
+.Ql ":pre" Ns No "/" Ns Ql ":post"
+are a separate mechanism: a trailing plist on each template cons.
+.Bl -bullet -compact
+.It
+.Ql ":pre"
+— a Lisp form evaluated \fBfirst\fP in
+.Ql "tempel--insert" ,
+before the element loop.
+.It
+.Ql ":post"
+— stashed on the range overlay, evaluated by the finalizer
+.Ql "tempel--done"
+in the lexical scope of the named fields.
+\fBNot evaluated on
+.Ql "tempel-abort" Ns No ".\fP"
+.El
+.Pp
+Element syntax (from
+.Ql "tempel--element" Ns No "'s"
+docstring): strings,
+.Ql "nil" ,
+.Ql "p" ,
+.Ql "r" ,
+.Ql "r>" ,
+.Ql "n" ,
+.Ql "n>" ,
+.Ql ">" ,
+.Ql "&" ,
+.Ql "%" ,
+.Ql "o" ,
+.Ql "q" ,
+.Ql "(s NAME)" ,
+.Ql "(p PROMPT <NAME> <NOINSERT>)" ,
+.Ql "(r PROMPT …)" ,
+.Ql "(r> PROMPT …)" ,
+.Ql "(l ELEMENTS…)" ,
+and arbitrary Lisp forms dispatched first through
+.Ql "tempel-user-elements" ,
+with string results dynamically updated.
+Upstream's own warning: \(dqUse caution with templates which execute arbitrary code!\(dq
+.Pp
+.Ql "tempel-auto-reload"
+compares a whole
+.Ql "(file . mtime)"
+alist with
+.Ql "equal" ,
+so file \fBaddition and removal\fP also trigger a reload, not just mtime bumps.
+.Pp
+\fBBearing on this repo [I]:\fP
+.Ql "templates/jotain.eld"
+uses exactly the documented shape — bare mode symbols as section headers,
+.Ql "p" Ns No "/" Ns Ql "n" Ns No "/" Ns Ql "n>" Ns No "/" Ns Ql "r>" Ns No "/" Ns Ql "q"
+elements — and
+.Ql "tempel-path"
+is set to
+.Ql "templates/*.eld" ,
+which the wildcard support covers.
+.Ss 6.4 hippie-expand — the prior art for a dwim chain key [V]
+This is the most directly applicable finding for the \(dqseparate chain key\(dq design.
+.Pp
+\fBDefault
+.Ql "hippie-expand-try-functions-list" Ns No "\fP"
+(byte-identical on emacs-30, emacs-31 and master;
+.Ql "hippie-exp.el" Ns No ":204-218):"
+.Bd -literal -offset indent
+\&'(try-complete-file-name-partially
+  try-complete-file-name
+  try-expand-all-abbrevs
+  try-expand-list
+  try-expand-line
+  try-expand-dabbrev
+  try-expand-dabbrev-all-buffers
+  try-expand-dabbrev-from-kill
+  try-complete-lisp-symbol-partially
+  try-complete-lisp-symbol)
+.Ed
+.Pp
+.Ql ":type '(repeat function)" ,
+autoloaded, no
+.Ql ":version" Ns No "/" Ns Ql ":group" Ns No "/" Ns Ql ":set" .
+Note the default is a \fBproper subset\fP of what the file defines —
+.Ql "try-expand-line-all-buffers" ,
+.Ql "try-expand-list-all-buffers"
+and
+.Ql "try-expand-whole-kill"
+are deliberately excluded.
+.Pp
+\fBThe sanctioned way to build a bespoke chain key [V]\fP —
+.Ql "make-hippie-expand-function" ,
+autoloaded,
+.Ql "(TRY-LIST &optional VERBOSE)" ,
+returning an interactive closure that dynamically binds
+.Ql "hippie-expand-try-functions-list"
+to TRY-LIST and calls
+.Ql "hippie-expand" :
+.Bd -ragged -offset indent
+.Pp
+\(dqinstead of loading the variable with all kinds of try-functions above, it might be an idea to use
+.Ql "make-hippie-expand-function' to construct different " Ns No "hippie-expand'-like"
+functions, with different try-lists and \fBbound to different keys\fP.\(dq
+.Pp
+—
+.Ql "hippie-exp.el"
+Commentary, lines 114-118
+.Ed
+.Pp
+with
+.Ql "fset"
+examples at lines 394-400.
+Nothing in the file is marked obsolete
+.No \&( Ns Ql "grep -n obsolete"
+→ zero hits).
+It is a \fBdefun returning a closure\fP, not a macro — the file's own preceding comment calls it \(dqa macro\(dq sloppily.
+.Pp
+\fBCycling semantics [V]:\fP repeated invocation steps through candidates and then forward through the try-list.
+A positive numeric ARG jumps ARG functions forward; a negative arg,
+.Ql "C-u 0" ,
+or plain
+.Ql "C-u"
+\fBundoes\fP the tried expansion.
+Three precisions: (a) it does \fBnot\fP wrap around — on exhaustion it messages \(dqNo further expansions found\(dq and
+.Ql "(ding)" ;
+(b) with no ARG a repeat re-invokes the \fIsame\fP try-function with
+.Ql "old=t"
+to get its next candidate, advancing only once that function returns nil — candidate-by-candidate, not one function per keypress; (c)
+.Ql "C-u 0"
+also reaches the undo branch, which the manual wording omits.
+.Pp
+\fB[R] Refuted 0-3:\fP the claim that the Commentary \(dqexplicitly sanctions\(dq the buffer-local/mode-hook pattern as \fIthe\fP documented pattern for prose-vs-code chains.
+The text at lines 118-120 does offer that path — \(dqIt is also possible to make
+.No "`hippie-expand-try-functions-list' a buffer local variable, and let it depend on the mode (by setting it in the mode-hooks)\(dq — but it carries no such normative weight."
+.Ss 6.5 corfu's keymap — the RET and TAB question [V]
+Default
+.Ql "corfu-map" ,
+from the corfu README:
+.Bd -literal -offset indent
+| Binding | Command |
+| completion-at-point, TAB | corfu-complete |
+| M-TAB | corfu-expand |
+| RET | corfu-insert |
+| next-line, down, M-n | corfu-next |
+| previous-line, up, M-p | corfu-previous |
+| C-g | corfu-quit |
+| M-SPC | corfu-insert-separator |
+| M-h | corfu-info-documentation |
+| M-g | corfu-info-location |
+.Ed
+.Bd -ragged -offset indent
+.Pp
+\(dqThe current candidate is inserted with
+.Ql "TAB"
+and selected with
+.Ql "RET" Ns No ".\(dq"
+.Ed
+.Pp
+Upstream documents freeing RET explicitly:
+.Bd -literal -offset indent
+;; Free the RET key for less intrusive behavior.
+;; Option 1: Unbind RET completely
+(keymap-unset corfu-map "RET")
+;; Option 2: Use RET only in shell modes
+(keymap-set corfu-map "RET" `( menu-item "" nil :filter
+                               ,(lambda (&optional _)
+                                  (and (derived-mode-p 'eshell-mode 'comint-mode)
+                                       #'corfu-send))))
+.Ed
+.Pp
+This is decisive for the \(dqEnter must never accept a completion\(dq requirement: it is a \fBsupported, upstream-documented configuration\fP, not a hack.
+The
+.Ql "menu-item"
+.Ql ":filter"
+form is also the general pattern for making a corfu binding context-conditional.
+.Pp
+\fBNot established this round:\fP exhaustive accepted-value lists for
+.Ql "corfu-preselect" ,
+.Ql "corfu-on-exact-match" ,
+and
+.Ql "corfu-quit-no-match" .
+The README shows
+.Ql "corfu-preselect"
+values
+.Ql "prompt"
+and
+.Ql "directory"
+by example only, and
+.Ql "corfu-on-exact-match"
+via
+.Ql "'insert"
+by example.
+.Ql "corfu-quit-no-match"
+is described with
+.Ql "separator"
+(default) and
+.Ql "t" .
+\fBDo not reproduce a complete value table from this report\fP — read the docstrings before relying on any value not listed here.
+.Ss 6.6 What remains unresearched
+Reported as \fBnot found\fP rather than inferred.
+Two rounds produced zero verified claims on these, so the design document must not present them as evidence-backed:
+.Bl -bullet -compact
+.It
+\fBCapf ordering, concretely (GAP 3).\fP Whether
+.Ql "cape-capf-nonexclusive"
+around
+.Ql "eglot-completion-at-point"
+is upstream-endorsed; how it compares with
+.Ql "cape-capf-super"
+merging; whether
+.Ql "completion--capf-wrapper" Ns No "'s"
+prefix-
+.Ql "try-completion"
+approximation for
+.Ql ":exclusive 'no"
+\fBmisfires under orderless\fP (the
+.Ql "minibuffer.el"
+FIXME says non-prefix completion \(dqwill not work (or not right) for completion functions that are non-exclusive\(dq — and this config runs orderless); and the behavior of
+.Ql "eglot--capf-session"
+/
+.Ql "eglot--capf-session-flush" ,
+including whether
+.Ql "cape-capf-buster"
+is needed around eglot.
+.Pp
+The two things GAP 3 \fIcan\fP lean on from verified findings: tempel's capfs are both
+.Ql ":exclusive 'no" ,
+and the ispell capf sits at depth 10 — so tempel and ispell both fall through, and neither shadows eglot.
+.It
+\fBOpt-out / kill-switch idiom (GAP 5).\fP Neither the normative half (Elisp manual Defining Variables / Customization / Minor Mode Conventions on
+.Ql "defcustom"
+vs
+.Ql "defvar" ,
+.Ql ":set" Ns No "/" Ns Ql ":initialize" ,
+load-time vs runtime togglability) nor the descriptive half (Doom module flags, Prelude, Crafted, purcell, Prot, karthink, minimal-emacs.d) was gathered.
+\fBThe design document's opt-out section is therefore grounded in this repo's own established convention\fP, which is verifiable locally, rather than in external evidence.
+.It
+\fBPerformance (GAP 6).\fP Nothing on
+.Ql "corfu-auto-delay" Ns No "/" Ns Ql "-prefix"
+tuning guidance, the per-keystroke cost of
+.Ql "corfu-auto--post-command" ,
+.Ql "eglot-send-changes-idle-time"
+or capf latency reports,
+.Ql "cape-dabbrev-check-other-buffers"
+cost,
+.Ql "corfu-history"
+.Bl -bullet -compact
+.It
+savehist boundedness, or native-comp's effect on completion responsiveness.
+Every performance number in circulation for this stack should be treated as folklore until measured.
+.El
+.It
+\fBThe rest of the built-in layer.\fP
+.Ql "dabbrev"
+internals and cache invalidation,
+.Ql "abbrev" Ns No "/" Ns Ql "abbrev-suggest" ,
+.Ql "skeleton" Ns No "/" Ns Ql "tempo" ,
+and the exact accepted values of
+.Ql "completion-auto-help"
+and
+.Ql "completion-auto-select" .
+.El

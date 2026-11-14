@@ -1,0 +1,114 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd April 16, 2026
+.Dt EMACS-JOURNAL-2026-04-16 7
+.Os
+.Sh NAME
+.Nm emacs-journal-2026-04-16
+.Nd working notes of 2026-04-16
+.Sh ENTRIES
+.Ss Fix nix flake check
+.Ss Summary
+Made
+.Ql "nix flake check"
+pass.
+Fixed two categories of issues:
+.Ss 1. Nixfmt formatting (nix/use-package.nix)
+Reformatted the
+.Ql "if/else"
+expression in
+.Ql "toEmacsPackage"
+to match nixfmt's expected style (indented
+.Ql "else"
+branch with parenthesised body).
+.Ss 2. Elisp byte-compile errors (checks.x86_64-linux.elisp-compile)
+The check runs
+.Ql "batch-byte-compile"
+with
+.Ql "byte-compile-error-on-warn t" ,
+turning all byte-compile warnings into hard errors.
+.Pp
+\fBFree variables in
+.Ql "early-init.el" Ns No "\fP"
+— Added
+.Ql "defvar"
+declarations for variables that are only set inside conditional guards but not defined in the current compilation context:
+.Ql "package-quickstart" ,
+.Ql "warning-suppress-log-types" ,
+.Ql "use-package-enable-imenu-support" ,
+.Ql "use-package-always-ensure" ,
+.Ql "ns-use-thin-smoothing"
+(macOS-only),
+.Ql "native-comp-async-report-warnings-errors" ,
+.Ql "native-comp-speed" ,
+and
+.Ql "treesit-extra-load-path" .
+.Pp
+\fBSandbox
+.Ql "make-directory"
+failure\fP —
+.Ql "init-core.el"
+called
+.Ql "(make-directory jotain-var-dir t)"
+at top level, which runs during batch compilation in the Nix sandbox where
+.Ql "~/.emacs.d/"
+can't be created.
+Wrapped in
+.Ql "ignore-errors" .
+.Pp
+.No "\fB" Ns Ql "rxt--re-builder-switch-pcre-mode"
+from pcre2el\fP —
+.Ql "magit-todos"
+loads
+.Ql "pcre2el" ,
+which has a
+.Ql "defadvice ... compile"
+that byte-compiles its advice body at activation time.
+With
+.Ql "byte-compile-error-on-warn t"
+active, the forward reference to
+.Ql "rxt--re-builder-switch-pcre-mode"
+in that advice body fails.
+Fixed by adding
+.Ql "(require 'pcre2el)"
+to
+.Ql "nix/checks.nix"
+before setting the flag, so pcre2el's advice compiles without the flag active.
+.Pp
+\fBFunctions not known to the byte-compiler\fP — Added
+.Ql ":functions (...)"
+to
+.Ql "use-package"
+blocks in
+.Ql "init-ai" ,
+.Ql "init-completion" ,
+.Ql "init-core" ,
+.Ql "init-editing" ,
+.Ql "init-navigation" ,
+.Ql "init-org" ,
+.Ql "init-prog" ,
+.Ql "init-project" ,
+.Ql "init-systems" ,
+.Ql "init-tracking" ,
+.Ql "init-ui" ,
+.Ql "init-vc" .
+Also added a
+.Ql "declare-function"
+for
+.Ql "jotain-core--auto-create-missing-dirs"
+(defined inside a
+.Ql ":config"
+block).
+.Pp
+.No "\fB" Ns Ql "diff-hl-magit-pre-refresh"
+obsolete\fP — Replaced with
+.Ql "ignore"
+as the diff-hl 1.11.0 changelog requires.
+.Pp
+.No "\fB" Ns Ql "treesit-fold-indicators-priority"
+free variable\fP — Changed
+.Ql ":init (setq ...) "
+to
+.Ql ":custom (...)"
+so the variable is set via
+.Ql "customize-set-variable"
+after the package loads (when the variable is bound).

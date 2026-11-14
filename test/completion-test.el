@@ -6,7 +6,7 @@
 ;; `lisp/init-snippets.el' build on.  No network, subprocesses or writes
 ;; outside a temp buffer, so safe in the Nix sandbox.
 ;;
-;; Sections 1-3 pin down core capf behaviour that `docs/design/completion.md'
+;; Sections 1-3 pin down core capf behaviour that `docs/design/emacs-completion-design.7'
 ;; depends on and the documentation does not settle:
 ;;
 ;;   1. A capf with no `:exclusive' (like eglot's) suppresses every capf

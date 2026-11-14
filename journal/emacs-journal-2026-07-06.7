@@ -1,0 +1,463 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd July 6, 2026
+.Dt EMACS-JOURNAL-2026-07-06 7
+.Os
+.Sh NAME
+.Nm emacs-journal-2026-07-06
+.Nd working notes of 2026-07-06
+.Sh ENTRIES
+.Ss Fix eglot-tempel-mode void-function error when opening a .nix file
+.Ss Symptom
+Opening a
+.Ql ".nix"
+file (e.g.
+.Ql "package.nix" )
+fires
+.Ql "nix-ts-mode"
+→
+.Ql "eglot-ensure" ,
+which loads eglot, and produced:
+.Bd -literal -offset indent
+Error (use-package): eglot-tempel/:init: Symbol's function definition is void: eglot-tempel-mode
+.Ed
+.Pp
+The eglot-tempel integration (Tempel-based expansion of LSP-sent snippets) never armed and every first eglot session printed the error.
+.Ss Root cause
+The
+.Ql "eglot-tempel"
+block in
+.Ql "init-snippets.el"
+registered two competing
+.Ql "with-eval-after-load 'eglot"
+blocks:
+.Bd -literal -offset indent
+(use-package eglot-tempel
+  :after eglot
+  :functions (eglot-tempel-mode)
+  :init (with-eval-after-load 'eglot (eglot-tempel-mode 1)))
+.Ed
+.Pp
+.Ql ":init"
+runs unconditionally when
+.Ql "init-snippets.el"
+loads, registering a block that calls
+.Ql "(eglot-tempel-mode 1)" .
+Separately,
+.Ql ":after eglot"
+(which implies deferred loading) registers a \fIsecond\fP block that
+.Ql "require" Ns No "s"
+the
+.Ql "eglot-tempel"
+package, the thing that actually defines
+.Ql "eglot-tempel-mode" .
+.Ql "eval-after-load"
+runs blocks in registration order, and
+.Ql ":init"
+is expanded before the
+.Ql ":after"
+load logic, so the
+.Ql "eglot-tempel-mode"
+call fired \fIbefore\fP the package was required → void function.
+The autoload did not cover it.
+.Ss Fix
+Enable the mode from
+.Ql ":config"
+instead.
+Under
+.Ql ":after eglot" ,
+use-package already requires
+.Ql "eglot-tempel"
+when eglot loads, and
+.Ql ":config"
+runs after that require, so the function is defined by the time it is called.
+The inner
+.Ql "with-eval-after-load 'eglot"
+was redundant and is gone:
+.Bd -literal -offset indent
+(use-package eglot-tempel
+  :after eglot
+  :functions (eglot-tempel-mode)
+  :config (eglot-tempel-mode 1))
+.Ed
+.Pp
+.Ql ":functions (eglot-tempel-mode)"
+stays: the repo byte-compiles with
+.Ql "byte-compile-error-on-warn"
+and without packages on
+.Ql "load-path" ,
+and the
+.Ql "declare-function"
+it emits keeps the
+.Ql ":config"
+call from erroring as an unknown function.
+The mode still arms while eglot is being required (before it connects), so the \(dqarmed the moment eglot loads\(dq comment holds.
+The
+.Ql "jotain-tempel-eglot-capf"
+merge in the
+.Ql "tempel"
+block is untouched; it merges the user's own snippet capf into corfu, complementing
+.Ql "eglot-tempel-mode" Ns No "'s"
+server snippets.
+.Ss Auto-adopt any language a project's devenv provides (eglot + envrc)
+.Ss Motivation
+In a project whose
+.Ql "devenv.nix"
+enables
+.Ql "languages.go.enable = true"
+(or rust/python/haskell/c/…), devenv puts the toolchain and its LSP server on
+.Ql "PATH" .
+.Ql "envrc-global-mode"
+already applies that per-project
+.Ql "PATH"
+buffer-locally, but eglot only auto-started for a fixed hook list (dockerfile, go, nix, python, rust, ts/tsx, zig).
+Languages with a mode but no hook (C/C++, Haskell) or no mode wired at all never lit up, and the
+.Ql "rass" Ns No "/basedpyright/typescript"
+gating was decided once at startup against Jotain's \fIown\fP shell — so a daemon started outside devenv never registered it.
+.Ss Change (init-prog.el, eglot block)
+.Bl -enum -compact
+.It
+\fBGeneral devenv-aware auto-start.\fP New
+.Ql "jotain-prog--maybe-eglot-ensure"
+on
+.Ql "prog-mode-hook"
+(in
+.Ql ":init" ,
+outside eglot's deferral) probes, on an idle timer so envrc's env is applied first, whether
+.Ql "eglot--guess-contact"
+resolves a server whose binary is on the buffer's
+.Ql "exec-path" ;
+if so it calls
+.Ql "eglot-ensure" .
+Uses eglot's built-in
+.Ql "eglot-server-programs"
+table (clangd, gopls, rust-analyzer, HLS, zls, bash-language-server, solargraph, …).
+Skips remote/non-file/Lisp buffers and already-managed buffers, so no eglot load or warning spam in elisp.
+.It
+\fBConnect-time server discovery.\fP The startup-time
+.Ql "(when (executable-find \(dqrass\(dq) …)"
+block is replaced by function-valued
+.Ql "eglot-server-programs"
+contacts
+.No \&( Ns Ql "jotain-prog--ts-server" ,
+.Ql "jotain-prog--python-server" ).
+eglot evaluates them at connect time in the buffer, so
+.Ql "rass" Ns No "/basedpyright/ruff"
+discovery honours the project's devenv
+.Ql "PATH" ,
+not Jotain's.
+Each falls back to a plain single server when the multiplexer is absent.
+The
+.Ql "jotain-prog-enable-risky-js-lsp"
+opt-in is preserved via
+.Ql "jotain-prog--risky-js-extras" .
+.El
+.Pp
+The explicit curated
+.Ql ":hook"
+list stays as a zero-regression safety net;
+.Ql "eglot-ensure"
+is idempotent so it composes with the general hook.
+.Ss envrc ergonomics (init-prog.el, envrc block)
+Bound
+.Ql "C-c e"
+→
+.Ql "envrc-command-map"
+(envrc's own recommendation):
+.Ql "C-c e a"
+allow,
+.Ql "C-c e r"
+reload,
+.Ql "C-c e R"
+reload-all (picks up a terminal
+.Ql "direnv allow"
+in a running Emacs).
+Replaces reaching for
+.Ql "M-x envrc-allow"
+per project.
+Manual allow stays the secure default — no auto-allow whitelist.
+.Ss Prerequisite
+The project must expose devenv's env to Emacs: an
+.Ql ".envrc"
+with
+.Ql "use devenv"
+(+
+.Ql "direnv allow" ),
+or Emacs launched inside
+.Ql "devenv shell" .
+Otherwise nothing is on
+.Ql "PATH" .
+.Ss Verification
+.Ql "byte-compile-error-on-warn"
+full compile of
+.Ql "early-init.el init.el lisp/init-*.el"
+exits clean.
+(The Nix
+.Ql "elisp-compile"
+flake check is temporarily blocked by the untracked in-progress
+.Ql "lisp/init-lang-go.el" ,
+which Nix excludes from the git source — unrelated to this change.)
+.Ss Overhaul Go development experience
+.Ss Motivation
+Go was the least-developed language in the config and inconsistent with the Rust/Python bar.
+Concrete gaps:
+.Bl -bullet -compact
+.It
+.Ql "init-lang-systems.el"
+pulled the third-party
+.Ql "go-mode"
+from MELPA even though the file's own comment claimed Go was \(dqbuilt in (ensure nil)\(dq.
+.Ql "treesit-auto"
++ built-in
+.Ql "go-ts-mode"
+already owned
+.Ql ".go" ,
+so
+.Ql "go-mode"
+was redundant.
+.It
+Inlay hints were a no-op:
+.Ql "eglot-inlay-hints-mode"
+was enabled for Go, but gopls emits nothing without a
+.Ql "hints"
+workspace config, and there was no gopls
+.Ql "eglot-workspace-configuration"
+at all.
+.It
+.Ql "compile-multi"
+keyed its Go commands on
+.Ql "go-mode" ,
+but buffers open in
+.Ql "go-ts-mode"
+(Emacs 30 does not make
+.Ql "go-ts-mode"
+a child of
+.Ql "go-mode" ),
+so the picker never fired.
+.It
+No formatter wiring, no debugging, no Go helpers.
+.El
+.Ss Changes
+.Bl -bullet -compact
+.It
+\fBNew
+.Ql "lisp/init-lang-go.el" Ns No "\fP"
+(Go graduated to its own file like nix/rust/python).
+Registers built-in
+.Ql "go-ts-mode"
++
+.Ql "go-mod-ts-mode"
+from a single
+.Ql "use-package"
+block
+.No \&( Ns Ql "go-mod-ts-mode"
+lives inside
+.Ql "go-ts-mode.el" ,
+so a separate
+.Ql ":ensure nil"
+block would try to load a non-existent feature — a mistake caught by the byte-compile log).
+No indent-offset is set: gofmt uses tabs and the built-in default matches.
+Adds
+.Ql "go-tag"
+and
+.Ql "gotest"
+under a buffer-local
+.Ql "C-c C-t"
+Go-tooling prefix (chosen so it never shadows the global
+.Ql "C-c t"
+theme toggle).
+.It
+.No "\fB" Ns Ql "init-prog.el" Ns No "\fP:"
+eglot hook + inlay-hints list +
+.Ql "gopls"
+server override re-keyed to
+.Ql "go-ts-mode" Ns No "/" Ns Ql "go-mod-ts-mode"
+(dropped
+.Ql "go-mode" ).
+Added a
+.Ql ":gopls"
+.Ql "eglot-workspace-configuration"
+(usePlaceholders, completeUnimported, staticcheck, the full
+.Ql "hints"
+set, and unusedparams/shadow/nilness/unusedwrite analyses) — this is what actually lights up inlay hints and staticcheck via flymake. apheleia now maps
+.Ql "go-ts-mode → gofmt"
+explicitly.
+Added
+.Ql "dape"
+(Debug Adapter Protocol) under a new
+.Ql "C-c d"
+prefix; its built-in Delve config drives Go debugging via
+.Ql "dlv dap" .
+.It
+.No "\fB" Ns Ql "init-project.el" Ns No "\fP:"
+.Ql "compile-multi"
+Go entry re-keyed to
+.Ql "go-ts-mode"
+and enriched
+.No \&( Ns Ql "go test ./..." ,
+current,
+.Ql "-race" ,
+.Ql "go vet" ,
+.Ql "go build ./..." ).
+.It
+.No "\fB" Ns Ql "init-lang-systems.el" Ns No "\fP:"
+removed the
+.Ql "go-mode"
+block; header updated.
+.El
+.Ss Keybinding reshuffle (docker removed to free C-c d)
+.Ql "C-c d"
+was triple-claimed:
+.Ql "docker"
+(devops),
+.Ql "dirvish"
+(navigation), and a which-key label of \(dqdirvish\(dq.
+Devops loads last, so docker silently won.
+The docker Magit-style TUI was removed (its
+.Ql "jotain-docker-backend"
+defcustom stays, trimmed to only drive
+.Ql "dockerfile-mode" ).
+.Ql "C-c d"
+is now the
+.Ql "dape"
+debug prefix;
+.Ql "dirvish"
+moved to
+.Ql "C-c f"
+.No \&( Ns Ql "dirvish-side"
+stays on
+.Ql "C-c D" ).
+.Ql "C-c e"
+was the obvious target but is already the envrc command-map prefix, so
+.Ql "C-c f"
+(\(dqfiles\(dq) was used instead. which-key labels and
+.Ql "docs/keybindings.mdx"
+updated to match.
+.Ss External binaries (from the project env, not bundled in Nix)
+.Ql "gopls"
+(LSP),
+.Ql "dlv"
+(dape),
+.Ql "gotests"
+(gotest generate),
+.Ql "gomodifytags"
+(go-tag) — same \(dqLSP from project environment\(dq philosophy as Rust/Python.
+.Ql "gofmt"
+ships with the Go toolchain.
+.Ss Verification
+.Ql "nix build .#checks.x86_64-linux.elisp-compile"
+passes (needs
+.Ql "lisp/init-lang-go.el"
+git-staged so the flake source sees it).
+.Ql "go-tag" ,
+.Ql "gotest" ,
+and
+.Ql "dape"
+all resolve in the pinned
+.Ql "emacsPackages" ,
+so the use-package Nix auto-mapping pulls them in with no
+.Ql "trivialBuild"
+entry.
+.Ss Log when a classic (non-tree-sitter) major mode is used despite a ready ts-mode
+.Ss Motivation
+Files are routed to
+.Ql "*-ts-mode"
+unevenly:
+.Ql "treesit-auto"
++ per-language
+.Ql ":mode"
+entries cover the well-developed languages, but several classic modes (C/C++, classic
+.Ql "yaml-mode" ,
+.Ql "web-mode" ,
+.Ql "terraform-mode" ,
+…) still win even though a built-in
+.Ql "*-ts-mode"
+and its grammar (Nix ships them via
+.Ql "$TREE_SITTER_DIR" )
+are available.
+Nothing surfaced these gaps, so they were invisible.
+.Ss Change (init-prog.el, new \(dqNon-tree-sitter mode diagnostic\(dq subsection)
+A
+.Ql "jotain-prog--warn-non-ts-mode"
+function on
+.Ql "after-change-major-mode-hook"
+logs to
+.Ql "*Messages*"
+whenever the buffer's
+.Ql "major-mode"
+is a classic mode that has a tree-sitter counterpart whose grammar is actually loadable, e.g.:
+.Bd -literal -offset indent
+jotain: foo.sh opened in sh-mode; bash-ts-mode (tree-sitter, grammar `bash') is available
+.Ed
+.Pp
+Design notes:
+.Bl -bullet -compact
+.It
+\fBReuses
+.Ql "treesit-auto-recipe-list" Ns No "\fP"
+(already loaded
+.Ql ":demand t" )
+as the authoritative classic↔ts↔grammar source rather than hardcoding a table.
+A hash table (classic-mode →
+.Ql "(ts-mode . lang)" )
+is built \fBonce\fP at load, so the hook is an O(1)
+.Ql "gethash"
+on the common miss path — matching the repo's aversion to per-find-file overhead (the reason
+.Ql "global-treesit-auto-mode"
+was rejected).
+.Ql ":remap"
+may be a bare symbol
+.No \&( Ns Ql "sh-mode" )
+or a list
+.No \&( Ns Ql "(js-mode javascript-mode js2-mode)" ),
+normalised with
+.Ql "proper-list-p" .
+.It
+.No "\fB" Ns Ql "treesit-ready-p"
+guard is required, not optional.\fP Every
+.Ql "*-ts-mode"
+symbol is always
+.Ql "fboundp"
+even with no grammar installed, so
+.Ql "fboundp"
+alone would nag for every classic mode on any grammar-less host;
+.Ql "treesit-ready-p"
+returns nil when the grammar is missing, so the notice only fires when tree-sitter would genuinely work.
+.Ql "major-mode-remap-defaults"
+was rejected as a source — with grammars absent it self-populated only C/C++ entries; Python/JS/CSS/YAML never register there.
+.It
+Always on via
+.Ql "defcustom jotain-prog-warn-non-ts-mode"
+(default
+.Ql "t" );
+.Ql "setopt"
+it to nil to silence.
+Byte-compile-clean under
+.Ql "byte-compile-error-on-warn"
+via
+.Ql "(eval-when-compile (require 'treesit-auto))"
+(cf. the
+.Ql "doom-modeline"
+block in
+.Ql "init-vc.el" )
+plus
+.Ql "declare-function"
+for the struct accessors and
+.Ql "treesit-ready-p" .
+.El
+.Ss Verification
+Full
+.Ql "byte-compile-error-on-warn"
+compile of
+.Ql "early-init.el init.el lisp/init-*.el"
+exits clean.
+Runtime probe against
+.Ql "jotainEmacsPackages" :
+the table builds with 64 entries and the irregular/list cases resolve correctly
+.No \&( Ns Ql "sh-mode → (bash-ts-mode . bash)" ,
+.Ql "js-mode" Ns No "/" Ns Ql "javascript-mode → (js-ts-mode . javascript)" ),
+while
+.Ql "python-ts-mode"
+is absent as a key (so already-ts buffers never nag) and the hook is installed.
+The Nix
+.Ql "nix build .#checks.x86_64-linux.elisp-compile"
+flake check passes.

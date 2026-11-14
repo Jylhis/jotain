@@ -1,0 +1,356 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd August 1, 2026
+.Dt EMACS-COMPLETION-UX-RESEARCH 7
+.Os
+.Sh NAME
+.Nm emacs-completion-ux-research
+.Nd in-buffer completion UX — \(dqless annoying, more natural\(dq research
+.Sh DESCRIPTION
+\fBDate:\fP 2026-08-26 \fBScope:\fP A second round on the in-buffer side of
+.Ql "lisp/init-completion.el" ,
+narrowly aimed at the request \(dqmake the autocomplete popup and usage less annoying and more natural.\(dq
+Builds on
+.Ql "emacs-completion-research.7"
+and the design in
+.Ql "../design/completion.md" ;
+the capf/keymap facts settled there are not re-litigated here.
+\fBStatus:\fP Research + implementation.
+The changes it motivates shipped in the same round in
+.Ql "lisp/init-completion.el"
+and
+.Ql "test/completion-test.el" .
+.Sh HOW TO READ THIS
+Each concrete claim is tagged:
+.Bl -bullet -compact
+.It
+\fB[V]\fP — verified against a primary source (package source read on its release branch, GNU manual, or NEWS).
+.It
+\fB[CFG]\fP — corroborated by a widely-cited real configuration, not by a normative source.
+.It
+\fB[FOLK]\fP — community consensus / folklore; sensible but not documented.
+.It
+\fB[I]\fP — a sound inference from a verified source.
+.El
+.Pp
+Two hard constraints from the existing design bound every option below and are treated as non-negotiable: \fBTAB indents only\fP (R2) and \fBRET is a newline, never an accept\fP (R4).
+.Sh 1. THE THREE LEVERS THAT WERE ACTUALLY AVAILABLE
+The 2026-07 round left the trigger model (auto in code, manual in prose), the freed RET/TAB, and the capf chain settled.
+What it did \fBnot\fP tune, and what this round found, are three orthogonal levers:
+.Bl -enum -compact
+.It
+\fBThe popup commits candidates you did not choose\fP —
+.Ql "corfu-preview-current" .
+.It
+\fBThe popup fires half a beat too eagerly\fP —
+.Ql "corfu-auto-delay"
+/
+.Ql "-prefix" .
+.It
+\fBTwo \(dqmore natural\(dq surfaces were simply absent\fP — a documentation panel
+.No \&( Ns Ql "corfu-popupinfo" )
+and inline ghost text
+.No \&( Ns Ql "completion-preview-mode" ).
+.El
+.Pp
+Nothing here needs a new package:
+.Ql "corfu-popupinfo"
+is a bundled corfu extension and
+.Ql "completion-preview"
+is built into Emacs 30+, so all three are
+.Ql ":ensure nil"
+and add nothing to the package closure.
+.Sh 2. CORFU-PREVIEW-CURRENT — THE ACCIDENTAL-ACCEPT LEVER [V]
+\fBFinding, and a corrected premise.\fP corfu's
+.Ql "corfu-preview-current"
+defaults to the symbol
+.No "\fB" Ns Ql "insert" Ns No "\fP,"
+not
+.Ql "t" .
+Its docstring: \fI\(dqIf the variable has the value
+.No "`insert', the candidate is automatically inserted on further input.\(dq\fP So with the shipped default, while a popup is open, \fBcontinued typing commits the selected candidate\fP into the buffer. [V — corfu.el defcustom]"
+.Pp
+This directly undercuts the spirit of R4 and the freed RET/TAB.
+The 2026-07 design took great care that RET, TAB, and continued typing never \fIaccept\fP a candidate — but
+.Ql "corfu-preview-current insert"
+was quietly doing exactly that on continued input.
+Setting it to
+.No "\fB" Ns Ql "nil" Ns No "\fP"
+shows the menu with no inline text and inserts nothing until an explicit
+.Ql "corfu-complete"
+.No \&( Ns Ql "C-M-i" ).
+[V — docstring; CFG — this is what Prot's config sets]
+.Pp
+This is the single biggest \(dqless annoying / more natural\(dq win, and it is also what makes room for lever 3: with
+.Ql "nil" ,
+corfu contributes \fBno\fP inline text, so
+.Ql "completion-preview-mode" Ns No "'s"
+ghost is the one and only inline surface — no duelling previews.
+.Pp
+\fBShipped:\fP
+.Ql "(corfu-preview-current nil)"
+in the corfu
+.Ql ":custom"
+block.
+.Sh 3. AUTO-POPUP TIMING — THE EAGERNESS LEVER [V]
+\fBCorrected premises.\fP corfu's shipped defaults are
+.Ql "corfu-auto-delay"
+= \fB0.2\fP and
+.Ql "corfu-auto-prefix"
+= \fB3\fP.
+[V — corfu.el / GNU ELPA doc] This config was running \fB0.1 / 2\fP — \fIbelow both defaults\fP, in the direction corfu's own docstrings caution against: a very short delay or small prefix \(dqwill create high load for Emacs, in particular if executing the completion backend is costly,\(dq and the README example annotates
+.Ql "corfu-auto-delay 0"
+/
+.Ql "corfu-auto-prefix 0"
+with \(dqTOO SMALL — NOT RECOMMENDED!\(dq.
+[V — corfu README + docstrings]
+.Pp
+The 2026-07 design was explicit that 0.1 / 2 were \fBnot measured\fP — \(dqevery number in circulation for this stack is folklore until measured.\(dq
+Given no measurement exists either way, moving to corfu's \fIdocumented defaults\fP (0.2 / 3) is the better-justified resting point than sitting below them: it is the one change most directly aimed at \(dqit pops up while I'm still typing,\(dq and it aligns the popup with
+.Ql "completion-preview-minimum-symbol-length"
+(3), so the ghost text and the popup begin suggesting at the same keystroke.
+[V for the defaults; I for \(dqbetter-justified than 0.1/2\(dq]
+.Pp
+Real configs cluster at delay 0.1–0.25 and prefix 2–3; anything at or above 0.2 / 3 is squarely inside the documented-safe range, below it is the debated zone.
+Prot side-steps the question entirely (no auto-popup).
+[CFG]
+.Pp
+\fBShipped:\fP defaults raised to
+.Ql "jotain-completion-auto-delay 0.2" ,
+.Ql "jotain-completion-auto-prefix 3" ,
+with the docstrings rewritten to cite the corfu recommendation instead of \(dqnot tuned.\(dq
+.Sh 4. CORFU-POPUPINFO — THE DOCUMENTATION PANEL [V]
+\fBWhat it is.\fP A bundled corfu extension (successor to
+.Ql "corfu-doc" )
+that shows a child-frame panel beside the candidate list with the selected candidate's docstring or source location — the IDE \(dqdetail pane.\(dq
+Enabled with
+.Ql "(corfu-popupinfo-mode 1)" ;
+inactive by default like all corfu extensions.
+[V — extensions/corfu-popupinfo.el + corfu README]
+.Pp
+\fBDelay is a cons
+.Ql "(INITIAL . SUBSEQUENT)" Ns No ",\fP"
+defaulting to
+.Ql "(2.0 . 0.5)" :
+a long wait before it first appears (so docs do not flash on every pause) and a short refresh as you arrow between candidates.
+The split exists precisely to make first appearance unobtrusive while keeping candidate-to-candidate refresh instant.
+A responsive-but-quiet value is
+.Ql "(1.0 . 0.5)"
+(Prot uses
+.Ql "(1.25 . 0.5)" ).
+[V — defcustom; CFG — Prot]
+.Pp
+\fBKeymap safety.\fP
+.Ql "corfu-popupinfo-map"
+binds only
+.Ql "M-t"
+(toggle),
+.Ql "M-h" Ns No "/" Ns Ql "M-g"
+(documentation/location), and the
+.Ql "C-M-v"
+scroll family.
+It touches \fBneither\fP the freed RET/TAB \fBnor\fP
+.Ql "M-n" Ns No "/" Ns Ql "M-p" ,
+so it is safe under this config's constraints — verified against the full
+.Ql "corfu-map"
+list.
+[V]
+.Pp
+.Ql "corfu-echo"
+(one-line echo-area doc,
+.Ql "corfu-echo-delay '(2.0 . 1.0)" )
+is the lighter alternative; running both is redundant.
+This config chose the panel for the fuller IDE feel; the echo mode is the documented fallback if the child frame ever feels heavy.
+[V — extensions/corfu-echo.el; FOLK — \(dqpick one\(dq]
+.Pp
+\fBShipped:\fP
+.Ql "corfu-popupinfo"
+block, delay
+.Ql "(1.0 . 0.5)" ,
+gated by
+.Ql "jotain-completion-doc-popup"
+(default t).
+.Sh 5. COMPLETION-PREVIEW-MODE — INLINE GHOST TEXT (FINDING 12B) [V]
+This is the deferred feature decision from
+.Ql "emacs-nix-deep-review.7"
+Finding 12, option (b): adopt the built-in inline preview alongside corfu.
+.Pp
+\fBWhat it is.\fP A buffer-local minor mode (Emacs \fB30.1\fP; user options extended in \fB31\fP) that draws the top completion candidate as greyed \(dqghost text\(dq after point, updated as you type, sourced from the \fBsame\fP
+.Ql "completion-at-point-functions"
+corfu uses — so it previews the eglot/cape/tempel candidates already configured, with no separate source list.
+.Ql "global-completion-preview-mode"
+is the global twin.
+[V — NEWS.30 \(dqNew Modes and Packages\(dq; completion-preview.el commentary]
+.Ss 5.1 The R2 landmine [V — decisive]
+.Ql "completion-preview-active-mode-map"
+(active only while a preview shows) binds, verbatim on the
+.Ql "emacs-31"
+branch:
+.Bd -literal -offset indent
+"C-i" #'completion-preview-insert
+"M-i" #'completion-preview-complete
+.Ed
+.Pp
+.Ql "C-i" ,
+.Ql "TAB" ,
+and
+.Ql "?\et"
+are the \fBsame event\fP in Emacs —
+.Ql "\(dqC-i\(dq"
+and
+.Ql "\(dqTAB\(dq"
+are identical keymap keys.
+So the shipped binding \fBis\fP \(dqTAB accepts the preview\(dq: on a terminal the Tab key sends
+.Ql "C-i"
+directly; in a GUI the
+.Ql "<tab>"
+event is translated to
+.Ql "C-i"
+by
+.Ql "local-function-key-map"
+when
+.Ql "<tab>"
+is unbound in the active maps, and the minor-mode map then shadows
+.Ql "indent-for-tab-command" .
+The mode's commentary confirms the intended UX is \(dqaccept with TAB.\(dq
+Left as-is this is a \fBdirect R2 violation\fP in exactly the buffers it runs in.
+[V — keymap source + Emacs key-translation semantics]
+.Pp
+The remedy is a one-liner:
+.Ql "(keymap-unset completion-preview-active-mode-map \(dqC-i\(dq t)"
+(REMOVE = t), after which Tab falls through to indentation while a preview shows.
+The whole-candidate accept then needs a non-TAB home; this config binds
+.Ql "completion-preview-insert"
+to
+.No "\fB" Ns Ql "M-RET" Ns No "\fP"
+(R4 governs bare RET only;
+.Ql "M-RET"
+is a distinct event) and leaves
+.Ql "M-i"
+(common-prefix complete) as shipped.
+[V —
+.Ql "keymap-unset"
+semantics; I — M-RET is R4-safe]
+.Pp
+\fBDo not\fP copy the common community recipe that binds TAB to
+.Ql "completion-preview-complete"
+(e.g. the \(dqÀ la Mode\(dq corfu+preview config): it re-introduces the exact R2 violation.
+[FOLK, explicitly incompatible with R2]
+.Pp
+\fBR4 is safe out of the box\fP — the map binds no
+.Ql "RET" Ns No "/" Ns Ql "<return>" ,
+not even commented out.
+The only obligation is: do not add one.
+[V]
+.Ss 5.2 The options that matter [V — all defaults from the emacs-31 source]
+.Bd -literal -offset indent
+| Option | Default | Use here |
+| completion-preview-idle-delay | nil (immediate) | Set to jotain-completion-auto-delay (0.2) so the ghost and the popup share one debounce, and a costly LSP capf is not hit twice per keystroke at different times. |
+| completion-preview-minimum-symbol-length | 3 | Left as-is; matches the 3-char popup prefix. (nil would fire after punctuation/whitespace too — more aggressive, not less.) |
+| completion-preview-sort-function | #'minibuffer--sort-by-length-alpha (user option in 31) | Paired with corfu-sort-function so the ghost matches the popup's top row — NEWS.31 promotes it as a user option specifically "together with … Corfu … for a more integrated experience." Guarded on the option's custom-type so Emacs 30 is untouched. |
+| completion-preview-inhibit-functions | nil (new in 31) | Add a comment/string predicate ((nth 8 (syntax-ppss))) so the ghost does not appear where symbol completion is meaningless. Guarded on boundp (absent on 30). |
+| completion-preview-completion-styles | '(basic) — a defvar, not a defcustom | Left as shipped. The preview computes candidates with basic (prefix) matching, not the config's orderless. Consequence: the ghost is prefix-only, which is the conservative, predictable choice for an always-on inline hint; orderless stays where it belongs, in the popup and the minibuffer. [V — it is a defvar defaulting to (basic); I — leaving it prefix-only is the calmer choice] |
+.Ed
+.Ss 5.3 Coexistence with corfu, and where to run it [V + FOLK]
+corfu has \fBno\fP inline ghost text of its own; it previews only inside its popup
+.No \&( Ns Ql "corfu-preview-current" ).
+The corfu README does not mention completion-preview — they are independent, rendering in different places (popup vs. inline overlay), and do not fight over one UI element.
+They \fIdo\fP both read the same capf, so with both surfaces live you see the popup list \fBand\fP one ghost line.
+[V]
+.Pp
+The folklore worry about a \(dqbusy double surface\(dq comes almost entirely from running completion-preview together with
+.Ql "corfu-preview-current insert"
+— i.e. \fItwo\fP inline previews.
+Setting
+.Ql "corfu-preview-current nil"
+(§2) collapses that to exactly one inline surface (the ghost) plus the popup list — which is the familiar modern-editor arrangement, not noise.
+[I from §2 + the coexistence facts]
+.Pp
+\fBPlacement decision.\fP Rather than
+.Ql "global-completion-preview-mode"
+(which would put ghost text in prose and the minibuffer — the minibuffer is explicitly \fInot\fP recommended, and prose is meant to stay quiet per R1), the mode is enabled only in
+.Ql "jotain-completion-auto-modes"
+— the \fIsame\fP mode list that gets the auto-popup.
+Code gets both surfaces; prose inherits neither and stays manual-only via
+.Ql "C-M-i" ;
+the minibuffer is never touched.
+[FOLK for \(dqrun preview where auto-popup is on\(dq; V for the minibuffer caveat — minad/vertico discussion #512]
+.Pp
+\fBShipped:\fP
+.Ql "completion-preview"
+block enabled across
+.Ql "jotain-completion-auto-modes" ,
+gated by
+.Ql "jotain-completion-inline-preview"
+(default t), with the C-i unbind, the M-RET accept, the idle-delay pairing, the sort pairing, and the comment/string inhibit.
+.Ss 5.4 Residual — needs eyes on a GUI [I]
+Two things batch tests cannot settle, recorded honestly, same as the 2026-07 design did for
+.Ql "corfu-complete" Ns No "'s"
+feel:
+.Bl -enum -compact
+.It
+Whether ghost + popup together feels integrated or busy in day-to-day coding.
+Mitigated structurally
+.No \&( Ns Ql "corfu-preview-current nil" ,
+matched sorts) and by the one-toggle opt-out
+.Ql "jotain-completion-inline-preview" .
+.It
+Whether prefix-only ghost (from
+.Ql "completion-preview-completion-styles '(basic)" )
+ever disagrees jarringly with an orderless popup top row.
+If so, the lever is aligning that defvar with
+.Ql "completion-styles" ,
+at the cost of a fuzzy ghost.
+.El
+.Sh 6. OPTIONS CONSIDERED AND NOT TAKEN
+.Bl -bullet -compact
+.It
+.No "\fB" Ns Ql "corfu-preselect 'prompt" Ns No "\fP"
+— would keep typed input selected so an accidental accept inserts your own text.
+With
+.Ql "corfu-preview-current nil"
+already removing auto-insert, the marginal safety is small and it complicates accepting the first candidate; left at the default
+.Ql "valid" .
+[V — defcustom; decision: out of scope]
+.It
+\fBBuffer-local
+.Ql "orderless-literal-only" Ns No "/" Ns Ql "basic"
+style for corfu\fP (the README's \(dqseparate styles for minibuffer vs. Corfu\(dq recipe) — a real \(dqmore predictable in-buffer matching\(dq lever, but it changes matching semantics the owner has been living with and is orthogonal to \(dqannoying popup.\(dq
+Deferred as a separate decision, not bundled into this round.
+[V — README recipe]
+.It
+.No "\fB" Ns Ql "corfu-on-exact-match" Ns No "\fP"
+— already
+.Ql "nil"
+(no surprising auto-insert); no change.
+[V]
+.It
+\fBWidth-pinning
+.No \&( Ns Ql "corfu-min-width" Ns No "/" Ns Ql "-max-width" )
+and hiding the scrollbar\fP — cosmetic calm-feel tweaks; not \(dqannoying-usage\(dq fixes.
+Left alone.
+[CFG]
+.El
+.Sh 7. SOURCES
+.Bl -bullet -compact
+.It
+corfu.el,
+.Ql "extensions/corfu-popupinfo.el" ,
+.Ql "extensions/corfu-echo.el" ,
+and README — https://github.com/minad/corfu; GNU ELPA doc https://elpa.gnu.org/packages/doc/corfu.html.
+.It
+.Ql "completion-preview.el"
+on the
+.Ql "emacs-31"
+branch — https://raw.githubusercontent.com/emacs-mirror/emacs/emacs-31/lisp/completion-preview.el.
+.It
+Emacs NEWS.30 (\(dqNew Modes and Packages in Emacs 30.1\(dq) and NEWS.31 (\(dqMinibuffer and Completions\(dq) — emacs-mirror/emacs, branches
+.Ql "emacs-30"
+/
+.Ql "emacs-31" .
+.It
+minad/vertico discussion #512 (completion-preview in the minibuffer is not recommended).
+.It
+Prot's Emacs configuration (2024-11-28) for
+.Ql "corfu-preview-current nil"
+and the popupinfo delay — https://protesilaos.com/codelog/2024-11-28-basic-emacs-configuration/.
+.El

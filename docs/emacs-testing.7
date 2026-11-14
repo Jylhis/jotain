@@ -1,0 +1,95 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd November 14, 2026
+.Dt EMACS-TESTING 7
+.Os
+.Sh NAME
+.Nm emacs-testing
+.Nd ERT test suite of the Emacs distribution
+.Sh DESCRIPTION
+The ERT suite lives under
+.Pa test/ .
+The
+.Ql emacs-elisp-test
+check loads every
+.Pa *.el
+file in that directory.
+A new test file needs no registration.
+.Pp
+The suite has these main files:
+.Bl -tag -width Ds
+.It Pa test-smoke.el
+A canary that proves the runner globs
+.Pa test/*.el .
+.It Pa test-ui.el
+Regression tests of the theme wiring.
+They read
+.Pa init-ui.el
+as data, so the theme names cannot drift from the design-system pin.
+The theme-file tests use
+.Ql skip-unless
+for the
+.Ql jylhis-themes
+package.
+.It Pa test-org-babel.el
+The Org Babel wiring, including the
+.Ql my-org-babel-confirm-evaluate
+trust check.
+.It Pa completion-test.el
+The in-buffer completion wiring.
+.It Pa devenv-test.el
+The
+.Pa devenv.el
+integration library.
+.It Pa lang-eval-test.el
+A drift guard for the language-evaluation registry in
+.Pa etc/lang-eval/ .
+.El
+.Pp
+The other files cover the language modules, the version-control wiring and the
+review libraries.
+.Sh RUNNING
+Command
+.Ql just test
+runs the suite natively with
+.Ql emacs -batch
+when
+.Ql emacs
+is on
+.Ev PATH ,
+and skips otherwise.
+The project shell has no Emacs.
+Command
+.Ql just nix-build local.checks.emacs-elisp-test
+builds the check in the Nix sandbox.
+The check also writes a JUnit report.
+.Pp
+The sandbox has no network.
+A test must not need the network, a subprocess or the devenv binary.
+Use
+.Ql skip-unless
+for anything that needs an external tool.
+.Sh CONVENTIONS
+.Bl -bullet
+.It
+Prefix every
+.Ql ert-deftest
+with the module or package name.
+Test names share one global namespace.
+.It
+Keep tests free of side effects:
+use
+.Ql with-temp-buffer ,
+let-bound options and
+.Ql cl-letf
+to stub functions.
+.It
+Load project code with
+.Fl L Pa lisp .
+.El
+.Pp
+The
+.Ql elisp-dev
+skill has the full pattern reference in its file
+.Pa debugging-and-testing.md .
+.Sh SEE ALSO
+.Xr emacs 7

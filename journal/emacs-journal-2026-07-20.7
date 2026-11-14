@@ -1,0 +1,101 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd July 20, 2026
+.Dt EMACS-JOURNAL-2026-07-20 7
+.Os
+.Sh NAME
+.Nm emacs-journal-2026-07-20
+.Nd working notes of 2026-07-20
+.Sh ENTRIES
+.Ss Spell-check: switch jinx to global-jinx-mode
+.Ss Summary
+Applied Emacs Redux's \(dqReplacing Flyspell with Jinx\(dq https://emacsredux.com/blog/2026/07/13/replacing-flyspell-with-jinx/.
+Jotain already used jinx; the missing piece was the post's central recommendation: drive jinx from
+.No "\fB" Ns Ql "global-jinx-mode" Ns No "\fP"
+instead of per-mode hooks.
+.Ss Change
+.Bl -bullet -compact
+.It
+.No "\fB" Ns Ql "lisp/init-writing.el" Ns No "\fP"
+— the
+.Ql "jinx"
+.Ql "use-package"
+block replaced its
+.Ql ":hook ((text-mode . jinx-mode) (org-mode . jinx-mode))"
+pair with a single
+.Ql ":hook (emacs-startup . global-jinx-mode)" .
+Keybindings
+.No \&( Ns Ql "M-$"
+→
+.Ql "jinx-correct" ,
+.Ql "C-M-$"
+→
+.Ql "jinx-languages" )
+are unchanged.
+.El
+.Ss Why
+.Bl -bullet -compact
+.It
+\fBOne mode replaces two.\fP
+.Ql "global-jinx-mode"
+subsumes both
+.Ql "flyspell-mode"
+and
+.Ql "flyspell-prog-mode" .
+Jinx decides \fIwhat\fP to check by \fBface\fP, so in a programming buffer it limits itself to comments and strings automatically — no separate prog-mode variant, no per-language hooks.
+.It
+\fBCode comments/docstrings are now checked.\fP The old per-mode hooks fired only in
+.Ql "text-mode"
+(and, redundantly,
+.Ql "org-mode" ,
+which already derives from
+.Ql "text-mode" ).
+Prose was covered; typos in comments and docstrings across every
+.Ql "prog-mode"
+buffer went unchecked.
+Global mode closes that gap — this was Finding 4/11 of the 2026-07 deep-research review.
+.It
+\fBRedundant hook dropped.\fP
+.Ql "(org-mode . jinx-mode)"
+was a no-op on top of the
+.Ql "text-mode"
+hook; folding everything into the global mode removes it.
+.El
+.Ss Interaction with init-lang-data.el
+Data/config buffers that merely \fIderive\fP from
+.Ql "text-mode"
+but read as code — YAML in particular — still want jinx off.
+.Ql "jotain-lang-data--enable-prog-mode-features"
+already turns it back off unconditionally
+.No \&( Ns Ql "(when (bound-and-true-p jinx-mode) (jinx-mode -1))" ).
+Ordering still holds under global mode:
+.Ql "global-jinx-mode"
+enables jinx during
+.Ql "after-change-major-mode-hook" ,
+then the mode's own
+.Ql "yaml-mode-hook"
+runs the opt-out afterward, so those buffers end up jinx-free exactly as before.
+.Ss Docs
+.Bl -bullet -compact
+.It
+.No "\fB" Ns Ql "docs/configuration/package-reference.mdx" Ns No "\fP"
+— regenerated body text to match the updated
+.Ql ";;; @doc"
+block on the jinx form (hand-synced; no Nix in this environment to run
+.Ql "just docs-refresh-packages" ).
+The
+.Ql "packages-doc-in-sync"
+flake check compares byte-for-byte against the
+.Ql "@doc"
+markers, so this must track the source comment exactly.
+.El
+.Ss Not changed (deployment-dependent, pre-existing)
+.Bl -bullet -compact
+.It
+.No "\fB" Ns Ql "Jinx: No dictionaries available for \(dqen_US\(dq" Ns No "\fP"
+on hosts whose enchant has no en_US backend.
+Global mode surfaces this in more buffers than the old text-mode-only hooks did, but it is the same deployment gap noted on 2026-06-09 — the Nix-wrapped
+.Ql "jotainEmacsPackages"
+ships the dictionary; a bare host still needs a hunspell/nuspell dict on
+.Ql "DICPATH" .
+No config change belongs here.
+.El

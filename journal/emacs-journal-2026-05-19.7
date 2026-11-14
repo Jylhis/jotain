@@ -1,0 +1,52 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd May 19, 2026
+.Dt EMACS-JOURNAL-2026-05-19 7
+.Os
+.Sh NAME
+.Nm emacs-journal-2026-05-19
+.Nd working notes of 2026-05-19
+.Sh ENTRIES
+.Ss YAML buffers still rendered as prose
+.Ss Symptom
+YAML files opened with variable-pitch fonts and visual-line wrapping, despite the earlier change to re-fire
+.Ql "prog-mode-hook"
+(commits
+.Ql "0928969" ,
+.Ql "bb70c5c" ).
+.Ss Root cause
+.Ql "yaml-mode"
+/
+.Ql "yaml-ts-mode"
+derive from
+.Ql "text-mode" ,
+so
+.Ql "text-mode-hook"
+fires before the yaml-specific hook.
+In
+.Ql "init-writing.el"
+that hook enables
+.Ql "variable-pitch-mode" ,
+.Ql "visual-line-mode" ,
+and
+.Ql "visual-wrap-prefix-mode" ,
+and
+.Ql "jinx-mode"
+is also attached to
+.Ql "text-mode-hook"
+for prose spell-check.
+Running
+.Ql "prog-mode-hook"
+on top added the prog niceties but did not undo the prose ones, so the buffer kept its text-mode appearance.
+.Ss Fix
+.Ql "lisp/init-lang-data.el"
+— extended
+.Ql "jotain-lang-data--enable-prog-mode-features"
+to disable
+.Ql "variable-pitch-mode" ,
+.Ql "visual-line-mode" ,
+.Ql "visual-wrap-prefix-mode" ,
+and
+.Ql "jinx-mode"
+after running
+.Ql "prog-mode-hook" .
+The two visual-wrap / jinx calls are guarded so the function stays safe if those packages aren't loaded yet.

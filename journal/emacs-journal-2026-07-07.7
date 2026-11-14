@@ -1,0 +1,467 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd July 7, 2026
+.Dt EMACS-JOURNAL-2026-07-07 7
+.Os
+.Sh NAME
+.Nm emacs-journal-2026-07-07
+.Nd working notes of 2026-07-07
+.Sh ENTRIES
+.Ss Integrate origin's devenv/terminal work with local Go/eglot work (best-of-both merge)
+.Ql "origin/main"
+and the local branch had both diverged from
+.Ql "10922cb"
+and independently reworked the Go tooling and the shared
+.Ql "init-prog"
+/
+.Ql "init-project"
+/
+.Ql "init-keys"
+files.
+Merged both, keeping the stronger implementation on each overlap.
+.Ss What origin brought
+.Bl -bullet -compact
+.It
+.Ql "lisp/devenv.el"
++
+.Ql "lisp/init-devenv.el"
+— native devenv.sh integration (transient on
+.Ql "C-c v" :
+tasks, scripts, processes dashboard, test/build through compilation-mode, env reload,
+.Ql "devenv lsp"
+for devenv.nix,
+.Ql "devenv mcp"
+for gptel, auto-activation trust + mode-line status).
+.It
+.Ql "lisp/init-terminal.el"
+— the ghostel terminal emulator (libghostty-vt), replacing vterm, plus the kkp/clipetty/tty-tip block moved out of
+.Ql "init-ui.el" .
+.It
+dape with
+.Ql "C-x C-a"
+(gud prefix), right-side windows, and breakpoint persistence in
+.Ql "var/dape-breakpoints" .
+.El
+.Ss What local kept
+.Bl -bullet -compact
+.It
+.Ql "jotain-prog--maybe-eglot-ensure" :
+eglot auto-starts for \fIany\fP project file whose language server is on the buffer's (envrc-applied) PATH, so enabling a language in a project's devenv lights up its LSP with no per-language config.
+Function-valued
+.Ql "rass"
+resolvers run discovery at connect time in the project env instead of once at startup.
+.It
+The classic-vs-tree-sitter mode diagnostic
+.No \&( Ns Ql "jotain-prog--warn-non-ts-mode" ).
+.It
+.Ql "envrc"
+command map on
+.Ql "C-c e" .
+.It
+.Ql "go-tag"
+struct-tag editing alongside
+.Ql "gotest" .
+.El
+.Ss Overlap resolutions
+.Bl -bullet -compact
+.It
+\fBGo modes\fP: origin's file structure (buffer-local gopls workspace hook, go.work fallback,
+.Ql "go-ts-mode-indent-offset 8" )
+with the local branch's richer gopls settings
+.No \&( Ns Ql "completeUnimported" ,
+.Ql "unusedparams" Ns No "/" Ns Ql "shadow" Ns No "/"
+.Ql "nilness" Ns No "/" Ns Ql "unusedwrite"
+analyses).
+.It
+\fBFormatter\fP:
+.Ql "goimports"
+(origin) over
+.Ql "gofmt"
+— adds import management.
+.It
+\fBdape\fP: origin's
+.Ql "C-x C-a"
++ persistence over the local
+.Ql "C-c d"
+prefix.
+Because docker.el was removed on the local branch, dirvish keeps its long-standing
+.Ql "C-c d"
+with no clash, so there was no need to move it.
+.It
+\fBcompile-multi\fP: union of both sides' Go commands
+.No \&( Ns Ql "test" Ns No "/" Ns Ql "test current" Ns No "/" Ns Ql "test -race" Ns No "/" Ns Ql "build ./..." Ns No "/" Ns Ql "run" Ns No "/" Ns Ql "vet" Ns No "/" Ns Ql "golangci-lint" )
+plus origin's
+.Ql "go-mod-ts-mode"
+.No \&( Ns Ql "mod tidy" Ns No "/" Ns Ql "mod download" )
+and the
+.Ql "devenv test" Ns No "/" Ns Ql "build" Ns No "/" Ns Ql "up"
+entries, and
+.Ql "devenv.nix"
+as a project root marker.
+.El
+.Ss Fix: \(dqFile mode specification error: Cannot open load file … go-mode\(dq
+.Ss Symptom
+Opening Emacs (built from the remote branch) and visiting a
+.Ql ".go"
+file produced:
+.Bd -literal -offset indent
+File mode specification error: (file-missing Cannot open load file No such file or directory go-mode)
+.Ed
+.Ss Root cause
+Both branches deliberately dropped the classic
+.Ql "go-mode"
+package in favour of the built-in
+.Ql "go-ts-mode" ,
+so nothing installs
+.Ql "go-mode"
+directly (it only ever arrives as a transitive dependency of
+.Ql "gotest" Ns No "/" Ns Ql "go-tag" ).
+But a
+.Ql ".go"
+file can still be routed to the classic
+.Ql "go-mode" :
+.Bl -bullet -compact
+.It
+a \fBstale
+.Ql "var/package-quickstart.el" Ns No "\fP"
+carrying
+.Ql "go-mode" Ns No "'s"
+.Ql ";;;###autoload (add-to-list 'auto-mode-alist '(\(dq\e\e.go\e\e'\(dq . go-mode))"
+after the elpa copy of
+.Ql "go-mode"
+was cleaned, or
+.It
+a \fBtreesit-auto grammar-missing fallback\fP, or
+.It
+an old
+.Ql "auto-mode-alist"
+entry.
+.El
+.Pp
+.Ql "set-auto-mode"
+then calls
+.Ql "go-mode" ,
+which
+.Ql "require" Ns No "s"
+a package that is not on
+.Ql "load-path" ,
+and the whole file-visit aborts with the mode-spec error.
+.Ss Fix
+Add
+.Ql "major-mode-remap-alist"
+entries in
+.Ql "init-lang-go.el"
+routing classic
+.Ql "go-mode" Ns No "/" Ns Ql "go-mod-mode"
+to their tree-sitter equivalents:
+.Bd -literal -offset indent
+(when (fboundp 'go-ts-mode)
+  (dolist (remap '((go-mode         . go-ts-mode)
+                   (go-dot-mod-mode . go-mod-ts-mode)
+                   (go-mod-mode     . go-mod-ts-mode)))
+    (add-to-list 'major-mode-remap-alist remap)))
+.Ed
+.Pp
+.Ql "set-auto-mode"
+consults
+.Ql "major-mode-remap-alist"
+\fIbefore\fP it loads the mode function, so
+.Ql "go-mode"
+is never required and every Go buffer lands in
+.Ql "go-ts-mode"
+regardless of how the file got routed.
+In the full distribution the Go grammar is always present, so the remap resolves to a working
+.Ql "go-ts-mode" ;
+if the grammar were ever missing the failure would be a clear treesit-grammar error rather than a load error that breaks all file-visiting.
+.Ss Fix: custom.el supersession prompt
+.Ss Symptom
+.Bd -literal -offset indent
+custom.el changed on disk; really edit the buffer? (y, n, r or C-h) n
+userlock--ask-user-about-supersession-threat: File changed on disk: ~/.config/emacs/var/custom.el
+.Ed
+.Ss Root cause
+.Ql "custom-file"
+is write-only
+.No \&( Ns Ql "init.el" ):
+the declarative config in git is the single source of truth, and
+.Ql "custom.el"
+is regenerated from scratch on every
+.Ql "custom-save-all"
+— which
+.Ql "package.el"
+triggers whenever it persists
+.Ql "package-selected-packages"
+after installing a package.
+When more than one session writes it (a daemon and its
+.Ql "emacsclient"
+frames, or two Emacsen sharing
+.Ql "var/" ),
+the file changes on disk underneath the writer.
+.Ql "custom-save-variables"
+then modifies its buffer, Emacs notices the visited file changed on disk, and raises the supersession prompt (aborting the write with a
+.Ql "file-supersession"
+error if declined).
+.Ss Fix
+The file is disposable, so clobbering it is correct.
+.Ql "init-core.el"
+wraps
+.Ql "custom-save-all"
+so the supersession asker is a no-op during the save:
+.Bd -literal -offset indent
+(defun jotain-core--custom-save-without-supersession (orig &rest args)
+  (let ((saved (symbol-function 'ask-user-about-supersession-threat)))
+    (unwind-protect
+        (progn
+          (fset 'ask-user-about-supersession-threat #'ignore)
+          (apply orig args))
+      (fset 'ask-user-about-supersession-threat saved))))
+(advice-add 'custom-save-all :around
+            #'jotain-core--custom-save-without-supersession)
+.Ed
+.Ss Fix: go-mode crash recurs on every file; switch env from direnv to native devenv; tree-sitter cleanup
+Three problems surfaced running
+.Ql "just run-built"
+and opening files.
+The first \fIcompletes\fP the \(dqCannot open load file … go-mode\(dq entry above, whose
+.Ql "major-mode-remap-alist"
+fix turned out to be insufficient.
+.Ss 1. Cannot open load file … go-mode on a Nix file (not just Go)
+The earlier remap-only fix did not hold: opening a
+.Ql ".nix"
+file still raised the error and nix-mode never loaded.
+Real root cause:
+.Ql "go-tag" Ns No "/" Ns Ql "gotest"
+drag in classic
+.Ql "go-mode" ,
+whose autoloads install a \fBglobal\fP
+.Ql "magic-mode-alist"
+entry
+.Ql "(go--is-go-asm . go-asm-mode)" .
+.Ql "magic-mode-alist"
+is consulted for \fBevery\fP file
+.Ql "set-auto-mode"
+visits, and
+.Ql "go--is-go-asm"
+is autoloaded from
+.Ql "go-mode" ,
+so opening \fIany\fP file force-loads classic go-mode.
+When go-mode isn't on
+.Ql "load-path" ,
+the load fails and mode setup aborts.
+.Ql "major-mode-remap-alist"
+does \fBnot\fP prevent this — it only rewrites the \fIchosen\fP mode; the magic predicate fires earlier and loads go-mode directly.
+.Pp
+Fix
+.No \&( Ns Ql "init-lang-go.el" ):
+strip go-mode's global autoload state at module load — remove the
+.Ql "go--is-go-asm"
+.Ql "magic-mode-alist"
+entry and the classic
+.Ql ".go" Ns No "/" Ns Ql "go.mod" Ns No "/" Ns Ql "go.work"
+.Ql "auto-mode-alist"
+entries (the module already routes those to the tree-sitter modes).
+The remap stays as a backstop.
+Verified in the built Emacs:
+.Ql "flake.nix"
+→
+.Ql "go--is-go-asm"
+gone, opens in
+.Ql "nix-ts-mode" ;
+.Ql ".go"
+still opens in
+.Ql "go-ts-mode" .
+.Ss 2. gopls go: executable file not found in $PATH → disable direnv, use native devenv
+.Ql "Direnv failed in .../otherproject/"
+meant envrc applied no env, so gopls (global) couldn't find
+.Ql "go" .
+Trigger:
+.Ql "just run-built"
+launches Emacs \fIinside\fP jotain's own devenv shell (leaking
+.Ql "DEVENV_*" Ns No "/" Ns Ql "NIX_*" ),
+so envrc's nested
+.Ql "use devenv"
+for another project fails.
+Decision: stop using direnv/envrc; load the environment natively via devenv.
+.Bl -bullet -compact
+.It
+.Ql "devenv.el" :
+new
+.Ql "devenv-env-defer-to-direnv"
+defcustom (default
+.Ql "t" ,
+keeps the library reusable);
+.Ql "devenv-env--turn-on"
+only skips
+.Ql ".envrc" Ns No "/" Ns Ql "envrc-mode"
+buffers when it is non-nil.
+New
+.Ql "devenv-env-loading-p"
+predicate reports an in-flight
+.Ql "print-dev-env"
+fetch.
+.It
+.Ql "init-prog.el" :
+removed the
+.Ql "envrc"
+.Ql "use-package"
+block; removed the curated per-mode
+.Ql ":hook . eglot-ensure"
+(it fired \fIbefore\fP the globalized
+.Ql "devenv-env-mode"
+turned on, so eglot connected with the global env).
+Hardened
+.Ql "jotain-prog--maybe-eglot-ensure"
+to call
+.Ql "eglot-ensure"
+unconditionally while the devenv env is loading (the loader's deferral advice holds and replays it once the env lands), keeping the
+.Ql "executable-find"
+guard only for the settled path.
+.It
+.Ql "init-devenv.el" :
+enable
+.Ql "devenv-env-global-mode"
+on
+.Ql "after-init" ,
+set
+.Ql "devenv-env-defer-to-direnv"
+nil.
+.El
+.Pp
+Trust:
+.Ql "devenv-env-mode"
+only activates for projects trusted with
+.Ql "devenv-allow"
+.No \&( Ns Ql "C-c v" );
+until then the mode line shows
+.Ql "devenv[!]" .
+Trade-off: pure-direnv, non-devenv projects lose auto-env.
+Verified: the loader enables cleanly and installs the
+.Ql "eglot-ensure"
+deferral advice.
+(Interactive confirmation that gopls finds
+.Ql "go"
+in otherproject, and whether otherproject is a devenv project, is the remaining user step.)
+.Ss 3. Tree-sitter cleanup
+The
+.Ql "TREE_SITTER_DIR"
+→
+.Ql "treesit-extra-load-path"
+block in
+.Ql "early-init.el"
+was dead: nothing set that env var.
+Grammars come from Nixpkgs' own
+.Ql "site-start.el"
+.No \&( Ns Ql "treesit-extra-load-path"
+→
+.Ql "…/emacs-packages-deps/lib/" ).
+Removed the block, fixed the stale comment in
+.Ql "init-prog.el" ,
+and stopped the async native-comp \(dqgrammar for go unavailable\(dq warning by propagating the path into workers (which run without site files):
+.Bd -literal -offset indent
+(setq native-comp-async-env-modifier-form
+      `(setq treesit-extra-load-path ',treesit-extra-load-path))
+.Ed
+.Ss Note: stale lisp/.elc shadow source edits
+.Ql "early-init.el"
+sets
+.Ql "load-prefer-newer"
+to
+.Ql "noninteractive" ,
+so an \fIinteractive\fP Emacs prefers
+.Ql ".elc"
+even when the
+.Ql ".el"
+is newer.
+A prior
+.Ql "just compile"
+had left stale
+.Ql "lisp/*.elc"
+(devenv, init-devenv, init-lang-go, …) that would shadow these edits.
+Ran
+.Ql "just clean"
+to clear them and the eln-cache; the next
+.Ql "just run-built"
+recompiles from source.
+.Ql "nix flake check" Ns No "'s"
+elisp-compile (warnings-as-errors) passes with the edits.
+.Ss Drop treesit-auto; route tree-sitter modes ourselves
+.Ql "treesit-auto"
+was already running with both of its headline features off:
+.Ql "treesit-auto-install nil"
+(Nix provides every grammar) and
+.Ql "global-treesit-auto-mode"
+deliberately unused (it advises
+.Ql "set-auto-mode-0"
+and cost ~3.6 s per
+.Ql "find-file" ).
+All it still did was
+.Ql "(treesit-auto-add-to-auto-mode-alist 'all)"
+for the long tail and supply the recipe list behind
+.Ql "jotain-prog--warn-non-ts-mode" .
+Meanwhile every
+.Ql "init-lang-*.el"
+already routed its language explicitly, so routing was split-brain and the diagnostic reached into the package's struct accessors.
+.Pp
+Emacs ships no built-in lang→regex table, so \fIsome\fP table is unavoidable; owning a small one beats depending on a community recipe list.
+.Ss Change
+.Bl -bullet -compact
+.It
+.Ql "init-prog.el" :
+removed the
+.Ql "treesit-auto"
+.Ql "use-package"
+block; added
+.Ql "jotain-prog-ts-remaps"
+(entries
+.Ql "(LANG TS-MODE CLASSIC-MODE...)" )
+and
+.Ql "jotain-prog--apply-ts-remaps" ,
+a
+.Ql "treesit-ready-p" Ns No "-guarded"
+loop that populates
+.Ql "major-mode-remap-alist" .
+Remapping the \fIchosen\fP mode means we own no file regexes: each classic mode's own autoload stays the source of truth and we just redirect it.
+Same mechanism
+.Ql "init-lang-go.el"
+uses.
+.It
+Expanded coverage to silence the diagnostic:
+.Ql "sh-mode" Ns No "→" Ns Ql "bash-ts-mode" ,
+.Ql "cmake-mode" Ns No "→" Ns Ql "cmake-ts-mode" ,
+.Ql "dockerfile-mode" Ns No "→" Ns Ql "dockerfile-ts-mode" ,
+.Ql "js-json-mode" Ns No "/" Ns Ql "json-mode" Ns No "→" Ns Ql "json-ts-mode" ,
+.Ql "conf-toml-mode" Ns No "→"
+.Ql "toml-ts-mode" ,
+.Ql "yaml-mode" Ns No "→" Ns Ql "yaml-ts-mode"
+(plus python/rust/css/js/ts belt-and-suspenders).
+.It
+Rewrote
+.Ql "jotain-prog--warn-non-ts-mode"
+to be self-contained: it derives
+.Ql "foo-ts-mode" Ns No "/grammar"
+from the mode name instead of reading
+.Ql "treesit-auto-recipe-list" .
+It's now a gap detector for \fIunrouted\fP languages (routed ones never reach it).
+.It
+.Ql "dockerfile"
+eglot server keyed on
+.Ql "(dockerfile-ts-mode dockerfile-mode)"
+so
+.Ql "docker-langserver"
+still matches after the remap.
+.Ql "dockerfile-mode" Ns No "'s"
+build commands remain available via
+.Ql "M-x"
+(autoloaded); only font-lock changes to tree-sitter.
+.It
+Refreshed stale
+.Ql "treesit-auto"
+comments in
+.Ql "init-lang-go.el"
+and
+.Ql "nix/mk-overlay.nix" .
+Grammar set unchanged, so cache parity holds.
+.El
+.Pp
+Curated/lite builds still fall back gracefully: a missing grammar means
+.Ql "treesit-ready-p"
+is nil and the classic mode stays.

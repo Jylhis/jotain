@@ -1,0 +1,208 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd July 1, 2026
+.Dt EMACS-JOURNAL-2026-07-01 7
+.Os
+.Sh NAME
+.Nm emacs-journal-2026-07-01
+.Nd working notes of 2026-07-01
+.Sh ENTRIES
+.Ss Switch prose font hook from variable-pitch-mode to mixed-pitch-mode (keep Org tables and code aligned)
+.Ss Summary
+.Ql "init-writing.el"
+applied
+.Ql "(text-mode . variable-pitch-mode)"
+to every
+.Ql "text-mode" Ns No "-derived"
+buffer.
+.Ql "variable-pitch-mode"
+makes the \fIwhole\fP buffer proportional, so Org (which aligns tables by padding cells with spaces) rendered ragged tables: a monospace-only trick applied under a proportional font.
+The same hit source blocks and verbatim spans.
+.Pp
+Swapped in the
+.Ql "mixed-pitch"
+package (MELPA, jabranham).
+.Ql "mixed-pitch-mode"
+remaps the buffer default to
+.Ql "variable-pitch"
+for prose while keeping a curated face list
+.No \&( Ns Ql "mixed-pitch-fixed-pitch-faces"
+—
+.Ql "org-table" ,
+.Ql "org-code" ,
+.Ql "org-block" ,
+.Ql "org-verbatim" ,
+.Ql "org-formula" ,
+…) pinned to
+.Ql "fixed-pitch" .
+Org tables align again; prose stays proportional.
+It reuses the same
+.Ql "variable-pitch"
+face that
+.Ql "init-ui.el"
+already configures, so no font/theme change was needed.
+.Pp
+Two follow-on decisions:
+.Bl -bullet -compact
+.It
+\fBCommit-message and email buffers are now fully monospaced.\fP They derive from
+.Ql "text-mode"
+and were proportional before; they are column-sensitive (50/72 rule), so a new opt-out turns
+.Ql "mixed-pitch-mode"
+back off there.
+.It
+\fBMarkdown uses the
+.Ql "mixed-pitch"
+default face list\fP (no extra faces added); Org is the case that mattered and is covered out of the box.
+.El
+.Ss Changes
+.Bl -bullet -compact
+.It
+.No "\fB" Ns Ql "lisp/init-writing.el" Ns No "\fP"
+.Bl -bullet -compact
+.It
+Dropped
+.Ql "(text-mode . variable-pitch-mode)"
+from the
+.Ql "text-mode"
+.Ql "use-package"
+.Ql ":hook"
+(kept
+.Ql "visual-line-mode" ,
+.Ql "visual-wrap-prefix-mode" )
+and reworded its
+.Ql ";;; @doc" .
+.It
+Added a
+.Ql "use-package mixed-pitch"
+block.
+.Ql ":hook"
+enables
+.Ql "mixed-pitch-mode"
+in
+.Ql "text-mode" ,
+and a
+.Ql ":preface"
+helper
+.Ql "jotain-writing--keep-monospace"
+(calls
+.Ql "(mixed-pitch-mode -1)" )
+is hooked to
+.Ql "git-commit-setup"
+and
+.Ql "message-mode"
+for the monospace opt-out.
+.Ql "git-commit-setup-hook"
+and
+.Ql "message-mode-hook"
+both run after
+.Ql "text-mode-hook" ,
+so the opt-out cleanly reverses it.
+Added
+.Ql "(declare-function mixed-pitch-mode \(dqmixed-pitch\(dq …)" .
+.It
+The helper lives in
+.Ql ":preface"
+(not between the
+.Ql ";;; @doc"
+and the
+.Ql "use-package"
+form) so
+.Ql "nix/packages-doc.nix"
+still associates the doc block with the block — otherwise the generated reference showed
+.Ql "_Undocumented._" .
+.El
+.It
+.No "\fB" Ns Ql "lisp/init-lang-data.el" Ns No "\fP"
+— in
+.Ql "jotain-lang-data--enable-prog-mode-features"
+(the YAML prose-off workaround), changed
+.Ql "(variable-pitch-mode -1)"
+to
+.Ql "(mixed-pitch-mode -1)"
+and added the matching
+.Ql "declare-function" ;
+without this YAML buffers would keep a proportional font.
+Updated the docstring wording.
+.It
+.No "\fB" Ns Ql "bench/find-file-bench.el" Ns No "\fP"
+— updated the timed-minor-modes list
+.No \&( Ns Ql "variable-pitch-mode"
+→
+.Ql "mixed-pitch-mode" )
+so the find-file benchmark measures the mode that now fires in
+.Ql "text-mode" .
+.It
+.No "\fB" Ns Ql "docs/configuration/package-reference.mdx" Ns No "\fP"
+— regenerated via
+.Ql "just docs-refresh-packages"
+from the updated
+.Ql ";;; @doc"
+blocks (adds a
+.Ql "### mixed-pitch"
+section, reworks
+.Ql "### text-mode" ).
+Not hand-edited; CI's
+.Ql "packages-doc-in-sync"
+check verifies the in-tree copy.
+.El
+.Pp
+Nix build needed no manual package entry:
+.Ql "nix/use-package.nix"
+auto-scans the new
+.Ql "(use-package mixed-pitch …)"
+and resolves it to
+.Ql "epkgs.mixed-pitch" .
+.Ss Verification
+.Bl -bullet -compact
+.It
+.Ql "just docs-refresh-packages"
+— regenerated cleanly;
+.Ql "### mixed-pitch"
+section present, no
+.Ql "_Undocumented._" .
+.It
+.Ql "just check"
+— flake check (byte-compile with warnings-as-errors, paren check, statix/deadnix/nixfmt,
+.Ql "packages-doc-in-sync" ).
+.It
+Manual
+.No \&( Ns Ql "just run-built" ):
+Org numeric table aligns and right-justifies; YAML stays monospaced; Markdown prose is proportional; magit commit buffer is monospaced.
+.El
+.Ss Compatibility note
+Only
+.Ql "text-mode" Ns No "-derived"
+buffers change.
+Code modes were never hooked;
+.Ql "conf-mode"
+is not
+.Ql "text-mode" Ns No "-derived."
+.Ql "denote"
+notes and Markdown prose stay proportional (now with monospaced code spans).
+.Ql "init-ui.el"
+faces and
+.Ql "init-org.el" Ns No "/org-modern"
+are unchanged.
+.Ss Incidental: byte-compile fix in init-snippets.el
+The first
+.Ql "just check"
+after the edits failed on
+.Ql "lisp/init-snippets.el:51"
+—
+.Ql "make-variable-buffer-local' not called at toplevel" .
+That file is untouched by this change; editing
+.Ql "lisp/"
+merely busted the cached
+.Ql "elisp-compile"
+result from before the last nix-inputs bump, so the newer byte-compiler's stricter warning (now an error under
+.Ql "byte-compile-error-on-warn" )
+surfaced on the forced rebuild.
+The
+.Ql "defvar-local"
+guard for the merged tempel+eglot capf lived inside
+.Ql "use-package tempel" Ns No "'s"
+.Ql ":init" ,
+where it is not a toplevel form.
+Hoisted it to true top level;
+.Ql "just check"
+is green (all 8 flake checks pass).
