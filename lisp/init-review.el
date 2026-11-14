@@ -37,7 +37,10 @@
 ;;; draft comment on the line at point into the queue; `P' in the queue
 ;;; lists the drafts and posts them through Ghub after you confirm. `v'
 ;;; marks the file at point as viewed (an Org tag, so it persists with
-;;; the review); it also works in a diff or a visited file.
+;;; the review); it also works in a diff or a visited file. With gptel,
+;;; `a' in a diff drafts a comment for the line at point and `A' on a
+;;; draft shows advice on its wording; both send text to the gptel model
+;;; and save or post nothing without you.
 ;;; Queues live under var/repo-review/.
 (use-package repo-review
   :ensure nil

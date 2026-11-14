@@ -464,5 +464,74 @@ Binds `root' to the project directory."
   (with-temp-buffer
     (should-error (repo-review-toggle-viewed))))
 
+;;; AI assistance
+
+(ert-deftest repo-review-ai-draft-saves-edited-answer ()
+  (repo-review-test--with-pr
+    (repo-review-pullreq)
+    (let ((queue (current-buffer)) prompts)
+      (repo-review-test--open-diff "new.txt")
+      (goto-char (point-min))
+      (re-search-forward "^\\+n")
+      (let ((repo-review-ai-function
+             (lambda (prompt cb) (push prompt prompts) (funcall cb "  Rename n.  "))))
+        (cl-letf (((symbol-function 'read-string)
+                   (lambda (_p &optional initial &rest _) initial)))
+          (repo-review-ai-draft-comment)))
+      (should (string-match-p "line 1 of new.txt" (car prompts)))
+      (should (string-match-p "^\\+n" (car prompts)))
+      (with-current-buffer queue
+        (should (equal (plist-get (car (repo-review--drafts)) :body) "Rename n."))))))
+
+(ert-deftest repo-review-ai-draft-does-not-post ()
+  (repo-review-test--with-pr
+    (repo-review-pullreq)
+    (repo-review-test--open-diff "new.txt")
+    (goto-char (point-min))
+    (re-search-forward "^\\+n")
+    (let* ((sent nil)
+           (repo-review-post-function (lambda (r) (push r sent)))
+           (repo-review-ai-function (lambda (_p cb) (funcall cb "x"))))
+      (cl-letf (((symbol-function 'read-string)
+                 (lambda (_p &optional initial &rest _) initial)))
+        (repo-review-ai-draft-comment))
+      (should-not sent))))
+
+(ert-deftest repo-review-ai-draft-outside-diff ()
+  (with-temp-buffer
+    (should-error (repo-review-ai-draft-comment) :type 'user-error)))
+
+(ert-deftest repo-review-ai-check-shows-advice-and-keeps-draft ()
+  (repo-review-test--with-pr
+    (repo-review-pullreq)
+    (repo-review--add-draft buffer-file-name "src/a.py" 1 "bad wording")
+    (goto-char (point-min))
+    (re-search-forward "^\\*\\*\\* Draft")
+    (let ((repo-review-ai-function
+           (lambda (prompt cb)
+             (should (string-match-p "bad wording" prompt))
+             (funcall cb "Say it kindly."))))
+      (cl-letf (((symbol-function 'display-buffer) #'ignore))
+        (repo-review-ai-check-draft)))
+    (with-current-buffer "*repo-review: AI check*"
+      (should (string-match-p "kindly" (buffer-string))))
+    (should (equal (plist-get (car (repo-review--drafts)) :body) "bad wording"))))
+
+(ert-deftest repo-review-ai-check-needs-a-draft ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (should-error (repo-review-ai-check-draft) :type 'user-error)))
+
+(ert-deftest repo-review-ai-default-without-gptel-is-user-error ()
+  (skip-unless (not (locate-library "gptel")))
+  (should-error (repo-review--gptel-request "p" #'ignore) :type 'user-error))
+
+(ert-deftest repo-review-hunk-text-is-truncated ()
+  (with-temp-buffer
+    (insert "@@ -1 +1 @@\n" (make-string 100 ?x) "\n")
+    (goto-char (point-min))
+    (let ((repo-review-ai-max-chars 20))
+      (should (<= (length (repo-review--hunk-text)) 20)))))
+
 (provide 'repo-review-test)
 ;;; repo-review-test.el ends here

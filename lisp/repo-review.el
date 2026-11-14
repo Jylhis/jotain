@@ -55,6 +55,7 @@
 
 ;; Optional: only called after the forge stack is loaded.
 (declare-function ghub-request "ext:ghub")
+(declare-function gptel-request "ext:gptel-request")
 
 (defgroup repo-review nil
   "Whole-repository code review queue."
@@ -84,6 +85,22 @@ It receives a plist with the keys :forge, :host, :method, :resource and
   "Non-nil means opening a file from the queue marks it as viewed."
   :type 'boolean)
 
+(defcustom repo-review-ai-function #'repo-review--gptel-request
+  "Function that asks a language model for text.
+It receives the prompt string and a callback, and calls the callback
+with the answer string.  The default uses gptel when it is installed."
+  :type 'function)
+
+(defcustom repo-review-ai-system-prompt
+  "You are a careful code reviewer.  Answer with the review text only, \
+in plain sentences, without markdown headings."
+  "System prompt for the AI commands of `repo-review'."
+  :type 'string)
+
+(defcustom repo-review-ai-max-chars 20000
+  "Longest diff text, in characters, that the AI commands send."
+  :type 'natnum)
+
 (defcustom repo-review-use-org-remark t
   "Non-nil means enable `org-remark-mode' in files opened from the queue."
   :type 'boolean)
@@ -100,6 +117,7 @@ It receives a plist with the keys :forge, :host, :method, :resource and
   "e"   #'repo-review-visit-writable
   "P"   #'repo-review-post-comments
   "v"   #'repo-review-toggle-viewed
+  "A"   #'repo-review-ai-check-draft
   "n"   #'org-next-visible-heading
   "p"   #'org-previous-visible-heading
   "N"   #'repo-review-next-todo
@@ -423,6 +441,7 @@ Works in the queue, in a diff and in a file opened from the queue."
 
 (defvar-keymap repo-review-diff-mode-map
   "c" #'repo-review-comment
+  "a" #'repo-review-ai-draft-comment
   "v" #'repo-review-toggle-viewed)
 
 (define-minor-mode repo-review-diff-mode
@@ -611,6 +630,75 @@ POSTED property and is not sent again."
            drafts requests)
         (save-buffer))
       (message "Posted %d comment(s)" done))))
+
+;;; AI assistance
+
+(defun repo-review--gptel-request (prompt callback)
+  "Send PROMPT through gptel and pass the answer string to CALLBACK."
+  (unless (require 'gptel nil t)
+    (user-error "The AI commands need gptel, which is not installed"))
+  (gptel-request prompt
+    :system repo-review-ai-system-prompt
+    :callback (lambda (response info)
+                (if (stringp response)
+                    (funcall callback response)
+                  (message "repo-review: no AI answer (%s)"
+                           (plist-get info :status))))))
+
+(defun repo-review--hunk-text ()
+  "Return the diff hunk at point, cut to `repo-review-ai-max-chars'."
+  (save-excursion
+    (end-of-line)
+    (unless (re-search-backward "^@@ " nil t)
+      (user-error "Point is not inside a diff hunk"))
+    (let ((start (point)))
+      (forward-line 1)
+      (let ((end (if (re-search-forward "^@@ " nil t)
+                     (match-beginning 0)
+                   (point-max))))
+        (buffer-substring-no-properties
+         start (min end (+ start repo-review-ai-max-chars)))))))
+
+(defun repo-review-ai-draft-comment ()
+  "Ask the AI for a review comment on the hunk at point, then edit and save it.
+The hunk is sent to the model that `repo-review-ai-function' uses.
+The answer opens in the minibuffer; nothing is saved until you accept,
+and nothing is posted to the forge."
+  (interactive)
+  (unless repo-review--diff-queue
+    (user-error "Not in a pull request diff buffer"))
+  (let* ((buf (current-buffer))
+         (marker (point-marker))
+         (line (repo-review--diff-new-line))
+         (prompt (format "Write one short review comment for line %d of %s, \
+as shown in this diff hunk.\n\n%s"
+                         line repo-review--diff-path (repo-review--hunk-text))))
+    (funcall repo-review-ai-function prompt
+             (lambda (answer)
+               (when (buffer-live-p buf)
+                 (with-current-buffer buf
+                   (goto-char marker)
+                   (repo-review-comment (string-trim answer))))))))
+
+(defun repo-review-ai-check-draft ()
+  "Ask the AI to check the draft comment at point and show its advice.
+The draft stays unchanged."
+  (interactive)
+  (unless (org-entry-get nil "DRAFT_LINE")
+    (user-error "Point is not on a draft comment"))
+  (let ((body (repo-review--draft-body))
+        (path (org-entry-get nil "REVIEW_PATH" t)))
+    (funcall repo-review-ai-function
+             (format "Check this code review comment on %s for clarity, tone and \
+whether the author can act on it.  Reply with short advice and, if needed, a better \
+wording.\n\n%s" path body)
+             (lambda (answer)
+               (with-current-buffer (get-buffer-create "*repo-review: AI check*")
+                 (let ((inhibit-read-only t))
+                   (erase-buffer)
+                   (insert answer "\n"))
+                 (special-mode)
+                 (display-buffer (current-buffer)))))))
 
 ;;;###autoload
 (defun repo-review-pullreq (&optional pr)
