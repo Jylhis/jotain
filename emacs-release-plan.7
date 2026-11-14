@@ -1,4 +1,5 @@
 .\" Assisted-by: Claude Code:claude-fable-5-2
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
 .Dd November 14, 2026
 .Dt EMACS-RELEASE-PLAN 7
 .Os
@@ -9,8 +10,10 @@
 .Bd -ragged -offset indent
 Plan, not started.
 EM6 has owner steps that deploy
-.Ql docs.example.org .
+.Ql docs.example.org
+and redirect the old site; it changes a service and DNS.
 No step changes a host.
+EM6 carries its rollback and checks below.
 .Ed
 .Pp
 The Emacs distribution is the third release of
@@ -35,6 +38,11 @@ and
 .Ql emacs-config-startup .
 The cloud container could not download the package sources.
 EM4 runs them on local-lab.
+Since this page was written,
+.Ql just test
+runs the ERT suite natively (commit c6ea62497f), and the ERT check writes a
+JUnit report (commit b7095b1d8c).
+Neither change makes the three checks above verified.
 .It
 The distribution has no flake and no
 .Ql package.nix .
@@ -171,6 +179,34 @@ apply for
 .Ql docs.example.org ,
 and merge so that the workflow deploys.
 Then redirect the old GitHub Pages site.
+.Pp
+Idempotent: the infra apply and the redirect are idempotent;
+the merge is not, and a second merge is a new commit.
+Rollback: before the redirect, remove the DNS record of the site and apply again;
+after the redirect, revert the redirect commit of the old site.
+This restores the old GitHub Pages site as the only address.
+No step of EM6 deletes the old site, so this rollback stays possible.
+Expected state: the plan shows one new Worker route and one DNS record;
+the old address answers with a redirect.
+Check: run
+.Ql just infra-plan cloudflare
+before the apply and read it;
+then run
+.Ql curl -sI https://docs.example.org
+and expect a status 200, and run
+.Ql curl -sI
+on the old address and expect a status 301.
+No command of this step ran for this plan; all are unverified.
+.Pp
+Known effects:
+.Bl -bullet -compact
+.It
+DNS takes minutes to propagate; the site can answer 404 or a certificate error in that time.
+.It
+Visitors of the old address land on the new landing page; old deep links can fail.
+.It
+Each push to green main starts a Workers Builds run (free tier).
+.El
 .It EM7 (sonnet; 1 session; after EM6, RK2)
 Add the
 .Ql Support and updates
@@ -199,19 +235,17 @@ and record the output.
 .El
 .Ss Schedule
 .Bl -tag -width Ds
-.It W3, 30 November to 6 December
-EM1, EM2, EM4.
 .It W4, 7 to 13 December
-EM3, EM5, EM6, EM8; the site is deployed.
+EM1 to EM6, EM8; the site is deployed.
 .It W5, 14 to 20 December
 EM7, EM9, EM10; the release is on Friday 18 December.
 .El
 .Ss Goals
 .Bl -bullet
 .It
-4 December: 3 of 10 tasks; the flake evaluates in the tree.
+4 December: no task is due; the work starts on 7 December.
 .It
-11 December: 7 of 10 tasks;
+11 December: 7 of 10 tasks; the flake evaluates in the tree;
 .Ql docs.example.org
 answers and the export passes its check.
 .It
