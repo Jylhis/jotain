@@ -31,10 +31,15 @@
 ;;; in `view-mode', `e' opens it writable, `N' jumps to the next
 ;;; unreviewed file, and `g' appends files added since the queue was
 ;;; built. A prefix argument rebuilds the queue after a confirmation.
+;;; `C-x p V' (`repo-review-pullreq') does the same for the Forge pull
+;;; request or merge request at point: the queue lists the changed
+;;; files and RET shows each as a read-only diff.
 ;;; Queues live under var/repo-review/.
 (use-package repo-review
   :ensure nil
-  :bind (:map project-prefix-map ("R" . repo-review-start))
+  :bind (:map project-prefix-map
+              ("R" . repo-review-start)
+              ("V" . repo-review-pullreq))
   :custom
   (repo-review-queue-dir (my-var-file "repo-review/")))
 

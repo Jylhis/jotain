@@ -185,5 +185,74 @@ Binds `root' to the project directory."
   (with-temp-buffer
     (should-error (repo-review--entry-file) :type 'user-error)))
 
+;;; Pull requests
+
+(defun repo-review-test--git (&rest args)
+  "Run git with ARGS in `default-directory' and return trimmed stdout."
+  (with-temp-buffer
+    (apply #'process-file "git" nil t nil "-c" "user.name=t" "-c" "user.email=t@t" args)
+    (string-trim (buffer-string))))
+
+(defmacro repo-review-test--with-pr (&rest body)
+  "Run BODY in a project with a feature branch; bind `info' to a PR plist."
+  (declare (indent 0) (debug t))
+  `(repo-review-test--with-project
+     (repo-review-test--git "commit" "-q" "-m" "base")
+     (let ((base (repo-review-test--git "rev-parse" "HEAD")))
+       (repo-review-test--git "checkout" "-q" "-b" "feat")
+       (write-region "y\n" nil "src/a.py")
+       (write-region "n\n" nil "new.txt")
+       (repo-review-test--git "add" "-A")
+       (repo-review-test--git "commit" "-q" "-m" "change")
+       (let ((info (list :number 7 :title "T" :base base
+                         :head (repo-review-test--git "rev-parse" "HEAD")
+                         :forge 'github :repo "o/r")))
+         (cl-letf (((symbol-function 'repo-review--pr-info) (lambda (_pr) info))
+                   ((symbol-function 'repo-review--pr-at-point) (lambda () 'pr)))
+           ,@body)))))
+
+(ert-deftest repo-review-pr-queue-lists-changed-files ()
+  (repo-review-test--with-pr
+    (repo-review-pullreq)
+    (should (derived-mode-p 'repo-review-queue-mode))
+    (should (repo-review--pr-queue-p))
+    (should (string-match-p "-pr7\\.org\\'" buffer-file-name))
+    (should (equal (repo-review-test--paths) '("new.txt" "src/a.py")))))
+
+(ert-deftest repo-review-pr-visit-shows-read-only-diff ()
+  (repo-review-test--with-pr
+    (repo-review-pullreq)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (repo-review-visit)
+    (should (derived-mode-p 'diff-mode))
+    (should buffer-read-only)
+    (should (string-match-p "^\\+n$" (buffer-string)))
+    (should (equal (file-name-nondirectory
+                    (directory-file-name default-directory))
+                   (file-name-nondirectory (directory-file-name root))))))
+
+(ert-deftest repo-review-pr-refresh-keeps-entries ()
+  (repo-review-test--with-pr
+    (repo-review-pullreq)
+    (repo-review-refresh)
+    (should (equal (repo-review-test--paths) '("new.txt" "src/a.py")))))
+
+(ert-deftest repo-review-pr-reopen-reuses-queue ()
+  (repo-review-test--with-pr
+    (repo-review-pullreq)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (org-todo "DONE")
+    (save-buffer)
+    (repo-review-pullreq)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (should (equal (org-entry-get nil "REVIEW_PATH") "src/a.py"))))
+
+(ert-deftest repo-review-pr-bad-revision-is-user-error ()
+  (repo-review-test--with-project
+    (should-error (repo-review--pr-files root "nope" "nada") :type 'user-error)))
+
 (provide 'repo-review-test)
 ;;; repo-review-test.el ends here
