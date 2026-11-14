@@ -80,16 +80,26 @@ It receives a plist with the keys :forge, :host, :method, :resource and
 :payload, and runs only after the user confirmed the post."
   :type 'function)
 
+(defcustom repo-review-mark-viewed-on-visit nil
+  "Non-nil means opening a file from the queue marks it as viewed."
+  :type 'boolean)
+
 (defcustom repo-review-use-org-remark t
   "Non-nil means enable `org-remark-mode' in files opened from the queue."
   :type 'boolean)
 
 ;;; Queue mode
 
+(defvar-local repo-review--diff-queue nil
+  "Queue file of the review that the buffer belongs to.")
+(defvar-local repo-review--diff-path nil
+  "Project-relative path the buffer shows.")
+
 (defvar-keymap repo-review-queue-mode-map
   "RET" #'repo-review-visit
   "e"   #'repo-review-visit-writable
   "P"   #'repo-review-post-comments
+  "v"   #'repo-review-toggle-viewed
   "n"   #'org-next-visible-heading
   "p"   #'org-previous-visible-heading
   "N"   #'repo-review-next-todo
@@ -242,8 +252,12 @@ With prefix argument REBUILD, discard review state and rebuild the queue."
   "Visit FILE in another window, in `view-mode' when READ-ONLY.
 Enables `org-remark-mode' when `repo-review-use-org-remark' and the
 package are available, with the notes file beside the queue."
-  (let ((notes (and repo-review-use-org-remark (repo-review--notes-file))))
+  (let ((notes (and repo-review-use-org-remark (repo-review--notes-file)))
+        (queue buffer-file-name)
+        (rel (file-relative-name file (repo-review--root))))
     (find-file-other-window file)
+    (setq-local repo-review--diff-queue queue)
+    (setq-local repo-review--diff-path rel)
     (view-mode (if read-only 1 -1))
     (when (and notes (require 'org-remark nil t))
       ;; `org-remark-notes-get-file-name' returns this absolute value
@@ -256,6 +270,8 @@ package are available, with the notes file beside the queue."
 In a pull request queue, show the diff of the file instead."
   (interactive)
   (let ((file (repo-review--entry-file)))
+    (when repo-review-mark-viewed-on-visit
+      (repo-review--set-viewed t))
     (if (repo-review--pr-queue-p)
         (repo-review--show-diff (org-entry-get nil "REVIEW_PATH"))
       (repo-review--open file t))))
@@ -329,11 +345,6 @@ symbol such as `github' or `gitlab'), :host (the API host) and
           (plist-get info :forge) (plist-get info :repo)
           (or (plist-get info :host) "")))
 
-(defvar-local repo-review--diff-queue nil
-  "Queue file of the pull request whose diff the buffer shows.")
-(defvar-local repo-review--diff-path nil
-  "Project-relative path whose diff the buffer shows.")
-
 (defun repo-review--show-diff (rel)
   "Show the diff of project-relative path REL for the current pull request queue."
   (let* ((root (repo-review--root))
@@ -355,10 +366,64 @@ symbol such as `github' or `gitlab'), :host (the API host) and
       (view-mode 1))
     (pop-to-buffer buf)))
 
+;;; Viewed state
+
+(defconst repo-review--viewed-tag "viewed"
+  "Org tag that marks a queue entry as viewed.")
+
+(defun repo-review--set-viewed (state)
+  "Set the viewed tag of the file entry at point to STATE, or toggle on `toggle'."
+  (let* ((tags (org-get-tags nil t))
+         (was (member repo-review--viewed-tag tags))
+         (now (if (eq state 'toggle) (not was) state)))
+    (unless (eq (and was t) (and now t))
+      (org-set-tags (if now
+                        (cons repo-review--viewed-tag tags)
+                      (delete repo-review--viewed-tag tags))))
+    now))
+
+(defun repo-review--viewed-summary ()
+  "Return \"viewed/total\" for the file entries of the current queue buffer."
+  (let ((total 0) (viewed 0))
+    (org-map-entries
+     (lambda ()
+       (setq total (1+ total))
+       (when (member repo-review--viewed-tag (org-get-tags nil t))
+         (setq viewed (1+ viewed))))
+     "REVIEW_PATH<>\"\"" 'file)
+    (format "%d/%d" viewed total)))
+
+(defun repo-review--goto-file-entry ()
+  "Move to the file entry at point, from a draft or from a diff buffer."
+  (if repo-review--diff-queue
+      (goto-char (or (org-find-property "REVIEW_PATH" repo-review--diff-path)
+                     (user-error "%s is not in the queue" repo-review--diff-path)))
+    (let ((rel (org-entry-get nil "REVIEW_PATH" t)))
+      (unless rel
+        (user-error "No :REVIEW_PATH: property at point"))
+      (goto-char (org-find-property "REVIEW_PATH" rel)))))
+
+(defun repo-review-toggle-viewed ()
+  "Toggle the viewed state of the file at point or of the visited file.
+The state is an Org tag in the queue, so it persists with the review.
+Works in the queue, in a diff and in a file opened from the queue."
+  (interactive)
+  (let ((buf (if repo-review--diff-queue
+                 (find-file-noselect repo-review--diff-queue)
+               (current-buffer))))
+    (with-current-buffer buf
+      (org-with-wide-buffer
+       (let ((now (progn (repo-review--goto-file-entry)
+                         (repo-review--set-viewed 'toggle))))
+         (save-buffer)
+         (message "%s: %s (viewed %s)" (org-entry-get nil "REVIEW_PATH")
+                  (if now "viewed" "not viewed") (repo-review--viewed-summary)))))))
+
 ;;; Comments
 
 (defvar-keymap repo-review-diff-mode-map
-  "c" #'repo-review-comment)
+  "c" #'repo-review-comment
+  "v" #'repo-review-toggle-viewed)
 
 (define-minor-mode repo-review-diff-mode
   "Minor mode of a pull request diff buffer opened from a review queue.

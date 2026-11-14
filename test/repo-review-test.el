@@ -378,5 +378,91 @@ Binds `root' to the project directory."
     (repo-review-start)
     (should-error (repo-review-post-comments) :type 'user-error)))
 
+;;; Viewed state
+
+(defun repo-review-test--viewed ()
+  "Return the paths of the entries tagged viewed in the current queue."
+  (delq nil (org-map-entries (lambda () (org-entry-get nil "REVIEW_PATH"))
+                             "viewed" 'file)))
+
+(ert-deftest repo-review-toggle-viewed-in-queue ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (repo-review-toggle-viewed)
+    (should (equal (repo-review-test--viewed) '(".gitignore")))
+    (repo-review-toggle-viewed)
+    (should-not (repo-review-test--viewed))))
+
+(ert-deftest repo-review-viewed-persists-across-reopen ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (repo-review-toggle-viewed)
+    (let ((file buffer-file-name))
+      (kill-buffer)
+      (with-current-buffer (find-file-noselect file)
+        (should (equal (repo-review-test--viewed) '(".gitignore")))))))
+
+(ert-deftest repo-review-viewed-survives-refresh-and-todo-change ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (repo-review-toggle-viewed)
+    (org-todo "DONE")
+    (repo-review-refresh)
+    (should (equal (repo-review-test--viewed) '(".gitignore")))))
+
+(ert-deftest repo-review-viewed-from-visited-file ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (let ((queue (current-buffer)))
+      (goto-char (point-min))
+      (repo-review-next-todo)
+      (repo-review-visit)
+      (repo-review-toggle-viewed)
+      (with-current-buffer queue
+        (should (equal (repo-review-test--viewed) '(".gitignore")))))))
+
+(ert-deftest repo-review-viewed-from-pr-diff ()
+  (repo-review-test--with-pr
+    (repo-review-pullreq)
+    (let ((queue (current-buffer)))
+      (repo-review-test--open-diff "src/a.py")
+      (repo-review-toggle-viewed)
+      (with-current-buffer queue
+        (should (equal (repo-review-test--viewed) '("src/a.py")))))))
+
+(ert-deftest repo-review-mark-viewed-on-visit-option ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (let ((queue (current-buffer)))
+      (repo-review-visit)
+      (with-current-buffer queue
+        (should-not (repo-review-test--viewed)))
+      (let ((repo-review-mark-viewed-on-visit t))
+        (with-current-buffer queue (repo-review-visit)))
+      (with-current-buffer queue
+        (should (equal (repo-review-test--viewed) '(".gitignore")))))))
+
+(ert-deftest repo-review-viewed-on-draft-heading-targets-file ()
+  (repo-review-test--with-pr
+    (repo-review-pullreq)
+    (repo-review--add-draft buffer-file-name "src/a.py" 1 "x")
+    (goto-char (point-min))
+    (re-search-forward "^\\*\\*\\* Draft")
+    (repo-review-toggle-viewed)
+    (should (equal (repo-review-test--viewed) '("src/a.py")))
+    (should (equal (repo-review--viewed-summary) "1/2"))))
+
+(ert-deftest repo-review-toggle-viewed-outside-queue ()
+  (with-temp-buffer
+    (should-error (repo-review-toggle-viewed))))
+
 (provide 'repo-review-test)
 ;;; repo-review-test.el ends here

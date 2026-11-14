@@ -35,7 +35,9 @@
 ;;; request or merge request at point: the queue lists the changed
 ;;; files and RET shows each as a read-only diff. `c' in a diff saves a
 ;;; draft comment on the line at point into the queue; `P' in the queue
-;;; lists the drafts and posts them through Ghub after you confirm.
+;;; lists the drafts and posts them through Ghub after you confirm. `v'
+;;; marks the file at point as viewed (an Org tag, so it persists with
+;;; the review); it also works in a diff or a visited file.
 ;;; Queues live under var/repo-review/.
 (use-package repo-review
   :ensure nil
