@@ -24,10 +24,12 @@
     mode = "push";
     # The engine does not manage the Worker or docs.example.org: CI deploys it.
     provision = false;
+    # The site is open to the internet (no Access application).
+    public = true;
   };
 
   # docs.example.org: the site's hostname. With deploy.provision = false the
-  # engine binds no custom domain; set it to true to have workers.nix bind it.
+  # engine binds no custom domain; the route in wrangler.jsonc binds it.
   requires.dns = "docs.example.org";
 
   # Read outside the project directory (project.nix(5) uses).
