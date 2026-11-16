@@ -7,7 +7,7 @@
 #   * Linux terminal:  noGui.
 #
 # Called standalone (`nix-build emacs.nix`), the default `pkgs` applies
-# emacs-overlay pinned by nix/tamal (nix/inputs.nix).
+# emacs-overlay pinned by flake.lock (nix/locked.nix).
 #
 # Usage:
 #   nix-build emacs.nix                                            # unstable variant (Emacs 31.1);
@@ -25,7 +25,7 @@
 # back:
 #   nix-build emacs.nix --arg variant '"git"' --argstr rev "abc123..." --argstr hash "sha256-..."
 #
-# nixpkgs is the nix/tamal pin (nix/inputs.nix); pass --arg pkgs '<nixpkgs>' to override.
+# nixpkgs is the flake.lock pin (nix/locked.nix); pass --arg pkgs '<nixpkgs>' to override.
 #
 # Based on:
 #   - NixOS/nixpkgs       pkgs/applications/editors/emacs/ (make-emacs.nix)
@@ -34,11 +34,11 @@
   system ? builtins.currentSystem,
   pkgs ?
     let
-      inputs = import ../../../nix/inputs.nix { };
+      inputs = import ./nix/locked.nix;
     in
     import inputs.nixpkgs {
       inherit system;
-      overlays = [ inputs.emacs-overlay.overlays.default ];
+      overlays = [ (import inputs.emacs-overlay) ];
     },
 
   # Source variant

@@ -3,11 +3,11 @@
 #
 #   just cache-parity
 let
-  inputs = import ../../../../nix/inputs.nix { };
+  inputs = import ./locked.nix;
   pkgs = import inputs.nixpkgs {
     system = builtins.currentSystem;
     overlays = [
-      inputs.emacs-overlay.overlays.default
+      (import inputs.emacs-overlay)
       (import ./mk-overlay.nix { })
     ];
   };
