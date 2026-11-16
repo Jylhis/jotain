@@ -19,8 +19,8 @@
 
 ;;; Commentary:
 
-;; Modes for data-shaped files: YAML, CSV, jq, SQL, Jinja2 templates, and
-;; gnuplot scripts.
+;; Modes for data-shaped files: YAML, KDL, CSV, jq, SQL, Jinja2 templates,
+;; and gnuplot scripts.
 
 ;;; Code:
 
@@ -69,6 +69,11 @@ enabled: mixed-pitch, visual-line wrapping, and jinx."
 ;;; the usual programming features apply.
 (use-package jq-mode
   :mode "\\.jq\\'")
+
+;;; @doc KDL document language major mode (`.kdl` files, e.g. the
+;;; nixtamal `manifest.kdl`): syntax highlighting and indentation.
+(use-package kdl-mode
+  :mode "\\.kdl\\'")
 
 ;;; @doc CSV major mode. csv-align-mode aligns columns visually without
 ;;; changing the file.

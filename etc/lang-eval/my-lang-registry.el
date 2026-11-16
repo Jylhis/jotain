@@ -182,6 +182,9 @@
     (:id jinja2     :name "Jinja2"         :file "init-lang-data.el"
      :sample "eval.j2"             :mode jinja2-mode :grammar nil)
 
+    (:id kdl        :name "KDL"            :file "init-lang-data.el"
+     :sample "eval.kdl"            :mode kdl-mode :grammar nil)
+
     (:id just       :name "Just"           :file "init-lang-devops.el"
      :sample "justfile"            :mode just-ts-mode :grammar just :skip-mode t))
   "The per-language feature standard read by the language evaluation.
