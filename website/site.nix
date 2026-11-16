@@ -86,6 +86,7 @@ let
     root = src;
     fileset = src + "/emacs.7";
   };
+  release = builtins.fromJSON (builtins.readFile ./release.json);
   webSrc = lib.fileset.toSource {
     root = ./public;
     fileset = ./public;
@@ -147,6 +148,12 @@ pkgs.runCommand "emacs-config-site"
     mkdir -p "$out/public"
     cp -r "$webSrc/." "$out/public/"
     chmod -R u+w "$out/public"
+
+    substituteInPlace "$out/public/index.html" \
+      --replace-fail '@VERSION@' ${lib.escapeShellArg (lib.escapeXML release.version)} \
+      --replace-fail '@FLAKE@' ${lib.escapeShellArg (lib.escapeXML "github:${release.repo}")} \
+      --replace-fail '@REPO_URL@' ${lib.escapeShellArg (lib.escapeXML "https://github.com/${release.repo}")} \
+      --replace-fail '@SUPPORT@' ${lib.escapeShellArg (lib.escapeXML release.support)}
 
     ${lib.optionalString (!withApiDoc) ''
       # This variant (the preview variant) omits /help/api/ and, with it, the
