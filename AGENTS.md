@@ -16,16 +16,16 @@ tooling only, **no `emacs`**: build and launch with `just run-built`.
 `journal/` is a set of working notes and may be stale; when it
 disagrees with the code, the code wins. Finding numbers cited there refer to
 the reports under `docs/reviews/`. Older notes and docs may still mention the
-retired standalone repo (`flake.nix`, `flake.lock`, GitHub workflows); the
-in-tree build replaces them.
+retired standalone repo (GitHub workflows); the in-tree build replaces them.
+The current `flake.nix` and `flake.lock` are new (EM2).
 
 ## Project Structure & Module Organization
 
 - `early-init.el`, `init.el`, and `lisp/init-*.el` (feature modules,
   `require`d from `init.el` in order).
 - Nix at the root: `emacs.nix`, `overlay.nix`, `default.nix`, `module.nix`,
-  `module-system.nix`. There is no `flake.nix`: the
-  repo root `nix/inputs.nix` builds the `emacs-config` attrset (overlay,
+  `module-system.nix`, and `flake.nix`. `nix/outputs.nix` builds the
+  `emacs-config` attrset (overlay,
   modules, checks, packages) from these files. Helpers live in `nix/`
   (`mk-overlay.nix` is the overlay implementation, `checks.nix` the checks).
 - `docs/` (documentation sources), `bench/` (startup benchmarks), `test/` (ERT;
@@ -205,18 +205,21 @@ target.
 - `likec4Lsp`: the `@likec4/lsp` server for `my-likec4-mode`, on every
   distribution's `PATH`.
 
-**`default.nix`** selects `emacs-config.packages.<system>.default` from the
-repo root `nix/inputs.nix`: `nix-build` builds the distribution. Variant builds
-target `emacs.nix` directly.
+**`default.nix`** selects `packages.<system>.default` from `nix/off-flake.nix`
+(`nix/outputs.nix` with the inputs of `flake.lock`): `nix-build` builds the
+distribution. Variant builds target `emacs.nix` directly.
 
-**Outputs** (the `emacs-config` attrset in the root `nix/inputs.nix`):
+**Outputs** (`nix/outputs.nix`, the one function behind `flake.nix`,
+`default.nix` and the root `nix/inputs.nix`; the last passes its own nixtamal
+pins, `platform/kit` and `projects/libs/design`):
 
 - `packages.<system>`: `default` (`emacsConfigPackages`), `emacs`
   (`emacsConfig`), `emacs-nox` (`emacsConfigPackagesNoGui`), `docs` (options
   HTML), `packages-doc` (per-package reference), `ds-assets`, `info`.
 - `overlays.default`; `homeManagerModules.default` (`module.nix`);
   `nixosModules.default` (`module-system.nix`).
-- `checks` (`nix/checks.nix`, including the treefmt `formatting` check).
+- `checks` (`nix/checks.nix`, including the treefmt `formatting` check) and
+  `formatter`.
 
 Module outputs get the overlay composed over emacs-overlay
 (`emacsConfigModuleOverlay`), so module installs resolve the same Emacs base
@@ -284,9 +287,20 @@ in nixpkgs-extra.
 
 ### Pinning
 
-The tree's nixtamal pins (`nix/tamal/`, see the root `AGENTS.md`) are the
-source of truth for nixpkgs and emacs-overlay; `just update` at the repo root
-bumps them. Nothing in `projects/distros/emacs` carries its own `flake.lock`.
+Two pin sets feed `nix/outputs.nix`. The root `nix/inputs.nix` passes the
+tree's nixtamal pins (`nix/tamal/`, see the root `AGENTS.md`); `flake.nix` and
+the off-flake entry points (`default.nix`, `overlay.nix`, `emacs.nix`,
+`nix/cache-parity.nix`) read `flake.lock`, the latter through `nix/locked.nix`.
+Both must name the same revisions of `nixpkgs`, `emacs-overlay` and
+`treefmt-nix`, or the tree and the export build different derivations. The
+`jylhis-design` input is the published design repository, not the in-tree
+`projects/libs/design`; in the tree `nix/world.nix` picks the in-tree copy.
+Do not edit `flake.lock` by hand: re-lock with `nix flake lock` in this
+directory, then align the three pins with the nixtamal ones.
+
+Outside the tree the kit helpers come from `jylhis/platform/kit`, which the export
+vendors (`publish.vendor`). A `path:` flake inside the tree cannot find it, so
+test the flake from an export, not from the working tree.
 
 #### Hand-pinned upstreams
 
@@ -299,7 +313,7 @@ Codeberg fork and is not bumped.
 ### Shared treefmt configuration
 
 `nix/treefmt.nix` defines the formatters (`nixfmt`, `deadnix`, `statix`) for
-both the root `nix/inputs.nix` (the `formatting` check and formatter) and `shell.nix`. Add
+`nix/outputs.nix` (the `formatting` check and formatter) and `shell.nix`. Add
 new formatters there.
 
 ### Check / test responsibility split

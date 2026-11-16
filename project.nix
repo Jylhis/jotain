@@ -9,8 +9,8 @@
     ];
   };
 
-  # No package.nix: the Emacs distribution builds through nix/inputs.nix
-  # (the computed emacs-config attrset) and the flakeless shim default.nix.
+  # No package.nix: the distribution builds through nix/outputs.nix, which
+  # flake.nix, default.nix and the root nix/inputs.nix all call.
   deploy = {
     type = "none";
   };

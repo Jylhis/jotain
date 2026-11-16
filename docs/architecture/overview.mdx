@@ -15,7 +15,8 @@ projects/distros/emacs/
 ├── init.el             # Entry point: loads modules in order
 ├── lisp/               # Modular Elisp config (init-*.el, one per concern)
 ├── emacs.nix           # Bare Emacs build (cache-parity invariant)
-├── default.nix         # Entry point (shim over the tree's nix/inputs.nix)
+├── flake.nix           # Flake entry point (inputs, then nix/outputs.nix)
+├── default.nix         # Off-flake entry point (nix/off-flake.nix)
 ├── overlay.nix         # Standalone nixpkgs overlay (wraps nix/mk-overlay.nix)
 ├── module.nix          # Home Manager module for the daemon
 ├── module-system.nix   # NixOS module
@@ -52,7 +53,7 @@ projects/distros/emacs/
 
 1. **`emacs.nix`** builds bare Emacs from emacs-overlay's `unstable` (default), `git`, or `igc` attrs, or nixpkgs' `emacs` (`mainline`, the cache-parity canary), with the build flags exposed as arguments. The matrix is pgtk GUI or terminal-only on Linux. Default builds produce the same store paths as the matching prebuilt attrs, so they are cache hits on Hydra and `nix-community.cachix.org`; custom `rev` pins rebuild from source. See [Nix build layer](/architecture/nix-build).
 
-2. **`default.nix`**: shim that returns the full distribution from the tree's `nix/inputs.nix`, which also wires the overlay, modules and checks.
+2. **`flake.nix`** and **`default.nix`**: `flake.nix` passes its inputs to `nix/outputs.nix`, which wires the overlay, modules, checks, packages and formatter. `default.nix` returns the full distribution from the same function with the inputs of `flake.lock`. The jylhis tree calls `nix/outputs.nix` from its own `nix/inputs.nix`.
 
 3. **`module.nix`**: Home Manager module that runs the configuration as a user-session Emacs daemon (`services.emacsConfig`), with an `emacsclient` desktop entry and optional `EDITOR`/`VISUAL` setup. Runs under systemd; `services.emacsConfig.package` swaps in another configuration-shaped distribution.
 
