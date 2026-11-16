@@ -9,7 +9,10 @@
 final: _prev:
 let
   usePackage = import ./use-package.nix { inherit (final) lib; };
-  extraPackages = import ./extra-packages.nix { pkgs = final; inherit design; };
+  extraPackages = import ./extra-packages.nix {
+    pkgs = final;
+    inherit design;
+  };
 
   # Packages injected outside the lisp/ use-package scan (see that file).
   nixProvidedPackages = import ./nix-provided-packages.nix;

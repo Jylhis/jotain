@@ -32,7 +32,9 @@
   outputs =
     inputs:
     import ./nix/outputs.nix (
-      { inherit (inputs) nixpkgs emacs-overlay treefmt-nix; }
+      {
+        inherit (inputs) nixpkgs emacs-overlay treefmt-nix;
+      }
       // import ./nix/world.nix { design = inputs.jylhis-design; }
     );
 }

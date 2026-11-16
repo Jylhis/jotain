@@ -51,9 +51,12 @@ let
   nixSrc = fileset.toSource {
     root = repoRoot;
     # Not devenv's generated .devenv.flake.nix (platform/kit/source.nix).
-    fileset = fileset.difference (fileset.intersection ((import (kit + "/source.nix")).cleanFileset lib repoRoot) (
-      fileset.fileFilter (f: lib.hasSuffix ".nix" f.name) repoRoot
-    )) (fileset.maybeMissing (repoRoot + "/jylhis"));
+    fileset =
+      fileset.difference
+        (fileset.intersection ((import (kit + "/source.nix")).cleanFileset lib repoRoot) (
+          fileset.fileFilter (f: lib.hasSuffix ".nix" f.name) repoRoot
+        ))
+        (fileset.maybeMissing (repoRoot + "/jylhis"));
   };
 
   # The inner emacsWithPackages result (`passthru.core'), not the outer
