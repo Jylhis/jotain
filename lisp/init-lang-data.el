@@ -64,6 +64,12 @@ enabled: mixed-pitch, visual-line wrapping, and jinx."
   :defer t
   :hook (yaml-ts-mode . my-lang-data--enable-prog-mode-features))
 
+;;; @doc JSON with comments (`.jsonc`, e.g. `wrangler.jsonc`). Emacs 31
+;;; routes only `.json` to `js-json-mode`, so `.jsonc` would open in
+;;; fundamental mode. `my-prog-ts-remaps` (init-prog.el) remaps the mode
+;;; to `json-ts-mode` when its grammar loads.
+(add-to-list 'auto-mode-alist '("\\.jsonc\\'" . js-json-mode))
+
 ;;; @doc jq filter major mode (`.jq` files): syntax highlighting and
 ;;; indentation for jq programs. The mode derives from `prog-mode', so
 ;;; the usual programming features apply.

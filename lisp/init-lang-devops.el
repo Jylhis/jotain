@@ -73,10 +73,16 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
 
 ;;; @doc Tree-sitter major mode for `Justfile` (the `just` grammar). The
 ;;; package registers Justfile itself; the `:mode` regexes add the
-;;; `.just` extension used for modular recipes.
+;;; dotfile `.justfile` and the `.just` extension used for modular
+;;; recipes.
 (use-package just-ts-mode
-  :mode (("/[Jj]ustfile\\'" . just-ts-mode)
+  :mode (("/\\.?[Jj]ustfile\\'" . just-ts-mode)
          ("\\.just\\'" . just-ts-mode)))
+
+;;; @doc Gherkin major mode (MELPA) for Cucumber `.feature` files:
+;;; keyword highlighting, indentation and step navigation.
+(use-package feature-mode
+  :mode "\\.feature\\'")
 
 ;;; @doc Ansible minor mode for playbooks: keyword and Jinja2
 ;;; highlighting plus `ansible-vault` helpers. Not enabled

@@ -103,9 +103,18 @@
      :servers ("clangd") :override t :formatter "clang-format" :dape "codelldb"
      :snippets t :inlay t)
 
+    (:id kotlin     :name "Kotlin"         :file "init-lang-systems.el"
+     :sample "eval.kt"             :mode kotlin-ts-mode :grammar kotlin)
+
+    (:id glsl       :name "GLSL"           :file "init-lang-systems.el"
+     :sample "eval.glsl"           :mode glsl-mode :grammar nil)
+
     (:id bash       :name "Bash / shell"   :file "init-prog.el"
      :sample "eval.sh"             :mode bash-ts-mode :classic sh-mode :grammar bash
      :servers ("bash-language-server") :formatter "shfmt" :live t)
+
+    (:id lua        :name "Lua"            :file "init-prog.el"
+     :sample "eval.lua"            :mode lua-ts-mode :classic lua-mode :grammar lua)
 
     (:id dockerfile :name "Dockerfile"     :file "init-lang-devops.el"
      :sample "Dockerfile"          :mode dockerfile-ts-mode :classic dockerfile-mode
@@ -184,6 +193,12 @@
 
     (:id kdl        :name "KDL"            :file "init-lang-data.el"
      :sample "eval.kdl"            :mode kdl-mode :grammar nil)
+
+    (:id gherkin    :name "Gherkin"        :file "init-lang-devops.el"
+     :sample "eval.feature"        :mode feature-mode :grammar nil)
+
+    (:id mdoc       :name "mdoc man page"  :file "init-writing.el"
+     :sample "eval.7"              :mode nroff-mode :grammar nil)
 
     (:id just       :name "Just"           :file "init-lang-devops.el"
      :sample "justfile"            :mode just-ts-mode :grammar just :skip-mode t))

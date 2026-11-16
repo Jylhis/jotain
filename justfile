@@ -45,6 +45,18 @@ docs-refresh-packages:
     cp "$out/package-reference.mdx" projects/distros/emacs/docs/configuration/package-reference.mdx
     echo "Refreshed projects/distros/emacs/docs/configuration/package-reference.mdx"
 
+# Regenerate docs/reference/language-support.mdx from
+# etc/lang-eval/my-lang-registry.el (the fix for a failing
+# lang-eval-doc-in-sync gate).
+[group('docs')]
+docs-refresh-lang-matrix:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ justfile_directory() }}"
+    EMACS_CONFIG_LANG_DOC_OUT="$PWD/docs/reference/language-support.mdx" \
+        emacs -Q --batch -L etc/lang-eval -l my-lang-doc.el
+    echo "Refreshed docs/reference/language-support.mdx"
+
 # Build the full distribution for this system (flakeless shim entry).
 [group('build')]
 build:

@@ -73,6 +73,7 @@
     (cmake       cmake-ts-mode       cmake-mode)
     (dockerfile  dockerfile-ts-mode  dockerfile-mode)
     (json        json-ts-mode        js-json-mode json-mode)
+    (lua         lua-ts-mode         lua-mode)
     (toml        toml-ts-mode        conf-toml-mode)
     (yaml        yaml-ts-mode        yaml-mode)
     ;; Modes routed by their own `init-lang-*' file are listed too, so a
@@ -231,9 +232,9 @@ loaded."
   (declare-function devenv-env-loading-p "devenv")
   (defun my-prog--maybe-eglot-ensure ()
     "Auto-start eglot when the project's env provides a server for this buffer.
-Runs from `prog-mode-hook' but defers to an idle timer: `devenv-env-mode'
-turns on later, from `after-change-major-mode-hook', and connecting
-earlier would use the global environment instead of the project's.
+Runs from `prog-mode-hook' but defers to an idle timer: `envrc-mode' and
+`devenv-env-mode' turn on later, from `after-change-major-mode-hook', and
+connecting earlier would use the global environment instead of the project's.
 Skips remote, non-file and already-managed buffers, and Lisp buffers
 (no server, and eglot must not load for every Elisp buffer)."
     (when (and buffer-file-name
@@ -606,12 +607,26 @@ every prog-mode buffer."
 
 ;;;; Per-project environment + format-on-save + grep refactor
 
-;; The per-project environment comes from devenv (init-devenv.el), applied
-;; buffer-locally; envrc is deliberately not enabled.
+;; The per-project environment comes from direnv (envrc, below) where a `.envrc'
+;; exists, and from devenv (init-devenv.el) for the remaining devenv.nix
+;; projects.  Both apply it buffer-locally.
+
+;;; @doc Buffer-local direnv environments through `.envrc': every project of
+;;; this tree has one, so LSP servers, formatters and the treefmt wrapper
+;;; reach Emacs from the project's dev shell. The `direnv` binary must be on
+;;; PATH. Buffers under a `.envrc` are skipped by devenv.el, so the two
+;;; loaders never both apply.
+(use-package envrc
+  :init
+  ;; Depth 90 enables it last in `after-init-hook'.  The globalized mode
+  ;; pushes its `after-change-major-mode-hook' entry in front of the
+  ;; others, so the environment is set before the other global modes act.
+  (add-hook 'after-init-hook #'envrc-global-mode 90))
 
 ;;; @doc Async format-on-save through external formatters (ruff, nixfmt,
 ;;; rustfmt, prettier, …), all mapped in one place. `apheleia-mode` is a
-;;; safe local variable, so `.dir-locals.el` can opt a project out.
+;;; safe local variable, so `.dir-locals.el` can opt a project out, and
+;;; `apheleia-formatter` can pick one (this repo selects `treefmt`).
 (use-package apheleia
   :hook (after-init . apheleia-global-mode)
   :config
@@ -647,6 +662,11 @@ every prog-mode buffer."
   ;; robotidy also edits in place.
   (add-to-list 'apheleia-formatters '(robotidy . ("robotidy" inplace)))
   (add-to-list 'apheleia-mode-alist '(robot-mode . robotidy))
+  ;; ruff instead of apheleia's default black outside the tree.
+  (add-to-list 'apheleia-mode-alist '(python-mode . ruff))
+  (add-to-list 'apheleia-mode-alist '(python-ts-mode . ruff))
+  ;; The jylhis `.dir-locals.el' selects apheleia's stock `treefmt' formatter:
+  ;; the wrapper from the project shell echoes an excluded path unchanged.
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
 ;;; @doc Edit grep result buffers in place and write the changes back to

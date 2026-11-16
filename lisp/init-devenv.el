@@ -21,11 +21,11 @@
 
 ;; Binds the self-contained lisp/devenv.el library into the configuration.
 ;;
-;; envrc is not enabled (init-prog.el), so the native loader owns each
-;; trusted project's environment, `.envrc' or not (hence
-;; `devenv-env-defer-to-direnv' nil).  A project must be trusted once
-;; with `devenv-allow'; until then the mode line shows devenv[!] and no
-;; environment is applied.
+;; envrc (init-prog.el) owns the environment of every buffer under a
+;; `.envrc', so `devenv-env-defer-to-direnv' is t: the native loader
+;; applies only to devenv.nix projects without one.  Such a project must
+;; be trusted once with `devenv-allow'; until then the mode line shows
+;; devenv[!] and no environment is applied.
 
 ;;; Code:
 
@@ -55,7 +55,7 @@
              devenv-mcp-setup devenv-env-global-mode)
   :bind ("C-c v" . devenv)
   :custom
-  (devenv-env-defer-to-direnv nil)
+  (devenv-env-defer-to-direnv t)
   ;; devenv-modeline-mode already shows devenv[on]/[off]/[!]; the
   ;; minor-mode lighter would only duplicate it.
   (devenv-env-lighter "")
