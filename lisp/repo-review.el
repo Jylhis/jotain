@@ -107,6 +107,9 @@ in plain sentences, without markdown headings."
 
 ;;; Queue mode
 
+(defconst repo-review--viewed-tag "viewed"
+  "Org tag that marks a queue entry as viewed.")
+
 (defvar-local repo-review--diff-queue nil
   "Queue file of the review that the buffer belongs to.")
 (defvar-local repo-review--diff-path nil
@@ -117,6 +120,8 @@ in plain sentences, without markdown headings."
   "e"   #'repo-review-visit-writable
   "P"   #'repo-review-post-comments
   "v"   #'repo-review-toggle-viewed
+  "m"   #'repo-review-mark-viewed
+  "u"   #'repo-review-unmark-viewed
   "A"   #'repo-review-ai-check-draft
   "n"   #'org-next-visible-heading
   "p"   #'org-previous-visible-heading
@@ -129,7 +134,9 @@ in plain sentences, without markdown headings."
 (define-derived-mode repo-review-queue-mode org-mode "RepoReview"
   "Major mode for the per-project code review queue.
 
-\\{repo-review-queue-mode-map}")
+\\{repo-review-queue-mode-map}"
+  (setq-local header-line-format
+              '(" Viewed " (:eval (repo-review--header-summary)))))
 
 ;;; Files
 
@@ -237,10 +244,17 @@ With prefix argument REBUILD, discard review state and rebuild the queue."
         (when (and buf (not (kill-buffer buf)))
           (user-error "Queue buffer was not killed; rebuild cancelled"))
         (message "Queued %d files" (repo-review--write-queue file root files))))
-    (pop-to-buffer (find-file-noselect file))
-    (unless (derived-mode-p 'repo-review-queue-mode)
-      (repo-review-queue-mode))
-    (org-content 2)))
+    (repo-review--open-queue file)))
+
+(defun repo-review--open-queue (file)
+  "Show the queue FILE and clear the viewed state of changed files."
+  (pop-to-buffer (find-file-noselect file))
+  (unless (derived-mode-p 'repo-review-queue-mode)
+    (repo-review-queue-mode))
+  (let ((cleared (repo-review--expire-viewed)))
+    (when (> cleared 0)
+      (message "%d file(s) changed since you viewed them" cleared)))
+  (org-content 2))
 
 (defun repo-review-refresh ()
   "Append files added to the project since the queue was built."
@@ -257,6 +271,7 @@ With prefix argument REBUILD, discard review state and rebuild the queue."
         (unless (gethash rel known)
           (repo-review--insert-entry rel)
           (setq added (1+ added)))))
+    (repo-review--expire-viewed)
     (save-buffer)
     (message "Added %d new file(s)" added)))
 
@@ -299,15 +314,23 @@ In a pull request queue, show the diff of the file instead."
   (interactive)
   (repo-review--open (repo-review--entry-file) nil))
 
+(defun repo-review--next-unviewed-todo ()
+  "Return the position of the next TODO headline that is not viewed, or nil."
+  (save-excursion
+    (end-of-line)
+    (let (pos)
+      (while (and (not pos) (re-search-forward "^\\*+ TODO " nil t))
+        (unless (member repo-review--viewed-tag (org-get-tags nil t))
+          (setq pos (line-beginning-position))))
+      pos)))
+
 (defun repo-review-next-todo ()
-  "Move to the next headline in TODO state."
+  "Move to the next headline in TODO state that is not marked as viewed."
   (interactive)
-  (let ((pos (save-excursion
-               (end-of-line)
-               (re-search-forward "^\\*+ TODO " nil t))))
+  (let ((pos (repo-review--next-unviewed-todo)))
     (if pos
         (progn (goto-char pos) (org-back-to-heading) (org-fold-show-context))
-      (message "No TODO files left"))))
+      (message "No unviewed TODO files left"))))
 
 ;;; Pull requests
 
@@ -386,11 +409,25 @@ symbol such as `github' or `gitlab'), :host (the API host) and
 
 ;;; Viewed state
 
-(defconst repo-review--viewed-tag "viewed"
-  "Org tag that marks a queue entry as viewed.")
+(defun repo-review--file-rev (rel)
+  "Return an identifier of the current content of project-relative path REL.
+In a pull request queue it is the blob at the head revision; otherwise
+it is the SHA-1 of the file.  Return nil when the file is missing."
+  (let ((root (repo-review--root)))
+    (if (repo-review--pr-queue-p)
+        (ignore-errors
+          (car (repo-review--git root "rev-parse"
+                                 (format "%s:%s" (repo-review--keyword "REVIEW_HEAD")
+                                         rel))))
+      (let ((abs (expand-file-name rel root)))
+        (when (file-regular-p abs)
+          (with-temp-buffer
+            (insert-file-contents-literally abs)
+            (secure-hash 'sha1 (current-buffer))))))))
 
 (defun repo-review--set-viewed (state)
-  "Set the viewed tag of the file entry at point to STATE, or toggle on `toggle'."
+  "Set the viewed state of the file entry at point to STATE, or toggle on `toggle'.
+Marking a file records its content identifier in :VIEWED_REV:."
   (let* ((tags (org-get-tags nil t))
          (was (member repo-review--viewed-tag tags))
          (now (if (eq state 'toggle) (not was) state)))
@@ -398,7 +435,27 @@ symbol such as `github' or `gitlab'), :host (the API host) and
       (org-set-tags (if now
                         (cons repo-review--viewed-tag tags)
                       (delete repo-review--viewed-tag tags))))
+    (if now
+        (org-entry-put nil "VIEWED_REV"
+                       (or (repo-review--file-rev (org-entry-get nil "REVIEW_PATH")) ""))
+      (org-entry-delete nil "VIEWED_REV"))
     now))
+
+(defun repo-review--expire-viewed ()
+  "Clear the viewed state of files that changed since the user marked them.
+Return the number of entries cleared."
+  (let ((cleared 0))
+    (org-with-wide-buffer
+     (org-map-entries
+      (lambda ()
+        (let ((rev (org-entry-get nil "VIEWED_REV")))
+          (unless (equal rev (repo-review--file-rev (org-entry-get nil "REVIEW_PATH")))
+            (repo-review--set-viewed nil)
+            (setq cleared (1+ cleared)))))
+      "VIEWED_REV<>\"\"" 'file))
+    (when (> cleared 0)
+      (save-buffer))
+    cleared))
 
 (defun repo-review--viewed-summary ()
   "Return \"viewed/total\" for the file entries of the current queue buffer."
@@ -411,6 +468,16 @@ symbol such as `github' or `gitlab'), :host (the API host) and
      "REVIEW_PATH<>\"\"" 'file)
     (format "%d/%d" viewed total)))
 
+(defvar-local repo-review--summary-cache nil
+  "Cons of the buffer modification tick and the viewed summary computed at it.")
+
+(defun repo-review--header-summary ()
+  "Return the viewed summary of the queue buffer, recomputed after a change."
+  (let ((tick (buffer-chars-modified-tick)))
+    (unless (eq (car repo-review--summary-cache) tick)
+      (setq repo-review--summary-cache (cons tick (repo-review--viewed-summary))))
+    (cdr repo-review--summary-cache)))
+
 (defun repo-review--goto-file-entry ()
   "Move to the file entry at point, from a draft or from a diff buffer."
   (if repo-review--diff-queue
@@ -421,21 +488,37 @@ symbol such as `github' or `gitlab'), :host (the API host) and
         (user-error "No :REVIEW_PATH: property at point"))
       (goto-char (org-find-property "REVIEW_PATH" rel)))))
 
-(defun repo-review-toggle-viewed ()
-  "Toggle the viewed state of the file at point or of the visited file.
-The state is an Org tag in the queue, so it persists with the review.
-Works in the queue, in a diff and in a file opened from the queue."
-  (interactive)
+(defun repo-review--update-viewed (state)
+  "Set the viewed state of the file at point or of the visited file to STATE.
+STATE is t, nil or `toggle'.  Work in the queue, in a diff and in a file
+opened from the queue."
   (let ((buf (if repo-review--diff-queue
                  (find-file-noselect repo-review--diff-queue)
                (current-buffer))))
     (with-current-buffer buf
       (org-with-wide-buffer
        (let ((now (progn (repo-review--goto-file-entry)
-                         (repo-review--set-viewed 'toggle))))
+                         (repo-review--set-viewed state))))
          (save-buffer)
          (message "%s: %s (viewed %s)" (org-entry-get nil "REVIEW_PATH")
                   (if now "viewed" "not viewed") (repo-review--viewed-summary)))))))
+
+(defun repo-review-toggle-viewed ()
+  "Toggle the viewed state of the file at point or of the visited file.
+The state is an Org tag and the file revision in the queue, so it persists
+with the review and ends when the file changes."
+  (interactive)
+  (repo-review--update-viewed 'toggle))
+
+(defun repo-review-mark-viewed ()
+  "Mark the file at point or the visited file as viewed."
+  (interactive)
+  (repo-review--update-viewed t))
+
+(defun repo-review-unmark-viewed ()
+  "Remove the viewed mark of the file at point or the visited file."
+  (interactive)
+  (repo-review--update-viewed nil))
 
 ;;; Comments
 
@@ -718,10 +801,7 @@ read-only diff.  The request revisions must exist locally: run
         (message "Queued %d files"
                  (repo-review--write-queue file root files
                                            (repo-review--pr-header info)))))
-    (pop-to-buffer (find-file-noselect file))
-    (unless (derived-mode-p 'repo-review-queue-mode)
-      (repo-review-queue-mode))
-    (org-content 2)))
+    (repo-review--open-queue file)))
 
 (provide 'repo-review)
 ;;; repo-review.el ends here

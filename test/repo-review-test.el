@@ -464,6 +464,93 @@ Binds `root' to the project directory."
   (with-temp-buffer
     (should-error (repo-review-toggle-viewed))))
 
+(ert-deftest repo-review-mark-and-unmark-viewed ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (repo-review-mark-viewed)
+    (repo-review-mark-viewed)
+    (should (equal (repo-review-test--viewed) '(".gitignore")))
+    (should (org-entry-get nil "VIEWED_REV"))
+    (repo-review-unmark-viewed)
+    (repo-review-unmark-viewed)
+    (should-not (repo-review-test--viewed))
+    (should-not (org-entry-get nil "VIEWED_REV"))))
+
+(ert-deftest repo-review-viewed-ends-when-file-changes ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (repo-review-mark-viewed)
+    (repo-review-next-todo)
+    (repo-review-mark-viewed)
+    (should (equal (repo-review-test--viewed) '(".gitignore" "b.nix")))
+    (write-region "changed\n" nil (expand-file-name "b.nix" root))
+    (repo-review-start)
+    (should (equal (repo-review-test--viewed) '(".gitignore")))
+    (should (equal (repo-review--viewed-summary) "1/3"))))
+
+(ert-deftest repo-review-viewed-kept-when-file-is-unchanged ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (repo-review-mark-viewed)
+    (should (= 0 (repo-review--expire-viewed)))
+    (repo-review-start)
+    (should (equal (repo-review-test--viewed) '(".gitignore")))))
+
+(ert-deftest repo-review-viewed-refresh-expires-changed-file ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (repo-review-mark-viewed)
+    (write-region "changed\n" nil (expand-file-name ".gitignore" root))
+    (repo-review-refresh)
+    (should-not (repo-review-test--viewed))))
+
+(ert-deftest repo-review-next-todo-skips-viewed ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (repo-review-mark-viewed)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (should (equal (org-entry-get nil "REVIEW_PATH") "b.nix"))
+    (repo-review-mark-viewed)
+    (repo-review-next-todo)
+    (should (equal (org-entry-get nil "REVIEW_PATH") "src/a.py"))
+    (repo-review-mark-viewed)
+    (goto-char (point-min))
+    (let ((pos (point)))
+      (repo-review-next-todo)
+      (should (= pos (point))))))
+
+(ert-deftest repo-review-queue-header-shows-viewed-count ()
+  (repo-review-test--with-project
+    (repo-review-start)
+    (goto-char (point-min))
+    (repo-review-next-todo)
+    (should (equal (repo-review--header-summary) "0/3"))
+    (repo-review-mark-viewed)
+    (should (equal (repo-review--header-summary) "1/3"))))
+
+(ert-deftest repo-review-viewed-pr-queue-records-blob ()
+  (repo-review-test--with-pr
+    (repo-review-pullreq)
+    (let ((queue (current-buffer)))
+      (repo-review-test--open-diff "src/a.py")
+      (repo-review-mark-viewed)
+      (with-current-buffer queue
+        (should (= 0 (repo-review--expire-viewed)))
+        (should (equal (repo-review-test--viewed) '("src/a.py")))
+        (should (= 40 (length (org-entry-get (org-find-property "REVIEW_PATH" "src/a.py")
+                                             "VIEWED_REV"))))))))
+
 ;;; AI assistance
 
 (ert-deftest repo-review-ai-draft-saves-edited-answer ()
