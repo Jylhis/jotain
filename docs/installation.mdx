@@ -5,25 +5,103 @@ description: How to build and install the configuration
 
 # Installation
 
-This configuration uses [Nix](https://nixos.org/) to build Emacs, driven by a `justfile` task runner. It lives in the jylhis tree at `projects/distros/emacs`; there is no flake. Development happens in the jylhis lane shell: the tracked `.envrc` enters it through [direnv](https://direnv.net) (`direnv allow`).
+This configuration is a [Nix](https://nixos.org/) flake. It builds GNU Emacs 31 with its packages, the tree-sitter grammars and the Info manual. The flake also provides a Home Manager module and a NixOS module.
+
+The supported platform is `x86_64-linux`. The flake also exposes `aarch64-linux` outputs, which nobody tests.
 
 ## Prerequisites
 
-- [Nix package manager](https://nixos.org/download) with `nix-build` available
-- [just](https://github.com/casey/just) task runner
-- [direnv](https://direnv.net) (optional but recommended for development)
+- [Nix](https://nixos.org/download) with the `nix-command` and `flakes` features enabled
+- A Linux machine. The GUI build is pgtk.
 
-All `just` recipes assume the lane shell is active (`direnv allow`).
+The flake sets `extra-substituters` for `nix-community.cachix.org` and `jylhis.cachix.org`. Nix asks you to accept them on the first run, or use `--accept-flake-config`. Without them the build compiles Emacs from source.
+
+## Try it
+
+Run the full distribution without installing it. It reads the configuration from its own store path:
+
+```bash
+nix run github:Jylhis/<name>
+```
+
+The wrapped `emacs` starts with this configuration, the packages and the Info manual. It never touches `~/.emacs.d`.
+
+Other outputs:
+
+```bash
+nix run github:Jylhis/<name>#emacs-nox    # terminal only
+nix build github:Jylhis/<name>#info       # the Info manual
+```
+
+## Install with Home Manager
+
+Add the flake as an input and import the module. The module runs Emacs as a user daemon with an `emacsclient` desktop entry:
+
+```nix
+# flake.nix
+{
+  inputs.emacs-config.url = "github:Jylhis/<name>";
+  inputs.emacs-config.inputs.nixpkgs.follows = "nixpkgs";
+}
+```
+
+```nix
+# home.nix
+{ inputs, ... }:
+{
+  imports = [ inputs.emacs-config.homeManagerModules.default ];
+
+  services.emacsConfig.enable = true;
+}
+```
+
+The module applies its own overlay, so it does not need yours. `services.emacsConfig.package` swaps in another distribution, for example the terminal-only build:
+
+```nix
+{
+  services.emacsConfig = {
+    enable = true;
+    package = inputs.emacs-config.packages.${pkgs.system}.emacs-nox;
+  };
+}
+```
+
+## Install with NixOS
+
+The NixOS module puts the distribution into `environment.systemPackages`:
+
+```nix
+{ inputs, ... }:
+{
+  imports = [ inputs.emacs-config.nixosModules.default ];
+
+  services.emacsConfig.enable = true;
+}
+```
+
+`services.emacsConfig.users.<user>` builds the programs of one user and installs them in that user's profile. The Home Manager module of the same user then takes the programs from there.
+
+## Older nixpkgs
+
+The modules take whatever `pkgs` the importing configuration has (release branches **24.05+** through unstable).
+
+`emacs.nix` only forwards the build flags the base `make-emacs.nix` defines, so the modules still evaluate and build on older releases. On 24.05, `pkgs.emacs` is Emacs 29 while the configuration's Elisp needs Emacs 31.1: the build succeeds, but runtime behaviour is only guaranteed on the pinned unstable.
+
+## Developing in the jylhis tree
+
+The tree is the source of the public repository. It lives at `projects/distros/emacs`, in the jylhis lane shell: the tracked `.envrc` enters it through [direnv](https://direnv.net) (`direnv allow`). The shell has no Emacs. All `just` recipes assume it is active.
+
+```bash
+just build           # nix-build: the full distribution
+just run-built       # build, then launch result/bin/emacs with this checkout as the init directory
+just run-built --debug-init
+```
+
+The recipes go through `default.nix`, which builds the same outputs as the flake from the inputs of `flake.lock`. The tree itself has no `flake.nix`, and a `path:` flake inside it cannot see the vendored kit, so test the flake from the public repository.
 
 ## Building Emacs
 
-The default build targets the current system and includes every tree-sitter grammar from nixpkgs:
-
-```bash
-just build
-```
-
-This runs plain `nix-build`, which evaluates `default.nix` (a shim over the tree's `nix/inputs.nix`) and builds `emacs-config.packages.<system>.default`: the full `emacsConfigPackages` distribution (Emacs + use-package-scanned packages + tree-sitter grammars + the Info manual) assembled by `nix/mk-overlay.nix`. Its Emacs is the emacs-overlay `unstable` variant (the newest Emacs release or pretest tag, currently 31.1). The cache-parity invariant in `emacs.nix` makes its store path match emacs-overlay's prebuilt `emacs-unstable-pgtk` on Linux, so the base Emacs comes from `nix-community.cachix.org` instead of compiling.
+The default build targets the current system and includes every tree-sitter grammar from nixpkgs. `just build` runs plain `nix-build`, which evaluates `default.nix` and builds `packages.<system>.default`: the full `emacsConfigPackages` distribution (Emacs + use-package-scanned packages + tree-sitter grammars + the Info manual) assembled by `nix/mk-overlay.nix`. Its Emacs is the emacs-overlay `unstable` variant (the newest Emacs release or pretest tag, currently 31.1). The cache-parity invariant in `emacs.nix` makes its store path match emacs-overlay's prebuilt `emacs-unstable-pgtk` on Linux, so the base Emacs comes from `nix-community.cachix.org` instead of compiling.
 
 ### Build Matrix
 
@@ -48,45 +126,6 @@ nix-build emacs.nix  --arg variant '"igc"'               # MPS GC branch
 `git`/`unstable`/`igc` build the revision pinned by emacs-overlay and are binary-cache hits on Linux. When pinning a custom commit via `--argstr rev "..."`, the first build fails and reports the hash to pass back via `--argstr hash "sha256-..."`.
 </Note>
 
-## Installing the modules
-
-The tree's `nix/inputs.nix` builds a flake-shaped `emacs-config` attrset with Home Manager and NixOS modules. The jylhis hosts get both through `outputs.nix`; anything else imports them from a checkout. By default they install the full distribution (`emacsConfigPackages`):
-
-```nix
-let
-  emacs-config = (import /path/to/jylhis/nix/inputs.nix { }).emacs-config;
-in
-{
-  imports = [ emacs-config.homeManagerModules.default ];
-
-  services.emacsConfig.enable = true;
-}
-```
-
-`services.emacsConfig.package` swaps in another configuration-shaped distribution, for example the terminal-only build:
-
-```nix
-{
-  services.emacsConfig = {
-    enable = true;
-    package = emacs-config.packages.${system}.emacs-nox;
-  };
-}
-```
-
-### Older nixpkgs
-
-The modules take whatever `pkgs` the importing configuration has (release branches **24.05+** through unstable).
-
-`emacs.nix` only forwards the build flags the base `make-emacs.nix` defines, so the modules still evaluate and build on older releases. On 24.05, `pkgs.emacs` is Emacs 29 while the configuration's Elisp needs Emacs 31.1: the build succeeds, but runtime behaviour is only guaranteed on the pinned unstable.
-
 ## Running
 
-This configuration is launched from its own checkout via `--init-directory`, so it never touches `~/.emacs.d`.
-
-```bash
-just run-built               # build, then launch result/bin/emacs
-just run-built --debug-init  # arguments are passed on to Emacs
-```
-
-The lane shell has no Emacs. See [Launching Emacs](/usage/launching) for the daemon + client pattern.
+See [Launching Emacs](/usage/launching) for the daemon and client pattern.
