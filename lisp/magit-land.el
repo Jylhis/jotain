@@ -41,7 +41,9 @@
 ;; `magit-land-dispatch' (add, approve, reject, remove, retry, bump, show,
 ;; log, pause, resume).
 ;;
-;; `git-land', `git-results' and `wt' are called when a key asks for them.
+;; The library needs `magit-section' and `transient', and magit for the status
+;; section; init-review.el loads it when magit has loaded.  `git-land',
+;; `git-results' and `wt' are called when a key asks for them.
 
 ;;; Code:
 
