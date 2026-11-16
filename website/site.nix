@@ -82,6 +82,10 @@ let
       lib.fileset.fileFilter (f: lib.hasSuffix ".md" f.name || lib.hasSuffix ".mdx" f.name) src
     );
   };
+  manSrc = lib.fileset.toSource {
+    root = src;
+    fileset = src + "/emacs.7";
+  };
   webSrc = lib.fileset.toSource {
     root = ./public;
     fileset = ./public;
@@ -133,8 +137,9 @@ pkgs.runCommand "emacs-config-site"
       # search-index.json (only used under withApiDoc).
       pkgs.jq
     ];
-    inherit docsSrc webSrc;
+    inherit docsSrc manSrc webSrc;
     meta.description = "docs.example.org static site (landing SPA + generated docs)";
+    meta.license = lib.licenses.gpl3Plus;
   }
   ''
     set -eu
@@ -415,7 +420,7 @@ pkgs.runCommand "emacs-config-site"
         "$name" "$name" "$desc" >> "$man_index_body"
     }
 
-    pandoc "$docsSrc/docs/emacs-config.7.md" -s -f markdown -t man -o emacs-config.7
+    cp "$manSrc/emacs.7" emacs-config.7
     cp emacs-config.7 "$out/public/man/emacs-config.7"
     render_man emacs-config.7 "emacs-config.7" "the manual, troff edition"
 
@@ -430,7 +435,7 @@ pkgs.runCommand "emacs-config-site"
 
     {
       echo '<h1 class="h1"><span class="star">*</span> Man pages</h1>'
-      echo '<p class="docs-index-lede">Rendered with mandoc. The Emacs pages come from the exact Emacs build the configuration ships; <a href="${baseHref}/man/emacs-config.7">emacs-config.7</a> is also available as raw troff.</p>'
+      echo '<p class="docs-index-lede">Rendered with mandoc. The Emacs pages come from the exact Emacs build the configuration ships; <a href="${baseHref}/man/emacs-config.7">emacs-config.7</a> is also available as raw mdoc source.</p>'
       cat "$man_index_body"
     } > man_body.html
     write_page "$out/public/man/index.html" "Man pages" "*Man apropos*" "(Man)" man_body.html \
