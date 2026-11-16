@@ -4,6 +4,8 @@
 {
   pkgs,
   src,
+  kit ? (import ./world.nix { }).kit,
+  design ? (import ./world.nix { }).design,
   treefmtCheck,
   testEqualFiles,
 }:
@@ -49,9 +51,9 @@ let
   nixSrc = fileset.toSource {
     root = repoRoot;
     # Not devenv's generated .devenv.flake.nix (platform/kit/source.nix).
-    fileset =
-      fileset.intersection ((import ../../../../platform/kit/source.nix).cleanFileset lib repoRoot)
-        (fileset.fileFilter (f: lib.hasSuffix ".nix" f.name) repoRoot);
+    fileset = fileset.difference (fileset.intersection ((import (kit + "/source.nix")).cleanFileset lib repoRoot) (
+      fileset.fileFilter (f: lib.hasSuffix ".nix" f.name) repoRoot
+    )) (fileset.maybeMissing (repoRoot + "/jylhis"));
   };
 
   # The inner emacsWithPackages result (`passthru.core'), not the outer
@@ -60,8 +62,8 @@ let
   # package set does (the lisp/ scan reads package names only).
   elispEmacs = pkgs.emacsConfigPackages.core;
 
-  testNixOSModuleEval = pkgs.callPackage ../../../../platform/kit/testers/test-nixos-module-eval {
-    testAssertions = pkgs.callPackage ../../../../platform/kit/testers/test-assertions { };
+  testNixOSModuleEval = pkgs.callPackage (kit + "/testers/test-nixos-module-eval") {
+    testAssertions = pkgs.callPackage (kit + "/testers/test-assertions") { };
   };
 
   evalHomeModule =
@@ -378,7 +380,7 @@ in
   # fails. Eval-only: never builds packages.
   emacs-packages-eval =
     let
-      set = import ./emacs-package-set.nix { inherit pkgs; };
+      set = import ./emacs-package-set.nix { inherit pkgs design; };
       up = import ./use-package.nix { inherit lib; };
       scanned = up.scanDirectoryWithDoc ../lisp;
       docEntries = lib.filter (e: !e.ensureNil) (lib.concatMap (s: s.entries) scanned);

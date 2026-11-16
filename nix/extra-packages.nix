@@ -2,7 +2,7 @@
 # overrides of archive packages: built-in shims and version
 # pins. Overlaid onto the package scope by nix/mk-overlay.nix and
 # nix/emacs-package-set.nix.
-{ pkgs }:
+{ pkgs, design }:
 
 efinal: _eprev:
 let
@@ -51,9 +51,9 @@ in
   eglot = emptyElpaPackage "eglot";
   flymake = emptyElpaPackage "flymake";
 
-  # The Jylhis themes from the in-tree design system (projects/libs/design), the same
-  # tokens every other target is generated from.
-  jylhis-emacs-themes = pkgs.callPackage ../../../../projects/libs/design/nix/emacs.nix {
+  # The Jylhis themes from the design system, the same tokens every other
+  # target is generated from.
+  jylhis-emacs-themes = pkgs.callPackage (design + "/nix/emacs.nix") {
     inherit (efinal) trivialBuild;
   };
 

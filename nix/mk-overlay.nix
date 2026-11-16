@@ -4,11 +4,12 @@
   # the newest Emacs release or pretest tag (currently 31.1), cached on
   # nix-community.cachix.org.
   variant ? "unstable",
+  design ? (import ./world.nix { }).design,
 }:
 final: _prev:
 let
   usePackage = import ./use-package.nix { inherit (final) lib; };
-  extraPackages = import ./extra-packages.nix { pkgs = final; };
+  extraPackages = import ./extra-packages.nix { pkgs = final; inherit design; };
 
   # Packages injected outside the lisp/ use-package scan (see that file).
   nixProvidedPackages = import ./nix-provided-packages.nix;

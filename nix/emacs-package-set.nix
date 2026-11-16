@@ -12,12 +12,13 @@
 {
   pkgs,
   lispDir ? ../lisp,
+  design ? (import ./world.nix { }).design,
 }:
 let
   inherit (pkgs) lib;
 
   up = import ./use-package.nix { inherit lib; };
-  extraPackages = import ./extra-packages.nix { inherit pkgs; };
+  extraPackages = import ./extra-packages.nix { inherit pkgs design; };
 
   # The same scope the distribution is built from (nix/mk-overlay.nix).
   scope = (pkgs.emacsPackagesFor pkgs.emacsConfig).overrideScope extraPackages;
