@@ -502,6 +502,77 @@ The argv lists go to `magit-land-test--calls'."
       (should-not (local-variable-p 'eval)))
     (kill-buffer "*magit-land review*")))
 
+(defconst magit-land-test--denied
+  '(diff-goto-source diff-apply-hunk diff-apply-buffer diff-test-hunk diff-ediff-patch
+    diff-reverse-direction diff-kill-applied-hunks diff-revert-and-kill-hunk
+    diff-delete-other-hunks diff-add-change-log-entries-other-window diff-split-hunk
+    diff-refine-hunk diff-refresh-hunk diff-hunk-kill diff-file-kill vc-next-action
+    diff-context->unified diff-unified->context diff-ignore-whitespace-hunk
+    diff-restrict-view next-error-follow-minor-mode undo diff-kill-ring-save)
+  "Commands that the review buffer must not bind.")
+
+(defun magit-land-test--bound-symbols (map)
+  "Return every symbol that MAP and its parents bind, menus and prefixes included."
+  (let (found)
+    (cl-labels ((walk (m)
+                  (map-keymap (lambda (_k b)
+                                (cond ((symbolp b) (push b found))
+                                      ((keymapp b) (walk b))
+                                      ((consp b) (when (symbolp (cdr b)) (push (cdr b) found))
+                                       (when (keymapp (cdr b)) (walk (cdr b))))))
+                              m)))
+      (walk map))
+    found))
+
+(defun magit-land-test--review-buffer ()
+  "Show a review and return the buffer."
+  (magit-land-test--recording (magit-land-test--review-reply)
+    (let ((magit-land--root nil))
+      (magit-land--review "40")))
+  (get-buffer "*magit-land review*"))
+
+(ert-deftest magit-land-review-buffer-cannot-reach-the-files-of-the-diff ()
+  (with-current-buffer (magit-land-test--review-buffer)
+    (unwind-protect
+        (progn
+          (should (derived-mode-p 'diff-mode))
+          (should (eq major-mode 'magit-land-review-mode))
+          (should (null diff-font-lock-syntax))
+          (should (null diff-mode-read-only))
+          (should-not (equal default-directory (file-name-as-directory
+                                                (expand-file-name "~"))))
+          (should (equal default-directory "/"))
+          (should (null (keymap-parent (current-local-map))))
+          (dolist (key '("RET" "o" "C-c C-c" "C-c C-a" "C-c C-t" "C-c C-b" "C-c C-e"
+                         "C-c C-r" "C-c C-m a" "C-x 4 A" "A" "R" "u" "v" "k" "w" "ESC RET"
+                         "<mouse-2>"))
+            (let ((b (key-binding (kbd key))))
+              (should-not (memq b magit-land-test--denied))
+              (should-not (and (symbolp b) (string-prefix-p "diff-" (symbol-name b))
+                               (not (memq b '(diff-hunk-next diff-hunk-prev diff-file-next
+                                              diff-file-prev)))))))
+          (should (eq (key-binding (kbd "n")) 'diff-hunk-next))
+          (should (eq (key-binding (kbd "p")) 'diff-hunk-prev))
+          (should (eq (key-binding (kbd "N")) 'diff-file-next))
+          (should (eq (key-binding (kbd "P")) 'diff-file-prev))
+          (should (eq (key-binding (kbd "TAB")) 'diff-hunk-next))
+          (should (eq (key-binding (kbd "q")) 'quit-window))
+          (dolist (map (current-active-maps))
+            (unless (eq map global-map)
+              (dolist (sym (magit-land-test--bound-symbols map))
+                (should-not (memq sym magit-land-test--denied))))))
+      (kill-buffer "*magit-land review*"))))
+
+(ert-deftest magit-land-review-navigation-moves-between-hunks ()
+  (with-current-buffer (magit-land-test--review-buffer)
+    (unwind-protect
+        (progn
+          (goto-char (point-min))
+          (call-interactively (key-binding (kbd "N")))
+          (should (looking-at "---\\|diff --git\\|@@"))
+          (should buffer-read-only))
+      (kill-buffer "*magit-land review*"))))
+
 (ert-deftest magit-land-call-raw-keeps-the-bytes ()
   (let* ((script (make-temp-file "git-land-fake" nil ".sh"))
          (magit-land-land-command script))

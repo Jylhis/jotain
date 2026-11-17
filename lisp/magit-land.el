@@ -66,6 +66,7 @@
 ;;; Code:
 
 (require 'compile)
+(require 'diff-mode)
 (require 'subr-x)
 (require 'cl-lib)
 (require 'seq)
@@ -452,16 +453,59 @@ name, ID the set id (nil for an unqueued branch)."
       (user-error "%s has no held set (%s)" ref (alist-get 'state set)))
     set))
 
+(defvar magit-land-review-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "n" #'diff-hunk-next)
+    (define-key map "p" #'diff-hunk-prev)
+    (define-key map "N" #'diff-file-next)
+    (define-key map "P" #'diff-file-prev)
+    (define-key map "}" #'diff-file-next)
+    (define-key map "{" #'diff-file-prev)
+    (define-key map (kbd "TAB") #'diff-hunk-next)
+    (define-key map (kbd "<backtab>") #'diff-hunk-prev)
+    (define-key map " " #'scroll-up-command)
+    (define-key map (kbd "DEL") #'scroll-down-command)
+    (define-key map "<" #'beginning-of-buffer)
+    (define-key map ">" #'end-of-buffer)
+    (define-key map "q" #'quit-window)
+    (define-key map [remap read-only-mode] #'ignore)
+    (define-key map [remap toggle-read-only] #'ignore)
+    (define-key map [remap next-error] #'ignore)
+    (define-key map [remap previous-error] #'ignore)
+    map)
+  "Keymap of `magit-land-review-mode', an allow-list with no parent.
+The map of `diff-mode' has commands that visit, apply, test, reverse or edit
+the files that the diff names.  The diff is text from an agent, so none of
+them may be reachable from this buffer.")
+
+(define-derived-mode magit-land-review-mode diff-mode "Land-Review"
+  "Read-only `diff-mode' to review a held set before the owner approves it.
+The diff names files that an agent chose.  This mode keeps the fontification
+of `diff-mode' and drops every command and setting that reads, visits or
+changes those files.
+
+\\{magit-land-review-mode-map}"
+  (set-keymap-parent magit-land-review-mode-map nil)
+  (use-local-map magit-land-review-mode-map)
+  (setq-local diff-font-lock-syntax nil
+              diff-font-lock-prettify nil
+              diff-mode-read-only nil
+              read-only-mode-hook nil
+              next-error-function #'ignore
+              add-log-buffer-file-name-function #'ignore))
+
 (defun magit-land--show-review (id summary diff)
-  "Show the set ID in `*magit-land review*': SUMMARY, then DIFF in `diff-mode'.
-DIFF is a unibyte string.  Both texts go in as literal text.  The buffer
-is read-only, and no file-local variable is evaluated."
+  "Show the set ID in `*magit-land review*': SUMMARY, then DIFF.
+DIFF is a unibyte string.  Both texts go in as literal text, in
+`magit-land-review-mode'.  The buffer is read-only, no file-local variable
+is evaluated, and `default-directory' is not the repository."
   (with-current-buffer (get-buffer-create "*magit-land review*")
     (let ((inhibit-read-only t)
           (enable-local-variables nil)
           (enable-dir-local-variables nil))
+      (setq default-directory (file-name-as-directory (expand-file-name "/")))
       (erase-buffer)
-      (diff-mode)
+      (magit-land-review-mode)
       (insert (format "Set #%s\n\n" id) summary
               (if (string-suffix-p "\n" summary) "" "\n")
               "\n" (decode-coding-string diff 'utf-8-unix t))
