@@ -492,6 +492,7 @@ changes those files.
               diff-mode-read-only nil
               read-only-mode-hook nil
               next-error-function #'ignore
+              add-log-current-defun-function #'ignore
               add-log-buffer-file-name-function #'ignore))
 
 (defun magit-land--show-review (id summary diff)

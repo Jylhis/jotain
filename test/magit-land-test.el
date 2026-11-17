@@ -563,6 +563,29 @@ The argv lists go to `magit-land-test--calls'."
                 (should-not (memq sym magit-land-test--denied))))))
       (kill-buffer "*magit-land review*"))))
 
+(ert-deftest magit-land-review-mode-does-not-visit-files-for-add-log ()
+  (let* ((dir (make-temp-file "magit-land-defun" t))
+         (file (expand-file-name "victim.el" dir))
+         (before (buffer-list)))
+    (unwind-protect
+        (progn
+          (with-temp-file file (insert "(defun victim-fn ()\n  1)\n"))
+          (with-temp-buffer
+            (insert (format "diff --git a/%s b/%s\n--- a/%s\n+++ b/%s\n@@ -1,2 +1,2 @@\n"
+                            file file file file)
+                    " (defun victim-fn ()\n-  1)\n+  2)\n")
+            (let ((default-directory dir))
+              (magit-land-review-mode)
+              (should (eq add-log-current-defun-function #'ignore))
+              (goto-char (point-max))
+              (forward-line -1)
+              (should (null (add-log-current-defun)))))
+          (should-not (find-buffer-visiting file))
+          (should-not (cl-set-difference
+                       (buffer-list) before)))
+      (when-let* ((b (find-buffer-visiting file))) (kill-buffer b))
+      (delete-directory dir t))))
+
 (ert-deftest magit-land-review-navigation-moves-between-hunks ()
   (with-current-buffer (magit-land-test--review-buffer)
     (unwind-protect
