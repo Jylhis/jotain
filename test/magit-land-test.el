@@ -81,10 +81,8 @@ review note."
     (let (cmd)
       (cl-letf (((symbol-function 'compile) (lambda (c &rest _) (push c cmd))))
         (magit-land)
-        (magit-land-land)
-        (magit-land-land t))
-      (should (equal (nreverse cmd)
-                     '("git-land" "git-land approve --yes main"))))))
+        (magit-land-land))
+      (should (equal (nreverse cmd) '("git-land"))))))
 
 (defconst magit-land-test--status
   (concat
@@ -163,6 +161,8 @@ The argv lists go to `magit-land-test--calls'."
                 (lambda (_root &rest args) (push args magit-land-test--calls) ,reply))
                ((symbol-function 'magit-land--refresh) #'ignore)
                ((symbol-function 'y-or-n-p) (lambda (&rest _) t))
+               ((symbol-function 'yes-or-no-p) (lambda (&rest _) t))
+               ((symbol-function 'display-buffer) #'ignore)
                ((symbol-function 'message) #'ignore))
        ,@body)
      (setq magit-land-test--calls (nreverse magit-land-test--calls))))
@@ -298,24 +298,99 @@ The argv lists go to `magit-land-test--calls'."
       (should-error (magit-land-add) :type 'user-error)))
   (should-not magit-land-test--calls))
 
-(ert-deftest magit-land-approve-shows-the-gates-then-approves ()
+(defconst magit-land-test--patch (make-string 64 ?a)
+  "The patch id in the review.")
+
+(defconst magit-land-test--review
+  (concat "gates: platform, hosts\nhosts/lab/default.nix\n"
+          " 1 file changed, 2 insertions(+)\npatch: " magit-land-test--patch "\n")
+  "What `git land approve 40' prints on stderr before it asks.")
+
+(defun magit-land-test--reply ()
+  "Reply to the argv that `magit-land--call' saw last."
+  (let ((args (car magit-land-test--calls)))
+    (cond ((equal (car args) "show") (list 0 magit-land-test--show ""))
+          ((equal args '("approve" "40")) (list 1 "" magit-land-test--review))
+          (t '(0 "approved #40\n" "")))))
+
+(ert-deftest magit-land-approve-shows-the-review-then-approves ()
   (let ((prompt nil))
-    (magit-land-test--recording (if (equal (car (car magit-land-test--calls)) "show")
-                                    (list 0 magit-land-test--show "")
-                                  '(0 "approved #40\n" ""))
-      (cl-letf (((symbol-function 'y-or-n-p) (lambda (p) (setq prompt p) t)))
+    (magit-land-test--recording (magit-land-test--reply)
+      (cl-letf (((symbol-function 'yes-or-no-p) (lambda (p) (setq prompt p) t)))
         (magit-land-test--point-on 'land-set 40
           (magit-land-approve))))
-    (should (equal magit-land-test--calls '(("show" "--json" "40") ("approve" "--yes" "40"))))
+    (should (equal magit-land-test--calls
+                   `(("show" "--json" "40") ("approve" "40")
+                     ("approve" "--yes" "--patch" ,magit-land-test--patch "40"))))
     (should (string-match-p "gates: platform, hosts" prompt))
-    (should (string-match-p "chore/kernel-budget" prompt))))
+    (should (string-match-p "chore/kernel-budget" prompt))
+    (with-current-buffer "*magit-land review*"
+      (should (string-match-p "hosts/lab/default.nix" (buffer-string)))
+      (should (string-match-p "1 file changed" (buffer-string))))
+    (kill-buffer "*magit-land review*")))
 
 (ert-deftest magit-land-approve-declined-runs-nothing-more ()
-  (magit-land-test--recording (list 0 magit-land-test--show "")
-    (cl-letf (((symbol-function 'y-or-n-p) (lambda (&rest _) nil)))
+  (magit-land-test--recording (magit-land-test--reply)
+    (cl-letf (((symbol-function 'yes-or-no-p) (lambda (&rest _) nil)))
       (magit-land-test--point-on 'land-set 40
         (magit-land-approve))))
-  (should (equal magit-land-test--calls '(("show" "--json" "40")))))
+  (should (equal magit-land-test--calls '(("show" "--json" "40") ("approve" "40"))))
+  (kill-buffer "*magit-land review*"))
+
+(ert-deftest magit-land-approve-needs-a-review ()
+  (magit-land-test--recording (if (equal (car (car magit-land-test--calls)) "show")
+                                  (list 0 magit-land-test--show "")
+                                '(1 "" "the owner spool is not writable here\n"))
+    (magit-land-test--point-on 'land-set 40
+      (should-error (magit-land-approve) :type 'user-error)))
+  (should (equal magit-land-test--calls '(("show" "--json" "40") ("approve" "40")))))
+
+(ert-deftest magit-land-approve-refuses-a-review-without-a-patch-id ()
+  (magit-land-test--recording (if (equal (car (car magit-land-test--calls)) "show")
+                                  (list 0 magit-land-test--show "")
+                                '(1 "" "gates: platform\nhosts/lab/default.nix\n"))
+    (cl-letf (((symbol-function 'yes-or-no-p) (lambda (&rest _) (error "asked"))))
+      (magit-land-test--point-on 'land-set 40
+        (should-error (magit-land-approve) :type 'user-error))))
+  (should (equal magit-land-test--calls '(("show" "--json" "40") ("approve" "40"))))
+  (kill-buffer "*magit-land review*"))
+
+(ert-deftest magit-land-prefix-land-reviews-then-approves-the-set-id ()
+  (magit-land-test--with-repo
+    (let (cmd)
+      (magit-land-test--recording (magit-land-test--reply)
+        (cl-letf (((symbol-function 'compile) (lambda (c &rest _) (push c cmd))))
+          (magit-land)
+          (magit-land-land t)))
+      (should (equal magit-land-test--calls
+                     '(("show" "--json" "main") ("approve" "40"))))
+      (should (equal cmd (list (concat "git-land approve --yes --patch "
+                                       magit-land-test--patch " 40"))))
+      (kill-buffer "*magit-land review*"))))
+
+(ert-deftest magit-land-prefix-land-declined-runs-nothing ()
+  (magit-land-test--with-repo
+    (let (cmd)
+      (magit-land-test--recording (magit-land-test--reply)
+        (cl-letf (((symbol-function 'compile) (lambda (c &rest _) (push c cmd)))
+                  ((symbol-function 'yes-or-no-p) (lambda (&rest _) nil)))
+          (magit-land)
+          (magit-land-land t)))
+      (should-not cmd)
+      (kill-buffer "*magit-land review*"))))
+
+(ert-deftest magit-land-prefix-land-needs-a-held-set ()
+  (magit-land-test--with-repo
+    (let (cmd
+          (json (replace-regexp-in-string "\"state\":\"held\",\"gates"
+                                          "\"state\":\"queued\",\"gates"
+                                          magit-land-test--show)))
+      (magit-land-test--recording (list 0 json "")
+        (cl-letf (((symbol-function 'compile) (lambda (c &rest _) (push c cmd))))
+          (magit-land)
+          (should-error (magit-land-land t) :type 'user-error)))
+      (should-not cmd)
+      (should (equal magit-land-test--calls '(("show" "--json" "main")))))))
 
 (ert-deftest magit-land-approve-refuses-a-set-that-is-not-held ()
   (let ((json (replace-regexp-in-string "\"state\":\"held\",\"gates"
@@ -329,7 +404,7 @@ The argv lists go to `magit-land-test--calls'."
 (ert-deftest magit-land-approve-uses-the-set-of-an-item ()
   (magit-land-test--recording (list 0 magit-land-test--show "")
     (magit-land-test--point-on 'land-item "feat/parser"
-      (magit-land-approve)))
+      (should-error (magit-land-approve) :type 'user-error)))
   (should (equal (car magit-land-test--calls) '("show" "--json" "41"))))
 
 (ert-deftest magit-land-commands-build-their-argv ()

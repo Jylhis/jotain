@@ -55,7 +55,8 @@
 ;;; current branch that are not on origin/main yet, with the check
 ;;; kinds from refs/notes/checks and the review note from
 ;;; refs/notes/review under each. `L' runs git-land in a compilation
-;;; buffer (`C-u L' runs approve --yes), `S' shows the check results of
+;;; buffer (`C-u L' shows the review of the held set, asks yes or no, then
+;;; approves it), `S' shows the check results of
 ;;; the commit at point with git-results, `D' removes the worktree with
 ;;; `wt remove' after a prompt, and `g' refreshes. The library also
 ;;; adds a Land queue section to `magit-status', from `git land status

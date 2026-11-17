@@ -27,7 +27,9 @@
 ;; the kinds of check result in refs/notes/checks and the text of the
 ;; note in refs/notes/review.  Keys:
 ;;
-;;   L  run `git-land' in a compilation buffer (C-u L runs `approve --yes')
+;;   L  run `git-land' in a compilation buffer (C-u L reviews the held change of
+;;      the branch, asks `yes-or-no-p', then approves that set and that patch id in a
+;;      compilation buffer)
 ;;   S  show the check results of the commit at point (`git-results show')
 ;;   D  remove the worktree with `wt remove', after a y-or-n-p
 ;;   g  refresh
@@ -380,25 +382,62 @@ name, ID the set id (nil for an unqueued branch)."
   (interactive)
   (magit-land--run "add" "--detach" (plist-get (magit-land--need 'branch) :ref)))
 
-(defun magit-land-approve ()
-  "Show the gates of the held set at point and, after a prompt, approve it."
-  (interactive)
-  (let* ((ref (plist-get (magit-land--need 'set 'item) :set))
-         (res (magit-land--call (magit-land--dir) "show" "--json" ref))
+(defun magit-land--held-set (ref)
+  "Return the held set that REF (a set id or a branch) names, or signal."
+  (let* ((res (magit-land--call (magit-land--dir) "show" "--json" ref))
          (set (and (zerop (car res))
                    (alist-get 'set (magit-land--parse (cadr res))))))
     (unless set
       (user-error "Cannot read set %s: %s" ref
                   (magit-land--first-line (nth 2 res) (nth 1 res))))
     (unless (equal (alist-get 'state set) "held")
-      (user-error "Set %s is not held (%s)" ref (alist-get 'state set)))
-    (when (y-or-n-p (format "Approve #%s %s, gates: %s, %s? " ref
-                            (string-join (mapcar (lambda (i) (alist-get 'branch i))
-                                                 (alist-get 'items set))
-                                         ", ")
-                            (string-join (alist-get 'gates set) ", ")
-                            (if (alist-get 'checked set) "checks green" "not checked")))
-      (magit-land--run "approve" "--yes" ref))))
+      (user-error "%s has no held set (%s)" ref (alist-get 'state set)))
+    set))
+
+(defun magit-land--review (id)
+  "Show the review of the held set ID in a buffer and return its patch id.
+The text is what `git land approve' prints before it asks: the gates, the
+changed files, the diffstat and the line \"patch: ID\".  Without `--yes' and
+with no input the command answers its own question with no, so this approves
+nothing.  A review without a patch line is a `user-error'."
+  (pcase-let ((`(,_code ,out ,err) (magit-land--call (magit-land--dir) "approve" id)))
+    (unless (string-match-p "^gates: " err)
+      (user-error "Cannot review set %s: %s" id (magit-land--first-line err out)))
+    (with-current-buffer (get-buffer-create "*magit-land review*")
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert (format "Set #%s\n\n" id) err)
+        (goto-char (point-min))
+        (special-mode))
+      (display-buffer (current-buffer)))
+    (unless (string-match "^patch: \\([0-9a-f]\\{64\\}\\)$" err)
+      (user-error "The review of set %s has no patch id" id))
+    (match-string 1 err)))
+
+(defun magit-land--confirm-approval (ref)
+  "Review the held set that REF names and ask the owner to approve it.
+Return (ID . PATCH) after a yes, else nil: ID is the set id as a string and
+PATCH the id of the change that the owner saw.  Signal a `user-error' when REF
+has no held set or the review has no patch id.  The caller approves that set
+with that patch id, never REF."
+  (let* ((set (magit-land--held-set ref))
+         (id (number-to-string (alist-get 'id set)))
+         (patch (magit-land--review id)))
+    (when (yes-or-no-p (format "Approve #%s %s, gates: %s, %s? " id
+                               (string-join (mapcar (lambda (i) (alist-get 'branch i))
+                                                    (alist-get 'items set))
+                                            ", ")
+                               (string-join (alist-get 'gates set) ", ")
+                               (if (alist-get 'checked set) "checks green" "not checked")))
+      (cons id patch))))
+
+(defun magit-land-approve ()
+  "Show the review of the held set at point and, after a yes, approve it.
+The review is the gates, the changed files and the diffstat."
+  (interactive)
+  (when-let* ((ok (magit-land--confirm-approval
+                   (plist-get (magit-land--need 'set 'item) :set))))
+    (magit-land--run "approve" "--yes" "--patch" (cdr ok) (car ok))))
 
 (defun magit-land-reject ()
   "Return the held set at point, after a prompt."
@@ -548,16 +587,18 @@ name, ID the set id (nil for an unqueued branch)."
 
 (defun magit-land-land (&optional yes)
   "Run `git-land' for the branch in a compilation buffer.
-With prefix argument YES, approve the held change of the branch instead."
+With prefix argument YES, show the review of the held set of the branch
+\(gates, files, diffstat), ask with `yes-or-no-p' and approve that set."
   (interactive "P")
   (let ((default-directory magit-land--root))
-    (compile (if yes
-                 (concat magit-land-land-command " approve --yes "
-                         (shell-quote-argument
-                          (or (magit-land--git magit-land--root "symbolic-ref"
-                                               "--short" "HEAD")
-                              (user-error "No branch to approve"))))
-               magit-land-land-command))))
+    (if yes
+        (when-let* ((ok (magit-land--confirm-approval
+                         (or (magit-land--git magit-land--root "symbolic-ref"
+                                              "--short" "HEAD")
+                             (user-error "No branch to approve")))))
+          (compile (concat magit-land-land-command " approve --yes --patch "
+                           (cdr ok) " " (car ok))))
+      (compile magit-land-land-command))))
 
 (defun magit-land-show-results ()
   "Show the check results of the commit at point."
