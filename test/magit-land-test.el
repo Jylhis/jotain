@@ -159,6 +159,8 @@ The argv lists go to `magit-land-test--calls'."
      (setq magit-land-test--calls nil)
      (cl-letf (((symbol-function 'magit-land--call)
                 (lambda (_root &rest args) (push args magit-land-test--calls) ,reply))
+               ((symbol-function 'magit-land--call-raw)
+                (lambda (_root &rest args) (push args magit-land-test--calls) ,reply))
                ((symbol-function 'magit-land--refresh) #'ignore)
                ((symbol-function 'y-or-n-p) (lambda (&rest _) t))
                ((symbol-function 'yes-or-no-p) (lambda (&rest _) t))
@@ -298,19 +300,30 @@ The argv lists go to `magit-land-test--calls'."
       (should-error (magit-land-add) :type 'user-error)))
   (should-not magit-land-test--calls))
 
-(defconst magit-land-test--patch (make-string 64 ?a)
+(defconst magit-land-test--diff
+  (concat "diff --git a/hosts/lab/default.nix b/hosts/lab/default.nix\n"
+          "--- a/hosts/lab/default.nix\n+++ b/hosts/lab/default.nix\n"
+          "@@ -1 +1,2 @@\n x\n+services.evil = true;\n")
+  "The diff on stdout of the review.")
+
+(defconst magit-land-test--patch (secure-hash 'sha256 magit-land-test--diff)
   "The patch id in the review.")
 
 (defconst magit-land-test--review
   (concat "gates: platform, hosts\nhosts/lab/default.nix\n"
-          " 1 file changed, 2 insertions(+)\npatch: " magit-land-test--patch "\n")
+          " 1 file changed, 2 insertions(+)\npatch: "
+          (secure-hash 'sha256 magit-land-test--diff) "\n")
   "What `git land approve 40' prints on stderr before it asks.")
+
+(defun magit-land-test--review-reply ()
+  "Return the reply of the review of set 40."
+  (list 1 magit-land-test--diff magit-land-test--review))
 
 (defun magit-land-test--reply ()
   "Reply to the argv that `magit-land--call' saw last."
   (let ((args (car magit-land-test--calls)))
     (cond ((equal (car args) "show") (list 0 magit-land-test--show ""))
-          ((equal args '("approve" "40")) (list 1 "" magit-land-test--review))
+          ((equal args '("approve" "40")) (magit-land-test--review-reply))
           (t '(0 "approved #40\n" "")))))
 
 (ert-deftest magit-land-approve-shows-the-review-then-approves ()
@@ -326,7 +339,12 @@ The argv lists go to `magit-land-test--calls'."
     (should (string-match-p "chore/kernel-budget" prompt))
     (with-current-buffer "*magit-land review*"
       (should (string-match-p "hosts/lab/default.nix" (buffer-string)))
-      (should (string-match-p "1 file changed" (buffer-string))))
+      (should (string-match-p "1 file changed" (buffer-string)))
+      (should (string-match-p "^\\+services.evil = true;$" (buffer-string)))
+      (should (< (string-match "1 file changed" (buffer-string))
+                 (string-match "^diff --git" (buffer-string))))
+      (should (derived-mode-p 'diff-mode))
+      (should buffer-read-only))
     (kill-buffer "*magit-land review*")))
 
 (ert-deftest magit-land-approve-declined-runs-nothing-more ()
@@ -348,12 +366,12 @@ The argv lists go to `magit-land-test--calls'."
 (ert-deftest magit-land-approve-refuses-a-review-without-a-patch-id ()
   (magit-land-test--recording (if (equal (car (car magit-land-test--calls)) "show")
                                   (list 0 magit-land-test--show "")
-                                '(1 "" "gates: platform\nhosts/lab/default.nix\n"))
+                                '(1 "d\n" "gates: platform\nhosts/lab/default.nix\n"))
     (cl-letf (((symbol-function 'yes-or-no-p) (lambda (&rest _) (error "asked"))))
       (magit-land-test--point-on 'land-set 40
         (should-error (magit-land-approve) :type 'user-error))))
   (should (equal magit-land-test--calls '(("show" "--json" "40") ("approve" "40"))))
-  (kill-buffer "*magit-land review*"))
+  (should-not (get-buffer "*magit-land review*")))
 
 (ert-deftest magit-land-prefix-land-reviews-then-approves-the-set-id ()
   (magit-land-test--with-repo
@@ -425,7 +443,7 @@ The argv lists go to `magit-land-test--calls'."
                  '(("reject" "40") ("remove" "40") ("retry" "40") ("bump" "40")
                  ("remove" "feat/parser") ("retry" "feat/parser")
                  ("reject" "41") ("bump" "41")
-                         ("pause") ("resume")))))
+                         ("pause") ("status" "--all" "--json") ("resume")))))
 
 (ert-deftest magit-land-declined-prompt-runs-nothing ()
   (magit-land-test--recording '(0 "" "")
@@ -452,6 +470,111 @@ The argv lists go to `magit-land-test--calls'."
   (magit-land-test--recording '(1 "" "the owner spool is not writable here\n")
     (let ((err (should-error (magit-land-pause) :type 'user-error)))
       (should (string-match-p "pause failed: the owner spool" (cadr err))))))
+
+(ert-deftest magit-land-review-refuses-a-diff-that-does-not-match ()
+  (magit-land-test--recording (if (equal (car (car magit-land-test--calls)) "show")
+                                  (list 0 magit-land-test--show "")
+                                (list 1 (concat magit-land-test--diff "+more\n")
+                                      magit-land-test--review))
+    (cl-letf (((symbol-function 'yes-or-no-p) (lambda (&rest _) (error "asked"))))
+      (magit-land-test--point-on 'land-set 40
+        (should-error (magit-land-approve) :type 'user-error))))
+  (should (equal magit-land-test--calls '(("show" "--json" "40") ("approve" "40"))))
+  (should-not (get-buffer "*magit-land review*")))
+
+(ert-deftest magit-land-review-refuses-an-empty-diff ()
+  (magit-land-test--recording (if (equal (car (car magit-land-test--calls)) "show")
+                                  (list 0 magit-land-test--show "")
+                                (list 1 "" magit-land-test--review))
+    (magit-land-test--point-on 'land-set 40
+      (should-error (magit-land-approve) :type 'user-error)))
+  (should (equal magit-land-test--calls '(("show" "--json" "40") ("approve" "40")))))
+
+(ert-deftest magit-land-review-keeps-the-diff-as-literal-text ()
+  (let* ((diff "+x\n+\e[31mred\n+;; Local Variables:\n+;; eval: (error \"pwned\")\n")
+         (review (format "gates: a\npatch: %s\n" (secure-hash 'sha256 diff))))
+    (magit-land-test--recording (list 1 diff review)
+      (let ((magit-land--root nil))
+        (should (equal (magit-land--review "40") (secure-hash 'sha256 diff)))))
+    (with-current-buffer "*magit-land review*"
+      (should (string-match-p "\e\\[31mred" (buffer-string)))
+      (should (string-match-p "eval: (error" (buffer-string)))
+      (should-not (local-variable-p 'eval)))
+    (kill-buffer "*magit-land review*")))
+
+(ert-deftest magit-land-call-raw-keeps-the-bytes ()
+  (let* ((script (make-temp-file "git-land-fake" nil ".sh"))
+         (magit-land-land-command script))
+    (unwind-protect
+        (progn
+          (with-temp-file script
+            (insert "#!/bin/sh\nprintf 'a\\r\\n\\377b\\n'\necho oops >&2\nexit 1\n"))
+          (set-file-modes script #o755)
+          (pcase-let ((`(,code ,out ,err) (magit-land--call-raw default-directory "x")))
+            (should (= code 1))
+            (should-not (multibyte-string-p out))
+            (should (equal out "a\r\n\377b\n"))
+            (should (equal err "oops\n"))))
+      (delete-file script))))
+
+(defconst magit-land-test--trip (make-string 40 ?b)
+  "The main at the trip in the stopped status.")
+
+(defun magit-land-test--stopped (reason)
+  "Return the status JSON of a daemon that stopped for REASON, or nil for none."
+  (format "{\"main\":\"%s\",\"paused\":%s,%s\"lane\":null,\"parked\":null}"
+          magit-land-test--trip (if reason "true" "false")
+          (if reason
+              (format "\"pause_reason\":%s,\"seen_main\":\"%s\",\"trip_main\":\"%s\","
+                      (json-serialize reason) (make-string 40 ?a) magit-land-test--trip)
+            "")))
+
+(defun magit-land-test--resume-reply (reason)
+  "Return a reply function for the argv that was seen last, daemon stopped for REASON."
+  (let ((args (car magit-land-test--calls)))
+    (cond ((equal (car args) "status") (list 0 (magit-land-test--stopped reason) ""))
+          ((and reason (equal args '("resume"))) (list 1 "abc1234 sneaky move\n 1 file changed\n"
+                                          "trust main at bbbbbbb? [y/N] "))
+          (t '(0 "resumed\n" "")))))
+
+(ert-deftest magit-land-section-shows-why-the-daemon-stopped ()
+  (magit-land-test--with-status (magit-land-test--stopped "main moved\e[2J outside\nthe queue")
+    (let ((text (buffer-substring-no-properties (point-min) (point-max))))
+      (should (string-match-p "^Stopped: main moved\\[2J outsidethe queue$" text))
+      (should (string-match-p "resume with P" text))
+      (should-not (string-match-p "\e" text)))
+    (goto-char (point-min))
+    (search-forward "Stopped:")
+    (should (eq (get-text-property (match-beginning 0) 'face) 'warning)))
+  (magit-land-test--with-status (magit-land-test--stopped nil)
+    (should-not (string-match-p "Stopped" (buffer-string)))))
+
+(ert-deftest magit-land-resume-after-a-stop-binds-to-the-reviewed-main ()
+  (let ((prompt nil))
+    (magit-land-test--recording (magit-land-test--resume-reply "main moved outside the queue")
+      (cl-letf (((symbol-function 'yes-or-no-p) (lambda (p) (setq prompt p) t)))
+        (magit-land-resume)))
+    (should (equal magit-land-test--calls
+                   `(("status" "--all" "--json") ("resume")
+                     ("resume" "--yes" "--main" ,magit-land-test--trip))))
+    (should (string-match-p "bbbbbbb" prompt))
+    (should-not (string-match-p magit-land-test--trip prompt))
+    (with-current-buffer "*magit-land resume*"
+      (should (string-match-p "sneaky move" (buffer-string)))
+      (should buffer-read-only))
+    (kill-buffer "*magit-land resume*")))
+
+(ert-deftest magit-land-resume-after-a-stop-declined-runs-nothing-more ()
+  (magit-land-test--recording (magit-land-test--resume-reply "main moved outside the queue")
+    (cl-letf (((symbol-function 'yes-or-no-p) (lambda (&rest _) nil)))
+      (magit-land-resume)))
+  (should (equal magit-land-test--calls '(("status" "--all" "--json") ("resume"))))
+  (kill-buffer "*magit-land resume*"))
+
+(ert-deftest magit-land-resume-without-a-stop-adds-no-arguments ()
+  (magit-land-test--recording (magit-land-test--resume-reply nil)
+    (magit-land-resume))
+  (should (equal magit-land-test--calls '(("status" "--all" "--json") ("resume")))))
 
 (ert-deftest magit-land-dispatch-keys ()
   (dolist (key '("a" "A" "r" "k" "R" "b" "s" "l" "p" "P"))

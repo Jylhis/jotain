@@ -29,7 +29,8 @@
 ;;
 ;;   L  run `git-land' in a compilation buffer (C-u L reviews the held change of
 ;;      the branch, asks `yes-or-no-p', then approves that set and that patch id in a
-;;      compilation buffer)
+;;      compilation buffer; the review is the gates, the files, the diffstat and
+;;      the full diff, see below)
 ;;   S  show the check results of the commit at point (`git-results show')
 ;;   D  remove the worktree with `wt remove', after a y-or-n-p
 ;;   g  refresh
@@ -42,6 +43,21 @@
 ;; that says why.  `&' on a set, an item or a branch opens
 ;; `magit-land-dispatch' (add, approve, reject, remove, retry, bump, show,
 ;; log, pause, resume).
+;;
+;; A review of a held set (`magit-land-approve' and `C-u L') runs
+;; `git land approve SET' with no input.  Its stdout is the full diff of the
+;; held change, and the sha256 of that diff is the patch id.  Its stderr holds
+;; the gates, the changed files, the diffstat and the line "patch: ID".
+;; The buffer `*magit-land review*' shows the summary and then the diff in
+;; `diff-mode'.  The diff is untrusted text from an agent branch: it is read
+;; as bytes, inserted as literal text and never evaluated.  The review stops
+;; when the sha256 of the bytes is not the patch id.  After a yes, the
+;; approval runs `git land approve --yes --patch ID SET'.
+;;
+;; When the daemon stopped itself because main moved outside the queue, the
+;; queue section shows the reason.  `magit-land-resume' then shows the move
+;; (`git land resume' with no input), asks whether to trust that main, and
+;; resumes with `--yes --main SHA' for the commit that the status showed.
 ;;
 ;; The library needs `magit-section' and `transient', and magit for the status
 ;; section; init-review.el loads it when magit has loaded.  `git-land',
@@ -108,6 +124,29 @@ Return (EXIT STDOUT STDERR).  EXIT is -1 when the program did not start."
                   (or err (with-temp-buffer
                             (insert-file-contents errfile)
                             (buffer-string))))))
+      (delete-file errfile))))
+
+(defun magit-land--call-raw (root &rest args)
+  "Run `magit-land-land-command' with ARGS in ROOT, without decoding.
+Return (EXIT STDOUT STDERR).  STDOUT is a unibyte string of the exact bytes
+that the program wrote.  STDERR is decoded as UTF-8.  EXIT is -1 when the
+program did not start."
+  (let ((default-directory root)
+        (errfile (make-temp-file "magit-land-err"))
+        (coding-system-for-read 'no-conversion)
+        (coding-system-for-write 'no-conversion))
+    (unwind-protect
+        (with-temp-buffer
+          (set-buffer-multibyte nil)
+          (let* ((err nil)
+                 (code (condition-case e
+                           (apply #'process-file magit-land-land-command
+                                  nil (list t errfile) nil args)
+                         (error (setq err (error-message-string e)) -1)))
+                 (out (buffer-string)))
+            (erase-buffer)
+            (insert-file-contents-literally errfile)
+            (list code out (or err (decode-coding-string (buffer-string) 'utf-8-unix t)))))
       (delete-file errfile))))
 
 (defun magit-land--first-line (&rest texts)
@@ -288,6 +327,20 @@ PLACE is the lane position, or nil for a parked set."
                     "  " (string-pad (magit-land--plural (alist-get 'commits b)) cw)
                     "  " (alist-get 'state b) "\n")))))))
 
+(defun magit-land--plain (text)
+  "Return TEXT without control characters."
+  (replace-regexp-in-string "[[:cntrl:]\u0080-\u009f]" "" text))
+
+(defun magit-land--insert-stopped (st)
+  "Insert the lines that say why the daemon of status ST stopped itself."
+  (when-let* ((reason (alist-get 'pause_reason st))
+              ((not (string-empty-p reason))))
+    (insert (propertize (concat "Stopped: " (magit-land--plain reason)) 'face 'warning)
+            "\n"
+            "  resume with "
+            (propertize "P" 'face 'help-key-binding)
+            " in the menu (&), after a review of the move\n")))
+
 (defun magit-land--insert-status (st)
   "Insert the queue sections for the status ST."
   (let ((now (magit-land--now)))
@@ -295,6 +348,7 @@ PLACE is the lane position, or nil for a parked set."
       (magit-insert-heading
         (format "Land queue  main %s  lane: %s"
                 (magit-land--short (alist-get 'main st)) (magit-land--lane-state st)))
+      (magit-land--insert-stopped st)
       (let ((place 0))
         (dolist (s (alist-get 'lane st))
           (magit-land--insert-set s st now (cl-incf place))))
@@ -363,19 +417,23 @@ name, ID the set id (nil for an unqueued branch)."
       (user-error "git land %s failed: %s" (car args) (magit-land--first-line err out)))
     (message "git land %s: %s" (car args) (magit-land--first-line out))))
 
+(defun magit-land--show-text (name text)
+  "Show TEXT as literal text in the read-only buffer NAME."
+  (with-current-buffer (get-buffer-create name)
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (insert text)
+      (goto-char (point-min))
+      (special-mode))
+    (display-buffer (current-buffer))))
+
 (defun magit-land--text-buffer (name args)
   "Show the output of git-land ARGS in the buffer NAME."
   (pcase-let ((`(,code ,out ,err) (apply #'magit-land--call (magit-land--dir) args)))
-    (with-current-buffer (get-buffer-create name)
-      (let ((inhibit-read-only t))
-        (erase-buffer)
-        (insert (if (zerop code)
-                    out
-                  (format "git land %s failed: %s\n" (car args)
-                          (magit-land--first-line err out))))
-        (goto-char (point-min))
-        (special-mode))
-      (display-buffer (current-buffer)))))
+    (magit-land--show-text name (if (zerop code)
+                                    out
+                                  (format "git land %s failed: %s\n" (car args)
+                                          (magit-land--first-line err out))))))
 
 (defun magit-land-add ()
   "Queue the unqueued branch at point and return at once."
@@ -394,25 +452,44 @@ name, ID the set id (nil for an unqueued branch)."
       (user-error "%s has no held set (%s)" ref (alist-get 'state set)))
     set))
 
+(defun magit-land--show-review (id summary diff)
+  "Show the set ID in `*magit-land review*': SUMMARY, then DIFF in `diff-mode'.
+DIFF is a unibyte string.  Both texts go in as literal text.  The buffer
+is read-only, and no file-local variable is evaluated."
+  (with-current-buffer (get-buffer-create "*magit-land review*")
+    (let ((inhibit-read-only t)
+          (enable-local-variables nil)
+          (enable-dir-local-variables nil))
+      (erase-buffer)
+      (diff-mode)
+      (insert (format "Set #%s\n\n" id) summary
+              (if (string-suffix-p "\n" summary) "" "\n")
+              "\n" (decode-coding-string diff 'utf-8-unix t))
+      (goto-char (point-min))
+      (setq buffer-read-only t))
+    (display-buffer (current-buffer))))
+
 (defun magit-land--review (id)
   "Show the review of the held set ID in a buffer and return its patch id.
-The text is what `git land approve' prints before it asks: the gates, the
-changed files, the diffstat and the line \"patch: ID\".  Without `--yes' and
-with no input the command answers its own question with no, so this approves
-nothing.  A review without a patch line is a `user-error'."
-  (pcase-let ((`(,_code ,out ,err) (magit-land--call (magit-land--dir) "approve" id)))
+Run `git land approve ID' with no input and without `--yes'.  The command
+answers its own question with no, so this approves nothing.  Its stdout is
+the full diff of the held change, and its stderr is the gates, the changed
+files, the diffstat and the line \"patch: ID\".  The buffer shows both.
+Signal a `user-error' when the review has no gates or no patch line, when
+the diff is empty, or when the sha256 of the diff bytes is not the patch id."
+  (pcase-let ((`(,_code ,out ,err) (magit-land--call-raw (magit-land--dir) "approve" id)))
     (unless (string-match-p "^gates: " err)
       (user-error "Cannot review set %s: %s" id (magit-land--first-line err out)))
-    (with-current-buffer (get-buffer-create "*magit-land review*")
-      (let ((inhibit-read-only t))
-        (erase-buffer)
-        (insert (format "Set #%s\n\n" id) err)
-        (goto-char (point-min))
-        (special-mode))
-      (display-buffer (current-buffer)))
     (unless (string-match "^patch: \\([0-9a-f]\\{64\\}\\)$" err)
       (user-error "The review of set %s has no patch id" id))
-    (match-string 1 err)))
+    (let ((patch (match-string 1 err))
+          (bytes (if (multibyte-string-p out) (encode-coding-string out 'utf-8-unix) out)))
+      (when (string-empty-p bytes)
+        (user-error "The review of set %s has an empty diff" id))
+      (unless (equal (secure-hash 'sha256 bytes) patch)
+        (user-error "The diff of set %s does not match its patch id; not shown" id))
+      (magit-land--show-review id err bytes)
+      patch)))
 
 (defun magit-land--confirm-approval (ref)
   "Review the held set that REF names and ask the owner to approve it.
@@ -433,7 +510,8 @@ with that patch id, never REF."
 
 (defun magit-land-approve ()
   "Show the review of the held set at point and, after a yes, approve it.
-The review is the gates, the changed files and the diffstat."
+The review is the gates, the changed files, the diffstat and the full diff.
+The approval carries the patch id of the diff that the review showed."
   (interactive)
   (when-let* ((ok (magit-land--confirm-approval
                    (plist-get (magit-land--need 'set 'item) :set))))
@@ -469,10 +547,40 @@ The review is the gates, the changed files and the diffstat."
   (interactive)
   (magit-land--run "pause"))
 
+(defun magit-land--stop-state ()
+  "Return the status alist when the daemon stopped itself, else nil."
+  (let ((res (magit-land--fetch (magit-land--dir))))
+    (when (eq (car res) 'ok)
+      (let ((reason (alist-get 'pause_reason (cdr res))))
+        (and (stringp reason) (not (string-empty-p reason)) (cdr res))))))
+
+(defun magit-land--resume-after-stop (st)
+  "Show the move that stopped the daemon of status ST and resume after a yes.
+Run `git land resume' with no input to get the move, ask which main to trust
+and resume with `--yes --main' and the full commit of the status."
+  (let ((main (alist-get 'trip_main st)))
+    (unless (and (stringp main) (string-match-p "\\`[0-9a-f]\\{40,64\\}\\'" main))
+      (user-error "The status has no commit for the stop; run: git land resume"))
+    (pcase-let ((`(,code ,out ,err) (magit-land--call (magit-land--dir) "resume")))
+      (when (zerop code)
+        (magit-land--refresh)
+        (user-error "The daemon resumed without a review"))
+      (when (string-empty-p out)
+        (user-error "git land resume failed: %s" (magit-land--first-line err out)))
+      (magit-land--show-text "*magit-land resume*" out))
+    (when (yes-or-no-p (format "Trust main at %s after: %s? " (magit-land--short main)
+                               (magit-land--plain (alist-get 'pause_reason st))))
+      (magit-land--run "resume" "--yes" "--main" main))))
+
 (defun magit-land-resume ()
-  "Start the worker again."
+  "Start the worker again.
+When the daemon stopped itself because main moved outside the queue, show
+the move first, ask whether to trust that main, and resume only after a yes
+with the commit that the status named.  Otherwise resume at once."
   (interactive)
-  (magit-land--run "resume"))
+  (if-let* ((st (magit-land--stop-state)))
+      (magit-land--resume-after-stop st)
+    (magit-land--run "resume")))
 
 (defun magit-land-show ()
   "Show the set or branch at point with `git land show'."
@@ -588,7 +696,8 @@ The review is the gates, the changed files and the diffstat."
 (defun magit-land-land (&optional yes)
   "Run `git-land' for the branch in a compilation buffer.
 With prefix argument YES, show the review of the held set of the branch
-\(gates, files, diffstat), ask with `yes-or-no-p' and approve that set."
+\(gates, files, diffstat, full diff), ask with `yes-or-no-p' and approve that
+set with the patch id of the reviewed diff."
   (interactive "P")
   (let ((default-directory magit-land--root))
     (if yes

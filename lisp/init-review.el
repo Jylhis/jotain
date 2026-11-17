@@ -55,8 +55,8 @@
 ;;; current branch that are not on origin/main yet, with the check
 ;;; kinds from refs/notes/checks and the review note from
 ;;; refs/notes/review under each. `L' runs git-land in a compilation
-;;; buffer (`C-u L' shows the review of the held set, asks yes or no, then
-;;; approves it), `S' shows the check results of
+;;; buffer (`C-u L' shows the review of the held set, with its gates, files,
+;;; diffstat and full diff, asks yes or no, then approves that diff), `S' shows the check results of
 ;;; the commit at point with git-results, `D' removes the worktree with
 ;;; `wt remove' after a prompt, and `g' refreshes. The library also
 ;;; adds a Land queue section to `magit-status', from `git land status
@@ -64,7 +64,8 @@
 ;;; branches that are not queued. It loads once magit has loaded, so
 ;;; the section is there from the first `magit-status'. `&' on a set,
 ;;; an item or a branch opens a menu to add, approve, reject, remove,
-;;; retry, bump, show, log, pause and resume.
+;;; retry, bump, show, log, pause and resume. When the daemon stopped
+;;; itself, the section shows why, and resume shows the move first.
 (use-package magit-land
   :ensure nil
   :bind (:map project-prefix-map ("L" . magit-land))
