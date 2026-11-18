@@ -63,20 +63,22 @@ The wrapper wins when the project has one."
 (defconst my-kotlin--repl-buffer-name "*kotlin*"
   "Name of the Kotlin REPL buffer.")
 
-(defun my-kotlin--repl-program ()
-  "Return the Kotlin REPL on the buffer's PATH: `ki', else `kotlinc'."
-  (or (executable-find "ki")
-      (executable-find "kotlinc")
-      (user-error "No Kotlin REPL (ki or kotlinc) on PATH")))
+(defun my-kotlin--repl-command ()
+  "Return the Kotlin REPL command line on the buffer's PATH.
+`ki' wins.  The `kotlinc' REPL is opt-in with `-Xrepl' from Kotlin 2.2;
+an older compiler warns about the flag and starts its REPL."
+  (cond ((executable-find "ki") '("ki"))
+        ((executable-find "kotlinc") '("kotlinc" "-Xrepl"))
+        (t (user-error "No Kotlin REPL (ki or kotlinc) on PATH"))))
 
 (defun my-kotlin--repl-buffer ()
   "Return the Kotlin REPL buffer; start the REPL in the project root if needed."
   (require 'comint)
   (if (comint-check-proc my-kotlin--repl-buffer-name)
       (get-buffer my-kotlin--repl-buffer-name)
-    (let ((program (my-kotlin--repl-program))
+    (let ((command (my-kotlin--repl-command))
           (default-directory (my-kotlin--project-root)))
-      (make-comint "kotlin" program))))
+      (apply #'make-comint "kotlin" (car command) nil (cdr command)))))
 
 (defun my-kotlin-repl ()
   "Show the Kotlin REPL; start it when it is not running."
@@ -195,9 +197,15 @@ detekt reads files only, so a modified buffer has no detekt findings."
      nil report-fn)))
 
 (defun my-kotlin--setup-flymake ()
-  "Add the ktlint and detekt Flymake backends to this buffer."
-  (add-hook 'flymake-diagnostic-functions #'my-kotlin-flymake-ktlint nil t)
-  (add-hook 'flymake-diagnostic-functions #'my-kotlin-flymake-detekt nil t))
+  "Add the ktlint and detekt Flymake backends to a Kotlin buffer."
+  (when (derived-mode-p 'kotlin-ts-mode)
+    (add-hook 'flymake-diagnostic-functions #'my-kotlin-flymake-ktlint nil t)
+    (add-hook 'flymake-diagnostic-functions #'my-kotlin-flymake-detekt nil t)))
+
+;; Eglot replaces `flymake-diagnostic-functions' with its own backend when
+;; it starts to manage a buffer, after the mode hook.  Add the two again
+;; so that they run beside the server's diagnostics.
+(add-hook 'eglot-managed-mode-hook #'my-kotlin--setup-flymake)
 
 ;;;; Mode
 

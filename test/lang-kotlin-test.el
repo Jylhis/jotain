@@ -80,6 +80,27 @@
           (should (member "--config" (my-kotlin--detekt-command "A.kt" root))))
       (delete-directory root t))))
 
+(ert-deftest lang-kotlin-test-repl-command ()
+  "The REPL is ki, else kotlinc with its opt-in flag, else an error."
+  (lang-kotlin-test--load "lisp/init-lang-kotlin.el" 'my-kotlin--repl-command)
+  (cl-letf (((symbol-function 'executable-find) (lambda (&rest _) t)))
+    (should (equal (my-kotlin--repl-command) '("ki"))))
+  (cl-letf (((symbol-function 'executable-find)
+             (lambda (program &rest _) (equal program "kotlinc"))))
+    (should (equal (my-kotlin--repl-command) '("kotlinc" "-Xrepl"))))
+  (cl-letf (((symbol-function 'executable-find) #'ignore))
+    (should-error (my-kotlin--repl-command) :type 'user-error)))
+
+(ert-deftest lang-kotlin-test-lint-backends-survive-eglot ()
+  "The Flymake setup also runs when Eglot starts to manage the buffer.
+Eglot replaces `flymake-diagnostic-functions' at that point."
+  (with-temp-buffer
+    (insert-file-contents
+     (expand-file-name "lisp/init-lang-kotlin.el" lang-kotlin-test--root))
+    (should (search-forward
+             "(add-hook 'eglot-managed-mode-hook #'my-kotlin--setup-flymake)"
+             nil t))))
+
 (ert-deftest lang-kotlin-test-server-prefers-kotlin-lsp ()
   "The resolver picks kotlin-lsp when present, else kotlin-language-server."
   (lang-kotlin-test--load "lisp/init-prog.el" 'my-prog--kotlin-server)
