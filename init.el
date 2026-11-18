@@ -60,12 +60,13 @@
 (require 'init-org)          ; org, org-modern, capture templates
 (require 'init-http)         ; verb HTTP/REST client (org-based)
 
-;; Languages: Nix, Rust, Python, Go, and QML get their own files;
+;; Languages: Nix, Rust, Python, Go, Kotlin, and QML get their own files;
 ;; less-used modes are grouped by concern.
 (require 'init-lang-nix)
 (require 'init-lang-rust)
 (require 'init-lang-python)
 (require 'init-lang-go)
+(require 'init-lang-kotlin)
 (require 'init-lang-web)       ; TS/TSX/CSS/HTML/JSON/Astro/web-mode
 (require 'init-lang-devops)    ; Dockerfile, terraform, just, ansible
 (require 'init-lang-data)      ; yaml, csv, sql, jinja2, gnuplot

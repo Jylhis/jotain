@@ -103,8 +103,10 @@
      :servers ("clangd") :override t :formatter "clang-format" :dape "codelldb"
      :snippets t :inlay t)
 
-    (:id kotlin     :name "Kotlin"         :file "init-lang-systems.el"
-     :sample "eval.kt"             :mode kotlin-ts-mode :grammar kotlin)
+    (:id kotlin     :name "Kotlin"         :file "init-lang-kotlin.el"
+     :sample "eval.kt"             :mode kotlin-ts-mode :grammar kotlin
+     :servers ("kotlin-lsp" "kotlin-language-server") :override t
+     :formatter "ktfmt" :dape "kotlin-debug-adapter" :snippets t :inlay t)
 
     (:id glsl       :name "GLSL"           :file "init-lang-systems.el"
      :sample "eval.glsl"           :mode glsl-mode :grammar nil)

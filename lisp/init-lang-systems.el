@@ -20,7 +20,7 @@
 ;;; Commentary:
 
 ;; Systems-language modes: C/C++, CUDA, CMake, Meson, Haskell, OCaml,
-;; Dune, Zig, Kotlin, and GLSL.  C/C++ open in `c-ts-mode'/`c++-ts-mode'
+;; Dune, Zig, and GLSL.  C/C++ open in `c-ts-mode'/`c++-ts-mode'
 ;; via `my-prog-ts-remaps' (init-prog.el); cc-mode decides which
 ;; extensions are C vs C++ (`.h' and `.c' are C; C++ sources use `.hpp'
 ;; and `.cpp').  CUDA has no upstream tree-sitter mode, so
@@ -182,11 +182,6 @@ where the `<<<...>>>' launch syntax parses as an error node."
 ;;; zls; format-on-save runs `zig fmt' through apheleia (init-prog).
 (use-package zig-ts-mode
   :mode "\\.\\(?:zig\\|zon\\)\\'")
-
-;;; @doc Tree-sitter Kotlin mode (MELPA, `kotlin' grammar) for `.kt'
-;;; sources and `.kts' Gradle scripts.
-(use-package kotlin-ts-mode
-  :mode "\\.kts?\\'")
 
 ;;; @doc GLSL shader mode (MELPA) with its default file patterns
 ;;; (`.glsl', `.vert', `.frag', `.comp', ...). Chosen over a tree-sitter

@@ -96,7 +96,8 @@ removed override must fail here."
 Only the formatters the configuration adds itself are checked; apheleia built-ins
 (ruff/prettier/rustfmt/clang-format) are not in our source."
   (let ((prog (lang-eval-test--contents "lisp/init-prog.el"))
-        (ours '("meson" "zig" "goimports" "buildifier" "nixfmt" "qmlformat")))
+        (ours '("meson" "zig" "goimports" "buildifier" "nixfmt" "qmlformat"
+                "ktfmt")))
     (dolist (e my-lang-registry)
       (let ((f (plist-get e :formatter)))
         (when (and f (member f ours))

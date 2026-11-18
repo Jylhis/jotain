@@ -52,6 +52,17 @@ go-mode go-ts-mode
 (switch "switch " p " {" n> r> n "}" >)
 (struct "type " p " struct {" n> r> n "}" >)
 
+kotlin-ts-mode
+
+(fun "fun " p "(" p ") {" n> r> n "}" >)
+(class "class " p "(" p ") {" n> r> n "}" >)
+(data "data class " p "(" p ")")
+(if "if (" p ") {" n> r> n "}" >)
+(when "when (" p ") {" n> r> n "}" >)
+(for "for (" p " in " p ") {" n> r> n "}" >)
+(while "while (" p ") {" n> r> n "}" >)
+(test "@Test" n> "fun `" p "`() {" n> r> n "}" >)
+
 c-mode c-ts-mode
 
 (for "for (" p "; " p "; " p ") {" n> r> n "}" >)

@@ -145,7 +145,7 @@ When a note conflicts with the installed Emacs, trust the running Emacs
 - **LSP and formatters live in `init-prog.el`.** Per-language `eglot-ensure`
   hooks and `apheleia` formatters are centralised there; `init-lang-*.el`
   holds only mode regexes and language tweaks.
-- **Language files**: `init-lang-nix/rust/python/go` have their own files;
+- **Language files**: `init-lang-nix/rust/python/go/kotlin/qml` have their own files;
   the rest are grouped (`init-lang-web`, `-devops`, `-data`, `-systems`).
   Only split a language out once it grows enough (Go did, with its gopls
   workspace config, `go-tag`/`gotest` helpers, and dape debugging).

@@ -295,6 +295,14 @@ basedpyright/pyright, then pylsp."
           ((executable-find "pyright-langserver") '("pyright-langserver" "--stdio"))
           (t '("pylsp"))))
 
+  (defun my-prog--kotlin-server (&optional _interactive)
+    "Resolve the Kotlin server contact against the buffer's (project) PATH.
+Prefers JetBrains `kotlin-lsp', then the community
+kotlin-language-server."
+    (if (executable-find "kotlin-lsp")
+        '("kotlin-lsp" "--stdio")
+      '("kotlin-language-server")))
+
   (defun my-prog--likec4-server (&optional _interactive)
     "Resolve the LikeC4 server contact against the buffer's PATH.
 Prefers the standalone `likec4-lsp' (on the distribution wrapper PATH),
@@ -380,6 +388,7 @@ Both speak stdio by default."
                    python-mode python-ts-mode
                    neocaml-mode neocaml-interface-mode
                    zig-ts-mode
+                   kotlin-ts-mode
                    c-mode c++-mode c-ts-mode c++-ts-mode cuda-ts-mode
                    nix-ts-mode
                    haskell-ts-mode))
@@ -428,6 +437,9 @@ Both speak stdio by default."
   (add-to-list 'eglot-server-programs
                (cons '(python-mode python-ts-mode)
                      #'my-prog--python-server))
+  ;; Kotlin (init-lang-kotlin).
+  (add-to-list 'eglot-server-programs
+               (cons '(kotlin-ts-mode) #'my-prog--kotlin-server))
   ;; LikeC4 architecture models (init-lang-devops).
   (add-to-list 'eglot-server-programs
                (cons '(my-likec4-mode) #'my-prog--likec4-server))
@@ -468,9 +480,22 @@ Both speak stdio by default."
 
 ;;;; Debugging — dape (Debug Adapter Protocol)
 
+(defun my-prog--kotlin-main-class ()
+  "Guess the JVM main class of the current Kotlin file.
+A top-level `main' in `Foo.kt' of package `a.b' compiles to `a.b.FooKt'."
+  (let ((class (concat (file-name-base (or buffer-file-name "Main")) "Kt")))
+    (save-excursion
+      (save-restriction
+        (widen)
+        (goto-char (point-min))
+        (if (re-search-forward "^package[ \t]+\\([[:alnum:]_.]+\\)" nil t)
+            (concat (match-string-no-properties 1) "." class)
+          class)))))
+
 ;;; @doc Debug Adapter Protocol client, the debugging counterpart to
 ;;; eglot. Ships adapter configs for dlv (Go), debugpy (Python),
-;;; codelldb (Rust/C/C++) and more; adapter binaries come from the
+;;; codelldb (Rust/C/C++) and more; this config adds cargo (lldb-dap)
+;;; and Kotlin (kotlin-debug-adapter). Adapter binaries come from the
 ;;; project/host PATH. `C-x C-a` is the prefix (the gud convention);
 ;;; stepping commands repeat, so `C-x C-a n n n` keeps stepping.
 (use-package dape
@@ -503,6 +528,25 @@ Both speak stdio by default."
                                  (read-file-name "Binary: " (dape-cwd) nil t
                                                  "target/debug/")
                                "target/debug/")))))
+
+  ;; Kotlin/JVM launch config for fwcd's kotlin-debug-adapter, which dape
+  ;; does not ship.  The adapter reads the compiled classes of the Gradle
+  ;; build, so `compile' builds them first.
+  (add-to-list 'dape-configs
+               `(kotlin-debug-adapter
+                 modes (kotlin-ts-mode)
+                 ensure dape-ensure-command
+                 command "kotlin-debug-adapter"
+                 command-cwd dape-command-cwd
+                 compile "./gradlew --console=plain classes"
+                 :type "kotlin"
+                 :request "launch"
+                 :projectRoot dape-cwd
+                 :mainClass ,(lambda ()
+                               (let ((guess (my-prog--kotlin-main-class)))
+                                 (if enable-recursive-minibuffers
+                                     (read-string "Main class: " guess)
+                                   guess))))))
 
 ;;;; SonarLint
 
@@ -659,6 +703,12 @@ every prog-mode buffer."
   ;; apheleia keys ocamlformat on tuareg/caml modes only.
   (add-to-list 'apheleia-mode-alist '(neocaml-mode . ocamlformat))
   (add-to-list 'apheleia-mode-alist '(neocaml-interface-mode . ocamlformat))
+  ;; ktfmt instead of apheleia's default ktlint for Kotlin.  The
+  ;; kotlinlang style indents by 4, as `kotlin-ts-mode' does; ktfmt's
+  ;; default style indents by 2.
+  (add-to-list 'apheleia-formatters
+               '(ktfmt . ("ktfmt" "--kotlinlang-style" "-")))
+  (add-to-list 'apheleia-mode-alist '(kotlin-ts-mode . ktfmt))
   ;; robotidy also edits in place.
   (add-to-list 'apheleia-formatters '(robotidy . ("robotidy" inplace)))
   (add-to-list 'apheleia-mode-alist '(robot-mode . robotidy))
