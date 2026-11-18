@@ -527,7 +527,7 @@ A top-level `main' in `Foo.kt' of package `a.b' compiles to `a.b.FooKt'."
                              (if enable-recursive-minibuffers
                                  (read-file-name "Binary: " (dape-cwd) nil t
                                                  "target/debug/")
-                               "target/debug/")))))
+                               "target/debug/"))))
 
   ;; Kotlin/JVM launch config for fwcd's kotlin-debug-adapter, which dape
   ;; does not ship.  The adapter reads the compiled classes of the Gradle
