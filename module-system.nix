@@ -1,7 +1,8 @@
 # module-system.nix — NixOS module for Jotain Emacs.
 #
 # Applies the overlay and adds Jotain Emacs to environment.systemPackages.
-# For a per-user daemon, use the Home Manager module (module.nix).
+# The system module starts no daemon; for a per-user one use the Home Manager
+# module (module.nix), which runs it through services.emacs.
 #
 # Usage:
 #
@@ -23,22 +24,23 @@ let
   cfg = config.services.jotain;
   system = config;
   jotainOverlay = args.jotainOverlay or (import ./overlay.nix);
-  # A host whose pkgs already carry the overlay skips a second nixpkgs
-  # fixpoint.
+  # An externally supplied nixpkgs.pkgs ignores nixpkgs.overlays, and the users
+  # option works without services.jotain.enable, so extend pkgs when it lacks
+  # the overlay.
   pkgsWithOverlay = if pkgs ? jotainEmacsPackages then pkgs else pkgs.extend jotainOverlay;
   selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.jotainEmacsPackages;
+  sharedOptions = import ./nix/module-options.nix { inherit lib; };
 
-  # Shared runtime binaries plus the opt-in tools (mirrors module.nix).
-  runtimeDeps =
-    import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; }
-    ++ lib.optional cfg.sonarlint.enable pkgs.sonarlint-ls
-    ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server
-    ++ lib.optional cfg.onePassword.enable pkgs._1password-cli
-    ++ lib.optional cfg.sops.enable pkgs.sops
-    ++ lib.optional cfg.claudeCode.enable pkgs.claude-code;
+  # No init directory: nothing here deploys a config, so Emacs resolves it as usual.
+  systemPrograms = import ./nix/user-programs.nix {
+    inherit pkgs pkgsWithOverlay cfg;
+    package = selectedPackage;
+    initDirectory = null;
+  };
 
   wrappedPackage = import ./nix/wrap-runtime-deps.nix {
-    inherit pkgs runtimeDeps;
+    inherit pkgs;
+    inherit (systemPrograms) runtimeDeps;
     package = selectedPackage;
     spellDictionaries = cfg.spell.dictionaries;
   };
@@ -52,35 +54,22 @@ let
       options = {
         enable = lib.mkEnableOption "the Jotain programs of this user in their profile";
 
-        package = lib.mkOption {
-          type = lib.types.nullOr lib.types.package;
-          default = null;
-          defaultText = lib.literalExpression "config.services.jotain.package or the full distribution";
-          description = "Custom Jotain Emacs package for this user.";
-        };
-
-        nativeCompile.enable = lib.mkEnableOption "AOT native compilation of the config (see module.nix)";
+        inherit (sharedOptions)
+          package
+          nativeCompile
+          sonarlint
+          dockerfileLsp
+          onePassword
+          sops
+          claudeCode
+          spell
+          ;
 
         initDirectory = lib.mkOption {
           type = lib.types.str;
           default = "${home}/.config/emacs";
           defaultText = lib.literalExpression ''"<home>/.config/emacs"'';
           description = "Where Home Manager deploys the config; the wrapped emacs pins --init-directory here.";
-        };
-
-        sonarlint.enable = lib.mkEnableOption "the SonarLint language server on the wrapper PATH";
-        dockerfileLsp.enable = lib.mkEnableOption "the Dockerfile language server on the wrapper PATH";
-        onePassword.enable = lib.mkEnableOption "the 1Password CLI on the wrapper PATH";
-        sops.enable = lib.mkEnableOption "the sops CLI on the wrapper PATH";
-        claudeCode.enable = lib.mkEnableOption "the Claude Code CLI on the wrapper PATH";
-
-        spell.dictionaries = lib.mkOption {
-          type = with lib.types; listOf package;
-          default = [ ];
-          description = ''
-            Aspell dictionaries for jinx. A non-empty list replaces the bundled
-            set in this user's wrapped emacs; the empty default keeps it.
-          '';
         };
 
         built = lib.mkOption {
@@ -91,37 +80,15 @@ let
           default = import ./nix/user-programs.nix {
             inherit pkgs pkgsWithOverlay;
             inherit (config) initDirectory;
+            cfg = config;
             package = if config.package != null then config.package else selectedPackage;
-            nativeCompile = config.nativeCompile.enable;
-            spellDictionaries = config.spell.dictionaries;
-            tools = {
-              sonarlint = config.sonarlint.enable;
-              dockerfileLsp = config.dockerfileLsp.enable;
-              onePassword = config.onePassword.enable;
-              sops = config.sops.enable;
-              claudeCode = config.claudeCode.enable;
-            };
           };
         };
       };
     };
 
   enabledUsers = lib.filterAttrs (_: u: u.enable) cfg.users;
-
-  # EDITOR: terminal emacsclient.
-  editorScript = import ./nix/editor-script.nix {
-    inherit pkgs;
-    package = wrappedPackage;
-  };
-
-  # VISUAL: GUI emacsclient frame.
-  visualScript = pkgs.writeShellScriptBin "jotain-visual" ''
-    exec ${lib.getBin wrappedPackage}/bin/emacsclient \
-      --create-frame \
-      --alternate-editor=${lib.getBin wrappedPackage}/bin/emacs \
-      -- \
-      "$@"
-  '';
+  inherit (systemPrograms) editorScript visualScript fontPackages;
 in
 {
   options.services.jotain = {
@@ -140,76 +107,16 @@ in
       '';
     };
 
-    package = lib.mkOption {
-      type = lib.types.nullOr lib.types.package;
-      default = null;
-      defaultText = lib.literalExpression "null";
-      description = ''
-        Custom Jotain Emacs package to use. Leave unset for the full
-        distribution (`jotainEmacsPackages`).
-      '';
-    };
-
-    defaultEditor = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      example = false;
-      description = ''
-        Whether to configure {command}`emacsclient` as the default
-        editor using the {env}`EDITOR` and {env}`VISUAL`
-        environment variables.
-      '';
-    };
-
-    sonarlint = {
-      enable = lib.mkEnableOption "SonarLint language server ({command}`M-x jotain-sonarlint`)";
-    };
-
-    dockerfileLsp = {
-      enable = lib.mkEnableOption "Dockerfile language server ({command}`docker-langserver`), auto-attached by Eglot in {command}`dockerfile-mode`";
-    };
-
-    spell = {
-      dictionaries = lib.mkOption {
-        type = with lib.types; listOf package;
-        default = [ ];
-        example = lib.literalExpression "[ pkgs.aspellDicts.en pkgs.aspellDicts.fi ]";
-        description = ''
-          Aspell dictionary packages for jinx spell-checking
-          (lisp/init-writing.el). A non-empty list replaces the bundled
-          en/fi/de/fr set: the wrapped emacs gets an ASPELL_CONF that points
-          at an {command}`aspellWithDicts` built from these packages. The
-          packages also go into the system profile. The empty default keeps
-          the bundled dictionaries.
-        '';
-      };
-    };
-
-    onePassword = {
-      enable = lib.mkEnableOption ''
-        the 1Password CLI ({command}`op`) on the wrapper PATH, the backend
-        for {command}`auth-source-1password` (lisp/init-systems.el) that
-        resolves credentials for gptel, {command}`forge`, smtpmail, etc.
-        from the vault. Pulls the unfree `_1password-cli` package, so it
-        needs `allowUnfree`
-      '';
-    };
-
-    sops = {
-      enable = lib.mkEnableOption ''
-        the {command}`sops` CLI on the wrapper PATH, required by
-        {command}`sops.el` (lisp/init-systems.el) for transparent
-        encrypt/decrypt of SOPS-managed files
-      '';
-    };
-
-    claudeCode = {
-      enable = lib.mkEnableOption ''
-        the Claude Code CLI ({command}`claude`) on the wrapper PATH, the
-        external agent {command}`claude-code-ide` (lisp/init-ai.el) drives.
-        Pulls the unfree `claude-code` package, so it needs `allowUnfree`
-      '';
-    };
+    inherit (sharedOptions)
+      package
+      defaultEditor
+      sonarlint
+      dockerfileLsp
+      onePassword
+      sops
+      claudeCode
+      spell
+      ;
   };
 
   config = lib.mkMerge [
@@ -233,20 +140,10 @@ in
         wrappedPackage
         editorScript
         visualScript
-        pkgsWithOverlay.eca
       ]
       # jinx dictionaries; the wrapper's ASPELL_CONF is what jinx reads.
       ++ cfg.spell.dictionaries;
-      # Colour-emoji fallback for lisp/init-ui.el's fontsets, BlexMono (the
-      # default face and nerd-icons font, as in module.nix), and the design
-      # system's families (Fira Sans is the variable-pitch face).
-      fonts.packages = [
-        pkgs.noto-fonts-color-emoji
-        pkgs.nerd-fonts.blex-mono
-        pkgs.jost
-        pkgs.fira-sans
-        pkgs.ibm-plex
-      ];
+      fonts.packages = fontPackages;
       environment.variables = lib.mkIf cfg.defaultEditor {
         EDITOR = lib.mkOverride 900 "${lib.getBin editorScript}/bin/jotain-editor";
         VISUAL = lib.mkOverride 900 "${lib.getBin visualScript}/bin/jotain-visual";

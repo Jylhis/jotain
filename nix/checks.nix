@@ -75,9 +75,9 @@ let
         type = lib.types.attrsOf lib.types.anything;
         default = { };
       };
-      systemd.user.sockets = lib.mkOption {
-        type = lib.types.attrsOf lib.types.anything;
-        default = { };
+      services.emacs = {
+        enable = lib.mkEnableOption "the Emacs daemon";
+        package = lib.mkOption { type = lib.types.package; };
       };
       programs = lib.mkOption {
         type = lib.types.attrsOf lib.types.anything;
@@ -107,9 +107,11 @@ let
     };
 
   defaultModule = evalHomeModule { };
-  graphicalModule = evalHomeModule {
-    startWithUserSession = "graphical";
+  envModule = evalHomeModule {
+    environmentFile = "/run/secrets/jotain-env";
+    authSources = [ "/run/secrets/authinfo" ];
   };
+  daemonService = module: module.config.systemd.user.services.emacs.Service;
   spellModule = evalHomeModule { spell.dictionaries = [ pkgs.aspellDicts.fi ]; };
   emacsWrapperText =
     module:
@@ -166,7 +168,12 @@ in
     pkgs.runCommandLocal "check-module-eval"
       {
         defaultEditorConfigured = if defaultModule.config.home.sessionVariables ? EDITOR then "1" else "0";
-        graphicalTarget = builtins.toJSON graphicalModule.config.systemd.user.services.jotain.Install.WantedBy;
+        daemonEnabled = if defaultModule.config.services.emacs.enable then "1" else "0";
+        daemonRunsWrapper =
+          if lib.hasInfix "emacs" (toString defaultModule.config.services.emacs.package) then "1" else "0";
+        environmentFile = (daemonService envModule).EnvironmentFile or "";
+        authSourcesEnv = builtins.toJSON ((daemonService envModule).Environment or [ ]);
+        noEnvironmentByDefault = if (daemonService defaultModule) == { } then "1" else "0";
         spellReachesWrapper =
           if lib.hasInfix "ASPELL_CONF='dict-dir " (emacsWrapperText spellModule) then "1" else "0";
         spellDefaultKeepsBundle =
@@ -174,10 +181,14 @@ in
       }
       ''
         test "$defaultEditorConfigured" = "1" || { echo "EDITOR not set"; exit 1; }
-        case "$graphicalTarget" in
-          *graphical-session.target*) ;;
-          *) echo "graphical start target not wired: $graphicalTarget"; exit 1 ;;
+        test "$daemonEnabled" = "1" || { echo "services.emacs.enable not set"; exit 1; }
+        test "$daemonRunsWrapper" = "1" || { echo "services.emacs.package not set"; exit 1; }
+        test "$environmentFile" = "/run/secrets/jotain-env" || { echo "EnvironmentFile not on the emacs unit: $environmentFile"; exit 1; }
+        case "$authSourcesEnv" in
+          *JOTAIN_AUTH_SOURCES=/run/secrets/authinfo*) ;;
+          *) echo "JOTAIN_AUTH_SOURCES not on the emacs unit: $authSourcesEnv"; exit 1 ;;
         esac
+        test "$noEnvironmentByDefault" = "1" || { echo "the default sets daemon environment"; exit 1; }
         test "$spellReachesWrapper" = "1" || { echo "spell.dictionaries does not reach ASPELL_CONF in the wrapper"; exit 1; }
         test "$spellDefaultKeepsBundle" = "1" || { echo "the default sets ASPELL_CONF in the wrapper"; exit 1; }
         touch $out
