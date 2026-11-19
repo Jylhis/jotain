@@ -1,0 +1,15 @@
+#+TITLE: AI Screenshots
+#+DESCRIPTION: Capture the Emacs frame to an image, interactively, through an MCP tool, or headless under Xvfb.
+
+* AI Screenshots
+:PROPERTIES:
+:CUSTOM_ID: ai-screenshot
+:END:
+
+Jotain can render the current frame to an image file so that an AI assistant, or you, can see how Emacs looks. It uses the built-in =x-export-frames=, which draws the frame to PNG, SVG or PDF on cairo builds without an external tool. The technique follows [[https://emacsredux.com/blog/2026/07/03/automating-emacs-screenshots/][Automating Emacs Screenshots]].
+
+=M-x jotain-screenshot= writes the selected frame to =var/screenshots/<timestamp>.png=, echoes the path and pushes it onto the kill ring. From Lisp, =(jotain-screenshot "/tmp/frame.svg" 'svg)= chooses the file and format. It needs a graphical frame on a cairo build and signals a =user-error= otherwise.
+
+=init-ai.el= registers the command as the =emacs_screenshot= MCP tool of [[https://github.com/manzaltu/claude-code-ide.el][claude-code-ide]], so a Claude Code session attached to Emacs (=C-c q=) can call it and read the returned file. It relies on =claude-code-ide-enable-mcp-server=, which Jotain sets.
+
+For environments without a display, =just screenshot [out]= builds Emacs, launches it with this configuration under Xvfb (1920 by 1080), captures the frame once startup settles and exits. =xvfb-run= comes from the development shell. The recipe exits 0 on success, 2 if the capture failed and 1 if no image was written. The first run is slow because it builds the distribution and installs any package Nix does not provide, so it needs network access, and the run is limited to 600 seconds. Without the shell fonts, fontconfig falls back to whatever is available and the capture is less faithful to a desktop.

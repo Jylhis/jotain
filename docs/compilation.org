@@ -1,0 +1,38 @@
+#+TITLE: Compilation and grep
+#+DESCRIPTION: How Jotain configures compilation mode, per-language compile commands, error navigation and editing of grep results.
+
+* Compilation and grep
+:PROPERTIES:
+:CUSTOM_ID: compilation
+:END:
+
+Compilation mode runs a command, captures its output and links error messages to source locations. The mechanics are in [[info:emacs#Compilation]] and [[info:emacs#Compilation Mode]], and grep buffers use the same machinery ([[info:emacs#Grep Searching]]). This chapter covers what Jotain sets up.
+
+** Compilation setup
+:PROPERTIES:
+:CUSTOM_ID: compilation-config
+:END:
+
+=init-prog.el= sets =compilation-ask-about-save= to nil, so modified buffers are saved before compiling without a prompt, and =compilation-always-kill= to t, so a new compilation replaces a running one.
+
+=compile-multi= (in =init-project.el=) offers named compile commands per major mode. Presets exist for Go, Python (pytest), Haskell, OCaml (dune), Meson, Nix (=nix flake check=, =nix fmt=, devenv), Rust (cargo), Zig, JavaScript and TypeScript (npm) and C/C++ (CMake, CTest). =M-x compile-multi= picks one, =consult-compile-multi= provides narrowing, and the Embark integration adds actions to them. It complements =projection= on =C-x P=, which detects commands from project files.
+
+** Navigating errors
+:PROPERTIES:
+:CUSTOM_ID: compilation-nav
+:END:
+
+=M-g n= and =M-g p= (=next-error=, =previous-error=) work from any buffer and cover compilation, grep and occur. =M-g e= runs =consult-compile-error=, a searchable list of all errors. In buffers with Flymake, =M-n= and =M-p= go to the next and previous diagnostic.
+
+** Editing grep results
+:PROPERTIES:
+:CUSTOM_ID: compilation-wgrep
+:END:
+
+=wgrep= makes grep buffers editable and saves the changed files (=wgrep-auto-save-buffer=). The workflow across a project:
+
+1. Run =consult-ripgrep=.
+2. Press =C-c C-o= (or =C-. E=) to export the matches to a grep buffer.
+3. Press =C-x C-q= to start editing, change the matches, and press =C-c C-c= to apply them to every file.
+
+Emacs 31 also has a built-in =grep-edit-mode=.

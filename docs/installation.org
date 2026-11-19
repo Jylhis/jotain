@@ -1,0 +1,94 @@
+#+TITLE: Installation
+#+DESCRIPTION: Try Jotain from a checkout, or install it with the Home Manager or NixOS module.
+
+* Installation
+:PROPERTIES:
+:CUSTOM_ID: installation
+:END:
+
+Jotain is a Nix flake for =x86_64-linux=. It builds GNU Emacs 31 (the pgtk GUI) together with the packages the configuration uses, the tree-sitter grammars and the Info manual. Nix with the =nix-command= and =flakes= features is the only prerequisite. See the [[https://nix.dev/manual/nix/stable/command-ref/new-cli/nix3-flake.html][nix flake reference]] for flake basics.
+
+The Emacs build is emacs-overlay's =emacs-unstable-pgtk=, which the nix-community binary cache provides. Without the =nix-community.cachix.org= substituter Nix compiles Emacs from source.
+
+** Try it from a checkout
+:PROPERTIES:
+:CUSTOM_ID: checkout
+:END:
+
+#+begin_src bash
+git clone https://github.com/Jylhis/jotain.git
+cd jotain
+nix develop
+just run-built
+#+end_src
+
+The development shell holds tooling only (=just=, Nix linters, language servers, documentation tools, fonts) and has no Emacs. =just run-built= builds the distribution and starts =result/bin/emacs= with the checkout as the init directory, so it never reads =~/.emacs.d=. The first launch installs any package that Nix does not provide from MELPA or NonGNU ELPA.
+
+Other recipes for working in a checkout:
+
+| Recipe                     | What it does                                                      |
+|----------------------------+-------------------------------------------------------------------|
+| =just build=               | Build the distribution into =result/=                             |
+| =just run-built-debug=     | Launch with =--debug-init= and =debug-on-error=                   |
+| =just run-built-debug-log= | Launch with every debug facility on, logs in =var/debug/=         |
+| =just run-built-fast=      | Launch the ahead-of-time compiled configuration (last build)      |
+| =just screenshot=          | Capture the frame headless under Xvfb (see [[file:ai-screenshot.org][AI Screenshots]]) |
+| =just bench-built=         | Startup benchmark (needs a display)                               |
+| =just serve-site=          | Build and serve the documentation site on localhost               |
+| =just update-pins=         | Bump the hand-pinned upstreams (see [[file:architecture.org::#pinning][Pinning]])      |
+| =just clean=               | Remove =*.elc=, autosaves, =var/eln-cache= and =result*=          |
+| =just clean-all=           | Also remove =elpa/= and =var/=                                    |
+
+Checks and maintenance use the plain tools: =nix flake check=, =nix fmt= and =nix flake update=.
+
+** Home Manager
+:PROPERTIES:
+:CUSTOM_ID: home-manager
+:END:
+
+Add the flake as an input and import the module. See the [[https://nix-community.github.io/home-manager/][Home Manager manual]] for how flake inputs and module imports work, and the [[https://nix.dev/manual/nix/stable/command-ref/new-cli/nix3-flake.html#flake-inputs][flake input reference]] for =follows=.
+
+#+begin_src nix
+# flake.nix
+inputs.jotain.url = "github:Jylhis/jotain";
+inputs.jotain.inputs.nixpkgs.follows = "nixpkgs";
+#+end_src
+
+#+begin_src nix
+# home.nix
+{ inputs, ... }:
+{
+  imports = [ inputs.jotain.homeManagerModules.default ];
+  services.jotain.enable = true;
+}
+#+end_src
+
+The module applies its own overlay, so your own does not need to include it. It delegates the daemon to Home Manager's =services.emacs=, so the systemd user unit is =emacs.service=. It also installs the byte-compiled configuration into =~/.config/emacs=, adds the =jotain-editor=, =jotain-visual= and =jotctl= programs, and can generate an =emacsclient= desktop entry. [[file:launching.org][Launching Emacs]] describes the daemon and the clients. [[file:jotain.org::#module-options][Module Options]] lists every option.
+
+To use a different Emacs, set =services.jotain.package=, or override =jotainEmacs= in the overlay.
+
+** NixOS
+:PROPERTIES:
+:CUSTOM_ID: nixos
+:END:
+
+Import the NixOS module the same way (see the [[https://nixos.org/manual/nixos/stable/#sec-configuration-syntax][NixOS manual]] for modules):
+
+#+begin_src nix
+{ inputs, ... }:
+{
+  imports = [ inputs.jotain.nixosModules.default ];
+  services.jotain.enable = true;
+}
+#+end_src
+
+The module puts the distribution into =environment.systemPackages=. =services.jotain.users.<name>= builds the programs of one user and installs them in that user's profile, and the Home Manager module of the same user then takes them from there, so both modules produce the same store paths.
+
+Note: The NixOS module installs the Emacs distribution (packages, grammars, themes, Info manual), not =early-init.el=, =init.el= or =lisp/=. To boot the full configuration, point Emacs at a checkout with =--init-directory=, as =just run-built= does, or use the Home Manager module. An init directory inside the read-only Nix store does not work, because Jotain writes =var/=, =elpa/= and =eln-cache/= under =user-emacs-directory=.
+
+** Other outputs
+:PROPERTIES:
+:CUSTOM_ID: outputs
+:END:
+
+=nix run github:Jylhis/jotain= starts the wrapped Emacs with the bundled packages, grammars and Info manual, without the configuration (it is read from a checkout). =nix build github:Jylhis/jotain#info= builds the Info manual and =#emacs= builds Emacs without the packages.

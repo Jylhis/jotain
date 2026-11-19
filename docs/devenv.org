@@ -1,0 +1,75 @@
+#+TITLE: devenv
+#+DESCRIPTION: Run devenv.sh tasks, manage processes and load project environments from Emacs.
+
+* devenv
+:PROPERTIES:
+:CUSTOM_ID: devenv
+:END:
+
+Jotain integrates [[https://devenv.sh][devenv]], the Nix-based developer environment tool. The library is =lisp/devenv.el=, a standalone package with no Jotain dependencies, wired in by =init-devenv.el=. It drives the =devenv= CLI and reports a clean error when the binary is not on =PATH=. devenv 2.1 or later is recommended. Every invocation sets ~AI_AGENT=1~ so devenv's TUI stays out of machine-readable output.
+
+** devenv entry point
+:PROPERTIES:
+:CUSTOM_ID: devenv-entry
+:END:
+
+=C-c v= (or =M-x devenv=) opens a transient:
+
+| Key       | Command                                | What it does                                                        |
+|-----------+----------------------------------------+---------------------------------------------------------------------|
+| =t=       | =devenv-task-run=                      | Pick a task and run it; a prefix argument picks the dependency mode |
+| =s=       | =devenv-script-run=                    | Pick a script from =devenv.nix= and run it                          |
+| =T=       | =devenv-test=                          | =devenv test=                                                       |
+| =b=       | =devenv-build=                         | =devenv build=, optionally for given attributes                     |
+| =u= / =d= | =devenv-up= / =devenv-down=            | Start or stop the project's processes                               |
+| =p=       | =devenv-processes=                     | Process dashboard                                                   |
+| =l=       | =devenv-processes-logs=                | Tail the logs of one process                                        |
+| ~i~, ~/~, ~:~ | =devenv-info= / =devenv-search= / =devenv-eval= | Environment summary, package and option search, evaluate an attribute |
+| =r=       | =devenv-reload=                        | Refresh the environment                                             |
+| =e=       | =devenv-env-global-mode=               | Toggle the native environment loader                                |
+| =m=       | =devenv-modeline-mode=                 | Toggle the mode-line segment                                        |
+| =a= / =x= | =devenv-allow= / =devenv-revoke=       | Trust or untrust the project for auto-activation                    |
+| =M=       | =devenv-mcp-setup=                     | Register the project's MCP server with mcp.el                       |
+| =U= / =G= | =devenv-update= / =devenv-gc=          | Update =devenv.lock= inputs, collect old generations                |
+| =$=       | =devenv-show-log=                      | Show =*devenv log*=, which records every CLI call                   |
+
+Long-running commands run in compilation buffers with Nix trace matching, so =M-g M-n= jumps to the =file.nix:LINE:COL= locations in evaluation errors. In the process dashboard, =s= starts, =k= stops, =r= restarts, =l= or =RET= shows logs, =u= and =d= bring everything up or down, and =g= refreshes.
+
+** Environment loading
+:PROPERTIES:
+:CUSTOM_ID: devenv-env
+:END:
+
+The native loader (=devenv-env-global-mode=, enabled by =init-devenv=) replaces direnv. Every buffer in a trusted devenv project gets the project environment buffer-locally, so Eglot servers, formatters, =M-x compile= and the terminal see the tools devenv provides. The aim is parity with =devenv shell=.
+
+- With =devenv-env-loader= set to =shell= (the default), the loader sources the printed dev-env script in bash, shell hook included, and diffs the result against Emacs's environment. Hook-only values such as =LOCALE_ARCHIVE=, =MANPATH= and anything =enterShell= exports reach Emacs too. Sourcing runs project code, so it is limited to trusted projects.
+- With =json=, it parses =devenv print-dev-env --json=. No project code runs, but the shell hook's effects are missing. This is also the fallback when sourcing fails.
+- =PATH= and =XDG_DATA_DIRS= are layered over the global value (=devenv-env-layered-variables=) and not replaced, otherwise the =devenv= CLI itself would leave =exec-path=.
+- Derivation-only variables are dropped (=devenv-env-never-applied-variables=). The JSON form is the raw build environment, and applying =TMPDIR= and =NIX_BUILD_TOP= verbatim would point them at a sandbox path that does not exist on the host, which breaks rust-analyzer's proc-macro server and cargo build scripts.
+
+While a fetch is in flight, =eglot-ensure= is deferred and replayed once the environment arrives, so servers never start with the wrong =PATH=. If the fetch fails, the buffers are released without connecting and a message says how many have no LSP; =M-x eglot= or =C-c v r= retries. After editing =devenv.nix=, run =devenv-reload=. It clears the caches, fetches the environment again and offers to =eglot-reconnect= every server in the project. To let direnv own the environment, set =devenv-env-defer-to-direnv= to =t=.
+
+** devenv trust
+:PROPERTIES:
+:CUSTOM_ID: devenv-trust
+:END:
+
+devenv 2.1 gates auto-activation behind a per-project trust database managed with =devenv allow= and =devenv revoke=. See [[https://devenv.sh][devenv.sh]] for the trust model. The native loader honours it through =devenv hook-should-activate= and never evaluates an untrusted =devenv.nix= automatically. The same check decides whether the environment may be obtained by sourcing, and an untrusted project falls back to the JSON loader. =C-c v a= trusts the project and =C-c v x= revokes it. On older devenv, which has no trust model, loading is permitted.
+
+** Mode line, LSP and MCP
+:PROPERTIES:
+:CUSTOM_ID: devenv-extras
+:END:
+
+=devenv-modeline-mode= shows =devenv[on]= when the buffer carries the devenv shell, =devenv[off]= when it does not, and =devenv[!]= when trust is denied. Trust is probed once per project in the background, so redisplay never runs a subprocess.
+
+=devenv.nix= and =devenv.local.nix= buffers connect to =devenv lsp=, a nixd preconfigured with the project's options. Other Nix buffers use the server registered before it.
+
+=devenv-mcp-setup= (=C-c v M=) registers =devenv mcp=, a server for package search, option search and process control, with [[https://github.com/lizqwerscott/mcp.el][mcp.el]] as =devenv-<project>=. Start it from =M-x mcp-hub= and hand its tools to gptel with =M-x gptel-mcp-connect=.
+
+** devenv customization
+:PROPERTIES:
+:CUSTOM_ID: devenv-custom
+:END:
+
+Run =M-x customize-group RET devenv RET=. It covers the executable, extra environment, global CLI flags, cache time and command timeout, detached =up= (=devenv-up-detached=), dashboard log lines, and the loader variables named above.

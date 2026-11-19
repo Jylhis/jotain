@@ -1,0 +1,54 @@
+#+TITLE: Development
+#+DESCRIPTION: How to work on Jotain: the development shell, the checks, the test suite and commit conventions.
+
+* Development
+:PROPERTIES:
+:CUSTOM_ID: development
+:END:
+
+=AGENTS.md= in the repository root is the contributor guide and holds the full rules. This chapter gives the short version.
+
+** Development shell
+:PROPERTIES:
+:CUSTOM_ID: dev-shell
+:END:
+
+=nix develop= (or =nix-shell=) provides =just=, the Nix linters, the language servers the configuration shells out to, the documentation tools, release tools and the fonts the UI probes. It has no Emacs; build and launch with =just run-built=, see [[file:installation.org::#checkout][Installation]].
+
+** Checks
+:PROPERTIES:
+:CUSTOM_ID: checks
+:END:
+
+=nix flake check= runs every check in =nix/checks.nix=. Build one with =nix build --no-link .#checks.x86_64-linux.<name>=. The checks are:
+
+| Check                | What it verifies                                                       |
+|----------------------+------------------------------------------------------------------------|
+| =formatting=         | =nix fmt= (treefmt with nixfmt) leaves the tree unchanged               |
+| =statix=, =deadnix=  | Nix lints                                                              |
+| =dev-shell=          | The development shell builds                                           |
+| =module-eval=        | The Home Manager and NixOS modules evaluate                            |
+| =options-doc=        | The module options reference builds                                    |
+| =eca-models-in-sync= | The OpenRouter models in =config/eca/config.json= match gptel's list in =lisp/init-ai.el= |
+| =elisp-compile=      | The configuration byte-compiles with warnings as errors                |
+| =config-startup=     | =early-init.el= and =init.el= load against the real package set without =use-package= errors |
+| =elisp-test=         | The ERT suite                                                          |
+| =packages-default=   | The full distribution builds                                           |
+
+=nix fmt= formats the Nix files and =nix flake update= bumps =flake.lock=.
+
+** Testing
+:PROPERTIES:
+:CUSTOM_ID: testing
+:END:
+
+The ERT suite is in =test/=. The =elisp-test= check loads every =test/*.el= with =-L lisp= under =emacs -batch= and writes a JUnit report, so a new test file needs no registration. The development shell has no Emacs, so run the suite with =nix build --no-link .#checks.x86_64-linux.elisp-test=.
+
+The sandbox has no network. A test must not need the network, a subprocess or the devenv binary; use =skip-unless= for anything that needs an external tool. Prefix every =ert-deftest= with the module or package name, because test names share one global namespace. Keep tests free of side effects with =with-temp-buffer=, let-bound options and =cl-letf= for stubs. See [[info:ert#Top]] for the framework.
+
+** Commits
+:PROPERTIES:
+:CUSTOM_ID: commits
+:END:
+
+Commits follow [[https://www.conventionalcommits.org][Conventional Commits]] as configured in =.convco=, for example =feat(elisp): add a Kotlin module=. A =feat=, =fix=, =refactor=, =perf= or =revert= commit also adds a changelog fragment under =.changes/unreleased/= created with [[https://changie.dev][changie]]. =prek install -t pre-commit -t commit-msg= installs the hooks, which scan staged files for secrets and check the message format.

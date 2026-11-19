@@ -1,0 +1,73 @@
+#+TITLE: Launching Emacs
+#+DESCRIPTION: How to start Jotain: one-shot from a checkout, as a daemon with clients, or with the shell aliases and jotctl.
+
+* Launching Emacs
+:PROPERTIES:
+:CUSTOM_ID: launching
+:END:
+
+The development shell has no =emacs= binary. The supported way to launch the configuration from a checkout is =just run-built=. An installed setup (Home Manager) runs a daemon and uses =emacsclient= for frames.
+
+** One-shot
+:PROPERTIES:
+:CUSTOM_ID: one-shot
+:END:
+
+#+begin_src bash
+just run-built            # build, then launch result/bin/emacs
+just run-built-debug      # with --debug-init and debug-on-error
+just run-built-debug-log  # everything on, logs mirrored into var/debug/<timestamp>/
+just run-built-fast       # launch the ahead-of-time compiled configuration
+#+end_src
+
+=just run-built= builds the distribution and runs =./result/bin/emacs --init-directory=<repo>=, so it never touches =~/.emacs.d=. The first run pays a =nix build=, usually a binary-cache download. =run-built-fast= reflects the last build, so use =run-built= while editing the configuration. This pattern suits sanity checks and configuration changes, because every launch pays the package initialisation cost.
+
+** Daemon and client
+:PROPERTIES:
+:CUSTOM_ID: daemon
+:END:
+
+An Emacs server keeps one process alive and opens frames from lightweight clients; see [[info:emacs#Emacs Server]] for the general mechanism. From a checkout:
+
+#+begin_src bash
+just build
+./result/bin/emacs --fg-daemon --init-directory="$PWD"
+./result/bin/emacsclient -c    # graphical frame
+./result/bin/emacsclient -t    # terminal frame
+#+end_src
+
+With the Home Manager module the daemon is the =emacs.service= user unit of Home Manager's =services.emacs=. =services.jotain.startWithUserSession= controls whether it starts with the session. The module also provides:
+
+- =jotain-editor=: =emacsclient --tty=, falling back to =emacs -nw= when no daemon runs. =services.jotain.defaultEditor= sets it as =$EDITOR=.
+- =jotain-visual=: =emacsclient --create-frame=, set as =$VISUAL= by the same option.
+- =jotctl=: =start=, =stop=, =status=, =restart= and =logs= for the daemon unit. It is on =PATH= whenever the module is enabled.
+- =jotain-client.desktop=, a desktop entry for a graphical client, when =services.jotain.client.enable= is set.
+
+[[file:jotain.org::#module-options][Module Options]] has the full option reference.
+
+** Shell aliases
+:PROPERTIES:
+:CUSTOM_ID: aliases
+:END:
+
+With =services.jotain.shellAliases.enable = true= the module adds aliases to the bash, zsh and fish configuration that Home Manager manages. =services.jotain.shellAliases.prefix= prepends a string to each name.
+
+| Alias | Expands to                              |
+|-------+-----------------------------------------|
+| =emd= | =emacs --fg-daemon= (wrapped)           |
+| =em=  | =jotain-editor= (=emacsclient --tty=)   |
+| =emg= | =jotain-visual= (=emacsclient -c=)      |
+
+** Quick edit
+:PROPERTIES:
+:CUSTOM_ID: quick-edit
+:END:
+
+To bypass Jotain, for example to edit =/etc/hosts= over SSH, start any Emacs with =-Q -nw=. =-Q= skips =early-init.el=, =init.el= and site files, and =-nw= stays in the terminal. [[https://rahuljuliato.com/posts/basic-emacs-alias][Rahul Juliato's basic-emacs-alias post]] describes the idea, and [[https://rahuljuliato.com/posts/launching-emacs-terminal][his launching post]] inspired the aliases above.
+
+| Situation                            | Use                    |
+|--------------------------------------+------------------------|
+| First-time setup, sanity checks      | =just run-built=       |
+| Day-to-day editing                   | daemon with =em= / =emg= |
+| Ad-hoc edit in an SSH session        | =emacs -Q -nw=         |
+| Debugging a configuration regression | =just run-built-debug= |

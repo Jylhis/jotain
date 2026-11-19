@@ -1,0 +1,60 @@
+#+TITLE: Whole-repo review queue
+#+DESCRIPTION: Review every file of a project, or a pull request, with an Org-backed queue and marginal notes.
+
+* Whole-repo review queue
+:PROPERTIES:
+:CUSTOM_ID: review
+:END:
+
+=lisp/repo-review.el= is a standalone package that =init-review.el= wires in. It supports a review of a complete repository instead of a diff. It builds a per-project Org queue with one =TODO= headline per project file. You open each file read-only, annotate it and mark the headline done. The package never changes the reviewed sources.
+
+** Whole repository
+:PROPERTIES:
+:CUSTOM_ID: review-repo
+:END:
+
+=C-x p R= (=repo-review-start=) opens the queue of the current project and builds it on first use. The file list comes from =project-files=, so =.gitignore= applies. =C-u= asks for confirmation, discards all review state and rebuilds. =g= appends files added since the queue was built.
+
+Each project keeps its queue under =var/repo-review/=, named after the project directory and a hash of its path. The first line of the file sets the major mode, the =#+review_root:= keyword records the project root, and each headline keeps its project-relative path in the =REVIEW_PATH= property. Absolute paths and paths that escape the root with =..= are rejected, so hand-edited queues must stay relative. Deleted files stay in the queue; mark them =SKIP=.
+
+** Pull and merge requests
+:PROPERTIES:
+:CUSTOM_ID: review-pr
+:END:
+
+=C-x p V= (=repo-review-pullreq=) opens a queue for a Forge pull request (GitHub) or merge request (GitLab). Run it in a Forge topic buffer, or anywhere in the project and enter the number. The queue lists the files the request changes against its merge base, and =RET= shows each as a read-only diff, never as a checkout. The revisions must exist locally, so run =forge-pull= or fetch first. Each request has its own queue and notes file, which reopening reuses.
+
+In a diff, =c= saves a comment on the added or unchanged line at point as a draft: a =Draft= sub-headline in the queue with the line in =DRAFT_LINE=. Nothing leaves your machine at this point. Comments on removed lines are not supported. =P= in the queue lists the unposted drafts and asks before it sends them through Ghub with the Forge token, one request each: a review comment on GitHub, a discussion with a diff position on GitLab. A posted draft gets a =POSTED= property and is never sent again. If a request fails, the earlier drafts stay posted and the rest stay drafts. The default posting function refuses to run in a batch session. If the request moved on, for example after a force push, delete the queue file and open the request again before posting.
+
+** Queue keys
+:PROPERTIES:
+:CUSTOM_ID: review-keys
+:END:
+
+| Key       | Command                                | What it does                                                     |
+|-----------+----------------------------------------+------------------------------------------------------------------|
+| =RET=     | =repo-review-visit=                    | Open the file in another window, read-only in =view-mode=        |
+| =e=       | =repo-review-visit-writable=           | Open the file for editing                                        |
+| =n= / =p= | Org heading motion                     | Next or previous headline                                        |
+| =N=       | =repo-review-next-todo=                | Next headline still =TODO= and not viewed                        |
+| =t=       | =org-todo=                             | Set the state: =TODO=, =REVIEWING=, =DONE=, =SKIP=               |
+| =v=       | =repo-review-toggle-viewed=            | Toggle the viewed tag                                            |
+| =m= / =u= | =repo-review-mark-viewed= / =-unmark-viewed= | Mark or unmark the file as viewed                          |
+| =P=       | =repo-review-post-comments=            | Post the drafts of a pull request queue                          |
+| =A=       | =repo-review-ai-check-draft=           | Ask gptel for advice on the draft at point                       |
+| =g=       | =repo-review-refresh=                  | Append files new since the last scan                             |
+| =/=       | =org-sparse-tree=                      | Filter, for example to show only =TODO= files                    |
+| =q=       | =quit-window=                          | Close the queue                                                  |
+
+The viewed tag lives in the queue file, so it survives restarts, =g= and changes of the =TODO= state. Marking a file records its content (the SHA-1 of the file, or the blob at the head revision in a pull request queue) in =VIEWED_REV=. When you open the queue or press =g=, a file whose content changed loses its mark. Set =repo-review-mark-viewed-on-visit= to mark files when you open them.
+
+** AI assistance and notes
+:PROPERTIES:
+:CUSTOM_ID: review-ai
+:END:
+
+gptel is optional. In a pull request diff, =a= (=repo-review-ai-draft-comment=) sends the hunk at point to the model and opens the answer in the minibuffer for you to edit. On a draft in the queue, =A= asks for advice on clarity and tone and leaves the draft alone. Both send diff or comment text to the provider gptel uses, and neither posts. =repo-review-ai-function= selects another client and =repo-review-ai-max-chars= limits the hunk size.
+
+Files visited from the queue enable =org-remark-mode=. Highlights and comments collect in a notes file beside the queue (=<project>-<hash>-notes.org=), never in the source tree. Set =repo-review-use-org-remark= to nil to disable it.
+
+Other options: =repo-review-queue-dir=, =repo-review-source-extensions=, =repo-review-exclude-regexp=, =repo-review-post-function= and =repo-review-ai-system-prompt=. =M-x customize-group RET repo-review RET= lists them.

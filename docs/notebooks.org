@@ -1,0 +1,75 @@
+#+TITLE: Notebooks with Org Babel
+#+DESCRIPTION: Use Org mode as a literate notebook in Jotain: the C-c b keys, the evaluation trust check and the Python defaults.
+
+* Notebooks with Org Babel
+:PROPERTIES:
+:CUSTOM_ID: notebooks
+:END:
+
+Org Babel turns an =.org= file into a notebook: prose, executable source blocks and their output in one plain-text document. Jotain configures it in =lisp/init-org.el=. There is no separate mode. Everything about blocks, header arguments, sessions, results, export and tangling is Org's own, documented in [[info:org#Working with Source Code]]. This chapter covers what Jotain adds.
+
+** The C-c b prefix
+:PROPERTIES:
+:CUSTOM_ID: notebooks-keys
+:END:
+
+=C-c C-c= runs the block at point. Everything wider is under =C-c b= in Org buffers:
+
+| Key       | Command                                               | What it does                                           |
+|-----------+-------------------------------------------------------+--------------------------------------------------------|
+| =C-c b b= | =org-babel-execute-buffer=                            | Run every block in the file                            |
+| =C-c b e= | =org-babel-execute-subtree=                           | Run every block under the current heading              |
+| =C-c b r= | =jotain-org-babel-restart-session-and-execute-buffer= | Kill the session of the block at point, then run the buffer |
+| =C-c b s= | =org-babel-switch-to-session=                         | Jump into the REPL behind the block at point           |
+| =C-c b k= | =org-babel-remove-result-one-or-many=                 | Clear results; with a prefix argument, the whole buffer |
+| =C-c b t= | =org-babel-tangle=                                    | Write the blocks out to source files                   |
+
+Org's own =C-c C-v= map is unchanged. =C-c '= edits a block in a buffer of its language's major mode, with LSP and formatting.
+
+** Notebook defaults
+:PROPERTIES:
+:CUSTOM_ID: notebooks-defaults
+:END:
+
+- Python blocks default to =:results output=, because notebooks print things and Org's own default (=value=) shows nothing unless the block returns. See [[info:org#Results of Evaluation]].
+- Inline images are redisplayed after every run and capped at 600 pixels wide.
+- Export never re-runs code (=:eval never-export=) and shows both code and results (=:exports both=). See [[info:org#Exporting Code Blocks]].
+- Source-block editing preserves indentation (=org-src-preserve-indentation=), which Python needs because re-indenting corrupts blocks where whitespace is syntax. See [[info:org#Extracting Source Code]] for tangling.
+- Each language that =jotain-org-babel-languages= enables is backed by an =ob-*= library that ships with Org, so no block depends on an extra package. =test/test-org-babel.el= requires each one, so a language that moves out of Org fails CI instead of a block months later. Add a language by editing the list. See [[info:org#Languages]]. Enabling a language does not provide its interpreter: Python, R, gnuplot and dot come from the project environment, like the language servers. See [[info:org#Environment of a Code Block]] for sessions and variables.
+
+** Evaluation trust
+:PROPERTIES:
+:CUSTOM_ID: notebooks-trust
+:END:
+
+Org confirms every block evaluation by default. Jotain replaces the blanket prompt with a trust check, =jotain-org-babel-confirm-evaluate=. A file is trusted when it is under =org-directory= (the notes tree, =jotain-notes-directory=, shared with =org-capture=, =org-roam= and =denote=) or inside the current project. Trusted files evaluate without a prompt. Any other file, such as a download or an attachment, still asks for each block. To restore Org's behaviour, run =(setopt org-confirm-babel-evaluate t)=.
+
+** Python and IPython
+:PROPERTIES:
+:CUSTOM_ID: notebooks-python
+:END:
+
+=init-lang-python.el= uses =ipython= as the REPL, for =run-python= and for =:session= blocks, when it is on =PATH=, and =python3= otherwise. Blocks without a session always use plain =python3= (=org-babel-python-command=), because a one-shot block handed an interactive =ipython -i= would wait for input instead of returning.
+
+** Structure templates
+:PROPERTIES:
+:CUSTOM_ID: notebooks-templates
+:END:
+
+=org-tempo= expands =<KEY= followed by =TAB=. Jotain adds these to Org's own (see [[info:org#Structure Templates]]):
+
+| Key    | Expands to                                              |
+|--------+---------------------------------------------------------|
+| =<py=  | =#+begin_src python=                                    |
+| =<jp=  | =#+begin_src python :session notebook :results output=  |
+| =<sh=  | =#+begin_src bash=                                      |
+| =<el=  | =#+begin_src emacs-lisp=                                |
+| =<sql= | =#+begin_src sql=                                       |
+| =<dot= | =#+begin_src dot :file diagram.png=                     |
+
+** Notebook limits
+:PROPERTIES:
+:CUSTOM_ID: notebooks-limits
+:END:
+
+This is Org Babel and not a Jupyter client: there are no kernels, no =.ipynb= files and no rich output beyond images and tables. For those, the [[https://github.com/emacs-jupyter/jupyter][emacs-jupyter]] package works alongside it, but Jotain does not ship it because it needs the =zmq= module and a =jupyter= binary at run time. Blocks run synchronously and block Emacs, so for long computations use a =:session= and watch the REPL with =C-c b s=.

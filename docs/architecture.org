@@ -1,0 +1,126 @@
+#+TITLE: Architecture
+#+DESCRIPTION: How the Jotain repository is laid out, how Emacs starts, how modules and packages are organised, and what the Nix layer builds.
+
+* Architecture
+:PROPERTIES:
+:CUSTOM_ID: architecture
+:END:
+
+Jotain has two layers. The Emacs Lisp layer configures the editor, and the Nix layer builds Emacs, its packages and the manuals. =AGENTS.md= in the repository root holds the full contributor rules.
+
+** Layout
+:PROPERTIES:
+:CUSTOM_ID: layout
+:END:
+
+| Path                                            | Purpose                                                                  |
+|-------------------------------------------------+--------------------------------------------------------------------------|
+| =early-init.el=, =init.el=                      | Entry points                                                             |
+| =lisp/=                                         | One =init-*.el= module per concern, plus =devenv.el= and =repo-review.el= |
+| =flake.nix=, =default.nix=, =shell.nix=         | Flake wiring, flake-compat entry point, =nix-shell= entry point          |
+| =overlay.nix=                                   | Standalone overlay that wraps =nix/mk-overlay.nix=                       |
+| =module.nix=, =module-system.nix=               | Home Manager module and NixOS module                                     |
+| =nix/=                                          | Overlay, checks, development shell, manual and site builds, extra packages |
+| =docs/=, =website/=                             | Manual sources and the shell of the documentation site                   |
+| =test/=                                         | ERT tests, every =*.el= is loaded by the =elisp-test= check              |
+| =templates/=, =config/=, =etc/=, =bench/=, =scripts/= | Tempel templates, ECA defaults, debug harness and registries, startup benchmark, pin updates |
+
+=lisp/devenv.el= and =lisp/repo-review.el= are standalone packages with their own namespaces and no =jotain-= dependencies. =lisp/init-devenv.el= and =lisp/init-review.el= wire them in.
+
+** Startup
+:PROPERTIES:
+:CUSTOM_ID: startup
+:END:
+
+*** early-init.el
+:PROPERTIES:
+:CUSTOM_ID: early-init
+:END:
+
+=early-init.el= runs before =package.el= and before the first frame, so it holds only what has to happen that early. The choices specific to Jotain:
+
+- The startup garbage collection threshold is set to =most-positive-fixnum= so no collection runs while the configuration loads. =init-core= restores a working value afterwards. See [[info:elisp#Garbage Collection]].
+- Bidirectional reordering is disabled, because Jotain targets left-to-right text and the reordering costs time on every redisplay in large files.
+- =use-package-always-ensure= is =t=, so every =use-package= block installs a missing package. Built-ins and packages that Nix puts on =load-path= need =:ensure nil=, which also keeps startup free of network access. See [[info:use-package#Top]].
+- =package-quickstart-file= is pinned to =var/package-quickstart.el=. It has to be set here, because =startup.el= activates packages between =early-init.el= and =init.el= using whatever path the variable holds at that moment. The quickstart file caches absolute =/nix/store= paths, so =early-init.el= deletes it whenever a hash of =EMACSLOADPATH= (stored in =var/package-quickstart.gen=) shows that the Nix deployment changed. See [[info:emacs#Package Installation]].
+- The tool bar and scroll bars are switched off in =default-frame-alist= before the first frame exists, which is cheaper than toggling the modes afterwards.
+- The native-compilation cache is redirected to =var/eln-cache/=, and background compilation uses at most half the cores (one to three jobs). =JOTAIN_ELN_PATH=, set by the Home Manager wrapper and by =just run-built-fast=, is appended to =native-comp-eln-load-path= so ahead-of-time compiled files load from the store while JIT output keeps going to the first writable entry, the =var/= cache. See [[info:elisp#Native-Compilation]].
+- =xterm-ghostty= is aliased to =xterm-256color= in =term-file-aliases=. Emacs ships no =term/xterm-ghostty.el=, and the alias restores =modifyOtherKeys= and 24-bit colour. It has to be set before =init.el= because terminal initialisation runs first.
+- =JOTAIN_PROFILE_STARTUP=, when set, turns on =use-package-compute-statistics=, so =M-x use-package-report= shows per-block timings.
+
+*** init.el
+:PROPERTIES:
+:CUSTOM_ID: init-el
+:END:
+
+=init.el= is short. It registers MELPA and NonGNU ELPA as fallback archives, puts =lisp/= on =load-path=, points =custom-file= at =var/custom.el=, and requires each module in order. After the modules it enables Emacs 31's =newcomers-presets= theme through =jotain-ui-enable-newcomers-presets=, which supplies defaults such as savehist, recentf, which-key and electric pairs. A module does not restate a setting that the theme already provides.
+
+Archives are never refreshed at startup. A download happens only when =package-install= finds the archive cache empty, or when you run =M-x package-refresh-contents= or =M-x list-packages=. A Nix deployment, where every package is already on =load-path=, starts without contacting any server, and a flaky network cannot take a daemon down at launch.
+
+=var/custom.el= is write-only. Jotain never loads it, so git stays the single source of truth and =M-x customize= still has somewhere to write.
+
+** Modules
+:PROPERTIES:
+:CUSTOM_ID: modules
+:END:
+
+Each module is =lisp/init-<concern>.el=. It starts with a =lexical-binding: t= cookie and ends with =(provide 'init-<concern>)=. =init.el= requires the modules in this order:
+
+#+INCLUDE: "../init.el" src emacs-lisp :lines "39-74"
+
+Conventions:
+
+- A package that enhances a built-in lives in the same file as that built-in. =dirvish= is in =init-navigation.el= with =dired=, and =magit= is in =init-vc.el= with =vc=. There is no split into built-in and third-party files, and the layout should not move toward one.
+- =vertico=, =marginalia=, =orderless=, =consult=, =corfu= and =cape= share =init-completion.el=, because a change to one of them almost always means a change to the others.
+- Global bindings that belong to no package are in =init-keys.el=. Every other binding sits in the =use-package= block of its package.
+- =init-project.el= holds two project command systems that complement each other: =projection= (project types and commands detected from Makefiles, justfiles and =Cargo.toml=) and =compile-multi= (named per-mode commands such as "go test" or "nix flake check"). Neither covers the other fully.
+- Language servers and formatters are configured in =init-prog.el=: the per-language =eglot-ensure= hooks and the =apheleia= formatters. Eglot also starts for any project file whose server is on the project's =PATH=. The =init-lang-*.el= files hold only mode regexps and language tweaks.
+- =init-lang-nix=, =-rust=, =-python=, =-go=, =-kotlin= and =-qml= have their own files. The other languages are grouped in =init-lang-web=, =-devops=, =-data= and =-systems=. A language gets its own file when its configuration grows enough, as Go did with its gopls workspace settings, test helpers and debugging.
+- =init-snippets.el= uses =tempel=, because it plugs into =completion-at-point-functions= and shares an author with the vertico, corfu and cape stack. Templates live in =templates/jotain.eld= keyed by major mode, so adding one never touches Lisp.
+- =init-docs.el= registers the bundled =jotain.info= for =C-h i= in a source checkout. Nix installs set =INFOPATH= in the wrapper and do not need it.
+- Options defined with =defcustom= are set with =setopt=, not =setq=, so =:set= callbacks and type validation run. See [[info:elisp#Setting Variables]].
+- Global symbols carry the =jotain-= prefix and internals =jotain--=. Jotain targets Emacs 31.1, so modules use its APIs without version guards. The configuration is Linux only.
+
+To add a module, create =lisp/init-<concern>.el=, end it with =provide=, add a =require= at the right point in =init.el=, and run =nix flake check=. The =elisp-lint= check verifies the parentheses and =elisp-compile= byte-compiles with warnings as errors.
+
+** Packages
+:PROPERTIES:
+:CUSTOM_ID: packages
+:END:
+
+Jotain combines =use-package= with Nix. Nix puts the packages on =load-path=, so =use-package= finds them without network access. Packages come from four places:
+
+- Emacs itself. Built-in packages carry =:ensure nil=.
+- The emacs-overlay package set. The distribution scans the =use-package= forms in =lisp/= with =nix/use-package.nix= and maps them to packages through emacs-overlay's =emacsWithPackagesFromUsePackage=. See the [[https://github.com/nix-community/emacs-overlay][emacs-overlay README]].
+- Packages that are in no archive, built with =trivialBuild= from pinned revisions in =nix/extra-packages.nix= and listed in =nix/nix-provided-packages.nix=. Their =use-package= forms carry =:ensure nil=. The file also holds a few overrides: empty shims for =xref=, =project=, =eglot= and =flymake=, so that stale GNU ELPA copies pulled in as dependencies cannot shadow the Emacs 31 versions, and an Elisp-only =ghostel= whose native module downloads at run time.
+- MELPA and NonGNU ELPA, as the fallback for a scanned package that Nix does not provide. Outside Nix this is the normal path.
+
+The scanner reads the Lisp text with a regular expression and does not evaluate it. Write =use-package= forms out literally: a macro that generates them is invisible to the scan, and a form nested in another form's =:config= is not found. A form with =:disabled= is dropped from the Nix package set even when the value would be nil at run time. The =scanner-fidelity= check compares the scanner with the Emacs reader.
+
+The distribution includes every tree-sitter grammar from nixpkgs. nixpkgs' =site-start.el= points =treesit-extra-load-path= at them, and =init-prog.el= passes the path on to asynchronous native-compilation workers, which run without site files.
+
+** Nix layer
+:PROPERTIES:
+:CUSTOM_ID: nix-layer
+:END:
+
+Jotain builds one Emacs: emacs-overlay's =emacs-unstable-pgtk= (the pgtk GUI on =x86_64-linux=), which the nix-community binary cache provides. To use another Emacs, override =services.jotain.package= or the overlay's =jotainEmacs=.
+
+The overlay in =nix/mk-overlay.nix= defines:
+
+- =jotainEmacs=: the Emacs build.
+- =jotainEmacsPackages=: the full distribution, which is Emacs with the scanned packages and all tree-sitter grammars. A wrapper adds the runtime dependencies to =PATH= (formatters, =delta=, =mergiraf= and similar; see =nix/runtime-deps.nix=), appends =jotainInfo= to =INFOPATH= so that =C-h i d m Jotain RET= works, and sets a default =ASPELL_CONF= for the bundled English, Finnish, German and French dictionaries (=nix/spell-conf.nix=).
+- =jotainInfo=: this manual as an Info file.
+- =eca=: the prebuilt ECA server that =lisp/init-ai.el= uses.
+- =likec4Lsp=: the =@likec4/lsp= server for the in-tree LikeC4 mode.
+
+=flake.nix= only wires things together. Its outputs are =packages.x86_64-linux= (=default=, =emacs=, =info=, =likec4-lsp=, the documentation and site builds), =legacyPackages= (every bundled package under =emacs-packages=, plus the compiled configuration used by =just run-built-fast=), a development shell, =overlays.default=, =homeManagerModules.default=, =nixosModules.default=, =formatter=, =lib= (the scanner) and =checks=. Both modules apply the Jotain overlay over emacs-overlay, so module installs resolve the same Emacs and package snapshot that CI builds.
+
+=default.nix= wraps the flake with flake-compat, so =nix-build= builds the distribution. =shell.nix= exposes the development shell to =nix-shell=.
+
+*** Pinning
+:PROPERTIES:
+:CUSTOM_ID: pinning
+:END:
+
+=flake.lock= is the source of truth for flake inputs; =nix flake update= bumps it. Some upstreams are pinned by hand in the Nix files and are not in the lock file: the GitHub-built Emacs packages in =nix/extra-packages.nix=, the ECA server, the vendored npm language server and the design pin that supplies the themes (=nix/design-pin.nix=). =just update-pins= bumps them with [[https://github.com/Mic92/nix-update][nix-update]] and a few bespoke steps; pass pin names to limit it, for example =just update-pins combobulate eca=, and run =scripts/update-pins.sh --list= for the names. Two pins stay manual: =ghostel= and the vendored =etc/elisp-doc=.
