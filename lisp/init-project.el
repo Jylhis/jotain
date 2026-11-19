@@ -50,11 +50,6 @@ Labels include the parent root, so same-named projects stay distinct."
           (project-remember-project proj))
         (project-switch-project dir)))))
 
-;;; @doc Built-in project tracker. The extra root markers make a
-;;; directory with, e.g., `flake.nix` or `go.mod` a project root, even
-;;; without VCS or inside a larger repository. The project list lives
-;;; under var/. `C-x p P` scans `jotain-repositories-roots` to add and
-;;; open projects not yet known.
 (use-package project
   :ensure nil
   :bind (:map project-prefix-map ("P" . jotain-find-projects-and-switch))
@@ -69,10 +64,6 @@ Labels include the parent root, so same-named projects stay distinct."
    '(".project" "package.json" "Cargo.toml" "pyproject.toml" "flake.nix"
      "devenv.nix" "go.mod" "settings.gradle.kts" "settings.gradle")))
 
-;;; @doc project.el backend for the Nix (and Guix) store: each store
-;;; directory is a project root, so `project-find-file` works while
-;;; reading a dependency's source. Store paths stay out of the saved
-;;; project list.
 (use-package project-nix-store
   :ensure nil
   :after project
@@ -83,11 +74,8 @@ Labels include the parent root, so same-named projects stay distinct."
   :config
   (add-to-list 'project-list-exclude #'project-nix-store-p))
 
-;;;; projection — per-project commands keyed off .dir-locals.el
+;;;; projection
 
-;;; @doc Per-project commands (configure, build, test, run, package,
-;;; install) under C-x P, auto-detected from Makefile/justfile/Cargo.toml
-;;; and friends and overridable from `.dir-locals.el`.
 (use-package projection
   :hook (after-init . global-projection-hook-mode)
   :bind-keymap ("C-x P" . projection-map)
@@ -101,25 +89,19 @@ Labels include the parent root, so same-named projects stay distinct."
                  projection-commands-install-project))
     (put sym 'safe-local-variable #'stringp)))
 
-;;; @doc Bridges projection with compile-multi: `C-x p RET` picks from
-;;; every named compile command available in this project.
 (use-package projection-multi
   :after projection
   :bind (:map project-prefix-map
               ("RET" . projection-multi-compile)))
 
-;;; @doc Embark actions on projection-multi entries.
 (use-package projection-multi-embark
   :after (embark projection-multi)
   :functions (projection-multi-embark-setup-command-map)
   :demand t
   :config (projection-multi-embark-setup-command-map))
 
-;;;; compile-multi — named compile commands per major mode
+;;;; compile-multi
 
-;;; @doc Per-major-mode picker for named compile commands ("go test",
-;;; "pytest file", "nix flake check", …). Complements projection; neither
-;;; fully covers the other.
 (use-package compile-multi
   :defer t
   :commands (compile-multi)
@@ -186,19 +168,16 @@ Labels include the parent root, so same-named projects stay distinct."
          ("cmake build"     . "cmake --build build")
          ("ctest"           . "ctest --test-dir build --output-on-failure"))))))
 
-;;; @doc Renders compile-multi pickers through consult.
 (use-package consult-compile-multi
   :after compile-multi
   :functions (consult-compile-multi-mode)
   :demand t
   :config (consult-compile-multi-mode))
 
-;;; @doc Nerd-font icons for compile-multi entries by command type.
 (use-package compile-multi-nerd-icons
   :after (compile-multi nerd-icons-completion)
   :demand t)
 
-;;; @doc Embark actions on compile-multi entries.
 (use-package compile-multi-embark
   :after (embark compile-multi)
   :functions (compile-multi-embark-mode)

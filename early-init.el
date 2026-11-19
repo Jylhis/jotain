@@ -80,7 +80,6 @@
 (setq frame-inhibit-implied-resize t)
 
 (setq inhibit-startup-screen t
-      inhibit-startup-message t
       inhibit-startup-echo-area-message user-login-name
       initial-scratch-message nil)
 
@@ -95,7 +94,6 @@
 ;; default: since 30, `native-comp-async-warnings-errors-kind' limits them
 ;; to errors and important warnings, and NEWS.30 advises against silencing
 ;; them.
-(defvar native-comp-speed nil)
 (defvar native-comp-async-jobs-number 0)
 ;; A defcustom in the not-yet-loaded comp-run.el: pre-declare it so the
 ;; value set below survives its later defcustom.
@@ -105,9 +103,7 @@
   ;; Async jobs: half the logical cores, clamped to 1..3. The cap keeps
   ;; a background recompile from starving redisplay and input on big
   ;; machines; small hosts (2-core VMs) get one job.
-  (setq native-comp-speed 2
-        native-comp-async-jobs-number (max 1 (min 3 (/ (num-processors) 2)))
-        ;; No background native compilation on battery.
+  (setq native-comp-async-jobs-number (max 1 (min 3 (/ (num-processors) 2)))
         native-comp-async-on-battery-power nil)
   (startup-redirect-eln-cache
    (convert-standard-filename

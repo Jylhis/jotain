@@ -2,28 +2,10 @@
 
 ;;; Commentary:
 
-;; AI tool hierarchy:
-;;
-;;   claude-code-ide  C-c q         Agentic editing — autonomous multi-file
-;;                                  changes via the Claude Code CLI.
-;;
-;;   jotain-screenshot              Capture the frame to var/screenshots/;
-;;                                  also the `emacs_screenshot' MCP tool,
-;;                                  so Claude can see Emacs.
-;;
-;;   eca              C-c e         Editor Code Assistant — chat, inline
-;;                                  completion, rewrite, and MCP through an
-;;                                  external `eca' server (C-c . for the menu
-;;                                  inside eca windows).
-;;
-;;   gptel            C-c s         Send region/buffer to an LLM.
-;;                    C-c S         Full menu (model, backend, system prompt).
-;;
-;;   mcp              M-x mcp-connect-server + gptel-mcp-connect
-;;                                  Model Context Protocol tool use via gptel.
-;;                                  `devenv-mcp-setup' (init-devenv, C-c v M)
-;;                                  registers the project's `devenv mcp'
-;;                                  server here.
+;; AI assistants: claude-code-ide (C-c q), eca (C-c e), gptel (C-c s, C-c S),
+;; mcp, and `jotain-screenshot', which is also the `emacs_screenshot' MCP
+;; tool so Claude can see Emacs.  `devenv-mcp-setup' (init-devenv)
+;; registers the project's `devenv mcp' server with mcp.el.
 ;;
 ;; Auth: API keys (OPENROUTER_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY)
 ;; come from the environment, falling back to auth-source (1Password via
@@ -35,12 +17,11 @@
 
 ;;; Code:
 
-;;;; Frame screenshots for AI tooling
-;;
+;;;; Frame screenshots
+
 ;; `x-export-frames' needs a graphical frame; a daemon also serves tty frames.
 
 (declare-function x-export-frames "xfns.c" (&optional frames type))
-(declare-function jotain-var-file "init-core" (name))
 (declare-function auth-source-pick-first-password "auth-source" (&rest spec))
 
 (defun jotain-screenshot (&optional file format)
@@ -67,16 +48,12 @@ Interactively, echo the path and push it onto the kill ring."
       (message "Screenshot: %s" file))
     file))
 
-;;; @doc Agentic multi-file editing through the Claude Code CLI; C-c q
-;;; opens its menu. Attached sessions also get an `emacs_screenshot` MCP
-;;; tool. Provided by Nix (manzaltu/claude-code-ide.el is not on MELPA).
 (use-package claude-code-ide
   :ensure nil
   :defer t
   :bind ("C-c q" . claude-code-ide-menu)
   :functions (claude-code-ide-emacs-tools-setup claude-code-ide-make-tool)
   :custom
-  ;; Serve custom MCP tools (emacs_screenshot) to attached sessions.
   (claude-code-ide-enable-mcp-server t)
   :config
   (claude-code-ide-emacs-tools-setup)
@@ -111,22 +88,12 @@ are skipped."
                              :host host :user user)))
           (setenv var secret))))))
 
-;;; @doc Editor Code Assistant: AI pair-programming client (chat, inline
-;;; completion, rewrite, MCP) talking to an external `eca` server over
-;;; JSONRPC. The server binary is on the wrapper PATH, so nothing is
-;;; downloaded. Missing provider keys are exported from auth-source before
-;;; a session starts. C-c e starts a session and opens the chat.
 (use-package eca
   :defer t
   :bind ("C-c e" . eca)
   :init
   (advice-add 'eca :before #'jotain-ai-export-api-keys))
 
-;;; @doc Conversational LLM front-end. The default backend is Claude on the
-;;; direct Anthropic API; OpenRouter (an OpenAI-compatible aggregator behind
-;;; one key), Gemini and local Ollama backends are selectable from the C-c S
-;;; menu. C-c s sends. Keys come
-;;; from the environment, then auth-source.
 (use-package gptel
   :defer t
   :functions (gptel-make-openai gptel-make-anthropic gptel-make-gemini
@@ -180,9 +147,6 @@ are skipped."
     :host "localhost:11434"
     :models '(llama3.1:latest)))
 
-;;; @doc Model Context Protocol client: lets gptel call tools on
-;;; registered MCP servers. Loaded on demand (M-x mcp-connect-server,
-;;; `devenv-mcp-setup`).
 (use-package mcp
   :defer t)
 

@@ -11,7 +11,7 @@
   "User-facing UI knobs for the configuration."
   :group 'convenience)
 
-;;;; Theme — Jylhis light/dark, switched by system appearance
+;;;; Theme
 
 (defcustom jotain-theme-light 'jylhis-light
   "Theme to use when the system is in light mode.
@@ -72,9 +72,6 @@ REASON is reported so the downgrade is visible in *Messages*."
           (load-theme jotain-theme-dark t t))
       (error (jotain-ui--fall-back-to-modus (error-message-string err))))))
 
-;;; @doc Flips between `jotain-theme-light` and `jotain-theme-dark`
-;;; following the system appearance (GNOME, or anything exposing
-;;; a dark/light setting). C-c t toggles manually.
 (use-package auto-dark
   :demand t
   :bind ("C-c t" . auto-dark-toggle-appearance)
@@ -157,8 +154,6 @@ on `window-selection-change-functions' (switching between frames)."
         (setopt doom-modeline-icon icons)
         (force-mode-line-update t)))))
 
-;;; @doc A dense, IDE-style modeline with LSP/eglot status, project
-;;; buffer info, and Nerd Font glyphs. Enabled after init.
 (use-package doom-modeline
   :hook (after-init . doom-modeline-mode)
   :custom
@@ -242,7 +237,7 @@ attributes are applied globally so all frames see the update."
 (add-hook 'server-after-make-frame-hook #'jotain-ui-apply-font)
 
 (defcustom jotain-emoji-font-preferences
-'("Noto Color Emoji" "Segoe UI Emoji" "Symbola")
+  '("Noto Color Emoji" "Segoe UI Emoji" "Symbola")
   "Ordered list of family names to try for the `emoji' and `symbol' charsets.
 The first installed family wins.  The Home Manager and NixOS modules
 install Noto Color Emoji."
@@ -265,16 +260,8 @@ availability on the right display."
 (jotain-ui-apply-emoji-font)
 (add-hook 'server-after-make-frame-hook #'jotain-ui-apply-emoji-font)
 
-;;; @doc Built-in emoji picker: `C-x 8 e e' inserts by name, `C-x 8 e s'
-;;; searches, `C-x 8 e l' lists all, `C-x 8 e d' describes the emoji at
-;;; point.
-(use-package emoji
-  :ensure nil
-  :defer t)
+;;;; Display tweaks
 
-;;;; Built-in display tweaks
-
-;; Don't draw cursors in non-focused windows.
 (setopt cursor-in-non-selected-windows nil)
 
 (defcustom jotain-line-numbers-in-prog t
@@ -287,21 +274,10 @@ availability on the right display."
   (when jotain-line-numbers-in-prog
     (display-line-numbers-mode 1)))
 
-;;; @doc Built-in line numbers in programming and config buffers only,
-;;; not prose or Org. Toggle with `jotain-line-numbers-in-prog'.
 (use-package display-line-numbers
   :ensure nil
   :hook ((prog-mode conf-mode) . jotain-ui--maybe-line-numbers))
 
-;;; @doc Scrolling, tuned after James Cherti's "Enhancing Emacs
-;;; Scrolling" (jamescherti.com). The newcomers-presets theme turns on
-;;; `pixel-scroll-mode', which smooths mouse-wheel scrolling.
-;;; `fast-but-imprecise-scrolling' skips exact fontification on large
-;;; jumps. `scroll-conservatively' 20 scrolls just enough to keep point
-;;; visible instead of recentering; `auto-window-vscroll' nil avoids
-;;; half-screen jumps on long lines; `scroll-error-top-bottom' moves point
-;;; to the buffer edge before signalling; the `hscroll-*' pair scrolls
-;;; horizontally one column at a time.
 (use-package pixel-scroll
   :ensure nil
   :custom
@@ -312,14 +288,10 @@ availability on the right display."
   (hscroll-margin 2)
   (hscroll-step 1))
 
-;;; @doc Built-in current-line highlight in code, config, and prose
-;;; buffers only.
 (use-package hl-line
   :ensure nil
   :hook ((prog-mode conf-mode text-mode) . hl-line-mode))
 
-;;; @doc Built-in matching-paren highlight, quick to appear, also when
-;;; point is just inside a paren or in a line's leading/trailing space.
 (use-package paren
   :ensure nil
   :hook (after-init . show-paren-mode)
@@ -328,15 +300,11 @@ availability on the right display."
   (show-paren-when-point-inside-paren t)
   (show-paren-when-point-in-periphery t))
 
-
-;;; @doc Built-in calendar with ISO week numbers and a Monday week
-;;; start.
 (use-package calendar
   :ensure nil
   :defer t
-  :custom (calendar-week-start-day 1) ; Monday
+  :custom (calendar-week-start-day 1)
   :config
-  ;; ISO week numbers in the gutter.
   (copy-face 'font-lock-constant-face 'calendar-iso-week-face)
   (set-face-attribute 'calendar-iso-week-face nil :height 0.7)
   (setopt calendar-intermonth-text
@@ -348,8 +316,6 @@ availability on the right display."
 
 ;;;; Icons (Nerd Font glyphs in dired, ibuffer, corfu, marginalia)
 
-;;; @doc Nerd Font glyphs for the nerd-icons-* family. The font family
-;;; comes from `jotain-font-preferences` so icons match the editor face.
 (use-package nerd-icons
   ;; Deferred: doom-modeline pulls it in at after-init, and the :after
   ;; chains below (corfu/completion/ibuffer glue) follow it there.
@@ -370,42 +336,32 @@ exists when a daemon loads the config."
   (jotain-ui--apply-nerd-icons-font)
   (add-hook 'server-after-make-frame-hook #'jotain-ui--apply-nerd-icons-font))
 
-;;; @doc Kind-specific glyphs in the corfu candidate margin.
 (use-package nerd-icons-corfu
   :after (nerd-icons corfu)
   :functions (nerd-icons-corfu-formatter)
   :config
   (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
 
-;;; @doc Adds Nerd-Font icons to marginalia annotations (file/buffer
-;;; category icons in completion lists).
 (use-package nerd-icons-completion
   :after (nerd-icons marginalia)
   :config
   (nerd-icons-completion-mode)
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
-
-;;; @doc Nerd Font glyphs in ibuffer rows, by buffer type.
 (use-package nerd-icons-ibuffer
   :after nerd-icons
   :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
 
 ;;;; Polish packages
 
-;;; @doc Highlights TODO / FIXME / HACK / NOTE / XXX keywords in code.
 (use-package hl-todo
   :hook (prog-mode . hl-todo-mode)
   :custom
   (hl-todo-highlight-punctuation ":"))
 
-;;; @doc Header line showing project, file, and the enclosing
-;;; definitions at point.
 (use-package breadcrumb
   :hook (prog-mode . breadcrumb-local-mode))
 
-;;; @doc Pulses the current line after a jump (other-window, xref,
-;;; consult-line) so the eye finds the cursor.
 (use-package pulsar
   :hook (after-init . pulsar-global-mode)
   :custom
@@ -416,7 +372,6 @@ exists when a daemon loads the config."
      xref-find-definitions xref-find-references xref-go-back
      consult-line consult-goto-line imenu)))
 
-;;; @doc Colours parens by nesting depth in Lisp buffers.
 (use-package rainbow-delimiters
   :hook ((lisp-mode emacs-lisp-mode) . rainbow-delimiters-mode))
 
@@ -432,8 +387,6 @@ exists when a daemon loads the config."
   (when jotain-indent-bars-enabled
     (indent-bars-mode 1)))
 
-;;; @doc Vertical indent guides for code, tree-sitter aware. Toggle with
-;;; `jotain-indent-bars-enabled'.
 (use-package indent-bars
   :custom (indent-bars-treesit-support t)
   :hook (prog-mode . jotain-ui--maybe-indent-bars))

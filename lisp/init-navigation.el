@@ -8,16 +8,9 @@
 
 ;;; Code:
 
-;;; @doc Built-in directory editor, the configuration's primary file manager.
-;;; `M-s R` previews a regex replacement across the marked files as a
-;;; unified diff. `!`/`&` suggest the OS default application
-;;; (`xdg-open`) for common document and media files; files can also be
-;;; dragged out to desktop apps with the mouse.
 (use-package dired
   :ensure nil
   :custom
-  (insert-directory-program "ls")
-  (dired-use-ls-dired t)
   ;; `v': natural number sort (foo2 before foo10).
   (dired-listing-switches "-alhv --group-directories-first")
   (dired-dwim-target t)
@@ -41,24 +34,15 @@
   (setopt dired-hide-details-hide-absolute-location t)
   ;; `!'/`&' suggest the OS default handler for documents, images and
   ;; media.
-  (when-let* ((opener (cond
-                       ((memq system-type '(gnu gnu/linux gnu/kfreebsd
-                                                berkeley-unix))
-                        "xdg-open")
-                       ((memq system-type '(cygwin windows-nt ms-dos))
-                        "start"))))
-    (setopt dired-guess-shell-alist-user
-            `(("\\.\\(?:docx\\|pdf\\|odt\\|odg\\|ods\\|djvu\\|eps\\)\\'" ,opener)
-              ("\\.\\(?:jpe?g\\|webp\\|png\\|gif\\|xpm\\)\\'" ,opener)
-              ("\\.xcf\\'" ,opener)
-              ("\\.tex\\'" ,opener)
-              ("\\.\\(?:mp4\\|mkv\\|m4a\\|avi\\|flv\\|rm\\|rmvb\\|ogv\\)\\(?:\\.part\\)?\\'"
-               ,opener)
-              ("\\.\\(?:mp3\\|flac\\)\\'" ,opener)))))
+  (setopt dired-guess-shell-alist-user
+          '(("\\.\\(?:docx\\|pdf\\|odt\\|odg\\|ods\\|djvu\\|eps\\)\\'" "xdg-open")
+            ("\\.\\(?:jpe?g\\|webp\\|png\\|gif\\|xpm\\)\\'" "xdg-open")
+            ("\\.xcf\\'" "xdg-open")
+            ("\\.tex\\'" "xdg-open")
+            ("\\.\\(?:mp4\\|mkv\\|m4a\\|avi\\|flv\\|rm\\|rmvb\\|ogv\\)\\(?:\\.part\\)?\\'"
+             "xdg-open")
+            ("\\.\\(?:mp3\\|flac\\)\\'" "xdg-open"))))
 
-;;; @doc Built-in dired extras. `dired-omit-mode` hides lock and
-;;; auto-save files, `.git`, `.DS_Store`, Syncthing folders, `__pycache__`
-;;; and flycheck/flymake temp files.
 (use-package dired-x
   :ensure nil
   :after dired
@@ -76,25 +60,17 @@
            "\\|^flycheck_.*"
            "\\|^flymake_.*")))
 
-;;; @doc Async file ops for dired: copy, rename, symlink and hardlink run
-;;; in a subprocess, so large copies do not freeze the UI.
 (use-package dired-async
   :ensure async
   :after dired
   :config (dired-async-mode 1))
 
-;;; @doc rsync from dired (`C-c C-r`), for very large transfers or TRAMP
-;;; endpoints: hands the marked files to `rsync` asynchronously with live
-;;; progress.
 (use-package dired-rsync
   :after dired
   :bind (:map dired-mode-map ("C-c C-r" . dired-rsync))
   :custom
   (dired-rsync-options "-az --progress --human-readable"))
 
-;;; @doc Built-in writable dired: C-c C-e makes the listing editable,
-;;; so files can be renamed and chmodded with normal editing. Save
-;;; (C-c C-c) to apply.
 (use-package wdired
   :ensure nil
   :after dired
@@ -102,34 +78,21 @@
   (wdired-allow-to-change-permissions t)
   :bind (:map dired-mode-map ("C-c C-e" . wdired-change-to-wdired-mode)))
 
-;;; @doc Extra dired colours by file type, permissions and more.
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
 
-;;; @doc Live-filter a dired buffer by typing a fragment after `/`.
 (use-package dired-narrow
   :after dired
   :bind (:map dired-mode-map ("/" . dired-narrow)))
 
-;;; @doc Browse the system trash. With `delete-by-moving-to-trash` set
-;;; in init-core, dired deletions are recoverable through `M-x trashed`.
 (use-package trashed
   :commands trashed
   :custom
   (trashed-action-confirmer 'y-or-n-p))
 
-;;; @doc Shortens `/nix/store/abc123-foo-1.0` to `…foo-1.0` in dired and
-;;; shell buffers.
 (use-package pretty-sha-path
   :hook ((dired-mode shell-mode) . pretty-sha-path-mode))
 
-;;; @doc Modern dired front-end with previews, side panels and miller
-;;; columns, replacing plain dired everywhere. C-c d opens it, C-c D a
-;;; docked side tree. `TAB` expands a directory inline and `<backtab>`
-;;; opens the subtree menu. The standalone `dired-subtree` package is
-;;; deliberately not loaded: it and dirvish's own subtree engine corrupt
-;;; each other's overlays. The side tree covers what speedbar would, so
-;;; speedbar is not wired up.
 (use-package dirvish
   :demand t
   :after dired
@@ -148,11 +111,8 @@
   :config
   (dirvish-override-dired-mode 1))
 
-;; Splitting resizes all sibling windows proportionally.
 (setopt window-combination-resize t)
 
-;;; @doc Built-in window-layout undo/redo. Makes `C-x 1` reversible
-;;; (see below).
 (use-package winner
   :ensure nil
   :config (winner-mode 1))

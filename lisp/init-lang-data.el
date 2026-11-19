@@ -32,57 +32,37 @@ enabled: mixed-pitch, visual-line wrapping, and jinx."
   (when (bound-and-true-p jinx-mode)
     (jinx-mode -1)))
 
-;;; @doc YAML major mode (MELPA), loaded on demand. YAML derives from
-;;; `text-mode' upstream, so we re-run `prog-mode-hook' to get line
-;;; numbers, flymake, indent guides and the rest of the code setup.
 (use-package yaml-mode
   :defer t
   :hook (yaml-mode . jotain-lang-data--enable-prog-mode-features))
 
-;;; @doc Built-in tree-sitter YAML mode. Same prog-mode hook tweak as
-;;; `yaml-mode'; a separate block so the built-in mode works without
-;;; `use-package-always-ensure' pulling in MELPA `yaml-mode'.
+;; A separate block so the built-in mode works without
+;; `use-package-always-ensure' pulling in MELPA `yaml-mode'.
 (use-package yaml-ts-mode
   :ensure nil
   :defer t
   :hook (yaml-ts-mode . jotain-lang-data--enable-prog-mode-features))
 
-;;; @doc JSON with comments (`.jsonc`, e.g. `wrangler.jsonc`). Emacs 31
-;;; routes only `.json` to `js-json-mode`, so `.jsonc` would open in
-;;; fundamental mode. `jotain-prog-ts-remaps` (init-prog.el) remaps the mode
-;;; to `json-ts-mode` when its grammar loads.
 (add-to-list 'auto-mode-alist '("\\.jsonc\\'" . js-json-mode))
 
-;;; @doc jq filter major mode (`.jq` files): syntax highlighting and
-;;; indentation for jq programs. The mode derives from `prog-mode', so
-;;; the usual programming features apply.
 (use-package jq-mode
   :mode "\\.jq\\'")
 
-;;; @doc KDL document language major mode (`.kdl` files): syntax
-;;; highlighting and indentation.
 (use-package kdl-mode
   :mode "\\.kdl\\'")
 
-;;; @doc CSV major mode. csv-align-mode aligns columns visually without
-;;; changing the file.
 (use-package csv-mode
   :mode "\\.csv\\'"
   :hook (csv-mode . csv-align-mode)
   :custom (csv-separators '("," ";" "|" "\t")))
 
-;;; @doc Syntax-aware indentation for SQL: SELECT lists, JOINs, and
-;;; CTEs.
 (use-package sql-indent
   :defer t)
 
-;;; @doc Jinja2 / Ansible / Saltstack templating syntax. Mode regex
-;;; covers `.j2`, `.jinja`, and `.jinja2`.
 (use-package jinja2-mode
   :mode (("\\.j2\\'"      . jinja2-mode)
          ("\\.jinja2?\\'" . jinja2-mode)))
 
-;;; @doc Major mode for gnuplot script files (`.plt`).
 (use-package gnuplot
   :mode ("\\.plt\\'" . gnuplot-mode))
 

@@ -23,13 +23,6 @@
 (defvar jotain-completion-snippets)
 (defvar jotain-completion-eglot-nonexclusive)
 
-;;; @doc Lightweight template/snippet engine from the corfu/cape author.
-;;; Templates are read from `templates/*.eld' (keyed by major mode).
-;;; `M-+' completes a snippet by name, `M-*' inserts one interactively;
-;;; `M-}'/`M-{' or `C-M-n'/`C-M-p' move between fields, `M-RET' finishes.
-;;; TAB indents and completes, never moves fields. Set
-;;; `jotain-completion-snippets' to nil to keep snippet names out of the
-;;; popup; `M-+' and `M-*' still work.
 (use-package tempel
   :functions (tempel-complete cape-capf-super cape-capf-buster
               cape-capf-nonexclusive eglot-completion-at-point eglot-managed-p)
@@ -88,9 +81,6 @@ plain tempel capf, and re-arm the merge for a reconnect."
   (when jotain-completion-snippets
     (add-hook 'eglot-managed-mode-hook #'jotain-tempel-eglot-capf)))
 
-;;; @doc Lets Tempel expand snippets sent by language servers (e.g.
-;;; argument placeholders). Enabled as soon as eglot loads, because it
-;;; must be on before eglot connects.
 (use-package eglot-tempel
   :after eglot
   :functions (eglot-tempel-mode)

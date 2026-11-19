@@ -192,12 +192,6 @@ detekt reads files only, so a modified buffer has no detekt findings."
 
 ;;;; Mode
 
-;;; @doc Tree-sitter Kotlin mode (MELPA, `kotlin' grammar) for `.kt'
-;;; sources and `.kts' Gradle scripts. The language server (eglot), ktfmt
-;;; (apheleia, on save) and kotlin-debug-adapter (dape) are wired in
-;;; init-prog; ktlint and detekt report through Flymake. `C-c C-t` runs
-;;; the Gradle test at point, of the class, or of the project; `C-c C-z`
-;;; opens the REPL. All Kotlin tooling comes from the project PATH.
 (use-package kotlin-ts-mode
   :mode "\\.kts?\\'"
   :hook (kotlin-ts-mode . jotain-kotlin--setup-flymake)

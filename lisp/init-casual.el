@@ -11,9 +11,6 @@
 
 ;;; Code:
 
-;;; @doc Discoverable Transient menus over built-in tools: dired, calc,
-;;; isearch, ibuffer, and Info.  Each menu is bound to `C-o' in its own
-;;; mode map (`<f2>' in isearch, whose `C-o' is already taken).
 (use-package casual
   :commands (casual-dired-tmenu
              casual-calc-tmenu

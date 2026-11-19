@@ -16,80 +16,38 @@
 
 ;;;; prog-mode
 
-;;; @doc Built-in `prog-mode` parent. Turns on the fill-column
-;;; indicator; hl-line and show-paren live in init-ui, as they apply
-;;; beyond code.
 (use-package prog-mode
   :ensure nil
   :hook
-  (prog-mode . display-fill-column-indicator-mode)
-  :config
-  ;; No warning face past the column.
-  (setopt display-fill-column-indicator-warning nil))
+  (prog-mode . display-fill-column-indicator-mode))
 
 ;;;; Tree-sitter
 
-;;; @doc Built-in tree-sitter. Font-lock level 4 enables every
-;;; available syntactic decoration.
 (use-package treesit
   :ensure nil
   :custom
   (treesit-font-lock-level 4))
 
-;;; @doc Defer fontification of newly exposed text by 50 ms so heavy
-;;; level-4 treesit font-lock never blocks keystrokes or scrolling.
-;;; Pairs with `redisplay-skip-fontification-on-input' (init-core).
 (use-package jit-lock
   :ensure nil
   :custom
   (jit-lock-defer-time 0.05))
 
-;;; @doc Route classic major modes to their tree-sitter variants through
-;;; `major-mode-remap-alist' (no `treesit-auto': Nix ships every grammar).
-;;; Remapping the chosen mode means the classic modes' `auto-mode-alist'
-;;; entries stay the source of truth. A language whose grammar is not
-;;; loadable keeps its classic mode.
-(declare-function treesit-ready-p "treesit" (language &optional quiet))
+;; Emacs 31 keeps the ts-mode remaps in `treesit-major-mode-remap-alist' and
+;; applies the ones named here.  There is no grammar check: the
+;; distribution ships every grammar.
+(setopt treesit-enabled-modes
+        '(bash-ts-mode cmake-ts-mode dockerfile-ts-mode json-ts-mode
+          lua-ts-mode toml-ts-mode yaml-ts-mode python-ts-mode rust-ts-mode
+          css-ts-mode js-ts-mode typescript-ts-mode c-ts-mode c++-ts-mode
+          go-ts-mode go-mod-ts-mode go-work-ts-mode))
 
-(defvar jotain-prog-ts-remaps
-  '((bash        bash-ts-mode        sh-mode)
-    (cmake       cmake-ts-mode       cmake-mode)
-    (dockerfile  dockerfile-ts-mode  dockerfile-mode)
-    (json        json-ts-mode        js-json-mode json-mode)
-    (lua         lua-ts-mode         lua-mode)
-    (toml        toml-ts-mode        conf-toml-mode)
-    (yaml        yaml-ts-mode        yaml-mode)
-    ;; Modes routed by their own `init-lang-*' file are listed too, so a
-    ;; stray classic-mode path (a package autoload, a stale quickstart
-    ;; entry) still lands in the tree-sitter mode.
-    (python      python-ts-mode      python-mode)
-    (rust        rust-ts-mode        rust-mode)
-    (css         css-ts-mode         css-mode)
-    (javascript  js-ts-mode          js-mode javascript-mode js2-mode)
-    (typescript  typescript-ts-mode  typescript-mode)
-    ;; C/C++ (init-lang-systems, which also maps `.cu'/`.cuh' straight
-    ;; to its own `cuda-ts-mode').
-    (c           c-ts-mode           c-mode)
-    (cpp         c++-ts-mode         c++-mode))
-  "Tree-sitter routing table: entries (LANG TS-MODE CLASSIC-MODE...).
-For each entry whose grammar LANG is loadable, every CLASSIC-MODE is
-remapped to TS-MODE through `major-mode-remap-alist'.  Go is handled in
-`init-lang-go.el', which additionally strips classic go-mode autoloads.")
-
-(defun jotain-prog--apply-ts-remaps ()
-  "Populate `major-mode-remap-alist' from `jotain-prog-ts-remaps'.
-Only remaps a language whose grammar is loadable (`treesit-ready-p') and
-whose tree-sitter mode is defined, so a build without a given grammar
-leaves the classic mode in place."
-  (dolist (entry jotain-prog-ts-remaps)
-    (let ((lang (car entry))
-          (ts-mode (cadr entry))
-          (classics (cddr entry)))
-      (when (and (fboundp ts-mode) (treesit-ready-p lang t))
-        (dolist (classic classics)
-          (add-to-list 'major-mode-remap-alist (cons classic ts-mode)))))))
-
-(jotain-prog--apply-ts-remaps)
+;; Classic modes that Emacs 31 does not remap itself, so a stray package
+;; autoload still lands in the tree-sitter mode.
+(dolist (remap '((js-mode  . js-ts-mode)
+                 (js2-mode . js-ts-mode)
+                 (json-mode . json-ts-mode)))
+  (add-to-list 'major-mode-remap-alist remap))
 
 ;; Async native-comp workers skip site files, so they miss the
 ;; `treesit-extra-load-path' Nixpkgs' site-start.el sets.  Pass it on, or
@@ -100,52 +58,10 @@ leaves the classic mode in place."
 (setq native-comp-async-env-modifier-form
       `(setq treesit-extra-load-path ',treesit-extra-load-path))
 
-;;;; Non-tree-sitter mode diagnostic
-
-;;; @doc Log to *Messages* when a buffer opens in a classic major mode
-;;; although a tree-sitter variant with a loadable grammar exists: a gap
-;;; detector for languages missing from `jotain-prog-ts-remaps'. Silence
-;;; it with `jotain-prog-warn-non-ts-mode', or per mode with
-;;; `jotain-prog-warn-non-ts-exclude'.
-(defcustom jotain-prog-warn-non-ts-mode t
-  "When non-nil, log if a classic major mode is used despite a ready ts-mode.
-Modes in `jotain-prog-warn-non-ts-exclude' are never reported."
-  :type 'boolean
-  :group 'jotain-prog)
-
-(defcustom jotain-prog-warn-non-ts-exclude nil
-  "Classic major modes the non-ts diagnostic deliberately skips."
-  :type '(repeat symbol)
-  :group 'jotain-prog)
-
-(defun jotain-prog--warn-non-ts-mode ()
-  "Log when `major-mode' is classic but a ready tree-sitter mode exists.
-Derives `foo-ts-mode' and the grammar name from `foo-mode', so irregular
-names (`sh-mode' to `bash-ts-mode') are missed; those are remapped in
-`jotain-prog-ts-remaps' anyway."
-  (when (and jotain-prog-warn-non-ts-mode
-             (not (memq major-mode jotain-prog-warn-non-ts-exclude)))
-    (let ((name (symbol-name major-mode)))
-      (when (and (string-suffix-p "-mode" name)
-                 (not (string-suffix-p "-ts-mode" name)))
-        (let* ((base (string-remove-suffix "-mode" name))
-               (ts-mode (intern-soft (concat base "-ts-mode")))
-               (lang (intern base)))
-          (when (and ts-mode (fboundp ts-mode) (treesit-ready-p lang t))
-            (message "init-prog: %s opened in %s; %s (tree-sitter, grammar `%s') is available"
-                     (buffer-name) major-mode ts-mode lang)))))))
-
-(add-hook 'after-change-major-mode-hook #'jotain-prog--warn-non-ts-mode)
-
-;;; @doc Code folding along treesit syntax nodes (functions, classes,
-;;; blocks). Fringe indicators show fold state.
 (use-package treesit-fold
   :hook (after-init . global-treesit-fold-indicators-mode)
   :custom (treesit-fold-indicators-priority -1))
 
-;;; @doc Structural editing via treesit (move/clone/raise nodes,
-;;; transpose siblings). Opt-in per buffer via M-x combobulate-mode or
-;;; .dir-locals.el. Provided by Nix.
 (use-package combobulate
   :ensure nil
   :defer t
@@ -160,8 +76,6 @@ names (`sh-mode' to `bash-ts-mode') are missed; those are remapped in
 ;; far fewer read(2) calls.
 (setopt read-process-output-max (* 4 1024 1024))
 
-;;; @doc Security gate: the ESLint and Tailwind language servers can
-;;; execute project-controlled JS config, so they are opt-in.
 (defcustom jotain-prog-enable-risky-js-lsp nil
   "When non-nil, include ESLint and Tailwind LSP servers in TS/TSX `rass` sessions.
 These servers may evaluate project JavaScript configuration files."
@@ -186,12 +100,6 @@ owns the settings."
                               (default-value 'eglot-workspace-configuration))
                              key settings))))
 
-;;; @doc Built-in LSP client. All LSP wiring lives here; mode regexes
-;;; stay in the `init-lang-*` files. C-c r is the refactor prefix
-;;; (rename/format/code-actions). Eglot auto-starts for any project file
-;;; whose language server is on the buffer's devenv-applied PATH, so
-;;; enabling `languages.X.enable` in a project's devenv lights up its LSP
-;;; with no per-language config.
 (use-package eglot
   :ensure nil
   :preface
@@ -347,7 +255,6 @@ Both speak stdio by default."
         ("C-c r q" . eglot-code-action-quickfix)
         ("C-h ."   . eldoc-doc-buffer))
   :config
-  ;; Show all eldoc sources together rather than Eglot's default strategy.
   (defun jotain-prog--eldoc-compose-eagerly ()
     "Compose eldoc sources eagerly in Eglot-managed buffers."
     (setq-local eldoc-documentation-strategy
@@ -359,7 +266,6 @@ Both speak stdio by default."
   (require 'markdown-ts-mode)
   (setopt eglot-documentation-renderer 'markdown-ts-view-mode)
 
-  ;; Hide the inline "code action available" indicators.
   (setopt eglot-code-action-indications nil)
 
   (defun jotain-prog--maybe-enable-inlay-hints ()
@@ -378,19 +284,13 @@ Both speak stdio by default."
       (eglot-inlay-hints-mode 1)))
   (add-hook 'eglot-managed-mode-hook #'jotain-prog--maybe-enable-inlay-hints)
 
-  (add-to-list 'eglot-server-programs
-               '((go-ts-mode go-mod-ts-mode go-work-ts-mode) . ("gopls")))
-  ;; Classic modes stay in the keys below so a build without the grammar
-  ;; still finds a server.
-  (add-to-list 'eglot-server-programs
-               '((dockerfile-ts-mode dockerfile-mode) . ("docker-langserver" "--stdio")))
-  ;; QML (init-lang-qml).  `-E' makes qmlls honour QML_IMPORT_PATH from
+  ;; `-E' makes qmlls honour QML_IMPORT_PATH from
   ;; the project env.  qmlls is appended to the wrapper PATH
   ;; (nix/runtime-deps.nix), so a project-provided qmlls wins.
   (add-to-list 'eglot-server-programs
                '((qml-ts-mode) . ("qmlls" "-E")))
 
-  ;; HTML (init-lang-web).  `mhtml-ts-mode' does not derive from the
+  ;; `mhtml-ts-mode' does not derive from the
   ;; classic modes eglot's default HTML entry is keyed on, so mirror that
   ;; entry for the tree-sitter modes.
   (add-to-list 'eglot-server-programs
@@ -398,17 +298,6 @@ Both speak stdio by default."
                      (eglot-alternatives
                       '(("vscode-html-language-server" "--stdio")
                         ("html-languageserver" "--stdio")))))
-
-  ;; C/C++/CUDA (init-lang-systems).  clangd treats `.cu' as CUDA by
-  ;; extension; `.cuh' and a full index need a project
-  ;; `compile_commands.json' (and, on Nix, `--cuda-path').
-  (add-to-list 'eglot-server-programs
-               '((cuda-ts-mode c-ts-mode c++-ts-mode c-mode c++-mode) . ("clangd")))
-
-  ;; OCaml via neocaml (init-lang-systems).  neocaml also registers this
-  ;; itself; kept here so all LSP wiring is in one place.
-  (add-to-list 'eglot-server-programs
-               '((neocaml-mode neocaml-interface-mode) . ("ocamllsp")))
 
   ;; Function-valued contacts resolve at connect time against the buffer's
   ;; project env, not once at startup.  `rass' (rassumfrassum) multiplexes
@@ -420,27 +309,17 @@ Both speak stdio by default."
   (add-to-list 'eglot-server-programs
                (cons '(python-mode python-ts-mode)
                      #'jotain-prog--python-server))
-  ;; Kotlin (init-lang-kotlin).
   (add-to-list 'eglot-server-programs
                (cons '(kotlin-ts-mode) #'jotain-prog--kotlin-server))
-  ;; LikeC4 architecture models (init-lang-devops).
   (add-to-list 'eglot-server-programs
                (cons '(jotain-likec4-mode) #'jotain-prog--likec4-server))
-  ;; Robot Framework (init-lang-devops).
   (add-to-list 'eglot-server-programs
                (cons '(robot-mode) #'jotain-prog--robot-server))
-  ;; Astro (init-lang-web).
   (add-to-list 'eglot-server-programs
                (cons '(astro-ts-mode) #'jotain-prog--astro-server)))
 
-;;; @doc Wrap local stdio language servers in emacs-lsp-booster, which
-;;; converts server JSON into Elisp bytecode and buffers I/O so a busy
-;;; server cannot block the UI. Function-valued contacts (the `rass`
-;;; resolvers) are boosted too. The binary rides the distribution wrapper
-;;; PATH (nix/runtime-deps.nix) because the mode resolves it once at
-;;; enable time. Remote (TRAMP) contacts are left unboosted, since the
-;;; booster would have to exist on the remote host. Provided by Nix (not
-;;; on MELPA); `:if' skips the block when the library is absent.
+;; The binary rides the distribution wrapper PATH
+;; (nix/runtime-deps.nix) because the mode resolves it once at enable time.
 (use-package eglot-booster
   :ensure nil
   :if (locate-library "eglot-booster")
@@ -448,20 +327,17 @@ Both speak stdio by default."
   :custom (eglot-booster-no-remote-boost t)
   :config (eglot-booster-mode))
 
-;;; @doc Workspace symbol search through consult: C-M-. lists symbols
-;;; across the LSP workspace.
 (use-package consult-eglot
   ;; Only needs `eglot-mode-map'; `consult-eglot-symbols' is autoloaded.
   :after eglot
   :bind (:map eglot-mode-map
               ("C-M-." . consult-eglot-symbols)))
 
-;;; @doc Embark actions on consult-eglot workspace symbols.
 (use-package consult-eglot-embark
   :after (consult-eglot embark)
   :demand t)
 
-;;;; Debugging — dape (Debug Adapter Protocol)
+;;;; Debugging (dape)
 
 (defun jotain-prog--kotlin-main-class ()
   "Guess the JVM main class of the current Kotlin file.
@@ -475,12 +351,6 @@ A top-level `main' in `Foo.kt' of package `a.b' compiles to `a.b.FooKt'."
             (concat (match-string-no-properties 1) "." class)
           class)))))
 
-;;; @doc Debug Adapter Protocol client, the debugging counterpart to
-;;; eglot. Ships adapter configs for dlv (Go), debugpy (Python),
-;;; codelldb (Rust/C/C++) and more; this config adds cargo (lldb-dap)
-;;; and Kotlin (kotlin-debug-adapter). Adapter binaries come from the
-;;; project/host PATH. `C-x C-a` is the prefix (the gud convention);
-;;; stepping commands repeat, so `C-x C-a n n n` keeps stepping.
 (use-package dape
   :bind-keymap ("C-x C-a" . dape-global-map)
   :custom
@@ -546,16 +416,11 @@ existing language server, adding code-quality and security diagnostics."
 
 ;;;; Flymake / eldoc
 
-;;; @doc Built-in diagnostics, on in every programming buffer. Indicator
-;;; chars (! ? ·) and end-of-line messages keep them visible
-;;; without a side window; `short' shows only the most severe diagnostic
-;;; per line. M-n / M-p navigate.
 (use-package flymake
   :ensure nil
   :hook (prog-mode . flymake-mode)
   :custom
   (flymake-suppress-zero-counters t)
-  ;; `short' needs Flymake 1.3.6+.
   (flymake-show-diagnostics-at-end-of-line 'short)
   (flymake-margin-indicators-string
    '((error   "!" compilation-error)
@@ -575,8 +440,6 @@ existing language server, adding code-quality and security diagnostics."
       (remove-hook 'flymake-diagnostic-functions #'elisp-flymake-byte-compile t)))
   (add-hook 'flymake-mode-hook #'jotain-prog--disable-flymake-byte-compile))
 
-;;; @doc Built-in echo-area documentation: single-line display and a
-;;; short idle delay.
 (use-package eldoc
   :ensure nil
   :custom
@@ -584,17 +447,12 @@ existing language server, adding code-quality and security diagnostics."
   (eldoc-print-after-edit t)
   (eldoc-idle-delay 0.2)
   (eldoc-echo-area-display-truncation-message nil)
-  ;; Use the doc buffer instead of the echo area when it is visible.
   (eldoc-echo-area-prefer-doc-buffer t)
   :config
-  ;; Also show `help-at-pt' text (flymake diagnostics, button help)
-  ;; through eldoc.
   (setopt eldoc-help-at-pt t))
 
 ;;;; xref
 
-;;; @doc Built-in cross-reference engine. Searches with ripgrep (on the
-;;; wrapper PATH) instead of grep.
 (use-package xref
   :ensure nil
   :custom
@@ -602,11 +460,6 @@ existing language server, adding code-quality and security diagnostics."
 
 ;;;; tagref
 
-;;; @doc Cross-reference checker for `[tag:x]'/`[ref:x]' directives. Adds
-;;; completion, xref navigation (M-. jumps from a ref to its tag, M-? finds
-;;; references), and `M-x tagref-check' (clickable compilation buffer).
-;;; Needs the `tagref' CLI on PATH (dev shell / Home Manager wrapper).
-;;; Provided by Nix (not on MELPA).
 (use-package tagref
   :ensure nil
   :commands (tagref-mode)
@@ -624,8 +477,6 @@ every prog-mode buffer."
 
 ;;;; Compile
 
-;;; @doc Built-in compile / recompile. Skips the save prompt and kills
-;;; a running compilation without asking.
 (use-package compile
   :ensure nil
   :custom
@@ -637,9 +488,6 @@ every prog-mode buffer."
 ;; The per-project environment comes from devenv (init-devenv.el), applied
 ;; buffer-locally; envrc is deliberately not enabled.
 
-;;; @doc Async format-on-save through external formatters (ruff, nixfmt,
-;;; rustfmt, prettier, …), all mapped in one place. `apheleia-mode` is a
-;;; safe local variable, so `.dir-locals.el` can opt a project out.
 (use-package apheleia
   :hook (after-init . apheleia-global-mode)
   :config
@@ -648,9 +496,6 @@ every prog-mode buffer."
                                   "--source-file-path" filepath
                                   "-")))
   (add-to-list 'apheleia-mode-alist '(meson-mode . meson-format))
-  (add-to-list 'apheleia-formatters
-               '(zig-fmt . ("zig" "fmt" "--stdin")))
-  (add-to-list 'apheleia-mode-alist '(zig-ts-mode . zig-fmt))
   ;; goimports instead of apheleia's default gofmt for Go.
   (add-to-list 'apheleia-mode-alist '(go-ts-mode . goimports))
   ;; `-path' lets buildifier infer the Starlark dialect.  The `bazel-mode'
@@ -665,13 +510,6 @@ every prog-mode buffer."
   ;; temp copy.
   (add-to-list 'apheleia-formatters '(qmlformat . ("qmlformat" "-i" inplace)))
   (add-to-list 'apheleia-mode-alist '(qml-ts-mode . qmlformat))
-  ;; apheleia keys clang-format on the classic cc-mode modes only.
-  ;; `cuda-ts-mode' counts as `c++-ts-mode' (init-lang-systems).
-  (add-to-list 'apheleia-mode-alist '(c-ts-mode . clang-format))
-  (add-to-list 'apheleia-mode-alist '(c++-ts-mode . clang-format))
-  ;; apheleia keys ocamlformat on tuareg/caml modes only.
-  (add-to-list 'apheleia-mode-alist '(neocaml-mode . ocamlformat))
-  (add-to-list 'apheleia-mode-alist '(neocaml-interface-mode . ocamlformat))
   ;; robotidy also edits in place.
   (add-to-list 'apheleia-formatters '(robotidy . ("robotidy" inplace)))
   (add-to-list 'apheleia-mode-alist '(robot-mode . robotidy))
@@ -686,16 +524,12 @@ every prog-mode buffer."
   (add-to-list 'apheleia-mode-alist '(python-ts-mode . ruff))
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
-;;; @doc Edit grep result buffers in place and write the changes back to
-;;; every matched file: consult-ripgrep, C-c C-o (embark-export),
-;;; C-x C-q, edit, C-c C-c.
 (use-package wgrep
   :defer t
   :custom
   (wgrep-auto-save-buffer t)
   (wgrep-change-readonly-file t))
 
-;;; @doc Detect indentation width and tabs/spaces from file contents.
 (use-package dtrt-indent
   ;; 0 silences the per-file "adjusted" message; detection is unaffected.
   :custom (dtrt-indent-verbosity 0)

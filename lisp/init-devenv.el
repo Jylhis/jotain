@@ -12,22 +12,6 @@
 
 ;;; Code:
 
-;;; @doc Native devenv.sh integration (the in-repo `lisp/devenv.el`
-;;; library). `C-c v` opens a transient with task and script runners,
-;;; `devenv test`/`build` in compilation-mode with Nix error matching,
-;;; a process dashboard (start/stop/restart/logs), and introspection
-;;; (`devenv eval`/`info`/`search`). `devenv-env-global-mode` applies
-;;; each project's `devenv print-dev-env` environment buffer-locally;
-;;; `devenv-reload` refreshes it and offers to reconnect eglot.
-;;; `devenv-shell` does the same per buffer without recording trust,
-;;; the manual counterpart of a terminal `devenv shell`.
-;;; devenv.nix buffers get the bundled `devenv lsp` server; other Nix
-;;; buffers get nixd or nil, the project's own first. `devenv-mcp-setup`
-;;; registers the project's `devenv mcp` server with mcp.el for gptel.
-;;; `devenv-allow`/`devenv-revoke` manage devenv's auto-activation trust
-;;; database, which also gates the loader, and `devenv-modeline-mode`
-;;; shows devenv[on]/[off]/[!] in the mode line. Without the `devenv`
-;;; binary on PATH, commands fail with a clear error.
 (use-package devenv
   :ensure nil
   :defer t

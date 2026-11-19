@@ -2,12 +2,10 @@
 
 ;;; Commentary:
 
-;; The Nix distribution (`jotainEmacsPackages') wraps emacs with
-;; INFOPATH pointing at jotain.info, so `C-h i d' already lists the configuration.
-;; This module is the fallback for a host Emacs that isn't the configuration
-;; wrapper: if a built manual is found (JOTAIN_INFO_DIR, or the
-;; checkout's result-info/ from `nix build -f . local.packages.info-manual
-;; -o etc/emacs/result-info' at the repo root), add its directory to
+;; The Nix distribution wraps emacs with INFOPATH pointing at
+;; jotain.info. This module is the fallback for a host Emacs without that
+;; wrapper: if a built manual is found (JOTAIN_INFO_DIR, result-info/ or
+;; result/ in the checkout), add its directory to
 ;; `Info-additional-directory-list'.
 
 ;;; Code:
@@ -20,12 +18,8 @@
 (defvar jotain-info--candidate-paths
   (delq nil
         (list
-         ;; Explicit override for unusual checkouts.
          (getenv "JOTAIN_INFO_DIR")
-         ;; `nix build -f . local.packages.info-manual -o etc/emacs/result-info'
-         ;; drops the result symlink here.
          (expand-file-name "result-info/share/info" user-emacs-directory)
-         ;; Fallback: `nix build .#info -o result' without a custom name.
          (expand-file-name "result/share/info" user-emacs-directory)))
   "Directories to probe for a bundled `jotain.info' file.")
 

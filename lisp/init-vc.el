@@ -11,10 +11,6 @@
 ;; deferred :config reads it.
 (defvar jotain-repositories-roots)
 
-;;; @doc Built-in version control, limited to Git and Jujutsu: every
-;;; other backend probes each visited file's parent directories for
-;;; nothing. JJ comes from `vc-jj' below; without it in this list
-;;; project.el would not discover `.jj' roots.
 (use-package vc
   :ensure nil
   :custom
@@ -29,9 +25,6 @@
   ;; once upstream widens the :type.
   (setq vc-dir-auto-hide-up-to-date 'revert))
 
-;;; @doc C-x G jumps to a file git status reports as changed (modified,
-;;; added, renamed, copied, unmerged, type-changed or untracked).
-;;; Adapted from Rahul M. Juliato's emacs-solo/switch-git-status-buffer.
 (use-package vc-git
   :ensure nil
   ;; Not C-x C-g: a sequence ending in C-g would break C-g as abort.
@@ -101,16 +94,6 @@ prefix and suffix; the result is the new path."
        (concat (match-string 1 text) (match-string 2 text) (match-string 3 text)))
     text))
 
-;;; @doc Jujutsu (jj) backend for built-in `vc' and `project', so
-;;; `C-x v …', the modeline VC state and project.el work in jj repos.
-;;; vc, diff-hl and smerge expect git-format diffs and conflicts, so set
-;;; this via `jj config edit --user':
-;;;   [ui]
-;;;   diff-formatter = ":git"
-;;;   conflict-marker-style = "git"
-;;;
-;;; C-x J is the jj twin of the C-x G status jump. The richer
-;;; interactive view is `majutsu' (C-c j).
 (use-package vc-jj
   :after vc
   :bind ("C-x J" . jotain-switch-jj-status-buffer)
@@ -146,9 +129,6 @@ Deletions are omitted, since there is no file to open."
               (when file-path
                 (find-file (expand-file-name file-path expanded-root))))))))))
 
-;;; @doc The Git porcelain. C-x g for status, C-x M-g for dispatch,
-;;; C-c g for the file menu. Diffs refine hunks (ignoring whitespace)
-;;; and status buffers list worktrees.
 (use-package magit
   :bind
   (("C-x g"   . magit-status)
@@ -165,10 +145,6 @@ Deletions are omitted, since there is no file to open."
           (mapcar (lambda (root) (cons root 2)) jotain-repositories-roots))
   (add-hook 'magit-status-sections-hook 'magit-insert-worktrees t))
 
-;;; @doc The Jujutsu porcelain, a magit-style interface for jj that sits
-;;; alongside magit in colocated repos. C-c j opens the log
-;;; (`majutsu-log'); C-c M-j the transient dispatcher. Provided by Nix
-;;; (nix/extra-packages.nix).
 (use-package majutsu
   :ensure nil
   :commands (majutsu majutsu-log majutsu-dispatch)
@@ -176,8 +152,6 @@ Deletions are omitted, since there is no file to open."
   (("C-c j"   . majutsu-log)
    ("C-c M-j" . majutsu-dispatch)))
 
-;;; @doc Lists TODO/FIXME/HACK comments as a magit-status section.
-;;; Scan depth 1 keeps it fast on large repos.
 (use-package magit-todos
   :after magit
   :commands (magit-todos-mode global-magit-todos-mode)
@@ -185,10 +159,6 @@ Deletions are omitted, since there is no file to open."
   (magit-todos-depth 1)
   :config (magit-todos-mode 1))
 
-;;; @doc PRs, issues, and reviews from GitHub/GitLab/Forgejo inside
-;;; magit. Uses Emacs's built-in sqlite, so no external emacsql binary is
-;;; needed. Tokens come from auth-source (e.g. machine api.github.com
-;;; login USER^forge password ghp_…).
 (use-package forge
   :after magit
   :custom
@@ -196,8 +166,6 @@ Deletions are omitted, since there is no file to open."
   (forge-post-directory (jotain-var-file "forge/posts/"))
   (forge-database-connector 'emacsql-sqlite-builtin))
 
-;;; @doc Built-in transient menu system that magit/forge are built on.
-;;; Its three state files live under var/.
 (use-package transient
   :ensure nil
   ;; Deferred to keep transient off the startup path; the paths are set
@@ -209,8 +177,6 @@ Deletions are omitted, since there is no file to open."
             transient-values-file  (jotain-var-file "transient/values.el")
             transient-levels-file  (jotain-var-file "transient/levels.el"))))
 
-;;; @doc Fringe indicators for added/changed/removed lines.
-;;; `diff-hl-flydiff-mode` updates them before saving, too.
 (use-package diff-hl
   :functions (diff-hl-flydiff-mode)
   :custom
@@ -225,11 +191,6 @@ Deletions are omitted, since there is no file to open."
   :config
   (diff-hl-flydiff-mode 1))
 
-;;; @doc VC change indicators next to files in dired. Its own block
-;;; because `diff-hl-dired-mode' lives in diff-hl-dired.el: hooked from
-;;; the `diff-hl' block, use-package would autoload it from "diff-hl",
-;;; and with stale package autoloads that errors and empties every dired
-;;; buffer.
 (use-package diff-hl-dired
   :ensure nil
   :hook (dired-mode . diff-hl-dired-mode))
@@ -242,17 +203,10 @@ Deletions are omitted, since there is no file to open."
   (when-let* ((proc (get-buffer-process (current-buffer))))
     (set-process-query-on-exit-flag proc nil)))
 
-(when (< emacs-major-version 32)
-  (with-eval-after-load 'vc-git
-    (advice-add 'vc-git-dir-status-goto-stage :after
-                #'jotain-vc--dir-status-no-query)))
+(with-eval-after-load 'vc-git
+  (advice-add 'vc-git-dir-status-goto-stage :after
+              #'jotain-vc--dir-status-no-query))
 
-;;; @doc An `N/M` mode-line counter (via `mode-line-misc-info`): N is
-;;; uncommitted added+deleted lines, M is commits made today (since local
-;;; midnight, merges excluded). Works in git and jj repos (a `.jj`
-;;; directory selects jj). N changes face at configurable thresholds, a
-;;; nudge that the WIP is getting too large for one commit. Probes run
-;;; async, so rendering never blocks.
 (defgroup jotain-vc nil
   "Version-control modeline knobs for the configuration."
   :group 'jotain-ui)
@@ -587,15 +541,6 @@ on while any remain."
                        status)))
         (kill-buffer out))))))
 
-;;; @doc Built-in conflict-marker editing; it turns on for files with
-;;; markers and binds `C-c ^' (`smerge-command-prefix'). `C-c ^ S' runs
-;;; `jotain-vc-mergiraf-solve', which re-resolves the file with mergiraf's
-;;; syntax-aware merge and leaves smerge-mode on for what remains. The
-;;; mergiraf binary rides the wrapper PATH; the markers must be diff3
-;;; style. Enable the git merge driver per repository with
-;;; `*.json merge=mergiraf' in `.gitattributes' and the driver
-;;; `mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P' in
-;;; `merge.mergiraf.driver'.
 (use-package smerge-mode
   :ensure nil
   :defer t
@@ -609,10 +554,6 @@ It changes how every magit diff looks, so it is off by default."
   :type 'boolean
   :group 'jotain-vc)
 
-;;; @doc Renders magit diffs through delta (`magit-delta-mode'). Off
-;;; until `jotain-magit-delta-enable' is non-nil, because it changes every
-;;; magit diff; `M-x magit-delta-mode' toggles it per session. The delta
-;;; binary rides the wrapper PATH.
 (use-package magit-delta
   :after magit
   :commands (magit-delta-mode)
@@ -620,8 +561,6 @@ It changes how every magit diff looks, so it is off by default."
   (when jotain-magit-delta-enable
     (magit-delta-mode 1)))
 
-;;; @doc Built-in interactive diff. The `plain` window setup keeps the
-;;; control panel out of a separate frame; diffs ignore whitespace.
 (use-package ediff
   :ensure nil
   :defer t
@@ -630,19 +569,7 @@ It changes how every magit diff looks, so it is off by default."
   (ediff-split-window-function 'split-window-horizontally)
   (ediff-diff-options "-w")
   (ediff-custom-diff-options "-u")
-  (ediff-merge-revisions-with-ancestor t)
-  :config
-  (setopt ediff-control-frame-parameters
-          '((name . "Ediff Control")
-            (width . 60)
-            (height . 14)
-            (left . 200)
-            (top . 200)
-            (minibuffer . nil)
-            (user-position . t)
-            (vertical-scroll-bars . nil)
-            (scrollbar-width . 0)
-            (tool-bar-lines . 0))))
+  (ediff-merge-revisions-with-ancestor t))
 
 (provide 'init-vc)
 ;;; init-vc.el ends here

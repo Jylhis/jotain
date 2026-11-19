@@ -8,11 +8,6 @@
 
 ;;; Code:
 
-;;; @doc Tree-sitter QML major mode (xhcoding/qml-ts-mode) for Quickshell
-;;; / Qt Quick `.qml' files. Provided by Nix, with the `qmljs' grammar
-;;; from treesit-grammars.with-all-grammars. qmlls (eglot) and qmlformat
-;;; (apheleia) are wired in init-prog and ride the distribution wrapper
-;;; PATH (nix/runtime-deps.nix).
 (use-package qml-ts-mode
   :ensure nil
   :mode "\\.qml\\'")

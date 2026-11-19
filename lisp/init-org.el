@@ -17,9 +17,6 @@
 (declare-function project-current "project" (&optional maybe-prompt directory))
 (declare-function project-root "project" (project))
 
-;;; @doc Built-in Org: outline, agenda, capture, literate programming.
-;;; Notes, agenda and capture all live under `jotain-notes-directory`.
-;;; C-c a agenda, C-c c capture, C-c l store link.
 (use-package org
   :ensure nil
   :commands (org-mode org-capture org-agenda)
@@ -52,7 +49,6 @@ stays on, and org-indent supplies the wrap prefix."
   (org-return-follows-link     t)
   (org-fold-catch-invisible-edits 'show-and-error)
   :config
-  ;; Keep all capture templates here.
   (setopt org-capture-templates
         '(("t" "Todo" entry
            (file+headline org-default-notes-file "Tasks")
@@ -61,10 +57,7 @@ stays on, and org-indent supplies the wrap prefix."
            (file+headline org-default-notes-file "Notes")
            "* %?\n  %U"))))
 
-;;; Org Babel — the notebook half of Org
-;;
-;; A Jupyter-style loop: `C-c C-c' a block, keep state in a `:session',
-;; get plots inline, tangle to real source files.
+;;;; Org Babel
 
 ;; Declared, not required: loading Org at compile time would defeat the
 ;; deferral.
@@ -74,6 +67,8 @@ stays on, and org-indent supplies the wrap prefix."
 (declare-function org-babel-remove-result-one-or-many "ob-core" (&optional arg))
 (declare-function org-babel-switch-to-session "ob-core" (&optional arg info))
 (declare-function org-babel-tangle "ob-tangle" (&optional arg target-file lang-re))
+(declare-function org-link-preview-region "ol"
+                  (&optional include-linked refresh beg end))
 
 ;; A plain `defvar' in ob-python, so `:config' sets it with `setq'.
 (defvar org-babel-default-header-args:python)
@@ -113,16 +108,11 @@ where the file lives matters (`jotain-org-babel-trusted-p')."
 
 (defun jotain-org-babel-redisplay-images ()
   "Refresh inline images after a source block runs.
-So a block that writes a plot to `:file' shows the new image.  Org 9.8
-\(Emacs 31) made the old inline-image commands obsolete, so the command
-is looked up at runtime to compile warning-free on Org 9.7 and 9.8.
+So a block that writes a plot to `:file' shows the new image.
 Errors are demoted: a cosmetic refresh must not abort a block."
   (when (derived-mode-p 'org-mode)
-    (when-let* ((refresh (seq-find #'fboundp
-                                   '(org-link-preview-region
-                                     org-redisplay-inline-images))))
-      (with-demoted-errors "Inline image refresh failed: %S"
-        (funcall refresh)))))
+    (with-demoted-errors "Inline image refresh failed: %S"
+      (org-link-preview-region))))
 
 (defun jotain-org-babel-restart-session-and-execute-buffer ()
   "Kill the session of the block at point, then re-run the whole buffer.
@@ -137,13 +127,6 @@ this is just `org-babel-execute-buffer'."
       (kill-buffer buffer)))
   (org-babel-execute-buffer))
 
-;;; @doc Org Babel, configured as a notebook. Enables a curated set of
-;;; Org-provided languages (`jotain-org-babel-languages`). The evaluation
-;;; prompt only appears for files outside your notes and projects. Inline
-;;; images refresh after every run. `C-c b` prefix in Org buffers: `b` run
-;;; buffer, `e` run subtree, `r` restart session and run buffer, `s`
-;;; switch to session, `k` clear results, `t` tangle. Export never
-;;; re-evaluates blocks (`:eval never-export`).
 (use-package ob-core
   :ensure nil
   :after org
@@ -169,7 +152,6 @@ this is just `org-babel-execute-buffer'."
      (:noweb   . "no")
      (:hlines  . "no")
      (:tangle  . "no")))
-  ;; Show `:file' plots, capped at 600px wide.
   (org-startup-with-inline-images t)
   (org-image-actual-width '(600))
   :config
@@ -179,21 +161,16 @@ this is just `org-babel-execute-buffer'."
   ;; print-style code a notebook invites; capture stdout instead.
   (setq org-babel-default-header-args:python '((:results . "output replace"))))
 
-;;; @doc Built-in source-block editing (`C-c '`). Edits open in the
-;;; current window, and indentation is preserved exactly: re-indenting
-;;; would corrupt Python blocks, where whitespace is syntax.
 (use-package org-src
   :ensure nil
   :after org
   :custom
+  ;; Re-indenting would corrupt Python blocks, where whitespace is syntax.
   (org-src-preserve-indentation t)
   (org-edit-src-content-indentation 0)
   (org-src-window-setup 'current-window)
   (org-src-ask-before-returning-to-edit-buffer nil))
 
-;;; @doc Built-in `<KEY TAB' block expansion, with extra source-block
-;;; keys: `<py', `<sh', `<el', `<sql', `<dot' (Graphviz to a file) and
-;;; `<jp' (Python with a session, for notebook-style work).
 (use-package org-tempo
   :ensure nil
   :after org
@@ -208,8 +185,6 @@ this is just `org-babel-execute-buffer'."
                             org-structure-template-alist)
                     (lambda (a b) (equal (car a) (car b))))))
 
-;;; @doc Built-in time tracking. Clocks persist across restarts, so an
-;;; interrupted clock can be resumed.
 (use-package org-clock
   :ensure nil
   :after org
@@ -219,15 +194,10 @@ this is just `org-babel-execute-buffer'."
   :config
   (org-clock-persistence-insinuate))
 
-;;; @doc Reveal hidden Org emphasis markers (`*` `_` `/` `~`) only while
-;;; point is on them.
 (use-package org-appear
   :after org
   :hook (org-mode . org-appear-mode))
 
-;;; @doc Modern visual styling for Org buffers and agenda — typographic
-;;; bullets (fixed-pitch, so list items keep their width), faux-rendered
-;;; blocks, agenda decorations.
 (use-package org-modern
   :custom
   ;; The replacement bullets carry no face of their own, so they take the
@@ -240,8 +210,6 @@ this is just `org-babel-execute-buffer'."
   :hook ((org-mode            . org-modern-mode)
          (org-agenda-finalize . org-modern-agenda)))
 
-;;; @doc Zettelkasten-style note linking on top of Org. The SQLite
-;;; database syncs automatically. C-c n f find, i insert, c capture.
 (use-package org-roam
   :commands (org-roam-node-find org-roam-capture)
   :functions (org-roam-db-autosync-mode)

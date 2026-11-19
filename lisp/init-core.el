@@ -63,12 +63,9 @@ immediately for writes."
 (add-hook 'minibuffer-setup-hook #'jotain-core--gc-defer)
 (add-hook 'minibuffer-exit-hook #'jotain-core--gc-restore)
 
-;; UTF-8 everywhere.
 (set-language-environment "UTF-8")
 (prefer-coding-system 'utf-8)
 
-;;; @doc Sane defaults for the bare editor — fill column, dialog/box use,
-;;; lockfiles, recursive minibuffers, case-insensitive completion.
 (use-package emacs
   :ensure nil
   :custom
@@ -93,16 +90,12 @@ immediately for writes."
   (minibuffer-prompt-properties
    '(read-only t cursor-intangible t face minibuffer-prompt))
   (read-extended-command-predicate #'command-completion-default-include-p)
-  ;; Case-insensitive completion everywhere.
   (completion-ignore-case t)
   (read-buffer-completion-ignore-case t)
   (read-file-name-completion-ignore-case t)
   :config
-  (line-number-mode 1)
   (minibuffer-depth-indicate-mode 1))
 
-;;; @doc Persist point per file across sessions. Built-in; the
-;;; newcomers-presets theme turns on `save-place-mode'.
 (use-package saveplace
   :ensure nil
   :custom (save-place-file (jotain-var-file "save-place.el"))
@@ -127,9 +120,6 @@ immediately for writes."
               #'jotain-core--recenter-after-save-place))
 
 (declare-function jotain-core--auto-create-missing-dirs nil)
-;;; @doc Built-in file-handling tweaks: no auto-save side files, no
-;;; backup `~` files, no kill-process confirmation, plus a hook that
-;;; auto-creates missing parent directories on find-file.
 (use-package files
   :ensure nil
   :custom
@@ -168,34 +158,21 @@ immediately for writes."
 (advice-add 'custom-save-all :around
             #'jotain-core--custom-save-without-supersession)
 
-;;; @doc Repeat-mode lets you press the trailing key alone after a prefix
-;;; command (e.g. C-x o o o instead of C-x o C-x o). Built-in; the
-;;; newcomers-presets theme turns it on. `repeat-exit-timeout' drops the
-;;; repeat map after two idle seconds. Built-in maps already cover window
-;;; resizing (`C-x ^ ^ v'); init-keys.el only adds a map for the
-;;; `window-layout-*' commands.
 (use-package repeat
   :ensure nil
   :custom
   (repeat-exit-timeout 2))
 
-;;; @doc Disambiguate same-name buffers by directory prefix instead of
-;;; the default `<2>` suffix. `forward` style mirrors the path.
 (use-package uniquify
   :ensure nil
   :custom (uniquify-buffer-name-style 'forward))
 
-;;; @doc Replace `list-buffers` (C-x C-b) with the more capable ibuffer:
-;;; dired-style filter/mark/operate on buffers.
 (use-package ibuffer
   :ensure nil
   :bind ([remap list-buffers] . ibuffer)
   :config
-  ;; Human-readable Size column (KB/MB).
   (setopt ibuffer-human-readable-size t))
 
-;;; @doc Tame `find-file-at-point` so an unknown hostname doesn't block
-;;; the editor on a DNS lookup — reject means "treat as not a host".
 (use-package ffap
   :ensure nil
   ;; On-demand only, yet an eager load cost ~67ms at startup (isolated
@@ -205,8 +182,6 @@ immediately for writes."
   :custom
   (ffap-machine-p-known 'reject))
 
-;;; @doc Built-in `world-clock` for cross-timezone scheduling. Loaded on
-;;; demand only.
 (use-package time
   :ensure nil
   :commands world-clock
@@ -217,14 +192,7 @@ immediately for writes."
      ("Asia/Bangkok"    "Bangkok")
      ("Asia/Shanghai"   "Shanghai")))
   :config
-  ;; List zones in chronological order.
   (setopt world-clock-sort-order "%FT%T"))
-
-(defun jotain-display-ansi-colors ()
-  "Render ANSI escape sequences in the current buffer."
-  (interactive)
-  (require 'ansi-color)
-  (ansi-color-apply-on-region (point-min) (point-max)))
 
 (declare-function profiler-start "profiler" (mode))
 (declare-function profiler-stop "profiler")
@@ -246,11 +214,6 @@ Useful for diagnosing freezes: start, reproduce, stop."
     (setq jotain-profiler--running t)
     (message "Profiler started — run `M-x jotain-profile-toggle' again to report")))
 
-;;; @doc Inherits PATH, MANPATH, and other shell-managed vars from the
-;;; user's login shell so a GUI or systemd-spawned Emacs sees
-;;; what the terminal sees. The Nix wrapper already puts the tools the
-;;; config needs (rg, fd, git, jj, zoxide, coreutils) on PATH; this
-;;; adds ~/.nix-profile and user toolchains.
 (use-package exec-path-from-shell
   :if (or (daemonp)
           (memq window-system '(x pgtk)))
@@ -267,16 +230,11 @@ Useful for diagnosing freezes: start, reproduce, stop."
   :custom
   (exec-path-from-shell-arguments '("-l"))) ; login shell only, skip -i
 
-;;; @doc Auto-revert buffers when their file changes on disk (branch
-;;; switches, external edits), and non-file buffers such as dired.
 (use-package autorevert
   :ensure nil
   :custom (global-auto-revert-non-file-buffers t)
   :config (global-auto-revert-mode 1))
 
-;;; @doc Built-in recently-visited files list, used by
-;;; `consult-recent-file'. State lives under var/; the newcomers-presets
-;;; theme turns on `recentf-mode'.
 (use-package recentf
   :ensure nil
   :custom
@@ -285,9 +243,6 @@ Useful for diagnosing freezes: start, reproduce, stop."
   :config
   (add-to-list 'recentf-exclude jotain-var-dir))
 
-;;; @doc Persist minibuffer history (M-p / M-n, vertico ordering, etc.)
-;;; across sessions. Built-in; the newcomers-presets theme turns on
-;;; `savehist-mode'.
 (use-package savehist
   :ensure nil
   :custom
@@ -299,8 +254,6 @@ Useful for diagnosing freezes: start, reproduce, stop."
   (savehist-additional-variables
    '(kill-ring search-ring regexp-search-ring)))
 
-;;; @doc Built-in bookmark store, kept under var/. `save-flag 1` writes
-;;; on every change so a crash never loses bookmarks; no fringe mark.
 (use-package bookmark
   :ensure nil
   ;; Nothing at startup uses bookmarks; the customs apply when
@@ -311,23 +264,12 @@ Useful for diagnosing freezes: start, reproduce, stop."
   (bookmark-fringe-mark nil)
   (bookmark-save-flag 1))
 
-;;; @doc Lazy-count isearch matches in the prompt — "(3/12)" tells you
-;;; where you are without leaving the search.
 (use-package isearch
   :ensure nil
   :custom
   (isearch-lazy-count t)
   (lazy-count-prefix-format "(%s/%s) "))
 
-;;; @doc Live-highlight regexp constructs (groups, alternation, escapes,
-;;; char classes) in the minibuffer while typing a regexp for
-;;; `query-replace-regexp', `isearch-*-regexp', `keep-lines', etc.
-;;; Built-in since Emacs 30.
-(minibuffer-regexp-mode 1)
-
-;;; @doc Built-in HTML renderer used by eww, Gnus, and elfeed. Page
-;;; colours and proportional fonts are off, so rendered HTML follows the
-;;; theme and the default face.
 (use-package shr
   :ensure nil
   ;; On-demand only, yet an eager load cost ~74ms at startup (isolated
@@ -337,18 +279,12 @@ Useful for diagnosing freezes: start, reproduce, stop."
   (shr-use-colors nil)
   (shr-use-fonts nil))
 
-;;; @doc Built-in GnuTLS, hardened: a failed certificate check aborts
-;;; the connection instead of continuing (`gnutls-verify-error`), and
-;;; weak Diffie-Hellman primes are rejected (`gnutls-min-prime-bits`).
 (use-package gnutls
   :ensure nil
   :custom
   (gnutls-verify-error t)
   (gnutls-min-prime-bits 3072))
 
-;;; @doc Built-in Network Security Manager. `network-security-level`
-;;; 'high applies the strictest checks (certificate changes, weak
-;;; ciphers, downgrades). Settings file under var/.
 (use-package nsm
   :ensure nil
   :custom

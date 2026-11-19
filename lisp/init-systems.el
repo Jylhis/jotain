@@ -11,9 +11,6 @@
 
 ;;;; auth-source-1password
 
-;;; @doc Pulls credentials from the 1Password CLI (`op`), so every
-;;; auth-source consumer (forge, gptel, smtpmail) can resolve them from
-;;; the vault by host.
 (use-package auth-source-1password
   :defer t
   :functions (auth-source-1password-enable)
@@ -33,15 +30,12 @@
   :config
   (setopt auth-source-1password-search-fields '("title" "website" "url")))
 
-;;;; sops — transparent encryption for YAML/JSON/env files
+;;;; sops
 
 ;; sops-mode ships no keymap; define one and register it below.
 (defvar sops-mode-map (make-sparse-keymap)
   "Keymap for `sops-mode'.")
 
-;;; @doc Transparent SOPS encrypt/decrypt for YAML/JSON/env files.
-;;; C-c C-d opens the decrypted edit view, C-c C-c saves it encrypted,
-;;; C-c C-k cancels.
 (use-package sops
   :commands (global-sops-mode)
   :functions (sops-save-file sops-cancel sops-edit-file)
@@ -61,10 +55,8 @@
         (setcdr entry sops-mode-map)
       (add-to-list 'minor-mode-map-alist (cons 'sops-mode sops-mode-map)))))
 
-;;;; logview — major mode for log files
+;;;; logview
 
-;;; @doc Major mode for log files: level filtering, timestamp parsing,
-;;; thread highlighting. Adds a ROS2 submode on top of the built-in ones.
 (use-package logview
   :defer t
   :custom

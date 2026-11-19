@@ -43,19 +43,13 @@ Minibuffer open (even when point is in another window) → abort
 recursive edit (this also dismisses any `*Completions*' popup).
 Completions window visible with no minibuffer (user popped it via
 `display-completion-list' or focused it directly) → close it.
-Region active → deactivate it.  Otherwise call regular
-`keyboard-quit'."
+Otherwise call regular `keyboard-quit'."
   (interactive)
   (cond
    ((> (minibuffer-depth) 0)                     (abort-recursive-edit))
    ((get-buffer-window "*Completions*" 'visible) (delete-completion-window))
-   ((region-active-p)                            (keyboard-quit))
    (t                                            (keyboard-quit))))
 
-;;; @doc Top-level rebindings: no accidental suspend (C-z, C-x C-z),
-;;; other-window on M-o, C-x j toggles a two-window split between
-;;; horizontal and vertical, and C-g quits DWIM-style, closing a
-;;; minibuffer even from another window.
 (use-package emacs
   :ensure nil
   :bind
@@ -65,9 +59,6 @@ Region active → deactivate it.  Otherwise call regular
    ("M-o" . other-window)
    ("C-x j" . jotain-toggle-window-split)))
 
-;;; @doc Remove unwanted stock menu-bar entries and disable the commands
-;;; behind them: Read Mail, Read Net News, all Games (including the Emacs
-;;; Psychotherapist), and Help > Getting New Versions.
 (dolist (key '("<menu-bar> <tools> <rmail>"          ; Read Mail
                "<menu-bar> <tools> <gnus>"           ; Read Net News
                "<menu-bar> <tools> <games>"          ; Games (incl. doctor)
@@ -80,19 +71,13 @@ Region active → deactivate it.  Otherwise call regular
                mpuz pong snake solitaire tetris zone))
   (put cmd 'disabled t))
 
-;;; @doc Built-in directional window switching: `Shift-<arrow>` moves
-;;; focus between windows.
 (use-package windmove
   :ensure nil
   :config (windmove-default-keybindings))
 
-;;; @doc Short `which-key' labels for the global `C-c' and `C-x' keys.
-;;; The bindings themselves stay in their `use-package' blocks; only the
-;;; labels live here. Registered after which-key loads (the
-;;; newcomers-presets theme turns it on), so load order doesn't matter.
 (with-eval-after-load 'which-key
   (which-key-add-key-based-replacements
-    ;; C-c <letter> — global user namespace.
+    ;; C-c <letter>
     "C-c a"     "org-agenda"
     "C-c c"     "org-capture"
     "C-c d"     "dirvish"
@@ -113,10 +98,10 @@ Region active → deactivate it.  Otherwise call regular
     "C-c S"     "gptel-menu"
     "C-c t"     "toggle-theme"
     "C-c v"     "devenv"
-    ;; C-c <modified> — special leaves.
+    ;; C-c <modified>
     "C-c M-j"   "jujutsu-dispatch"
     "C-c M-x"   "consult-mode-command"
-    ;; C-x namespace.
+    ;; C-x
     "C-x C-a"   "dape (debug)"
     "C-x g"     "magit-status"
     "C-x G"     "git-status-file"
@@ -126,15 +111,11 @@ Region active → deactivate it.  Otherwise call regular
     "C-x u"     "vundo"
     "C-x P"     "project (projection)"))
 
-;;;; Repeat maps — Emacs-native "one-shot modifier" pattern
-;;
-;; The newcomers-presets theme enables `repeat-mode', and many built-ins
-;; (`other-window', `next-buffer', `undo', window resizing) ship their
-;; own repeat maps.  See the "Ergonomics" chapter of the Info manual.
+;;;; Repeat maps
 
-;; Transpose/rotate/flip the whole window tree.  Emacs binds
-;; these under `C-x w' with arrow keys; this adds single-letter keys
-;; under `C-x W' with a repeat map, so `C-x W r r r' keeps rotating.
+;; Emacs binds the window-tree transforms under `C-x w' with arrow keys;
+;; this adds single-letter keys under `C-x W' so `C-x W r r r' keeps
+;; rotating.
 (defvar-keymap jotain-window-layout-repeat-map
   :doc "Repeat map for `window-layout-*' frame transforms."
   :repeat t

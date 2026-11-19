@@ -19,14 +19,5 @@
    :cargo (:buildScripts (:enable t))
    :procMacro (:enable t)))
 
-;;; @doc Built-in tree-sitter Rust mode. rust-analyzer runs clippy on
-;;; save with build scripts and proc macros enabled; format-on-save runs
-;;; rustfmt through apheleia.
-(use-package rust-ts-mode
-  :ensure nil
-  :mode "\\.rs\\'"
-  :custom
-  (rust-ts-mode-indent-offset 4))
-
 (provide 'init-lang-rust)
 ;;; init-lang-rust.el ends here

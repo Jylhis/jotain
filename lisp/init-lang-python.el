@@ -10,11 +10,6 @@
 
 ;;; Code:
 
-;;; @doc Built-in Python mode pinned to its tree-sitter variant. The LSP
-;;; server (basedpyright, with ruff via `rass` when present; else pyright
-;;; or pylsp) comes from the project's environment. When IPython is on
-;;; PATH it becomes the `run-python` REPL; Org Babel blocks, session or
-;;; not, run plain `python3`.
 (use-package python
   :ensure nil
   :mode ("\\.py\\'" . python-ts-mode)
@@ -22,7 +17,7 @@
   :custom
   (python-shell-interpreter "python3")
   :config
-  ;; Since Org 9.7 a non-`auto' value overrides both
+  ;; A non-`auto' value overrides both
   ;; `org-babel-python-command-session' (whose `auto' would inherit the
   ;; IPython interpreter and args below) and
   ;; `org-babel-python-command-nonsession' (default "python").

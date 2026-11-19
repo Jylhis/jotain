@@ -70,9 +70,6 @@ new head onto the `nix' entry never mutates the shared default."
                       (assq-delete-all 'nix
                                        (copy-sequence treesit-simple-indent-rules))))))
 
-;;; @doc Tree-sitter Nix major mode, provided by Nix. Format-on-save runs
-;;; nixfmt through apheleia (init-prog). An extra indent rule stops blank
-;;; lines from falling back to column 0.
 (use-package nix-ts-mode
   :ensure nil
   :mode "\\.nix\\'"

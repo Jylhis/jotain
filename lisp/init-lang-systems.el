@@ -4,52 +4,29 @@
 
 ;; Systems-language modes: C/C++, CUDA, CMake, Meson, Haskell, OCaml,
 ;; Dune, Zig, and GLSL.  C/C++ open in `c-ts-mode'/`c++-ts-mode'
-;; via `jotain-prog-ts-remaps' (init-prog.el); cc-mode decides which
-;; extensions are C vs C++ (`.h' and `.c' are C; C++ sources use `.hpp'
-;; and `.cpp').  CUDA has no upstream tree-sitter mode, so
-;; this file defines `cuda-ts-mode'.
+;; through `treesit-enabled-modes' (init-prog.el); `.h' is pinned to C.
+;; CUDA has no upstream tree-sitter mode, so this file defines
+;; `cuda-ts-mode'.
 ;;
 ;; All LSP and formatter wiring lives in `init-prog.el'; keep new server
 ;; hooks there.
 
 ;;; Code:
 
-;;; @doc Built-in cc-mode, kept for its `auto-mode-alist' decisions and as
-;;; the grammarless fallback. The `:mode' list decides which extensions
-;;; are C vs C++ (`.h' is C; C++ uses `.hpp' and `.cpp'); `jotain-prog-ts-remaps'
-;;; (init-prog.el) then remaps `c-mode'/`c++-mode' to the tree-sitter
-;;; modes when the grammar loads. `c-basic-offset'/`c-default-style'
-;;; apply to the remaining cc-mode buffers (Java, AWK, and C/C++ without
-;;; a grammar).
 (use-package cc-mode
   :ensure nil
-  :custom
-  (c-basic-offset 4)
-  (c-default-style
-   '((c-mode   . "stroustrup")
-     (c++-mode . "stroustrup")
-     (java-mode . "java")
-     (awk-mode  . "awk")
-     (other     . "gnu")))
   :mode (("\\.h\\'"   . c-mode)
-         ("\\.hpp\\'" . c++-mode)
-         ("\\.hxx\\'" . c++-mode)
-         ("\\.cc\\'"  . c++-mode)
-         ("\\.cpp\\'" . c++-mode)
-         ("\\.cxx\\'" . c++-mode)
          ("\\.tpp\\'" . c++-mode)
-         ("\\.txx\\'" . c++-mode)))
+         ("\\.txx\\'" . c++-mode))
+  :config
+  (dolist (mode '(c-mode c++-mode))
+    (add-to-list 'c-default-style (cons mode "stroustrup"))))
 
-;;; @doc Built-in tree-sitter C/C++ modes, reached via
-;;; `jotain-prog-ts-remaps' (init-prog.el). Indent 4 to match cc-mode's
-;;; `c-basic-offset'; style `k&r', the closest tree-sitter style to
-;;; Stroustrup, which has no tree-sitter equivalent. clangd (eglot) and
-;;; clang-format (apheleia) are wired in init-prog.el.
 (use-package c-ts-mode
   :ensure nil
   :defer t
   :custom
-  (c-ts-mode-indent-offset 4)
+  (c-ts-indent-offset 4)
   (c-ts-mode-indent-style 'k&r))
 
 ;;;; CUDA
@@ -117,58 +94,36 @@ where the `<<<...>>>' launch syntax parses as an error node."
 (add-to-list 'auto-mode-alist '("\\.cu\\'"  . cuda-ts-mode))
 (add-to-list 'auto-mode-alist '("\\.cuh\\'" . cuda-ts-mode))
 
-;;; @doc CMake mode for CMakeLists.txt and `.cmake` files, the fallback
-;;; when `cmake-ts-mode` (via `jotain-prog-ts-remaps`) has no grammar.
 (use-package cmake-mode
   :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
 
-;;; @doc Meson mode for `meson.build`, `meson_options.txt`, and
-;;; `meson.options`. Format-on-save runs `meson format` through apheleia
-;;; (init-prog).
 (use-package meson-mode
   :mode (("/meson\\.build\\'" . meson-mode)
          ("/meson_options\\.txt\\'" . meson-mode)
          ("/meson\\.options\\'" . meson-mode)))
 
-;;; @doc Haskell major mode, loaded on demand. Kept as the parent of
-;;; `haskell-ts-mode' below and for `.cabal'/`.lhs' files.
 (use-package haskell-mode
   :defer t)
 
-;;; @doc Tree-sitter Haskell mode (NonGNU ELPA) for `.hs' files. It
-;;; derives from `haskell-mode', so eglot's built-in HLS entry matches it;
-;;; HLS comes from the project PATH.
 (use-package haskell-ts-mode
   :mode ("\\.hs\\'" . haskell-ts-mode))
 
-;;; @doc Tuareg, kept for OCaml lexer/parser sources (`.mll'/`.mly'),
-;;; which neocaml does not cover.
 (use-package tuareg
   :mode ("\\.ml[ly]\\'" . tuareg-mode))
 
-;;; @doc Tree-sitter OCaml via neocaml (MELPA): `neocaml-mode' for `.ml'
-;;; and `neocaml-interface-mode' for `.mli'. ocamllsp (eglot) and
-;;; ocamlformat (apheleia) are wired for both in init-prog, from the
-;;; project PATH.
 (use-package neocaml
   :mode (("\\.ml\\'"  . neocaml-mode)
          ("\\.mli\\'" . neocaml-interface-mode)))
 
-;;; @doc Major mode for the OCaml build system's `dune`, `dune-project`,
-;;; and `dune-workspace` files.
 (use-package dune
   :mode (("/dune\\'" . dune-mode)
          ("/dune-project\\'" . dune-mode)
          ("/dune-workspace\\'" . dune-mode)))
 
-;;; @doc Tree-sitter Zig mode (MELPA). eglot's built-in entry starts
-;;; zls; format-on-save runs `zig fmt' through apheleia (init-prog).
 (use-package zig-ts-mode
   :mode "\\.\\(?:zig\\|zon\\)\\'")
 
-;;; @doc GLSL shader mode (MELPA) with its default file patterns
-;;; (`.glsl', `.vert', `.frag', `.comp', ...). Chosen over a tree-sitter
-;;; mode because nixpkgs ships no `glsl-ts-mode'.
+;; Chosen over a tree-sitter mode because nixpkgs ships no `glsl-ts-mode'.
 (use-package glsl-mode
   :defer t)
 

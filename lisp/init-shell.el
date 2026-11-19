@@ -8,8 +8,6 @@
 
 ;;; Code:
 
-;;; @doc Built-in Lisp-driven shell: the same on every platform, with
-;;; Elisp functions as commands and no subprocess for builtins.
 (use-package eshell
   :ensure nil
   :commands (eshell)
@@ -20,8 +18,6 @@
   (eshell-error-if-no-glob t)
   (eshell-destroy-buffer-when-process-dies t))
 
-;;; @doc Built-in REPL substrate (python, ielm, sql, ...). These
-;;; settings apply to every comint-derived buffer.
 (use-package comint
   :ensure nil
   :custom
@@ -29,8 +25,6 @@
   (comint-input-ignoredups t)
   (comint-scroll-to-bottom-on-input t))
 
-;;; @doc Built-in Emacs Lisp REPL. On Emacs 31+ its input history
-;;; persists to a file under `var/'.
 (use-package ielm
   :ensure nil
   :commands ielm

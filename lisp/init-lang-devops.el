@@ -6,8 +6,7 @@
 ;; GitLab CI, Justfile, Ansible, Bazel, and Robot Framework.
 ;;
 ;; Also two hand-rolled modes for the C4-model DSLs, Structurizr (`.dsl')
-;; and LikeC4 (`.c4'/`.likec4').  They are not packages, so the
-;; use-package scanner (nix/use-package.nix) never sees them.
+;; and LikeC4 (`.c4'/`.likec4'), sharing one brace-depth indenter.
 
 ;;; Code:
 
@@ -36,63 +35,63 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
          (set-default-toplevel-value sym val)
          (jotain--apply-docker-backend)))
 
-;;; @doc Dockerfile major mode with build commands (`M-x
-;;; dockerfile-build-buffer`). The runtime command comes from
-;;; `jotain-docker-backend`.
 (use-package dockerfile-mode
   :defer t
   :config (jotain--apply-docker-backend))
 
-;;; @doc Terraform mode for `.tf` files. eglot's built-in entry starts
-;;; terraform-ls when it is on PATH.
 (use-package terraform-mode
   :defer t
   :mode "\\.tf\\'")
 
-;;; @doc `yaml-mode` derivative for `.gitlab-ci.yml` with GitLab CI
-;;; keyword highlighting and completion.
 (use-package gitlab-ci-mode
   :defer t)
 
-;;; @doc Tree-sitter major mode for `Justfile` (the `just` grammar). The
-;;; package registers Justfile itself; the `:mode` regexes add the
-;;; dotfile `.justfile` and the `.just` extension used for modular
-;;; recipes.
 (use-package just-ts-mode
   :mode (("/\\.?[Jj]ustfile\\'" . just-ts-mode)
          ("\\.just\\'" . just-ts-mode)))
 
-;;; @doc Gherkin major mode (MELPA) for Cucumber `.feature` files:
-;;; keyword highlighting, indentation and step navigation.
 (use-package feature-mode
   :mode "\\.feature\\'")
 
-;;; @doc Ansible minor mode for playbooks: keyword and Jinja2
-;;; highlighting plus `ansible-vault` helpers. Not enabled
-;;; automatically; use `M-x ansible-mode`.
 (use-package ansible
   :defer t)
 
-;;; @doc Bazel/Starlark major modes for `BUILD`, `WORKSPACE`,
-;;; `MODULE.bazel`, `REPO.bazel`, `*.bzl`, `.bazelrc`, `.bazelignore` and
-;;; `.bazeliskrc` (registered by the package). `C-c C-f` runs
-;;; buildifier; format-on-save goes through apheleia (init-prog).
 (use-package bazel
   :defer t)
 
-;;; @doc Major mode for Robot Framework suites and resource files
-;;; (`.robot`/`.resource`). LSP (robotcode or robotframework_ls) and
-;;; format-on-save (robotidy) are wired in init-prog, from the project
-;;; PATH.
 (use-package robot-mode
   :mode (("\\.robot\\'" . robot-mode)
          ("\\.resource\\'" . robot-mode)))
 
-;;; Structurizr DSL ---------------------------------------------------
-;;
+;;;; Brace-block DSLs
+
+(defun jotain-devops--brace-indent-line (offset)
+  "Indent the current line by OFFSET columns per `{'/`}' nesting level.
+A line that leads with `}' closes the block above, so it belongs one
+level out."
+  (let ((depth (save-excursion
+                 (back-to-indentation)
+                 (let ((open (car (syntax-ppss))))
+                   (if (looking-at-p "}") (1- open) open)))))
+    (indent-line-to (* offset (max depth 0)))))
+
+(defun jotain-devops--setup-brace-mode (comment-skip indent-function keywords)
+  "Set up the current buffer as a brace-block DSL.
+COMMENT-SKIP is `comment-start-skip', INDENT-FUNCTION the
+`indent-line-function' and KEYWORDS the symbol holding the font-lock
+rules."
+  (setq-local comment-start "// "
+              comment-end ""
+              comment-start-skip comment-skip
+              indent-line-function indent-function
+              font-lock-defaults (list keywords nil t))
+  ;; Dedent the line when the block-closing brace is typed.
+  (setq-local electric-indent-chars (cons ?} electric-indent-chars)))
+
+;;;; Structurizr DSL
+
 ;; `.dsl' otherwise opens in the built-in `dsssl-mode', whose Lisp
-;; indentation mangles Structurizr's `{'/`}' blocks.  This mode indents by
-;; brace depth and knows the `//', `#', and `/* */' comment forms.
+;; indentation mangles Structurizr's `{'/`}' blocks.
 
 (defcustom jotain-structurizr-indent-offset 4
   "Columns of indentation per `{'/`}' nesting level in Structurizr DSL."
@@ -101,8 +100,6 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
 
 (defvar jotain-structurizr-mode-syntax-table
   (let ((table (make-syntax-table)))
-    ;; Braces as paren pairs, for sexp motion, `show-paren-mode', and
-    ;; depth-based indentation.
     (modify-syntax-entry ?{ "(}" table)
     (modify-syntax-entry ?} "){" table)
     (modify-syntax-entry ?\" "\"" table)
@@ -111,7 +108,6 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
     (modify-syntax-entry ?/  ". 124b" table)
     (modify-syntax-entry ?*  ". 23"   table)
     (modify-syntax-entry ?\n "> b"    table)
-    ;; Identifiers and relationship arrows keep `-' and `_' together.
     (modify-syntax-entry ?_ "_" table)
     (modify-syntax-entry ?- "_" table)
     table)
@@ -136,33 +132,23 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
 
 (defun jotain-structurizr-indent-line ()
   "Indent the current Structurizr line by its `{'/`}' nesting depth."
-  (let ((depth (save-excursion
-                 (back-to-indentation)
-                 (let ((open (car (syntax-ppss))))
-                   ;; A line that leads with `}' closes the block above,
-                   ;; so it belongs one level out.
-                   (if (looking-at-p "}") (1- open) open)))))
-    (indent-line-to (* jotain-structurizr-indent-offset (max depth 0)))))
+  (jotain-devops--brace-indent-line jotain-structurizr-indent-offset))
 
 (define-derived-mode jotain-structurizr-mode prog-mode "Structurizr"
   "Major mode for editing Structurizr DSL architecture models."
   :syntax-table jotain-structurizr-mode-syntax-table
-  (setq-local comment-start "// "
-              comment-end ""
-              comment-start-skip "\\(?://+\\|#+\\|/\\*+\\)[ \t]*"
-              indent-line-function #'jotain-structurizr-indent-line
-              font-lock-defaults '(jotain-structurizr-font-lock-keywords nil t))
-  ;; Dedent the line when the block-closing brace is typed.
-  (setq-local electric-indent-chars (cons ?} electric-indent-chars)))
+  (jotain-devops--setup-brace-mode
+   "\\(?://+\\|#+\\|/\\*+\\)[ \t]*"
+   #'jotain-structurizr-indent-line
+   'jotain-structurizr-font-lock-keywords))
 
 ;; Win over the built-in `.dsl' -> `dsssl-mode' entry by prepending.
 (add-to-list 'auto-mode-alist '("\\.dsl\\'" . jotain-structurizr-mode))
 
-;;; LikeC4 -----------------------------------------------------------
-;;
-;; LikeC4 (https://likec4.dev): same brace-depth approach as Structurizr,
-;; with only the `//' and `/* */' comment forms.  The eglot server
-;; (`likec4-lsp', bundled on the distribution PATH) is wired in init-prog.
+;;;; LikeC4
+
+;; https://likec4.dev: brace-depth indentation with only the `//' and
+;; `/* */' comment forms.
 
 (defcustom jotain-likec4-indent-offset 2
   "Columns of indentation per `{'/`}' nesting level in LikeC4 DSL."
@@ -170,15 +156,8 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
   :group 'jotain-devops)
 
 (defvar jotain-likec4-mode-syntax-table
-  (let ((table (make-syntax-table)))
-    (modify-syntax-entry ?{ "(}" table)
-    (modify-syntax-entry ?} "){" table)
-    (modify-syntax-entry ?\" "\"" table)
-    (modify-syntax-entry ?/  ". 124b" table)
-    (modify-syntax-entry ?*  ". 23"   table)
-    (modify-syntax-entry ?\n "> b"    table)
-    (modify-syntax-entry ?_ "_" table)
-    (modify-syntax-entry ?- "_" table)
+  (let ((table (make-syntax-table jotain-structurizr-mode-syntax-table)))
+    (modify-syntax-entry ?# "." table)
     table)
   "Syntax table for `jotain-likec4-mode'.")
 
@@ -197,21 +176,15 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
 
 (defun jotain-likec4-indent-line ()
   "Indent the current LikeC4 line by its `{'/`}' nesting depth."
-  (let ((depth (save-excursion
-                 (back-to-indentation)
-                 (let ((open (car (syntax-ppss))))
-                   (if (looking-at-p "}") (1- open) open)))))
-    (indent-line-to (* jotain-likec4-indent-offset (max depth 0)))))
+  (jotain-devops--brace-indent-line jotain-likec4-indent-offset))
 
 (define-derived-mode jotain-likec4-mode prog-mode "LikeC4"
   "Major mode for editing LikeC4 architecture models."
   :syntax-table jotain-likec4-mode-syntax-table
-  (setq-local comment-start "// "
-              comment-end ""
-              comment-start-skip "\\(?://+\\|/\\*+\\)[ \t]*"
-              indent-line-function #'jotain-likec4-indent-line
-              font-lock-defaults '(jotain-likec4-font-lock-keywords nil t))
-  (setq-local electric-indent-chars (cons ?} electric-indent-chars)))
+  (jotain-devops--setup-brace-mode
+   "\\(?://+\\|/\\*+\\)[ \t]*"
+   #'jotain-likec4-indent-line
+   'jotain-likec4-font-lock-keywords))
 
 (add-to-list 'auto-mode-alist '("\\.c4\\'" . jotain-likec4-mode))
 (add-to-list 'auto-mode-alist '("\\.likec4\\'" . jotain-likec4-mode))

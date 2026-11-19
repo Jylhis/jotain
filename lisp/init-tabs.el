@@ -19,8 +19,6 @@
 (declare-function tab-bar-new-tab "tab-bar" (&optional arg from-number))
 (declare-function tab-bar-rename-tab "tab-bar" (name &optional tab-number))
 
-;;; @doc Built-in frame-local tab bar, used as a workspace switcher.
-;;; The bar is hidden while only one tab exists.
 (use-package tab-bar
   :ensure nil
   :hook (after-init . tab-bar-mode)

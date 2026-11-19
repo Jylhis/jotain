@@ -36,23 +36,6 @@ open when corfu first starts keep their old value."
   :type '(repeat symbol)
   :group 'jotain-completion)
 
-(defcustom jotain-completion-auto-delay 0.2
-  "Idle seconds before the automatic popup appears.
-Applies only in `jotain-completion-auto-modes' buffers.  Also drives
-`completion-preview-idle-delay' when `jotain-completion-inline-preview'
-is on, so the ghost text and the popup wait the same beat.  `0.2' is
-corfu's default; corfu warns that shorter delays create high load."
-  :type 'number
-  :group 'jotain-completion)
-
-(defcustom jotain-completion-auto-prefix 3
-  "Characters typed before the automatic popup appears.
-Applies only in `jotain-completion-auto-modes' buffers.  `3' is corfu's
-default and matches `completion-preview-minimum-symbol-length', so the
-inline preview and the popup start at the same point."
-  :type 'integer
-  :group 'jotain-completion)
-
 (defcustom jotain-completion-key "C-M-i"
   "Key bound to `completion-at-point', or nil to bind nothing.
 `C-M-i' is the manual's recommended key (window managers often take
@@ -75,8 +58,9 @@ Non-nil sets `tab-always-indent' to t (the stock default) and removes
 the TAB bindings of the corfu popup and the inline preview.
 
 With the default nil, TAB both indents and completes:
-  - `tab-always-indent' is `complete': TAB indents, and on an already
-    indented line runs `completion-at-point' (opening the popup);
+  - `tab-always-indent' is `complete' (set by the newcomers-presets
+    theme): TAB indents, and on an already indented line runs
+    `completion-at-point' (opening the popup);
   - inside the popup TAB runs `corfu-insert', so a second TAB accepts
     the candidate (and expands a snippet);
   - with only the inline preview showing, TAB accepts the ghost text.
@@ -134,17 +118,12 @@ per buffer."
 
 ;;;; Minibuffer defaults
 
-;;; @doc Built-in minibuffer customisation: one-column *Completions*
-;;; and historical sorting so frequent commands surface first.
 (use-package minibuffer
   :ensure nil
   :custom
   (completions-format 'one-column)
   (completions-sort 'historical))
 
-;;; @doc Fuzzy, space-separated, order-independent completion. Pairs with
-;;; partial-completion (path globbing) so `/u/s/a` matches
-;;; `/usr/share/applications`.
 (use-package orderless
   :demand t
   :custom
@@ -157,15 +136,10 @@ per buffer."
 
 ;;;; Vertico + extensions
 
-;;; @doc Vertical minibuffer completion UI. Replaces the default
-;;; `*Completions*` buffer with an inline list.
 (use-package vertico
   :demand t
   :config (vertico-mode 1))
 
-;;; @doc Path-savvy editing in vertico — RET enters a candidate
-;;; directory, DEL/M-DEL delete a path component instead of one
-;;; character. Bundled with vertico.
 (use-package vertico-directory
   :ensure nil
   :after vertico
@@ -175,9 +149,6 @@ per buffer."
               ("M-DEL" . vertico-directory-delete-word))
   :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
 
-;;; @doc Per-category and per-command display modes: grid for files,
-;;; a buffer for line/grep/imenu/flymake so candidates have room, and
-;;; posframe for everything else. Bundled with vertico.
 (use-package vertico-multiform
   :ensure nil
   :after vertico
@@ -198,9 +169,6 @@ per buffer."
      (consult-fd         grid)))
   :config (vertico-multiform-mode 1))
 
-;;; @doc Lets vertico render in a regular buffer instead of the
-;;; minibuffer; vertico-multiform uses it for consult-line and the grep
-;;; family.
 (use-package vertico-buffer
   :ensure nil
   :after vertico
@@ -208,18 +176,10 @@ per buffer."
   (vertico-buffer-hide-prompt nil)
   (vertico-buffer-display-action '(display-buffer-reuse-window)))
 
-;;; @doc Renders the vertico candidate list in a floating child frame,
-;;; styled like the corfu popup. Driven through vertico-multiform (the
-;;; `t' catch-all above) rather than a global vertico-posframe-mode, as
-;;; upstream recommends, so the other multiform entries keep their own
-;;; displays. On a tty posframe cannot work, so vertico stays in the
-;;; minibuffer.
 (use-package vertico-posframe
   :after vertico
   :custom
-  ;; Bottom-centre, where the eye already looks for the minibuffer.
   (vertico-posframe-poshandler 'posframe-poshandler-frame-bottom-center)
-  ;; Inner padding so candidate text does not sit against the border.
   (vertico-posframe-parameters '((left-fringe . 8) (right-fringe . 8)))
   :custom-face
   ;; Inherit corfu's faces so both floating panels match; posframe reads
@@ -229,19 +189,14 @@ per buffer."
 
 ;;;; Annotations
 
-;;; @doc Adds annotation columns (file size, mode, docstring, …) to every
-;;; completion list.
 (use-package marginalia
   ;; No `completing-read' runs before `after-init-hook', so marginalia can
   ;; wait for it.  vertico and orderless stay eager: they must be live for
   ;; the first minibuffer session, which can follow startup immediately.
   :hook (after-init . marginalia-mode))
 
-;;;; Consult — the big binding table
+;;;; Consult
 
-;;; @doc Preview-as-you-go variants of most Emacs lookups: buffer
-;;; switch, line jump, grep, recent files, imenu, flymake, registers.
-;;; The binding table replaces a dozen built-ins with one consistent UI.
 (use-package consult
   :hook (completion-list-mode . consult-preview-at-point-mode)
   :functions (consult-xref consult-register-window)
@@ -318,15 +273,8 @@ per buffer."
    :preview-key '(:debounce 0.4 any))
   (setopt consult-narrow-key "<"))
 
-;;;; Embark — actions on anything
+;;;; Embark
 
-;;; @doc Context actions on the thing at point or the current candidate.
-;;; `C-.' (embark-act) opens a menu of actions for it (file, symbol,
-;;; region, buffer, URL, …); `C-;' (embark-dwim) runs the default action
-;;; directly. `C-h' after `C-.' makes the menu searchable. In the menu,
-;;; `i'/`w' insert or copy the candidate, `A' acts on every candidate and
-;;; `B' re-runs the input through another command. `C-h B' is a
-;;; searchable describe-bindings.
 (use-package embark
   :bind
   (("C-."   . embark-act)
@@ -335,16 +283,11 @@ per buffer."
   :init
   (setq prefix-help-command #'embark-prefix-help-command)
   :config
-  ;; Hide modelines in the transient embark collect/live buffers.
   (add-to-list 'display-buffer-alist
                '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
                  nil
                  (window-parameters (mode-line-format . none)))))
 
-;;; @doc Glue between embark and consult: `embark-export' (`C-c C-o' in
-;;; the minibuffer) turns grep results into a grep buffer, consult-line
-;;; into occur, files into dired and buffers into ibuffer. Exporting grep
-;;; results and pressing `C-x C-q' (wgrep) edits every match in place.
 (use-package embark-consult
   ;; Activates on the first consult command, the only time it matters.
   :after (embark consult)
@@ -354,8 +297,6 @@ per buffer."
 
 ;;;; Jump tools
 
-;;; @doc Jump to a visible char, word or line by typing a short label.
-;;; Bound under M-g next to the goto family; works across all frames.
 (use-package avy
   :bind
   (("M-g c" . avy-goto-char)
@@ -373,9 +314,6 @@ every `find-file'."
       (set-process-sentinel proc #'ignore))
     proc))
 
-;;; @doc Frecency-ranked directory jump via the zoxide CLI. Every
-;;; `find-file' records its directory; M-g z opens a file from a ranked
-;;; directory.
 (use-package zoxide
   ;; zoxide rides the wrapper PATH (nix/runtime-deps.nix); without it,
   ;; skip the find-file hook rather than fail on every file open.
@@ -394,15 +332,8 @@ every `find-file'."
 
 ;;;; In-buffer completion
 
-;;; @doc TAB indents and completes: `tab-always-indent' is `complete',
-;;; so TAB indents the line and, once it is indented, runs
-;;; `completion-at-point'. A second TAB in the popup accepts the
-;;; candidate. `jotain-completion-free-tab' restores the stock `t'
-;;; (indent only).
-(use-package emacs
-  :ensure nil
-  :custom
-  (tab-always-indent (if jotain-completion-free-tab t 'complete)))
+(when jotain-completion-free-tab
+  (setopt tab-always-indent t))
 
 ;; Bind `completion-at-point', not the stock `complete-symbol': a remap
 ;; only fires for the command a key resolves to, so this is what lets
@@ -410,13 +341,6 @@ every `find-file'."
 (when jotain-completion-key
   (keymap-global-set jotain-completion-key #'completion-at-point))
 
-;;; @doc In-buffer completion popup. It opens on its own only in
-;;; `jotain-completion-auto-modes' (default: programming modes), so prose
-;;; stays quiet. By default TAB and `C-M-i' (`jotain-completion-key')
-;;; each work twice: the first press opens the popup, the second inserts
-;;; the preselected top candidate (`corfu-insert', which also expands
-;;; snippets). RET is unbound in the popup, so Enter is always a newline
-;;; (`jotain-completion-free-return'). `M-n'/`M-p' move, `C-g' dismisses.
 (use-package corfu
   :hook (after-init . global-corfu-mode)
   :preface
@@ -432,8 +356,6 @@ once.  Major-mode hooks run first; `corfu-mode-hook' would be too late."
     (add-hook hook #'jotain-completion--enable-auto))
   :custom
   (corfu-cycle t)
-  (corfu-auto-prefix jotain-completion-auto-prefix)
-  (corfu-auto-delay jotain-completion-auto-delay)
   ;; corfu's default `insert' commits the selected candidate when you
   ;; keep typing, silently accepting one you never chose.
   (corfu-preview-current nil)
@@ -457,19 +379,11 @@ once.  Major-mode hooks run first; `corfu-mode-hook' would be too late."
   ;; Same for `C-M-i', which reaches the popup through this remap.
   (keymap-set corfu-map "<remap> <completion-at-point>" #'corfu-insert))
 
-;;; @doc Sorts recently picked candidates first; persisted across
-;;; sessions by savehist. Bundled with corfu.
 (use-package corfu-history
   :ensure nil
   :after corfu
   :config (corfu-history-mode 1))
 
-;;; @doc Documentation panel beside the popup: a child frame with the
-;;; selected candidate's docstring or source location. Gated on
-;;; `jotain-completion-doc-popup'. The delay is (INITIAL . SUBSEQUENT):
-;;; a longer wait before it first appears so it does not flash, then a
-;;; quick refresh as you move between candidates. `M-t' toggles it.
-;;; Bundled with corfu.
 (use-package corfu-popupinfo
   :ensure nil
   :when jotain-completion-doc-popup
@@ -479,11 +393,6 @@ once.  Major-mode hooks run first; `corfu-mode-hook' would be too late."
   (corfu-popupinfo-delay '(1.0 . 0.5))
   :config (corfu-popupinfo-mode 1))
 
-;;; @doc Extra capfs. dabbrev, file path and keyword go on the global
-;;; `completion-at-point-functions', so they run as fallbacks after the
-;;; buffer-local major-mode capfs. `cape-elisp-symbol' is added only in
-;;; Elisp buffers, where it also completes inside comments and
-;;; docstrings.
 (use-package cape
   ;; The capfs are autoloaded; cape loads on first use.
   :defer t
@@ -508,14 +417,6 @@ where the built-in returns nil: comments and docstrings."
 (unless jotain-completion-inline-preview
   (setopt global-completion-preview-mode nil))
 
-;;; @doc Inline completion preview (built-in): greys out the most likely
-;;; completion after point, drawn from the same capfs as the corfu popup.
-;;; The newcomers-presets theme enables `global-completion-preview-mode'
-;;; in every buffer. Gated on
-;;; `jotain-completion-inline-preview'. TAB (unless
-;;; `jotain-completion-free-tab') and `M-RET' accept the preview, `M-i'
-;;; its common prefix; RET stays a newline. Suppressed in comments and
-;;; strings, and sorted like corfu so it matches the popup's top row.
 (use-package completion-preview
   :ensure nil
   :when jotain-completion-inline-preview
@@ -533,9 +434,9 @@ Added to `completion-preview-inhibit-functions' so the ghost
 text does not appear where symbol completion is meaningless."
     (nth 8 (syntax-ppss)))
   :config
-  ;; Match the popup's delay so one keystroke does not fire two capf
-  ;; passes at different times (costly with an LSP capf).
-  (setopt completion-preview-idle-delay jotain-completion-auto-delay)
+  ;; Same 0.2s as corfu's auto delay, so one keystroke does not fire two
+  ;; capf passes at different times (costly with an LSP capf).
+  (setopt completion-preview-idle-delay 0.2)
   ;; `C-i' is the TAB event.  Strict mode drops it so TAB only indents;
   ;; otherwise bind it explicitly rather than rely on the shipped default.
   ;; A visible popup wins regardless: corfu-map's TAB takes precedence.
@@ -543,13 +444,11 @@ text does not appear where symbol completion is meaningless."
       (keymap-unset completion-preview-active-mode-map "C-i" t)
     (keymap-set completion-preview-active-mode-map "C-i"
                 #'completion-preview-insert))
-  ;; Accept without TAB or RET.
   (keymap-set completion-preview-active-mode-map "M-RET"
               #'completion-preview-insert)
   ;; Match corfu's top row once corfu has loaded (it loads after init).
   (with-eval-after-load 'corfu
     (setopt completion-preview-sort-function corfu-sort-function))
-  ;; Suppress in comments/strings.
   (add-hook 'completion-preview-inhibit-functions
             #'jotain-completion--preview-inhibit-in-comment))
 

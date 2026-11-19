@@ -34,17 +34,6 @@
               :nilness t
               :unusedwrite t)))
 
-;;; @doc Built-in tree-sitter Go modes: `go-ts-mode` for source,
-;;; `go-mod-ts-mode` for go.mod, `go-work-ts-mode` for
-;;; go.work. gopls (eglot), goimports (apheleia, on save), and dlv (dape)
-;;; are wired in init-prog; all Go tooling comes from the project PATH.
-(use-package go-ts-mode
-  :ensure nil
-  :mode (("\\.go\\'"     . go-ts-mode)
-         ("/go\\.mod\\'"  . go-mod-ts-mode)))
-
-(add-to-list 'auto-mode-alist '("/go\\.work\\'" . go-work-ts-mode))
-
 ;; go-tag/gotest pull in classic `go-mode' as a dependency, and its
 ;; autoloads add global state that breaks unrelated buffers:
 ;;
@@ -54,32 +43,22 @@
 ;;     and the buffer never reaches its real mode.
 ;;   - `auto-mode-alist' entries routing Go files to the classic modes.
 ;;
-;; Only stripping the magic entry prevents the load error; the remap
-;; below acts after the predicate has already fired.  Both removals are
-;; no-ops when go-mode's autoloads were never loaded.
+;; Only stripping the magic entry prevents the load error; a remap acts
+;; after the predicate has already fired.  Both removals are no-ops when
+;; go-mode's autoloads were never loaded.
 (setq magic-mode-alist (assq-delete-all 'go--is-go-asm magic-mode-alist))
 (dolist (classic '(go-mode go-dot-mod-mode go-dot-work-mode))
   (setq auto-mode-alist (rassq-delete-all classic auto-mode-alist)))
 
-;; If anything else still selects a classic Go mode (e.g. a stale
-;; `package-quickstart' autoload), remap it to the tree-sitter mode.
-(dolist (remap '((go-mode         . go-ts-mode)
-                 (go-dot-mod-mode . go-mod-ts-mode)
-                 (go-mod-mode     . go-mod-ts-mode)))
-  (add-to-list 'major-mode-remap-alist remap))
+;; Emacs 31 remaps `go-mode' and `go-mod-mode' itself; this one it lacks.
+(add-to-list 'major-mode-remap-alist '(go-dot-mod-mode . go-mod-ts-mode))
 
-;;; @doc Struct-tag editing (`json:"..."`, `db:"..."`, ...) via the
-;;; project's `gomodifytags`. Bound under the mode-local `C-c C-t` Go
-;;; prefix, clear of the global `C-c t` theme toggle.
 (use-package go-tag
   :after go-ts-mode
   :bind (:map go-ts-mode-map
               ("C-c C-t a" . go-tag-add-tags)
               ("C-c C-t d" . go-tag-remove-tags)))
 
-;;; @doc Run the Go test or benchmark at point, the current file's
-;;; tests, or the whole project, with compilation-mode error jumping.
-;;; Shares the `C-c C-t` prefix with go-tag.
 (use-package gotest
   :after go-ts-mode
   :bind (:map go-ts-mode-map
