@@ -47,7 +47,7 @@ Everything traces back to these — cite them when correcting the notes:
 ## How to keep it honest
 
 These notes target Emacs 31.1 (released 2026-08-24, the default build) with
-30.1 as the floor, and carry version flags (e.g. igc/MPS is not in 30 or
+31.1 as the floor, and carry version flags (e.g. igc/MPS is not in 30 or
 31.1; pure storage and unexec are gone in 31). When a note conflicts with the
 installed Emacs, **trust the running Emacs and its manual**: verify with
 `C-h f`/`C-h v`/`C-h S`, then fix the reference file in the same change so

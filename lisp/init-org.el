@@ -5,7 +5,7 @@
 ;; Org gets its own file: it is a whole writing, agenda and literate-
 ;; programming environment.  Babel is configured as a notebook: a curated
 ;; language set, a trust-aware evaluation prompt, and a `C-c b' prefix for
-;; the run/restart/clear loop.  See docs/usage/notebooks.mdx.
+;; the run/restart/clear loop.  See docs/notebooks.org.
 
 ;;; Code:
 
