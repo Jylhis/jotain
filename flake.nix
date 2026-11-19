@@ -11,10 +11,6 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # The git-based emacs.nix variants: emacs-git (master), emacs-unstable
-    # (newest release or pretest tag, currently 31.1; the jotainEmacs
-    # default) and emacs-igc (feature/igc3). "mainline" is nixpkgs' own
-    # emacs and needs no overlay.
     emacs-overlay = {
       url = "github:nix-community/emacs-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -47,15 +43,12 @@
           projectRootFile = "flake.nix";
           programs = import ./nix/treefmt.nix;
         };
-      # Overlay for the module outputs. emacs-overlay sits underneath so
-      # module installs resolve the same Emacs bases and epkgs snapshot as
-      # `packages.default` (and CI's cachix artifacts). Consumers that
-      # override nixpkgs (24.05+) lose those cache hits and build the
-      # overlay's MELPA snapshot locally.
+      # emacs-overlay sits underneath so module installs resolve the same
+      # Emacs and epkgs snapshot as `packages.default`.
       moduleOverlay = nixpkgs.lib.composeExtensions emacs-overlay.overlays.default self.overlays.default;
     in
     {
-      overlays.default = import ./nix/mk-overlay.nix { };
+      overlays.default = import ./nix/mk-overlay.nix;
 
       homeManagerModules.default =
         { ... }:
@@ -70,84 +63,47 @@
           _module.args.jotainOverlay = moduleOverlay;
         };
 
-      lib = import ./nix/use-package.nix { inherit (nixpkgs) lib; };
-
-      # One Emacs build: `emacs` (the pgtk GUI, wrapped by `default`, the
-      # full distribution). emacs.nix asserts other GUIs away.
       packages = forAllSystems (system: {
         default = (pkgsFor system).jotainEmacsPackages;
         emacs = (pkgsFor system).jotainEmacs;
-        # Already bundled into every distribution; exposed for direct builds.
+        inherit ((pkgsFor system)) eca;
         likec4-lsp = (pkgsFor system).likec4Lsp;
         info = (pkgsFor system).jotainInfo;
         docs = import ./nix/options-doc.nix {
           pkgs = pkgsFor system;
           src = self;
         };
-        packages-doc = import ./nix/packages-doc.nix {
-          pkgs = pkgsFor system;
-          src = self;
-        };
-        # Docstring-level API reference for every bundled package, mounted
-        # at /help/api/ by nix/site.nix. Heavy: one batch Emacs per package.
-        emacs-api-doc = import ./nix/emacs-api-doc.nix {
-          pkgs = pkgsFor system;
-          src = self;
-        };
-        # No `src = self`: lib.fileset (used by site.nix and
-        # info-manual.nix) rejects the string-like flake source. The
-        # default src (../.) is the same tree as a path.
+        # No `src = self`: lib.fileset rejects the string-like flake source.
         site = import ./nix/site.nix {
           pkgs = pkgsFor system;
         };
-        # PR CI's site build: the full site minus the heavy /help/api/
-        # reference, which only the deploy path builds.
-        site-preview = import ./nix/site.nix {
-          pkgs = pkgsFor system;
-          withApiDoc = false;
-        };
-        # Expected contents of website/public/ds (`just ds-sync`, ds-in-sync).
         ds-assets = import ./nix/ds-assets.nix {
           pkgs = pkgsFor system;
-          inherit ((pkgsFor system)) bun;
         };
       });
 
-      # legacyPackages holds outputs `nix flake check` must not build
-      # (it builds every `packages` output but skips these); `nix build
-      # .#<name>` still resolves them.
+      # Outputs `nix flake check` does not build.
       legacyPackages = forAllSystems (
         system:
         let
-          langEval = import ./nix/lang-eval.nix {
-            pkgs = pkgsFor system;
-          };
-          emacsPackageSet = import ./nix/emacs-package-set.nix {
-            pkgs = pkgsFor system;
-          };
+          pkgs = pkgsFor system;
+          langEval = import ./nix/lang-eval.nix { inherit pkgs; };
         in
         {
-          # Every bundled Emacs package, e.g. `nix build
-          # .#emacs-packages.magit`. The eval-only emacs-packages-eval check
-          # gates that every declared name resolves.
-          emacs-packages = emacsPackageSet.byName;
+          # The scope the distribution is built from, for `nix-update --flake`
+          # and `nix build .#emacs-packages.<name>`.
+          emacs-packages = (pkgs.emacsPackagesFor pkgs.jotainEmacs).overrideScope (
+            import ./nix/extra-packages.nix { inherit pkgs; }
+          );
 
-          # AOT-compiled config (.elc + store .eln) for `just run-built-fast`
-          # only; ~50-150 MB of .eln. Built against `.core`, like the
-          # daemon's compiledConfig and the elisp-compile check (see
-          # nix/config-compiled.nix).
+          # For `just run-built-fast`. Built against `.core`, like the
+          # elisp-compile check.
           config-compiled = import ./nix/config-compiled.nix {
-            pkgs = pkgsFor system;
-            emacs = (pkgsFor system).jotainEmacsPackages.core;
+            inherit pkgs;
+            emacs = pkgs.jotainEmacsPackages.core;
             nativeCompile = true;
           };
 
-          # Per-language IDE-feature evaluation (nix/lang-eval.nix). The
-          # matrix loads the full config and the live probe bundles language
-          # servers; the cheap gate is checks.lang-eval-doc-in-sync.
-          #   nix build .#lang-eval-doc      (registry -> language-support.mdx)
-          #   nix build .#lang-eval-matrix   (live config-introspection matrix)
-          #   nix build .#lang-eval-live     (end-to-end LSP probe subset)
           inherit (langEval) lang-eval-doc lang-eval-matrix lang-eval-live;
         }
       );

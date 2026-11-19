@@ -10,9 +10,6 @@
 #   /info/emacs/      the GNU Emacs manual from the pinned Emacs source
 #   /info/elisp/      the Emacs Lisp reference manual, same source
 #   /options/         Nix module options reference (options-doc.nix)
-#   /help/packages/   per-package reference (packages-doc.nix)
-#   /help/api/        generated docstring-level API reference (emacs-api-doc.nix)
-#   /packages/        third-party package search over /help/api/ (withApiDoc)
 #
 # The site is $out/public/ (the GitHub Pages artifact). Preview it under
 # the base path with `just serve-site`.
@@ -20,26 +17,13 @@
   pkgs,
   lib ? pkgs.lib,
   src ? ../.,
-  # Mount the heavy /help/api/ reference. Off for `.#site-preview` (PR CI);
-  # guarded lazily so `false` never realizes emacsApiDoc.
-  withApiDoc ? true,
   # Prefix of every internal absolute URL: the site is the GitHub Pages
   # project site page.jylhis.com/jotain/. Use "" to serve from a root.
   baseHref ? "/jotain",
 }:
 let
   optionsDoc = import ./options-doc.nix { inherit pkgs src; };
-  packagesDoc = import ./packages-doc.nix { inherit pkgs src; };
-  # The mount path is baked into the pages' stylesheet links; keep it in
-  # sync with where html/ is copied below.
-  emacsApiDoc = import ./emacs-api-doc.nix {
-    inherit pkgs src;
-    mountPath = "${baseHref}/help/api";
-  };
-  # /help/ index row, emitted only under withApiDoc.
-  apiHelpRow = ''<div class="man-entry"><a href="${baseHref}/help/api/">C-h S — elisp API reference</a><span class="man-dots">·····································································</span><span class="man-desc">docstrings for every bundled package</span></div>'';
-  # /packages/ row, likewise only under withApiDoc.
-  pkgSearchRow = ''<div class="man-entry"><a href="${baseHref}/packages/">M-x list-packages — package search</a><span class="man-dots">·····································································</span><span class="man-desc">search every third-party package and symbol</span></div>'';
+  dsAssets = import ./ds-assets.nix { inherit pkgs; };
   infoManual = import ./info-manual.nix { inherit pkgs src; };
   # The shipped Emacs: its man pages and manual sources feed /man and
   # /info, so the site documents the exact revision users get.
@@ -133,9 +117,6 @@ pkgs.runCommand "jotain-site"
       pkgs.pandoc
       pkgs.mandoc
       pkgs.gzip
-      # Server-renders the /packages/ list from the generated
-      # search-index.json (only used under withApiDoc).
-      pkgs.jq
     ];
     inherit docsSrc manSrc webSrc;
     meta.description = "page.jylhis.com/jotain static site (landing SPA + generated docs)";
@@ -146,6 +127,8 @@ pkgs.runCommand "jotain-site"
     mkdir -p "$out/public"
     cp -r "$webSrc/website/public/." "$out/public/"
     chmod -R u+w "$out/public"
+    cp -r "${dsAssets}" "$out/public/ds"
+    chmod -R u+w "$out/public/ds"
 
     substituteInPlace "$out/public/index.html" \
       --replace-fail '@VERSION@' ${lib.escapeShellArg (lib.escapeXML release.version)} \
@@ -154,13 +137,7 @@ pkgs.runCommand "jotain-site"
       --replace-fail '@REPO@' ${lib.escapeShellArg (lib.escapeXML release.repo)} \
       --replace-fail '@SUPPORT@' ${lib.escapeShellArg (lib.escapeXML release.support)}
 
-    ${lib.optionalString (!withApiDoc) ''
-      # This variant (site-preview) omits /help/api/ and, with it, the
-      # /packages/ search page. Drop the landing page's link to /packages/
-      # so an API-free build advertises no 404 route (the /help/ index's
-      # rows for it are already withApiDoc-gated).
-      sed -i '\|href="packages/"|d' "$out/public/index.html"
-    ''}
+    sed -i '\|href="packages/"|d' "$out/public/index.html"
 
     # The shared design-system CSS is @import-ed with a root-absolute path;
     # rewrite it to the deploy base path. These stylesheets are copied to
@@ -335,74 +312,17 @@ pkgs.runCommand "jotain-site"
     cp "$out/public/css/manual.css" "$out/public/manual/manual.css"
     inject_head "$out/public/manual/"*.html
 
-    # /options/ and /help/packages/ — pandoc standalone pages
-    mkdir -p "$out/public/options" "$out/public/help/packages"
+    # /options/ — pandoc standalone page
+    mkdir -p "$out/public/options"
     cp "${optionsDoc}/index.html" "$out/public/options/index.html"
-    cp "${packagesDoc}/index.html" "$out/public/help/packages/index.html"
-    chmod u+w "$out/public/options/index.html" "$out/public/help/packages/index.html"
-    # Both pages link a sibling style.css; ship the design-system
-    # version instead of their bundled purple one.
+    chmod u+w "$out/public/options/index.html"
     cp "$out/public/css/pandoc-page.css" "$out/public/options/style.css"
-    cp "$out/public/css/pandoc-page.css" "$out/public/help/packages/style.css"
-    inject_head "$out/public/options/index.html" "$out/public/help/packages/index.html"
-
-    ${lib.optionalString withApiDoc ''
-      # /help/api/ — generated per-package API reference (etc/elisp-doc).
-      # The pages are self-contained and theme-aware via their own CSS
-      # (style.css + emacs.css, shipped inside the tree), so they are copied
-      # verbatim rather than run through inject_head over thousands of files.
-      mkdir -p "$out/public/help/api"
-      cp -r "${emacsApiDoc}/html/." "$out/public/help/api/"
-      chmod -R u+w "$out/public/help/api"
-
-      # /packages/ — a site-chrome landing page over the generated API
-      # reference: the full list of bundled third-party packages plus a
-      # client-side search across every package and symbol, powered by
-      # help/api/search-index.json (emitted by the emacs-api-doc aggregate
-      # pass). Server-render the list so the page works without JS; the
-      # search box (js/packages.js) enhances it.
-      api="$out/public/help/api"
-      if [ -f "$api/search-index.json" ]; then
-        pkg_count="$(jq '.packages | length' "$api/search-index.json")"
-        {
-          printf '<div class="man-label">PACKAGES (%s)</div>\n' "$pkg_count"
-          jq -r --arg base "${baseHref}/help/api" '
-            .packages[] |
-            "<div class=\"man-entry\"><a href=\"\($base)/\(.href)\"><code>\(.name|@html)</code></a>"
-            + "<span class=\"man-dots\">·····································································</span>"
-            + "<span class=\"man-desc\">\(.count) \(if .count == 1 then "symbol" else "symbols" end)</span></div>"
-          ' "$api/search-index.json"
-        } > pkg_list_body.html
-
-        {
-          echo '<h1 class="h1"><span class="star">*</span> Packages</h1>'
-          echo '<p class="docs-index-lede">Every third-party Emacs package this configuration bundles, with its full docstring-level API reference — every function, command, variable, user option and face, generated straight from their docstrings. Search across the packages and their symbols, or browse the list below. Each entry links into the <a href="${baseHref}/help/api/">generated reference</a>.</p>'
-          echo '<div class="pkg-search">'
-          echo '  <span class="pkg-search-prompt">M-x</span>'
-          echo '  <input id="pkg-q" type="search" autocomplete="off" spellcheck="false" aria-label="search packages and symbols" placeholder="loading index…">'
-          echo '  <span class="pkg-count" id="pkg-count"></span>'
-          echo '</div>'
-          echo '<div id="pkg-results" hidden></div>'
-          echo '<div id="pkg-list">'
-          cat pkg_list_body.html
-          echo '</div>'
-          echo '<script>window.JOTAIN_API_BASE = "${baseHref}/help/api";</script>'
-          echo '<script src="${baseHref}/js/packages.js"></script>'
-        } > packages_body.html
-
-        write_page "$out/public/packages/index.html" "Packages" "*Packages*" "(Package Menu)" \
-          packages_body.html \
-          '<a href="${baseHref}/help/">← Help</a><a href="${baseHref}/help/api/">full API reference →</a>'
-      fi
-    ''}
+    inject_head "$out/public/options/index.html"
 
     # /help/ index — C-h, as a directory listing.
     cat > help_body.html <<'HELP'
     <h1 class="h1"><span class="star">*</span> Help</h1>
     <p class="docs-index-lede">The <code>C-h</code> map, rendered for the web.</p>
-    <div class="man-entry"><a href="${baseHref}/help/packages/">C-h P — package reference</a><span class="man-dots">·····································································</span><span class="man-desc">every package Jotain ships, and why</span></div>
-    ${lib.optionalString withApiDoc pkgSearchRow}
-    ${lib.optionalString withApiDoc apiHelpRow}
     <div class="man-entry"><a href="${baseHref}/options/">nix options</a><span class="man-dots">·····································································</span><span class="man-desc">Home Manager · NixOS</span></div>
     <div class="man-entry"><a href="${baseHref}/manual/">C-h i d m Jotain RET — the manual</a><span class="man-dots">·····································································</span><span class="man-desc">HTML, one page per chapter</span></div>
     <div class="man-entry"><a href="${baseHref}/info/">C-h i — info directory</a><span class="man-dots">·····································································</span><span class="man-desc">GNU Emacs + Elisp manuals</span></div>

@@ -1,14 +1,9 @@
-# PR CI: the lightweight subset of nix/checks.nix, plus elisp-compile so
-# Emacs 31 obsoletions fail before merge. The rest (package builds,
-# elisp-test, emacs-api-doc, …) runs in deploy.yml's `nix flake check`.
-#
-# cachix is pull-only: no CACHIX_AUTH_TOKEN is exposed to untrusted PR
-# code. Pushes happen in deploy.yml.
+# PR CI: the nix/checks.nix subset. cachix is pull-only: no
+# CACHIX_AUTH_TOKEN is exposed to untrusted PR code.
 name: CI
 
 # workflow_dispatch: pushes from the Claude Code GitHub App create no
-# synchronize runs, so kick those manually (gh workflow run ci.yml --ref
-# <branch>).
+# synchronize runs.
 on:
   pull_request:
   workflow_dispatch:
@@ -33,10 +28,8 @@ jobs:
       - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
         with:
           name: jylhis
-          # Hosts the default jotainEmacs base (emacs-unstable).
           extraPullNames: nix-community
 
-      # One step per check, so a failure surfaces by name in the UI.
       - name: Check — formatting
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.formatting
 
@@ -52,58 +45,17 @@ jobs:
       - name: Check — module-eval
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.module-eval
 
-      - name: Check — cache-parity
-        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.cache-parity
-
-      - name: Check — packages-doc-in-sync
-        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.packages-doc-in-sync
-
       - name: Check — eca-models-in-sync
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.eca-models-in-sync
-
-      - name: Check — ds-in-sync
-        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.ds-in-sync
-
-      - name: Check — packages-doc
-        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.packages-doc
 
       - name: Check — options-doc
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.options-doc
 
-      - name: Check — elisp-lint
-        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.elisp-lint
-
-      - name: Check — scanner-fidelity
-        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.scanner-fidelity
-
       - name: Check — elisp-compile
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.elisp-compile
 
-      # Reuses elisp-compile's closure; evaluates every use-package :config
-      # block, which byte-compiling never does.
       - name: Check — config-startup
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.config-startup
 
       - name: Check — elisp-test
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.elisp-test
-
-  site:
-    name: Site
-    timeout-minutes: 30
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31
-
-      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
-        with:
-          name: jylhis
-          # Man pages and manuals come from jotainEmacs.
-          extraPullNames: nix-community
-
-      # Catches docs/website breakage before the post-merge Pages deploy.
-      # `.#site-preview` omits the heavy /help/api/ reference, which only
-      # deploy.yml builds.
-      - name: Build site
-        run: nix build --no-link --print-build-logs .#site-preview

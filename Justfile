@@ -1,39 +1,13 @@
-# Jotain Emacs configuration — task runner.
-#
-# Recipes assume the dev shell (`nix develop`), or prefix with
-# `nix develop -c` (e.g. `nix develop -c just check`).
+# Run recipes inside the dev shell (`nix develop`).
 
 config_dir := justfile_directory()
-
-system := "x86_64-linux"
 
 # List available recipes.
 default:
     @just --list --justfile "{{justfile()}}"
 
-
-# ── Check / compile ─────────────────────────────────────────────────
-
-# Run every flake check (heavier than PR CI).
-[group('check')]
-check:
-    nix flake check
-
-# Assert each bare Emacs build equals its prebuilt sibling.
-[group('check')]
-cache-parity:
-    nix build .#checks.{{system}}.cache-parity --no-link --print-build-logs
-
-# Run the ERT tests under test/ via the elisp-test flake check.
-[group('check')]
-test:
-    nix build .#checks.{{system}}.elisp-test --no-link --print-build-logs
-
-
-# Measures interpreted startup (the run-built baseline). Needs a display:
-# prefix `xvfb-run` when headless.
-# Benchmark startup of the Nix-built Emacs with the bench/ harness.
-[group('check')]
+# Benchmark startup of the Nix-built Emacs (needs a display; xvfb-run works).
+[group('build')]
 bench-built output="var/bench/startup.txt":
     #!/usr/bin/env bash
     set -euo pipefail
@@ -48,40 +22,10 @@ bench-built output="var/bench/startup.txt":
     cat "$out"
 
 
-# ── Build (nix) ─────────────────────────────────────────────────────
-
 # Build the full distribution (Emacs + every grammar).
 [group('build')]
 build:
     nix-build
-
-# Build a bare Emacs (no grammars), the pgtk GUI.
-[group('build')]
-build-bare:
-    nix-build --argstr system {{system}} emacs.nix
-
-# Build from git master (the revision pinned by emacs-overlay, binary-cached).
-[group('build')]
-build-git:
-    nix-build --arg variant '"git"' --argstr system {{system}} emacs.nix
-
-# Build the IGC (Memory Pool System GC) branch.
-[group('build')]
-build-igc:
-    nix-build --arg variant '"igc"' --argstr system {{system}} emacs.nix
-
-# igc itself is a cache hit, so ccache only pays off for a custom rev. Needs
-# the sandbox setup described at useCcache in emacs.nix.
-# Build IGC with ccache, for cheaper repeat local rebuilds.
-[group('build')]
-build-igc-ccache:
-    nix-build --arg variant '"igc"' --arg useCcache true --argstr system {{system}} emacs.nix
-
-# Off every binary cache by design; see cpuTune in emacs.nix.
-# Build a CPU-tuned Emacs (-O3 -march/-mtune=icelake-client).
-[group('build')]
-build-perf:
-    nix-build --arg cpuTune '"icelake-client"' --argstr system {{system}} emacs.nix
 
 # Build, then launch Emacs with this configuration.
 [group('build')]
@@ -93,11 +37,7 @@ run-built *ARGS:
     echo "Launching Emacs from result/bin/emacs..."
     ./result/bin/emacs --init-directory="{{config_dir}}" {{ARGS}}
 
-# var/fast-home symlinks the entry files and lisp/ into .#config-compiled,
-# so realpath hits the store .eln (as in the HM daemon); var/, elpa/ and
-# templates/ point back at the repo. Reflects the last build: use plain
-# run-built while editing.
-# Launch the AOT-compiled config (.elc + store .eln), the fastest start.
+# Launch the AOT-compiled config (.elc + store .eln); reflects the last build.
 [group('build')]
 run-built-fast *ARGS:
     #!/usr/bin/env bash
@@ -112,11 +52,9 @@ run-built-fast *ARGS:
     for f in early-init.el early-init.elc init.el init.elc lisp; do
         ln -sfn "$store/$f" "$home/$f"
     done
-    # Writable state shared with the repo.
     ln -sfn "{{config_dir}}/var" "$home/var"
     ln -sfn "{{config_dir}}/templates" "$home/templates"
     [ -e "{{config_dir}}/elpa" ] && ln -sfn "{{config_dir}}/elpa" "$home/elpa" || true
-    # Appended to the eln load path by early-init.el.
     export JOTAIN_ELN_PATH="$store/share/emacs/native-lisp"
     exec ./result/bin/emacs --init-directory="$home" {{ARGS}}
 
@@ -125,9 +63,6 @@ run-built-fast *ARGS:
 run-built-debug *ARGS:
     just run-built --debug-init --eval '(setq debug-on-error t)' {{ARGS}}
 
-# Every debugging facility on (etc/debug-init.el); messages, warnings,
-# backtraces and stderr go to var/debug/<timestamp>/. stdout stays on the
-# tty, so GUI and -nw both work. M-x jotain-debug-dump-now flushes mid-run.
 [group('build')]
 [doc('Launch with full debugging on; logs to var/debug/<timestamp>/')]
 run-built-debug-log *ARGS:
@@ -138,12 +73,9 @@ run-built-debug-log *ARGS:
     mkdir -p "$dir"
     export JOTAIN_DEBUG_DIR="$dir"
     echo "Debug session → $dir"
-    # Tee only stderr, leaving the interactive tty on stdout intact.
     exec 2> >(tee "$dir/stderr.log" >&2)
     just run-built --debug-init --load "{{config_dir}}/etc/debug-init.el" {{ARGS}}
 
-# Needs xvfb-run (dev shell). First run is slow (cache pull + MELPA
-# bootstrap); raise the timeout if a cold cache needs it.
 # Headless screenshot under Xvfb via jotain-screenshot, saved to `out` (PNG).
 [group('build')]
 [linux]
@@ -168,133 +100,44 @@ screenshot out="var/screenshots/headless.png":
     echo "Screenshot → $out"
 
 
-# Build the Nix module options reference (HTML).
+# Build the site and serve it locally under /jotain/.
 [group('build')]
-docs:
-    nix build .#docs -o result-docs
-    @echo "Docs built → result-docs/index.html"
-
-# init-docs.el picks up result-info/ automatically.
-# Build the Info manual (jotain.info) from docs/ and the generated references.
-[group('build')]
-info:
-    nix build .#info -o result-info
-    @echo "Info manual → result-info/share/info/jotain.info"
-    @echo "Open with 'just run-built' then C-h i d m Jotain RET."
-
-# Build the per-package reference (HTML + texi + Mintlify .mdx).
-[group('build')]
-build-packages-doc:
-    nix build .#packages-doc -o result-packages-doc
-    @echo "Packages doc → result-packages-doc/index.html"
-
-# Build the docstring-level API reference for /help/api/ (heavy).
-[group('build')]
-build-api-doc:
-    nix build .#emacs-api-doc -o result-api-doc
-    @echo "API reference → result-api-doc/html/index.html"
-    @echo "Load log      → result-api-doc/generate.log (check the skipped list)"
-
-# Required after editing any `;;; @doc` block (packages-doc-in-sync).
-# Regenerate docs/configuration/package-reference.mdx from `;;; @doc` markers.
-[group('build')]
-docs-refresh-packages: build-packages-doc
-    cp result-packages-doc/package-reference.mdx \
-       docs/configuration/package-reference.mdx
-    @echo "Refreshed docs/configuration/package-reference.mdx"
-
-# Loads the full config and introspects each language's mode routing,
-# grammar, eglot server, formatter and tools; fails on a routing regression.
-# Build the live per-language capability matrix.
-[group('build')]
-lang-matrix:
-    nix build .#lang-eval-matrix -o result-lang-matrix
-    @echo "Language matrix → result-lang-matrix/matrix.md (+ matrix.json, index.html)"
-
-# Heavy: bundles the language servers. Checks that each LSP responds.
-# Run the end-to-end LSP probe over the curated language subset.
-[group('build')]
-lang-eval-live:
-    nix build .#lang-eval-live -o result-lang-live
-    @echo "Live LSP probe → result-lang-live/live.md (+ live.json)"
-
-# Required after editing etc/lang-eval/jotain-lang-registry.el.
-# Regenerate docs/reference/language-support.mdx from the language registry.
-[group('build')]
-docs-refresh-lang-matrix:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cd "{{ config_dir }}"
-    out=$(nix build --no-link --print-out-paths .#lang-eval-doc)
-    cp "$out/language-support.mdx" docs/reference/language-support.mdx
-    echo "Refreshed docs/reference/language-support.mdx"
-
-# Build both HTML docs and the Info manual.
-[group('build')]
-docs-all: docs info
-
-# Landing page, docs, manuals, man pages and the generated references,
-# under the /jotain base path; deploy.yml publishes it from main.
-# Build the full page.jylhis.com/jotain site.
-[group('build')]
-site:
-    nix build .#site -o result-site
-    @echo "Site → result-site/public/index.html"
-
-# Build the site and serve it locally under /jotain/, as in production.
-[group('build')]
-serve-site: site
-    #!/usr/bin/env bash
-    set -euo pipefail
-    d=$(mktemp -d)
-    trap 'rm -rf "$d"' EXIT
-    ln -s "{{ config_dir }}/result-site/public" "$d/jotain"
-    echo "Serving → http://localhost:8080/jotain/"
-    python3 -m http.server -d "$d" 8080
-
-
-# ── Format ──────────────────────────────────────────────────────────
-
-# Format all Nix files.
-[group('format')]
-fmt:
-    nix fmt
-
-
-# ── Pins ────────────────────────────────────────────────────────────
-
-# Update flake inputs.
-[group('pins')]
-update:
-    nix flake update
-
-# Covers the extra Emacs packages, ECA server, vendored npm LSPs and the
-# design pin. Scope with pin names (`just update-pins combobulate eca`);
-# `--list` shows them.
-# Bump the hand-pinned upstreams that flake.lock does not manage.
-[group('pins')]
-update-pins *PINS:
-    bash scripts/update-pins.sh {{ PINS }}
-
-# Run after bumping nix/design-pin.nix (ds-in-sync fails until then).
-# Re-vendor website/public/ds from the pinned jylhis/design rev.
-[group('pins')]
-ds-sync:
+serve-site:
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{config_dir}}"
-    out=$(nix build --no-link --print-out-paths .#ds-assets)
-    # Wipe first so files dropped upstream do not linger.
-    rm -rf website/public/ds
-    mkdir -p website/public/ds
-    cp -r "$out/." website/public/ds/
-    chmod -R u+w website/public/ds
-    echo "Re-vendored website/public/ds from $(nix eval --raw --file nix/design-pin.nix rev)"
+    nix build .#site -o result-site
+    d=$(mktemp -d)
+    trap 'rm -rf "$d"' EXIT
+    ln -s "{{config_dir}}/result-site/public" "$d/jotain"
+    echo "Serving → http://localhost:8080/jotain/"
+    python3 -m http.server -d "$d" 8080
+
+# Bump hand-pinned upstreams with nix-update; optional names scope it.
+[group('pins')]
+update-pins *PINS:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{config_dir}}"
+    branch="claude-code-ide eglot-booster combobulate qml-ts-mode tagref jylhis-emacs-themes"
+    tagged="eca"
+    script="likec4-lsp"
+    wanted="{{PINS}}"
+    want() { [ -z "$wanted" ] || [[ " $wanted " == *" $1 "* ]]; }
+    nu() { nix run nixpkgs#nix-update -- --flake "$@"; }
+    for n in $branch; do
+        want "$n" && nu --version=branch "legacyPackages.x86_64-linux.emacs-packages.$n"
+    done
+    for n in $tagged; do
+        want "$n" && nu "$n"
+    done
+    for n in $script; do
+        want "$n" && nu --use-update-script "$n"
+    done
+    true
 
 
-# ── Cleanup ─────────────────────────────────────────────────────────
-
-# Remove .elc files, autosaves, the eln-cache and the result symlink.
+# Remove .elc files, autosaves, the eln-cache and result links.
 [group('clean')]
 clean:
     #!/usr/bin/env bash

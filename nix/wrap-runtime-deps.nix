@@ -1,35 +1,34 @@
-# nix/wrap-runtime-deps.nix: re-wrap a Jotain distribution with the
-# runtime binaries (nix/runtime-deps.nix) appended to PATH, used by
-# module-system.nix.
-#
-# Appending keeps the host userland first. Unlike
-# environment.systemPackages, the wrapper PATH survives every launch
-# context.
 {
   pkgs,
   package,
   runtimeDeps,
-  # services.jotain.spell.dictionaries; [ ] keeps the bundled dictionaries.
+  # [ ] keeps the caller's ASPELL_CONF (or none).
   spellDictionaries ? [ ],
+  # --set-default (the user may override) instead of --set.
+  aspellDefault ? false,
+  infoDirs ? [ ],
+  name ? "${package.name or "jotain-emacs"}-with-runtime-deps",
+  passthru ? package.passthru or { },
 }:
 let
+  inherit (pkgs) lib;
   aspellConf = import ./spell-conf.nix {
     inherit pkgs;
     dictionaries = spellDictionaries;
   };
+  aspellFlag = if aspellDefault then "--set-default" else "--set";
 in
-pkgs.runCommand "${package.name or "jotain-emacs"}-with-runtime-deps"
+pkgs.runCommand name
   {
     nativeBuildInputs = [
-      # Top-level `lndir` only exists on recent nixpkgs; on older
-      # releases (24.05+) it lives under the xorg package set.
+      # Top-level `lndir` only exists on recent nixpkgs.
       (pkgs.lndir or pkgs.xorg.lndir)
       pkgs.makeBinaryWrapper
     ];
     meta = (package.meta or { }) // {
       mainProgram = "emacs";
     };
-    passthru = package.passthru or { };
+    inherit passthru;
   }
   ''
     mkdir -p $out
@@ -39,10 +38,10 @@ pkgs.runCommand "${package.name or "jotain-emacs"}-with-runtime-deps"
       orig=$(readlink -f "$prog")
       rm "$prog"
       makeBinaryWrapper "$orig" "$prog" \
-        --suffix PATH : "${pkgs.lib.makeBinPath runtimeDeps}" ${
-          pkgs.lib.optionalString (
-            aspellConf != null
-          ) "--set ASPELL_CONF ${pkgs.lib.escapeShellArg aspellConf}"
+        --suffix PATH : "${lib.makeBinPath runtimeDeps}" ${
+          lib.concatMapStringsSep " " (d: "--suffix INFOPATH : ${lib.escapeShellArg d}") infoDirs
+        } ${
+          lib.optionalString (aspellConf != null) "${aspellFlag} ASPELL_CONF ${lib.escapeShellArg aspellConf}"
         }
     done
   ''

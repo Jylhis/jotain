@@ -1,12 +1,5 @@
-# default.nix — Jotain non-flake entry point via flake-compat.
-#
-# Packages for the current system are promoted to the top level, so:
-#
-#   nix-build                              # full distribution (jotainEmacsPackages)
-#   nix-build -A emacs                     # bare Emacs only
-#   nix-build emacs.nix                    # bare Emacs (cache-parity build)
-#   nix-build emacs.nix --arg variant '"git"'   # variant build (bleeding-edge master)
-#   nix-shell                              # dev shell (shell.nix)
+# Non-flake entry point via flake-compat: `nix-build` builds the distribution,
+# `nix-build -A emacs` the bare Emacs.
 let
   lock = builtins.fromJSON (builtins.readFile ./flake.lock);
   flake-compat = fetchTarball {

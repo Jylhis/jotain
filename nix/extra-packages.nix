@@ -1,7 +1,6 @@
 # Emacs packages Nix builds itself (absent from every archive), plus
-# overrides of archive packages: built-in shims, ghostel, and version
-# pins. Overlaid onto the package scope by nix/mk-overlay.nix and
-# nix/emacs-package-set.nix.
+# overrides of archive packages: built-in shims and ghostel. Overlaid onto
+# the package scope by nix/mk-overlay.nix.
 { pkgs }:
 
 efinal: eprev:
@@ -45,21 +44,19 @@ let
     };
 in
 {
-  # See `emptyElpaPackage' above.
+  # `emacsWithPackagesFromUsePackage` lists `use-package` itself as a wanted
+  # package, which would put the ELPA copy ahead of the in-tree one.
+  use-package = emptyElpaPackage "use-package";
   xref = emptyElpaPackage "xref";
   project = emptyElpaPackage "project";
   eglot = emptyElpaPackage "eglot";
   flymake = emptyElpaPackage "flymake";
 
-  # TEMPORARY (2026-07-21): emacs-overlay's ghostel epkg builds the
-  # libghostty-vt native module with zig, and the module's zig-deps
-  # fixed-output fetch is currently unbuildable on GitHub CI runners
-  # (zig's fetcher fails against github.com: HttpConnectionClosing /
-  # WriteFailed). Rebuild the package Elisp-only from the same pinned
-  # MELPA source so the distribution stays buildable. Until reverted the
-  # distribution has no module: auto-install downloads into the package
-  # directory, which is the read-only store path. Revert to the plain
-  # epkgs.ghostel once the upstream fetch works.
+  # Elisp-only rebuild of emacs-overlay's ghostel: its zig-deps fixed-output
+  # fetch failed on GitHub CI runners (zig's fetcher against github.com:
+  # HttpConnectionClosing / WriteFailed). Without the native module,
+  # auto-install would download into the read-only store path. Revert to
+  # the plain epkgs.ghostel once the fetch works there.
   ghostel = efinal.trivialBuild {
     pname = "ghostel";
     version = eprev.ghostel.version or "0";
@@ -75,44 +72,28 @@ in
     '';
   };
 
-  # Pinned in nix/design-pin.nix, shared with the website's vendored CSS.
   # The generated jylhis-{light,dark} themes are not committed upstream, so
-  # the generator runs here; jylhis-themes.el is a committed source.
-  jylhis-emacs-themes =
-    let
-      pin = import ./design-pin.nix;
-      src = pkgs.fetchFromGitHub {
-        inherit (pin)
-          owner
-          repo
-          rev
-          sha256
-          ;
-      };
-      generated =
-        pkgs.runCommandLocal "jylhis-generated"
-          {
-            nativeBuildInputs = [ pkgs.bun ];
-          }
-          ''
-            cp -r ${src}/. "$TMP/src/"
-            chmod -R u+w "$TMP/src"
-            export HOME="$TMPDIR"
-            cd "$TMP/src"
-            bun scripts/generate.mjs --out "$out"
-          '';
-    in
-    efinal.trivialBuild {
-      pname = "jylhis-emacs-themes";
-      inherit (pin) version;
-      src = pkgs.symlinkJoin {
-        name = "jylhis-emacs-themes-src";
-        paths = [
-          "${generated}/platforms/emacs"
-          "${src}/platforms/emacs"
-        ];
-      };
+  # the generator runs here. nix/ds-assets.nix reads `src` and `version`.
+  jylhis-emacs-themes = efinal.trivialBuild {
+    pname = "jylhis-emacs-themes";
+    version = "3.0.0-unstable-2026-09-23";
+    src = pkgs.fetchFromGitHub {
+      owner = "Jylhis";
+      repo = "design";
+      rev = "e24a796d090f56aced9a3f11a8763a3ba586b157";
+      hash = "sha256-kEBsdVLVxLDB5ZZBzxt4NY2SqmqskGM9r1y2xFULuZI=";
     };
+    nativeBuildInputs = [ pkgs.bun ];
+    postUnpack = ''
+      export HOME="$TMPDIR"
+      (cd "$sourceRoot" && bun scripts/generate.mjs --out "$TMPDIR/generated")
+      mkdir emacs-src
+      cp -r "$TMPDIR/generated/platforms/emacs/." emacs-src/
+      cp -r "$sourceRoot/platforms/emacs/." emacs-src/
+      chmod -R u+w emacs-src
+      sourceRoot=emacs-src
+    '';
+  };
 
   claude-code-ide = efinal.trivialBuild {
     pname = "claude-code-ide";
@@ -154,20 +135,6 @@ in
     };
   };
 
-  # `project.el' backend for the Nix (and Guix) store
-  # (lisp/init-project.el). Overrides emacs-overlay's lagging epkg with
-  # the current tagged release. Built-ins only.
-  project-nix-store = efinal.trivialBuild {
-    pname = "project-nix-store";
-    version = "0.13.0";
-    src = pkgs.fetchFromGitHub {
-      owner = "jian-lin";
-      repo = "project-nix-store";
-      rev = "f56570285fa07bb15aa51d7c9d3b1c1a561a5317"; # tag 0.13.0
-      sha256 = "1z9ad6ivskiff4j8105y4jj6ij23qs9zvlhmll1f0h18w7b0s3p7";
-    };
-  };
-
   # Tree-sitter QML mode (lisp/init-lang-qml.el), using the bundled
   # `qmljs' grammar. Not on MELPA; built-ins only.
   qml-ts-mode = efinal.trivialBuild {
@@ -179,30 +146,6 @@ in
       rev = "b80c6663521b4d0083e416e6712ebc02d37b7aec";
       sha256 = "079fj4vm8pyjfm62yba8r089rlhy725qm27b3fj4vx25s44vywjr";
     };
-  };
-
-  # Magit-style porcelain for Jujutsu (lisp/init-vc.el), pinned ahead of
-  # nixpkgs' older revision. `packageRequires' mirrors upstream's:
-  # trivialBuild byte-compiles every .el, so the gerrit files'
-  # `consult'/`plz' requires must resolve even though Jotain never calls
-  # them.
-  majutsu = efinal.trivialBuild {
-    pname = "majutsu";
-    # Past the v0.6.0 tag; the Version header still reads 0.6.0 in-dev.
-    version = "0.6.0-unstable-2026-09-14";
-    src = pkgs.fetchFromGitHub {
-      owner = "0WD0";
-      repo = "majutsu";
-      rev = "0fdb3c2b3ab826724949cd2cc714f2eff32ec152";
-      sha256 = "1wpfx3rq108kr2v1vg9wjgf11r52ai43w364fnlm31wkfi56kbp0";
-    };
-    packageRequires = with efinal; [
-      compat
-      transient
-      magit
-      consult
-      plz
-    ];
   };
 
   # Emacs integration for the tagref CLI. Not on MELPA; built-ins only.

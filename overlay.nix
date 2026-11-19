@@ -1,18 +1,6 @@
-# overlay.nix — Nixpkgs overlay for Jotain Emacs.
-#
-# Adds:
-#   jotainEmacs              — bare Emacs binary (unstable variant, the
-#                              newest Emacs release tag, currently 31.1;
-#                              see nix/mk-overlay.nix)
-#   jotainInfo               — Jotain manual (share/info/jotain.info + dir)
-#   jotainEmacsPackages      — full distribution using jotainEmacs
-#   eca                      — prebuilt ECA server binary (lisp/init-ai.el)
-#   likec4Lsp                — LikeC4 language server (lisp/init-lang-devops.el)
-#
-# nix-community/emacs-overlay (pinned via flake.lock) is composed
-# underneath, so standalone imports (the module fallback without the
-# flake, or `import <nixpkgs> { overlays = [ (import ./overlay.nix) ]; }`)
-# resolve the same Emacs bases and epkgs snapshot as the flake build.
+# Standalone overlay for non-flake consumers. emacs-overlay (pinned from
+# flake.lock) sits underneath, so Emacs and the epkgs snapshot match the
+# flake build.
 let
   emacsOverlay = import (
     let
@@ -24,10 +12,8 @@ let
       sha256 = n.narHash;
     }
   );
-  jotainOverlay = import ./nix/mk-overlay.nix { };
+  jotainOverlay = import ./nix/mk-overlay.nix;
 in
-# lib.composeExtensions, inlined: no nixpkgs lib is in scope before the
-# overlay is applied.
 final: prev:
 let
   emacsAttrs = emacsOverlay final prev;

@@ -13,7 +13,7 @@
 #                           jotain.info + install-info dir entry
 #
 # The options and package references come in as Texinfo fragments from
-# nix/options-doc.nix and nix/packages-doc.nix.
+# nix/options-doc.nix.
 #
 # Usage:
 #   nix build .#info
@@ -49,7 +49,6 @@ let
   };
 
   optionsDoc = import ./options-doc.nix { inherit pkgs src; };
-  packagesDoc = import ./packages-doc.nix { inherit pkgs src; };
 
   # Chapters of jotain.texi: { src (relative to docs/), node (its
   # @node in jotain.texi), out (the @include name) }. Order mirrors
@@ -100,8 +99,6 @@ let
       node = "Packages";
       out = "configuration-packages.texi";
     }
-    # configuration/package-reference.mdx is skipped: packages-doc.nix's
-    # own texinfo fragment is copied in below.
     {
       src = "usage/launching.mdx";
       node = "Launching Emacs";
@@ -161,14 +158,10 @@ let
 
   # Links between pages use the docs site's routes ([x](/usage/launching)),
   # which pandoc keeps as @uref{/usage/launching,x}. Point each route at its
-  # chapter node; package-reference is the packages-doc.nix fragment.
-  packageReference = {
-    src = "configuration/package-reference.mdx";
-    node = "Package Reference";
-  };
+  # chapter node.
   routeRef =
     c: "s|@uref\\{/${lib.removeSuffix ".mdx" c.src}(#[^,}]*)?,([^}]*)\\}|@ref{${c.node},,\\2}|g; ";
-  routeRefs = lib.concatMapStrings routeRef (chapters ++ [ packageReference ]);
+  routeRefs = lib.concatMapStrings routeRef chapters;
 
   # One `convert "docs/foo.mdx" "foo.texi"` line per chapter, emitted
   # into the build script below.
@@ -184,7 +177,6 @@ pkgs.runCommand "jotain-info"
     ];
     src = docsSrc;
     optionsFragment = "${optionsDoc}/jotain-options.texi";
-    packagesFragment = "${packagesDoc}/jotain-packages.texi";
     meta = {
       description = "Jotain Info manual (generated from docs/)";
     };
@@ -264,7 +256,7 @@ pkgs.runCommand "jotain-info"
 
         # Put the generated fragments on the include path.
         cp "$optionsFragment"  docs/jotain-options.texi
-        sed -E '${routeRefs}' "$packagesFragment" > docs/jotain-packages.texi
+        : > docs/jotain-packages.texi
 
         # A short manual: one unsplit .info file.
         mkdir -p "$out/share/info"

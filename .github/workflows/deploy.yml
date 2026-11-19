@@ -5,9 +5,8 @@
 #       source) at page.jylhis.com/jotain/.
 # next: check only.
 #
-# Both push new artifacts to the jylhis cachix cache, so later PR runs
-# hit it. Pages hosts one deployment; PR previews are artifacts instead
-# (preview.yml).
+# Both push to the jylhis cachix cache. Pages hosts one deployment; PR
+# previews are artifacts instead (preview.yml).
 #
 # Every `uses:` must be github-owned or match cachix/*: the repo restricts
 # Actions to those, and a disallowed action fails the whole run at
@@ -19,8 +18,7 @@ on:
     branches: [main, next]
   workflow_dispatch:
 
-# Never cancel: post-merge cache pushes must finish. Pages builds are
-# also serialized below.
+# Never cancel: post-merge cache pushes must finish.
 concurrency:
   group: deploy-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -33,7 +31,6 @@ permissions:
 jobs:
   check:
     name: Check
-    # Covers a cold emacs-api-doc build (one batch Emacs per package).
     # The pushed result makes build-pages' `.#site` a cache hit.
     timeout-minutes: 90
     runs-on: ubuntu-latest
@@ -46,20 +43,15 @@ jobs:
         with:
           name: jylhis
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          # Hosts the default jotainEmacs base (emacs-unstable).
           extraPullNames: nix-community
 
       - name: nix flake check
         run: nix flake check --print-build-logs
 
   build-pages:
-    # Full `.#site` (including /help/api/ and /packages/), built with
-    # baseHref=/jotain to match the project-site URL.
     name: Build site
     if: github.ref == 'refs/heads/main'
     needs: check
-    # Normally pulls emacs-api-doc from the cache Check just filled;
-    # the headroom covers a cold cache.
     timeout-minutes: 60
     runs-on: ubuntu-latest
     # Concurrent main pushes queue instead of racing the upload.
@@ -75,13 +67,11 @@ jobs:
         with:
           name: jylhis
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          # Man pages and manuals come from jotainEmacs.
           extraPullNames: nix-community
 
       - name: Build site
         run: nix build .#site -o result-site
 
-      # Dereferenced, writable copy for upload-pages-artifact to tar.
       - name: Assemble Pages artifact
         run: |
           mkdir -p site

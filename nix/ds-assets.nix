@@ -1,32 +1,19 @@
-# The design-system assets vendored into website/public/ds, taken from the
-# pinned jylhis/design rev (nix/design-pin.nix).
+# Design-system CSS and fonts for the site, from the jylhis/design revision
+# that nix/extra-packages.nix pins for the Emacs themes.
 #
-# website/public/ needs no build step, so these files are committed;
-# `just ds-sync` copies from this derivation and the ds-in-sync check diffs
-# the committed copy against it.
-#
-# tokens.css and density.css are generator outputs (upstream no longer
-# commits them; `tokens.core.json` is the source of truth). The other CSS
-# files and fonts/ (woff2/ttf plus OFL texts, referenced by fonts.css as
-# ./fonts/) are copied verbatim, unmodified.
-{
-  pkgs,
-  bun,
-}:
+# tokens.css and density.css are generator outputs; the other CSS files and
+# fonts/ (referenced by fonts.css as ./fonts/) are copied verbatim.
+{ pkgs }:
 let
-  pin = import ./design-pin.nix;
-  src = pkgs.fetchFromGitHub {
-    inherit (pin)
-      owner
-      repo
-      rev
-      sha256
-      ;
-  };
+  themes =
+    ((pkgs.emacsPackagesFor pkgs.jotainEmacs).overrideScope (
+      import ./extra-packages.nix { inherit pkgs; }
+    )).jylhis-emacs-themes;
+  inherit (themes) src;
   generated =
     pkgs.runCommandLocal "jylhis-generated"
       {
-        nativeBuildInputs = [ bun ];
+        nativeBuildInputs = [ pkgs.bun ];
       }
       ''
         cp -r ${src}/. "$TMP/src/"
@@ -39,6 +26,7 @@ in
 pkgs.runCommandLocal "jylhis-ds-assets"
   {
     inherit src generated;
+    inherit (themes) version;
   }
   ''
     mkdir -p "$out/fonts"
@@ -48,7 +36,6 @@ pkgs.runCommandLocal "jylhis-ds-assets"
         *) cp "$src/$f" "$out/$f" ;;
       esac
     done
-    # Self-hosted woff2/ttf slices, plus the OFL texts fonts.css points at.
     cp "$src"/fonts/*.woff2 "$src"/fonts/*.ttf "$src"/fonts/LICENSE-*.txt "$out/fonts/"
     chmod -R u+w "$out"
   ''
