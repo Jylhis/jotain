@@ -7,28 +7,19 @@
 (function () {
   'use strict';
 
-  var ORDER = ['readme', 'man', 'keys'];
+  var ORDER = ['readme', 'keys'];
   var META = {
     readme: { name: 'README.org', mode: '(Org)' },
-    man: { name: '*Man JOTAIN(7)*', mode: '(Man)' },
     keys: { name: 'keybindings.org', mode: '(Org)' }
   };
 
-  var INDEX = [
-    { buf: 'readme', label: 'README.org', id: 'sec-intro', title: 'Something, from scratch' },
-    { buf: 'readme', label: 'README.org', id: 'sec-ships', title: 'What ships — emacs.nix, init-*.el, module.nix' },
-    { buf: 'readme', label: 'README.org', id: 'sec-qs', title: 'Quickstart — nix develop, just run-built' },
-    { buf: 'readme', label: 'README.org', id: 'sec-manual', title: 'Read the manual' },
-    { buf: 'man', label: '*Man JOTAIN(7)*', id: 'man-name', title: 'NAME — jotain' },
-    { buf: 'man', label: '*Man JOTAIN(7)*', id: 'man-synopsis', title: 'SYNOPSIS — just run-built | build | check | test' },
-    { buf: 'man', label: '*Man JOTAIN(7)*', id: 'man-sections', title: 'MANUAL SECTIONS — introduction, installation, …' },
-    { buf: 'man', label: '*Man JOTAIN(7)*', id: 'man-seealso', title: 'SEE ALSO — emacs(1), nix(1), just(1)' },
-    { buf: 'keys', label: 'keybindings', id: 'keys-cc', title: 'C-c — user namespace (org, magit, consult, gptel)' },
-    { buf: 'keys', label: 'keybindings', id: 'keys-cx', title: 'C-x — control namespace (dape, magit-status, vundo)' },
-    { buf: 'keys', label: 'keybindings', id: 'keys-global', title: 'Other globals — M-o, embark C-. / C-;, expreg' },
-    { buf: 'keys', label: 'keybindings', id: 'keys-embark', title: 'Embark habits — search → edit with wgrep' },
-    { buf: 'keys', label: 'keybindings', id: 'keys-disabled', title: 'Disabled — C-z, C-x C-z' }
-  ];
+  var INDEX = [];
+  ORDER.forEach(function (buf) {
+    var article = document.getElementById('buf-' + buf);
+    Array.prototype.forEach.call(article.querySelectorAll('h1[id], h2[id], h3[id]'), function (h) {
+      INDEX.push({ buf: buf, label: META[buf].name, id: h.id, title: h.textContent });
+    });
+  });
 
   var DEFAULT_ECHO = 'C-s search · C-x b / n / p switch buffer · click tabs · ☾ theme';
 

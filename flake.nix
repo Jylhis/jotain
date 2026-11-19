@@ -69,10 +69,6 @@
         inherit ((pkgsFor system)) eca;
         likec4-lsp = (pkgsFor system).likec4Lsp;
         info = (pkgsFor system).jotainInfo;
-        docs = import ./nix/options-doc.nix {
-          pkgs = pkgsFor system;
-          src = self;
-        };
         # No `src = self`: lib.fileset rejects the string-like flake source.
         site = import ./nix/site.nix {
           pkgs = pkgsFor system;

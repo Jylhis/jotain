@@ -1,16 +1,11 @@
-# nix/options-doc.nix — Generate module option reference documentation.
+# nix/options-doc.nix — Module option reference as an Org file.
 #
 # Evaluates each Nix module in isolation, extracts option metadata via
-# nixosOptionsDoc, and assembles a self-contained HTML page.
-#
-# Usage:
-#   nix build .#docs
-#   open result/index.html
+# nixosOptionsDoc and converts its CommonMark to options.org, which
+# docs/jotain.org includes as the Module Options appendix.
 { pkgs, src }:
 let
   inherit (pkgs) lib;
-
-  texi = import ./texi-fragment.nix;
 
   gitHubUrl = "https://github.com/Jylhis/jotain";
 
@@ -65,150 +60,14 @@ in
 pkgs.runCommand "jotain-options-doc"
   {
     nativeBuildInputs = [ pkgs.pandoc ];
-    # Appendix of the Info manual (nix/info-manual.nix).
-    passthru.texinfoFragment = "jotain-options.texi";
   }
-  # shellcheck disable=SC2016,SC2086
   ''
-        mkdir -p $out
-
-        cat > combined.md <<'HEADER'
-    # Jotain — Module Options Reference
-
-    Auto-generated reference for all Nix module options exposed by
-    [Jotain](${gitHubUrl}).
-
-    - [Home Manager Module](#home-manager-module) — per-user Emacs daemon, client wrapper, desktop entry
-    - [System Module](#system-module-nixos) — overlay and system packages
-
-    ---
-
-    # Home Manager Module
-
-    Import and enable in your Home Manager configuration:
-
-    ```nix
+    mkdir -p $out
     {
-      imports = [ jotain.homeManagerModules.default ];
-      services.jotain = {
-        enable = true;
-        defaultEditor = true;
-        client.enable = true;
-      };
-    }
-    ```
-
-    HEADER
-
-        cat ${hmDoc.optionsCommonMark} >> combined.md
-
-        cat >> combined.md <<'SECTION2'
-
-    ---
-
-    # System Module (NixOS)
-
-    Applies the Jotain overlay and adds the package to system environment.
-    For per-user daemon management, use the Home Manager module instead.
-
-    ```nix
-    {
-      imports = [ jotain.nixosModules.default ];
-      services.jotain.enable = true;
-    }
-    ```
-
-    SECTION2
-
-        cat ${systemDoc.optionsCommonMark} >> combined.md
-
-        cat > $out/style.css <<'CSS'
-    :root {
-      --max-width: 52rem;
-      --fg: #1a1a2e;
-      --bg: #fafafa;
-      --accent: #7C3AED;
-      --code-bg: #f0f0f5;
-      --border: #e2e2e8;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --fg: #e0e0e8;
-        --bg: #16161e;
-        --code-bg: #1e1e28;
-        --border: #2a2a3a;
-      }
-    }
-    * { box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-                   "Helvetica Neue", sans-serif;
-      max-width: var(--max-width);
-      margin: 2rem auto;
-      padding: 0 1.5rem;
-      color: var(--fg);
-      background: var(--bg);
-      line-height: 1.65;
-    }
-    h1 {
-      font-size: 1.6rem;
-      border-bottom: 2px solid var(--accent);
-      padding-bottom: 0.4rem;
-      margin-top: 2.5rem;
-    }
-    h1:first-of-type { margin-top: 0; }
-    h2 {
-      font-family: "SF Mono", "Fira Code", Menlo, Consolas, monospace;
-      font-size: 1rem;
-      font-weight: 600;
-      margin-top: 2rem;
-      padding: 0.4rem 0.6rem;
-      background: var(--code-bg);
-      border-left: 3px solid var(--accent);
-      border-radius: 0 4px 4px 0;
-      overflow-x: auto;
-    }
-    code {
-      font-family: "SF Mono", "Fira Code", Menlo, Consolas, monospace;
-      background: var(--code-bg);
-      padding: 0.15rem 0.35rem;
-      border-radius: 3px;
-      font-size: 0.88em;
-    }
-    pre {
-      background: var(--code-bg);
-      padding: 1rem 1.2rem;
-      border-radius: 6px;
-      overflow-x: auto;
-      border: 1px solid var(--border);
-    }
-    pre code { background: none; padding: 0; }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    hr { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }
-    ul { padding-left: 1.5rem; }
-    p { margin: 0.6rem 0; }
-    CSS
-
-        pandoc combined.md \
-          -o $out/index.html \
-          --standalone \
-          --metadata title="Jotain — Module Options" \
-          --css style.css \
-          --highlight-style=kate \
-          --wrap=none
-
-        # Texinfo fragment for nix/info-manual.nix. Shifting headings by one
-        # turns each `# …` into an @section under docs/jotain.texi's
-        # @appendix. See nix/texi-fragment.nix.
-        pandoc combined.md \
-          -f gfm \
-          -t texinfo \
-          --shift-heading-level-by=1 \
-          --wrap=none \
-        | awk '${texi.stripScaffolding}' \
-        | sed -E '${texi.flattenRefs}' \
-          > $out/jotain-options.texi
-
-        touch $out/.nojekyll
+      printf '# Home Manager Module\n\n'
+      cat ${hmDoc.optionsCommonMark}
+      printf '\n# NixOS Module\n\n'
+      cat ${systemDoc.optionsCommonMark}
+    } > combined.md
+    pandoc -f commonmark -t org --shift-heading-level-by=0 --wrap=none combined.md > $out/options.org
   ''

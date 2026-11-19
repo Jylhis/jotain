@@ -23,7 +23,6 @@ pkgs.mkShell {
 
     pandoc
     texinfo
-    mandoc
 
     just
     jq

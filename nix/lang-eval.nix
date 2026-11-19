@@ -1,26 +1,22 @@
 # nix/lang-eval.nix — Per-language IDE-feature evaluation.
 #
 # Reads etc/lang-eval/jotain-lang-registry.el (the declarative per-language
-# feature standard) and produces three artifacts plus one gate:
+# feature standard) and produces three artifacts:
 #
-#   • lang-eval-doc      the *declared* matrix as a Mintlify `.mdx`
-#                        (docs/reference/language-support.mdx). Needs no
-#                        config or toolchain, so it is checked in and gated.
-#   • lang-eval-matrix   Tier-1 *live* matrix: the full config is loaded and
-#                        introspected per language (mode routing, tree-sitter
-#                        readiness, resolved eglot server, formatter, on-PATH
-#                        markers). Fails on a routing or explicit eglot
-#                        override regression (JOTAIN_LANG_EVAL_STRICT).
-#   • lang-eval-live     Tier-2 probe: a real eglot session per fixture
-#                        project for a curated subset whose servers it
-#                        bundles, recording the negotiated capabilities.
-#   • lang-eval-doc-in-sync  flake check: the checked-in `.mdx` must match a
-#                        fresh render of the registry.
+#   lang-eval-doc     the declared matrix as language-support.org, which the
+#                     manual includes (nix/info-manual.nix). Needs no config
+#                     or toolchain.
+#   lang-eval-matrix  Tier-1 live matrix: the full config is loaded and
+#                     introspected per language (mode routing, tree-sitter
+#                     readiness, resolved eglot server, formatter, on-PATH
+#                     markers). Fails on a routing or explicit eglot
+#                     override regression (JOTAIN_LANG_EVAL_STRICT).
+#   lang-eval-live    Tier-2 probe: a real eglot session per fixture project
+#                     for a curated subset whose servers it bundles,
+#                     recording the negotiated capabilities.
 #
-# matrix and live are heavy, so they are `legacyPackages` (not part of
-# `nix flake check`). The gates in `nix flake check` are
-# lang-eval-doc-in-sync and the ERT drift guard (test/lang-eval-test.el,
-# via elisp-test).
+# matrix and live are heavy, so they are `legacyPackages`, not part of
+# `nix flake check`.
 {
   pkgs,
 }:
@@ -78,18 +74,18 @@ let
     nodejs
   ];
 
-  # 1. Declared matrix -> .mdx (registry only).
+  # 1. Declared matrix -> Org (registry only).
   lang-eval-doc =
     pkgs.runCommand "jotain-lang-eval-doc"
       {
         nativeBuildInputs = [ emacsBare ];
-        meta.description = "Language-support reference (.mdx) generated from the registry";
+        meta.description = "Language-support reference (Org) generated from the registry";
       }
       ''
         set -euo pipefail
         export HOME="$(mktemp -d)"
         mkdir -p "$out"
-        JOTAIN_LANG_DOC_OUT="$out/language-support.mdx" \
+        JOTAIN_LANG_DOC_OUT="$out/language-support.org" \
           emacs -Q --batch -L ${engineSrc} -l jotain-lang-doc
       '';
 
@@ -147,30 +143,11 @@ let
           exit 1
         fi
       '';
-
-  # 4. In-sync gate: the checked-in .mdx must match a fresh render.
-  lang-eval-doc-in-sync =
-    pkgs.runCommandLocal "check-lang-eval-doc-in-sync"
-      {
-        tracked = root + "/docs/reference/language-support.mdx";
-        generated = "${lang-eval-doc}/language-support.mdx";
-      }
-      ''
-        if ! diff -u "$tracked" "$generated"; then
-          echo "" >&2
-          echo "docs/reference/language-support.mdx is out of sync with" >&2
-          echo "etc/lang-eval/jotain-lang-registry.el." >&2
-          echo "Refresh it with: just docs-refresh-lang-matrix" >&2
-          exit 1
-        fi
-        touch "$out"
-      '';
 in
 {
   inherit
     lang-eval-doc
     lang-eval-matrix
     lang-eval-live
-    lang-eval-doc-in-sync
     ;
 }

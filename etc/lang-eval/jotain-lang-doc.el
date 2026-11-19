@@ -4,8 +4,7 @@
 
 ;; Renders `jotain-lang-registry' into language-support.org.
 ;; This is the *declared* matrix: it needs neither the config nor any
-;; toolchain, so it is deterministic and can be committed and gated by the
-;; `lang-eval-doc-in-sync' check.  The live matrices (`jotain-lang-eval.el',
+;; toolchain, so it is deterministic.  The live matrices (`jotain-lang-eval.el',
 ;; `jotain-lang-live.el') depend on the built distribution and are not
 ;; committed.
 ;;
