@@ -13,6 +13,7 @@
 ;;; Code:
 
 (declare-function jotain-eglot-set-workspace-config "init-prog" (key settings))
+(defvar go-ts-mode-map)
 
 ;; gopls only emits inlay hints for the kinds enabled here; init-prog
 ;; turns on `eglot-inlay-hints-mode' to show them.  `gofumpt' stays nil
