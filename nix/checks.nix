@@ -1,11 +1,12 @@
 # nix/checks.nix — Flake check derivations for Jotain.
 #
-# Application and configuration checks; dev-shell assertions live in
-# devenv.nix enterTest.
+# Application and configuration checks, plus `dev-shell`, which builds the
+# dev shell (nix/dev-shell.nix).
 {
   pkgs,
   src,
   treefmtCheck,
+  devShell,
 }:
 let
   inherit (pkgs) lib;
@@ -86,10 +87,6 @@ let
         type = lib.types.attrsOf lib.types.anything;
         default = { };
       };
-      launchd.agents = lib.mkOption {
-        type = lib.types.attrsOf lib.types.anything;
-        default = { };
-      };
       programs = lib.mkOption {
         type = lib.types.attrsOf lib.types.anything;
         default = { };
@@ -121,50 +118,11 @@ let
   graphicalModule = evalHomeModule {
     startWithUserSession = "graphical";
   };
-
-  # Minimal stand-in for the nix-on-droid module system (eval only).
-  nixOnDroidStubModule = {
-    options = {
-      assertions = lib.mkOption {
-        type = lib.types.listOf lib.types.unspecified;
-        default = [ ];
-      };
-      environment.packages = lib.mkOption {
-        type = lib.types.listOf lib.types.package;
-        default = [ ];
-      };
-      environment.sessionVariables = lib.mkOption {
-        type = lib.types.attrsOf lib.types.str;
-        default = { };
-      };
-    };
-  };
-
-  evalNixOnDroidModule =
-    jotainConfig:
-    lib.evalModules {
-      modules = [
-        nixOnDroidStubModule
-        ../module-nix-on-droid.nix
-        {
-          services.jotain = {
-            enable = true;
-          }
-          // jotainConfig;
-        }
-      ];
-      specialArgs = { inherit pkgs; };
-    };
-
-  nixOnDroidModule = evalNixOnDroidModule { };
 in
 {
   packages-default = pkgs.jotainEmacsPackages;
   packages-emacs = pkgs.jotainEmacs;
   packages-info = pkgs.jotainInfo;
-  # The terminal-only distribution (`.#emacs-nox`, the nix-on-droid
-  # default): no other check realises it.
-  packages-emacs-nox = pkgs.jotainEmacsPackagesNoGui;
 
   options-doc = import ./options-doc.nix { inherit pkgs src; };
 
@@ -267,60 +225,26 @@ in
         touch $out
       '';
 
-  # flake.lock and devenv.lock must pin the same shared revs (Dependabot
-  # bumps flake.lock alone). Without this, only PR CI's `just verify`
-  # (same script) guards drift; this also covers pushes to main/next.
-  locks-in-sync =
-    pkgs.runCommandLocal "check-locks-in-sync"
-      {
-        inherit src;
-        nativeBuildInputs = [ pkgs.jq ];
-      }
-      ''
-        # Checked separately so an untracked/renamed script reports
-        # itself instead of masquerading as lock drift.
-        if [ ! -f "$src/scripts/verify-locks.sh" ]; then
-          echo "scripts/verify-locks.sh is missing from the flake source." >&2
-          echo "If you just created it, git add it — the flake source is" >&2
-          echo "tracked files only." >&2
-          exit 1
-        fi
-        if ! bash "$src/scripts/verify-locks.sh" "$src"; then
-          echo "" >&2
-          echo "flake.lock and devenv.lock disagree on a shared input's rev." >&2
-          echo "Re-sync them with: just sync-devenv" >&2
-          exit 1
-        fi
-        touch $out
-      '';
-
   module-eval =
     pkgs.runCommandLocal "check-module-eval"
       {
         defaultEditorConfigured = if defaultModule.config.home.sessionVariables ? EDITOR then "1" else "0";
-        graphicalTarget =
-          if pkgs.stdenv.hostPlatform.isLinux then
-            builtins.toJSON graphicalModule.config.systemd.user.services.jotain.Install.WantedBy
-          else
-            toString (builtins.length graphicalModule.config.launchd.agents.jotain.config.ProgramArguments);
+        graphicalTarget = builtins.toJSON graphicalModule.config.systemd.user.services.jotain.Install.WantedBy;
       }
       ''
         test "$defaultEditorConfigured" = "1" || { echo "EDITOR not set"; exit 1; }
         case "$graphicalTarget" in
-          *graphical-session.target*) ;; # systemd WantedBy
-          [1-9]*) ;; # launchd ProgramArguments length
+          *graphical-session.target*) ;;
           *) echo "graphical start target not wired: $graphicalTarget"; exit 1 ;;
         esac
         touch $out
       '';
 
   # The cache-parity invariant (AGENTS.md): each bare build equals its
-  # prebuilt sibling. Eval-only; Linux only (nix/cache-parity.nix).
+  # prebuilt sibling. Eval-only (nix/cache-parity.nix).
   cache-parity =
     let
-      parity = lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux (
-        import ./cache-parity.nix { inherit pkgs; }
-      );
+      parity = import ./cache-parity.nix { inherit pkgs; };
       broken = lib.attrNames (lib.filterAttrs (_: ok: !ok) parity);
     in
     pkgs.runCommandLocal "check-cache-parity"
@@ -336,19 +260,8 @@ in
         touch $out
       '';
 
-  # Eval-only: the module evaluates and sets EDITOR.
-  nix-on-droid-module-eval =
-    pkgs.runCommandLocal "check-nix-on-droid-module-eval"
-      {
-        editorConfigured =
-          if nixOnDroidModule.config.environment.sessionVariables ? EDITOR then "1" else "0";
-        packageCount = toString (builtins.length nixOnDroidModule.config.environment.packages);
-      }
-      ''
-        test "$editorConfigured" = "1" || { echo "EDITOR not set"; exit 1; }
-        test "$packageCount" -ge 1 || { echo "no packages installed"; exit 1; }
-        touch $out
-      '';
+  # The dev shell must keep building (tooling only, no Emacs).
+  dev-shell = devShell;
 
   # The dev shell has no Emacs, so jotainEmacs is checked here: expected
   # binaries exist and run without touching paths outside the store.
@@ -558,7 +471,7 @@ in
     emacs = elispEmacs;
   };
 
-  # ERT suite. Sandbox-safe: no devenv binary or network. git is on
+  # ERT suite. Sandbox-safe: no network. git is on
   # PATH for the tests that build throwaway VC projects (repo-review).
   elisp-test =
     pkgs.runCommand "check-elisp-test"

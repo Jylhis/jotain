@@ -1,12 +1,11 @@
 # Jotain Emacs configuration — task runner.
 #
-# Recipes assume the devenv shell: `devenv shell`, or prefix with
-# `devenv shell --` (e.g. `devenv shell -- just check`).
+# Recipes assume the dev shell (`nix develop`), or prefix with
+# `nix develop -c` (e.g. `nix develop -c just check`).
 
 config_dir := justfile_directory()
 
-# Override with e.g. `just system=x86_64-linux build-nox`.
-system := arch() + "-" + if os() == "macos" { "darwin" } else { "linux" }
+system := "x86_64-linux"
 
 # List available recipes.
 default:
@@ -15,12 +14,12 @@ default:
 
 # ── Check / compile ─────────────────────────────────────────────────
 
-# Run every flake check (heavier than PR CI; excludes devenv test).
+# Run every flake check (heavier than PR CI).
 [group('check')]
 check:
     nix flake check
 
-# Assert each bare Emacs build equals its prebuilt sibling (Linux).
+# Assert each bare Emacs build equals its prebuilt sibling.
 [group('check')]
 cache-parity:
     nix build .#checks.{{system}}.cache-parity --no-link --print-build-logs
@@ -31,21 +30,15 @@ test:
     nix build .#checks.{{system}}.elisp-test --no-link --print-build-logs
 
 
-# Measures interpreted startup (the run-built baseline). Needs a display
-# except on aarch64-linux (pgtk aborts headless): prefix `xvfb-run`.
+# Measures interpreted startup (the run-built baseline). Needs a display:
+# prefix `xvfb-run` when headless.
 # Benchmark startup of the Nix-built Emacs with the bench/ harness.
 [group('check')]
 bench-built output="var/bench/startup.txt":
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{config_dir}}"
-    platform="$(uname -s)-$(uname -m)"
-    case "$platform" in
-        Linux-aarch64) target=build-nox-full ;;
-        *)             target=build          ;;
-    esac
-    echo "Platform: $platform → just $target"
-    just "$target"
+    just build
     out="{{output}}"; case "$out" in /*) ;; *) out="{{config_dir}}/$out" ;; esac
     mkdir -p "$(dirname "$out")"
     echo "Benchmarking → $out"
@@ -57,21 +50,15 @@ bench-built output="var/bench/startup.txt":
 
 # ── Build (nix) ─────────────────────────────────────────────────────
 
-# Build the full distribution (Emacs + every grammar) for the current system.
+# Build the full distribution (Emacs + every grammar).
 [group('build')]
 build:
     nix-build
 
-# Darwin's patched NS build is from source by design (see emacs.nix).
-# Build a bare Emacs (no grammars): pgtk on Linux, patched NS on Darwin.
+# Build a bare Emacs (no grammars), the pgtk GUI.
 [group('build')]
 build-bare:
     nix-build --argstr system {{system}} emacs.nix
-
-# Build a terminal-only Emacs (--without-x --without-ns).
-[group('build')]
-build-nox:
-    nix-build --arg noGui true --argstr system {{system}} emacs.nix
 
 # Build from git master (the revision pinned by emacs-overlay, binary-cached).
 [group('build')]
@@ -83,9 +70,8 @@ build-git:
 build-igc:
     nix-build --arg variant '"igc"' --argstr system {{system}} emacs.nix
 
-# Only useful on Darwin, where nix-community has no prebuilt igc;
-# elsewhere igc is a cache hit. Needs the sandbox setup described at
-# useCcache in emacs.nix.
+# igc itself is a cache hit, so ccache only pays off for a custom rev. Needs
+# the sandbox setup described at useCcache in emacs.nix.
 # Build IGC with ccache, for cheaper repeat local rebuilds.
 [group('build')]
 build-igc-ccache:
@@ -97,23 +83,12 @@ build-igc-ccache:
 build-perf:
     nix-build --arg cpuTune '"icelake-client"' --argstr system {{system}} emacs.nix
 
-# Build the full terminal-only distribution for the current system.
-[group('build')]
-build-nox-full:
-    nix build .#emacs-nox -o result
-
-# Build for this platform, then launch Emacs with this configuration.
+# Build, then launch Emacs with this configuration.
 [group('build')]
 run-built *ARGS:
     #!/usr/bin/env bash
     set -euo pipefail
-    platform="$(uname -s)-$(uname -m)"
-    case "$platform" in
-        Linux-aarch64) target=build-nox-full ;;
-        *)             target=build       ;;
-    esac
-    echo "Platform: $platform → just $target"
-    just "$target"
+    just build
     echo "Build output: $(readlink result)"
     echo "Launching Emacs from result/bin/emacs..."
     ./result/bin/emacs --init-directory="{{config_dir}}" {{ARGS}}
@@ -167,7 +142,7 @@ run-built-debug-log *ARGS:
     exec 2> >(tee "$dir/stderr.log" >&2)
     just run-built --debug-init --load "{{config_dir}}/etc/debug-init.el" {{ARGS}}
 
-# Needs xvfb-run (devenv shell). First run is slow (cache pull + MELPA
+# Needs xvfb-run (dev shell). First run is slow (cache pull + MELPA
 # bootstrap); raise the timeout if a cold cache needs it.
 # Headless screenshot under Xvfb via jotain-screenshot, saved to `out` (PNG).
 [group('build')]
@@ -176,7 +151,7 @@ screenshot out="var/screenshots/headless.png":
     #!/usr/bin/env bash
     set -euo pipefail
     command -v xvfb-run >/dev/null 2>&1 || {
-        echo "xvfb-run not on PATH — enter the devenv shell (direnv/devenv shell)"; exit 1; }
+        echo "xvfb-run not on PATH — enter the dev shell (nix develop)"; exit 1; }
     just build
     out="{{out}}"
     case "$out" in /*) ;; *) out="{{config_dir}}/$out" ;; esac
@@ -286,19 +261,12 @@ fmt:
     nix fmt
 
 
-# ── Lock synchronization ────────────────────────────────────────────
+# ── Pins ────────────────────────────────────────────────────────────
 
-# Inputs both lock files must pin to the same revs.
-shared_inputs := "nixpkgs treefmt-nix emacs-overlay"
-
-# Update flake inputs, then sync devenv.yaml/devenv.lock to the new revs.
+# Update flake inputs.
 [group('pins')]
 update:
-    #!/usr/bin/env bash
-    set -euo pipefail
     nix flake update
-    just sync-devenv all
-    echo "Done."
 
 # Covers the extra Emacs packages, ECA server, vendored npm LSPs and the
 # design pin. Scope with pin names (`just update-pins combobulate eca`);
@@ -307,56 +275,6 @@ update:
 [group('pins')]
 update-pins *PINS:
     bash scripts/update-pins.sh {{ PINS }}
-
-# Sync devenv.yaml/devenv.lock to the revs already in flake.lock.
-[group('pins')]
-sync-devenv scope="shared":
-    #!/usr/bin/env bash
-    # Never `nix flake update` here: sync-devenv.yml runs this on
-    # Dependabot PRs and must keep the revs Dependabot pinned.
-    #
-    # scope=all also re-resolves the unpinned `devenv` input (what
-    # `just update` uses); the default keeps automated commits to the
-    # shared inputs.
-    set -euo pipefail
-    case "{{ scope }}" in
-        shared | all) ;;
-        *)
-            echo "ERROR: scope must be 'shared' or 'all', got '{{ scope }}'" >&2
-            exit 1
-            ;;
-    esac
-    tmpfile=$(mktemp)
-    cp devenv.yaml "$tmpfile"
-    for input in {{ shared_inputs }}; do
-        node=$(jq -r ".nodes.root.inputs.\"$input\" // empty" flake.lock)
-        if [ -z "$node" ]; then
-            echo "ERROR: input '$input' missing from flake.lock root inputs" >&2
-            exit 1
-        fi
-        owner=$(jq -r ".nodes.\"$node\".locked.owner" flake.lock)
-        repo=$(jq -r ".nodes.\"$node\".locked.repo" flake.lock)
-        rev=$(jq -r ".nodes.\"$node\".locked.rev" flake.lock)
-        echo "Syncing devenv.yaml: $input -> $rev"
-        sed -i.bak "s|url: github:$owner/$repo/[^[:space:]]*|url: github:$owner/$repo/$rev|" "$tmpfile"
-        rm -f "$tmpfile.bak"
-    done
-    mv "$tmpfile" devenv.yaml
-    if [ "{{ scope }}" = "all" ]; then
-        devenv update
-    else
-        for input in {{ shared_inputs }}; do
-            devenv update "$input"
-        done
-    fi
-
-# Verify that flake.lock and devenv.lock agree on every shared input's rev.
-[group('pins')]
-verify:
-    #!/usr/bin/env bash
-    # Shares one implementation with the `locks-in-sync` flake check.
-    set -euo pipefail
-    SHARED_INPUTS="{{ shared_inputs }}" bash scripts/verify-locks.sh .
 
 # Run after bumping nix/design-pin.nix (ds-in-sync fails until then).
 # Re-vendor website/public/ds from the pinned jylhis/design rev.

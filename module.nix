@@ -26,8 +26,6 @@ let
   # fixpoint.
   pkgsWithOverlay = if pkgs ? jotainEmacsPackages then pkgs else pkgs.extend jotainOverlay;
   selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.jotainEmacsPackages;
-  inherit (pkgs.stdenv.hostPlatform) isLinux;
-  inherit (pkgs.stdenv.hostPlatform) isDarwin;
   startWithSession =
     if cfg.startWithUserSession == "graphical" then true else cfg.startWithUserSession;
 
@@ -85,11 +83,9 @@ let
   ecaConfig = import ./nix/eca-config.nix { inherit lib pkgs; };
 
   # Shared runtime binaries (nix/runtime-deps.nix) plus the opt-in tools,
-  # prepended to PATH in emacsWrapper: launchd does not inherit the
-  # login-shell PATH.
+  # prepended to PATH in emacsWrapper.
   runtimeDeps =
     import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; }
-    ++ lib.optional cfg.devenv.enable pkgs.devenv
     ++ lib.optional cfg.sonarlint.enable pkgs.sonarlint-ls
     ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server
     ++ lib.optional cfg.onePassword.enable pkgs._1password-cli
@@ -97,8 +93,8 @@ let
     ++ lib.optional cfg.claudeCode.enable pkgs.claude-code;
 
   # Colour-emoji fallback for the `emoji' / `symbol' fontsets
-  # (lisp/init-ui.el). macOS ships Apple Color Emoji.
-  emojiFontPackages = lib.optional isLinux pkgs.noto-fonts-color-emoji;
+  # (lisp/init-ui.el).
+  emojiFontPackages = [ pkgs.noto-fonts-color-emoji ];
 
   # Nerd Font glyphs for the icon stack. BlexMono is the first entry in
   # `jotain-font-preferences' (lisp/init-ui.el); keep the two in step.
@@ -147,42 +143,18 @@ let
       "$@"
   '';
 
-  # Home Manager prefixes user agent labels with "org.nix-community.home.".
-  launchdLabel = "org.nix-community.home.jotain";
-  launchdPlist = "${config.home.homeDirectory}/Library/LaunchAgents/${launchdLabel}.plist";
-
-  # `jotctl <start|stop|status|restart|logs>`: drives the launchd agent on
-  # macOS or the systemd user service on Linux.
-  jotctlScript = pkgs.writeShellScriptBin "jotctl" (
-    if isDarwin then
-      ''
-        label=${launchdLabel}
-        plist=${lib.escapeShellArg launchdPlist}
-        uid=$(${pkgs.coreutils}/bin/id -u)
-        target="gui/$uid/$label"
-        case "''${1:-status}" in
-          start)   launchctl bootstrap "gui/$uid" "$plist" 2>/dev/null \
-                     || launchctl kickstart "$target" ;;
-          stop)    launchctl bootout "$target" ;;
-          restart) launchctl kickstart -k "$target" ;;
-          status)  launchctl print "$target" ;;
-          logs)    echo "macOS launchd does not capture Jotain stdout (no StandardOutPath set); showing launchd state:" >&2
-                   launchctl print "$target" ;;
-          *) echo "usage: jotctl {start|stop|status|restart|logs}" >&2; exit 2 ;;
-        esac
-      ''
-    else
-      ''
-        case "''${1:-status}" in
-          start)   exec systemctl --user start jotain ;;
-          stop)    exec systemctl --user stop jotain ;;
-          restart) exec systemctl --user restart jotain ;;
-          status)  exec systemctl --user status jotain ;;
-          logs)    exec journalctl --user -u jotain -f ;;
-          *) echo "usage: jotctl {start|stop|status|restart|logs}" >&2; exit 2 ;;
-        esac
-      ''
-  );
+  # `jotctl <start|stop|status|restart|logs>`: drives the systemd user
+  # service.
+  jotctlScript = pkgs.writeShellScriptBin "jotctl" ''
+    case "''${1:-status}" in
+      start)   exec systemctl --user start jotain ;;
+      stop)    exec systemctl --user stop jotain ;;
+      restart) exec systemctl --user restart jotain ;;
+      status)  exec systemctl --user status jotain ;;
+      logs)    exec journalctl --user -u jotain -f ;;
+      *) echo "usage: jotctl {start|stop|status|restart|logs}" >&2; exit 2 ;;
+    esac
+  '';
 
   systemdWantedBy =
     if cfg.startWithUserSession == "graphical" then "graphical-session.target" else "default.target";
@@ -215,8 +187,7 @@ in
       defaultText = lib.literalExpression "null";
       description = ''
         Custom Jotain Emacs package to use. Leave unset for the full
-        distribution (`jotainEmacsPackages`: pgtk/Wayland GUI on Linux,
-        patched NS GUI on Darwin).
+        distribution (`jotainEmacsPackages`, the pgtk/Wayland GUI).
       '';
     };
 
@@ -306,9 +277,8 @@ in
         {env}`GEMINI_API_KEY` (lisp/init-ai.el) and the {command}`eca`
         server's provider keys. Point it at a runtime secret path
         (sops-nix, agenix, …); it is read at daemon start and never
-        copied into the Nix store. On Linux it becomes the service's
-        {var}`EnvironmentFile`; on macOS the launchd agent sources it
-        before exec. For auth-source alternatives see
+        copied into the Nix store. It becomes the service's
+        {var}`EnvironmentFile`. For auth-source alternatives see
         {option}`services.jotain.onePassword.enable` and
         {option}`services.jotain.authSources`.
       '';
@@ -361,17 +331,6 @@ in
 
     sonarlint = {
       enable = lib.mkEnableOption "SonarLint language server ({command}`M-x jotain-sonarlint`)";
-    };
-
-    devenv = {
-      enable = lib.mkEnableOption ''
-        the {command}`devenv` CLI on the wrapper PATH, for the native
-        environment loader (`devenv-env-global-mode`, lisp/devenv.el)
-        under daemons whose login shell does not export it. Opt-in
-        because exec-path-from-shell normally finds the user's own
-        devenv, and `pkgs.devenv` bundles its own nix, which can
-        version-skew against per-project devenv installs
-      '';
     };
 
     eca = {
@@ -445,13 +404,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions = [
-      {
-        assertion = !cfg.socketActivation.enable || isLinux;
-        message = "services.jotain.socketActivation.enable is only supported on Linux/systemd.";
-      }
-    ];
-
     home.sessionVariables = lib.mkIf cfg.defaultEditor {
       EDITOR = "${lib.getBin editorScript}/bin/jotain-editor";
       VISUAL = "${lib.getBin visualScript}/bin/jotain-visual";
@@ -463,7 +415,7 @@ in
       zsh.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
       fish.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
     };
-    fonts.fontconfig.enable = lib.mkIf isLinux true;
+    fonts.fontconfig.enable = true;
 
     home.packages = [
       selectedPackage
@@ -476,9 +428,7 @@ in
     ]
     ++ emojiFontPackages
     ++ iconFontPackages
-    ++ lib.optional (cfg.client.enable && pkgs.stdenv.hostPlatform.isLinux) (
-      lib.hiPrio clientDesktopItem
-    );
+    ++ lib.optional cfg.client.enable (lib.hiPrio clientDesktopItem);
 
     # Entry files and lisp/ come from compiledConfig: an .eln is named
     # after a hash of its source path, so sources from any other store path
@@ -501,53 +451,51 @@ in
       };
     };
 
-    systemd.user.services.jotain = lib.mkIf isLinux (
-      {
-        Unit = {
-          Description = "Jotain Emacs text editor";
-          Documentation = "info:emacs man:emacs(1) https://gnu.org/software/emacs/";
+    systemd.user.services.jotain = {
+      Unit = {
+        Description = "Jotain Emacs text editor";
+        Documentation = "info:emacs man:emacs(1) https://gnu.org/software/emacs/";
 
-          After = lib.optional (cfg.startWithUserSession == "graphical") "graphical-session.target";
-          PartOf = lib.optional (cfg.startWithUserSession == "graphical") "graphical-session.target";
+        After = lib.optional (cfg.startWithUserSession == "graphical") "graphical-session.target";
+        PartOf = lib.optional (cfg.startWithUserSession == "graphical") "graphical-session.target";
 
-          # Avoid killing the session, which may be full of unsaved buffers.
-          X-RestartIfChanged = false;
-        }
-        // lib.optionalAttrs needsSocketWorkaround {
-          RefuseManualStart = true;
-        };
-
-        Service = {
-          Type = "notify";
-
-          # Wrap in a login shell so Emacs inherits the user's
-          # environment ($PATH, $NIX_PROFILES, etc.).
-          ExecStart = ''${pkgs.runtimeShell} -l -c "${emacsWrapper}/bin/emacs --fg-daemon${lib.optionalString cfg.socketActivation.enable "=${lib.escapeShellArg socketPath}"} ${lib.escapeShellArgs cfg.extraOptions}"'';
-
-          # Emacs exits with status 15 after SIGTERM.
-          SuccessExitStatus = 15;
-
-          Restart = "on-failure";
-        }
-        // lib.optionalAttrs needsSocketWorkaround {
-          ExecStartPost = "${pkgs.coreutils}/bin/chmod --changes -w ${socketDir}";
-          ExecStopPost = "${pkgs.coreutils}/bin/chmod --changes +w ${socketDir}";
-        }
-        // lib.optionalAttrs (cfg.environmentFile != null) {
-          EnvironmentFile = cfg.environmentFile;
-        }
-        // lib.optionalAttrs (cfg.authSources != [ ]) {
-          Environment = [ "JOTAIN_AUTH_SOURCES=${lib.concatStringsSep ":" cfg.authSources}" ];
-        };
+        # Avoid killing the session, which may be full of unsaved buffers.
+        X-RestartIfChanged = false;
       }
-      // lib.optionalAttrs startWithSession {
-        Install = {
-          WantedBy = [ systemdWantedBy ];
-        };
-      }
-    );
+      // lib.optionalAttrs needsSocketWorkaround {
+        RefuseManualStart = true;
+      };
 
-    systemd.user.sockets.jotain = lib.mkIf (isLinux && cfg.socketActivation.enable) {
+      Service = {
+        Type = "notify";
+
+        # Wrap in a login shell so Emacs inherits the user's
+        # environment ($PATH, $NIX_PROFILES, etc.).
+        ExecStart = ''${pkgs.runtimeShell} -l -c "${emacsWrapper}/bin/emacs --fg-daemon${lib.optionalString cfg.socketActivation.enable "=${lib.escapeShellArg socketPath}"} ${lib.escapeShellArgs cfg.extraOptions}"'';
+
+        # Emacs exits with status 15 after SIGTERM.
+        SuccessExitStatus = 15;
+
+        Restart = "on-failure";
+      }
+      // lib.optionalAttrs needsSocketWorkaround {
+        ExecStartPost = "${pkgs.coreutils}/bin/chmod --changes -w ${socketDir}";
+        ExecStopPost = "${pkgs.coreutils}/bin/chmod --changes +w ${socketDir}";
+      }
+      // lib.optionalAttrs (cfg.environmentFile != null) {
+        EnvironmentFile = cfg.environmentFile;
+      }
+      // lib.optionalAttrs (cfg.authSources != [ ]) {
+        Environment = [ "JOTAIN_AUTH_SOURCES=${lib.concatStringsSep ":" cfg.authSources}" ];
+      };
+    }
+    // lib.optionalAttrs startWithSession {
+      Install = {
+        WantedBy = [ systemdWantedBy ];
+      };
+    };
+
+    systemd.user.sockets.jotain = lib.mkIf cfg.socketActivation.enable {
       Unit = {
         Description = "Jotain Emacs text editor";
         Documentation = "info:emacs man:emacs(1) https://gnu.org/software/emacs/";
@@ -567,35 +515,6 @@ in
       Install = {
         WantedBy = [ "sockets.target" ];
         RequiredBy = [ "jotain.service" ];
-      };
-    };
-
-    launchd.agents.jotain = lib.mkIf isDarwin {
-      enable = true;
-      config = {
-        # launchd has no EnvironmentFile: source the file in a shell
-        # before exec so Emacs and its children see the keys.
-        ProgramArguments =
-          if cfg.environmentFile != null then
-            [
-              pkgs.runtimeShell
-              "-c"
-              "set -a; . ${lib.escapeShellArg (toString cfg.environmentFile)}; set +a; exec ${emacsWrapper}/bin/emacs --fg-daemon ${lib.escapeShellArgs cfg.extraOptions}"
-            ]
-          else
-            [
-              "${emacsWrapper}/bin/emacs"
-              "--fg-daemon"
-            ]
-            ++ cfg.extraOptions;
-        RunAtLoad = true;
-        KeepAlive = {
-          Crashed = true;
-          SuccessfulExit = false;
-        };
-      }
-      // lib.optionalAttrs (cfg.authSources != [ ]) {
-        EnvironmentVariables.JOTAIN_AUTH_SOURCES = lib.concatStringsSep ":" cfg.authSources;
       };
     };
   };

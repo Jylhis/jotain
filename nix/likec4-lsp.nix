@@ -53,12 +53,7 @@ pkgs.buildNpmPackage {
     homepage = "https://likec4.dev/tooling/editors/";
     license = lib.licenses.mit;
     mainProgram = "likec4-lsp";
-    platforms = [
-      "x86_64-linux"
-      "aarch64-linux"
-      "x86_64-darwin"
-      "aarch64-darwin"
-    ];
+    platforms = [ "x86_64-linux" ];
     sourceProvenance = [ lib.sourceTypes.fromSource ];
   };
 }

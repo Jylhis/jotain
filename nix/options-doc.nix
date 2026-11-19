@@ -14,7 +14,7 @@ let
 
   gitHubUrl = "https://github.com/Jylhis/jotain";
 
-  # Evaluate a module in isolation — no HM/NixOS/devenv stubs needed
+  # Evaluate a module in isolation — no HM/NixOS stubs needed
   # because config sections are gated by mkIf cfg.enable (default false).
   evalModule =
     modulePath:
@@ -79,7 +79,7 @@ pkgs.runCommand "jotain-options-doc"
     [Jotain](${gitHubUrl}).
 
     - [Home Manager Module](#home-manager-module) — per-user Emacs daemon, client wrapper, desktop entry
-    - [System Module](#system-module-nixos--nix-darwin) — overlay and system packages
+    - [System Module](#system-module-nixos) — overlay and system packages
 
     ---
 
@@ -106,14 +106,14 @@ pkgs.runCommand "jotain-options-doc"
 
     ---
 
-    # System Module (NixOS / nix-darwin)
+    # System Module (NixOS)
 
     Applies the Jotain overlay and adds the package to system environment.
     For per-user daemon management, use the Home Manager module instead.
 
     ```nix
     {
-      imports = [ jotain.nixosModules.default ];  # or darwinModules.default
+      imports = [ jotain.nixosModules.default ];
       services.jotain.enable = true;
     }
     ```

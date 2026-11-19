@@ -4,10 +4,8 @@
 #   jotainEmacs              — bare Emacs binary (unstable variant, the
 #                              newest Emacs release tag, currently 31.1;
 #                              see nix/mk-overlay.nix)
-#   jotainEmacsNoGui         — terminal-only (noGui) twin of jotainEmacs
 #   jotainInfo               — Jotain manual (share/info/jotain.info + dir)
 #   jotainEmacsPackages      — full distribution using jotainEmacs
-#   jotainEmacsPackagesNoGui — full distribution on the noGui build
 #   eca                      — prebuilt ECA server binary (lisp/init-ai.el)
 #   likec4Lsp                — LikeC4 language server (lisp/init-lang-devops.el)
 #

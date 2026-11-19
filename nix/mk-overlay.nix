@@ -1,5 +1,5 @@
 {
-  # Emacs source variant for jotainEmacs / jotainEmacsNoGui (see
+  # Emacs source variant for jotainEmacs (see
   # emacs.nix). Defaults to "unstable": emacs-overlay's emacs-unstable,
   # the newest Emacs release or pretest tag (currently 31.1), cached on
   # nix-community.cachix.org.
@@ -15,7 +15,7 @@ let
 
   # Runtime binaries the config shells out to, on every distribution
   # wrapper's PATH so a bare `just run-built' is self-contained.
-  # `--suffix' keeps ambient/project tools first, so a devenv-provided
+  # `--suffix' keeps ambient/project tools first, so a project-provided
   # server still wins.
   runtimeDeps = import ./runtime-deps.nix {
     pkgs = final;
@@ -94,8 +94,8 @@ let
         lndir -silent ${core} $out
 
         # Re-wrap anything under bin/ that may launch Emacs, so the info
-        # path propagates through `emacs', `emacsclient', the `.app'
-        # bundle (macOS), and any helper tools that shell out to emacs.
+        # path propagates through `emacs', `emacsclient',
+        # and any helper tools that shell out to emacs.
         for prog in $out/bin/*; do
           [ -L "$prog" ] || continue
           orig=$(readlink -f "$prog")
@@ -108,39 +108,16 @@ let
       '';
 in
 {
-  # Linux GUI is pgtk: it honors each backend's scale (Wayland fractional
+  # The GUI is pgtk: it honors each backend's scale (Wayland fractional
   # scale, Xft.dpi/GDK_SCALE on X11), so a fixed point size tracks the
   # system. emacs.nix selects the prebuilt `*-pgtk` sibling, so this stays
-  # a binary-cache hit.
-  #
-  # FLAG-TRIM POLICY: unused features (mailutils' movemail, gpm, SELinux)
-  # are dropped ONLY on builds already off binary-cache parity: the two
-  # noGui builds (cached only on jylhis cachix) and the Darwin GUI
-  # (patched, never cached). The Linux pgtk GUI keeps upstream defaults:
-  # it is byte-identical to nix-community's emacs-unstable-pgtk, and that
-  # cache hit (Emacs plus every dependent ELPA package) is worth more than
-  # any closure trim.
-  jotainEmacs = import ../emacs.nix (
-    {
-      pkgs = final;
-      inherit variant;
-      withPgtk = final.stdenv.hostPlatform.isLinux;
-    }
-    // final.lib.optionalAttrs final.stdenv.hostPlatform.isDarwin {
-      # Off-parity anyway (NS patches). gpm/selinux are already off here.
-      withMailutils = false;
-    }
-  );
-
-  # Terminal-only build (nix-on-droid, headless). Off-parity by
-  # construction, so the trim policy applies.
-  jotainEmacsNoGui = import ../emacs.nix {
+  # a binary-cache hit and keeps upstream's feature flags: the result is
+  # byte-identical to nix-community's emacs-unstable-pgtk, and that cache
+  # hit (Emacs plus every dependent ELPA package) is worth more than any
+  # closure trim.
+  jotainEmacs = import ../emacs.nix {
     pkgs = final;
     inherit variant;
-    noGui = true;
-    withMailutils = false;
-    withGpm = false;
-    withSelinux = false;
   };
 
   # Prebuilt ECA server for eca-emacs (lisp/init-ai.el).
@@ -167,11 +144,5 @@ in
   jotainEmacsPackages = mkJotainEmacsPackages {
     name = "jotain-emacs-full";
     package = final.jotainEmacs;
-  };
-
-  # Full distribution on the terminal-only base (nix-on-droid / headless).
-  jotainEmacsPackagesNoGui = mkJotainEmacsPackages {
-    name = "jotain-emacs-full-nox";
-    package = final.jotainEmacsNoGui;
   };
 }

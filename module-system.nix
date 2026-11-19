@@ -1,17 +1,11 @@
-# module-system.nix — NixOS / nix-darwin module for Jotain Emacs.
+# module-system.nix — NixOS module for Jotain Emacs.
 #
-# Applies the overlay and adds Jotain Emacs to environment.systemPackages;
-# one file serves both NixOS and nix-darwin. For a per-user daemon, use
-# the Home Manager module (module.nix).
+# Applies the overlay and adds Jotain Emacs to environment.systemPackages.
+# For a per-user daemon, use the Home Manager module (module.nix).
 #
-# Usage in NixOS:
+# Usage:
 #
 #   imports = [ jotain.nixosModules.default ];
-#   services.jotain.enable = true;
-#
-# Usage in nix-darwin:
-#
-#   imports = [ jotain.darwinModules.default ];
 #   services.jotain.enable = true;
 args@{
   config,
@@ -30,7 +24,6 @@ let
   # Shared runtime binaries plus the opt-in tools (mirrors module.nix).
   runtimeDeps =
     import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; }
-    ++ lib.optional cfg.devenv.enable pkgs.devenv
     ++ lib.optional cfg.sonarlint.enable pkgs.sonarlint-ls
     ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server
     ++ lib.optional cfg.onePassword.enable pkgs._1password-cli
@@ -96,17 +89,6 @@ in
       enable = lib.mkEnableOption "SonarLint language server ({command}`M-x jotain-sonarlint`)";
     };
 
-    devenv = {
-      enable = lib.mkEnableOption ''
-        the {command}`devenv` CLI on the wrapper PATH, for the native
-        environment loader (`devenv-env-global-mode`, lisp/devenv.el)
-        under launchd/systemd daemons whose login shell does not export
-        it. Opt-in because exec-path-from-shell normally finds the
-        user's own devenv, and `pkgs.devenv` bundles its own nix and
-        can version-skew against per-project devenv installs
-      '';
-    };
-
     dockerfileLsp = {
       enable = lib.mkEnableOption "Dockerfile language server ({command}`docker-langserver`), auto-attached by Eglot in {command}`dockerfile-mode`";
     };
@@ -146,10 +128,8 @@ in
       visualScript
       pkgsWithOverlay.eca
     ];
-    # Colour-emoji fallback for lisp/init-ui.el's fontsets. Skipped on
-    # Darwin: macOS ships Apple Color Emoji, and nix-darwin's
-    # `fonts.packages' differs from NixOS's.
-    fonts.packages = lib.mkIf pkgs.stdenv.hostPlatform.isLinux [
+    # Colour-emoji fallback for lisp/init-ui.el's fontsets.
+    fonts.packages = [
       pkgs.noto-fonts-color-emoji
       # BlexMono (default face and nerd-icons font, as in module.nix) and
       # the design system's families (Fira Sans is the variable-pitch face).

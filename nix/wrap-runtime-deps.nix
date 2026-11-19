@@ -1,10 +1,10 @@
 # nix/wrap-runtime-deps.nix: re-wrap a Jotain distribution with the
-# runtime binaries (nix/runtime-deps.nix) appended to PATH. Shared by
-# module-system.nix and module-nix-on-droid.nix.
+# runtime binaries (nix/runtime-deps.nix) appended to PATH, used by
+# module-system.nix.
 #
 # Appending keeps the host userland first. Unlike
-# environment.systemPackages, which a Dock/launchd-launched Emacs never
-# sees on darwin, the wrapper PATH survives every launch context.
+# environment.systemPackages, the wrapper PATH survives every launch
+# context.
 {
   pkgs,
   package,

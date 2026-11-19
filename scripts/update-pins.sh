@@ -12,8 +12,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-system="$(nix eval --impure --raw --expr builtins.currentSystem)"
-epkgs="legacyPackages.${system}.emacs-packages"
+epkgs="legacyPackages.x86_64-linux.emacs-packages"
 nix_update=(nix run nixpkgs#nix-update --)
 build_flag="--build"
 [ "${NO_BUILD:-0}" = "1" ] && build_flag=""
@@ -46,28 +45,19 @@ update_via_nix_update() {
   "${nix_update[@]}" "${args[@]}" "${epkgs}.${name}"
 }
 
-# --- eca: prebuilt server, four-platform sidecar-hash table ---------------
+# --- eca: prebuilt server, sidecar hash of the x86_64-linux asset ---------
 
 update_eca() {
   local file="nix/eca-server.nix"
   local tag
   tag="$(gh api repos/editor-code-assistant/eca/releases/latest --jq .tag_name)"
   log "eca -> ${tag}"
-  # Same platform->asset map as the nix file.
-  local -A assets=(
-    [x86_64-linux]="eca-native-static-linux-amd64.zip"
-    [aarch64-linux]="eca-native-linux-aarch64.zip"
-    [aarch64-darwin]="eca-native-macos-aarch64.zip"
-    [x86_64-darwin]="eca-native-macos-amd64.zip"
-  )
+  local asset="eca-native-static-linux-amd64.zip"
   local base="https://github.com/editor-code-assistant/eca/releases/download/${tag}"
-  local sys asset hex
-  for sys in "${!assets[@]}"; do
-    asset="${assets[$sys]}"
-    hex="$(curl -fsSL "${base}/${asset}.sha256" | awk '{print $1}')"
-    [ "${#hex}" -eq 64 ] || { echo "eca: bad sha for $asset" >&2; exit 1; }
-    perl -0pi -e "s/(asset = \"\Q${asset}\E\";\s*\n\s*sha256 = \")[0-9a-f]{64}(\")/\${1}${hex}\${2}/" "$file"
-  done
+  local hex
+  hex="$(curl -fsSL "${base}/${asset}.sha256" | awk '{print $1}')"
+  [ "${#hex}" -eq 64 ] || { echo "eca: bad sha for $asset" >&2; exit 1; }
+  perl -pi -e "s/^(  sha256 = \")[0-9a-f]{64}(\";)/\${1}${hex}\${2}/" "$file"
   perl -pi -e "s/^(  version = \")[^\"]*(\";)/\${1}${tag}\${2}/" "$file"
   [ -n "$build_flag" ] && build_eca
 }
@@ -76,7 +66,7 @@ build_eca() {
   log "build: eca"
   nix build --no-link --impure --expr '
     let f = builtins.getFlake (toString ./.);
-        pkgs = import f.inputs.nixpkgs { system = builtins.currentSystem; };
+        pkgs = import f.inputs.nixpkgs { system = "x86_64-linux"; };
     in import ./nix/eca-server.nix { inherit pkgs; }'
 }
 

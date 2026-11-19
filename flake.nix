@@ -3,9 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    # nixpkgs-unstable (26.11) dropped x86_64-darwin; 26.05 is the last
-    # release supporting it. Used for that platform only (see `nixpkgsFor`).
-    nixpkgs-x86_64-darwin.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
@@ -25,7 +22,7 @@
   };
 
   outputs =
-    inputs@{
+    {
       self,
       nixpkgs,
       treefmt-nix,
@@ -33,18 +30,11 @@
       ...
     }:
     let
-      systems = [
-        "x86_64-linux"
-        "aarch64-linux"
-        # on nixpkgs-26.05-darwin (see the nixpkgs-x86_64-darwin input)
-        "x86_64-darwin"
-        "aarch64-darwin"
-      ];
+      systems = [ "x86_64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
-      nixpkgsFor = system: if system == "x86_64-darwin" then inputs."nixpkgs-x86_64-darwin" else nixpkgs;
       pkgsFor =
         system:
-        import (nixpkgsFor system) {
+        import nixpkgs {
           inherit system;
           overlays = [
             emacs-overlay.overlays.default
@@ -79,25 +69,14 @@
           imports = [ ./module-system.nix ];
           _module.args.jotainOverlay = moduleOverlay;
         };
-      darwinModules.default = self.nixosModules.default;
-      nixOnDroidModules.default =
-        { ... }:
-        {
-          imports = [ ./module-nix-on-droid.nix ];
-          _module.args.jotainOverlay = moduleOverlay;
-        };
 
       lib = import ./nix/use-package.nix { inherit (nixpkgs) lib; };
 
-      # Two Emacs builds per platform: `emacs` (pgtk GUI on Linux, patched
-      # NS GUI on Darwin; wrapped by `default`, the full distribution) and
-      # the terminal-only `emacs-nox`. emacs.nix asserts other GUIs away.
+      # One Emacs build: `emacs` (the pgtk GUI, wrapped by `default`, the
+      # full distribution). emacs.nix asserts other GUIs away.
       packages = forAllSystems (system: {
         default = (pkgsFor system).jotainEmacsPackages;
         emacs = (pkgsFor system).jotainEmacs;
-        # Terminal-only distribution: what the nix-on-droid module ships
-        # and what `just run-built` launches on aarch64-linux.
-        emacs-nox = (pkgsFor system).jotainEmacsPackagesNoGui;
         # Already bundled into every distribution; exposed for direct builds.
         likec4-lsp = (pkgsFor system).likec4Lsp;
         info = (pkgsFor system).jotainInfo;
@@ -173,6 +152,13 @@
         }
       );
 
+      devShells = forAllSystems (system: {
+        default = import ./nix/dev-shell.nix {
+          pkgs = pkgsFor system;
+          treefmt = (treefmtEval system).config.build.wrapper;
+        };
+      });
+
       formatter = forAllSystems (system: (treefmtEval system).config.build.wrapper);
 
       checks = forAllSystems (
@@ -181,6 +167,7 @@
           pkgs = pkgsFor system;
           src = self;
           treefmtCheck = (treefmtEval system).config.build.check self;
+          devShell = self.devShells.${system}.default;
         }
       );
     };

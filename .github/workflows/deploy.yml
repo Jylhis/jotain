@@ -1,9 +1,9 @@
 # Full validation + deploy for protected branches.
 #
-# main: check (full nix flake check) and test (devenv test); after check,
-#       build-pages -> deploy-pages publishes the full `.#site` to GitHub
-#       Pages (Actions source) at page.jylhis.com/jotain/.
-# next: check + test only.
+# main: check (full nix flake check); after check, build-pages ->
+#       deploy-pages publishes the full `.#site` to GitHub Pages (Actions
+#       source) at page.jylhis.com/jotain/.
+# next: check only.
 #
 # Both push new artifacts to the jylhis cachix cache, so later PR runs
 # hit it. Pages hosts one deployment; PR previews are artifacts instead
@@ -51,29 +51,6 @@ jobs:
 
       - name: nix flake check
         run: nix flake check --print-build-logs
-
-  test:
-    name: Dev environment
-    timeout-minutes: 15
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: cachix/install-nix-action@v31
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-
-      - uses: cachix/cachix-action@v17
-        with:
-          name: jylhis
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          extraPullNames: devenv,nix-community
-
-      - name: Install devenv.sh
-        run: nix profile add nixpkgs#devenv
-
-      - name: devenv test
-        run: devenv test
 
   build-pages:
     # Full `.#site` (including /help/api/ and /packages/), built with

@@ -1,6 +1,5 @@
 # nix/cache-parity.nix: each bare Emacs build must equal its prebuilt
 # emacs-overlay / nixpkgs sibling, or its default-rev build is a cache miss.
-# Linux only: the Darwin GUI is patched and never on parity.
 #
 #   just cache-parity
 #
