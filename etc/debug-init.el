@@ -7,7 +7,7 @@
 ;; var/debug/).
 ;;
 ;; Kept outside lisp/ and test/ so the use-package scanner and the
-;; elisp-compile/elisp-lint checks never see it.
+;; elisp-compile check never sees it.
 
 (require 'backtrace)
 

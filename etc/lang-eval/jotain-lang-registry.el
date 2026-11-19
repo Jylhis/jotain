@@ -21,7 +21,7 @@
 ;;
 ;; Kept outside lisp/ and test/ (like etc/debug-init.el): it is not part of
 ;; the loaded configuration, so the use-package scanner and the
-;; elisp-compile/elisp-lint checks never see it.  Pure data plus small
+;; elisp-compile check never sees it.  Pure data plus small
 ;; accessors, so the ERT suite can `require' it without booting the config.
 
 ;;; Code:
