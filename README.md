@@ -17,19 +17,18 @@ per-package "why is this here" reference.
 just run-built
 ```
 
-Development happens in the [devenv](https://devenv.sh) shell
-(`devenv shell`, or prefix commands with `devenv shell --`). It provides
+Development happens in the flake's dev shell (`nix develop`, or prefix
+commands with `nix develop -c`; `nix-shell` works too). It provides
 linters, language servers, and the docs toolchain, but not Emacs, which
 `just run-built` builds on demand. `just check` runs the full
-`nix flake check`; `just` alone lists every recipe. In a bare container
-with no Nix, run `scripts/bootstrap-agent-env.sh` first.
+`nix flake check`; `just` alone lists every recipe.
 
 ## Installing
 
-The flake exposes the full distribution (`packages.<system>.default`,
-Emacs + tree-sitter grammars), a bare `emacs`, a terminal-only
-`emacs-nox`, and modules for Home Manager (`services.jotain` daemon),
-NixOS / nix-darwin, and nix-on-droid. See
+The flake targets `x86_64-linux` and exposes the full distribution
+(`packages.x86_64-linux.default`, Emacs + tree-sitter grammars), a bare
+`emacs`, and modules for Home Manager (`services.jotain` daemon) and NixOS
+(`services.jotain.users.<name>` installs the programs per user). See
 [Installation](https://page.jylhis.com/jotain/docs/installation).
 
 ## Contributing

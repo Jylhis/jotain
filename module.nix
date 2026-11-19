@@ -307,7 +307,7 @@ in
         {env}`OPENROUTER_API_KEY` via eca's `''${env:…}` interpolation, so
         no secret reaches the Nix store. Supply it through
         {option}`services.jotain.environmentFile`. gptel defaults to
-        OpenRouter regardless of this option
+        Claude on the direct Anthropic API regardless of this option
       '';
 
       settings = lib.mkOption {

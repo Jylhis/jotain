@@ -66,7 +66,7 @@ demand only.
 ### `exec-path-from-shell`
 
 Inherits PATH, MANPATH, and other shell-managed vars from the
-user's login shell so a GUI, launchd, or systemd-spawned Emacs sees
+user's login shell so a GUI or systemd-spawned Emacs sees
 what the terminal sees. The Nix wrapper already puts the tools the
 config needs (rg, fd, git, jj, zoxide, coreutils) on PATH; this
 adds ~/.nix-profile and user toolchains.
@@ -135,7 +135,7 @@ focus between windows.
 ### `auto-dark`
 
 Flips between `jotain-theme-light` and `jotain-theme-dark`
-following the system appearance (macOS, GNOME, or anything exposing
+following the system appearance (GNOME, or anything exposing
 a dark/light setting). C-c t toggles manually.
 
 ### `doom-modeline`
@@ -466,13 +466,11 @@ strings, and sorted like corfu so it matches the popup's top row.
 
 ### `dired` *(built-in / Nix)*
 
-Built-in directory editor, the configuration's primary file manager. On
-macOS it uses GNU `gls` when available, since BSD ls lacks
-`--group-directories-first` and `--dired`. `M-s R` previews a regex
-replacement across the marked files as a unified diff. `!`/`&`
-suggest the OS default application (`open`/`xdg-open`/`start`) for
-common document and media files; files can also be dragged out to
-desktop apps with the mouse.
+Built-in directory editor, the configuration's primary file manager.
+`M-s R` previews a regex replacement across the marked files as a
+unified diff. `!`/`&` suggest the OS default application
+(`xdg-open`) for common document and media files; files can also be
+dragged out to desktop apps with the mouse.
 
 ### `dired-x` *(built-in / Nix)*
 
@@ -489,13 +487,7 @@ in a subprocess, so large copies do not freeze the UI.
 
 rsync from dired (`C-c C-r`), for very large transfers or TRAMP
 endpoints: hands the marked files to `rsync` asynchronously with live
-progress. `--progress`, not `--info=progress2`, so stock macOS rsync
-2.6.9 still works.
-
-### `ls-lisp` *(built-in / Nix)*
-
-Pure-Lisp ls emulation, used on macOS without GNU coreutils to
-get the folders-first sorting BSD ls cannot produce.
+progress.
 
 ### `wdired` *(built-in / Nix)*
 
@@ -615,6 +607,25 @@ the `diff-hl' block, use-package would autoload it from "diff-hl",
 and with stale package autoloads that errors and empties every dired
 buffer.
 
+### `smerge-mode` *(built-in / Nix)*
+
+Built-in conflict-marker editing; it turns on for files with
+markers and binds `C-c ^' (`smerge-command-prefix'). `C-c ^ S' runs
+`jotain-vc-mergiraf-solve', which re-resolves the file with mergiraf's
+syntax-aware merge and leaves smerge-mode on for what remains. The
+mergiraf binary rides the wrapper PATH; the markers must be diff3
+style. Enable the git merge driver per repository with
+`*.json merge=mergiraf' in `.gitattributes' and the driver
+`mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P' in
+`merge.mergiraf.driver'.
+
+### `magit-delta`
+
+Renders magit diffs through delta (`magit-delta-mode'). Off
+until `jotain-magit-delta-enable' is non-nil, because it changes every
+magit diff; `M-x magit-delta-mode' toggles it per session. The delta
+binary rides the wrapper PATH.
+
 ### `ediff` *(built-in / Nix)*
 
 Built-in interactive diff. The `plain` window setup keeps the
@@ -683,7 +694,8 @@ Embark actions on consult-eglot workspace symbols.
 
 Debug Adapter Protocol client, the debugging counterpart to
 eglot. Ships adapter configs for dlv (Go), debugpy (Python),
-codelldb (Rust/C/C++) and more; adapter binaries come from the
+codelldb (Rust/C/C++) and more; this config adds cargo (lldb-dap)
+and Kotlin (kotlin-debug-adapter). Adapter binaries come from the
 project/host PATH. `C-x C-a` is the prefix (the gud convention);
 stepping commands repeat, so `C-x C-a n n n` keeps stepping.
 
@@ -833,6 +845,16 @@ file with one TODO headline per project file, listed by
 in `view-mode', `e' opens it writable, `N' jumps to the next
 unreviewed file, and `g' appends files added since the queue was
 built. A prefix argument rebuilds the queue after a confirmation.
+`C-x p V' (`repo-review-pullreq') does the same for the Forge pull
+request or merge request at point: the queue lists the changed
+files and RET shows each as a read-only diff. `c' in a diff saves a
+draft comment on the line at point into the queue; `P' in the queue
+lists the drafts and posts them through Ghub after you confirm. `v'
+marks the file at point as viewed (an Org tag, so it persists with
+the review); it also works in a diff or a visited file. With gptel,
+`a' in a diff drafts a comment for the line at point and `A' on a
+draft shows advice on its wording; both send text to the gptel model
+and save or post nothing without you.
 Queues live under var/repo-review/.
 
 ### `org-remark`
@@ -861,10 +883,10 @@ a session starts. C-c e starts a session and opens the chat.
 
 ### `gptel`
 
-Conversational LLM front-end. The default backend is OpenRouter,
-an OpenAI-compatible aggregator (Claude, GPT, Gemini, DeepSeek, Qwen,
-GLM, ...) behind one key; direct Anthropic, Gemini and local Ollama
-backends are selectable from the C-c S menu. C-c s sends. Keys come
+Conversational LLM front-end. The default backend is Claude on the
+direct Anthropic API; OpenRouter (an OpenAI-compatible aggregator behind
+one key), Gemini and local Ollama backends are selectable from the C-c S
+menu. C-c s sends. Keys come
 from the environment, then auth-source.
 
 ### `mcp`
@@ -949,6 +971,15 @@ while code, tables, and verbatim spans stay monospaced
 text-mode buffer and opted out of the column-sensitive ones: YAML
 (see init-lang-data), commit messages, and email.
 
+### `nroff-mode` *(built-in / Nix)*
+
+Lint feedback for mdoc(7) manual pages (`.1', `.5', `.7',
+`.8') in the built-in `nroff-mode'. A Flymake backend pipes the buffer
+through `mandoc -Tlint -Wwarning' and shows each finding at its line.
+It reports nothing while `mandoc' is not on the buffer's PATH. Pages
+keep one sentence per line, so auto-fill, visual-line wrapping and the
+proportional font stay off; jinx still checks the prose.
+
 ### `jinx`
 
 Just-in-time spell check using enchant. `global-jinx-mode'
@@ -960,7 +991,8 @@ dictionaries. YAML buffers opt out (init-lang-data).
 ### `markdown-mode`
 
 Markdown major mode with native code-block fontification,
-heading scaling, and nested imenu. README.md opens in gfm-mode. Beside
+heading scaling, and nested imenu. README.md opens in gfm-mode and
+`.mdx' files open in plain markdown-mode. Beside
 the stock `C-c C-...' bindings, a `C-c m ...' prefix holds the common
 ones: markup/image hiding, link and code-block insertion, follow-link,
 promote/demote, and live preview. gfm-mode inherits them. Wrapped
@@ -1086,6 +1118,17 @@ Run the Go test or benchmark at point, the current file's
 tests, or the whole project, with compilation-mode error jumping.
 Shares the `C-c C-t` prefix with go-tag.
 
+## `init-lang-kotlin.el` — Kotlin
+
+### `kotlin-ts-mode`
+
+Tree-sitter Kotlin mode (MELPA, `kotlin' grammar) for `.kt'
+sources and `.kts' Gradle scripts. The language server (eglot), ktfmt
+(apheleia, on save) and kotlin-debug-adapter (dape) are wired in
+init-prog; ktlint and detekt report through Flymake. `C-c C-t` runs
+the Gradle test at point, of the class, or of the project; `C-c C-z`
+opens the REPL. All Kotlin tooling comes from the project PATH.
+
 ## `init-lang-web.el` — Web (TypeScript, JS, CSS, HTML)
 
 ### `typescript-ts-mode` *(built-in / Nix)*
@@ -1100,8 +1143,9 @@ variant.
 
 ### `css-mode` *(built-in / Nix)*
 
-Built-in CSS / SCSS major mode pinned to the tree-sitter
-variant.
+Built-in CSS major mode pinned to the tree-sitter variant.
+`.scss` keeps the classic `scss-mode`, since the CSS grammar does not
+parse SCSS nesting, variables or mixins.
 
 ### `mhtml-ts-mode` *(built-in / Nix)*
 
@@ -1142,7 +1186,13 @@ keyword highlighting and completion.
 
 Tree-sitter major mode for `Justfile` (the `just` grammar). The
 package registers Justfile itself; the `:mode` regexes add the
-`.just` extension used for modular recipes.
+dotfile `.justfile` and the `.just` extension used for modular
+recipes.
+
+### `feature-mode`
+
+Gherkin major mode (MELPA) for Cucumber `.feature` files:
+keyword highlighting, indentation and step navigation.
 
 ### `ansible`
 
@@ -1178,6 +1228,17 @@ Built-in tree-sitter YAML mode. Same prog-mode hook tweak as
 `yaml-mode'; a separate block so the built-in mode works without
 `use-package-always-ensure' pulling in MELPA `yaml-mode'.
 
+### `jq-mode`
+
+jq filter major mode (`.jq` files): syntax highlighting and
+indentation for jq programs. The mode derives from `prog-mode', so
+the usual programming features apply.
+
+### `kdl-mode`
+
+KDL document language major mode (`.kdl` files): syntax
+highlighting and indentation.
+
 ### `csv-mode`
 
 CSV major mode. csv-align-mode aligns columns visually without
@@ -1203,7 +1264,7 @@ Major mode for gnuplot script files (`.plt`).
 
 Built-in cc-mode, kept for its `auto-mode-alist' decisions and as
 the grammarless fallback. The `:mode' list decides which extensions
-are C vs C++ (headers default to C++); `jotain-prog-ts-remaps'
+are C vs C++ (`.h' is C; C++ uses `.hpp' and `.cpp'); `jotain-prog-ts-remaps'
 (init-prog.el) then remaps `c-mode'/`c++-mode' to the tree-sitter
 modes when the grammar loads. `c-basic-offset'/`c-default-style'
 apply to the remaining cc-mode buffers (Java, AWK, and C/C++ without
@@ -1260,6 +1321,12 @@ and `dune-workspace` files.
 
 Tree-sitter Zig mode (MELPA). eglot's built-in entry starts
 zls; format-on-save runs `zig fmt' through apheleia (init-prog).
+
+### `glsl-mode`
+
+GLSL shader mode (MELPA) with its default file patterns
+(`.glsl', `.vert', `.frag', `.comp', ...). Chosen over a tree-sitter
+mode because nixpkgs ships no `glsl-ts-mode'.
 
 ## `init-lang-qml.el` — QML (Quickshell / Qt Quick)
 
