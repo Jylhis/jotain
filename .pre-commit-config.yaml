@@ -1,0 +1,20 @@
+# Hooks for `prek install -t pre-commit -t commit-msg`. The tools come from
+# the dev shell (`nix develop`).
+repos:
+  - repo: local
+    hooks:
+      # Secret scanning on staged files. `git --staged` needs gitleaks 8.19+.
+      - id: gitleaks
+        name: gitleaks
+        entry: gitleaks git --staged --redact --no-banner
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      # prek passes the commit message file as the last argument.
+      - id: convco
+        name: convco
+        entry: sh -c 'convco check --from-stdin < "$1"' --
+        language: system
+        always_run: true
+        stages: [commit-msg]

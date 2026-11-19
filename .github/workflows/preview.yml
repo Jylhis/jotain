@@ -1,8 +1,9 @@
 # PR site previews as downloadable artifacts.
 #
-# Pages hosts a single deployment (deploy.yml), so each PR's full `.#site`
-# is uploaded as a `site.tgz` workflow artifact instead. To view it, unzip
-# the artifact, extract site.tgz under /jotain/ (the baseHref) and serve:
+# Pages hosts a single deployment (deploy.yml), so each PR's `.#site-preview`
+# (the site without the heavy /help/api/ reference) is uploaded as a
+# `site.tgz` workflow artifact instead. To view it, unzip the artifact,
+# extract site.tgz under /jotain/ (the baseHref) and serve:
 #
 #   mkdir -p /tmp/site/jotain && tar xzf site.tgz -C /tmp/site/jotain
 #   python3 -m http.server -d /tmp/site 8080   # → http://localhost:8080/jotain/
@@ -27,28 +28,27 @@ permissions:
 jobs:
   preview-artifact:
     name: Build preview artifact
-    # A PR touching the elisp-doc engine or lisp/ rebuilds the /help/api/
-    # fragments cold. Same-repo PRs get the cachix writer token (forks
-    # stay pull-only), so that build fills the cache for later runs.
-    timeout-minutes: 90
+    # Same-repo PRs get the cachix writer token (forks stay pull-only).
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31
 
-      - uses: cachix/cachix-action@v17
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
         with:
           name: jylhis
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: nix-community
 
-      - name: Build site
-        run: nix build .#site -o result-site
+      # `.#site-preview` omits the /help/api/ reference, which only
+      # deploy.yml builds.
+      - name: Build site preview
+        run: nix build .#site-preview -o result-site
 
-      # upload-artifact rejects some /help/api/ filenames (":", e.g.
-      # org-babel-execute:python.html, and "*"/"?"/"<"/">"), so upload a
-      # tarball, as upload-pages-artifact does internally.
+      # One tarball keeps the upload a single file and preserves the
+      # directory layout, as upload-pages-artifact does internally.
       - name: Pack site tarball
         run: |
           mkdir -p out
@@ -56,7 +56,7 @@ jobs:
 
       - name: Upload preview artifact
         id: upload
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: site-preview-pr-${{ github.event.pull_request.number }}
           path: out/site.tgz
@@ -66,7 +66,7 @@ jobs:
       # artifact still uploads).
       - name: Comment artifact link
         if: github.event.pull_request.head.repo.full_name == github.repository
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
         with:
@@ -75,7 +75,7 @@ jobs:
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const artUrl = process.env.ARTIFACT_URL || runUrl;
             const marker = '<!-- pr-preview -->';
-            const body = `${marker}\n### 🔎 Site preview built\n\nThe full site for this PR is a downloadable artifact: **[site-preview-pr-${pr}](${artUrl})** (from [the workflow run](${runUrl}), under **Artifacts**).\n\nUnzip it, extract the \`site.tgz\` inside, and serve it locally mounted under \`/jotain/\` (the baseHref):\n\n\`\`\`sh\nmkdir -p /tmp/site/jotain && tar xzf site.tgz -C /tmp/site/jotain\npython3 -m http.server -d /tmp/site 8080   # → http://localhost:8080/jotain/\n\`\`\`\n\n_Updated for ${context.sha.substring(0, 12)}._`;
+            const body = `${marker}\n### 🔎 Site preview built\n\nThe site preview for this PR (without the generated API reference under /help/api/) is a downloadable artifact: **[site-preview-pr-${pr}](${artUrl})** (from [the workflow run](${runUrl}), under **Artifacts**).\n\nUnzip it, extract the \`site.tgz\` inside, and serve it locally mounted under \`/jotain/\` (the baseHref):\n\n\`\`\`sh\nmkdir -p /tmp/site/jotain && tar xzf site.tgz -C /tmp/site/jotain\npython3 -m http.server -d /tmp/site 8080   # → http://localhost:8080/jotain/\n\`\`\`\n\n_Updated for ${context.sha.substring(0, 12)}._`;
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner, repo: context.repo.repo, issue_number: pr,
             });
