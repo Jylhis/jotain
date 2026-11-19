@@ -1,0 +1,537 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd July 1, 2026
+.Dt JOTAIN-DEEP-RESEARCH-REVIEW 7
+.Os
+.Sh NAME
+.Nm jotain-deep-research-review
+.Nd deep-research review — implementation & docs (2026-07)
+.Sh DESCRIPTION
+A close review of the Jotain Elisp layer and its documentation, cross-checked against \fBupstream Emacs 30/31 behaviour\fP and a set of recent Emacs writing.
+Findings only reflect upstream Emacs semantics; anything that would only hold on the
+.Ql "github:jylhis/emacs"
+Meson fork was deliberately ignored.
+.Sh METHOD
+.Bl -bullet -compact
+.It
+\fBRead\fP every
+.Ql "lisp/init-*.el" ,
+.Ql "early-init.el" ,
+.Ql "init.el" ,
+and the affected
+.Ql "docs/*.mdx"
+pages.
+.It
+\fBCompared\fP the requested themes (spell-check, mode line, docs-as-service, diary, structured navigation) against the source material listed under Sources.
+.It
+\fBVerified\fP each candidate finding adversarially (refute-by-default) before it was allowed into this report.
+One plausible-looking bug (an alleged
+.Ql "vundo-unicode-symbols"
+void-variable at load time) was \fBrefuted\fP —
+.Ql "vundo-unicode-symbols"
+is an autoloaded
+.Ql "defconst" ,
+so the eager
+.Ql ":custom"
+is correct — and is \fInot\fP listed below.
+.El
+.Pp
+Because no Emacs binary is available in this environment (Nix dev-shell only), Elisp semantics were checked by reasoning plus the repo's own
+.Ql ".claude/skills/{elisp-dev,emacs-internals}"
+reference notes, not by execution.
+Line numbers are against the tree at review time.
+.Sh SUMMARY OF FINDINGS
+.Bd -literal -offset indent
+| # | Sev | Area | File | What |
+| 1 | Med | Docs / Info | lisp/init-docs.el:36 | add-to-list 'Info-directory-list before info-initialize hides every built-in manual in the fallback path |
+| 2 | Med | Project | lisp/init-project.el:127 | compile-multi entry keyed on python-mode never fires (buffers are python-ts-mode); %file-name% is not substituted |
+| 3 | Low | Core / internals | early-init.el:22 | bidi-display-reordering nil is an unsupported debug-only knob and redundant |
+| 4 | Low | Editing | lisp/init-editing.el:89 | (use-package newcomment …) is defined twice, byte-identical |
+| 5 | Low | Spell | lisp/init-writing.el:52 | (org-mode . jinx-mode) is redundant — org-mode derives from text-mode |
+| 6 | Low | Org / state | lisp/init-org.el:53,83 | org-clock-persist-file and org-roam-db-location litter outside var/ |
+| 7 | Low | Keys | lisp/init-keys.el:60 | jotain-keyboard-quit-dwim has a dead cond branch; docstring says "deactivate" but calls keyboard-quit |
+| 8 | Low | Devops | lisp/init-lang-devops.el:28 | setq used on the dockerfile-mode-command defcustom (repo rule: setopt) |
+| 9 | Low | Docs drift | lisp/init-devenv.el:35 | @doc still claims devenv-reload refreshes "through envrc" after direnv was dropped |
+| 10 | Low | Docs drift | docs/keybindings.mdx | Missing C-c j/C-c M-j (majutsu), global C-c C-e (eca), C-x C-g/C-x C-j; C-c C-d miscategorised as mode-local |
+| 11 | Info | Spell | lisp/init-writing.el:51 | jinx never runs in prog-mode; code comments/docstrings go unchecked |
+| 12 | Info | Diary | lisp/init-org.el | No appt, diary-file, or org-agenda-to-appt — no pre-event reminders |
+| 13 | Info | Core / GC | lisp/init-core.el:38,48 | 16 MiB GC threshold is a magic number duplicated; minibuffer-exit reset can drift and fires under nested minibuffers |
+| 14 | Info | Docs | docs/finding-information-in-emacs.mdx:6 | "AI generated" banner is warranted; one illustrative symbol-file return value is wrong |
+.Ed
+.Pp
+No high-severity or security issues were found.
+The configuration is unusually clean; most items below are polish, consistency, and doc-drift.
+.Sh 1. SPELL-CHECKING — JINX (REQUESTED AREA)
+.Ql "lisp/init-writing.el"
+already uses \fBjinx\fP (enchant-backed, JIT font-lock driven) rather than flyspell, which is exactly the direction of the emacsredux \(dqReplacing Flyspell with Jinx\(dq https://emacsredux.com/blog/2026/07/13/replacing-flyspell-with-jinx/ post.
+Two refinements:
+.Pp
+\fB1a — Redundant Org hook (Finding 5, low).\fP The
+.Ql ":hook"
+is:
+.Bd -literal -offset indent
+:hook ((text-mode . jinx-mode)
+       (org-mode  . jinx-mode))
+.Ed
+.Pp
+.Ql "org-mode"
+is
+.Ql "define-derived-mode org-mode outline-mode" ,
+and
+.Ql "outline-mode"
+is derived from
+.Ql "text-mode" .
+.Ql "define-derived-mode"
+runs the parent modes under
+.Ql "delay-mode-hooks"
+and then
+.Ql "run-mode-hooks" ,
+which runs the delayed
+.Ql "text-mode-hook"
+(and
+.Ql "outline-mode-hook" )
+in every Org buffer.
+So
+.Ql "(text-mode . jinx-mode)"
+\fBalready\fP enables jinx in Org; the
+.Ql "org-mode"
+entry just toggles the (idempotent) minor mode a second time. → Drop line 52.
+.Pp
+\fB1b — No prog-mode coverage (Finding 11, enhancement).\fP The whole reason the emacsredux post recommends
+.No "\fB" Ns Ql "global-jinx-mode" Ns No "\fP"
+over per-mode hooks is that jinx decides \fIwhat\fP to check by \fBface\fP: in a programming buffer it limits itself to comments and strings automatically, so one mode replaces both
+.Ql "flyspell-mode"
+and
+.Ql "flyspell-prog-mode" .
+Jotain's per-mode hooks mean typos in code comments and docstrings are never flagged.
+This may be intentional; if comment/docstring checking is wanted, either switch to
+.Ql "global-jinx-mode"
+or add
+.Ql "(prog-mode . jinx-mode)" .
+The current bindings
+.No \&( Ns Ql "M-$"
+→
+.Ql "jinx-correct" ,
+.Ql "C-M-$"
+→
+.Ql "jinx-languages" )
+already match the post exactly, and disabling
+.Ql "text-mode-ispell-word-completion"
+(to avoid the NixOS \(dqno word-list\(dq corfu error) is a correct, well-reasoned touch.
+.Sh 2. MODE LINE & UI (REQUESTED AREA)
+.Ql "lisp/init-ui.el"
+uses \fBdoom-modeline\fP
+.No \&( Ns Ql "doom-modeline-height 28" ,
+LSP segment on, GitHub/encoding off).
+Compared to davep's minimalist mode-line post https://blog.davep.org/2026/06/15/more-mode-line-tweaking.html (which pares a
+.Ql "mood-line"
+down to buffer/project/VC), doom-modeline is a heavier, batteries-included choice — a legitimate philosophical difference, not a defect.
+Worth noting only as a design tension: doom-modeline already renders project/VC/LSP, so if the config ever trends toward minimalism,
+.Ql "mood-line"
+or a hand-rolled
+.Ql "mode-line-format"
+would be the lighter path.
+\fBNo change recommended.\fP The rest of the module (font-preference
+.Ql "cl-loop"
+with
+.Ql "find-font"
+probing, emoji fontset fallback,
+.Ql "load-theme"
+disable-others advice, the
+.Ql "calendar-intermonth-text"
+propertize \fIform\fP — correctly an evaluated sexp, not a pre-computed string) is correct.
+.Sh 3. DOCS-AS-SERVICE & INFO DISCOVERABILITY (REQUESTED AREA)
+Framed against Charles Choi's \(dqIn Emacs, everything looks like a service\(dq http://yummymelon.com/devnull/in-emacs-everything-looks-like-a-service.html: the post's real thesis is \fImodel every integration as a client/server with a UI layer, a client edge, and a local store\fP — and Jotain's
+.Ql "devenv.el"
+transient +
+.Ql "@doc"
+cookie convention + bundled Info manual is a good expression of \(dqmake the service discoverable.\(dq
+But the discoverability layer has a real bug and some drift.
+.Pp
+\fB3a — Info fallback hides the standard manuals (Finding 1, medium).\fP
+.Ql "lisp/init-docs.el:36" :
+.Bd -literal -offset indent
+(add-to-list 'Info-directory-list found)
+.Ed
+.Pp
+.Ql "Info-directory-list"
+defaults to
+.Ql "nil"
+and is populated \fBlazily\fP by
+.Ql "info-initialize"
+(from
+.Ql "INFOPATH"
++
+.Ql "Info-default-directory-list" ),
+which only runs
+.Ql "(unless Info-directory-list …)" .
+Pre-seeding it here with a single directory means
+.Ql "info-initialize"
+later sees a non-nil value and does nothing — so in the source-checkout fallback path the Info reader can find
+.Ql "jotain.info"
+\fBbut no longer finds the Emacs, Elisp, Org, or any other bundled manual.\fP That defeats the module's own purpose.
+Fix: add to
+.No "\fB" Ns Ql "Info-additional-directory-list" Ns No "\fP"
+instead (designed for user additions, searched \fIafter\fP the standard set, never suppresses initialisation), or call
+.Ql "(info-initialize)"
+immediately before the
+.Ql "add-to-list" .
+(The Nix-wrapped build is unaffected — it uses
+.Ql "INFOPATH" ,
+which
+.Ql "info-initialize"
+reads correctly — so this only bites the exact path the module exists to serve.)
+.Pp
+\fB3b —
+.Ql "docs/keybindings.mdx"
+drift (Finding 10, low).\fP The reference table has fallen behind
+.Ql "init-*.el" :
+.Bl -bullet -compact
+.It
+.Ql "C-c j"
+→
+.Ql "majutsu-log"
+and
+.Ql "C-c M-j"
+→
+.Ql "majutsu-dispatch"
+.No \&( Ns Ql "init-vc.el:182" ,
+labelled \(dqjujutsu\(dq in
+.Ql "init-keys.el" )
+are \fBmissing\fP from the
+.Ql "C-c"
+table.
+.It
+Global
+.Ql "C-c C-e"
+→
+.Ql "eca"
+.No \&( Ns Ql "init-ai.el:51" )
+is undocumented; the page only lists the dired-local
+.Ql "C-c C-e"
+→
+.Ql "wdired"
+override, without noting the global binding it shadows.
+.It
+.Ql "C-x C-g"
+→
+.Ql "jotain-switch-git-status-buffer"
+and
+.Ql "C-x C-j"
+→
+.Ql "jotain-switch-jj-status-buffer"
+.No \&( Ns Ql "init-vc.el:46,119" )
+are \fBmissing\fP from the
+.Ql "C-x"
+table.
+.It
+.Ql "C-c C-d"
+→
+.Ql "helpful-at-point"
+is bound \fBglobally\fP in helpful's
+.Ql ":bind"
+.No \&( Ns Ql "init-help.el:51" ),
+not in
+.Ql "helpful-mode-map" ;
+the page lists it under \(dqMode-local overrides\(dq as a helpful-mode binding.
+It should move to the global list, with a note that
+.Ql "sops-mode"
+locally overrides
+.Ql "C-c C-d" .
+.El
+.Pp
+\fB3c — AI-generated docs banner (Finding 14, info).\fP The \(dqAI generated\(dq note on
+.Ql "docs/finding-information-in-emacs.mdx"
+is appropriate and honest; the page is broadly accurate and repo-consistent.
+One illustrative example gives a wrong
+.Ql "symbol-file"
+return shape — worth a one-line correction to match the
+.Ql "locate-library"
+example later in the same file — but nothing structural.
+.Sh 4. DIARY / CALENDAR / APPOINTMENTS (REQUESTED AREA)
+.Ql "lisp/init-ui.el"
+configures the built-in \fBcalendar\fP well (ISO week numbers, Monday
+.Ql "calendar-week-start-day" ),
+and
+.Ql "init-org.el"
+wires up org-agenda, capture, roam, and clock.
+But — motivated by the ray-on-emacs \(dqEmacs Carnival: Diary\(dq https://ray-on-emacs.blogspot.com/2026/06/emacs-carnival-diary-part-2.html post — there is a genuine \fBfunctional gap\fP (Finding 12, enhancement):
+.Bl -bullet -compact
+.It
+No
+.Ql "appt"
+activation, so \fBno pre-event reminders\fP ever fire for timed entries; org-agenda is an on-demand view only.
+.It
+No
+.Ql "diary-file"
+and no
+.Ql "org-agenda-include-diary" Ns No "/" Ns Ql "org-agenda-to-appt"
+bridge, so free-form and sexp diary entries
+.No \&( Ns Ql "diary-float" ,
+anniversaries) aren't surfaced anywhere.
+.El
+.Pp
+If reminders are wanted, an
+.Ql "appt"
+.Ql "use-package"
+block
+.No \&( Ns Ql ":ensure nil" ,
+.Ql "(appt-activate 1)" ,
+.Ql "appt-message-warning-time" ,
+and
+.Ql "(org-agenda-to-appt)"
+on
+.Ql "org-agenda-finalize-hook"
+plus a light idle timer) closes it.
+If the on-demand agenda is considered sufficient, this should be recorded as an explicit non-goal — but it is not equivalent to having reminders.
+.Sh 5. STRUCTURED NAVIGATION & EDITING (REQUESTED AREA)
+Measured against emacsredux's \(dqEssential Structured Navigation and Editing Commands\(dq https://emacsredux.com/blog/2026/06/20/essential-structured-navigation-and-editing-commands/: Jotain correctly leans on the \fBbuilt-in\fP sexp family
+.No \&( Ns Ql "C-M-f/b" ,
+.Ql "C-M-u/d" ,
+.Ql "C-M-a/e" ,
+.Ql "C-M-SPC" ,
+.Ql "C-M-k" ,
+.Ql "C-M-t" )
+— which are tree-sitter-aware in Emacs 30+ — rather than re-binding them, and layers
+.Ql "expreg"
+.No \&( Ns Ql "C-=" ),
+.Ql "multiple-cursors" ,
+and the prose-level
+.Ql "transpose-sentences" Ns No "/" Ns Ql "-paragraphs"
+on top.
+It also opts into the Emacs 31
+.Ql "delete-pair-push-mark"
+and
+.Ql "kill-region-dwim"
+niceties (guarded for Emacs 30).
+Two issues:
+.Pp
+\fB5a — Duplicate
+.Ql "newcomment"
+block (Finding 4, low).\fP
+.Ql "init-editing.el"
+defines
+.Ql "(use-package newcomment …)"
+\fBtwice\fP — lines 54–74 and again 89–109 — byte-for-byte identical, separated only by the
+.Ql "emacs"
+transpose block.
+The second expansion silently re-runs.
+Delete lines 89–109.
+.Pp
+\fB5b — Dead
+.Ql "cond"
+branch in DWIM quit (Finding 7, low).\fP
+.Ql "init-keys.el:57" :
+.Bd -literal -offset indent
+(cond
+ ((> (minibuffer-depth) 0)                     (abort-recursive-edit))
+ ((get-buffer-window "*Completions*" 'visible) (delete-completion-window))
+ ((region-active-p)                            (keyboard-quit))   ; ← dead
+ (t                                            (keyboard-quit)))
+.Ed
+.Pp
+The
+.Ql "region-active-p"
+branch is identical to the fallback, so it is dead; worse, the docstring promises \(dqRegion active → deactivate it,\(dq which implies
+.Ql "(deactivate-mark)" .
+Either drop the branch or make it do what the docstring says.
+.No \&( Ns Ql "keyboard-quit"
+does deactivate the mark as a side effect, so behaviour is fine today — but the code doesn't match its contract.)
+The paired global
+.Ql "M-s R"
+bindings —
+.Ql "replace-regexp-as-diff"
+(global) vs
+.Ql "dired-do-replace-regexp-as-diff"
+.No \&( Ns Ql "dired-mode-map" )
+— do \fBnot\fP conflict; the buffer-local map shadows the global, and the code comments say so.
+.Sh 6. CORE, EARLY-INIT & INTERNALS (EXPANSION VS THE THESIS)
+Cross-checked against the attached thesis \fI\(dqThe GNU Emacs Architecture — Unlocking the Core\(dq\fP (Karlsson, Uppsala 2026), which documents the single-threaded command loop, the cooperative \fBGIL\fP-serialised Lisp threads, and stop-the-world mark-and-sweep GC.
+The config's performance machinery is \fBconsistent with that model\fP: the
+.Ql "early-init"
+GC-defer
+.No \&( Ns Ql "gc-cons-threshold most-positive-fixnum" ),
+the runtime 16 MiB restore + idle
+.Ql "garbage-collect" ,
+and the minibuffer GC pause are all correct applications of \(dqraise the threshold so
+.Ql "consing_until_gc"
+is large; there are no threads to race.\(dq
+Nothing in the config wrongly assumes
+.Ql "make-thread"
+buys parallelism.
+Two refinements and one correctness nit:
+.Pp
+\fB6a —
+.Ql "bidi-display-reordering nil"
+(Finding 3, low).\fP
+.Ql "early-init.el:22"
+sets it via
+.Ql "setq-default" .
+Upstream documents this variable as intended \fBonly for debugging\fP; setting it to
+.Ql "nil"
+is discouraged and can mis-display real RTL text.
+It is also \fBredundant\fP:
+.Ql "bidi-paragraph-direction 'left-to-right"
++
+.Ql "(setopt bidi-inhibit-bpa t)"
+are the supported LTR performance knobs — and are exactly the two the repo's \fIown\fP
+.Ql ".claude/skills/emacs-internals/references/redisplay.md"
+cites as the mechanism (it does \fBnot\fP mention
+.Ql "bidi-display-reordering" ).
+Drop the
+.Ql "bidi-display-reordering nil"
+clause; keep the other two.
+(Impact is cosmetic and only with RTL text present — hence low, not medium.)
+.Pp
+\fB6b — GC magic number (Finding 13, info).\fP
+.Ql "16 * 1024 * 1024"
+appears twice
+.No \&( Ns Ql "init-core.el:38"
+and the
+.Ql "minibuffer-exit-hook"
+reset at line 48).
+A single
+.Ql "(defconst jotain-gc-cons-threshold (* 16 1024 1024))"
+referenced from both removes the drift risk.
+Separately, the exit hook lowers the threshold unconditionally, even when an \fIouter\fP recursive minibuffer is still open
+.No \&( Ns Ql "enable-recursive-minibuffers"
+is on) — guarding on
+.Ql "(= (minibuffer-depth) 0)"
+keeps the high threshold until the outermost minibuffer is dismissed.
+Both are minor.
+.Pp
+\fB6c — Thesis caveats.\fP The briefing flagged two thesis details that are version-stale and should \fInot\fP inform the config: \fBpure space\fP (§7.4.6) was removed in Emacs 30 (pdumper-only), and a
+.Ql "max_specpdl_size"
+description is inaccurate.
+Neither affects Jotain; noted so the internals notes don't inherit them.
+.Sh 7. BROADER SWEEP
+.Bl -bullet -compact
+.It
+.No "\fB" Ns Ql "compile-multi"
+python key (Finding 2, medium).\fP
+.Ql "init-project.el:127"
+keys entries on
+.Ql "python-mode" ,
+but the repo routes tree-sitter modes via
+.Ql "major-mode-remap-alist"
+(commit \fI\(dqroute ts-modes via major-mode-remap-alist\(dq\fP), so Python files open in
+.Ql "python-ts-mode"
+and this entry \fBnever appears\fP in the picker.
+Go/Nix/Rust/Zig correctly use their
+.Ql "-ts-mode"
+keys; Python is the odd one out (as are
+.Ql "haskell-mode" Ns No "/" Ns Ql "meson-mode" ,
+worth an audit).
+Also
+.Ql "\(dqpytest %file-name%\(dq"
+—
+.Ql "compile-multi"
+does \fBnot\fP template
+.Ql "%…%" ;
+it would run that literal string.
+Use
+.Ql "python-ts-mode"
+and a function-valued action that builds the argv from
+.Ql "buffer-file-name" .
+.It
+\fBOrg state outside
+.Ql "var/"
+(Finding 6, low).\fP
+.Ql "org-clock-persist"
+writes to
+.Ql "~/.emacs.d/org-clock-save.el"
+and
+.Ql "org-roam"
+to
+.Ql "~/.emacs.d/org-roam.db"
+— both land in the repo root under
+.Ql "just run" ,
+contrary to the config's own
+.Ql "var/"
+discipline
+.No \&( Ns Ql "init-core.el"
+themes every other state file).
+Set
+.Ql "org-clock-persist-file"
+and
+.Ql "org-roam-db-location"
+to
+.Ql "(jotain-var-file …)" .
+.It
+.No "\fB" Ns Ql "setq"
+on a defcustom (Finding 8, low).\fP
+.Ql "init-lang-devops.el:28"
+uses
+.Ql "(setq dockerfile-mode-command cmd)"
+inside a
+.Ql "boundp"
+guard; the repo rule is
+.Ql "setopt"
+for defcustom options (so
+.Ql ":set" Ns No "/" Ns Ql ":type"
+run).
+.Ql "(setopt dockerfile-mode-command cmd)"
+with a literal symbol and runtime value is valid here.
+.It
+.No "\fB" Ns Ql "@doc"
+drift (Finding 9, low).\fP
+.Ql "init-devenv.el:35"
+says
+.Ql "devenv-reload"
+refreshes \(dqthrough envrc (the direnv substrate configured in init-prog),\(dq but direnv/envrc was dropped for the native devenv env loader (commit \fI\(dqDrive project env via native devenv\(dq\fP); the same
+.Ql "@doc"
+even refers to the \(dqnative env loader\(dq a few lines later.
+Reword to the native loader.
+.El
+.Sh WHAT'S ALREADY STRONG
+Worth stating plainly, since a findings list skews negative: the module boundaries and the \(dqpackage that enhances a built-in shares its file\(dq rule are followed consistently;
+.Ql ":ensure nil"
+discipline is correct throughout; Emacs-31-only features are uniformly
+.Ql "boundp" Ns No "/" Ns Ql "fboundp" Ns No "-guarded"
+so the config loads clean on 30; the
+.Ql "custom.el" Ns No "-supersession"
+advice, the
+.Ql "save-place"
+recenter, and the
+.Ql "savehist"
+\(dqwhy
+.Ql "register-alist"
+is excluded\(dq comment show real care about edge cases; and the
+.Ql "@doc"
+cookie convention plus bundled Info manual make the config genuinely self-documenting — the spirit of the \(dqeverything is a service\(dq post.
+.Sh SUGGESTED SEQUENCING
+.Bl -enum -compact
+.It
+\fBFix now (safe, mechanical):\fP Findings 1, 4, 5, 6, 8, 9, and the Finding 10 doc-table updates — all zero-risk.
+.It
+\fBFix with a test:\fP Finding 2
+.No \&( Ns Ql "compile-multi"
+python key + action).
+.It
+\fBDecide (design calls):\fP Finding 3 (drop the bidi knob), Finding 11
+.No \&( Ns Ql "global-jinx-mode"
+vs status quo), Finding 12
+.No \&( Ns Ql "appt" Ns No "/diary"
+— feature or documented non-goal), Finding 13 (GC constant + depth guard).
+.El
+.Sh SOURCES
+.Bl -bullet -compact
+.It
+\fBThesis (attached):\fP Erik J.
+Karlsson, \fIThe GNU Emacs Architecture — Unlocking the Core\fP, Bachelor Programme in Computer Science, Uppsala University, 2026-03-18.
+.It
+Emacs Redux — \fIReplacing Flyspell with Jinx\fP, 2026-07-13.
+.It
+Emacs Redux — \fIEssential Structured Navigation and Editing Commands\fP, 2026-06-20.
+.It
+Charles Choi (yummymelon) — \fIIn Emacs, Everything Looks Like a Service\fP.
+.It
+Dave Pearson — \fIMore mode-line tweaking\fP, 2026-06-15.
+.It
+ray-on-emacs — \fIEmacs Carnival: Diary, Part 2\fP, 2026-06.
+.It
+Irreal — \fIStructured Emacs Editing With Builtin Commands\fP, 2026 (pointer to the Emacs Redux structured-editing post).
+.It
+Cross-checked against upstream GNU Emacs 30/31 and the repo's own
+.Ql ".claude/skills/{elisp-dev,emacs-internals}"
+reference notes.
+.El

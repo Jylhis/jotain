@@ -6,7 +6,8 @@ description: Pick the right launch pattern for the task — one-shot, daemon + c
 # Launching Emacs
 
 <Note>
-The devenv shell provides tooling only; there is no `emacs` binary in it.
+The development shell (`nix develop`) provides tooling only; there is no
+`emacs` binary in it.
 The supported launch path is **`just run-built`**: build Emacs via Nix,
 then launch it with this configuration.
 </Note>
@@ -20,15 +21,13 @@ A fresh `emacs` process every time. Loads the full Jotain config and
 pays package-init cost on every launch.
 
 ```bash
-just run-built            # build for this platform, then launch result/bin/emacs
+just run-built            # build, then launch result/bin/emacs
 just run-built-debug      # same, with --debug-init and debug-on-error
 just run-built-debug-log  # full debugging, logs mirrored into var/debug/<timestamp>/
 just run-built-fast       # rebuild, then launch the AOT-compiled config (fastest start)
 ```
 
-`just run-built` auto-detects the platform, builds the full
-distribution (`just build`; on aarch64-linux the terminal-only
-distribution via `just build-nox-full`), and launches
+`just run-built` builds the full distribution (`just build`) and launches
 `./result/bin/emacs --init-directory=<repo>`, so it never touches
 `~/.emacs.d`. The first run pays a `nix build` (usually a binary-cache
 pull).
@@ -64,7 +63,7 @@ terminal, or from any client:
 
 The `services.jotain` module ships:
 
-- A systemd user service (Linux) or launchd agent (macOS) that runs
+- A systemd user service that runs
   `emacs --fg-daemon`. `services.jotain.startWithUserSession` controls
   whether it starts with the session.
 - `jotain-editor`: `emacsclient --tty`, falling back to `emacs -nw`
@@ -103,21 +102,17 @@ home-manager manages.
 
 ### Managing the daemon (`jotctl`)
 
-`emd` starts a *foreground* daemon. The supervised daemon (the launchd
-agent on macOS, the `jotain` systemd user service on Linux) is managed
-with `jotctl`, which is always on `PATH` when the module is enabled,
-whatever `shellAliases.enable` says:
+`emd` starts a *foreground* daemon. The supervised daemon (the `jotain`
+systemd user service) is managed with `jotctl`, which is always on `PATH`
+when the module is enabled, whatever `shellAliases.enable` says:
 
-| Command          | macOS (launchd)                  | Linux (systemd --user)            |
-| ---------------- | -------------------------------- | --------------------------------- |
-| `jotctl status`  | `launchctl print …` (default)    | `systemctl --user status jotain`  |
-| `jotctl start`   | `launchctl bootstrap` / kickstart | `systemctl --user start jotain`   |
-| `jotctl stop`    | `launchctl bootout`              | `systemctl --user stop jotain`    |
-| `jotctl restart` | `launchctl kickstart -k`         | `systemctl --user restart jotain` |
-| `jotctl logs`    | launchd state + note¹            | `journalctl --user -u jotain -f`  |
-
-¹ The launchd agent sets no `StandardOutPath`, so macOS doesn't capture
-the daemon's stdout; `jotctl logs` prints the launchd state instead.
+| Command          | Runs (systemd --user)                           |
+| ---------------- | ----------------------------------------------- |
+| `jotctl status`  | `systemctl --user status jotain` (default)      |
+| `jotctl start`   | `systemctl --user start jotain`                 |
+| `jotctl stop`    | `systemctl --user stop jotain`                  |
+| `jotctl restart` | `systemctl --user restart jotain`               |
+| `jotctl logs`    | `journalctl --user -u jotain -f`                |
 
 ## Quick edit (`-Q -nw`)
 

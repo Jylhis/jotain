@@ -17,7 +17,7 @@
   var INDEX = [
     { buf: 'readme', label: 'README.org', id: 'sec-intro', title: 'Something, from scratch' },
     { buf: 'readme', label: 'README.org', id: 'sec-ships', title: 'What ships — emacs.nix, init-*.el, module.nix' },
-    { buf: 'readme', label: 'README.org', id: 'sec-qs', title: 'Quickstart — devenv shell, just run-built' },
+    { buf: 'readme', label: 'README.org', id: 'sec-qs', title: 'Quickstart — nix develop, just run-built' },
     { buf: 'readme', label: 'README.org', id: 'sec-manual', title: 'Read the manual' },
     { buf: 'man', label: '*Man JOTAIN(7)*', id: 'man-name', title: 'NAME — jotain' },
     { buf: 'man', label: '*Man JOTAIN(7)*', id: 'man-synopsis', title: 'SYNOPSIS — just run-built | build | check | test' },

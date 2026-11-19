@@ -23,6 +23,13 @@ Slab + Hanken Grotesk + IBM Plex Mono + IBM Plex Sans Condensed).
     the directory, and the `ds-in-sync` flake check fails when they
     disagree.
 
+## Release data
+
+`release.json` at the repository root holds `version`, `repo` and `support`.
+`nix/site.nix` substitutes them into `index.html` for the placeholders
+`@VERSION@`, `@FLAKE@`, `@REPO_URL@`, `@REPO@` and `@SUPPORT@`, and uses the
+version in the modeline of every generated page.
+
 ## Generated content
 
 `website/public/` is only the shell (landing SPA + shared CSS/JS/fonts).
@@ -32,8 +39,8 @@ Slab + Hanken Grotesk + IBM Plex Mono + IBM Plex Sans Condensed).
   `docs/docs.json`
 - `/manual/`: the Jotain manual (`docs/jotain.texi`) as HTML, one page per
   chapter, plus `/manual/jotain.info` for `C-h i`
-- `/man/`: `jotain(7)` (from `docs/jotain.7.md`, also served as raw
-  troff) and the man pages shipped by the Emacs build, via mandoc
+- `/man/`: `jotain(7)` (the mdoc source `jotain.7` at the repository root,
+  also served raw) and the man pages shipped by the Emacs build, via mandoc
 - `/info/emacs/`, `/info/elisp/`: the GNU Emacs and Emacs Lisp manuals,
   rendered from the Emacs source revision Jotain builds
 - `/options/`: Nix module options reference (`nix/options-doc.nix`)
@@ -70,7 +77,8 @@ any base.
 
 ```
 just serve-site          # full site: nix build .#site, served under /jotain/
-python3 -m http.server -d website/public 8080   # shell only (at the root)
+python3 -m http.server -d website/public 8080   # shell only (at the root; the
+                                                # @VERSION@-style placeholders stay unsubstituted)
 ```
 
 ## Conventions

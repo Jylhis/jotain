@@ -1,0 +1,289 @@
+.\" Assisted-by: Claude Code:claude-sonnet-5-5
+.Dd November 16, 2026
+.Dt JOTAIN-REVIEW-TOOLS 7
+.Os
+.Sh NAME
+.Nm jotain-review-tools
+.Nd Emacs code review packages compared with repo-review
+.Sh DESCRIPTION
+This page compares the Emacs review packages with
+.Pa lisp/repo-review.el .
+The goal is a read-only review flow on Magit and Forge, for a whole
+repository and for a GitHub pull request or GitLab merge request.
+The data come from the GitHub API and from the git history of each
+repository, read on 2026-11-16.
+The MELPA recipes come from the MELPA repository, and the nixpkgs entries from
+.Pa recipes-archive-melpa.json
+of nixpkgs.
+Maintenance states change; check the repository before you depend on a package.
+.Pp
+The criteria are:
+.Bl -bullet -compact
+.It
+The package never changes the reviewed sources.
+.It
+It works with Forge, or with a token that Ghub already stores.
+.It
+Every network call is a command the user starts, and the user confirms each write.
+.It
+It loads without optional packages.
+.El
+.Sh PACKAGES
+.Bl -tag -width Ds
+.It Sy repo-review
+The in-tree package.
+It makes an Org queue with one headline per project file and opens each file in
+.Ql view-mode .
+Notes go to
+.Ql org-remark
+files beside the queue.
+Dependencies are Emacs and Org only.
+It reviews a pull request or merge request through Forge, keeps comment drafts in the queue, posts them after a confirmation, and has a viewed state and gptel commands.
+It is GPL-3.0-or-later and in no package archive.
+.It Sy reviewer.el
+Repository
+.Pa SreenivasVRao/reviewer.el .
+A minor mode that annotates any buffer without changing it.
+Annotations form threads and render to an Org document, for you or for an agent.
+The last commit is 2026-11-14 and the project has 2 open issues.
+It has no licence file, so the terms of use are unclear.
+It is not on MELPA and not in nixpkgs.
+It is young: the history is about 30 commits.
+It requires Emacs 29.1 and
+.Ql transient ;
+posframe, treemacs and Projectile are optional.
+It has no forge integration and no network code.
+It fits the whole-repo flow, next to
+.Ql org-remark .
+.Sy Port ideas ,
+do not adopt.
+Port the Org render of all notes of a project, which hands a review to an agent, and the
+thread model (note plus replies).
+The
+.Ql org-remark
+notes of
+.Ql repo-review
+cover the annotation itself, and a second annotation layer would duplicate it.
+.It Sy code-review
+Repository
+.Pa wandersoncferreira/code-review .
+It reviews GitHub, GitLab and Bitbucket pull requests inside Emacs, from Forge or from a URL.
+It uses Magit sections, Forge, Ghub and
+.Ql emacsql .
+Its last commit is 2024-05-29 and it has 66 open issues, so it is stale.
+The fork
+.Pa ag91/code-review
+was active on 2026-11-11 and has 1 open issue.
+Both write to the forge from the review buffer, and the package keeps its own
+state in a database.
+.Sy Skip :
+the stale original conflicts with the current Magit and Forge releases, and the active
+fork is a second review system beside Forge.
+Port the idea of comments that stay local until the user sends them.
+.It Sy github-review
+Repository
+.Pa wandersoncferreira/github-review .
+It reviews a GitHub pull request as a diff in a plain buffer.
+You write comments into the diff text and submit them.
+Its last commit is 2021-10-11.
+It supports GitHub only.
+.Sy Skip .
+Port the idea that a comment belongs to a line of the diff, which
+.Ql repo-review
+uses for its pull request drafts.
+.It Sy pr-review
+Repository
+.Pa blahgeek/emacs-pr-review ,
+on MELPA.
+It reviews GitHub pull requests and, as an experimental feature, GitLab merge requests.
+Its last commit is 2026-05-09 and it has 12 open issues.
+It requires Magit, Magit Section, Ghub and Markdown mode, and reads its token from Ghub.
+It does not use the Forge database: it fetches the pull request over the API when you
+open it, so it needs the network for each view.
+It is the best package for the pure pull request flow, with threads, reviews and notifications.
+.Sy Skip
+as a dependency, and
+.Sy port
+these ideas: one
+.Ql FORGE-TYPE
+setting for each host name, a pending review that collects comments before the user
+submits them, and the Ghub token convention.
+The
+.Ql repo-review
+code reads the pull request from Forge, which already has the data on disk, and it
+adds the whole-repo queue that
+.Ql pr-review
+does not have.
+.It Sy egerrit
+Repository
+.Pa eclipse-egerrit/egerrit .
+It is a Gerrit client of the Eclipse project, written in Java, not an Emacs package.
+Its last commit is 2022-10-07.
+Gerrit is not a forge that Forge supports.
+.Sy Skip .
+.It Sy gptel-forge-prs
+Repository
+.Pa ArthurHeymans/gptel-forge-prs .
+It uses gptel to write the description of a new pull request in
+.Ql forge-create-pullreq .
+Its last commit is 2026-06-24.
+It needs Forge and gptel.
+It writes a description, not a review comment.
+.Sy Skip
+as a package.
+Port the pattern: build the prompt from the diff, call
+.Ql gptel-request
+with a callback, and show the answer for editing before the user keeps it.
+The AI commands of
+.Ql repo-review
+follow it.
+.It Sy forge-llm
+Repository
+.Pa rogs/forge-llm ,
+self-hosted, on MELPA.
+It does the same job as
+.Ql gptel-forge-prs
+through the
+.Ql llm
+package, and it uses the pull request template of the repository.
+The host of the repository refused the network request of this session, so the
+maintenance state is not verified.
+.Sy Skip :
+it needs a second LLM client library beside gptel, and it writes descriptions only.
+Port the idea to read the pull request template when you draft text.
+.El
+.Sh COVERAGE
+The table lists what each package covers of four parts.
+The parts are:
+.Bl -tag -width Ds -compact
+.It Sy A
+Read-only review of GitHub pull requests and GitLab merge requests through Magit and Forge.
+.It Sy B
+Posting comments back as review comments.
+.It Sy C
+A viewed state for each file.
+.It Sy D
+AI drafting or checking of comments with gptel.
+.El
+.Bl -tag -width Ds
+.It Sy repo-review
+A: yes, from the Forge database and local git.
+B: yes, drafts first, then one confirmed post.
+C: yes.
+D: yes, optional gptel.
+GPL-3.0-or-later, in-tree.
+.It Sy reviewer.el
+A: no.
+B: no.
+C: no.
+D: no, but the Org render is made for an agent.
+No licence file, not on MELPA, not in nixpkgs.
+Depends on transient.
+.It Sy code-review
+A: GitHub, basic GitLab, Bitbucket, partly through Forge.
+B: yes.
+C: no.
+D: no.
+GPL-3.0, on MELPA, in nixpkgs as
+.Ql emacsPackages.code-review .
+Depends on Forge, Ghub and emacsql.
+.It Sy ag91/code-review
+The active fork of the above.
+Same coverage; not on MELPA.
+.It Sy github-review
+A: GitHub only, not through Forge.
+B: yes.
+C: no.
+D: no.
+GPL-3.0, on MELPA, in nixpkgs as
+.Ql emacsPackages.github-review .
+.It Sy pr-review
+A: GitHub, and GitLab as an experiment, over the API, not through the Forge database.
+B: yes, with a pending review.
+C: no viewed state found in the source.
+D: no.
+GPL-3.0, on MELPA, in nixpkgs as
+.Ql emacsPackages.pr-review .
+Depends on Magit, Ghub and Markdown mode.
+.It Sy egerrit
+Gerrit only, written in Java, no licence on GitHub, not on MELPA.
+Covers none of the parts.
+.It Sy gptel-forge-prs
+A: no.
+B: no.
+C: no.
+D: yes, for the description of a new pull request.
+GPL-3.0, on MELPA, in nixpkgs as
+.Ql emacsPackages.gptel-forge-prs .
+.It Sy forge-llm
+A: no.
+B: no.
+C: no.
+D: yes, for descriptions, with the
+.Ql llm
+package.
+On MELPA, in nixpkgs as
+.Ql emacsPackages.forge-llm ,
+and the MELPA snapshot is from 2025-07.
+.El
+.Pp
+A search of GitHub on 2026-11-16 found no newer package that covers part C or a mix of A to D.
+.Sh RECOMMENDATIONS
+.Bl -tag -width Ds
+.It Sy A (review through Forge)
+.Sy Skip
+every package.
+.Ql repo-review
+already reads the request from Forge.
+.Ql pr-review
+is the only package with the same scope.
+It does not use the Forge database and would add a second review system.
+.It Sy B (post comments)
+.Sy Port ideas ,
+done in
+.Ql repo-review .
+Keep local drafts and one confirmed post.
+A pending review that the user submits as a whole is the open idea of
+.Ql pr-review .
+.It Sy C (viewed state)
+.Sy Port ideas
+from GitHub, not from a package, because no package has the state.
+.Ql repo-review
+keeps it as an Org tag with the revision of the file.
+.It Sy D (AI drafting)
+.Sy Skip
+the packages.
+.Ql gptel-forge-prs
+and
+.Ql forge-llm
+write descriptions only.
+The gptel commands of
+.Ql repo-review
+cover comments.
+.El
+.Pp
+No package needs the owner's approval for a new source.
+If the owner wants a second review system, the choice is
+.Ql emacsPackages.pr-review ,
+which is on MELPA and in nixpkgs.
+.Sh CONCLUSION
+.Bl -bullet
+.It
+No package gives a read-only, Forge-based review that also covers a whole repository.
+The in-tree
+.Ql repo-review
+keeps its place and grows the missing features.
+.It
+.Ql repo-review
+reads the pull request through Forge, lists the changed files in a queue, shows each file
+as a read-only diff, and keeps comment drafts in the queue file.
+Posting is a separate command that asks for confirmation and calls Ghub.
+.It
+Each file has a persistent viewed state in the queue file.
+.It
+gptel is optional.
+The commands that use it say so when gptel is not loaded.
+.El
+.Sh SEE ALSO
+.Xr jotain 7 ,
+.Xr jotain-testing 7

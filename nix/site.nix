@@ -6,7 +6,7 @@
 #   /docs/…           docs/**/*.mdx rendered to HTML (nav from docs.json)
 #   /manual/          the Jotain manual, makeinfo --html (via info-manual.nix)
 #   /manual/jotain.info  the same manual as an Info file
-#   /man/             jotain(7) + the man pages shipped by the Emacs build
+#   /man/             jotain(7) (mdoc, rendered by mandoc) + the man pages shipped by the Emacs build
 #   /info/emacs/      the GNU Emacs manual from the pinned Emacs source
 #   /info/elisp/      the Emacs Lisp reference manual, same source
 #   /options/         Nix module options reference (options-doc.nix)
@@ -80,10 +80,16 @@ let
       lib.fileset.fileFilter (f: lib.hasSuffix ".md" f.name || lib.hasSuffix ".mdx" f.name) src
     );
   };
+  manSrc = lib.fileset.toSource {
+    root = src;
+    fileset = src + "/jotain.7";
+  };
   webSrc = lib.fileset.toSource {
     root = src;
     fileset = lib.fileset.maybeMissing (src + "/website/public");
   };
+  # version, repo and support address of the landing page (release.json)
+  release = builtins.fromJSON (builtins.readFile (src + "/release.json"));
 
   # The GNU Emacs + Elisp manuals from that Emacs's source. Separate
   # derivation, so a docs/ edit does not re-render them.
@@ -131,7 +137,7 @@ pkgs.runCommand "jotain-site"
       # search-index.json (only used under withApiDoc).
       pkgs.jq
     ];
-    inherit docsSrc webSrc;
+    inherit docsSrc manSrc webSrc;
     meta.description = "page.jylhis.com/jotain static site (landing SPA + generated docs)";
   }
   ''
@@ -140,6 +146,13 @@ pkgs.runCommand "jotain-site"
     mkdir -p "$out/public"
     cp -r "$webSrc/website/public/." "$out/public/"
     chmod -R u+w "$out/public"
+
+    substituteInPlace "$out/public/index.html" \
+      --replace-fail '@VERSION@' ${lib.escapeShellArg (lib.escapeXML release.version)} \
+      --replace-fail '@FLAKE@' ${lib.escapeShellArg (lib.escapeXML "github:${release.repo}")} \
+      --replace-fail '@REPO_URL@' ${lib.escapeShellArg (lib.escapeXML "https://github.com/${release.repo}")} \
+      --replace-fail '@REPO@' ${lib.escapeShellArg (lib.escapeXML release.repo)} \
+      --replace-fail '@SUPPORT@' ${lib.escapeShellArg (lib.escapeXML release.support)}
 
     ${lib.optionalString (!withApiDoc) ''
       # This variant (site-preview) omits /help/api/ and, with it, the
@@ -163,6 +176,8 @@ pkgs.runCommand "jotain-site"
     write_page() {
       local outfile="$1" title="$2" bufname="$3" mode="$4" content="$5" navhtml="$6"
       mkdir -p "$(dirname "$outfile")"
+      local rel="''${outfile#"$out/public"}"
+      rel="''${rel%index.html}"
       {
         cat <<HEAD
     <!DOCTYPE html>
@@ -171,7 +186,7 @@ pkgs.runCommand "jotain-site"
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>''${title} — jotain</title>
-    <link rel="canonical" href="https://page.jylhis.com${baseHref}/">
+    <link rel="canonical" href="https://page.jylhis.com${baseHref}''${rel}">
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f8fc">
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c0f14">
     <link rel="icon" type="image/svg+xml" href="${baseHref}/favicon.svg">
@@ -207,7 +222,7 @@ pkgs.runCommand "jotain-site"
         <span class="modeline-buffer">''${bufname}</span>
         <span class="modeline-pos">Top L1</span>
         <span>''${mode}</span>
-        <span class="modeline-version">U:jotain 2026.07</span>
+        <span class="modeline-version">U:jotain ${release.version}</span>
       </footer>
       <div class="minibuffer">
         <span class="echo">C-x C-f <a href="${baseHref}/docs/">/docs/</a> · <a href="${baseHref}/manual/">manual</a> · <a href="${baseHref}/man/">man</a> · <a href="${baseHref}/info/">info</a> · ☾ theme</span>
@@ -306,7 +321,7 @@ pkgs.runCommand "jotain-site"
 
     {
       echo '<h1 class="h1"><span class="star">*</span> Documentation</h1>'
-      echo '<p class="docs-index-lede">Generated from the Markdown sources under <code>docs/</code> — the same sources that produce the <a href="${baseHref}/manual/">manual</a>, the <a href="${baseHref}/manual/jotain.info">Info file</a>, and <a href="${baseHref}/man/jotain.7.html">jotain(7)</a>.</p>'
+      echo '<p class="docs-index-lede">Generated from the Markdown sources under <code>docs/</code>, the same sources that produce the <a href="${baseHref}/manual/">manual</a> and the <a href="${baseHref}/manual/jotain.info">Info file</a>. The man page <a href="${baseHref}/man/jotain.7.html">jotain(7)</a> is written separately.</p>'
       cat "$docs_index_body"
     } > index_body.html
     write_page "$out/public/docs/index.html" "Documentation" "*docs dired*" "(Dired)" index_body.html \
@@ -388,7 +403,7 @@ pkgs.runCommand "jotain-site"
     <div class="man-entry"><a href="${baseHref}/help/packages/">C-h P — package reference</a><span class="man-dots">·····································································</span><span class="man-desc">every package Jotain ships, and why</span></div>
     ${lib.optionalString withApiDoc pkgSearchRow}
     ${lib.optionalString withApiDoc apiHelpRow}
-    <div class="man-entry"><a href="${baseHref}/options/">nix options</a><span class="man-dots">·····································································</span><span class="man-desc">Home Manager · NixOS/nix-darwin · devenv</span></div>
+    <div class="man-entry"><a href="${baseHref}/options/">nix options</a><span class="man-dots">·····································································</span><span class="man-desc">Home Manager · NixOS</span></div>
     <div class="man-entry"><a href="${baseHref}/manual/">C-h i d m Jotain RET — the manual</a><span class="man-dots">·····································································</span><span class="man-desc">HTML, one page per chapter</span></div>
     <div class="man-entry"><a href="${baseHref}/info/">C-h i — info directory</a><span class="man-dots">·····································································</span><span class="man-desc">GNU Emacs + Elisp manuals</span></div>
     <div class="man-entry"><a href="${baseHref}/man/">M-x man — man pages</a><span class="man-dots">·····································································</span><span class="man-desc">jotain(7) and the Emacs man pages</span></div>
@@ -411,9 +426,9 @@ pkgs.runCommand "jotain-site"
         "$name" "$name" "$desc" >> "$man_index_body"
     }
 
-    pandoc "$docsSrc/docs/jotain.7.md" -s -f markdown -t man -o jotain.7
+    cp "$manSrc/jotain.7" jotain.7
     cp jotain.7 "$out/public/man/jotain.7"
-    render_man jotain.7 "jotain.7" "the Jotain manual, troff edition"
+    render_man jotain.7 "jotain.7" "the Jotain manual, mdoc edition"
 
     for f in ${emacs}/share/man/man1/*.1.gz; do
       name="$(basename "$f" .gz)"
@@ -426,7 +441,7 @@ pkgs.runCommand "jotain-site"
 
     {
       echo '<h1 class="h1"><span class="star">*</span> Man pages</h1>'
-      echo '<p class="docs-index-lede">Rendered with mandoc. The Emacs pages come from the exact Emacs build Jotain ships; <a href="${baseHref}/man/jotain.7">jotain.7</a> is also available as raw troff.</p>'
+      echo '<p class="docs-index-lede">Rendered with mandoc. The Emacs pages come from the exact Emacs build Jotain ships; <a href="${baseHref}/man/jotain.7">jotain.7</a> is also available as raw mdoc source.</p>'
       cat "$man_index_body"
     } > man_body.html
     write_page "$out/public/man/index.html" "Man pages" "*Man apropos*" "(Man)" man_body.html \

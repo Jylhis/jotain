@@ -20,7 +20,7 @@
   "Alist of (FILE . SECONDS) for top-level `load' calls.
 Loads not driven by a tracked `require': autoloads, `load-theme', the
 package-quickstart file.  See Finding 52 in
-docs/reviews/2026-07-emacs-nix-deep-review.md.")
+docs/reviews/2026-07-emacs-nix-deep-review.7.")
 
 (defvar jotain-bench--require-depth 0
   "Dynamic nesting depth of tracked `require'/refresh calls.

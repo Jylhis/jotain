@@ -18,15 +18,13 @@ jotain/
 ├── default.nix         # Non-flake entry point (flake-compat wrapper)
 ├── overlay.nix         # Standalone nixpkgs overlay (wraps nix/mk-overlay.nix)
 ├── module.nix          # Home Manager module for the daemon
-├── module-system.nix   # Shared NixOS / nix-darwin module
-├── module-nix-on-droid.nix  # nix-on-droid module (terminal-only build)
+├── module-system.nix   # NixOS module
 ├── nix/
 │   ├── mk-overlay.nix         # Overlay implementation: distribution assembly
 │   ├── checks.nix             # Flake checks (lint, compile, tests, builds)
 │   ├── use-package.nix        # use-package scanner (Elisp → epkgs mapping)
 │   └── ...                    # docs, site, extra packages, treefmt helpers
-├── devenv.nix          # Development shell (tooling only, no Emacs)
-├── devenv.yaml         # devenv inputs (pinned to flake.lock revs)
+├── shell.nix           # nix-shell entry into the flake's dev shell (nix/dev-shell.nix)
 ├── flake.nix           # Flake entry point (thin wiring)
 ├── flake.lock          # Source of truth for input revisions
 ├── Justfile            # Task runner recipes
@@ -39,7 +37,7 @@ jotain/
 ├── templates/          # Tempel snippet templates (jotain.eld)
 ├── config/             # Auxiliary tool config (e.g. eca)
 ├── etc/                # Debug harness, language-eval registry, elisp-doc engine
-└── scripts/            # Helper scripts (agent bootstrap, lock verification, pin updates)
+└── scripts/            # Helper scripts (pin updates)
 ```
 
 ## Layers
@@ -54,14 +52,14 @@ jotain/
 
 ### Nix Layer
 
-1. **`emacs.nix`** builds bare Emacs from emacs-overlay's `unstable` (default), `git`, or `igc` attrs, or nixpkgs' `emacs` (`mainline`, the cache-parity canary), with the build flags exposed as arguments. The matrix is pgtk GUI or terminal-only on Linux, patched NS GUI or terminal-only on Darwin. Default builds produce the same store paths as the matching prebuilt attrs, so they are cache hits on Hydra and `nix-community.cachix.org`; custom `rev` pins and the Darwin GUI (patched by default) rebuild from source. See [Nix build layer](/architecture/nix-build).
+1. **`emacs.nix`** builds bare Emacs from emacs-overlay's `unstable` (default), `git`, or `igc` attrs, or nixpkgs' `emacs` (`mainline`, the cache-parity canary), with the build flags exposed as arguments. The only shipped build is the pgtk GUI on `x86_64-linux`. Default builds produce the same store paths as the matching prebuilt attrs, so they are cache hits on Hydra and `nix-community.cachix.org`; custom `rev` pins rebuild from source. See [Nix build layer](/architecture/nix-build).
 
 2. **`default.nix`**: flake-compat wrapper for the flake's packages.
 
-3. **`module.nix`**: Home Manager module that runs Jotain as a user-session Emacs daemon (`services.jotain`), with an `emacsclient` desktop entry and optional `EDITOR`/`VISUAL` setup. Supports systemd on Linux and launchd on macOS; `services.jotain.package` swaps in another Jotain-shaped distribution.
+3. **`module.nix`**: Home Manager module that runs Jotain as a user-session Emacs daemon (`services.jotain`), with an `emacsclient` desktop entry and optional `EDITOR`/`VISUAL` setup. The daemon runs under systemd; `services.jotain.package` swaps in another Jotain-shaped distribution.
 
 ### Development Layer
 
-- **`devenv.nix`**: development shell, **tooling only**, with no `emacs` binary. It ships Nix tooling and linters (`nil`, `nixfmt`, `treefmt`, `statix`, `deadnix`), the language servers and CLIs the Elisp config shells out to, the docs toolchain, and the fonts the UI config probes. Build and launch the editor with `just run-built` (see [Launching Emacs](/usage/launching)).
-- **`Justfile`**: day-to-day recipes: `run-built` / `run-built-debug` (build via Nix, then launch), `check`, `test`, the `build-*` matrix, `fmt`, `update`, `verify`, `clean`, `clean-all`. Elisp lint, compile, and test coverage comes from the `elisp-lint` / `elisp-compile` / `elisp-test` flake checks.
-- **Pinning**: `flake.lock` is the single source of truth; `default.nix`, `emacs.nix`, and `overlay.nix` read it directly via `fetchTarball`, so non-flake `nix-build` consumers get the same pins. `devenv.yaml` mirrors the shared input revs (`nixpkgs`, `treefmt-nix`, `emacs-overlay`), and `just update` keeps `devenv.lock` in lockstep.
+- **`nix/dev-shell.nix`** (entered with `nix develop` or `nix-shell`): development shell, **tooling only**, with no `emacs` binary. It ships Nix tooling and linters (`nil`, `nixfmt`, `treefmt`, `statix`, `deadnix`), the language servers and CLIs the Elisp config shells out to, the docs toolchain, and the fonts the UI config probes. Build and launch the editor with `just run-built` (see [Launching Emacs](/usage/launching)).
+- **`Justfile`**: day-to-day recipes: `run-built` / `run-built-debug` (build via Nix, then launch), `check`, `test`, the `build-*` recipes, `fmt`, `update`, `update-pins`, `clean`, `clean-all`. Elisp lint, compile, and test coverage comes from the `elisp-lint` / `elisp-compile` / `elisp-test` flake checks.
+- **Pinning**: `flake.lock` is the single source of truth; `default.nix`, `emacs.nix`, and `overlay.nix` read it directly via `fetchTarball`, so non-flake `nix-build` consumers get the same pins.
