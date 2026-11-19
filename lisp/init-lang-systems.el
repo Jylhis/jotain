@@ -3,9 +3,10 @@
 ;;; Commentary:
 
 ;; Systems-language modes: C/C++, CUDA, CMake, Meson, Haskell, OCaml,
-;; Dune, and Zig.  C/C++ open in `c-ts-mode'/`c++-ts-mode' via
-;; `jotain-prog-ts-remaps' (init-prog.el); cc-mode decides which
-;; extensions are C vs C++.  CUDA has no upstream tree-sitter mode, so
+;; Dune, Zig, and GLSL.  C/C++ open in `c-ts-mode'/`c++-ts-mode'
+;; via `jotain-prog-ts-remaps' (init-prog.el); cc-mode decides which
+;; extensions are C vs C++ (`.h' and `.c' are C; C++ sources use `.hpp'
+;; and `.cpp').  CUDA has no upstream tree-sitter mode, so
 ;; this file defines `cuda-ts-mode'.
 ;;
 ;; All LSP and formatter wiring lives in `init-prog.el'; keep new server
@@ -15,7 +16,7 @@
 
 ;;; @doc Built-in cc-mode, kept for its `auto-mode-alist' decisions and as
 ;;; the grammarless fallback. The `:mode' list decides which extensions
-;;; are C vs C++ (headers default to C++); `jotain-prog-ts-remaps'
+;;; are C vs C++ (`.h' is C; C++ uses `.hpp' and `.cpp'); `jotain-prog-ts-remaps'
 ;;; (init-prog.el) then remaps `c-mode'/`c++-mode' to the tree-sitter
 ;;; modes when the grammar loads. `c-basic-offset'/`c-default-style'
 ;;; apply to the remaining cc-mode buffers (Java, AWK, and C/C++ without
@@ -30,7 +31,7 @@
      (java-mode . "java")
      (awk-mode  . "awk")
      (other     . "gnu")))
-  :mode (("\\.h\\'"   . c++-mode)
+  :mode (("\\.h\\'"   . c-mode)
          ("\\.hpp\\'" . c++-mode)
          ("\\.hxx\\'" . c++-mode)
          ("\\.cc\\'"  . c++-mode)
@@ -163,7 +164,13 @@ where the `<<<...>>>' launch syntax parses as an error node."
 ;;; @doc Tree-sitter Zig mode (MELPA). eglot's built-in entry starts
 ;;; zls; format-on-save runs `zig fmt' through apheleia (init-prog).
 (use-package zig-ts-mode
-  :mode "\\.zig\\'")
+  :mode "\\.\\(?:zig\\|zon\\)\\'")
+
+;;; @doc GLSL shader mode (MELPA) with its default file patterns
+;;; (`.glsl', `.vert', `.frag', `.comp', ...). Chosen over a tree-sitter
+;;; mode because nixpkgs ships no `glsl-ts-mode'.
+(use-package glsl-mode
+  :defer t)
 
 (provide 'init-lang-systems)
 ;;; init-lang-systems.el ends here

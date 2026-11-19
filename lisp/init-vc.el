@@ -73,7 +73,9 @@ is no file to open."
                                                   path-info)
                                           path-info)
                                     files)))
-                           ((string-match-p "[MAUT?]" status)
+                           ((and (string-match-p "[MAUT?]" status)
+                                 ;; Deleted in the work tree: no file to open.
+                                 (not (string-match-p "\\`[MAT]D" status)))
                             (push (cons (format "%s %s"
                                                 status path-info)
                                         path-info)
@@ -88,6 +90,16 @@ is no file to open."
               (when file-path
                 (find-file (expand-file-name file-path
                                              expanded-root))))))))))
+
+(defun jotain-vc--jj-summary-path (text)
+  "Return the file to open for the path field TEXT of a `jj diff --summary' line.
+Renames and copies print \"{old => new}\", possibly inside a common
+prefix and suffix; the result is the new path."
+  (if (string-match "\\`\\(.*\\){[^}]* => \\([^}]*\\)}\\(.*\\)\\'" text)
+      (replace-regexp-in-string
+       "//+" "/"
+       (concat (match-string 1 text) (match-string 2 text) (match-string 3 text)))
+    text))
 
 ;;; @doc Jujutsu (jj) backend for built-in `vc' and `project', so
 ;;; `C-x v …', the modeline VC state and project.el work in jj repos.
@@ -120,7 +132,7 @@ Deletions are omitted, since there is no file to open."
                   (dolist (line (split-string cmd-output "\n" t))
                     (when (> (length line) 2)
                       (let ((status (substring line 0 1))
-                            (path (substring line 2)))
+                            (path (jotain-vc--jj-summary-path (substring line 2))))
                         (unless (string= status "D")
                           (push (cons (format "%s %s" status path) path)
                                 files)))))
@@ -170,7 +182,8 @@ Deletions are omitted, since there is no file to open."
   :after magit
   :commands (magit-todos-mode global-magit-todos-mode)
   :custom
-  (magit-todos-depth 1))
+  (magit-todos-depth 1)
+  :config (magit-todos-mode 1))
 
 ;;; @doc PRs, issues, and reviews from GitHub/GitLab/Forgejo inside
 ;;; magit. Uses Emacs's built-in sqlite, so no external emacsql binary is
@@ -220,6 +233,19 @@ Deletions are omitted, since there is no file to open."
 (use-package diff-hl-dired
   :ensure nil
   :hook (dired-mode . diff-hl-dired-mode))
+
+;; Backport of Emacs 32 (commit 0a8a5d4fadbe): without it a background
+;; dired revert can ask "has a running process; kill it?" (diff-hl#295),
+;; and on a daemon with no frame that prompt locks the keyboard.
+(defun jotain-vc--dir-status-no-query (&rest _)
+  "Clear the query-on-exit flag of the current buffer's process."
+  (when-let* ((proc (get-buffer-process (current-buffer))))
+    (set-process-query-on-exit-flag proc nil)))
+
+(when (< emacs-major-version 32)
+  (with-eval-after-load 'vc-git
+    (advice-add 'vc-git-dir-status-goto-stage :after
+                #'jotain-vc--dir-status-no-query)))
 
 ;;; @doc An `N/M` mode-line counter (via `mode-line-misc-info`): N is
 ;;; uncommitted added+deleted lines, M is commits made today (since local
@@ -498,6 +524,7 @@ also invalidate after `magit-post-refresh-hook'."
 ;; mode line alike, so there is no hand-copied segment list to drift.
 (add-to-list 'mode-line-misc-info
              '(:eval (when-let* ((file buffer-file-name)
+                                 ((not (file-remote-p file)))
                                  (rb (and (mode-line-window-selected-p)
                                           (jotain-git-stats--root-and-backend file))))
                        (progn (jotain-git-stats--maybe-refresh (car rb) (cdr rb))
@@ -511,8 +538,87 @@ also invalidate after `magit-post-refresh-hook'."
         (run-with-idle-timer jotain-git-stats-update-interval t
                              #'jotain-git-stats--tick)))
 
-;; smerge-mode needs no block: it turns on for files with conflict
-;; markers and binds C-c ^ (`smerge-command-prefix').
+(declare-function smerge-mode "smerge-mode" (&optional arg))
+(defvar smerge-begin-re)
+
+(defun jotain-vc--conflict-count ()
+  "Return the number of conflict markers opening a conflict in this buffer."
+  (require 'smerge-mode)
+  (save-excursion
+    (goto-char (point-min))
+    (let ((n 0))
+      (while (re-search-forward smerge-begin-re nil t)
+        (setq n (1+ n)))
+      n)))
+
+(defun jotain-vc-mergiraf-solve ()
+  "Re-resolve the conflicts of the current file with `mergiraf solve'.
+Needs diff3-style markers (a base section), as `merge.conflictStyle
+diff3' or `zdiff3' writes them.  Refuses when `mergiraf' is not on
+`exec-path', the buffer has no file, is modified, or has no conflict.
+Reverts the buffer, reports the conflicts left, and keeps `smerge-mode'
+on while any remain."
+  (interactive)
+  (cond
+   ((not (executable-find "mergiraf"))
+    (user-error "mergiraf is not on `exec-path'"))
+   ((not buffer-file-name)
+    (user-error "Buffer is not visiting a file"))
+   ((buffer-modified-p)
+    (user-error "Save the buffer first, mergiraf rewrites the file"))
+   ((zerop (jotain-vc--conflict-count))
+    (user-error "No conflict markers in this buffer"))
+   (t
+    (let ((out (generate-new-buffer " *mergiraf*"))
+          (file buffer-file-name))
+      (unwind-protect
+          (let ((status (call-process "mergiraf" nil out nil "solve"
+                                      "--keep-backup=false" file)))
+            (revert-buffer :ignore-auto :noconfirm)
+            (let ((left (jotain-vc--conflict-count)))
+              (if (zerop left)
+                  (smerge-mode -1)
+                (smerge-mode 1))
+              (message "mergiraf: %s (exit %s)"
+                       (if (zerop left)
+                           "all conflicts solved"
+                         (format "%d conflict%s remain" left
+                                 (if (= left 1) "" "s")))
+                       status)))
+        (kill-buffer out))))))
+
+;;; @doc Built-in conflict-marker editing; it turns on for files with
+;;; markers and binds `C-c ^' (`smerge-command-prefix'). `C-c ^ S' runs
+;;; `jotain-vc-mergiraf-solve', which re-resolves the file with mergiraf's
+;;; syntax-aware merge and leaves smerge-mode on for what remains. The
+;;; mergiraf binary rides the wrapper PATH; the markers must be diff3
+;;; style. Enable the git merge driver per repository with
+;;; `*.json merge=mergiraf' in `.gitattributes' and the driver
+;;; `mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P' in
+;;; `merge.mergiraf.driver'.
+(use-package smerge-mode
+  :ensure nil
+  :defer t
+  :config
+  (keymap-set smerge-basic-map "S" #'jotain-vc-mergiraf-solve))
+
+(defcustom jotain-magit-delta-enable nil
+  "Non-nil renders magit diffs through the `delta' pager.
+Takes effect when magit loads; `M-x magit-delta-mode' toggles it live.
+It changes how every magit diff looks, so it is off by default."
+  :type 'boolean
+  :group 'jotain-vc)
+
+;;; @doc Renders magit diffs through delta (`magit-delta-mode'). Off
+;;; until `jotain-magit-delta-enable' is non-nil, because it changes every
+;;; magit diff; `M-x magit-delta-mode' toggles it per session. The delta
+;;; binary rides the wrapper PATH.
+(use-package magit-delta
+  :after magit
+  :commands (magit-delta-mode)
+  :config
+  (when jotain-magit-delta-enable
+    (magit-delta-mode 1)))
 
 ;;; @doc Built-in interactive diff. The `plain` window setup keeps the
 ;;; control panel out of a separate frame; diffs ignore whitespace.

@@ -56,10 +56,16 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
 
 ;;; @doc Tree-sitter major mode for `Justfile` (the `just` grammar). The
 ;;; package registers Justfile itself; the `:mode` regexes add the
-;;; `.just` extension used for modular recipes.
+;;; dotfile `.justfile` and the `.just` extension used for modular
+;;; recipes.
 (use-package just-ts-mode
-  :mode (("/[Jj]ustfile\\'" . just-ts-mode)
+  :mode (("/\\.?[Jj]ustfile\\'" . just-ts-mode)
          ("\\.just\\'" . just-ts-mode)))
+
+;;; @doc Gherkin major mode (MELPA) for Cucumber `.feature` files:
+;;; keyword highlighting, indentation and step navigation.
+(use-package feature-mode
+  :mode "\\.feature\\'")
 
 ;;; @doc Ansible minor mode for playbooks: keyword and Jinja2
 ;;; highlighting plus `ansible-vault` helpers. Not enabled
@@ -101,7 +107,7 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
     (modify-syntax-entry ?} "){" table)
     (modify-syntax-entry ?\" "\"" table)
     ;; `#' is a line comment; `//' and `/* */' are the C-style forms.
-    (modify-syntax-entry ?#  "<"      table)
+    (modify-syntax-entry ?#  "< b"    table)
     (modify-syntax-entry ?/  ". 124b" table)
     (modify-syntax-entry ?*  ". 23"   table)
     (modify-syntax-entry ?\n "> b"    table)
@@ -174,7 +180,7 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
     (modify-syntax-entry ?_ "_" table)
     (modify-syntax-entry ?- "_" table)
     table)
-  "Syntax table for `likec4-mode'.")
+  "Syntax table for `jotain-likec4-mode'.")
 
 (defvar jotain-likec4-font-lock-keywords
   (let ((keywords '("specification" "model" "views" "view" "element" "tag"
@@ -187,7 +193,7 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
       ("->" . font-lock-function-name-face)
       (,(rx symbol-start (group (+ (any word "_"))) (* space) (any "=:"))
        (1 font-lock-variable-name-face))))
-  "Font-lock rules for `likec4-mode'.")
+  "Font-lock rules for `jotain-likec4-mode'.")
 
 (defun jotain-likec4-indent-line ()
   "Indent the current LikeC4 line by its `{'/`}' nesting depth."
@@ -197,7 +203,7 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
                    (if (looking-at-p "}") (1- open) open)))))
     (indent-line-to (* jotain-likec4-indent-offset (max depth 0)))))
 
-(define-derived-mode likec4-mode prog-mode "LikeC4"
+(define-derived-mode jotain-likec4-mode prog-mode "LikeC4"
   "Major mode for editing LikeC4 architecture models."
   :syntax-table jotain-likec4-mode-syntax-table
   (setq-local comment-start "// "
@@ -207,8 +213,8 @@ A no-op until dockerfile-mode has loaded, so safe to call any time."
               font-lock-defaults '(jotain-likec4-font-lock-keywords nil t))
   (setq-local electric-indent-chars (cons ?} electric-indent-chars)))
 
-(add-to-list 'auto-mode-alist '("\\.c4\\'" . likec4-mode))
-(add-to-list 'auto-mode-alist '("\\.likec4\\'" . likec4-mode))
+(add-to-list 'auto-mode-alist '("\\.c4\\'" . jotain-likec4-mode))
+(add-to-list 'auto-mode-alist '("\\.likec4\\'" . jotain-likec4-mode))
 
 (provide 'init-lang-devops)
 ;;; init-lang-devops.el ends here

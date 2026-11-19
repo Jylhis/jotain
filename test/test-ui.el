@@ -14,6 +14,7 @@
 ;;; Code:
 
 (require 'ert)
+(require 'cl-lib)
 
 (defconst test-ui--init-ui-file
   (expand-file-name "lisp/init-ui.el"
@@ -54,6 +55,43 @@ back to Modus in that case, which is a supported configuration."
   (let ((available (custom-available-themes)))
     (dolist (var '(jotain-theme-light jotain-theme-dark))
       (should (memq (cadr (test-ui--defcustom-default var)) available)))))
+
+(defun test-ui--defun-form (name)
+  "Return the `defun' form of NAME read from `test-ui--init-ui-file'."
+  (with-temp-buffer
+    (insert-file-contents test-ui--init-ui-file)
+    (goto-char (point-min))
+    (catch 'found
+      (condition-case nil
+          (while t
+            (let ((form (read (current-buffer))))
+              (when (and (eq (car-safe form) 'defun) (eq (nth 1 form) name))
+                (throw 'found form))))
+        (end-of-file nil)))))
+
+(ert-deftest test-ui-modeline-icons-follow-the-frame ()
+  "The icon switch follows the frame it is given and skips redundant sets."
+  (eval (test-ui--defun-form 'jotain-ui--apply-modeline-icons) t)
+  (defvar doom-modeline-icon)
+  (let* ((sets 0)
+         (watcher (lambda (&rest _) (setq sets (1+ sets))))
+         (old (default-boundp 'doom-modeline-icon)))
+    (set-default 'doom-modeline-icon t)
+    (add-variable-watcher 'doom-modeline-icon watcher)
+    (unwind-protect
+        (cl-letf (((symbol-function 'force-mode-line-update) #'ignore)
+                  ((symbol-function 'display-graphic-p) (lambda (&optional _f) nil)))
+          (jotain-ui--apply-modeline-icons)
+          (should-not doom-modeline-icon)
+          (should (= sets 1))
+          (jotain-ui--apply-modeline-icons)
+          (should (= sets 1))
+          (cl-letf (((symbol-function 'display-graphic-p) (lambda (&optional _f) t)))
+            (jotain-ui--apply-modeline-icons (selected-frame))
+            (should (eq doom-modeline-icon t))
+            (should (= sets 2))))
+      (remove-variable-watcher 'doom-modeline-icon watcher)
+      (unless old (makunbound 'doom-modeline-icon)))))
 
 (provide 'test-ui)
 ;;; test-ui.el ends here

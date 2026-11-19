@@ -2,8 +2,8 @@
 
 ;;; Commentary:
 
-;; Modes for data-shaped files: YAML, CSV, SQL, Jinja2 templates, and
-;; gnuplot scripts.
+;; Modes for data-shaped files: YAML, KDL, CSV, jq, SQL, Jinja2 templates,
+;; and gnuplot scripts.
 
 ;;; Code:
 
@@ -46,6 +46,23 @@ enabled: mixed-pitch, visual-line wrapping, and jinx."
   :ensure nil
   :defer t
   :hook (yaml-ts-mode . jotain-lang-data--enable-prog-mode-features))
+
+;;; @doc JSON with comments (`.jsonc`, e.g. `wrangler.jsonc`). Emacs 31
+;;; routes only `.json` to `js-json-mode`, so `.jsonc` would open in
+;;; fundamental mode. `jotain-prog-ts-remaps` (init-prog.el) remaps the mode
+;;; to `json-ts-mode` when its grammar loads.
+(add-to-list 'auto-mode-alist '("\\.jsonc\\'" . js-json-mode))
+
+;;; @doc jq filter major mode (`.jq` files): syntax highlighting and
+;;; indentation for jq programs. The mode derives from `prog-mode', so
+;;; the usual programming features apply.
+(use-package jq-mode
+  :mode "\\.jq\\'")
+
+;;; @doc KDL document language major mode (`.kdl` files): syntax
+;;; highlighting and indentation.
+(use-package kdl-mode
+  :mode "\\.kdl\\'")
 
 ;;; @doc CSV major mode. csv-align-mode aligns columns visually without
 ;;; changing the file.

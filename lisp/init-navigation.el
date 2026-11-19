@@ -8,28 +8,18 @@
 
 ;;; Code:
 
-;;; @doc Built-in directory editor, the configuration's primary file manager. On
-;;; macOS it uses GNU `gls` when available, since BSD ls lacks
-;;; `--group-directories-first` and `--dired`. `M-s R` previews a regex
-;;; replacement across the marked files as a unified diff. `!`/`&`
-;;; suggest the OS default application (`open`/`xdg-open`/`start`) for
-;;; common document and media files; files can also be dragged out to
-;;; desktop apps with the mouse.
+;;; @doc Built-in directory editor, the configuration's primary file manager.
+;;; `M-s R` previews a regex replacement across the marked files as a
+;;; unified diff. `!`/`&` suggest the OS default application
+;;; (`xdg-open`) for common document and media files; files can also be
+;;; dragged out to desktop apps with the mouse.
 (use-package dired
   :ensure nil
   :custom
-  ;; macOS BSD `ls' rejects `--dired' and `--group-directories-first'.
-  ;; Prefer GNU `gls'; otherwise use BSD ls without `--dired'.
-  (insert-directory-program (or (and (eq system-type 'darwin)
-                                     (executable-find "gls"))
-                                "ls"))
-  (dired-use-ls-dired (or (not (eq system-type 'darwin))
-                          (and (executable-find "gls") t)))
+  (insert-directory-program "ls")
+  (dired-use-ls-dired t)
   ;; `v': natural number sort (foo2 before foo10).
-  (dired-listing-switches (if (and (eq system-type 'darwin)
-                                   (not (executable-find "gls")))
-                              "-alhv"
-                            "-alhv --group-directories-first"))
+  (dired-listing-switches "-alhv --group-directories-first")
   (dired-dwim-target t)
   (dired-kill-when-opening-new-dired-buffer t)
   (dired-recursive-copies 'always)
@@ -52,7 +42,6 @@
   ;; `!'/`&' suggest the OS default handler for documents, images and
   ;; media.
   (when-let* ((opener (cond
-                       ((eq system-type 'darwin) "open")
                        ((memq system-type '(gnu gnu/linux gnu/kfreebsd
                                                 berkeley-unix))
                         "xdg-open")
@@ -96,23 +85,12 @@
 
 ;;; @doc rsync from dired (`C-c C-r`), for very large transfers or TRAMP
 ;;; endpoints: hands the marked files to `rsync` asynchronously with live
-;;; progress. `--progress`, not `--info=progress2`, so stock macOS rsync
-;;; 2.6.9 still works.
+;;; progress.
 (use-package dired-rsync
   :after dired
   :bind (:map dired-mode-map ("C-c C-r" . dired-rsync))
   :custom
   (dired-rsync-options "-az --progress --human-readable"))
-
-;;; @doc Pure-Lisp ls emulation, used on macOS without GNU coreutils to
-;;; get the folders-first sorting BSD ls cannot produce.
-(use-package ls-lisp
-  :ensure nil
-  :if (and (eq system-type 'darwin) (not (executable-find "gls")))
-  :custom
-  (ls-lisp-dirs-first t)
-  (ls-lisp-use-insert-directory-program nil)
-  (ls-lisp-verbosity '(links uid gid)))
 
 ;;; @doc Built-in writable dired: C-c C-e makes the listing editable,
 ;;; so files can be renamed and chmodded with normal editing. Save

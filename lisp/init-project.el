@@ -67,7 +67,7 @@ Labels include the parent root, so same-named projects stay distinct."
   ;; instead, replace "go.mod" with "go.work".
   (project-vc-extra-root-markers
    '(".project" "package.json" "Cargo.toml" "pyproject.toml" "flake.nix"
-     "devenv.nix" "go.mod")))
+     "devenv.nix" "go.mod" "settings.gradle.kts" "settings.gradle")))
 
 ;;; @doc project.el backend for the Nix (and Guix) store: each store
 ;;; directory is a project root, so `project-find-file` works while
@@ -164,6 +164,13 @@ Labels include the parent root, so same-named projects stay distinct."
      (rust-ts-mode . (("cargo test"     . "cargo test")
                       ("cargo clippy"   . "cargo clippy --all-targets")
                       ("cargo build"    . "cargo build")))
+     (kotlin-ts-mode . (("gradle test"    . "./gradlew --console=plain test")
+                        ("gradle build"   . "./gradlew --console=plain build")
+                        ("gradle check"   . "./gradlew --console=plain check")
+                        ("gradle run"     . "./gradlew --console=plain run")
+                        ("gradle ktlint"  . "./gradlew --console=plain ktlintCheck")
+                        ("gradle detekt"  . "./gradlew --console=plain detekt")
+                        ("ktlint"         . "ktlint")))
      (zig-ts-mode  . (("zig build"      . "zig build")
                       ("zig test"       . "zig build test")
                       ("zig run"        . "zig build run")))

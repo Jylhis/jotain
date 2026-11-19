@@ -72,9 +72,6 @@
 ;; than toggling the modes off afterwards. The menu bar stays on.
 (push '(tool-bar-lines . 0) default-frame-alist)
 (push '(vertical-scroll-bars) default-frame-alist)
-(when (featurep 'ns)
-  (push '(ns-transparent-titlebar . t) default-frame-alist)
-  (push '(ns-appearance . dark) default-frame-alist))
 
 ;; Don't resize the frame when the font, fringes, or bars change during
 ;; startup: each implied resize is a round-trip to the window system.
@@ -94,11 +91,6 @@
 ;; redisplay, especially with many installed fonts.
 (setq inhibit-compacting-font-caches t)
 
-;; Thinner font smoothing matches the system rendering on Retina.
-(defvar ns-use-thin-smoothing nil)
-(when (eq system-type 'darwin)
-  (setq ns-use-thin-smoothing t))
-
 ;; Native compilation: eln-cache under var/. Async warnings keep their
 ;; default: since 30, `native-comp-async-warnings-errors-kind' limits them
 ;; to errors and important warnings, and NEWS.30 advises against silencing
@@ -112,7 +104,7 @@
            (native-comp-available-p))
   ;; Async jobs: half the logical cores, clamped to 1..3. The cap keeps
   ;; a background recompile from starving redisplay and input on big
-  ;; machines; small hosts (2-core VMs, nix-on-droid) get one job.
+  ;; machines; small hosts (2-core VMs) get one job.
   (setq native-comp-speed 2
         native-comp-async-jobs-number (max 1 (min 3 (/ (num-processors) 2)))
         ;; No background native compilation on battery.

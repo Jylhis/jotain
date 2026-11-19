@@ -24,6 +24,8 @@ Openers are the tokens after which Nix nests one level: one of the
 brackets ({, [, (), an =, a lambda colon, or the let/in keywords."
   (save-excursion
     (end-of-line)
+    (let ((ppss (syntax-ppss)))         ; skip a trailing comment
+      (when (nth 4 ppss) (goto-char (nth 8 ppss))))
     (skip-chars-backward " \t")
     (let ((end (point)))
       (or (memq (char-before) '(?{ ?\[ ?\( ?= ?:))

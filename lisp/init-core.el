@@ -87,6 +87,9 @@ immediately for writes."
   (set-mark-command-repeat-pop t)
   (redisplay-skip-fontification-on-input t)
   (enable-recursive-minibuffers t)
+  ;; One user, one keyboard: a prompt opened on another terminal, or on
+  ;; the frameless daemon, must not lock input out of the GUI frame.
+  (multiple-terminals-merge-keyboards t)
   (minibuffer-prompt-properties
    '(read-only t cursor-intangible t face minibuffer-prompt))
   (read-extended-command-predicate #'command-completion-default-include-p)
@@ -243,25 +246,14 @@ Useful for diagnosing freezes: start, reproduce, stop."
     (setq jotain-profiler--running t)
     (message "Profiler started — run `M-x jotain-profile-toggle' again to report")))
 
-;;;; macOS — minimal modifier-key fix
-;;
-;; Option-as-Meta breaks typing braces and special characters on
-;; European layouts, so Meta goes on Command and Right-Option stays free
-;; for character entry.
-(when (eq system-type 'darwin)
-  (setopt mac-command-modifier      'meta
-          mac-option-modifier       'super
-          mac-right-option-modifier 'none)
-  (setopt trash-directory "~/.Trash"))
-
 ;;; @doc Inherits PATH, MANPATH, and other shell-managed vars from the
-;;; user's login shell so a GUI, launchd, or systemd-spawned Emacs sees
+;;; user's login shell so a GUI or systemd-spawned Emacs sees
 ;;; what the terminal sees. The Nix wrapper already puts the tools the
 ;;; config needs (rg, fd, git, jj, zoxide, coreutils) on PATH; this
 ;;; adds ~/.nix-profile and user toolchains.
 (use-package exec-path-from-shell
   :if (or (daemonp)
-          (memq window-system '(mac ns x pgtk)))
+          (memq window-system '(x pgtk)))
   :functions (exec-path-from-shell-initialize)
   ;; Forking the login shell is the largest cost on the init path, so it
   ;; runs on `after-init-hook': the first frame draws first, and PATH is
@@ -269,11 +261,11 @@ Useful for diagnosing freezes: start, reproduce, stop."
   ;;
   ;; Load-time `executable-find' guards in other modules see the
   ;; pre-import PATH. That is safe only because the tools they probe
-  ;; (zoxide, Darwin's gls) come from the Nix wrapper PATH
+  ;; (zoxide) come from the Nix wrapper PATH
   ;; (nix/runtime-deps.nix), not the login shell. Keep it that way.
   :hook (after-init . exec-path-from-shell-initialize)
   :custom
-  (exec-path-from-shell-arguments nil)) ; skip the -i round-trip
+  (exec-path-from-shell-arguments '("-l"))) ; login shell only, skip -i
 
 ;;; @doc Auto-revert buffers when their file changes on disk (branch
 ;;; switches, external edits), and non-file buffers such as dired.

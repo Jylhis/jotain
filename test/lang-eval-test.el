@@ -96,11 +96,14 @@ removed override must fail here."
 Only the formatters the configuration adds itself are checked; apheleia built-ins
 (ruff/prettier/rustfmt/clang-format) are not in our source."
   (let ((prog (lang-eval-test--contents "lisp/init-prog.el"))
-        (ours '("meson" "zig" "goimports" "buildifier" "nixfmt" "qmlformat")))
+        (ours '("meson" "zig" "goimports" "buildifier" "nixfmt" "qmlformat"
+                "ktfmt")))
     (dolist (e jotain-lang-registry)
       (let ((f (plist-get e :formatter)))
         (when (and f (member f ours))
-          (should (string-search f prog)))))))
+          (should (with-syntax-table emacs-lisp-mode-syntax-table
+                    (string-match-p (format "\\_<%s\\_>" (regexp-quote f))
+                                    prog))))))))
 
 (ert-deftest lang-eval-test-modes-registered ()
   "Each non-skip entry's mode is named in its owning file or init-prog.el.
@@ -138,6 +141,12 @@ tree-sitter routing table in init-prog.el for remapped languages."
   (dolist (e jotain-lang-registry)
     (when (plist-get e :live)
       (should (plist-get e :servers)))))
+
+(ert-deftest lang-eval-test-json-encodes-nil-as-null ()
+  "A nil plist value is JSON null, not the string \"json-null\"."
+  (require 'jotain-lang-eval)
+  (should (string-match-p "\"server\": null"
+                          (jotain-lang-eval--json (list (list :name "x" :server nil))))))
 
 (provide 'lang-eval-test)
 ;;; lang-eval-test.el ends here

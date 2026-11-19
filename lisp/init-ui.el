@@ -73,13 +73,12 @@ REASON is reported so the downgrade is visible in *Messages*."
       (error (jotain-ui--fall-back-to-modus (error-message-string err))))))
 
 ;;; @doc Flips between `jotain-theme-light` and `jotain-theme-dark`
-;;; following the system appearance (macOS, GNOME, or anything exposing
+;;; following the system appearance (GNOME, or anything exposing
 ;;; a dark/light setting). C-c t toggles manually.
 (use-package auto-dark
   :demand t
   :bind ("C-c t" . auto-dark-toggle-appearance)
   :custom
-  (auto-dark-allow-osascript t)
   (auto-dark-themes `((,jotain-theme-dark) (,jotain-theme-light)))
   :config
   (auto-dark-mode 1))
@@ -87,7 +86,7 @@ REASON is reported so the downgrade is visible in *Messages*."
 (defun jotain-ui--ensure-tty-theme (&optional frame)
   "Enable a theme on terminal FRAME when `auto-dark' left none active.
 In a bare terminal `auto-dark' has no appearance source (no
-macOS/GNOME/D-Bus), so no theme gets enabled.  Pick the dark or light
+GNOME/D-Bus), so no theme gets enabled.  Pick the dark or light
 theme by the frame's background mode.  Runs on
 `server-after-make-frame-hook' to cover daemon tty clients.  Themes are
 frame-global, so a mixed GUI+tty daemon shares one theme."
@@ -143,14 +142,20 @@ is not in its lists, so the theme joins both lists."
 
 ;;;; Modeline
 
+(defvar doom-modeline-icon)
 (defun jotain-ui--apply-modeline-icons (&optional frame)
-  "Enable doom-modeline glyphs only on a graphical FRAME.
-Terminal frames have no Nerd Font, so the icons render as tofu.  Runs
-on `server-after-make-frame-hook' so a daemon's GUI frames get glyphs
-even though no graphical frame exists at daemon start."
+  "Enable doom-modeline glyphs only while FRAME is graphical.
+Terminal frames have no Nerd Font, so the icons render as tofu.
+`doom-modeline-icon' is one global value read at redisplay and Emacs has no
+frame-local variables, so a daemon serving tty and GUI frames cannot hold
+both.  Instead the value follows the selected frame: it runs on
+`server-after-make-frame-hook' (a GUI frame created after daemon start) and
+on `window-selection-change-functions' (switching between frames)."
   (when (boundp 'doom-modeline-icon)
-    (setopt doom-modeline-icon (and (display-graphic-p frame) t))
-    (force-mode-line-update t)))
+    (let ((icons (and (display-graphic-p (and (framep frame) frame)) t)))
+      (unless (eq icons doom-modeline-icon)
+        (setopt doom-modeline-icon icons)
+        (force-mode-line-update t)))))
 
 ;;; @doc A dense, IDE-style modeline with LSP/eglot status, project
 ;;; buffer info, and Nerd Font glyphs. Enabled after init.
@@ -162,6 +167,7 @@ even though no graphical frame exists at daemon start."
   :config
   (jotain-ui--apply-modeline-icons)
   (add-hook 'server-after-make-frame-hook #'jotain-ui--apply-modeline-icons)
+  (add-hook 'window-selection-change-functions #'jotain-ui--apply-modeline-icons)
   ;; Upstream bug: the git-worktree indicator looks up the codicon
   ;; "nf-cod-worktree" in the `devicon' set, where no nerd-icons release
   ;; has it, and the lookup is unguarded, so the VCS segment errors on
@@ -236,13 +242,10 @@ attributes are applied globally so all frames see the update."
 (add-hook 'server-after-make-frame-hook #'jotain-ui-apply-font)
 
 (defcustom jotain-emoji-font-preferences
-  (if (eq system-type 'darwin)
-      '("Apple Color Emoji" "Noto Color Emoji" "Symbola")
-    '("Noto Color Emoji" "Segoe UI Emoji" "Symbola"))
+'("Noto Color Emoji" "Segoe UI Emoji" "Symbola")
   "Ordered list of family names to try for the `emoji' and `symbol' charsets.
-The first installed family wins.  macOS ships Apple Color Emoji; on
-Linux the Home Manager and NixOS modules install Noto Color
-Emoji."
+The first installed family wins.  The Home Manager and NixOS modules
+install Noto Color Emoji."
   :type '(repeat string)
   :group 'jotain-ui)
 

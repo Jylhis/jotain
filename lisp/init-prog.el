@@ -56,6 +56,7 @@
     (cmake       cmake-ts-mode       cmake-mode)
     (dockerfile  dockerfile-ts-mode  dockerfile-mode)
     (json        json-ts-mode        js-json-mode json-mode)
+    (lua         lua-ts-mode         lua-mode)
     (toml        toml-ts-mode        conf-toml-mode)
     (yaml        yaml-ts-mode        yaml-mode)
     ;; Modes routed by their own `init-lang-*' file are listed too, so a
@@ -63,7 +64,7 @@
     ;; entry) still lands in the tree-sitter mode.
     (python      python-ts-mode      python-mode)
     (rust        rust-ts-mode        rust-mode)
-    (css         css-ts-mode         css-mode scss-mode)
+    (css         css-ts-mode         css-mode)
     (javascript  js-ts-mode          js-mode javascript-mode js2-mode)
     (typescript  typescript-ts-mode  typescript-mode)
     ;; C/C++ (init-lang-systems, which also maps `.cu'/`.cuh' straight
@@ -277,6 +278,14 @@ basedpyright/pyright, then pylsp."
           ((executable-find "pyright-langserver") '("pyright-langserver" "--stdio"))
           (t '("pylsp"))))
 
+  (defun jotain-prog--kotlin-server (&optional _interactive)
+    "Resolve the Kotlin server contact against the buffer's (project) PATH.
+Prefers JetBrains `kotlin-lsp', then the community
+kotlin-language-server."
+    (if (executable-find "kotlin-lsp")
+        '("kotlin-lsp" "--stdio")
+      '("kotlin-language-server")))
+
   (defun jotain-prog--likec4-server (&optional _interactive)
     "Resolve the LikeC4 server contact against the buffer's PATH.
 Prefers the standalone `likec4-lsp' (on the distribution wrapper PATH),
@@ -362,6 +371,7 @@ Both speak stdio by default."
                    python-mode python-ts-mode
                    neocaml-mode neocaml-interface-mode
                    zig-ts-mode
+                   kotlin-ts-mode
                    c-mode c++-mode c-ts-mode c++-ts-mode cuda-ts-mode
                    nix-ts-mode
                    haskell-ts-mode))
@@ -410,9 +420,12 @@ Both speak stdio by default."
   (add-to-list 'eglot-server-programs
                (cons '(python-mode python-ts-mode)
                      #'jotain-prog--python-server))
+  ;; Kotlin (init-lang-kotlin).
+  (add-to-list 'eglot-server-programs
+               (cons '(kotlin-ts-mode) #'jotain-prog--kotlin-server))
   ;; LikeC4 architecture models (init-lang-devops).
   (add-to-list 'eglot-server-programs
-               (cons '(likec4-mode) #'jotain-prog--likec4-server))
+               (cons '(jotain-likec4-mode) #'jotain-prog--likec4-server))
   ;; Robot Framework (init-lang-devops).
   (add-to-list 'eglot-server-programs
                (cons '(robot-mode) #'jotain-prog--robot-server))
@@ -450,9 +463,22 @@ Both speak stdio by default."
 
 ;;;; Debugging — dape (Debug Adapter Protocol)
 
+(defun jotain-prog--kotlin-main-class ()
+  "Guess the JVM main class of the current Kotlin file.
+A top-level `main' in `Foo.kt' of package `a.b' compiles to `a.b.FooKt'."
+  (let ((class (concat (file-name-base (or buffer-file-name "Main")) "Kt")))
+    (save-excursion
+      (save-restriction
+        (widen)
+        (goto-char (point-min))
+        (if (re-search-forward "^package[ \t]+\\([[:alnum:]_.]+\\)" nil t)
+            (concat (match-string-no-properties 1) "." class)
+          class)))))
+
 ;;; @doc Debug Adapter Protocol client, the debugging counterpart to
 ;;; eglot. Ships adapter configs for dlv (Go), debugpy (Python),
-;;; codelldb (Rust/C/C++) and more; adapter binaries come from the
+;;; codelldb (Rust/C/C++) and more; this config adds cargo (lldb-dap)
+;;; and Kotlin (kotlin-debug-adapter). Adapter binaries come from the
 ;;; project/host PATH. `C-x C-a` is the prefix (the gud convention);
 ;;; stepping commands repeat, so `C-x C-a n n n` keeps stepping.
 (use-package dape
@@ -484,7 +510,26 @@ Both speak stdio by default."
                              (if enable-recursive-minibuffers
                                  (read-file-name "Binary: " (dape-cwd) nil t
                                                  "target/debug/")
-                               "target/debug/")))))
+                               "target/debug/"))))
+
+  ;; Kotlin/JVM launch config for fwcd's kotlin-debug-adapter, which dape
+  ;; does not ship.  The adapter reads the compiled classes of the Gradle
+  ;; build, so `compile' builds them first.
+  (add-to-list 'dape-configs
+               `(kotlin-debug-adapter
+                 modes (kotlin-ts-mode)
+                 ensure dape-ensure-command
+                 command "kotlin-debug-adapter"
+                 command-cwd dape-command-cwd
+                 compile "./gradlew --console=plain classes"
+                 :type "kotlin"
+                 :request "launch"
+                 :projectRoot dape-cwd
+                 :mainClass ,(lambda ()
+                               (let ((guess (jotain-prog--kotlin-main-class)))
+                                 (if enable-recursive-minibuffers
+                                     (read-string "Main class: " guess)
+                                   guess))))))
 
 ;;;; SonarLint
 
@@ -630,6 +675,15 @@ every prog-mode buffer."
   ;; robotidy also edits in place.
   (add-to-list 'apheleia-formatters '(robotidy . ("robotidy" inplace)))
   (add-to-list 'apheleia-mode-alist '(robot-mode . robotidy))
+  ;; ktfmt instead of apheleia's default ktlint for Kotlin.  The
+  ;; kotlinlang style indents by 4, as `kotlin-ts-mode' does; ktfmt's
+  ;; default style indents by 2.
+  (add-to-list 'apheleia-formatters
+               '(ktfmt . ("ktfmt" "--kotlinlang-style" "-")))
+  (add-to-list 'apheleia-mode-alist '(kotlin-ts-mode . ktfmt))
+  ;; ruff instead of apheleia's default black.
+  (add-to-list 'apheleia-mode-alist '(python-mode . ruff))
+  (add-to-list 'apheleia-mode-alist '(python-ts-mode . ruff))
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
 ;;; @doc Edit grep result buffers in place and write the changes back to

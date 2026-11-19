@@ -23,12 +23,13 @@
   :ensure nil
   :mode ("\\.js\\'" . js-ts-mode))
 
-;;; @doc Built-in CSS / SCSS major mode pinned to the tree-sitter
-;;; variant.
+;;; @doc Built-in CSS major mode pinned to the tree-sitter variant.
+;;; `.scss` keeps the classic `scss-mode`, since the CSS grammar does not
+;;; parse SCSS nesting, variables or mixins.
 (use-package css-mode
   :ensure nil
   :mode (("\\.css\\'"  . css-ts-mode)
-         ("\\.scss\\'" . css-ts-mode)))
+         ("\\.scss\\'" . scss-mode)))
 
 ;;; @doc Built-in tree-sitter HTML mode (Emacs 31) for plain
 ;;; `.html`/`.htm`, including embedded JS and CSS. Templating dialects go

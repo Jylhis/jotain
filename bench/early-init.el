@@ -50,7 +50,8 @@ The depth guard avoids double-counting `require'd modules; the wrapper's
 own delegation loads are excluded by name."
   (if (> jotain-bench--require-depth 0)
       (apply orig-fn file args)
-    (let ((start (current-time)))
+    (let ((start (current-time))
+          (jotain-bench--require-depth (1+ jotain-bench--require-depth)))
       (prog1 (apply orig-fn file args)
         (let ((elapsed (float-time (time-subtract (current-time) start)))
               (base (and (stringp file) (file-name-nondirectory file))))

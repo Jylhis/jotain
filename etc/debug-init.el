@@ -49,7 +49,7 @@ current state without quitting (handy before a suspected crash)."
   (jotain-debug--dump-buffer "*Backtrace*"  (jotain-debug--file "backtrace.log"))
   (jotain-debug--dump-buffer "*Compile-Log*" (jotain-debug--file "compile-log.log"))
   (jotain-debug--dump-buffer "*Async-native-compile-log*"
-                             (jotain-debug--file "native-comp.log"))
+                         (jotain-debug--file "native-comp.log"))
   (when (called-interactively-p 'interactive)
     (message "jotain-debug: logs flushed to %s" jotain-debug-directory)))
 
@@ -67,10 +67,10 @@ debugger is dismissed with `q'."
 
 ;;; Turn the debugging facilities on
 
-(setq debug-on-error t                 ; interactive backtrace on any error
-      message-log-max t                ; keep every message in *Messages*
-      backtrace-line-length 0          ; never truncate backtrace lines
-      warning-minimum-log-level :debug); log warnings of every severity
+(setopt debug-on-error t                 ; interactive backtrace on any error
+        message-log-max t                ; keep every message in *Messages*
+        backtrace-line-length 0          ; never truncate backtrace lines
+        warning-minimum-log-level :debug); log warnings of every severity
 (when (boundp 'native-comp-async-report-warnings-errors)
   (setq native-comp-async-report-warnings-errors t))
 
@@ -81,7 +81,12 @@ debugger is dismissed with `q'."
 (with-eval-after-load 'eglot
   (setopt eglot-events-buffer-config '(:size 2000000 :format full)))
 
-(add-hook 'emacs-startup-hook
-          (lambda ()
-            (message "jotain-debug: full debugging on; logs → %s (M-x jotain-debug-dump-now to flush)"
-                     jotain-debug-directory)))
+(defun jotain-debug--announce ()
+  "Tell the user where the debug logs go."
+  (message "jotain-debug: full debugging on; logs → %s (M-x jotain-debug-dump-now to flush)"
+           jotain-debug-directory))
+
+(add-hook 'emacs-startup-hook #'jotain-debug--announce)
+
+(provide 'debug-init)
+;;; debug-init.el ends here

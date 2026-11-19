@@ -131,7 +131,8 @@ this is just `org-babel-execute-buffer'."
   (interactive)
   (when-let* ((session (save-window-excursion
                          (ignore-errors (org-babel-initiate-session))))
-              (buffer (and (stringp session) (get-buffer session))))
+              (buffer (if (bufferp session) session
+                        (and (stringp session) (get-buffer session)))))
     (let ((kill-buffer-query-functions nil))
       (kill-buffer buffer)))
   (org-babel-execute-buffer))

@@ -37,7 +37,7 @@
 
 ;;;; Frame screenshots for AI tooling
 ;;
-;; `x-export-frames' needs a cairo build (Linux X11/pgtk), not noGui or NS.
+;; `x-export-frames' needs a graphical frame; a daemon also serves tty frames.
 
 (declare-function x-export-frames "xfns.c" (&optional frames type))
 (declare-function jotain-var-file "init-core" (name))
@@ -47,14 +47,11 @@
   "Capture the selected frame to FILE; return the absolute path.
 FORMAT is one of the symbols `png' (default), `svg' or `pdf'.
 FILE defaults to var/screenshots/<timestamp>.<format> under
-`jotain-var-dir'.  Signals `user-error' on tty frames and on
-builds without `x-export-frames' (noGui, macOS NS).
+`jotain-var-dir'.  Signals `user-error' on tty frames.
 Interactively, echo the path and push it onto the kill ring."
   (interactive)
   (unless (display-graphic-p)
     (user-error "jotain-screenshot needs a graphical frame"))
-  (unless (fboundp 'x-export-frames)
-    (user-error "x-export-frames unavailable — needs a cairo build (Linux X11/pgtk)"))
   (let* ((format (or format 'png))
          (file (expand-file-name
                 (or file
@@ -125,10 +122,10 @@ are skipped."
   :init
   (advice-add 'eca :before #'jotain-ai-export-api-keys))
 
-;;; @doc Conversational LLM front-end. The default backend is OpenRouter,
-;;; an OpenAI-compatible aggregator (Claude, GPT, Gemini, DeepSeek, Qwen,
-;;; GLM, ...) behind one key; direct Anthropic, Gemini and local Ollama
-;;; backends are selectable from the C-c S menu. C-c s sends. Keys come
+;;; @doc Conversational LLM front-end. The default backend is Claude on the
+;;; direct Anthropic API; OpenRouter (an OpenAI-compatible aggregator behind
+;;; one key), Gemini and local Ollama backends are selectable from the C-c S
+;;; menu. C-c s sends. Keys come
 ;;; from the environment, then auth-source.
 (use-package gptel
   :defer t
@@ -139,35 +136,35 @@ are skipped."
    ("C-c S" . gptel-menu))
   :config
   (setopt gptel-backend
-          (gptel-make-openai "OpenRouter"
-            :host "openrouter.ai"
-            :endpoint "/api/v1/chat/completions"
+          (gptel-make-anthropic "Claude"
             :stream t
+            :models '(claude-opus-5-5 claude-sonnet-5-5 claude-haiku-5-5)
             :key (lambda ()
-                   (or (getenv "OPENROUTER_API_KEY")
+                   (or (getenv "ANTHROPIC_API_KEY")
                        (auth-source-pick-first-password
-                        :host "openrouter.ai"
-                        :user "apikey")))
-            ;; Keep in sync with config/eca/config.json
-            ;; (providers.openrouter.models); checked by eca-models-in-sync.
-            :models '(anthropic/claude-opus-5.5
-                      anthropic/claude-sonnet-5.5
-                      anthropic/claude-haiku-5.5
-                      openai/gpt-5.5
-                      google/gemini-3.5-flash
-                      deepseek/deepseek-v4-pro
-                      qwen/qwen3.5-35b-a3b
-                      z-ai/glm-4.7))
-          gptel-model 'anthropic/claude-sonnet-5.5)
+                        :host "api.anthropic.com"
+                        :user "apikey"))))
+          gptel-model 'claude-sonnet-5-5)
 
-  (gptel-make-anthropic "Claude"
+  (gptel-make-openai "OpenRouter"
+    :host "openrouter.ai"
+    :endpoint "/api/v1/chat/completions"
     :stream t
-    :models '(claude-opus-5-5 claude-sonnet-5-5 claude-haiku-5-5)
     :key (lambda ()
-           (or (getenv "ANTHROPIC_API_KEY")
+           (or (getenv "OPENROUTER_API_KEY")
                (auth-source-pick-first-password
-                :host "api.anthropic.com"
-                :user "apikey"))))
+                :host "openrouter.ai"
+                :user "apikey")))
+    ;; Keep in sync with config/eca/config.json
+    ;; (providers.openrouter.models); checked by eca-models-in-sync.
+    :models '(anthropic/claude-opus-5.5
+              anthropic/claude-sonnet-5.5
+              anthropic/claude-haiku-5.5
+              openai/gpt-5.5
+              google/gemini-3.5-flash
+              deepseek/deepseek-v4-pro
+              qwen/qwen3.5-35b-a3b
+              z-ai/glm-4.7))
 
   (gptel-make-gemini "Gemini"
     :stream t

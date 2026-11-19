@@ -6,7 +6,7 @@
 ;; `lisp/init-snippets.el' build on.  No network, subprocesses or writes
 ;; outside a temp buffer, so safe in the Nix sandbox.
 ;;
-;; Sections 1-3 pin down core capf behaviour that `docs/design/completion.md'
+;; Sections 1-3 pin down core capf behaviour that `docs/design/jotain-completion-design.7'
 ;; depends on and the documentation does not settle:
 ;;
 ;;   1. A capf with no `:exclusive' (like eglot's) suppresses every capf
@@ -176,6 +176,8 @@ This is why `init-snippets.el' wraps its eglot merge."
       (should-not (equal (completion-test--winning-collection
                           (list merged #'completion-test--capf-later))
                          '("later-capf-ran")))
+      (should (completion-test--winning-collection
+               (list merged #'completion-test--capf-later)))
       (should (equal (completion-test--winning-collection
                       (list (cape-capf-nonexclusive merged)
                             #'completion-test--capf-later))
@@ -257,7 +259,13 @@ TAB and `<tab>' run `corfu-insert', which also runs the candidate's
   "The newcomers-presets theme (init.el) turns the inline preview on.
 With the default `jotain-completion-inline-preview', the config sets
 `global-completion-preview-mode' neither by `setopt' nor by `:custom',
-so the theme value applies."
+so the theme value applies.  The theme is loaded without enabling it, which
+would turn on savehist and recentf, and its settings are read back."
+  (load-theme 'newcomers-presets t t)
+  (let ((setting (seq-find (lambda (s) (eq (nth 1 s) 'global-completion-preview-mode))
+                           (get 'newcomers-presets 'theme-settings))))
+    (should setting)
+    (should (eq (nth 3 setting) t)))
   (should jotain-completion-inline-preview)
   (should-not (get 'global-completion-preview-mode 'custom-check-value))
   (should-not (assq 'use-package

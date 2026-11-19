@@ -546,8 +546,8 @@ text does not appear where symbol completion is meaningless."
   ;; Accept without TAB or RET.
   (keymap-set completion-preview-active-mode-map "M-RET"
               #'completion-preview-insert)
-  ;; Match corfu's top row (when corfu has loaded).
-  (when (boundp 'corfu-sort-function)
+  ;; Match corfu's top row once corfu has loaded (it loads after init).
+  (with-eval-after-load 'corfu
     (setopt completion-preview-sort-function corfu-sort-function))
   ;; Suppress in comments/strings.
   (add-hook 'completion-preview-inhibit-functions

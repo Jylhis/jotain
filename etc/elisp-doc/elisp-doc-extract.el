@@ -842,6 +842,10 @@ Content of the documentation pages is part of <a href=\"https://www.gnu.org/soft
         (insert (car additions))
         (goto-char (+ (prop-match-end prop) (length (car additions)) (length (cdr additions))))))))
 
+(defun elisp-doc--fragment-encode (text)
+  "Percent-encode TEXT for a URL text fragment, including `-', `,' and `&'."
+  (string-replace "-" "%2D" (url-hexify-string text)))
+
 (defun elisp-doc--find-text-fragment (text section pred)
   "Produce a tentative text fragment link fragment for TEXT in SECTION.
 
@@ -856,11 +860,11 @@ if there is none.  The caller decides what makes an occurrence valid."
                (progn
                  (goto-char (match-beginning 0))
                  (backward-word)
-                 (htmlize-attr-escape
-                  (concat (string-clean-whitespace
+                 (concat (elisp-doc--fragment-encode
+                          (string-clean-whitespace
                            (buffer-substring-no-properties
-                            (point) (match-beginning 0)))
-                          "-," text))))))))
+                            (point) (match-beginning 0))))
+                         "-," (elisp-doc--fragment-encode text))))))))
 (defconst elisp-doc--nth-word
   '("first" "second" "third" "fourth" "fifth" "sixth" "seventh" "eighth"))
 (defun elisp-doc--find-arg-ref (prop i section)
