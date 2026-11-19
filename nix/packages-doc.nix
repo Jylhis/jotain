@@ -130,6 +130,10 @@ let
       title = "Go";
     }
     {
+      file = "init-lang-kotlin.el";
+      title = "Kotlin";
+    }
+    {
       file = "init-lang-web.el";
       title = "Web (TypeScript, JS, CSS, HTML)";
     }

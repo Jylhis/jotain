@@ -25,7 +25,17 @@ let
   # A host whose pkgs already carry the overlay skips a second nixpkgs
   # fixpoint.
   pkgsWithOverlay = if pkgs ? jotainEmacsPackages then pkgs else pkgs.extend jotainOverlay;
-  selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.jotainEmacsPackages;
+  # With services.jotain.users.<user> on in NixOS (module-system.nix) the system
+  # builds the programs and installs them; this module takes them from there.
+  osConfig = args.osConfig or { };
+  system = osConfig.services.jotain.users.${config.home.username} or { enable = false; };
+  selectedPackage =
+    if system.enable then
+      system.built.package
+    else if cfg.package != null then
+      cfg.package
+    else
+      pkgsWithOverlay.jotainEmacsPackages;
   startWithSession =
     if cfg.startWithUserSession == "graphical" then true else cfg.startWithUserSession;
 
@@ -64,33 +74,8 @@ let
   # here so a stray ~/.emacs.d/ is never picked up.
   initDirectory = "${config.xdg.configHome}/emacs";
 
-  # Byte-compiled config, so the daemon loads .elc instead of
-  # interpreting .el (and deferred native compilation, which never fires
-  # for plain .el loads, can fill var/eln-cache).
-  #
-  # Same derivation as nix/checks.nix' `elisp-compile', so on the default
-  # configuration `home-manager switch' substitutes CI's cachix artifact.
-  # A custom `services.jotain.package' or nixpkgs pin builds it locally.
-  # `.core' is the inner emacsWithPackages result (see
-  # nix/config-compiled.nix); the `or' covers a custom package.
-  compiledConfig = import ./nix/config-compiled.nix {
-    inherit pkgs;
-    emacs = selectedPackage.core or selectedPackage;
-    nativeCompile = cfg.nativeCompile.enable;
-  };
-
   # Generator for ~/.config/eca/config.json (see nix/eca-config.nix).
   ecaConfig = import ./nix/eca-config.nix { inherit lib pkgs; };
-
-  # Shared runtime binaries (nix/runtime-deps.nix) plus the opt-in tools,
-  # prepended to PATH in emacsWrapper.
-  runtimeDeps =
-    import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; }
-    ++ lib.optional cfg.sonarlint.enable pkgs.sonarlint-ls
-    ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server
-    ++ lib.optional cfg.onePassword.enable pkgs._1password-cli
-    ++ lib.optional cfg.sops.enable pkgs.sops
-    ++ lib.optional cfg.claudeCode.enable pkgs.claude-code;
 
   # Colour-emoji fallback for the `emoji' / `symbol' fontsets
   # (lisp/init-ui.el).
@@ -107,54 +92,30 @@ let
     pkgs.ibm-plex
   ];
 
-  runtimePath = lib.makeBinPath runtimeDeps;
-
-  # `emacs` with --init-directory always set, for the daemon and any
-  # interactive invocation.
-  emacsWrapper = pkgs.writeShellScriptBin "emacs" ''
-    export PATH=${runtimePath}''${PATH:+:$PATH}
-    ${lib.optionalString cfg.nativeCompile.enable ''
-      export JOTAIN_ELN_PATH=${compiledConfig}/share/emacs/native-lisp
-    ''}
-    exec ${emacsBinPath}/emacs --init-directory=${lib.escapeShellArg initDirectory} "$@"
-  '';
-
-  # EDITOR fallback without a daemon; via emacsWrapper to keep
-  # --init-directory.
-  editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
-    exec ${emacsWrapper}/bin/emacs -nw -- "$@"
-  '';
-
-  # EDITOR — terminal-friendly emacsclient (works over SSH, in git commit, etc.)
-  editorScript = pkgs.writeShellScriptBin "jotain-editor" ''
-    exec ${lib.getBin selectedPackage}/bin/emacsclient \
-      --tty \
-      --alternate-editor=${editorFallback} \
-      -- \
-      "$@"
-  '';
-
-  # VISUAL — opens a GUI emacsclient frame.
-  visualScript = pkgs.writeShellScriptBin "jotain-visual" ''
-    exec ${lib.getBin selectedPackage}/bin/emacsclient \
-      --create-frame \
-      --alternate-editor=${emacsWrapper}/bin/emacs \
-      -- \
-      "$@"
-  '';
-
-  # `jotctl <start|stop|status|restart|logs>`: drives the systemd user
-  # service.
-  jotctlScript = pkgs.writeShellScriptBin "jotctl" ''
-    case "''${1:-status}" in
-      start)   exec systemctl --user start jotain ;;
-      stop)    exec systemctl --user stop jotain ;;
-      restart) exec systemctl --user restart jotain ;;
-      status)  exec systemctl --user status jotain ;;
-      logs)    exec journalctl --user -u jotain -f ;;
-      *) echo "usage: jotctl {start|stop|status|restart|logs}" >&2; exit 2 ;;
-    esac
-  '';
+  built =
+    if system.enable then
+      system.built
+    else
+      import ./nix/user-programs.nix {
+        inherit pkgs pkgsWithOverlay initDirectory;
+        package = selectedPackage;
+        nativeCompile = cfg.nativeCompile.enable;
+        spellDictionaries = cfg.spell.dictionaries;
+        tools = {
+          sonarlint = cfg.sonarlint.enable;
+          dockerfileLsp = cfg.dockerfileLsp.enable;
+          onePassword = cfg.onePassword.enable;
+          sops = cfg.sops.enable;
+          claudeCode = cfg.claudeCode.enable;
+        };
+      };
+  inherit (built)
+    compiledConfig
+    emacsWrapper
+    editorScript
+    visualScript
+    jotctlScript
+    ;
 
   systemdWantedBy =
     if cfg.startWithUserSession == "graphical" then "graphical-session.target" else "default.target";
@@ -168,16 +129,6 @@ let
   };
 in
 {
-  imports = [
-    # Removed: it only added dictionaries to the profile, which the
-    # distribution wrapper's ASPELL_CONF (nix/mk-overlay.nix) never reads.
-    (lib.mkRemovedOptionModule [ "services" "jotain" "spell" "dictionaries" ] ''
-      It never affected spell-checking: the Jotain distribution bundles
-      its own aspell dictionaries (en, fi, de, fr) and points ASPELL_CONF
-      at them. To change the set, override ASPELL_CONF for the daemon.
-    '')
-  ];
-
   options.services.jotain = {
     enable = lib.mkEnableOption "the Jotain Emacs daemon";
 
@@ -401,6 +352,22 @@ in
     dockerfileLsp = {
       enable = lib.mkEnableOption "Dockerfile language server ({command}`docker-langserver`), auto-attached by Eglot in {command}`dockerfile-mode`";
     };
+
+    spell = {
+      dictionaries = lib.mkOption {
+        type = with lib.types; listOf package;
+        default = [ ];
+        example = lib.literalExpression "[ pkgs.aspellDicts.en pkgs.aspellDicts.fi ]";
+        description = ''
+          Aspell dictionary packages for jinx spell-checking
+          (lisp/init-writing.el). A non-empty list replaces the bundled
+          en/fi/de/fr set: the wrapped emacs gets an ASPELL_CONF that points
+          at an {command}`aspellWithDicts` built from these packages. The
+          packages also go into the profile. The empty default keeps the
+          bundled dictionaries.
+        '';
+      };
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -417,18 +384,23 @@ in
     };
     fonts.fontconfig.enable = true;
 
-    home.packages = [
-      selectedPackage
-      editorScript
-      visualScript
-      jotctlScript
-      # hiPrio so the wrapped `emacs` shadows the unwrapped binary
-      # that ships inside the selected package.
-      (lib.hiPrio emacsWrapper)
-    ]
-    ++ emojiFontPackages
-    ++ iconFontPackages
-    ++ lib.optional cfg.client.enable (lib.hiPrio clientDesktopItem);
+    # The programs come from the system where services.jotain.users.<user> is on.
+    home.packages =
+      lib.optionals (!system.enable) (
+        [
+          selectedPackage
+          editorScript
+          visualScript
+          jotctlScript
+          # hiPrio so the wrapped `emacs` shadows the unwrapped binary
+          # that ships inside the selected package.
+          (lib.hiPrio emacsWrapper)
+        ]
+        ++ cfg.spell.dictionaries
+      )
+      ++ emojiFontPackages
+      ++ iconFontPackages
+      ++ lib.optional cfg.client.enable (lib.hiPrio clientDesktopItem);
 
     # Entry files and lisp/ come from compiledConfig: an .eln is named
     # after a hash of its source path, so sources from any other store path

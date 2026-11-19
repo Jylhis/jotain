@@ -33,15 +33,15 @@ let
   # (what jinx calls) still fails, as the master word list resolves under
   # the default data-dir. en_GB is jinx's default; fi/de/fr are a C-M-$
   # switch away.
-  spellEnv = final.aspellWithDicts (
-    d: with d; [
+  spellConf = import ./spell-conf.nix {
+    pkgs = final;
+    dictionaries = with final.aspellDicts; [
       en
       fi
       de
       fr
-    ]
-  );
-  spellConf = "dict-dir ${spellEnv}/lib/aspell; data-dir ${spellEnv}/lib/aspell";
+    ];
+  };
 
   mkJotainEmacsPackages =
     {
@@ -123,7 +123,7 @@ in
   # Prebuilt ECA server for eca-emacs (lisp/init-ai.el).
   eca = import ./eca-server.nix { pkgs = final; };
 
-  # LikeC4 language server for `likec4-mode' (lisp/init-lang-devops.el).
+  # LikeC4 language server for `jotain-likec4-mode' (lisp/init-lang-devops.el).
   likec4Lsp = import ./likec4-lsp.nix { pkgs = final; };
 
   jotainInfo = import ./info-manual.nix {

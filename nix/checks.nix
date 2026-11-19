@@ -63,13 +63,19 @@ let
         type = lib.types.listOf lib.types.unspecified;
         default = [ ];
       };
-      home.sessionVariables = lib.mkOption {
-        type = lib.types.attrsOf lib.types.str;
-        default = { };
-      };
-      home.packages = lib.mkOption {
-        type = lib.types.listOf lib.types.package;
-        default = [ ];
+      home = {
+        sessionVariables = lib.mkOption {
+          type = lib.types.attrsOf lib.types.str;
+          default = { };
+        };
+        username = lib.mkOption {
+          type = lib.types.str;
+          default = "tester";
+        };
+        packages = lib.mkOption {
+          type = lib.types.listOf lib.types.package;
+          default = [ ];
+        };
       };
       xdg.configHome = lib.mkOption {
         type = lib.types.str;
@@ -118,6 +124,16 @@ let
   graphicalModule = evalHomeModule {
     startWithUserSession = "graphical";
   };
+  spellModule = evalHomeModule { spell.dictionaries = [ pkgs.aspellDicts.fi ]; };
+  # The text of the wrapped `emacs' script (nix/user-programs.nix), or "".
+  emacsWrapperText =
+    module:
+    let
+      scripts = lib.filter (
+        p: lib.hasInfix "--init-directory" (p.text or "")
+      ) module.config.home.packages;
+    in
+    if scripts == [ ] then "" else (lib.head scripts).text;
 in
 {
   packages-default = pkgs.jotainEmacsPackages;
@@ -163,7 +179,7 @@ in
   # config/eca/config.json and gptel's OpenRouter :models
   # (lisp/init-ai.el) are hand-kept copies of one list. The elisp side is
   # read with Emacs' reader, anchored on the OpenRouter form (not the
-  # Ollama :models further down).
+  # Claude, Gemini or Ollama :models).
   eca-models-in-sync =
     pkgs.runCommand "check-eca-models-in-sync"
       {
@@ -182,7 +198,7 @@ in
         (with-temp-buffer
           (insert-file-contents (getenv "INIT_AI"))
           (goto-char (point-min))
-          (re-search-forward "gptel-make-openai")
+          (re-search-forward "gptel-make-openai \"OpenRouter\"")
           (re-search-forward ":models[[:space:]]*'")
           (dolist (m (read (current-buffer)))
             (princ (format "%s\n" m))))
@@ -230,6 +246,10 @@ in
       {
         defaultEditorConfigured = if defaultModule.config.home.sessionVariables ? EDITOR then "1" else "0";
         graphicalTarget = builtins.toJSON graphicalModule.config.systemd.user.services.jotain.Install.WantedBy;
+        spellReachesWrapper =
+          if lib.hasInfix "ASPELL_CONF='dict-dir " (emacsWrapperText spellModule) then "1" else "0";
+        spellDefaultKeepsBundle =
+          if lib.hasInfix "ASPELL_CONF" (emacsWrapperText defaultModule) then "0" else "1";
       }
       ''
         test "$defaultEditorConfigured" = "1" || { echo "EDITOR not set"; exit 1; }
@@ -237,6 +257,8 @@ in
           *graphical-session.target*) ;;
           *) echo "graphical start target not wired: $graphicalTarget"; exit 1 ;;
         esac
+        test "$spellReachesWrapper" = "1" || { echo "spell.dictionaries does not reach ASPELL_CONF in the wrapper"; exit 1; }
+        test "$spellDefaultKeepsBundle" = "1" || { echo "the default sets ASPELL_CONF in the wrapper"; exit 1; }
         touch $out
       '';
 
@@ -342,12 +364,12 @@ in
         cd $src
         emacs -Q --batch --eval '
           (let ((files (append (list "early-init.el" "init.el")
-                               (directory-files "lisp" t "^\\(init-.*\\|devenv\\|repo-review\\)\\.el$")
+                               (directory-files "lisp" t "\\.el$")
                                (directory-files "test" t "\\.el$")))
                 (failed nil))
             ;; Guard against a narrowed fileset that silently lost
             ;; lisp/ or test/ and would pass over nothing.
-            (when (< (length files) 30)
+            (when (< (length files) 40)
               (message "FAIL: only %d files found — narrowed source is wrong"
                        (length files))
               (kill-emacs 1))
@@ -474,19 +496,45 @@ in
   # ERT suite. Sandbox-safe: no network. git is on
   # PATH for the tests that build throwaway VC projects (repo-review).
   elisp-test =
+    let
+      # Built against the Emacs the tests run in, so its .elc loads there.
+      ertJunit = (pkgs.emacsPackagesFor pkgs.jotainEmacs).ert-junit;
+      report =
+        pkgs.runCommand "check-elisp-test-report"
+          {
+            nativeBuildInputs = [
+              elispEmacs
+              pkgs.git
+            ];
+            src = elispTestSrc;
+            inherit ertJunit;
+          }
+          ''
+            mkdir -p $out
+            cd $src
+            status=0
+            emacs --batch -L lisp -L test \
+              -L "$(echo $ertJunit/share/emacs/site-lisp/elpa/ert-junit-*)" \
+              --eval '(dolist (f (directory-files "test" t "\\.el$")) (load f nil t))' \
+              -l ert -l ert-junit -f ert-junit-run-tests-batch-and-exit "$out/junit.xml" \
+              >$out/output.log 2>&1 || status=$?
+            cat $out/output.log
+            echo $status > $out/exit-code
+          '';
+    in
     pkgs.runCommand "check-elisp-test"
       {
-        nativeBuildInputs = [
-          elispEmacs
-          pkgs.git
-        ];
-        src = elispTestSrc;
+        inherit report;
+        nativeBuildInputs = [ pkgs.gnugrep ];
+        passthru = { inherit report; };
       }
       ''
-        cd $src
-        emacs --batch -L lisp -L test \
-          --eval '(dolist (f (directory-files "test" t "\\.el$")) (load f nil t))' \
-          -l ert -f ert-run-tests-batch-and-exit
+        cat $report/output.log
+        [ "$(cat $report/exit-code)" = 0 ] || { echo "ERT failed" >&2; exit 1; }
+        if grep -lE '<(failure|error)[ />]' $report/*.xml; then
+          echo "a JUnit file records a failure" >&2
+          exit 1
+        fi
         touch $out
       '';
 
