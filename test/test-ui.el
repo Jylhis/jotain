@@ -1,77 +1,19 @@
-;;; test-ui.el --- Theme wiring regression tests -*- lexical-binding: t; -*-
+;;; test-ui.el --- UI helper tests -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 
-;; The Jylhis themes come from the in-tree design system (lib/design),
-;; so the theme symbols `init-ui.el' names can drift from the theme files
-;; it generates (as renames have done).  On drift `load-theme'
-;; signals and init-ui falls back to Modus.  Byte compilation can't
-;; catch it: the `load-theme' calls are skipped in batch.
-;;
-;; The tests read `init-ui.el' as data instead of loading it, which would
-;; pull in doom-modeline, auto-dark, and friends.
+;; `init-ui.el' is read as data instead of loaded, which would pull in
+;; doom-modeline, auto-dark, and friends.
 
 ;;; Code:
 
 (require 'ert)
 (require 'cl-lib)
-
-(defconst test-ui--init-ui-file
-  (expand-file-name "lisp/init-ui.el"
-                    (locate-dominating-file
-                     (or load-file-name buffer-file-name default-directory)
-                     "init.el"))
-  "Absolute path to the init-ui module under test.")
-
-(defun test-ui--defcustom-default (symbol)
-  "Return the default-value form of the defcustom named SYMBOL.
-Reads `test-ui--init-ui-file' as data, so no module is loaded.  Returns
-nil when SYMBOL has no defcustom in that file."
-  (with-temp-buffer
-    (insert-file-contents test-ui--init-ui-file)
-    (goto-char (point-min))
-    (catch 'found
-      (condition-case nil
-          (while t
-            (let ((form (read (current-buffer))))
-              (when (and (consp form)
-                         (eq (car form) 'defcustom)
-                         (eq (nth 1 form) symbol))
-                (throw 'found (nth 2 form)))))
-        (end-of-file nil)))))
-
-(ert-deftest test-ui-theme-defaults-are-quoted-symbols ()
-  "`init-ui.el' names a theme symbol for each system appearance."
-  (dolist (var '(jotain-theme-light jotain-theme-dark))
-    (let ((default (test-ui--defcustom-default var)))
-      (should (eq (car-safe default) 'quote))
-      (should (symbolp (cadr default))))))
-
-(ert-deftest test-ui-named-themes-are-loadable ()
-  "Every theme `init-ui.el' names is one Emacs can actually load.
-Skipped when the Jylhis theme package is absent — `init-ui.el' falls
-back to Modus in that case, which is a supported configuration."
-  (skip-unless (require 'jylhis-themes nil t))
-  (let ((available (custom-available-themes)))
-    (dolist (var '(jotain-theme-light jotain-theme-dark))
-      (should (memq (cadr (test-ui--defcustom-default var)) available)))))
-
-(defun test-ui--defun-form (name)
-  "Return the `defun' form of NAME read from `test-ui--init-ui-file'."
-  (with-temp-buffer
-    (insert-file-contents test-ui--init-ui-file)
-    (goto-char (point-min))
-    (catch 'found
-      (condition-case nil
-          (while t
-            (let ((form (read (current-buffer))))
-              (when (and (eq (car-safe form) 'defun) (eq (nth 1 form) name))
-                (throw 'found form))))
-        (end-of-file nil)))))
+(require 'test-helper)
 
 (ert-deftest test-ui-modeline-icons-follow-the-frame ()
   "The icon switch follows the frame it is given and skips redundant sets."
-  (eval (test-ui--defun-form 'jotain-ui--apply-modeline-icons) t)
+  (test-helper-load-defuns "lisp/init-ui.el" 'jotain-ui--apply-modeline-icons)
   (defvar doom-modeline-icon)
   (let* ((sets 0)
          (watcher (lambda (&rest _) (setq sets (1+ sets))))

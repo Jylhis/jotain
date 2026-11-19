@@ -23,40 +23,17 @@
 (require 'org)
 (require 'project)
 (require 'seq)
-
-(defconst test-org-babel--init-org-file
-  (expand-file-name "lisp/init-org.el"
-                    (locate-dominating-file
-                     (or load-file-name buffer-file-name default-directory)
-                     "init.el"))
-  "Absolute path to the Org module under test.")
-
-(defun test-org-babel--top-level-form (head name)
-  "Return the `(HEAD NAME ...)' form from the Org module, or nil.
-HEAD is a symbol such as `defun' or `defconst'.  The module is read as
-data, so no `use-package' form is expanded and no package is loaded."
-  (with-temp-buffer
-    (insert-file-contents test-org-babel--init-org-file)
-    (goto-char (point-min))
-    (catch 'found
-      (condition-case nil
-          (while t
-            (let ((form (read (current-buffer))))
-              (when (and (consp form)
-                         (eq (car form) head)
-                         (eq (nth 1 form) name))
-                (throw 'found form))))
-        (end-of-file nil)))))
+(require 'test-helper)
 
 (defun test-org-babel--languages ()
   "Return the language list `init-org.el' enables."
-  (let ((form (test-org-babel--top-level-form 'defconst 'jotain-org-babel-languages)))
+  (let ((form (test-helper-form "lisp/init-org.el" 'defconst 'jotain-org-babel-languages)))
     (should form)
     (eval (nth 2 form) t)))
 
 (defun test-org-babel--define (name)
   "Evaluate the `defun' named NAME out of the Org module."
-  (let ((form (test-org-babel--top-level-form 'defun name)))
+  (let ((form (test-helper-form "lisp/init-org.el" 'defun name)))
     (should form)
     (eval form t)))
 

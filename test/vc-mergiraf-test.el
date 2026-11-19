@@ -10,13 +10,7 @@
 (require 'ert)
 (require 'cl-lib)
 (require 'smerge-mode)
-
-(defconst vc-mergiraf-test--file
-  (expand-file-name "lisp/init-vc.el"
-                    (locate-dominating-file
-                     (or load-file-name buffer-file-name default-directory)
-                     "init.el"))
-  "Absolute path to the VC module under test.")
+(require 'test-helper)
 
 (defconst vc-mergiraf-test--conflict
   (concat "{\n<<<<<<< ours\n  \"a\": 1,\n  \"b\": 2\n"
@@ -26,17 +20,8 @@
 
 (defun vc-mergiraf-test--load ()
   "Evaluate the mergiraf defuns out of the VC module."
-  (with-temp-buffer
-    (insert-file-contents vc-mergiraf-test--file)
-    (goto-char (point-min))
-    (condition-case nil
-        (while t
-          (let ((f (read (current-buffer))))
-            (when (and (eq (car-safe f) 'defun)
-                       (memq (nth 1 f)
-                             '(jotain-vc--conflict-count jotain-vc-mergiraf-solve)))
-              (eval f t))))
-      (end-of-file nil))))
+  (test-helper-load-defuns "lisp/init-vc.el"
+                           'jotain-vc--conflict-count 'jotain-vc-mergiraf-solve))
 
 (defmacro vc-mergiraf-test--with-file (content &rest body)
   "Visit a temporary .json file holding CONTENT and run BODY there."

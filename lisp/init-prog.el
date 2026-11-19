@@ -290,6 +290,10 @@ Both speak stdio by default."
   (add-to-list 'eglot-server-programs
                '((qml-ts-mode) . ("qmlls" "-E")))
 
+  ;; `cuda-ts-mode' derives from `c-ts-base-mode', which eglot's clangd
+  ;; entry does not match.
+  (add-to-list 'eglot-server-programs '((cuda-ts-mode) . ("clangd")))
+
   ;; `mhtml-ts-mode' does not derive from the
   ;; classic modes eglot's default HTML entry is keyed on, so mirror that
   ;; entry for the tree-sitter modes.

@@ -7,30 +7,13 @@
 ;;; Code:
 
 (require 'ert)
-
-(defconst lang-vc-test--file
-  (expand-file-name "lisp/init-vc.el"
-                    (locate-dominating-file
-                     (or load-file-name buffer-file-name default-directory)
-                     "init.el"))
-  "Absolute path to the VC module under test.")
+(require 'cl-lib)
+(require 'test-helper)
 
 (defun lang-vc-test--load-helper (&optional name)
   "Evaluate the defun NAME out of the VC module.
 NAME defaults to `jotain-vc--jj-summary-path'."
-  (with-temp-buffer
-    (insert-file-contents lang-vc-test--file)
-    (goto-char (point-min))
-    (let (form)
-      (condition-case nil
-          (while (not form)
-            (let ((f (read (current-buffer))))
-              (when (and (eq (car-safe f) 'defun)
-                         (eq (nth 1 f) (or name 'jotain-vc--jj-summary-path)))
-                (setq form f))))
-        (end-of-file nil))
-      (should form)
-      (eval form t))))
+  (test-helper-load-defuns "lisp/init-vc.el" (or name 'jotain-vc--jj-summary-path)))
 
 (ert-deftest lang-vc-test-jj-summary-path ()
   "Rename entries resolve to the new path; plain paths stay as they are."
@@ -61,6 +44,26 @@ NAME defaults to `jotain-vc--jj-summary-path'."
       (when (process-live-p proc) (delete-process proc))
       (when (buffer-live-p buf)
         (let ((kill-buffer-query-functions nil)) (kill-buffer buf))))))
+
+(ert-deftest lang-vc-test-parse-numstat ()
+  "Added and deleted columns are summed; binary and malformed lines are skipped."
+  (lang-vc-test--load-helper 'jotain-git-stats--parse-numstat)
+  (dolist (case '(("" 0)
+                  ("3\t2\ta.el\n" 5)
+                  ("3\t2\ta.el\n10\t0\tb.el\n0\t7\tc.el\n" 22)
+                  ("-\t-\timage.png\n4\t1\ta.el\n" 5)
+                  ("3\t2\ta.el\n\nnot numstat\n5\tx\td.el\n" 5)))
+    (ert-info ((format "%S" (car case)))
+      (should (= (jotain-git-stats--parse-numstat (car case)) (cadr case))))))
+
+(ert-deftest lang-vc-test-count-diff-churn ()
+  "Changed lines count once; `+++' and `---' headers and context do not."
+  (lang-vc-test--load-helper 'jotain-git-stats--count-diff-churn)
+  (let ((diff (concat "diff --git a/f b/f\n--- a/f\n+++ b/f\n@@ -1,3 +1,3 @@\n"
+                      " ctx\n-old\n+new\n+added\n")))
+    (should (= (jotain-git-stats--count-diff-churn diff) 3)))
+  (should (= (jotain-git-stats--count-diff-churn "") 0))
+  (should (= (jotain-git-stats--count-diff-churn "+\n-\n") 2)))
 
 (provide 'lang-vc-test)
 ;;; lang-vc-test.el ends here

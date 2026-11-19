@@ -9,31 +9,11 @@
 
 (require 'ert)
 (require 'cl-lib)
-
-(defconst lang-kotlin-test--root
-  (locate-dominating-file
-   (or load-file-name buffer-file-name default-directory) "init.el")
-  "Root of the configuration under test.")
-
-(defun lang-kotlin-test--defun (file name)
-  "Return the `defun' form of NAME from FILE, searching nested forms too."
-  (with-temp-buffer
-    (insert-file-contents (expand-file-name file lang-kotlin-test--root))
-    (goto-char (point-min))
-    (let ((found nil))
-      (while (and (not found)
-                  (re-search-forward
-                   (format "(defun %s\\_>" (regexp-quote (symbol-name name)))
-                   nil t))
-        (goto-char (match-beginning 0))
-        (setq found (read (current-buffer))))
-      (should found)
-      found)))
+(require 'test-helper)
 
 (defun lang-kotlin-test--load (file &rest names)
   "Evaluate the `defun' forms of NAMES from FILE."
-  (dolist (name names)
-    (eval (lang-kotlin-test--defun file name) t)))
+  (apply #'test-helper-load-defuns file names))
 
 (ert-deftest lang-kotlin-test-parse-ktlint-line ()
   "A ktlint plain-reporter line yields line, column and message."
@@ -95,8 +75,7 @@
   "The Flymake setup also runs when Eglot starts to manage the buffer.
 Eglot replaces `flymake-diagnostic-functions' at that point."
   (with-temp-buffer
-    (insert-file-contents
-     (expand-file-name "lisp/init-lang-kotlin.el" lang-kotlin-test--root))
+    (insert-file-contents (test-helper-file "lisp/init-lang-kotlin.el"))
     (should (search-forward
              "(add-hook 'eglot-managed-mode-hook #'jotain-kotlin--setup-flymake)"
              nil t))))

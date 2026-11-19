@@ -14,10 +14,10 @@
 ;;     live wiring with each entry, then renders the capability matrix.
 ;;   • `jotain-lang-live.el' (Tier-2) starts a real eglot session for each
 ;;     `:live' entry whose server is on PATH.
-;;   • `jotain-lang-doc.el' renders docs/reference/language-support.mdx.
-;;   • test/lang-eval-test.el checks the table's consistency and
-;;     cross-checks it against the source text of init-prog.el and the
-;;     init-lang-*.el files, so drift fails the ERT suite.
+;;   • `jotain-lang-doc.el' renders language-support.org.
+;;   • test/lang-eval-test.el checks the table's consistency and its
+;;     snippet and inlay flags against templates/jotain.eld and
+;;     init-prog.el.
 ;;
 ;; Kept outside lisp/ and test/ (like etc/debug-init.el): it is not part of
 ;; the loaded configuration, so the use-package scanner and the
@@ -40,8 +40,9 @@
   ;;                nil means "no LSP wired for this language today"
   ;;   :override    non-nil when the server is set by an explicit
   ;;                `eglot-server-programs' entry in init-prog.el (vs. an eglot
-  ;;                built-in default).  The ERT drift check asserts these
-  ;;                strictly; built-in defaults are only advisory.
+  ;;                built-in default, which carries no :override).  The
+  ;;                Tier-1 probe fails when an :override entry resolves no
+  ;;                server.
   ;;   :formatter   apheleia formatter binary, or nil
   ;;   :dape        DAP adapter binary label (dlv/debugpy/codelldb), or nil
   ;;   :snippets    t when templates/jotain.eld has a section for :mode
@@ -66,7 +67,7 @@
 
     (:id go         :name "Go"             :file "init-lang-go.el"
      :sample "eval.go"             :mode go-ts-mode :grammar go
-     :servers ("gopls") :override t :formatter "goimports" :dape "dlv"
+     :servers ("gopls") :formatter "goimports" :dape "dlv"
      :snippets t :inlay t :live t)
 
     (:id typescript :name "TypeScript"     :file "init-lang-web.el"
@@ -90,12 +91,12 @@
 
     (:id c          :name "C"              :file "init-lang-systems.el"
      :sample "eval.c"              :mode c-ts-mode :classic c-mode :grammar c
-     :servers ("clangd") :override t :formatter "clang-format" :dape "codelldb"
+     :servers ("clangd") :formatter "clang-format" :dape "codelldb"
      :snippets t :inlay t)
 
     (:id c++        :name "C++"            :file "init-lang-systems.el"
      :sample "eval.cpp"            :mode c++-ts-mode :classic c++-mode :grammar cpp
-     :servers ("clangd") :override t :formatter "clang-format" :dape "codelldb"
+     :servers ("clangd") :formatter "clang-format" :dape "codelldb"
      :snippets t :inlay t)
 
     (:id cuda       :name "CUDA"           :file "init-lang-systems.el"
@@ -120,7 +121,7 @@
 
     (:id dockerfile :name "Dockerfile"     :file "init-lang-devops.el"
      :sample "Dockerfile"          :mode dockerfile-ts-mode :classic dockerfile-mode
-     :grammar dockerfile :servers ("docker-langserver") :override t :live t)
+     :grammar dockerfile :servers ("docker-langserver") :live t)
 
     (:id yaml       :name "YAML"           :file "init-lang-data.el"
      :sample "eval.yaml"           :mode yaml-ts-mode :classic yaml-mode :grammar yaml
@@ -140,7 +141,7 @@
 
     (:id ocaml      :name "OCaml"          :file "init-lang-systems.el"
      :sample "eval.ml"             :mode neocaml-mode :classic tuareg-mode :grammar ocaml
-     :servers ("ocamllsp") :override t :formatter "ocamlformat" :inlay t)
+     :servers ("ocamllsp") :formatter "ocamlformat" :inlay t)
 
     (:id haskell    :name "Haskell"        :file "init-lang-systems.el"
      :sample "eval.hs"             :mode haskell-ts-mode :classic haskell-mode :grammar haskell
@@ -198,9 +199,6 @@
 
     (:id gherkin    :name "Gherkin"        :file "init-lang-devops.el"
      :sample "eval.feature"        :mode feature-mode :grammar nil)
-
-    (:id mdoc       :name "mdoc man page"  :file "init-writing.el"
-     :sample "eval.7"              :mode nroff-mode :grammar nil)
 
     (:id just       :name "Just"           :file "init-lang-devops.el"
      :sample "justfile"            :mode just-ts-mode :grammar just :skip-mode t))

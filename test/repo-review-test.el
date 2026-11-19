@@ -90,34 +90,27 @@ Binds `root' to the project directory."
     (should view-mode)
     (should buffer-read-only)))
 
-(ert-deftest repo-review-rejects-absolute-paths ()
+(ert-deftest repo-review-entry-file-rejects-unsafe-paths ()
+  "An entry without a path, or with one leaving the project, is a user error."
   (repo-review-test--with-project
     (repo-review-start)
     (goto-char (point-min))
-    (repo-review-next-todo)
-    (org-entry-put nil "REVIEW_PATH" "/etc/passwd")
-    (should-error (repo-review--entry-file) :type 'user-error)))
-
-(ert-deftest repo-review-rejects-parent-directory-escape ()
-  (repo-review-test--with-project
-    (repo-review-start)
-    (goto-char (point-min))
-    (repo-review-next-todo)
-    (org-entry-put nil "REVIEW_PATH" "../../etc/passwd")
-    (should-error (repo-review--entry-file) :type 'user-error)))
-
-(ert-deftest repo-review-rejects-symlink-leaving-root-and-says-why ()
-  (repo-review-test--with-project
-    (repo-review-start)
-    (goto-char (point-min))
+    (ert-info ("no entry at point")
+      (should-error (repo-review--entry-file) :type 'user-error))
     (repo-review-next-todo)
     (let ((outside (make-temp-file "repo-review-outside-")))
       (unwind-protect
           (progn
             (make-symbolic-link outside (expand-file-name "link" root))
-            (org-entry-put nil "REVIEW_PATH" "link")
-            (let ((err (should-error (repo-review--entry-file) :type 'user-error)))
-              (should (string-match-p "symlink" (cadr err)))))
+            (dolist (case `(("absolute path" "/etc/passwd")
+                            ("parent directory escape" "../../etc/passwd")
+                            ("absolute path inside root" ,(expand-file-name "b.nix" root))
+                            ("symlink leaving root" "link" "symlink")))
+              (ert-info ((car case))
+                (org-entry-put nil "REVIEW_PATH" (cadr case))
+                (let ((err (should-error (repo-review--entry-file) :type 'user-error)))
+                  (when (nth 2 case)
+                    (should (string-match-p (nth 2 case) (cadr err))))))))
         (delete-file outside)))))
 
 (ert-deftest repo-review-exclude-regexp-option ()
@@ -125,20 +118,6 @@ Binds `root' to the project directory."
     (let ((repo-review-exclude-regexp "\\.nix\\'"))
       (repo-review-start)
       (should (equal (repo-review-test--paths) '(".gitignore" "src/a.py"))))))
-
-(ert-deftest repo-review-rejects-absolute-path-inside-root ()
-  (repo-review-test--with-project
-    (repo-review-start)
-    (goto-char (point-min))
-    (repo-review-next-todo)
-    (org-entry-put nil "REVIEW_PATH" (expand-file-name "b.nix" root))
-    (should-error (repo-review--entry-file) :type 'user-error)))
-
-(ert-deftest repo-review-missing-path-is-user-error ()
-  (repo-review-test--with-project
-    (repo-review-start)
-    (goto-char (point-min))
-    (should-error (repo-review--entry-file) :type 'user-error)))
 
 (ert-deftest repo-review-rebuild-with-confirmation ()
   (repo-review-test--with-project
@@ -395,26 +374,29 @@ Binds `root' to the project directory."
     (repo-review-toggle-viewed)
     (should-not (repo-review-test--viewed))))
 
-(ert-deftest repo-review-viewed-persists-across-reopen ()
-  (repo-review-test--with-project
-    (repo-review-start)
-    (goto-char (point-min))
-    (repo-review-next-todo)
-    (repo-review-toggle-viewed)
-    (let ((file buffer-file-name))
-      (kill-buffer)
-      (with-current-buffer (find-file-noselect file)
+(ert-deftest repo-review-viewed-persists ()
+  "A viewed tag survives a reopen, a refresh with a todo change, and a restart."
+  (dolist (case `(("reopen" .
+                   ,(lambda ()
+                      (let ((file buffer-file-name))
+                        (kill-buffer)
+                        (set-buffer (find-file-noselect file)))))
+                  ("refresh after todo change" .
+                   ,(lambda ()
+                      (org-todo "DONE")
+                      (repo-review-refresh)))
+                  ("restart with the file unchanged" .
+                   ,(lambda ()
+                      (should (= 0 (repo-review--expire-viewed)))
+                      (repo-review-start)))))
+    (ert-info ((car case))
+      (repo-review-test--with-project
+        (repo-review-start)
+        (goto-char (point-min))
+        (repo-review-next-todo)
+        (repo-review-toggle-viewed)
+        (funcall (cdr case))
         (should (equal (repo-review-test--viewed) '(".gitignore")))))))
-
-(ert-deftest repo-review-viewed-survives-refresh-and-todo-change ()
-  (repo-review-test--with-project
-    (repo-review-start)
-    (goto-char (point-min))
-    (repo-review-next-todo)
-    (repo-review-toggle-viewed)
-    (org-todo "DONE")
-    (repo-review-refresh)
-    (should (equal (repo-review-test--viewed) '(".gitignore")))))
 
 (ert-deftest repo-review-viewed-from-visited-file ()
   (repo-review-test--with-project
@@ -479,38 +461,21 @@ Binds `root' to the project directory."
     (should-not (org-entry-get nil "VIEWED_REV"))))
 
 (ert-deftest repo-review-viewed-ends-when-file-changes ()
-  (repo-review-test--with-project
-    (repo-review-start)
-    (goto-char (point-min))
-    (repo-review-next-todo)
-    (repo-review-mark-viewed)
-    (repo-review-next-todo)
-    (repo-review-mark-viewed)
-    (should (equal (repo-review-test--viewed) '(".gitignore" "b.nix")))
-    (write-region "changed\n" nil (expand-file-name "b.nix" root))
-    (repo-review-start)
-    (should (equal (repo-review-test--viewed) '(".gitignore")))
-    (should (equal (repo-review--viewed-summary) "1/3"))))
-
-(ert-deftest repo-review-viewed-kept-when-file-is-unchanged ()
-  (repo-review-test--with-project
-    (repo-review-start)
-    (goto-char (point-min))
-    (repo-review-next-todo)
-    (repo-review-mark-viewed)
-    (should (= 0 (repo-review--expire-viewed)))
-    (repo-review-start)
-    (should (equal (repo-review-test--viewed) '(".gitignore")))))
-
-(ert-deftest repo-review-viewed-refresh-expires-changed-file ()
-  (repo-review-test--with-project
-    (repo-review-start)
-    (goto-char (point-min))
-    (repo-review-next-todo)
-    (repo-review-mark-viewed)
-    (write-region "changed\n" nil (expand-file-name ".gitignore" root))
-    (repo-review-refresh)
-    (should-not (repo-review-test--viewed))))
+  "Rebuilding the queue drops the viewed tag of a file that changed."
+  (dolist (rebuild '(repo-review-start repo-review-refresh))
+    (ert-info ((symbol-name rebuild))
+      (repo-review-test--with-project
+        (repo-review-start)
+        (goto-char (point-min))
+        (repo-review-next-todo)
+        (repo-review-mark-viewed)
+        (repo-review-next-todo)
+        (repo-review-mark-viewed)
+        (should (equal (repo-review-test--viewed) '(".gitignore" "b.nix")))
+        (write-region "changed\n" nil (expand-file-name "b.nix" root))
+        (funcall rebuild)
+        (should (equal (repo-review-test--viewed) '(".gitignore")))
+        (should (equal (repo-review--viewed-summary) "1/3"))))))
 
 (ert-deftest repo-review-next-todo-skips-viewed ()
   (repo-review-test--with-project

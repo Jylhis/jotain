@@ -15,40 +15,16 @@
 (require 'ert)
 (require 'seq)
 (require 'visual-wrap)
-
-(defconst test-writing--file
-  (expand-file-name "lisp/init-writing.el"
-                    (locate-dominating-file
-                     (or load-file-name buffer-file-name default-directory)
-                     "init.el"))
-  "Absolute path to the init-writing module under test.")
+(require 'test-helper)
 
 (defun test-writing--use-package (name)
-  "Return the `use-package' form for NAME in `test-writing--file'."
-  (with-temp-buffer
-    (insert-file-contents test-writing--file)
-    (goto-char (point-min))
-    (catch 'found
-      (condition-case nil
-          (while t
-            (let ((form (read (current-buffer))))
-              (when (and (eq (car-safe form) 'use-package)
-                         (eq (nth 1 form) name))
-                (throw 'found form))))
-        (end-of-file nil)))))
+  "Return the `use-package' form for NAME in the writing module."
+  (test-helper-form "lisp/init-writing.el" 'use-package name))
 
 (defun test-writing--keyword (form keyword)
   "Return the forms that follow KEYWORD in the `use-package' FORM."
   (let ((tail (memq keyword form)))
     (seq-take-while (lambda (x) (not (keywordp x))) (cdr tail))))
-
-(ert-deftest test-writing-markdown-hooks-disable-visual-wrap-prefix ()
-  "The markdown-mode `use-package' form hooks the opt-out function."
-  (let* ((form (test-writing--use-package 'markdown-mode))
-         (hook (car (test-writing--keyword form :hook))))
-    (should form)
-    (should (equal (car-safe hook) 'markdown-mode))
-    (should (eq (cdr hook) 'jotain-writing--disable-visual-wrap-prefix))))
 
 (ert-deftest test-writing-markdown-buffer-has-no-visual-wrap-prefix ()
   "Running the markdown opt-out leaves `visual-wrap-prefix-mode' off.

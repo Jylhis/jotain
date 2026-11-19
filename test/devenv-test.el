@@ -144,49 +144,39 @@
   "Return NAME's applied value in PAIRS, or nil."
   (devenv-env--pair-value pairs name))
 
-(ert-deftest devenv-test-env-parse-exported-only ()
-  "Only exported string variables become NAME=VALUE pairs."
-  (let ((pairs (devenv-env--parse devenv-test--env-json)))
-    (should (member "PATH=/nix/store/aaa/bin:/usr/bin" pairs))
-    (should (member "DEVENV_ROOT=/proj" pairs))
-    ;; Ignored variable filtered out.
-    (should-not (devenv-test--pair pairs "PS1"))
-    ;; Non-exported and null-valued variables filtered out.
-    (should-not (devenv-test--pair pairs "checkPhase"))
-    (should-not (devenv-test--pair pairs "BROKEN"))))
+(ert-deftest devenv-test-env-parse-filters ()
+  "Only exported, non-ignored string variables become NAME=VALUE pairs.
+Each case is (LABEL IGNORED EXTRA MEMBERS PRESENT ABSENT): IGNORED is the
+IGNORED argument (`default' for none), EXTRA the value of
+`devenv-env-ignored-variables', MEMBERS exact pairs that must appear,
+PRESENT and ABSENT variable names that must or must not.
 
-(ert-deftest devenv-test-env-parse-drops-build-only-vars ()
-  "Variables a real devenv shell never exports are never applied.
-TMPDIR and friends name the build sandbox's /build, which does not
-exist on the host: applying them breaks every tool that needs a temp
-directory, rust-analyzer's proc-macro server included."
-  (let ((pairs (devenv-env--parse devenv-test--env-json)))
-    (dolist (name '("TMPDIR" "TMP" "NIX_BUILD_TOP" "NIX_ENFORCE_PURITY"
-                    "HOME" "SHELL" "out" "outputs" "stdenv" "shellHook"
-                    "PS1"))
-      (should-not (devenv-test--pair pairs name)))))
-
-(ert-deftest devenv-test-env-parse-keeps-toolchain-vars ()
-  "Variables a terminal devenv shell does get survive the filter."
-  (let ((pairs (devenv-env--parse devenv-test--env-json)))
-    (dolist (name '("PATH" "DEVENV_ROOT" "SOURCE_DATE_EPOCH" "IN_NIX_SHELL"
-                    "NIX_CFLAGS_COMPILE" "CC" "RUST_SRC_PATH" "MY_APP_ENV"))
-      (should (devenv-test--pair pairs name)))))
-
-(ert-deftest devenv-test-env-parse-custom-ignore ()
-  "The IGNORED argument overrides every default ignore list."
-  (let ((pairs (devenv-env--parse devenv-test--env-json '("PATH"))))
-    (should-not (devenv-test--pair pairs "PATH"))
-    (should (devenv-test--pair pairs "PS1"))))
-
-(ert-deftest devenv-test-env-parse-extra-ignored ()
-  "`devenv-env-ignored-variables' filters on top of the constant set."
-  (let* ((devenv-env-ignored-variables '("MY_APP_ENV"))
-         (pairs (devenv-env--parse devenv-test--env-json)))
-    (should-not (devenv-test--pair pairs "MY_APP_ENV"))
-    ;; The built-in set still applies.
-    (should-not (devenv-test--pair pairs "TMPDIR"))
-    (should (devenv-test--pair pairs "CC"))))
+TMPDIR and friends name the build sandbox's /build, which does not exist
+on the host: applying them breaks every tool that needs a temp directory,
+rust-analyzer's proc-macro server included."
+  (dolist (case
+           '(("exported only" default nil
+              ("PATH=/nix/store/aaa/bin:/usr/bin" "DEVENV_ROOT=/proj")
+              nil ("PS1" "checkPhase" "BROKEN"))
+             ("build-only variables dropped" default nil nil nil
+              ("TMPDIR" "TMP" "NIX_BUILD_TOP" "NIX_ENFORCE_PURITY" "HOME"
+               "SHELL" "out" "outputs" "stdenv" "shellHook" "PS1"))
+             ("toolchain variables kept" default nil nil
+              ("PATH" "DEVENV_ROOT" "SOURCE_DATE_EPOCH" "IN_NIX_SHELL"
+               "NIX_CFLAGS_COMPILE" "CC" "RUST_SRC_PATH" "MY_APP_ENV")
+              nil)
+             ("IGNORED overrides the default lists" ("PATH") nil nil ("PS1") ("PATH"))
+             ("extra ignored variables add to the constant set" default ("MY_APP_ENV")
+              nil ("CC") ("MY_APP_ENV" "TMPDIR"))))
+    (pcase-let ((`(,label ,ignored ,extra ,members ,present ,absent) case))
+      (ert-info (label)
+        (let* ((devenv-env-ignored-variables extra)
+               (pairs (if (eq ignored 'default)
+                          (devenv-env--parse devenv-test--env-json)
+                        (devenv-env--parse devenv-test--env-json ignored))))
+          (dolist (pair members) (should (member pair pairs)))
+          (dolist (name present) (should (devenv-test--pair pairs name)))
+          (dolist (name absent) (should-not (devenv-test--pair pairs name))))))))
 
 (ert-deftest devenv-test-env-path-extraction ()
   "PATH pairs convert to an `exec-path'-shaped list."
@@ -249,7 +239,8 @@ directory, rust-analyzer's proc-macro server included."
       (should (member "UNSET_ME" pairs)))))
 
 (ert-deftest devenv-test-env-apply-layers-path ()
-  "An applied PATH keeps the login entries reachable, `devenv' included."
+  "An applied PATH keeps the login entries reachable, `devenv' included.
+Applying the same pairs again does not stack entries."
   (cl-letf (((default-value 'process-environment)
              '("PATH=/login/bin" "TMPDIR=/tmp")))
     (with-temp-buffer
@@ -257,16 +248,9 @@ directory, rust-analyzer's proc-macro server included."
       (should (equal (getenv "PATH") "/nix/store/aaa/bin:/login/bin"))
       (should (member "/nix/store/aaa/bin/" exec-path))
       (should (member "/login/bin/" exec-path))
-      (should (equal (car (last exec-path)) exec-directory)))))
-
-(ert-deftest devenv-test-env-apply-is-idempotent ()
-  "Re-applying the same pairs does not stack PATH entries."
-  (cl-letf (((default-value 'process-environment) '("PATH=/login/bin")))
-    (with-temp-buffer
-      (devenv-env--apply (current-buffer) '("PATH=/nix/bin"))
-      (let ((first (getenv "PATH")))
-        (devenv-env--apply (current-buffer) '("PATH=/nix/bin"))
-        (should (equal (getenv "PATH") first))))))
+      (should (equal (car (last exec-path)) exec-directory))
+      (devenv-env--apply (current-buffer) '("PATH=/nix/store/aaa/bin"))
+      (should (equal (getenv "PATH") "/nix/store/aaa/bin:/login/bin")))))
 
 (ert-deftest devenv-test-env-apply-keeps-host-tmpdir ()
   "The host TMPDIR survives, so temp-dir-using tools keep working.
@@ -311,40 +295,43 @@ build sandbox's TMPDIR=/build."
     (should-not (assoc "junk-without-equals" vars))))
 
 (ert-deftest devenv-test-env-dump-delta ()
-  "Only the difference against Emacs's own environment is applied."
-  (cl-letf (((default-value 'process-environment)
-             '("PATH=/login/bin" "TMPDIR=/tmp" "GONE=1" "SAME=keep")))
-    (let ((pairs (devenv-env--dump-delta
-                  '(("PATH" . "/nix/bin:/login/bin")
-                    ("SAME" . "keep")
-                    ("NEW" . "yes")
-                    ("TMPDIR" . "/tmp")
-                    ;; Shell bookkeeping, ignored in both directions.
-                    ("SHLVL" . "2")
-                    ("_" . "/nix/bin/env")
-                    ("BASH_VERSION" . "5.3")
-                    ("nix_saved_PATH" . "/login/bin")))))
-      (should (member "PATH=/nix/bin:/login/bin" pairs))
-      (should (member "NEW=yes" pairs))
-      ;; Unchanged variables are not repeated.
-      (should-not (member "SAME=keep" pairs))
-      (should-not (member "TMPDIR=/tmp" pairs))
-      ;; A variable the shell removed becomes a bare name, i.e. unset.
-      (should (member "GONE" pairs))
-      (dolist (name '("SHLVL" "_" "BASH_VERSION" "nix_saved_PATH"))
-        (should-not (devenv-env--pair-value pairs name))))))
-
-(ert-deftest devenv-test-env-dump-delta-drops-extra-env ()
-  "`devenv-extra-env' is loader plumbing and never reaches the project.
-It is handed to the sourcing shell, so the dump echoes it back; applying
-it would export the quiet-mode flag to every tool the project runs."
-  (cl-letf (((default-value 'process-environment) '("PATH=/login/bin")))
-    (let* ((devenv-extra-env '("AI_AGENT=1"))
-           (pairs (devenv-env--dump-delta '(("PATH" . "/nix/bin")
-                                           ("AI_AGENT" . "1")))))
-      (should-not (devenv-env--pair-value pairs "AI_AGENT"))
-      (should-not (member "AI_AGENT" pairs))
-      (should (member "PATH=/nix/bin" pairs)))))
+  "Only the difference against Emacs's own environment is applied.
+Each case is (LABEL ENV EXTRA DUMP MEMBERS ABSENT-PAIRS ABSENT-NAMES)."
+  (dolist (case
+           '(("difference against the host environment"
+              ("PATH=/login/bin" "TMPDIR=/tmp" "GONE=1" "SAME=keep") nil
+              (("PATH" . "/nix/bin:/login/bin")
+               ("SAME" . "keep")
+               ("NEW" . "yes")
+               ("TMPDIR" . "/tmp")
+               ;; Shell bookkeeping, ignored in both directions.
+               ("SHLVL" . "2")
+               ("_" . "/nix/bin/env")
+               ("BASH_VERSION" . "5.3")
+               ("nix_saved_PATH" . "/login/bin"))
+              ;; A variable the shell removed becomes a bare name, i.e. unset.
+              ("PATH=/nix/bin:/login/bin" "NEW=yes" "GONE")
+              ;; Unchanged variables are not repeated.
+              ("SAME=keep" "TMPDIR=/tmp")
+              ("SHLVL" "_" "BASH_VERSION" "nix_saved_PATH"))
+             ;; `devenv-extra-env' is handed to the sourcing shell, so the
+             ;; dump echoes it back; applying it would export the quiet-mode
+             ;; flag to every tool the project runs.
+             ("devenv-extra-env is loader plumbing"
+              ("PATH=/login/bin") ("AI_AGENT=1")
+              (("PATH" . "/nix/bin") ("AI_AGENT" . "1"))
+              ("PATH=/nix/bin")
+              ("AI_AGENT")
+              ("AI_AGENT"))))
+    (pcase-let ((`(,label ,env ,extra ,dump ,members ,absent-pairs ,absent-names) case))
+      (ert-info (label)
+        (cl-letf (((default-value 'process-environment) env))
+          (let* ((devenv-extra-env extra)
+                 (pairs (devenv-env--dump-delta dump)))
+            (dolist (pair members) (should (member pair pairs)))
+            (dolist (pair absent-pairs) (should-not (member pair pairs)))
+            (dolist (name absent-names)
+              (should-not (devenv-env--pair-value pairs name)))))))))
 
 (ert-deftest devenv-test-env-dump-delta-unset-applies ()
   "A bare name from the delta really unsets the variable in a buffer."
