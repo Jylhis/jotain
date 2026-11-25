@@ -122,7 +122,7 @@ deploy:
     cp -RL "$out/public" "$dir/public"
     chmod -R u+w "$dir/public"
     cd website
-    nix shell nixpkgs#wrangler --command wrangler deploy --assets "$dir/public"
+    nix shell --inputs-from .. nixpkgs#wrangler --command wrangler deploy --assets "$dir/public"
 
 # Bump hand-pinned upstreams with nix-update; optional names scope it.
 [group('pins')]

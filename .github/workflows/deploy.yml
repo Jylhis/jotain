@@ -82,7 +82,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: nix shell nixpkgs#wrangler --command wrangler deploy --assets ../dist
+        run: nix shell --inputs-from .. nixpkgs#wrangler --command wrangler deploy --assets ../dist
 
       - name: Verify public routes
         run: |
@@ -90,7 +90,7 @@ jobs:
           check_page() {
             local url="$1" expected="$2" response
             response=$(curl --fail --silent --show-error --location \
-              --max-time 20 --retry 4 --retry-all-errors "$url")
+              --max-time 20 --retry 12 --retry-delay 10 --retry-all-errors "$url")
             if [[ "$response" != *"$expected"* ]]; then
               printf 'Unexpected page at %s\n' "$url" >&2
               return 1
