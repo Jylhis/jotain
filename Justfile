@@ -100,18 +100,29 @@ screenshot out="var/screenshots/headless.png":
     echo "Screenshot → $out"
 
 
-# Build the site and serve it locally under /jotain/.
+# Build the site and serve it locally at the root.
 [group('build')]
 serve-site:
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{config_dir}}"
     nix build .#site -o result-site
-    d=$(mktemp -d)
-    trap 'rm -rf "$d"' EXIT
-    ln -s "{{config_dir}}/result-site/public" "$d/jotain"
-    echo "Serving → http://localhost:8080/jotain/"
-    python3 -m http.server -d "$d" 8080
+    echo "Serving → http://localhost:8080/"
+    python3 -m http.server -d "{{config_dir}}/result-site/public" 8080
+
+# Build the site and deploy it to the emacs-docs Worker (needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID).
+[group('build')]
+deploy:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{config_dir}}"
+    out=$(nix build .#site --no-link --print-out-paths)
+    dir=$(mktemp -d)
+    trap 'rm -rf "$dir"' EXIT
+    cp -RL "$out/public" "$dir/public"
+    chmod -R u+w "$dir/public"
+    cd website
+    nix shell nixpkgs#wrangler --command wrangler deploy --assets "$dir/public"
 
 # Bump hand-pinned upstreams with nix-update; optional names scope it.
 [group('pins')]

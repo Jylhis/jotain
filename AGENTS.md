@@ -63,7 +63,9 @@ CI's artifact is what `home-manager switch` installs.
 Three workflows in `.github/workflows/`, x86_64-linux only. `ci.yml` runs one
 step per check on `pull_request` and `workflow_dispatch`. `deploy.yml` runs
 `nix flake check` on pushes to `main` and `next`, and on `main` builds
-`.#site` and publishes it to GitHub Pages at page.jylhis.com/jotain/.
+`.#site` and deploys it with wrangler to the `emacs-docs` Worker at
+emacs.j10s.io (repo secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`;
+by hand: `just deploy`).
 `preview.yml` uploads `.#site` as the artifact `site-preview-pr-<N>`.
 
 Every `uses:` must be GitHub-owned or `cachix/*` (the repo blocks other
@@ -139,7 +141,7 @@ appendices are generated at build time from the module sources
 (`nix/options-doc.nix`) and from `etc/lang-eval/jotain-lang-registry.el`
 (`nix/lang-eval.nix`); edit the sources, not the output. The design-system
 CSS and fonts are built by `ds-assets` from the revision pinned for
-`jylhis-emacs-themes`. `just serve-site` serves the site under `/jotain/`.
+`jylhis-emacs-themes`. `just serve-site` serves the site at the root of localhost:8080.
 
 ## Testing
 

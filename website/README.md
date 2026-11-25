@@ -1,4 +1,4 @@
-# website: page.jylhis.com/jotain
+# website: emacs.j10s.io
 
 The landing page and docs site for Jotain, styled as an Emacs frame: a tab
 bar with two buffers (`README.org`, `keybindings`), a modeline and a
@@ -30,11 +30,19 @@ system (`ds/`, from the `ds-assets` package).
 3. A shell function wraps each fragment in the page chrome.
 
 URLs: `/docs/` (index), `/docs/<slug>/` for `docs/<slug>.org`,
-`/docs/module-options/`, `/jotain.info`. `baseHref` (default `/jotain`)
-prefixes every absolute URL; pass `baseHref = ""` for a root-served copy.
+`/docs/module-options/`, `/jotain.info`. `baseHref` (default `""`, the site
+is served at the domain root) prefixes every absolute URL and has no
+trailing slash. The build also emits `404.html`.
 
 ## Deployment and preview
 
-`deploy.yml` publishes `.#site` to GitHub Pages on every push to main.
-`preview.yml` uploads it as the workflow artifact `site-preview-pr-<N>`.
-`just serve-site` builds and serves it under `/jotain/`.
+The site is the assets-only Cloudflare Worker `emacs-docs`, served at
+https://emacs.j10s.io/. `wrangler.jsonc` in this directory holds the Worker
+config. `deploy.yml` builds `.#site` on every push to main and runs
+`wrangler deploy --assets` on a copy of the result, using the repository
+secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. It then checks
+three public routes with curl. `just deploy` does the same by hand with the
+same two variables in the environment.
+`preview.yml` uploads the site as the workflow artifact
+`site-preview-pr-<N>`. `just serve-site` builds and serves it at
+http://localhost:8080/.

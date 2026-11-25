@@ -1,4 +1,4 @@
-# nix/site.nix — Assemble the static site for page.jylhis.com/jotain.
+# nix/site.nix — Assemble the static site for emacs.j10s.io.
 #
 # The landing page (website/public/index.html) and the documentation pages
 # share one Org source: nix/site-export.el exports each chapter that
@@ -11,16 +11,17 @@
 #   /docs/<slug>/     one chapter, slug = docs/<slug>.org
 #   /docs/module-options/  the generated options appendix
 #   /jotain.info      the manual as an Info file
+#   /404.html         the not-found page of the Worker
 #
-# The site is $out/public/ (the GitHub Pages artifact). Preview it under
-# the base path with `just serve-site`.
+# The site is $out/public/, the assets directory of the emacs-docs Worker.
+# Preview it with `just serve-site`.
 {
   pkgs,
   lib ? pkgs.lib,
   src ? ../.,
-  # Prefix of every internal absolute URL: the site is the GitHub Pages
-  # project site page.jylhis.com/jotain/. Use "" to serve from a root.
-  baseHref ? "/jotain",
+  # Prefix of every internal absolute URL, without a trailing slash. The site
+  # is served at the root of emacs.j10s.io, so the default is empty.
+  baseHref ? "",
 }:
 let
   fs = lib.fileset;
@@ -60,7 +61,7 @@ in
 pkgs.runCommand "jotain-site"
   {
     inherit webSrc;
-    meta.description = "page.jylhis.com/jotain static site (landing page + manual chapters)";
+    meta.description = "emacs.j10s.io static site (landing page + manual chapters)";
   }
   ''
     set -eu
@@ -88,7 +89,7 @@ pkgs.runCommand "jotain-site"
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>''${title} | jotain</title>
-    <link rel="canonical" href="https://page.jylhis.com${baseHref}''${path}">
+    <link rel="canonical" href="https://emacs.j10s.io${baseHref}''${path}">
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f8fc">
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c0f14">
     <link rel="icon" type="image/svg+xml" href="${baseHref}/favicon.svg">
@@ -170,6 +171,14 @@ pkgs.runCommand "jotain-site"
     done
     write_page "$out/public/docs/index.html" "Documentation" "*docs dired*" "(Dired)" "$index_body" \
       '<a href="${baseHref}/#readme">← README.org</a><a href="${baseHref}/docs/introduction/">introduction →</a>'
+
+    not_found=$(mktemp)
+    {
+      echo '<h1 class="h1"><span class="star">*</span> Not found</h1>'
+      echo '<p class="docs-index-lede">There is no such page. Try the <a href="${baseHref}/docs/">documentation index</a>.</p>'
+    } > "$not_found"
+    write_page "$out/public/404.html" "Not found" "*scratch*" "(Fundamental)" "$not_found" \
+      '<a href="${baseHref}/">← home</a><a href="${baseHref}/docs/">docs →</a>'
 
     # Landing page: release data, then the Org exports in place of the
     # placeholder lines.

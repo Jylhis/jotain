@@ -1,12 +1,12 @@
 # Full validation + deploy for protected branches.
 #
-# main: check (full nix flake check); after check, build-pages ->
-#       deploy-pages publishes the full `.#site` to GitHub Pages (Actions
-#       source) at page.jylhis.com/jotain/.
+# main: check (full nix flake check); after check, deploy builds `.#site` and
+#       publishes it with wrangler to the emacs-docs Worker, served at
+#       https://emacs.j10s.io/. Needs the repository secrets
+#       CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
 # next: check only.
 #
-# Both push to the jylhis cachix cache. Pages hosts one deployment; PR
-# previews are artifacts instead (preview.yml).
+# Both push to the jylhis cachix cache. PR previews are artifacts (preview.yml).
 #
 # Every `uses:` must be github-owned or match cachix/*: the repo restricts
 # Actions to those, and a disallowed action fails the whole run at
@@ -25,13 +25,11 @@ concurrency:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
   check:
     name: Check
-    # The pushed result makes build-pages' `.#site` a cache hit.
+    # The pushed result makes deploy's `.#site` a cache hit.
     timeout-minutes: 90
     runs-on: ubuntu-latest
     steps:
@@ -48,15 +46,15 @@ jobs:
       - name: nix flake check
         run: nix flake check --print-build-logs
 
-  build-pages:
-    name: Build site
+  deploy:
+    name: Deploy
     if: github.ref == 'refs/heads/main'
     needs: check
     timeout-minutes: 60
     runs-on: ubuntu-latest
-    # Concurrent main pushes queue instead of racing the upload.
+    # Concurrent main pushes queue instead of racing the deploy.
     concurrency:
-      group: pages
+      group: deploy-worker
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -72,26 +70,32 @@ jobs:
       - name: Build site
         run: nix build .#site -o result-site
 
-      - name: Assemble Pages artifact
+      # Dereference the read-only store symlinks into a writable tree.
+      - name: Materialize the built site
         run: |
-          mkdir -p site
-          cp -rL result-site/public/. site/
+          rm -rf dist
+          cp -RL result-site/public dist
+          chmod -R u+w dist
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
-        with:
-          path: site
+      - name: Deploy the Worker
+        working-directory: website
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: nix shell nixpkgs#wrangler --command wrangler deploy --assets ../dist
 
-  deploy-pages:
-    name: Deploy
-    if: github.ref == 'refs/heads/main'
-    needs: build-pages
-    timeout-minutes: 5
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
+      - name: Verify public routes
+        run: |
+          set -euo pipefail
+          check_page() {
+            local url="$1" expected="$2" response
+            response=$(curl --fail --silent --show-error --location \
+              --max-time 20 --retry 4 --retry-all-errors "$url")
+            if [[ "$response" != *"$expected"* ]]; then
+              printf 'Unexpected page at %s\n' "$url" >&2
+              return 1
+            fi
+          }
+          check_page https://emacs.j10s.io/ 'id="buf-readme"'
+          check_page https://emacs.j10s.io/docs/ '<title>Documentation'
+          check_page https://emacs.j10s.io/docs/installation/ '<title>Installation'
