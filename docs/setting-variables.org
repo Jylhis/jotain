@@ -1,0 +1,22 @@
+#+TITLE: Setting variables
+#+DESCRIPTION: Which form to use for a variable in the init files: setopt, setq, setq-default, setq-local or set.
+
+* Setting variables
+:PROPERTIES:
+:CUSTOM_ID: setting-variables
+:END:
+
+The configuration sets a variable with the form that fits its kind. See [[info:elisp#Setting Variables]] and [[https://emacsredux.com/blog/2025/04/06/goodbye-setq-hello-setopt/][Goodbye setq, hello setopt]] for the background.
+
+- =setopt= for every user option (a =defcustom=). It runs the =:set= callback of the option and checks the value against its =:type=, while =setq= does neither and can silently break a package whose setter updates internal state. It is slower than =setq=, so keep it out of hot paths. It also works in =early-init.el=, where its first use loads =cus-edit.el= a little earlier than usual.
+- =setq= for regular, non-customizable variables. Inside a =let= it changes the local binding, not the global one.
+- =setq-default= for the default value of a buffer-local variable. It applies to buffers that have no local value of their own.
+- =setq-local= for a value in the current buffer only, for example in a mode hook.
+- =set= only when the variable name is computed, as in =(set (intern name) value)=. It is rarely needed in init files.
+
+#+begin_src emacs-lisp
+(setopt display-line-numbers-type 'relative)
+(setq gc-cons-threshold (* 50 1000 1000))
+(setq-default indent-tabs-mode nil)
+(add-hook 'org-mode-hook (lambda () (setq-local fill-column 100)))
+#+end_src

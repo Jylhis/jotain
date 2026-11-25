@@ -26,6 +26,34 @@ Org Babel turns an =.org= file into a notebook: prose, executable source blocks 
 
 Org's own =C-c C-v= map is unchanged. =C-c '= edits a block in a buffer of its language's major mode, with LSP and formatting.
 
+** Sessions, results and plots
+:PROPERTIES:
+:CUSTOM_ID: notebooks-sessions
+:END:
+
+With point in a block, =C-c C-c= writes a =#+RESULTS:= block back into the buffer, so results are part of the document and survive a restart. Running a block that already has results replaces them.
+
+By default each block runs in a fresh process, so nothing carries over. Add =:session= to keep a live interpreter, which makes an Org file behave like a notebook:
+
+#+begin_example
+#+begin_src python :session notebook :results output
+import pandas as pd
+df = pd.read_csv("measurements.csv")
+#+end_src
+
+#+begin_src python :session notebook :results output
+print(df.describe())
+#+end_src
+#+end_example
+
+The second block sees =df=. =C-c b s= drops you into that interpreter, and =C-c b r= throws it away and replays the file from the top, which checks that a notebook still runs end to end after out-of-order edits.
+
+=:results output= captures what the block printed and =:results value= the value of the last expression. Set =value= per block when you want a table or a number rather than a transcript. A block that returns a table gets a real Org table back, which the rest of the document can reference by name.
+
+For a plot, write the figure to =:file= and Org inserts a link to it. The image is redisplayed after every run, so running a block again updates the picture in place. =C-c C-x C-v= toggles inline images if you want the raw links back.
+
+=C-c b t= writes blocks with a =:tangle= argument to real files, which is how a notebook becomes a program. Export uses the results already in the buffer. Pass =:eval yes= on a block to run it at export time, =:exports results= to hide the code and =:exports none= to hide both.
+
 ** Notebook defaults
 :PROPERTIES:
 :CUSTOM_ID: notebooks-defaults
@@ -35,7 +63,7 @@ Org's own =C-c C-v= map is unchanged. =C-c '= edits a block in a buffer of its l
 - Inline images are redisplayed after every run and capped at 600 pixels wide.
 - Export never re-runs code (=:eval never-export=) and shows both code and results (=:exports both=). See [[info:org#Exporting Code Blocks]].
 - Source-block editing preserves indentation (=org-src-preserve-indentation=), which Python needs because re-indenting corrupts blocks where whitespace is syntax. See [[info:org#Extracting Source Code]] for tangling.
-- Each language that =jotain-org-babel-languages= enables is backed by an =ob-*= library that ships with Org, so no block depends on an extra package. =test/test-org-babel.el= requires each one, so a language that moves out of Org fails CI instead of a block months later. Add a language by editing the list. See [[info:org#Languages]]. Enabling a language does not provide its interpreter: Python, R, gnuplot and dot come from the project environment, like the language servers. See [[info:org#Environment of a Code Block]] for sessions and variables.
+- Each language that =jotain-org-babel-languages= enables is backed by an =ob-*= library that ships with Org, so no block depends on an extra package. =test/test-org-babel.el= requires each one, so a language that moves out of Org fails CI instead of a block months later. The list holds =emacs-lisp=, =org=, =shell=, =eshell=, =python=, =C= (C, C++ and D), =R=, =haskell=, =js=, =css=, =sql=, =sqlite=, =awk=, =sed=, =calc=, =dot=, =gnuplot= and =latex=. Add a language by editing the list. See [[info:org#Languages]]. Enabling a language does not provide its interpreter: Python, R, gnuplot and dot come from the project environment, like the language servers. See [[info:org#Environment of a Code Block]] for sessions and variables.
 
 ** Evaluation trust
 :PROPERTIES:

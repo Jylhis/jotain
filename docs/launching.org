@@ -18,6 +18,7 @@ just run-built            # build, then launch result/bin/emacs
 just run-built-debug      # with --debug-init and debug-on-error
 just run-built-debug-log  # everything on, logs mirrored into var/debug/<timestamp>/
 just run-built-fast       # launch the ahead-of-time compiled configuration
+just run-built --debug-init  # arguments are passed on to Emacs
 #+end_src
 
 =just run-built= builds the distribution and runs =./result/bin/emacs --init-directory=<repo>=, so it never touches =~/.emacs.d=. The first run pays a =nix build=, usually a binary-cache download. =run-built-fast= reflects the last build, so use =run-built= while editing the configuration. This pattern suits sanity checks and configuration changes, because every launch pays the package initialisation cost.
@@ -36,11 +37,19 @@ just build
 ./result/bin/emacsclient -t    # terminal frame
 #+end_src
 
+To keep the clients apart from a default daemon, name the trial daemon and pass the name to the clients. Press =C-c= in the first terminal to stop it, or run the last command:
+
+#+begin_src bash
+./result/bin/emacs --fg-daemon=jotain-trial --init-directory="$PWD"
+./result/bin/emacsclient -s jotain-trial -c
+./result/bin/emacsclient -s jotain-trial -e '(kill-emacs)'
+#+end_src
+
 With the Home Manager module the daemon is the =emacs.service= user unit of Home Manager's =services.emacs=. Its =services.emacs.*= options (=startWithUserSession=, =socketActivation=, =client=, =extraOptions=) apply unchanged. The module also provides:
 
 - =jotain-editor=: =emacsclient --tty=, falling back to =emacs -nw= when no daemon runs. =services.jotain.defaultEditor= sets it as =$EDITOR=.
 - =jotain-visual=: =emacsclient --create-frame=, set as =$VISUAL= by the same option.
-- =jotctl=: =start=, =stop=, =status=, =restart= and =logs= for the daemon unit. It is on =PATH= whenever the module is enabled.
+- =jotctl=: =start=, =stop=, =status=, =restart= and =logs= for the daemon unit. It is on =PATH= whenever the module is enabled, whatever =shellAliases.enable= says. =start= and =status= use =emacs.service=, =logs= follows =journalctl --user -u emacs.service=, and =stop= and =restart= include =emacs.socket= when that unit exists. =emd= below starts a foreground daemon, so use =jotctl= for the supervised one.
 
 [[file:jotain.org::#module-options][Module Options]] has the full option reference.
 
@@ -62,7 +71,7 @@ With =services.jotain.shellAliases.enable = true= the module adds aliases to the
 :CUSTOM_ID: quick-edit
 :END:
 
-To bypass Jotain, for example to edit =/etc/hosts= over SSH, start any Emacs with =-Q -nw=. =-Q= skips =early-init.el=, =init.el= and site files, and =-nw= stays in the terminal. [[https://rahuljuliato.com/posts/basic-emacs-alias][Rahul Juliato's basic-emacs-alias post]] describes the idea, and [[https://rahuljuliato.com/posts/launching-emacs-terminal][his launching post]] inspired the aliases above.
+To bypass Jotain, for example to edit =/etc/hosts= over SSH, start any Emacs, including =./result/bin/emacs=, with =-Q -nw=. =-Q= skips =early-init.el=, =init.el= and site files, and =-nw= stays in the terminal. Adding =--eval "(load-theme 'wombat t)"= keeps it readable on dark terminals. [[https://rahuljuliato.com/posts/basic-emacs-alias][Rahul Juliato's basic-emacs-alias post]] describes the idea, and [[https://rahuljuliato.com/posts/launching-emacs-terminal][his launching post]] inspired the aliases above.
 
 | Situation                            | Use                    |
 |--------------------------------------+------------------------|
