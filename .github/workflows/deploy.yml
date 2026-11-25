@@ -78,22 +78,53 @@ jobs:
           chmod -R u+w dist
 
       - name: Deploy the Worker
+        id: deploy
         working-directory: website
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: nix shell --inputs-from .. nixpkgs#wrangler --command wrangler deploy --assets ../dist
-
-      - name: Verify public routes
         run: |
           set -euo pipefail
+          nix shell --inputs-from .. nixpkgs#wrangler --command \
+            wrangler deploy --assets ../dist | tee "$RUNNER_TEMP/deploy.log"
+          version=$(sed -n 's/^Current Version ID: //p' "$RUNNER_TEMP/deploy.log" | tail -n 1)
+          if [[ -z "$version" ]]; then
+            echo "wrangler printed no version id" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # The gate: the Worker serves the version this run uploaded.
+      - name: Verify the active deployment
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VERSION: ${{ steps.deploy.outputs.version }}
+        run: |
+          set -euo pipefail
+          url="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          url="$url/workers/scripts/emacs-docs/deployments"
+          active=$(curl --fail --silent --show-error --max-time 20 --retry 5 --retry-delay 5 \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$url" |
+            jq -r '.result.deployments[0].versions[] | "\(.version_id) \(.percentage)"')
+          if [[ "$active" != "$VERSION 100" ]]; then
+            printf 'Expected version %s at 100 percent, the Worker serves: %s\n' \
+              "$VERSION" "$active" >&2
+            exit 1
+          fi
+          echo "emacs-docs serves version $VERSION"
+
+      # A warning only: Cloudflare Bot Fight Mode on j10s.io answers a managed
+      # challenge (HTTP 403) to curl from a GitHub runner.
+      - name: Check public routes
+        run: |
           check_page() {
             local url="$1" expected="$2" response
-            response=$(curl --fail --silent --show-error --location \
-              --max-time 20 --retry 12 --retry-delay 10 --retry-all-errors "$url")
-            if [[ "$response" != *"$expected"* ]]; then
-              printf 'Unexpected page at %s\n' "$url" >&2
-              return 1
+            if ! response=$(curl --fail --silent --show-error --location \
+              --max-time 20 --retry 3 --retry-delay 10 --retry-all-errors "$url" 2>&1); then
+              echo "::warning::$url did not answer the runner: ${response##*$'\n'}"
+            elif [[ "$response" != *"$expected"* ]]; then
+              echo "::warning::unexpected page at $url"
             fi
           }
           check_page https://emacs.j10s.io/ 'id="buf-readme"'
