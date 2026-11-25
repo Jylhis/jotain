@@ -12,6 +12,9 @@ system (`ds/`). `public/ds` is a vendored copy of the Jylhis design system
   placeholder lines are replaced at build time by the Org exports of
   `README.org` and `docs/keybindings.org`. `@VERSION@`, `@FLAKE@`,
   `@REPO_URL@`, `@REPO@` and `@SUPPORT@` come from `release.json`.
+  `@ANALYTICS@` becomes the Cloudflare Web Analytics snippet of `nix/site.nix`.
+- `public/robots.txt` names the sitemap. `public/_headers` sets the security
+  headers and the `Link` header that points at `/llms.txt`.
 - `public/css/site.css`: frame and landing styles. `public/css/docs.css`:
   prose styles for the ox-html markup. Colors only via design-system tokens.
 - `public/js/app.js`: buffer switching, `C-s` search, theme toggle.
@@ -31,7 +34,10 @@ system (`ds/`). `public/ds` is a vendored copy of the Jylhis design system
 3. A shell function wraps each fragment in the page chrome.
 
 URLs: `/docs/` (index), `/docs/<slug>/` for `docs/<slug>.org`,
-`/docs/module-options/`, `/jotain.info`. `baseHref` (default `""`, the site
+`/docs/module-options/`, `/jotain.info`, `/sitemap.xml` (every page) and
+`/llms.txt` (the pages with their descriptions, for AI agents). Each page has
+a description, a canonical URL and Open Graph tags; the description of a
+chapter is its `#+DESCRIPTION`. `baseHref` (default `""`, the site
 is served at the domain root) prefixes every absolute URL and has no
 trailing slash. The build also emits `404.html`.
 
