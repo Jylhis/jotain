@@ -3,7 +3,8 @@
 The landing page and docs site for Jotain, styled as an Emacs frame: a tab
 bar with two buffers (`README.org`, `keybindings`), a modeline and a
 minibuffer with `I-search` over the headings. It uses the Jylhis design
-system (`ds/`, from the `ds-assets` package).
+system (`ds/`). `public/ds` is a vendored copy of the Jylhis design system
+7.0.0 web assets and is replaced by a pin when 7.0.0 is published.
 
 ## Layout
 

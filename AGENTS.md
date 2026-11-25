@@ -24,8 +24,7 @@ packages. One system (`x86_64-linux`), one build: emacs-overlay's
   `checks.nix`, `dev-shell.nix`, `extra-packages.nix`,
   `nix-provided-packages.nix`, `module-options.nix` (options shared by both
   modules), `user-programs.nix`, `wrap-runtime-deps.nix`, `runtime-deps.nix`,
-  `info-manual.nix`, `site.nix`, `options-doc.nix`, `lang-eval.nix`,
-  `ds-assets.nix`.
+  `info-manual.nix`, `site.nix`, `options-doc.nix`, `lang-eval.nix`.
 - `docs/*.org`: the manual, with `docs/jotain.org` as master file.
   `docs/design/` holds working notes that are not chapters. `README.org`,
   `release.json` and `website/` (page shell, see `website/README.md`) feed
@@ -140,8 +139,8 @@ include order is the reading order. A batch Emacs (`nix/org-export.el`,
 appendices are generated at build time from the module sources
 (`nix/options-doc.nix`) and from `etc/lang-eval/jotain-lang-registry.el`
 (`nix/lang-eval.nix`); edit the sources, not the output. The design-system
-CSS and fonts are built by `ds-assets` from the revision pinned for
-`jylhis-emacs-themes`. `just serve-site` serves the site at the root of localhost:8080.
+CSS and fonts are a vendored copy of the Jylhis design system 7.0.0 in
+`website/public/ds`. `just serve-site` serves the site at the root of localhost:8080.
 
 ## Testing
 

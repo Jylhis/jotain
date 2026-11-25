@@ -73,7 +73,7 @@ in
   };
 
   # The generated jylhis-{light,dark} themes are not committed upstream, so
-  # the generator runs here. nix/ds-assets.nix reads `src` and `version`.
+  # the generator runs here.
   jylhis-emacs-themes = efinal.trivialBuild {
     pname = "jylhis-emacs-themes";
     version = "3.0.0-unstable-2026-09-23";

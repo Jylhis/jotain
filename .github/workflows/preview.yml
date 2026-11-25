@@ -1,11 +1,12 @@
 # PR site previews as downloadable artifacts.
 #
-# Pages hosts a single deployment (deploy.yml), so each PR's `.#site` is
-# uploaded as a `site.tgz` workflow artifact instead. To view it, unzip the
-# artifact, extract site.tgz under /jotain/ (the baseHref) and serve:
+# deploy.yml publishes the production site to Cloudflare on pushes to main, so
+# each PR's `.#site` is uploaded as a `site.tgz` workflow artifact instead. The
+# site is built for the domain root. To view it, unzip the artifact, extract
+# site.tgz and serve it:
 #
-#   mkdir -p /tmp/site/jotain && tar xzf site.tgz -C /tmp/site/jotain
-#   python3 -m http.server -d /tmp/site 8080   # → http://localhost:8080/jotain/
+#   mkdir -p /tmp/site && tar xzf site.tgz -C /tmp/site
+#   python3 -m http.server -d /tmp/site 8080   # → http://localhost:8080/
 #
 # Every `uses:` must be github-owned or match cachix/*: the repo restricts
 # Actions to those.
@@ -67,7 +68,7 @@ jobs:
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const artUrl = process.env.ARTIFACT_URL || runUrl;
             const marker = '<!-- pr-preview -->';
-            const body = `${marker}\n### 🔎 Site preview built\n\nThe site preview for this PR is a downloadable artifact: **[site-preview-pr-${pr}](${artUrl})** (from [the workflow run](${runUrl}), under **Artifacts**).\n\nUnzip it, extract the \`site.tgz\` inside, and serve it locally mounted under \`/jotain/\` (the baseHref):\n\n\`\`\`sh\nmkdir -p /tmp/site/jotain && tar xzf site.tgz -C /tmp/site/jotain\npython3 -m http.server -d /tmp/site 8080   # → http://localhost:8080/jotain/\n\`\`\`\n\n_Updated for ${context.sha.substring(0, 12)}._`;
+            const body = `${marker}\n### 🔎 Site preview built\n\nThe site preview for this PR is a downloadable artifact: **[site-preview-pr-${pr}](${artUrl})** (from [the workflow run](${runUrl}), under **Artifacts**).\n\nUnzip it, extract the \`site.tgz\` inside, and serve it locally from the root:\n\n\`\`\`sh\nmkdir -p /tmp/site && tar xzf site.tgz -C /tmp/site\npython3 -m http.server -d /tmp/site 8080   # → http://localhost:8080/\n\`\`\`\n\n_Updated for ${context.sha.substring(0, 12)}._`;
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner, repo: context.repo.repo, issue_number: pr,
             });

@@ -13,6 +13,7 @@
 #   /jotain.info      the manual as an Info file
 #   /404.html         the not-found page of the Worker
 #
+# The design system assets in ds/ are the vendored copy in website/public/ds.
 # The site is $out/public/, the assets directory of the emacs-docs Worker.
 # Preview it with `just serve-site`.
 {
@@ -25,7 +26,6 @@
 }:
 let
   fs = lib.fileset;
-  dsAssets = import ./ds-assets.nix { inherit pkgs; };
   infoManual = import ./info-manual.nix { inherit pkgs src; };
   release = builtins.fromJSON (builtins.readFile (src + "/release.json"));
 
@@ -69,8 +69,6 @@ pkgs.runCommand "jotain-site"
     mkdir -p "$out/public"
     cp -r "$webSrc/website/public/." "$out/public/"
     chmod -R u+w "$out/public"
-    cp -r "${dsAssets}" "$out/public/ds"
-    chmod -R u+w "$out/public/ds"
     cp ${infoManual}/share/info/jotain.info "$out/public/jotain.info"
 
     esc() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
@@ -90,8 +88,8 @@ pkgs.runCommand "jotain-site"
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>''${title} | jotain</title>
     <link rel="canonical" href="https://emacs.j10s.io${baseHref}''${path}">
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f8fc">
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c0f14">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4efe4">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0b0b">
     <link rel="icon" type="image/svg+xml" href="${baseHref}/favicon.svg">
     <script src="${baseHref}/js/theme-init.js"></script>
     <link rel="stylesheet" href="${baseHref}/css/site.css">

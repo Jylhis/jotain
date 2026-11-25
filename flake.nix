@@ -73,9 +73,6 @@
         site = import ./nix/site.nix {
           pkgs = pkgsFor system;
         };
-        ds-assets = import ./nix/ds-assets.nix {
-          pkgs = pkgsFor system;
-        };
       });
 
       # Outputs `nix flake check` does not build.

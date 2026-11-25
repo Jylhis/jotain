@@ -1,5 +1,5 @@
 /*
- * app.js — page.jylhis.com/jotain
+ * app.js — emacs.j10s.io
  * Emacs-frame chrome: buffer switching (tabs / C-x b / n / p / hash),
  * I-search over a section index, modeline position, echo area, theme toggle.
  * No dependencies.
@@ -49,7 +49,7 @@
     document.documentElement.dataset.mode = dark ? 'dark' : '';
     try { localStorage.setItem('jotain-theme', dark ? 'dark' : 'light'); } catch (e) { /* private mode */ }
     renderTheme();
-    msg('Theme: ' + (dark ? 'jylhis-dark (Negative)' : 'jylhis-light (Print)'), 2000);
+    msg('Theme: ' + (dark ? 'jylhis-dark (Black)' : 'jylhis-light (Paper)'), 2000);
   }
 
   /* ── echo area ──────────────────────────────────────── */
