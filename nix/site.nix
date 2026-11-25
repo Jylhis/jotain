@@ -12,6 +12,8 @@
 #   /docs/module-options/  the generated options appendix
 #   /jotain.info      the manual as an Info file
 #   /404.html         the not-found page of the Worker
+#   /sitemap.xml      every indexable page, for the search engines
+#   /llms.txt         the pages and their descriptions, for AI agents
 #
 # The design system assets in ds/ are the vendored copy in website/public/ds.
 # The site is $out/public/, the assets directory of the emacs-docs Worker.
@@ -28,6 +30,16 @@ let
   fs = lib.fileset;
   infoManual = import ./info-manual.nix { inherit pkgs src; };
   release = builtins.fromJSON (builtins.readFile (src + "/release.json"));
+
+  siteUrl = "https://emacs.j10s.io${baseHref}";
+
+  # Cloudflare Web Analytics for the j10s.io zone: cookieless, so no consent
+  # banner. The token is the public site token. The edge does not inject the
+  # beacon into the responses of an assets-only Worker, so each page carries it.
+  analytics = lib.concatStrings [
+    ''<script defer src="https://static.cloudflareinsights.com/beacon.min.js" ''
+    "data-cf-beacon='{\"token\": \"a107628970cd437bb0976d717482a7a7\"}'></script>"
+  ];
 
   webSrc = fs.toSource {
     root = src;
@@ -71,14 +83,35 @@ pkgs.runCommand "jotain-site"
     chmod -R u+w "$out/public"
     cp ${infoManual}/share/info/jotain.info "$out/public/jotain.info"
 
-    esc() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+    esc() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g'; }
 
-    # write_page OUT TITLE BUFNAME MODE CONTENT_FILE NAV_HTML
+    # The indexable pages, in order: "PATH<TAB>TITLE<TAB>DESCRIPTION", with the
+    # text as the manifest has it. They feed sitemap.xml and llms.txt.
+    pages=$(mktemp)
+
+    # write_page OUT TITLE BUFNAME MODE CONTENT_FILE NAV_HTML DESCRIPTION
+    # TITLE and DESCRIPTION are escaped HTML. Without a description the page
+    # is marked noindex (the not-found page).
     write_page() {
       local outfile="$1" title="$2" bufname="$3" mode="$4" content="$5" navhtml="$6"
+      local desc="''${7:-}" meta
       mkdir -p "$(dirname "$outfile")"
       local path="''${outfile#"$out/public"}"
       path="''${path%index.html}"
+      if [ -n "$desc" ]; then
+        meta="<meta name=\"description\" content=\"$desc\">
+    <link rel=\"canonical\" href=\"${siteUrl}$path\">
+    <meta property=\"og:title\" content=\"$title | jotain\">
+    <meta property=\"og:description\" content=\"$desc\">
+    <meta property=\"og:url\" content=\"${siteUrl}$path\">
+    <meta property=\"og:type\" content=\"article\">
+    <meta property=\"og:site_name\" content=\"jotain\">
+    <meta property=\"og:image\" content=\"${siteUrl}/social-preview.png\">
+    <meta property=\"og:image:alt\" content=\"Jotain, a GNU Emacs configuration, with the bracketed j mark\">
+    <meta name=\"twitter:card\" content=\"summary_large_image\">"
+      else
+        meta='<meta name="robots" content="noindex">'
+      fi
       {
         cat <<HEAD
     <!DOCTYPE html>
@@ -87,13 +120,14 @@ pkgs.runCommand "jotain-site"
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>''${title} | jotain</title>
-    <link rel="canonical" href="https://emacs.j10s.io${baseHref}''${path}">
+    $meta
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4efe4">
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0b0b">
     <link rel="icon" type="image/svg+xml" href="${baseHref}/favicon.svg">
     <script src="${baseHref}/js/theme-init.js"></script>
     <link rel="stylesheet" href="${baseHref}/css/site.css">
     <link rel="stylesheet" href="${baseHref}/css/docs.css">
+    ${analytics}
     </head>
     <body>
     <div class="frame">
@@ -137,7 +171,9 @@ pkgs.runCommand "jotain-site"
 
     frag=${fragments}
     slugs=() titles=() descs=()
+    printf '/docs/\tDocumentation\tThe chapters of the Jotain manual, in reading order.\n' > "$pages"
     while IFS=$'\t' read -r slug title desc; do
+      printf '/docs/%s/\t%s\t%s\n' "$slug" "$title" "$desc" >> "$pages"
       slugs+=("$slug")
       titles+=("$(printf '%s' "$title" | esc)")
       descs+=("$(printf '%s' "$desc" | esc)")
@@ -163,12 +199,13 @@ pkgs.runCommand "jotain-site"
         nav="$nav<a href=\"${baseHref}/docs/\">index ↑</a>"
       fi
       write_page "$out/public/docs/$slug/index.html" "''${titles[$i]}" "docs/$slug.org" "(Org)" \
-        "$frag/$slug.html" "$nav"
+        "$frag/$slug.html" "$nav" "''${descs[$i]}"
       printf '<div class="man-entry"><a href="${baseHref}/docs/%s/">%s</a><span class="man-dots">·····································································</span><span class="man-desc">%s</span></div>\n' \
         "$slug" "''${titles[$i]}" "''${descs[$i]}" >> "$index_body"
     done
     write_page "$out/public/docs/index.html" "Documentation" "*docs dired*" "(Dired)" "$index_body" \
-      '<a href="${baseHref}/#readme">← README.org</a><a href="${baseHref}/docs/introduction/">introduction →</a>'
+      '<a href="${baseHref}/#readme">← README.org</a><a href="${baseHref}/docs/introduction/">introduction →</a>' \
+      'The chapters of the Jotain manual, in reading order: installation, launching, keybindings, language support and the module options.'
 
     not_found=$(mktemp)
     {
@@ -185,7 +222,47 @@ pkgs.runCommand "jotain-site"
       --replace-fail '@FLAKE@' ${lib.escapeShellArg (lib.escapeXML "github:${release.repo}")} \
       --replace-fail '@REPO_URL@' ${lib.escapeShellArg (lib.escapeXML "https://github.com/${release.repo}")} \
       --replace-fail '@REPO@' ${lib.escapeShellArg (lib.escapeXML release.repo)} \
-      --replace-fail '@SUPPORT@' ${lib.escapeShellArg (lib.escapeXML release.support)}
+      --replace-fail '@SUPPORT@' ${lib.escapeShellArg (lib.escapeXML release.support)} \
+      --replace-fail '@ANALYTICS@' ${lib.escapeShellArg analytics}
+
+    # sitemap.xml: the landing page, then the pages in manual order.
+    {
+      echo '<?xml version="1.0" encoding="UTF-8"?>'
+      echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+      echo '<url><loc>${siteUrl}/</loc></url>'
+      while IFS=$'\t' read -r path _; do
+        echo "<url><loc>${siteUrl}$path</loc></url>"
+      done < "$pages"
+      echo '</urlset>'
+    } > "$out/public/sitemap.xml"
+
+    # llms.txt (llmstxt.org): what the project is and where each page is.
+    {
+      cat <<LLMS
+    # Jotain
+
+    > Jotain is a GNU Emacs configuration built from scratch, with no framework
+    > underneath: Nix builds the editor from source and plain Emacs Lisp
+    > configures it. It ships as a Nix flake with Home Manager and NixOS modules.
+
+    Run it with \`nix run github:${release.repo}\`. The source is at
+    https://github.com/${release.repo}. The manual below is also one Info file:
+    ${siteUrl}/jotain.info
+
+    ## Documentation
+
+    LLMS
+      while IFS=$'\t' read -r path title desc; do
+        echo "- [$title](${siteUrl}$path)''${desc:+: $desc}"
+      done < "$pages"
+      cat <<LLMS
+
+    ## Optional
+
+    - [Source code](https://github.com/${release.repo}): the configuration, the Nix build and the tests
+    - [Releases](https://github.com/${release.repo}/releases): the release notes
+    LLMS
+    } > "$out/public/llms.txt"
 
     sed 's|href="LICENSE"|href="https://github.com/${release.repo}/blob/main/LICENSE"|' \
       "$frag/readme.html" > readme.html
