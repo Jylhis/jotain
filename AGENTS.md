@@ -128,7 +128,7 @@ fix the reference in the same change.
   per-user programs for both modules, so they yield the same store paths.
 - Pins outside `flake.lock` (the packages in `nix/extra-packages.nix`, the
   ECA server, the likec4 language server) are bumped with
-  `just update-pins`. `ghostel` is a manual override.
+  `just update-pins`.
 
 ## Docs
 

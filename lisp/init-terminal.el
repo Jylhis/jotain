@@ -21,10 +21,6 @@
 (use-package ghostel
   :commands (ghostel ghostel-project ghostel-other)
   :custom
-  ;; `ghostel-module-directory' stays nil (the package directory).  A
-  ;; present module is only loaded, never rewritten, so a read-only store
-  ;; path is fine; auto-install only fires when the module is missing.
-  (ghostel-module-auto-install 'download)
   (ghostel-enable-osc52 t))
 
 ;;;; Terminal compatibility (no-ops in GUI)

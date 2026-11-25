@@ -1,9 +1,8 @@
 # Emacs packages Nix builds itself (absent from every archive), plus
-# overrides of archive packages: built-in shims and ghostel. Overlaid onto
-# the package scope by nix/mk-overlay.nix.
+# built-in shims. Overlaid onto the package scope by nix/mk-overlay.nix.
 { pkgs }:
 
-efinal: eprev:
+efinal: _eprev:
 let
   # Emacs 31 ships newer xref/project/eglot/flymake in-tree, but
   # transitive `Package-Requires' (consult-eglot, eglot-tempel,
@@ -51,26 +50,6 @@ in
   project = emptyElpaPackage "project";
   eglot = emptyElpaPackage "eglot";
   flymake = emptyElpaPackage "flymake";
-
-  # Elisp-only rebuild of emacs-overlay's ghostel: its zig-deps fixed-output
-  # fetch failed on GitHub CI runners (zig's fetcher against github.com:
-  # HttpConnectionClosing / WriteFailed). Without the native module,
-  # auto-install would download into the read-only store path. Revert to
-  # the plain epkgs.ghostel once the fetch works there.
-  ghostel = efinal.trivialBuild {
-    pname = "ghostel";
-    version = eprev.ghostel.version or "0";
-    src = eprev.ghostel.src;
-    packageRequires = eprev.ghostel.packageRequires or [ ];
-    # The MELPA recipe cherry-picks the elisp out of the repo; trivialBuild
-    # wants it at the source root, so point sourceRoot at ghostel.el's dir.
-    postUnpack = ''
-      elFile=$(find "$sourceRoot" -name ghostel.el -print -quit)
-      if [ -n "$elFile" ]; then
-        sourceRoot=$(dirname "$elFile")
-      fi
-    '';
-  };
 
   # The generated jylhis-{light,dark} themes are not committed upstream, so
   # the generator runs here.
