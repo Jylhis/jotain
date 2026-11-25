@@ -58,4 +58,9 @@ in
       info = final.jotainInfo;
     };
   };
+
+  jotainEmacsConfigured = import ./configured.nix {
+    pkgs = final;
+    package = final.jotainEmacsPackages;
+  };
 }

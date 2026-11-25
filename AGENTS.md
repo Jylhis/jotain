@@ -46,12 +46,13 @@ isolated from `~/.emacs.d`. The Justfile documents the other recipes
 Plain Nix commands: `nix flake check`, `nix fmt`, `nix flake update`, and
 `nix build --no-link .#checks.x86_64-linux.<name>` for one check.
 `default.nix` loads the flake through flake-compat, which fetches inputs by
-URL; where only the flake CLI works, use `nix build .#default -o result` and
-run `./result/bin/emacs` by hand.
+URL; where only the flake CLI works, use `nix build .#emacs-with-packages -o result` and
+run `./result/bin/emacs` by hand (`.#default` is the same Emacs with the
+config linked into `$XDG_STATE_HOME/jotain`).
 
-The checks in `nix/checks.nix` are `packages-default`, `options-doc`,
+The checks in `nix/checks.nix` are `packages-default`, `packages-emacs-with-packages`, `options-doc`,
 `eca-models-in-sync`, `module-eval`, `dev-shell`, `formatting`, `statix`,
-`deadnix`, `elisp-compile`, `elisp-test` and `config-startup`.
+`deadnix`, `elisp-compile`, `elisp-test`, `config-startup` and `default-launcher`.
 `eca-models-in-sync` compares the OpenRouter models in
 `config/eca/config.json` with gptel's list in `lisp/init-ai.el`; reconcile
 both by hand. `elisp-compile` is the same derivation `module.nix` deploys, so

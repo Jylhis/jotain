@@ -64,8 +64,9 @@
         };
 
       packages = forAllSystems (system: {
-        default = (pkgsFor system).jotainEmacsPackages;
+        default = (pkgsFor system).jotainEmacsConfigured;
         emacs = (pkgsFor system).jotainEmacs;
+        emacs-with-packages = (pkgsFor system).jotainEmacsPackages;
         inherit ((pkgsFor system)) eca;
         likec4-lsp = (pkgsFor system).likec4Lsp;
         info = (pkgsFor system).jotainInfo;

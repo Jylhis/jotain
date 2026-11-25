@@ -123,7 +123,8 @@ let
     if scripts == [ ] then "" else (lib.head scripts).text;
 in
 {
-  packages-default = pkgs.jotainEmacsPackages;
+  packages-default = pkgs.jotainEmacsConfigured;
+  packages-emacs-with-packages = pkgs.jotainEmacsPackages;
   options-doc = import ./options-doc.nix { inherit pkgs src; };
 
   # config/eca/config.json and gptel's OpenRouter :models (lisp/init-ai.el)
@@ -305,6 +306,46 @@ in
           echo "FAIL: startup aborted before loading the whole config" >&2
           exit 1
         fi
+        touch $out
+      '';
+
+  # Runs the packaged launcher. --batch skips the init files, so they are
+  # loaded by hand, as in config-startup (no network, so no :ensure).
+  default-launcher =
+    pkgs.runCommand "check-default-launcher"
+      {
+        nativeBuildInputs = [ pkgs.jotainEmacsConfigured ];
+      }
+      ''
+        set -euo pipefail
+        export HOME="$(mktemp -d)"
+        unset XDG_STATE_HOME JOTAIN_INIT_DIRECTORY
+
+        run() {
+          emacs --batch \
+            --eval '(load (expand-file-name "early-init.el" user-emacs-directory) nil t)' \
+            --eval '(setq use-package-always-ensure nil)' \
+            --eval '(load (expand-file-name "init.el" user-emacs-directory) nil t)' \
+            --eval "$1"
+        }
+
+        got=$(run '(progn (princ user-emacs-directory) (terpri) (princ (featurep (quote init-core))))' 2>"$HOME/stderr.log") \
+          || { cat "$HOME/stderr.log" >&2; exit 1; }
+        echo "$got"
+        case "$got" in
+          "$HOME/.local/state/jotain/"*) ;;
+          *) echo "FAIL: user-emacs-directory is not under \$HOME/.local/state/jotain" >&2; exit 1 ;;
+        esac
+        case "$got" in
+          *$'\n't) ;;
+          *) echo "FAIL: init-core is not loaded" >&2; exit 1 ;;
+        esac
+
+        other="$(mktemp -d)"
+        emacs --batch --init-directory="$other" \
+          --eval '(princ user-emacs-directory)' > "$HOME/other.out"
+        [ "$(cat "$HOME/other.out")" = "$other/" ] \
+          || { echo "FAIL: --init-directory not honoured" >&2; exit 1; }
         touch $out
       '';
 }

@@ -22,10 +22,10 @@ bench-built output="var/bench/startup.txt":
     cat "$out"
 
 
-# Build the full distribution (Emacs + every grammar).
+# Build the full distribution (Emacs + every grammar), without the config.
 [group('build')]
 build:
-    nix-build
+    nix build .#emacs-with-packages -o result
 
 # Build, then launch Emacs with this configuration.
 [group('build')]
