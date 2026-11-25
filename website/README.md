@@ -12,7 +12,6 @@ system (`ds/`). `public/ds` is a vendored copy of the Jylhis design system
   placeholder lines are replaced at build time by the Org exports of
   `README.org` and `docs/keybindings.org`. `@VERSION@`, `@FLAKE@`,
   `@REPO_URL@`, `@REPO@` and `@SUPPORT@` come from `release.json`.
-  `@ANALYTICS@` becomes the Cloudflare Web Analytics snippet of `nix/site.nix`.
 - `public/robots.txt` names the sitemap. `public/_headers` sets the security
   headers and the `Link` header that points at `/llms.txt`.
 - `public/css/site.css`: frame and landing styles. `public/css/docs.css`:
