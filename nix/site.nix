@@ -33,14 +33,6 @@ let
 
   siteUrl = "https://emacs.j10s.io${baseHref}";
 
-  # Cloudflare Web Analytics for the j10s.io zone: cookieless, so no consent
-  # banner. The token is the public site token. The edge does not inject the
-  # beacon into the responses of an assets-only Worker, so each page carries it.
-  analytics = lib.concatStrings [
-    ''<script defer src="https://static.cloudflareinsights.com/beacon.min.js" ''
-    "data-cf-beacon='{\"token\": \"a107628970cd437bb0976d717482a7a7\"}'></script>"
-  ];
-
   webSrc = fs.toSource {
     root = src;
     fileset = src + "/website/public";
@@ -127,7 +119,6 @@ pkgs.runCommand "jotain-site"
     <script src="${baseHref}/js/theme-init.js"></script>
     <link rel="stylesheet" href="${baseHref}/css/site.css">
     <link rel="stylesheet" href="${baseHref}/css/docs.css">
-    ${analytics}
     </head>
     <body>
     <div class="frame">
@@ -222,8 +213,7 @@ pkgs.runCommand "jotain-site"
       --replace-fail '@FLAKE@' ${lib.escapeShellArg (lib.escapeXML "github:${release.repo}")} \
       --replace-fail '@REPO_URL@' ${lib.escapeShellArg (lib.escapeXML "https://github.com/${release.repo}")} \
       --replace-fail '@REPO@' ${lib.escapeShellArg (lib.escapeXML release.repo)} \
-      --replace-fail '@SUPPORT@' ${lib.escapeShellArg (lib.escapeXML release.support)} \
-      --replace-fail '@ANALYTICS@' ${lib.escapeShellArg analytics}
+      --replace-fail '@SUPPORT@' ${lib.escapeShellArg (lib.escapeXML release.support)}
 
     # sitemap.xml: the landing page, then the pages in manual order.
     {
