@@ -94,11 +94,13 @@ Import the NixOS module the same way (see the [[https://nixos.org/manual/nixos/s
 
 The module puts the distribution into =environment.systemPackages=. =services.jotain.users.<name>= builds the programs of one user and installs them in that user's profile, and the Home Manager module of the same user then takes them from there, so both modules produce the same store paths.
 
-Note: The NixOS module installs the Emacs distribution (packages, grammars, themes, Info manual), not =early-init.el=, =init.el= or =lisp/=. To boot the full configuration, point Emacs at a checkout with =--init-directory=, as =just run-built= does, or use the Home Manager module. An init directory inside the read-only Nix store does not work, because Jotain writes =var/=, =elpa/= and =eln-cache/= under =user-emacs-directory=.
+Note: The NixOS module installs the Emacs distribution (packages, grammars, themes, Info manual), not =early-init.el=, =init.el= or =lisp/=. To boot the full configuration, run =nix run github:Jylhis/jotain=, point Emacs at a checkout with =--init-directory=, as =just run-built= does, or use the Home Manager module. An init directory inside the read-only Nix store does not work, because Jotain writes =var/=, =elpa/= and =eln-cache/= under =user-emacs-directory=.
 
 ** Other outputs
 :PROPERTIES:
 :CUSTOM_ID: outputs
 :END:
 
-=nix run github:Jylhis/jotain= starts the wrapped Emacs with the bundled packages, grammars and Info manual, without the configuration (it is read from a checkout). =nix build github:Jylhis/jotain#info= builds the Info manual and =#emacs= builds Emacs without the packages.
+=nix run github:Jylhis/jotain= (also =nix run .= and =nix build= in a checkout) starts the default package, Emacs with the bundled packages, grammars, Info manual and the Jotain configuration. Its launcher uses the init directory =$JOTAIN_INIT_DIRECTORY=, or =${XDG_STATE_HOME:-~/.local/state}/jotain= when that is unset. It creates the directory, links the byte-compiled configuration from the Nix store into it on every start and passes =--init-directory=. =var/=, =elpa/= and the native compilation cache are written there. An explicit =--init-directory= argument skips all of this.
+
+=nix build github:Jylhis/jotain#emacs-with-packages= builds the same distribution without the configuration, which is what the Home Manager and NixOS modules install. =#info= builds the Info manual and =#emacs= builds Emacs without the packages.

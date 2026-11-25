@@ -110,13 +110,14 @@ The overlay in =nix/mk-overlay.nix= defines:
 
 - =jotainEmacs=: the Emacs build.
 - =jotainEmacsPackages=: the full distribution, which is Emacs with the scanned packages and all tree-sitter grammars. A wrapper adds the runtime dependencies to =PATH= (formatters, =delta=, =mergiraf= and similar; see =nix/runtime-deps.nix=), appends =jotainInfo= to =INFOPATH= so that =C-h i d m Jotain RET= works, and sets a default =ASPELL_CONF= for the bundled English, Finnish, German and French dictionaries (=nix/spell-conf.nix=).
+- =jotainEmacsConfigured=: =jotainEmacsPackages= plus the byte-compiled configuration (=nix/configured.nix=). Its =bin/emacs= is a launcher that links the configuration into a writable init directory (=$JOTAIN_INIT_DIRECTORY=, else =${XDG_STATE_HOME:-~/.local/state}/jotain=) and starts Emacs there, because Jotain writes =var/=, =elpa/= and the native compilation cache under =user-emacs-directory=. The modules do not use it.
 - =jotainInfo=: this manual as an Info file.
 - =eca=: the prebuilt ECA server that =lisp/init-ai.el= uses.
 - =likec4Lsp=: the =@likec4/lsp= server for the in-tree LikeC4 mode.
 
-=flake.nix= only wires things together. Its outputs are =packages.x86_64-linux= (=default=, =emacs=, =eca=, =info=, =likec4-lsp= and =site=), =legacyPackages= (every bundled package under =emacs-packages=, plus the compiled configuration used by =just run-built-fast=), a development shell, =overlays.default=, =homeManagerModules.default=, =nixosModules.default=, =formatter= and =checks=. Both modules apply the Jotain overlay over emacs-overlay, so module installs resolve the same Emacs and package snapshot that CI builds.
+=flake.nix= only wires things together. Its outputs are =packages.x86_64-linux= (=default= is =jotainEmacsConfigured=; =emacs= is =jotainEmacs=; =emacs-with-packages= is =jotainEmacsPackages=; then =eca=, =info=, =likec4-lsp= and =site=), =legacyPackages= (every bundled package under =emacs-packages=, plus the compiled configuration used by =just run-built-fast=), a development shell, =overlays.default=, =homeManagerModules.default=, =nixosModules.default=, =formatter= and =checks=. Both modules apply the Jotain overlay over emacs-overlay, so module installs resolve the same Emacs and package snapshot that CI builds.
 
-=default.nix= wraps the flake with flake-compat, so =nix-build= builds the distribution. =shell.nix= exposes the development shell to =nix-shell=.
+=default.nix= wraps the flake with flake-compat, so =nix-build= builds the default package. =shell.nix= exposes the development shell to =nix-shell=.
 
 *** Pinning
 :PROPERTIES:

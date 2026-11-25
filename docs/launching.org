@@ -6,7 +6,7 @@
 :CUSTOM_ID: launching
 :END:
 
-The development shell has no =emacs= binary. The supported way to launch the configuration from a checkout is =just run-built=. An installed setup (Home Manager) runs a daemon and uses =emacsclient= for frames.
+The development shell has no =emacs= binary. The supported way to launch the configuration from a checkout is =just run-built=. =nix run github:Jylhis/jotain= starts the configuration without a checkout, with the init directory in =${XDG_STATE_HOME:-~/.local/state}/jotain= (or =$JOTAIN_INIT_DIRECTORY=). An installed setup (Home Manager) runs a daemon and uses =emacsclient= for frames.
 
 ** One-shot
 :PROPERTIES:
@@ -21,14 +21,14 @@ just run-built-fast       # launch the ahead-of-time compiled configuration
 just run-built --debug-init  # arguments are passed on to Emacs
 #+end_src
 
-=just run-built= builds the distribution and runs =./result/bin/emacs --init-directory=<repo>=, so it never touches =~/.emacs.d=. The first run pays a =nix build=, usually a binary-cache download. =run-built-fast= reflects the last build, so use =run-built= while editing the configuration. This pattern suits sanity checks and configuration changes, because every launch pays the package initialisation cost.
+=just run-built= builds =.#emacs-with-packages= (the distribution without the configuration) and runs =./result/bin/emacs --init-directory=<repo>=, so it never touches =~/.emacs.d=. The first run pays a =nix build=, usually a binary-cache download. =run-built-fast= reflects the last build, so use =run-built= while editing the configuration. This pattern suits sanity checks and configuration changes, because every launch pays the package initialisation cost.
 
 ** Daemon and client
 :PROPERTIES:
 :CUSTOM_ID: daemon
 :END:
 
-An Emacs server keeps one process alive and opens frames from lightweight clients; see [[info:emacs#Emacs Server]] for the general mechanism. From a checkout:
+An Emacs server keeps one process alive and opens frames from lightweight clients; see [[info:emacs#Emacs Server]] for the general mechanism. From a checkout, after =just build= (which writes =result= for =.#emacs-with-packages=; a plain =nix build= yields the default package, whose launcher picks its own init directory unless given =--init-directory=):
 
 #+begin_src bash
 just build

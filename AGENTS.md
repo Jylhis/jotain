@@ -23,7 +23,7 @@ packages. One system (`x86_64-linux`), one build: emacs-overlay's
   (NixOS). Everything else is in `nix/`: `mk-overlay.nix` (the overlay),
   `checks.nix`, `dev-shell.nix`, `extra-packages.nix`,
   `nix-provided-packages.nix`, `module-options.nix` (options shared by both
-  modules), `user-programs.nix`, `wrap-runtime-deps.nix`, `runtime-deps.nix`,
+  modules), `user-programs.nix`, `wrap-runtime-deps.nix`, `configured.nix`, `runtime-deps.nix`,
   `info-manual.nix`, `site.nix`, `options-doc.nix`, `lang-eval.nix`.
 - `docs/*.org`: the manual, with `docs/jotain.org` as master file.
   `docs/design/` holds working notes that are not chapters. `README.org`,
@@ -121,7 +121,10 @@ fix the reference in the same change.
   `nix/extra-packages.nix`.
 - The overlay defines `jotainEmacs`, `jotainEmacsPackages` (the
   distribution: runtime deps on `PATH`, the Info manual on `INFOPATH`, a
-  default `ASPELL_CONF`, via `nix/wrap-runtime-deps.nix`), `jotainInfo`,
+  default `ASPELL_CONF`, via `nix/wrap-runtime-deps.nix`),
+  `jotainEmacsConfigured` (the distribution plus the compiled config, with a
+  launcher that links it into `$JOTAIN_INIT_DIRECTORY` or
+  `$XDG_STATE_HOME/jotain`; `packages.default`, `nix/configured.nix`), `jotainInfo`,
   `eca` and `likec4Lsp`. Both modules apply it over emacs-overlay.
 - `services.jotain` (Home Manager) delegates the daemon to home-manager's
   `services.emacs` (unit `emacs.service`). Options shared with the NixOS
